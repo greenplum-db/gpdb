@@ -4140,4 +4140,53 @@ CXformUtils::FCoverIndex(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
 	return true;
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CXformUtils::GetIndexScanDirection
+//
+//	@doc:
+//		Function to determine index scan direction given required order spec and
+//		index information. This function assumes that caller already validated
+//		if Index Scan is applicable on given index for the required order spec.
+//	    	1. Picks Forward if ORDER BY columns and index keys sort and nulls directions are equal.
+//	    	2. Picks Backward if ORDER BY columns and index keys sort and nulls directions are commutative.
+//---------------------------------------------------------------------------
+EIndexScanDirection
+CXformUtils::GetIndexScanDirection(COrderSpec *pos, const IMDIndex *pmdindex)
+{
+	const CColRef *colref = pos->Pcr(0);
+	IMDId *greater_than_mdid =
+		colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG);
+	IMDId *pos_mdid = pos->GetMdIdSortOp(0);
+
+	return (pos_mdid->Equals(greater_than_mdid) &&
+			pmdindex->KeySortDirectionAt(0) == SORT_DESC) ||
+				   (!pos_mdid->Equals(greater_than_mdid) &&
+					pmdindex->KeySortDirectionAt(0) == SORT_ASC)
+			   ? EForwardScan
+			   : EBackwardScan;
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CXformUtils::FIndicesCommutative
+//
+//	@doc:
+//        Function to validate if indices sort, nulls direction is commutative.
+//-----------------------------------------------------------------------------
+BOOL
+CXformUtils::FIndicesCommutative(CBitVector *first_index_props,
+								 CBitVector *second_index_props,
+								 ULONG keys_size)
+{
+	for (ULONG i = 0; i <= keys_size; i++)
+	{
+		if (first_index_props->Get(i) == second_index_props->Get(i))
+		{
+			return false;
+		}
+	}
+	return true;
+}
 // EOF

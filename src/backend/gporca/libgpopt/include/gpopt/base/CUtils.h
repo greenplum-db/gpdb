@@ -35,6 +35,11 @@ namespace gpopt
 {
 using namespace gpos;
 
+#define SORT_ASC 0
+#define SORT_DESC 1
+#define NULLS_LAST 0
+#define NULLS_FIRST 1
+
 // fwd declaration
 class CMemo;
 class CLogicalCTEConsumer;

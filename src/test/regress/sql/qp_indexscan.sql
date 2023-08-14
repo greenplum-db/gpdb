@@ -271,20 +271,19 @@ DROP TABLE test_index_with_sort_directions_on_orderby_limit;
 -- Test Case: Test on a Partition table with mixed data type columns.
 -- Purpose: Validate if DynamicIndexScan/DynamicIndexOnlyScan with correct scan direction is used on expected index for queries with order by and limit.
 
-CREATE TABLE test_partition_table(a int, b int, c float, d text, e numeric, f int) DISTRIBUTED BY (a) PARTITION BY range(a) (start (0) end(10000) every(2000));
--- single col index with opp nulls direction on partition column
-CREATE INDEX part_index_a on test_partition_table using btree(a nulls first);
--- multi col index all with all index keys asc
-CREATE INDEX part_index_bcd on test_partition_table using btree(b,c,d);
--- multi col index all with all index keys desc
-CREATE INDEX part_index_fde on test_partition_table using btree(f desc,d desc,e desc);
--- multi col index with mixed index keys properties
-CREATE INDEX part_index_eda on test_partition_table using btree(e desc nulls last, d,a desc);
+CREATE TABLE test_partition_table(a int, b int, c float, d text, e numeric, f int) DISTRIBUTED BY (a) PARTITION BY range(a);
+CREATE TABLE partition1 PARTITION OF test_partition_table FOR VALUES FROM (1) TO (3000);
+CREATE TABLE partition2 PARTITION OF test_partition_table FOR VALUES FROM (3000) TO (6000);
+CREATE TABLE partition3 PARTITION OF test_partition_table FOR VALUES FROM (6000) TO (9000);
+-- single col index with opp direction on partition column
+CREATE INDEX part_index_a on test_partition_table using btree(a desc);
 -- Covering index on partition column
-CREATE INDEX part_covering_index_cb ON test_partition_table(c desc) INCLUDE (b);
-INSERT INTO test_partition_table SELECT i, i+3, i/4.2, concat('sample_text ',i), i/5, i from generate_series(1,9998) i;
+CREATE INDEX part_covering_index_ab ON test_partition_table(a NULLS FIRST) INCLUDE (b);
+-- Creating index on one of the partitions to check if IndexScan is used instead of DynamicIndexScan
+CREATE INDEX index_on_partition ON partition2 using btree(a desc, c);
+INSERT INTO test_partition_table SELECT i, i+3, i/4.2, concat('sample_text ',i), i/5, i from generate_series(1,8998) i;
 -- Inserting nulls to verify results match when index key specifies nulls first or desc
-INSERT INTO test_partition_table values (9999, null, null, null, null, null);
+INSERT INTO test_partition_table values (8999, null, null, null, null, null);
 ANALYZE test_partition_table;
 
 -- Positive tests: Validate if DynamicIndexScan Forward/Backward is chosen.
@@ -292,113 +291,45 @@ ANALYZE test_partition_table;
 
 -- Validate if 'part_index_a' is used for order by cols matching/commutative to the index cols
 -- Expected to use Forward DynamicIndexScan
-explain analyze select a from test_partition_table order by a nulls first limit 3;
-select a from test_partition_table order by a nulls first limit 3;
+explain analyze select a from test_partition_table order by a desc limit 3;
+select a from test_partition_table order by a desc limit 3;
 -- Expected to use Backward DynamicIndexScan
-explain analyze select a from test_partition_table order by a desc nulls last limit 3;
-select a from test_partition_table order by a desc nulls last limit 3;
-
--- Validate if 'part_index_bcd' is used for order by cols matching/commutative to the index cols
--- Testing various permutations of order by columns that are expected to choose Forward DynamicIndexScan
-explain analyze select b,c,d from test_partition_table order by b,c,d limit 3;
-select b,c,d from test_partition_table order by b,c,d limit 3;
-explain analyze select b,c from test_partition_table order by b,c limit 13;
-select b,c from test_partition_table order by b,c limit 13;
--- Testing various permutations of order by columns that are expected to choose Backward DynamicIndexScan
-explain analyze select b,c,d from test_partition_table order by b desc,c desc,d desc limit 3;
-select b,c,d from test_partition_table order by b desc,c desc,d desc limit 3;
-explain analyze select b,c from test_partition_table order by b desc,c desc limit 3;
-select b,c from test_partition_table order by b desc,c desc limit 3;
-
--- Validate if 'part_index_fde' is used for order by cols matching/commutative to the index cols. Average partitions scanned
--- for this query are more as the limit value is higher.
--- Testing various permutations of order by columns that expected to choose Forward DynamicIndexScan
-explain analyze select f,d,e from test_partition_table order by f desc,d desc,e desc limit 23;
-select f,d,e from test_partition_table order by f desc,d desc,e desc limit 23;
-explain analyze select f,d from test_partition_table order by f desc,d desc limit 3;
-select f,d from test_partition_table order by f desc,d desc limit 3;
--- Testing various permutations of order by columns that should pick Backward DynamicIndexScan
-explain analyze select f,d,e from test_partition_table order by f,d,e limit 3;
-select f,d,e from test_partition_table order by f,d,e limit 3;
-explain analyze select f,d from test_partition_table order by f,d limit 3;
-select f,d from test_partition_table order by f,d limit 3;
-
--- Validate if 'part_index_eda' is used for order by cols matching/commutative to the index cols
--- Testing various permutations of order by columns that expected to choose Forward DynamicIndexScan
-explain analyze select e,d,a from test_partition_table order by e desc nulls last, d, a desc limit 3;
-select e,d,a from test_partition_table order by e desc nulls last, d, a desc limit 3;
-explain analyze select e,d,a from test_partition_table order by e desc nulls last, d limit 3;
-select e,d,a from test_partition_table order by e desc nulls last, d limit 3;
--- Testing various permutations of order by columns that expected to choose Backward DynamicIndexScan
-explain analyze select e,d,a from test_partition_table order by e nulls first, d desc, a limit 3;
-select e,d,a from test_partition_table order by e nulls first, d desc, a limit 3;
-explain analyze select e,d from test_partition_table order by e nulls first, d desc limit 3;
-select e,d from test_partition_table order by e nulls first, d desc limit 3;
+explain analyze select a from test_partition_table order by a limit 3;
+select a from test_partition_table order by a limit 3;
 
 -- Validate if DynamicIndexScan works on covering index
 -- Expected to choose Forward DynamicIndexScan
-explain analyze select c from test_partition_table order by c desc limit 3;
-select c from test_partition_table order by c desc limit 3;
+explain analyze select a from test_partition_table order by a nulls first limit 3;
+select a from test_partition_table order by a nulls first limit 3;
 -- Expected to choose Backward DynamicIndexScan
-explain analyze select c from test_partition_table order by c limit 3;
-select c from test_partition_table order by c limit 3;
+explain analyze select a from test_partition_table order by a desc nulls last limit 3;
+select a from test_partition_table order by a desc nulls last limit 3;
 
--- Negative tests: Validate if a DynamicSeqScan is chosen if order by cols directions do not matching indices keys directions.
---                 Expected to choose DynamicSeqScan with Sort
+-- Validate if IndexScan Forward/Backward are used for order by on partition2 table(as this is a regular table and don't
+-- have further partitions)
+explain(costs off) select a, c from partition2 order by a desc, c limit 3;
+select a, c from partition2 order by a desc, c limit 3;
+explain(costs off) select a, c from partition2 order by a, c desc limit 3;
+select a, c from partition2 order by a, c desc limit 3;
 
--- Testing various permutations that are not matching keys in 'part_index_a'
-explain(costs off) select a from test_partition_table order by a limit 3;
-select a from test_partition_table order by a  limit 3;
+-- Purpose: Validate if DynamicIndexOnlyScan Forward/Backward is chosen when required for queries with order by and limit
+-- Vacuum table to ensure DynamicIndexOnlyScans are chosen
+vacuum test_partition_table;
+-- Expected to use DynamicIndexOnlyScan Forward
+explain analyze select a from test_partition_table order by a desc limit 3;
+select a from test_partition_table order by a desc limit 3;
+-- Expected to use DynamicIndexOnlyScan Backward
+explain analyze select a from test_partition_table order by a limit 3;
+select a from test_partition_table order by a limit 3;
 
--- Testing various permutations that are not matching keys in 'part_index_bcd'
-explain(costs off) select b,c,d from test_partition_table order by b ,c desc,d desc limit 3;
-select b,c,d from test_partition_table order by b ,c desc,d desc limit 3;
-explain(costs off) select b,c,d from test_partition_table order by b ,c ,d desc limit 3;
-select b,c,d from test_partition_table order by b ,c ,d desc limit 3;
-explain(costs off) select b,c,d from test_partition_table order by b desc, c ,d desc limit 3;
-select b,c,d from test_partition_table order by b desc, c ,d desc limit 3;
-
--- Testing various permutations that are not matching keys in 'part_index_fde'
-explain(costs off) select f,d,e from test_partition_table order by f ,d desc,e desc limit 3;
-select f,d,e from test_partition_table order by f ,d desc,e desc limit 3;
-explain(costs off) select f,d,e from test_partition_table order by f,d ,e desc limit 3;
-select f,d,e from test_partition_table order by f,d ,e desc limit 3;
-explain(costs off) select f,d,e from test_partition_table order by f desc, d ,e desc limit 3;
-select f,d,e from test_partition_table order by f desc, d ,e desc limit 3;
-
--- Testing various permutations that are not matching keys in 'part_index_eda'
-explain(costs off) select e,d,a from test_partition_table order by e, d desc,a desc limit 3;
-select e,d,a from test_partition_table order by e, d desc,a desc limit 3;
-explain(costs off) select e,d,a from test_partition_table order by e desc,d desc,a desc limit 3;
-select e,d,a from test_partition_table order by e desc,d desc,a desc limit 3;
-explain(costs off) select e,d,a from test_partition_table order by e ,d ,a  limit 3;
-select e,d,a from test_partition_table order by e ,d ,a  limit 3;
-
--- -- Testing various permutations of order by on non-index columns. Expected to choose DynamicSeqScan with Sort
+-- Negative tests
+-- Testing various permutations of order by on non-index columns. Expected to choose DynamicSeqScan with Sort
 explain(costs off) select d from test_partition_table order by d limit 3;
 select d from test_partition_table order by d limit 3;
 explain(costs off) select a,e from test_partition_table order by a,e limit 3;
 select a,e from test_partition_table order by a,e limit 3;
 explain(costs off) select d,a from test_partition_table order by d,a desc limit 3;
 select d,a from test_partition_table order by d,a desc limit 3;
-explain(costs off) select d,c from test_partition_table order by d desc,c limit 3;
-select d,c from test_partition_table order by d desc,c limit 3;
-
--- Purpose: Validate if DynamicIndexOnlyScan Forward/Backward is chosen when required for queries with order by and limit
--- Vacuum table to ensure DynamicIndexOnlyScans are choosen
-vacuum test_partition_table;
--- Testing various permutations of order by columns that are expected to choose DynamicIndexOnlyScan Forward
-explain analyze select a from test_partition_table order by a nulls first limit 3;
-select a from test_partition_table order by a nulls first limit 3;
-explain analyze select e,d,a from test_partition_table order by e desc nulls last, d limit 3;
-select e,d,a from test_partition_table order by e desc nulls last, d limit 3;
-
--- Testing various permutations of order by columns that are expected to choose DynamicIndexOnlyScan Backward
-explain analyze select a from test_partition_table order by a desc nulls last limit 3;
-select a from test_partition_table order by a desc nulls last limit 3;
-explain analyze select e,d,a from test_partition_table order by e nulls first, d desc, a limit 3;
-select f,d,e from test_partition_table order by e nulls first, d desc, a limit 3;
-
 
 -- Clean Up
 DROP TABLE test_partition_table;
@@ -414,7 +345,6 @@ INSERT INTO test_replicated_table SELECT i, i+3, i/4.2, concat('sample_text ',i)
 INSERT INTO test_replicated_table values (null, null, null, null, null);
 
 -- Positive tests: Validate if IndexScan Forward/Backward is chosen.
-
 -- Validate if 'rep_index_eda' is used for order by matching to the index
 explain(costs off) select e,d,a from test_replicated_table order by e desc nulls last, d, a desc limit 3;
 select e,d,a from test_replicated_table order by e desc nulls last, d, a desc limit 3;
@@ -423,13 +353,10 @@ explain(costs off) select e,d,a from test_replicated_table order by e nulls firs
 select e,d,a from test_replicated_table order by e nulls first, d desc, a limit 3;
 
 -- Negative tests: Validate if a SeqScan is chosen for order by cols not matching any indices. Expected to choose SeqScan with Sort
-
 explain(costs off) select d,a from test_replicated_table order by d,a desc limit 3;
 select d,a from test_replicated_table order by d,a desc limit 3;
-
 -- Clean Up
 DROP TABLE test_replicated_table;
-
 
 
 -- Test Case: Test on AO table with mixed data type columns.
@@ -437,15 +364,10 @@ DROP TABLE test_replicated_table;
 CREATE TABLE test_ao_table(a int, b int, c float, d text, e numeric) WITH (appendonly=true) DISTRIBUTED BY (a);
 -- multi col index with mixed index keys properties
 CREATE INDEX ao_index_eda on test_ao_table using btree(e desc nulls last, d,a desc);
-INSERT INTO test_ao_table SELECT i, i+3, i/4.2, concat('sample_text ',i), i/5 from generate_series(1,100) i;
-
 -- Expected to choose SeqScan with a Sort as it is an AO table
 explain(costs off) select e,d,a from test_ao_table order by e desc nulls last, d, a desc limit 3;
-select e,d,a from test_ao_table order by e desc nulls last, d, a desc limit 3;
-
 -- Clean Up
 DROP TABLE test_ao_table;
-
 
 
 -- Test Case: Test on table with all other types of indexes apart from btree(bitmap, hash, brin, spgist, gist, gin)
@@ -494,6 +416,7 @@ select * from test_view order by b desc limit 3;
 DROP VIEW test_view;
 DROP TABLE test_on_views;
 
+
 -- Purpose: Test Forward/Backward IndexScan over partial indices
 -- ORCA_FEATURE_NOT_SUPPORTED: partial indexes are not supported
 create table test_on_partial_indices(a int, b int, c float);
@@ -504,6 +427,7 @@ analyze test_on_partial_indices;
 explain(costs off) select b from test_on_partial_indices order by b desc limit 3;
 -- Clean Up
 DROP TABLE test_on_partial_indices;
+
 
 -- Purpose: Test Forward/Backward IndexScan over primary key
 create table test_on_pk_column(a int primary key , b int, c float);
@@ -518,6 +442,7 @@ select a from test_on_pk_column order by a desc limit 3;
 -- Clean Up
 DROP TABLE test_on_pk_column;
 
+
 -- Purpose: Test Forward/Backward IndexScan over column with unique constraint
 create table test_on_unique_column(a int, b int unique, c float);
 INSERT INTO test_on_unique_column SELECT i+3, i, i/4.2 from generate_series(1,100) i;
@@ -530,6 +455,7 @@ explain(costs off) select a from test_on_unique_column order by b desc limit 3;
 select a from test_on_unique_column order by b desc limit 3;
 -- Clean Up
 DROP TABLE test_on_unique_column;
+
 
 -- Purpose: Test Forward/Backward IndexScan with order by on Index Expressions
 -- ORCA_FEATURE_NOT_SUPPORTED: Indexes on Expressions are not supported by ORCA
@@ -559,6 +485,7 @@ explain(costs off) select a from test_on_index_expressions order by multiply_by_
 DROP FUNCTION multiply_by_two;
 DROP TABLE test_on_index_expressions;
 
+
 -- Purpose: Test Forward/Backward IndexScan with order by on custom data type
 -- create a custom type
 CREATE TYPE custom_data_type AS (
@@ -577,6 +504,63 @@ select c from test_on_custom_data_type order by c desc limit 3;
 -- Clean Up
 DROP TABLE test_on_custom_data_type;
 DROP TYPE custom_data_type;
+
+
+-- Purpose: Test DynamicIndexScan on partition table with composite partition columns
+-- ORCA_FEATURE_NOT_SUPPORTED: Composite partition keys are not supported in ORCA
+CREATE TABLE tbl_range (id int, col1 int, col2 int, col3 int) PARTITION BY RANGE (col1, col2);
+CREATE TABLE p1 PARTITION OF tbl_range FOR VALUES FROM (0, 0) TO (100, 100);
+CREATE TABLE p2 PARTITION OF tbl_range FOR VALUES FROM (100, 100) TO (200, 200);
+CREATE TABLE p3 PARTITION OF tbl_range FOR VALUES FROM (200, 200) TO (300, 300);
+CREATE INDEX idx_on_tbl_range ON tbl_range using btree(col1, col2);
+ANALYZE tbl_range;
+-- Demonstrate that Planner could use IndexScan with MergeAppend for these cases
+set enable_seqscan to off;
+explain(costs off) select * from tbl_range order by col1, col2 limit 3;
+explain(costs off) select * from tbl_range order by col1 limit 3;
+-- Clean Up
+DROP TABLE tbl_range;
+
+
+-- Purpose: Test DynamicIndexScan on multi-level partition table
+-- ORCA_FEATURE_NOT_SUPPORTED: Multi-level partitioned tables are not supported in ORCA
+CREATE TABLE sales_data(year int, geo varchar(2), impressions integer, sales integer) PARTITION BY RANGE (year);
+CREATE TABLE sales_data_18_20 PARTITION OF sales_data FOR VALUES FROM (2018) TO (2020) PARTITION BY LIST (geo);
+CREATE TABLE sales_data_UK_18_20 PARTITION OF sales_data_18_20 FOR VALUES IN ('UK');
+CREATE TABLE sales_data_US_18_20 PARTITION OF sales_data_18_20 FOR VALUES IN ('US');
+CREATE INDEX idx_on_year ON sales_data USING btree(year desc);
+ANALYZE sales_data;
+explain(costs off) select * from sales_data order by year desc limit 3;
+-- Clean Up
+DROP TABLE sales_data;
+
+
+-- Purpose: Test DynamicIndexScan on a hash partitioned table
+-- ORCA_FEATURE_NOT_SUPPORTED: ORCA do not support hash partitioning
+CREATE TABLE tbl_hash (id int, col1 int, col2 int, col3 int) PARTITION BY HASH (col1);
+CREATE TABLE p1 PARTITION OF tbl_hash FOR VALUES WITH (MODULUS 100, REMAINDER 20);
+CREATE TABLE p2 PARTITION OF tbl_hash FOR VALUES WITH (MODULUS 100, REMAINDER 30);
+CREATE INDEX idx_on_tbl_hash ON tbl_hash using btree(col1);
+ANALYZE tbl_hash;
+explain(costs off) select * from tbl_hash order by col1 limit 3;
+-- Clean Up
+DROP TABLE tbl_hash;
+
+
+-- Purpose: Test DynamicIndexScan on a list partitioned table
+-- Currently, ORCA cannot support using DynamicIndexScan on List partitioned tables unless
+-- we add support for MergeAppend node. This is because both partition and non-partition col values are spread unordered
+-- across multiple partitions
+CREATE TABLE sales_data(year int, geo varchar(2), impressions integer, sales integer) PARTITION BY LIST (geo);
+CREATE TABLE sales_data_UK PARTITION OF sales_data FOR VALUES IN ('UK');
+CREATE TABLE sales_data_AU PARTITION OF sales_data FOR VALUES IN ('AU');
+CREATE INDEX idx_on_geo ON sales_data using btree(geo);
+ANALYZE sales_data;
+-- Expected to use DynamicSeqScan with Sort
+explain(costs off) select * from sales_data order by geo limit 3;
+-- Clean Up
+reset enable_seqscan;
+DROP TABLE sales_data;
 
 
 -- Purpose: This section includes tests on general table where backward index scan could be used, but is not used currently since
@@ -643,6 +627,7 @@ ANALYZE department;
 -- Forcing planner, ORCA to use a NL join
 set enable_hashjoin to off;
 set optimizer_enable_hashjoin to off;
+set enable_seqscan to off;
 -- Planner uses NL Join with IndexScan Backwards and the sort property of index 'index_salary',
 -- but ORCA, since it doesn't generate IndexScan alternative uses NL join with a Sort operator.
 explain(costs off) select e.id, e.name, e.salary, d.dep_name from employee e join department d on e.id=d.dep_id order by e.salary desc;
@@ -650,6 +635,7 @@ explain(costs off) select e.id, e.name, e.salary, d.dep_name from employee e joi
 -- Clean up
 reset enable_hashjoin;
 reset optimizer_enable_hashjoin;
+reset enable_seqscan;
 DROP TABLE employee;
 DROP TABLE department;
 
@@ -677,12 +663,13 @@ DROP TABLE table2;
 -- Purpose: This section includes tests on partition table where backward DynamicIndexScan could be used, but is not used currently since
 --          those cases are not supported as part of this initial addition of backward index support.
 CREATE TABLE test_partition_table(a int, b text, c float, d int, e int) DISTRIBUTED BY (a) PARTITION BY range(a) (start (0) end(10000) every(2000));
--- single col index with opp nulls direction on partition column
+-- single col index on partition column
 CREATE INDEX part_index_a on test_partition_table using btree(a);
--- multi col index all with all index keys asc
-CREATE INDEX part_index_b on test_partition_table using btree(b desc);
--- multi col index all with all index keys desc
+-- multi col indices
 CREATE INDEX part_index_cd on test_partition_table using btree(c,d);
+CREATE INDEX part_index_bcd on test_partition_table using btree(b,c,d);
+CREATE INDEX part_index_cad on test_partition_table using btree(c,a,d);
+
 -- Inserting data to demonstrate that Planner chooses IndexScans for these cases
 INSERT INTO test_partition_table select i, concat('sample_text', i), i/3.3, i,i-2 from generate_series(1,9999)i;
 ANALYZE test_partition_table;
@@ -690,15 +677,13 @@ ANALYZE test_partition_table;
 -- Cases with just order by without limit
 explain(costs off) select a from test_partition_table order by a desc;
 
-explain(costs off) select c,d from test_partition_table order by c desc, d desc;
-
 -- Since col a is asc in index, max(a) could use a backward index scan
 explain(costs off) select max(a) from test_partition_table;
 
 -- Cases with a predicate and order by (with/without limit). Order by columns commutating index column
-explain(costs off) select * from test_partition_table where a BETWEEN 40 and 4000 or c not between 4000 and 6000 order by c desc, d desc;
+explain(costs off) select * from test_partition_table where a BETWEEN 40 and 4000 or c not between 4000 and 6000 order by a desc;
 
-explain(costs off) select * from test_partition_table where a>7 order by c desc, d desc limit 4;
+explain(costs off) select * from test_partition_table where a>7 order by a desc limit 4;
 
 -- Cases with group by, order by (with/without limit). Order by cols commutating index column
 explain(costs off) select  a, sum(d) from test_partition_table group by a order by a desc;
@@ -711,9 +696,9 @@ explain(costs off) select  a, sum(d) from test_partition_table group by a having
 explain(costs off) select  a, sum(d) from test_partition_table group by a having a>30 order by a desc;
 
 -- Case with ordering via over() using window aggregates (with/without limit): rank(), row_number(), percent_rank() etc...
-explain(costs off) select c,d, rank() over (order by c desc, d desc) from test_partition_table;
+explain(costs off) select a, rank() over (order by a desc) from test_partition_table;
 
-explain(costs off) select c,d, rank() over (order by c desc, d desc) from test_partition_table limit 3;
+explain(costs off) select a, rank() over (order by a desc) from test_partition_table limit 3;
 
 -- Case with distinct and order by (with/without limit)
 explain(costs off) select distinct(a) from test_partition_table order by a desc;
@@ -721,16 +706,26 @@ explain(costs off) select distinct(a) from test_partition_table order by a desc;
 explain(costs off) select distinct(a) from test_partition_table order by a desc limit 3;
 
 -- Order by within a CTE without limit
-explain(costs off) with sorted_by_cd as (select c,d from test_partition_table order by c desc, d desc) select c from sorted_by_cd;
+explain(costs off) with sorted_by_a as (select a from test_partition_table order by a) select a from sorted_by_a;
 
 -- Order by within a CTE, with limit outside CTE expression
-explain(costs off) with sorted_by_cd as (select c,d from test_partition_table order by c desc, d desc) select c from sorted_by_cd limit 3;
+explain(costs off) with sorted_by_a as (select a from test_partition_table order by a) select a from sorted_by_a limit 3;
+
+-- Currently ORCA only supports DynamicIndex(Only)Scans for order by(same as the order of cols in partition key) on partition column(s),
+-- given partition colum(s) match prefix of any of existing btree indices keys, for order by on any other columns
+-- even if a btree index exists matching them ORCA uses DynamicSeqScan with sort. This is because
+-- all other columns are spread unordered across multiple partitions and cannot be ordered(without Sort) unless added support for MergeAppend.
+explain(costs off) select c,d from test_partition_table order by c,d limit 3;
+
+explain(costs off) select c,a,d from test_partition_table order by c,a,d limit 3;
+
+explain(costs off) select b,c,d from test_partition_table order by b desc,c desc,d desc limit 3;
 
 -- Case where DynamicIndexOnlyScan Backwards could be picked, but ORCA fails to produce DynamicIndexOnlyScan alternative.
 -- This is because, in FCoverIndex() function while determining output columns for the query we also consider partition
 -- column as part of the output cols(though query doesn't project it) since partition colum is always marked as Used.
 -- Due to this, for every index that doesn't include partition column as its key, index cols doesn't match
--- the output cols and hence alternative isn't added.
+-- the output cols and hence alternative isn't added. This issue has to be fixed after adding support for MergeAppend.
 vacuum test_partition_table;
 
 explain(costs off) select b,c,d from test_partition_table order by b desc, c desc, d desc;
@@ -742,19 +737,21 @@ DROP TABLE test_partition_table;
 --            This tests the case where IndexScan's order property could be used for joining two partition tables
 CREATE TABLE part_employee(id int, name text, dep_id int, salary int) PARTITION BY range(id) (start (0) end(10000) every(2000));
 CREATE TABLE part_department(dep_id int, dep_name text) PARTITION BY range(dep_id) (start (0) end(10000) every(2000));
-CREATE INDEX part_index_salary on part_employee using btree(salary);
+CREATE INDEX part_index_id on part_employee using btree(id);
 ANALYZE part_employee;
 ANALYZE part_department;
 -- Forcing planner, ORCA to use a NL join
 set enable_hashjoin to off;
 set optimizer_enable_hashjoin to off;
+set enable_seqscan to off;
 -- Planner uses NL Join with IndexScan Backwards and the sort property of index 'index_salary',
 -- but ORCA since doesn't generate IndexScan alternative uses NL join with a Sort operator.
-explain(costs off) select e.id, e.name, e.salary, d.dep_name from part_employee e join part_department d on e.id=d.dep_id order by e.salary desc;
-explain(costs off) select e.id, e.name, e.salary, d.dep_name from part_employee e join part_department d on e.id=d.dep_id order by e.salary desc limit 3;
+explain(costs off) select e.id, e.name, e.salary, d.dep_name from part_employee e join part_department d on e.id=d.dep_id order by e.id desc;
+explain(costs off) select e.id, e.name, e.salary, d.dep_name from part_employee e join part_department d on e.id=d.dep_id order by e.id desc limit 3;
 -- Clean up
 reset enable_hashjoin;
 reset optimizer_enable_hashjoin;
+reset enable_seqscan;
 DROP TABLE part_employee;
 DROP TABLE part_department;
 
@@ -763,8 +760,8 @@ DROP TABLE part_department;
 --            But documenting this case for reference
 CREATE TABLE part_table1(a int, b int) PARTITION BY range(a) (start (0) end(100) every(20));
 CREATE TABLE part_table2(a int, b int) PARTITION BY range(a) (start (0) end(100) every(20));
-CREATE INDEX part_tab1_idx on part_table1 using btree(b);
-CREATE INDEX part_tab2_idx on part_table2 using btree(b);
+CREATE INDEX part_tab1_idx on part_table1 using btree(a);
+CREATE INDEX part_tab2_idx on part_table2 using btree(a);
 -- inserting data and disabling seq_scan to avoid Planner generating a plan with Sort operator and Append node
 -- instead of IndexScan with MergeAppend
 set enable_seqscan to off;
@@ -772,7 +769,7 @@ INSERT INTO part_table1 select i, i from generate_series(1,99)i;
 INSERT INTO part_table2 select i, i from generate_series(1,99)i;
 ANALYZE part_table1;
 ANALYZE part_table2;
-explain(costs off) select b from part_table1 union all select b from part_table2 order by b desc;
+explain(costs off) select a from part_table1 union all select a from part_table2 order by a desc;
 -- Clean Up
 reset enable_seqscan;
 DROP TABLE part_table1;

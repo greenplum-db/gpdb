@@ -203,7 +203,8 @@ CXformJoin2IndexApply::CreateAlternativesForBtreeIndex(
 {
 	CExpression *pexprLogicalIndexGet = CXformUtils::PexprLogicalIndexGet(
 		mp, md_accessor, pexprInner, joinOp->UlOpId(), pdrgpexprConjuncts,
-		pcrsScalarExpr, outer_refs, pmdindex, pmdrel, false, EForwardScan);
+		pcrsScalarExpr, outer_refs, pmdindex, pmdrel, false /*indexForOrderBy*/,
+		EForwardScan /*indexScanDirection*/);
 	if (nullptr != pexprLogicalIndexGet)
 	{
 		// second child has residual predicates, create an apply of outer and inner

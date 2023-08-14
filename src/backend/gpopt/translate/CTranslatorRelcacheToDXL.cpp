@@ -74,10 +74,6 @@ extern "C" {
 using namespace gpdxl;
 using namespace gpopt;
 
-#define SORT_ASC 0
-#define SORT_DESC 1
-#define NULLS_LAST 0
-#define NULLS_FIRST 1
 
 static const ULONG cmp_type_mappings[][2] = {
 	{IMDType::EcmptEq, CmptEq},	  {IMDType::EcmptNEq, CmptNEq},

@@ -145,13 +145,11 @@ DynamicIndexScan-Homogenous-UnsupportedConstraint DynamicIndexScan-Heterogenous-
 DynamicIndexScan-Heterogenous-PartSelectEquality
 DynamicIndexScan-Heterogenous-PartSelectRange DynamicIndexScan-OpenEndedPartitions
 DynamicIndexScan-Relabel DynamicIndexScan-DroppedCols Forward-DynamicIndexScan-OrderBy-on-SingleCol-Index
-Backward-DynamicIndexScan-OrderBy-on-SingleCol-Index
-Forward-DynamicIndexScan-OrderBy-on-MultiCol-Index Backward-DynamicIndexScan-OrderBy-on-MultiCol-Index
-DynamicIndexScan-OrderBy-on-MultiCol-NonIndex;
+Backward-DynamicIndexScan-OrderBy-on-SingleCol-Index DynamicIndexScan-OrderBy-on-MultiCol-NonIndex;
 
 CDynamicIndexOnlyScanTest:
 DynamicIndexOnlyScan-Homogenous DynamicIndexOnlyScan-InnerJoin DynamicIndexOnlyScan-LeftJoin
-Forward-DynamicIndexOnlyScan-OrderBy-on-MultiCol-Index Backward-DynamicIndexOnlyScan-OrderBy-on-MultiCol-Index
+Forward-DynamicIndexOnlyScan-OrderBy-on-SingleCol-Index Backward-DynamicIndexOnlyScan-OrderBy-on-SingleCol-Index
 DynamicIndexOnlyScan-OrderBy-on-MultiCol-NonIndex;
 
 CIndexScanOnLeafTest:

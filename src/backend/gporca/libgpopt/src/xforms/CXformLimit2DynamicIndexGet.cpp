@@ -3,17 +3,18 @@
 //	Copyright (C) 2023 VMware, Inc. or its affiliates.
 //
 //	@filename:
-//		CXformLimit2IndexGet.cpp
+//		CXformLimit2DynamicIndexGet.cpp
 //
 //	@doc:
-//		Transform LogicalGet in a limit to LogicalIndexGet if order by columns
-//		match any of the index prefix
+//		Transform LogicalGet in a limit to LogicalDynamicIndexGet if order by
+//		columns match any of the index that has partition columns as its prefix
 //---------------------------------------------------------------------------
 
-#include "gpopt/xforms/CXformLimit2IndexGet.h"
+#include "gpopt/xforms/CXformLimit2DynamicIndexGet.h"
 
 #include "gpos/base.h"
 
+#include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalLimit.h"
 #include "gpopt/operators/CPatternLeaf.h"
@@ -26,13 +27,13 @@ using namespace gpmd;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformLimit2IndexGet::CXformLimit2IndexGet
+//		CXformLimit2DynamicIndexGet::CXformLimit2DynamicIndexGet
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CXformLimit2IndexGet::CXformLimit2IndexGet(CMemoryPool *mp)
+CXformLimit2DynamicIndexGet::CXformLimit2DynamicIndexGet(CMemoryPool *mp)
 	:  // pattern
 	  CXformExploration(
 		  // pattern
@@ -40,7 +41,7 @@ CXformLimit2IndexGet::CXformLimit2IndexGet(CMemoryPool *mp)
 			  mp, GPOS_NEW(mp) CLogicalLimit(mp),
 			  GPOS_NEW(mp) CExpression(
 				  mp,
-				  GPOS_NEW(mp) CLogicalGet(mp)),  // relational child
+				  GPOS_NEW(mp) CLogicalDynamicGet(mp)),  // relational child
 			  GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternLeaf(
 											   mp)),  // scalar child for offset
 			  GPOS_NEW(mp) CExpression(
@@ -53,14 +54,14 @@ CXformLimit2IndexGet::CXformLimit2IndexGet(CMemoryPool *mp)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformLimit2IndexGet::Exfp
+//		CXformLimit2DynamicIndexGet::Exfp
 //
 //	@doc:
 //		Compute xform promise for a given expression handle
 //
 //---------------------------------------------------------------------------
 CXform::EXformPromise
-CXformLimit2IndexGet::Exfp(CExpressionHandle &exprhdl) const
+CXformLimit2DynamicIndexGet::Exfp(CExpressionHandle &exprhdl) const
 {
 	if (exprhdl.DeriveHasSubquery(1))
 	{
@@ -72,14 +73,14 @@ CXformLimit2IndexGet::Exfp(CExpressionHandle &exprhdl) const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformLimit2IndexGet::Transform
+//		CXformLimit2DynamicIndexGet::Transform
 //
 //	@doc:
 //		Actual transformation
 //
 //---------------------------------------------------------------------------
 void
-CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
+CXformLimit2DynamicIndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 								CExpression *pexpr) const
 {
 	GPOS_ASSERT(nullptr != pxfctxt);
@@ -94,9 +95,9 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	CExpression *pexprScalarOffset = (*pexpr)[1];
 	CExpression *pexprScalarRows = (*pexpr)[2];
 
-	CLogicalGet *popGet = CLogicalGet::PopConvert(pexprRelational->Pop());
+	CLogicalDynamicGet *popDynGet = CLogicalDynamicGet::PopConvert(pexprRelational->Pop());
 	// get the indices count of this relation
-	const ULONG ulIndices = popGet->Ptabdesc()->IndexCount();
+	const ULONG ulIndices = popDynGet->Ptabdesc()->IndexCount();
 	// Ignore xform if relation doesn't have any indices
 	if (0 == ulIndices)
 	{
@@ -110,6 +111,24 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		return;
 	}
 
+	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+	const IMDRelation *pmdrel =
+		md_accessor->RetrieveRel(popDynGet->Ptabdesc()->MDId());
+
+	CHAR part_type = pmdrel->PartTypeAtLevel(0);
+	// TODO: Currently ORCA doesn't support DynamicIndexScans on List, Hash Partitions
+	// Ignore xform if table is list or hash partitioned
+	if (part_type != gpmd::IMDRelation::ErelpartitionRange) {
+		return;
+	}
+
+	ULONG partitionKeysCount = pmdrel->PartColumnCount();
+	// TODO: Currently ORCA doesn't support Composite partitioning keys
+	// Ignore xform if table has more than one partition key
+	if (partitionKeysCount > 1 || pos->UlSortColumns() > 1) {
+		return;
+	}
+
 	CExpression *boolConstExpr = nullptr;
 	boolConstExpr = CUtils::PexprScalarConstBool(mp, true);
 
@@ -117,26 +136,17 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	boolConstExpr->AddRef();
 	pdrgpexpr->Append(boolConstExpr);
 
-	popGet->AddRef();
+	popDynGet->AddRef();
 	CExpression *pexprUpdtdRltn =
-		GPOS_NEW(mp) CExpression(mp, popGet, boolConstExpr);
+		GPOS_NEW(mp) CExpression(mp, popDynGet, boolConstExpr);
 
 	CColRefSet *pcrsScalarExpr = popLimit->PcrsLocalUsed();
-
-	// find the indexes whose included columns meet the required columns
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	const IMDRelation *pmdrel =
-		md_accessor->RetrieveRel(popGet->Ptabdesc()->MDId());
-	CColRefArray *pdrgpcrIndexColumns = nullptr;
 
 	for (ULONG ul = 0; ul < ulIndices; ul++)
 	{
 		IMDId *pmdidIndex = pmdrel->IndexMDidAt(ul);
 		const IMDIndex *pmdindex = md_accessor->RetrieveIndex(pmdidIndex);
-		// get columns in the index
-		pdrgpcrIndexColumns = CXformUtils::PdrgpcrIndexKeys(
-			mp, popGet->PdrgpcrOutput(), pmdindex, pmdrel);
-		if (FIndexApplicableForOrderBy(mp, pos, pdrgpcrIndexColumns, pmdindex))
+		if (FIndexApplicableForOrderBy(mp, pos, pmdrel, pmdindex, popDynGet))
 		{
 			// get Scan direction
 			EIndexScanDirection scan_direction =
@@ -165,7 +175,6 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 				pxfres->Add(pexprLimit);
 			}
 		}
-		pdrgpcrIndexColumns->Release();
 	}
 
 	pdrgpexpr->Release();
@@ -179,21 +188,28 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 //	@doc:
 //		Function to validate if index is applicable, given OrderSpec and index
 //		columns. This function checks if
-//	        1. ORDER BY columns are prefix of the index columns
+//	        1. ORDER BY columns are prefix of the index that has partition columns in its prefix
 //	        2. Sort and Nulls Direction of ORDER BY columns is either equal or commutative to the index columns
+//     Currently ORCA only supports DynamicIndexScans on partition columns.
 //---------------------------------------------------------------------------
 BOOL
-CXformLimit2IndexGet::FIndexApplicableForOrderBy(
-	CMemoryPool *mp, COrderSpec *pos, CColRefArray *pdrgpcrIndexColumns,
-	const IMDIndex *pmdindex)
+CXformLimit2DynamicIndexGet::FIndexApplicableForOrderBy(
+	CMemoryPool *mp, COrderSpec *pos, const IMDRelation *pmdrel,
+	const IMDIndex *pmdindex, CLogicalDynamicGet *popDynGet)
 {
 	// Ordered IndexScan is only applicable for BTree index
 	if (pmdindex->IndexType() != IMDIndex::EmdindBtree)
 	{
 		return false;
 	}
+
 	// get order by columns size
 	ULONG totalOrderByCols = pos->UlSortColumns();
+	CColRefArray *pdrgpcrOutput = popDynGet->PdrgpcrOutput();
+	// get columns in the index
+	CColRefArray *pdrgpcrIndexColumns = CXformUtils::PdrgpcrIndexKeys(
+		mp, popDynGet->PdrgpcrOutput(), pmdindex, pmdrel);
+
 	if (pdrgpcrIndexColumns->Size() < totalOrderByCols)
 	{
 		return false;
@@ -209,17 +225,20 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(
 	CBitVector *derived_nulls_direction =
 		GPOS_NEW(mp) CBitVector(mp, totalOrderByCols);
 
+	const ULongPtrArray *part_col_indices = popDynGet->Ptabdesc()->PdrgpulPart();
 	for (ULONG i = 0; i < totalOrderByCols; i++)
 	{
-		// Index is not applicable if either Order By Column do not match with index key
-		const CColRef *colref = pos->Pcr(i);
-		if (!CColRef::Equals(colref, (*pdrgpcrIndexColumns)[i]))
-		{
+		const CColRef *orderby_col = pos->Pcr(i);
+		CColRef *index_col = (*pdrgpcrIndexColumns)[i];
+		CColRef *part_col = (*pdrgpcrOutput)[*(*part_col_indices)[i]];
+
+		if (!CColRef::Equals(part_col, index_col) || !CColRef::Equals(index_col, orderby_col)) {
 			indexApplicable = false;
 			break;
 		}
+
 		IMDId *greater_than_mdid =
-			colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG);
+			orderby_col->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG);
 		if (greater_than_mdid->Equals(pos->GetMdIdSortOp(i)))
 		{
 			// If order spec's sort mdid is DESC set req_sort_direction for the key
@@ -244,16 +263,18 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(
 		// If the derived, required sort directions and nulls directions are not equal or not commutative, then the index is not applicable.
 		if (!(req_sort_direction->Equals(derived_sort_direction) &&
 			  req_nulls_direction->Equals(derived_nulls_direction)) &&
-			!(CXformUtils::FIndicesCommutative(req_sort_direction,
-											   derived_sort_direction, i) &&
-			  CXformUtils::FIndicesCommutative(req_nulls_direction,
-											   derived_nulls_direction, i)))
+			!(CXformUtils::FIndicesCommutative(req_sort_direction, derived_sort_direction,
+								  i) &&
+			  CXformUtils::FIndicesCommutative(req_nulls_direction, derived_nulls_direction,
+								  i)))
 		{
 			indexApplicable = false;
 			break;
 		}
+
 	}
 
+	pdrgpcrIndexColumns->Release();
 	GPOS_DELETE(req_sort_direction);
 	GPOS_DELETE(derived_sort_direction);
 	GPOS_DELETE(req_nulls_direction);
