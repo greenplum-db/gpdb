@@ -97,6 +97,7 @@
 #include "parser/parse_expr.h"
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
+#include "utils/rel.h"
 #include "utils/selfuncs.h"
 #include "utils/spccache.h"
 #include "utils/tuplesort.h"
@@ -191,6 +192,8 @@ static Selectivity adjust_selectivity_for_nulltest(Selectivity selec,
 												Selectivity pselec,
 												List *pushed_quals,
 												JoinType jointype);
+
+static double ao_random_page_cost(RangeTblEntry *rte);
 /* CDB: The clamp_row_est() function definition has been moved to cost.h */
 
 
@@ -698,7 +701,10 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	 * like aoblkdir and aovisimap) lookups during index-only scan.
 	 */
 	AssertImply(IsAccessMethodAO(baserel_orig->relam), baserel->allvisfrac == 1);
-
+	if (IsAccessMethodAO(baserel_orig->relam))
+	{
+		spc_random_page_cost += ao_random_page_cost(root->simple_rte_array[baserel_orig->relid]);
+	}
 	/*----------
 	 * Estimate number of main-table pages fetched, and compute I/O cost.
 	 *
@@ -6280,4 +6286,18 @@ compute_bitmap_pages(PlannerInfo *root, RelOptInfo *baserel_orig, Path *bitmapqu
 		*tuple = tuples_fetched;
 
 	return pages_fetched;
+}
+
+static double
+ao_random_page_cost(RangeTblEntry *rte)
+{
+	double random_page_cost = DEFAULT_AO_RAMDOM_PAGE_COST;
+	NameData        compresstype;
+	GetAppendOnlyEntryAttributes(rte->relid, NULL, NULL, NULL, &compresstype);
+	if (!(strcmp(NameStr(compresstype), "") == 0 ||
+				pg_strcasecmp(NameStr(compresstype), "none") == 0))
+	{
+		random_page_cost += DEFAULT_COMPRESS_PAGE_COST;
+	}
+	return random_page_cost;
 }

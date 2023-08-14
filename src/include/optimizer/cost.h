@@ -33,6 +33,10 @@
 
 #define DEFAULT_EFFECTIVE_CACHE_SIZE  524288	/* measured in pages */
 
+#define DEFAULT_AO_RAMDOM_PAGE_COST  4.0
+#define DEFAULT_COMPRESS_PAGE_COST  4.0
+
+
 typedef enum
 {
 	CONSTRAINT_EXCLUSION_OFF,	/* do not use c_e */
