@@ -6,7 +6,7 @@
 //		CXformLimit2DynamicIndexGet.h
 //
 //	@doc:
-//		Transform LogicalGet in a limit to LogicalDynamicIndexGet if order by
+//		Transform LogicalDynamicGet in a limit to LogicalDynamicIndexGet if order by
 //		columns match any of the index that has partition columns as its prefix
 //---------------------------------------------------------------------------
 #ifndef GPOPT_CXformLimit2DynamicIndexGet_H
@@ -27,7 +27,7 @@ using namespace gpos;
 //		CXformLimit2DynamicIndexGet
 //
 //	@doc:
-//		Transform LogicalGet in a limit to LogicalDynamicIndexGet if order by
+//		Transform LogicalDynamicGet in a limit to LogicalDynamicIndexGet if order by
 //		columns match any of the index that has partition columns as its prefix
 //---------------------------------------------------------------------------
 class CXformLimit2DynamicIndexGet : public CXformExploration

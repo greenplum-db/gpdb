@@ -6,7 +6,7 @@
 //		CXformLimit2DynamicIndexGet.cpp
 //
 //	@doc:
-//		Transform LogicalGet in a limit to LogicalDynamicIndexGet if order by
+//		Transform LogicalDynamicGet in a limit to LogicalDynamicIndexGet if order by
 //		columns match any of the index that has partition columns as its prefix
 //---------------------------------------------------------------------------
 
@@ -187,7 +187,7 @@ CXformLimit2DynamicIndexGet::Transform(CXformContext *pxfctxt,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformLimit2IndexGet::FIndexApplicableForOrderBy
+//		CXformLimit2DynamicIndexGet::FIndexApplicableForOrderBy
 //
 //	@doc:
 //		Function to validate if index is applicable, given OrderSpec and index

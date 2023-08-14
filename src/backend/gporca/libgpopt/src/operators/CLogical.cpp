@@ -44,9 +44,6 @@ using namespace gpnaucrates;
 using namespace gpopt;
 using namespace gpmd;
 
-#define SORT_ASC 0
-#define NULLS_LAST 0
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CLogical::CLogical
