@@ -1116,6 +1116,9 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 	IndexAmRoutine *am_routine =
 		gpdb::GetIndexAmRoutineFromAmHandler(index_rel->rd_amhandler);
 	// Check if index can order and supports backwards scans
+	// Note: backward scans are not compatible with indexams having special sort operators
+	// (i.e. with amcandorderbyop=t)
+	// So, we don't consider them here.
 	if (am_routine->amcanorder && am_routine->amcanbackward)
 	{
 		for (int i = 0; i < form_pg_index->indnkeyatts; i++)

@@ -82,7 +82,7 @@ public:
 		return m_pindexdesc;
 	}
 
-	// index scan direction
+	// index scan direction is only used for B-tree indices.
 	EIndexScanDirection
 	ScanDirection() const
 	{

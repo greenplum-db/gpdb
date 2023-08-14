@@ -109,6 +109,8 @@ CXformSelect2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	{
 		IMDId *pmdidIndex = pmdrel->IndexMDidAt(ul);
 		const IMDIndex *pmdindex = md_accessor->RetrieveIndex(pmdidIndex);
+		// We consider ForwardScan here because, BackwardScan is only supported in the case where we have Order by
+		// clause in the query, but this xform handles scenario of a filter on top of a regular table
 		CExpression *pexprIndexGet = CXformUtils::PexprLogicalIndexGet(
 			mp, md_accessor, pexprRelational, pexpr->Pop()->UlOpId(), pdrgpexpr,
 			pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel,

@@ -146,7 +146,7 @@ public:
 		return m_pos;
 	}
 
-	// index scan direction
+	// index scan direction is only used for B-tree indices.
 	EIndexScanDirection
 	ScanDirection() const
 	{

@@ -88,7 +88,7 @@ public:
 		return m_ulOriginOpId;
 	}
 
-	// index scan direction
+	// index scan direction is only used for B-tree indices.
 	EIndexScanDirection
 	IndexScanDirection() const
 	{

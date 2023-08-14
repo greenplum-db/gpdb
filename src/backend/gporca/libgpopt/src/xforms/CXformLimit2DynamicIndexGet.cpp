@@ -41,7 +41,7 @@ CXformLimit2DynamicIndexGet::CXformLimit2DynamicIndexGet(CMemoryPool *mp)
 			  mp, GPOS_NEW(mp) CLogicalLimit(mp),
 			  GPOS_NEW(mp) CExpression(
 				  mp,
-				  GPOS_NEW(mp) CLogicalDynamicGet(mp)),  // relational child
+				  GPOS_NEW(mp) CLogicalDynamicGet(mp)),	 // relational child
 			  GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternLeaf(
 											   mp)),  // scalar child for offset
 			  GPOS_NEW(mp) CExpression(
@@ -80,8 +80,9 @@ CXformLimit2DynamicIndexGet::Exfp(CExpressionHandle &exprhdl) const
 //
 //---------------------------------------------------------------------------
 void
-CXformLimit2DynamicIndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-								CExpression *pexpr) const
+CXformLimit2DynamicIndexGet::Transform(CXformContext *pxfctxt,
+									   CXformResult *pxfres,
+									   CExpression *pexpr) const
 {
 	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
@@ -95,7 +96,8 @@ CXformLimit2DynamicIndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxf
 	CExpression *pexprScalarOffset = (*pexpr)[1];
 	CExpression *pexprScalarRows = (*pexpr)[2];
 
-	CLogicalDynamicGet *popDynGet = CLogicalDynamicGet::PopConvert(pexprRelational->Pop());
+	CLogicalDynamicGet *popDynGet =
+		CLogicalDynamicGet::PopConvert(pexprRelational->Pop());
 	// get the indices count of this relation
 	const ULONG ulIndices = popDynGet->Ptabdesc()->IndexCount();
 	// Ignore xform if relation doesn't have any indices
@@ -118,14 +120,16 @@ CXformLimit2DynamicIndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxf
 	CHAR part_type = pmdrel->PartTypeAtLevel(0);
 	// TODO: Currently ORCA doesn't support DynamicIndexScans on List, Hash Partitions
 	// Ignore xform if table is list or hash partitioned
-	if (part_type != gpmd::IMDRelation::ErelpartitionRange) {
+	if (part_type != gpmd::IMDRelation::ErelpartitionRange)
+	{
 		return;
 	}
 
 	ULONG partitionKeysCount = pmdrel->PartColumnCount();
 	// TODO: Currently ORCA doesn't support Composite partitioning keys
 	// Ignore xform if table has more than one partition key
-	if (partitionKeysCount > 1 || pos->UlSortColumns() > 1) {
+	if (partitionKeysCount > 1 || pos->UlSortColumns() > 1)
+	{
 		return;
 	}
 
@@ -225,14 +229,17 @@ CXformLimit2DynamicIndexGet::FIndexApplicableForOrderBy(
 	CBitVector *derived_nulls_direction =
 		GPOS_NEW(mp) CBitVector(mp, totalOrderByCols);
 
-	const ULongPtrArray *part_col_indices = popDynGet->Ptabdesc()->PdrgpulPart();
+	const ULongPtrArray *part_col_indices =
+		popDynGet->Ptabdesc()->PdrgpulPart();
 	for (ULONG i = 0; i < totalOrderByCols; i++)
 	{
 		const CColRef *orderby_col = pos->Pcr(i);
 		CColRef *index_col = (*pdrgpcrIndexColumns)[i];
 		CColRef *part_col = (*pdrgpcrOutput)[*(*part_col_indices)[i]];
 
-		if (!CColRef::Equals(part_col, index_col) || !CColRef::Equals(index_col, orderby_col)) {
+		if (!CColRef::Equals(part_col, index_col) ||
+			!CColRef::Equals(index_col, orderby_col))
+		{
 			indexApplicable = false;
 			break;
 		}
@@ -263,15 +270,14 @@ CXformLimit2DynamicIndexGet::FIndexApplicableForOrderBy(
 		// If the derived, required sort directions and nulls directions are not equal or not commutative, then the index is not applicable.
 		if (!(req_sort_direction->Equals(derived_sort_direction) &&
 			  req_nulls_direction->Equals(derived_nulls_direction)) &&
-			!(CXformUtils::FIndicesCommutative(req_sort_direction, derived_sort_direction,
-								  i) &&
-			  CXformUtils::FIndicesCommutative(req_nulls_direction, derived_nulls_direction,
-								  i)))
+			!(CXformUtils::FIndicesCommutative(req_sort_direction,
+											   derived_sort_direction, i) &&
+			  CXformUtils::FIndicesCommutative(req_nulls_direction,
+											   derived_nulls_direction, i)))
 		{
 			indexApplicable = false;
 			break;
 		}
-
 	}
 
 	pdrgpcrIndexColumns->Release();

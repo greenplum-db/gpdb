@@ -38,9 +38,9 @@ private:
 	// 1. ORDER BY columns are prefix of the index that has partition columns in its prefix
 	// 2. Sort and Nulls Direction of ORDER BY columns is either equal or commutative to the index columns
 	static BOOL FIndexApplicableForOrderBy(CMemoryPool *mp, COrderSpec *pos,
-											   const IMDRelation *pmdrel,
-											   const IMDIndex *pmdindex,
-											   CLogicalDynamicGet *popDynGet);
+										   const IMDRelation *pmdrel,
+										   const IMDIndex *pmdindex,
+										   CLogicalDynamicGet *popDynGet);
 
 public:
 	CXformLimit2DynamicIndexGet(const CXformLimit2DynamicIndexGet &) = delete;
@@ -69,7 +69,7 @@ public:
 
 	// actual transform
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-	CExpression *pexpr) const override;
+				   CExpression *pexpr) const override;
 };
 // class CXformLimit2DynamicIndexGet
 
