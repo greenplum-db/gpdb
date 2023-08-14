@@ -1009,3 +1009,53 @@ fetch backward all in c1;
 ERROR:  backward scan is not supported in this version of Greenplum Database
 commit;
 --end_ignore
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink, which contains attributes referenced in query's GROUP BY clause.
+-- Due to presence of non-grouping columns in targetList, ORCA performs query
+-- normalization, during which ORCA establishes a correspondence between vars
+-- from targetlist entries to grouping attributes. And this process should
+-- correctly handle nested structures. The inner part of SubPlan in the test
+-- should contain only t.j.
+-- start_ignore
+drop table if exists t;
+NOTICE:  table "t" does not exist, skipping
+-- end_ignore
+create table t (i int, j int) distributed by (i);
+insert into t values (1, 2);
+explain (verbose, costs off)
+select j,
+(select j from (select j) q2)
+from t
+group by i, j;
+                  QUERY PLAN                  
+----------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: j, ((SubPlan 1))
+   ->  Result
+         Output: j, (SubPlan 1)
+         ->  GroupAggregate
+               Output: j, i
+               Group Key: t.i, t.j
+               ->  Sort
+                     Output: i, j
+                     Sort Key: t.i, t.j
+                     ->  Seq Scan on public.t
+                           Output: i, j
+         SubPlan 1  (slice1; segments: 3)
+           ->  Result
+                 Output: t.j
+                 ->  Result
+                       Output: true
+ Optimizer: Pivotal Optimizer (GPORCA)
+(18 rows)
+
+select j,
+(select j from (select j) q2)
+from t
+group by i, j;
+ j | j 
+---+---
+ 2 | 2
+(1 row)
+
+drop table t;

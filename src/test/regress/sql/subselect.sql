@@ -517,3 +517,29 @@ fetch backward all in c1;
 
 commit;
 --end_ignore
+
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink, which contains attributes referenced in query's GROUP BY clause.
+-- Due to presence of non-grouping columns in targetList, ORCA performs query
+-- normalization, during which ORCA establishes a correspondence between vars
+-- from targetlist entries to grouping attributes. And this process should
+-- correctly handle nested structures. The inner part of SubPlan in the test
+-- should contain only t.j.
+-- start_ignore
+drop table if exists t;
+-- end_ignore
+create table t (i int, j int) distributed by (i);
+insert into t values (1, 2);
+
+explain (verbose, costs off)
+select j,
+(select j from (select j) q2)
+from t
+group by i, j;
+
+select j,
+(select j from (select j) q2)
+from t
+group by i, j;
+
+drop table t;
