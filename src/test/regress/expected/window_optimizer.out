@@ -3295,21 +3295,21 @@ FROM (VALUES
 WINDOW wnd AS (PARTITION BY P ORDER BY i ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)
 ORDER BY p, i;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
    row    |                    nstrict                    |                  nstrict_init                   |  strict   |  strict_init   
 ----------+-----------------------------------------------+-------------------------------------------------+-----------+----------------
  1,1:NULL | +NULL                                         | MI+NULL                                         |           | MI
@@ -3347,11 +3347,11 @@ ORDER BY p, i;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Aggregate functions with FILTER
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
    row    | nstrict_filt | nstrict_init_filt | strict_filt | strict_init_filt 
 ----------+--------------+-------------------+-------------+------------------
  1,1:NULL | +NULL        | MI+NULL           |             | MI
@@ -3380,11 +3380,11 @@ FROM (VALUES
 WINDOW wnd AS (ORDER BY i ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)
 ORDER BY i;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
  row |    inverse    | noinverse 
 -----+---------------+-----------
  1:a | a             | a
@@ -3408,11 +3408,11 @@ ORDER BY i;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Aggregate functions with FILTER
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
  row |    inverse    | noinverse 
 -----+---------------+-----------
  1:a | a             | a
@@ -3579,9 +3579,9 @@ WINDOW fwd AS (
 	ORDER BY vs.i ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING
 );
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: SIRV functions
 INFO:  GPORCA failed to produce a plan, falling back to planner
@@ -4109,7 +4109,7 @@ EXPLAIN (costs off) SELECT * FROM pg_temp.f(2);
 
 SELECT * FROM pg_temp.f(2);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
     f    
 ---------
  {1,2,3}

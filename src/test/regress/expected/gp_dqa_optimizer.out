@@ -2106,7 +2106,7 @@ select countall(distinct a), count(distinct b) from nonullstab;
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
  countall | count 
 ----------+-------
         1 |     1

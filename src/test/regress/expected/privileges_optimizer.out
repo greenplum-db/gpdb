@@ -48,7 +48,7 @@ GRANT regress_priv_group2 TO regress_priv_user4 WITH ADMIN OPTION;
 SET SESSION AUTHORIZATION regress_priv_user1;
 SELECT session_user, current_user;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: {SQLVALUEFUNCTION :op 12 :type 19 :typmod -1 :location 7} not supported in DXL
+DETAIL:  Feature not supported: {SQLVALUEFUNCTION :op 12 :type 19 :typmod -1 :location 7}
     session_user    |    current_user    
 --------------------+--------------------
  regress_priv_user1 | regress_priv_user1
@@ -89,7 +89,7 @@ GRANT TRUNCATE ON atest2 TO regress_priv_user5;
 SET SESSION AUTHORIZATION regress_priv_user2;
 SELECT session_user, current_user;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: {SQLVALUEFUNCTION :op 12 :type 19 :typmod -1 :location 7} not supported in DXL
+DETAIL:  Feature not supported: {SQLVALUEFUNCTION :op 12 :type 19 :typmod -1 :location 7}
     session_user    |    current_user    
 --------------------+--------------------
  regress_priv_user2 | regress_priv_user2
@@ -151,7 +151,7 @@ where col1 in (select distinct b from atest1); -- ok
 SET SESSION AUTHORIZATION regress_priv_user3;
 SELECT session_user, current_user;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: {SQLVALUEFUNCTION :op 12 :type 19 :typmod -1 :location 7} not supported in DXL
+DETAIL:  Feature not supported: {SQLVALUEFUNCTION :op 12 :type 19 :typmod -1 :location 7}
     session_user    |    current_user    
 --------------------+--------------------
  regress_priv_user3 | regress_priv_user3
