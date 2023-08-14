@@ -1058,4 +1058,55 @@ group by i, j;
  2 | 2
 (1 row)
 
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink when this SubLink is inside the GROUP BY clause. Attribute, which is
+-- not grouping column (1 as c), is added to query targetList to make ORCA
+-- perform query normalization. During normalization ORCA modifies the vars of
+-- the grouping elements of targetList in order to produce a new Query tree.
+-- The modification of vars inside nested part of SubLinks should be handled
+-- correctly. ORCA shouldn't fall back due to missing variable entry as a result
+-- of incorrect query normalization.
+explain (verbose, costs off)
+select j, 1 as c,
+(select j from (select j) q2) q1
+from t
+group by j, q1;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Result
+   Output: j, 1, ((SubPlan 1))
+   ->  Gather Motion 3:1  (slice2; segments: 3)
+         Output: j, ((SubPlan 1))
+         ->  GroupAggregate
+               Output: j, ((SubPlan 1))
+               Group Key: t.j, ((SubPlan 1))
+               ->  Sort
+                     Output: j, ((SubPlan 1))
+                     Sort Key: t.j, ((SubPlan 1))
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Output: j, ((SubPlan 1))
+                           Hash Key: j, ((SubPlan 1))
+                           ->  Result
+                                 Output: j, ((SubPlan 1))
+                                 ->  Result
+                                       Output: (SubPlan 1), j
+                                       ->  Seq Scan on public.t
+                                             Output: j
+                                       SubPlan 1  (slice1; segments: 3)
+                                         ->  Result
+                                               Output: t.j
+                                               ->  Result
+                                                     Output: true
+ Optimizer: Pivotal Optimizer (GPORCA)
+(25 rows)
+
+select j, 1 as c,
+(select j from (select j) q2) q1
+from t
+group by j, q1;
+ j | c | q1 
+---+---+----
+ 2 | 1 |  2
+(1 row)
+
 drop table t;
