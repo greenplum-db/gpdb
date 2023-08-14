@@ -1143,6 +1143,7 @@ wakeupWaitingVirtualSlotProcs(ResGroupData *group, bool grant)
 	while (!groupWaitQueueIsEmpty(group))
 	{
 		PGPROC		*waitProc;
+		bool 		hasVirtualSlot = false;
 
 		if (grant && groupIsNotDropped(group))
 		{
@@ -1151,11 +1152,13 @@ wakeupWaitingVirtualSlotProcs(ResGroupData *group, bool grant)
 
 			if (!acquireResult)
 				break;
+
+			hasVirtualSlot = true;
 		}
 
 		/* wake up one process in the wait queue */
 		waitProc = groupWaitQueuePop(group);
-		waitProc->hasVirtualSlot = true;
+		waitProc->hasVirtualSlot = hasVirtualSlot;
 		procWakeup(waitProc);
 	}
 }
