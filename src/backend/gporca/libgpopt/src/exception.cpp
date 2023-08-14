@@ -31,11 +31,12 @@ gpopt::EresExceptionInit(CMemoryPool *mp)
 	// Basic DXL messages in English
 	//---------------------------------------------------------------------------
 	CMessage rgmsg[ExmiSentinel] = {
-		CMessage(CException(gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound),
-				 CException::ExsevError,
-				 GPOS_WSZ_WSZLEN(
-					 "No plan has been computed for required properties"),
-				 0, GPOS_WSZ_WSZLEN("No plan found")),
+		CMessage(
+			CException(gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound),
+			CException::ExsevError,
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA"),
+			0, GPOS_WSZ_WSZLEN("No plan found")),
 
 		CMessage(
 			CException(gpopt::ExmaGPOPT, gpopt::ExmiInvalidPlanAlternative),
@@ -68,27 +69,30 @@ gpopt::EresExceptionInit(CMemoryPool *mp)
 					   gpopt::ExmiUnsupportedCompositePartKey),
 			CException::ExsevNotice,
 			GPOS_WSZ_WSZLEN(
-				"Feature not supported by GPORCA: composite partitioning keys"),
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: composite partitioning keys"),
 			0,
 			GPOS_WSZ_WSZLEN(
-				"Feature not supported by GPORCA: composite partitioning keys")),
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: composite partitioning keys")),
 
 		CMessage(
 			CException(gpopt::ExmaGPOPT,
 					   gpopt::ExmiUnsupportedNonDeterministicUpdate),
 			CException::ExsevNotice,
 			GPOS_WSZ_WSZLEN(
-				"Feature not supported by GPORCA: non-deterministic DML statements"),
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: non-deterministic DML statements"),
 			0,
 			GPOS_WSZ_WSZLEN(
-				"Feature not supported by GPORCA: non-deterministic DML statements")),
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: non-deterministic DML statements")),
 
-		CMessage(CException(gpopt::ExmaGPOPT,
-							gpopt::ExmiUnsatisfiedRequiredProperties),
-				 CException::ExsevError,
-				 GPOS_WSZ_WSZLEN("Plan does not satisfy required properties"),
-				 0,
-				 GPOS_WSZ_WSZLEN("Plan does not satisfy required properties")),
+		CMessage(
+			CException(gpopt::ExmaGPOPT,
+					   gpopt::ExmiUnsatisfiedRequiredProperties),
+			CException::ExsevError,
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because plan does not satisfy required properties in GPORCA"),
+			0,
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because plan does not satisfy required properties in GPORCA")),
 
 		CMessage(
 			CException(gpopt::ExmaGPOPT, gpopt::ExmiEvalUnsupportedScalarExpr),

@@ -94,11 +94,14 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 			0,	//
 			GPOS_WSZ_WSZLEN("Incorrect Number of children")),
 
-		CMessage(CException(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion),
-				 CException::ExsevNotice,
-				 GPOS_WSZ_WSZLEN("Feature not supported: %ls"),
-				 1,	 //
-				 GPOS_WSZ_WSZLEN("Feature not supported")),
+		CMessage(
+			CException(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion),
+			CException::ExsevNotice,
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: %ls"),
+			1,	//
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because GPORCA does not support this feature")),
 
 		CMessage(
 			CException(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLAttributeNotFound),
@@ -112,9 +115,11 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 		CMessage(
 			CException(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature),
 			CException::ExsevNotice,
-			GPOS_WSZ_WSZLEN("Feature not supported: %ls"),
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: %ls"),
 			1,	//
-			GPOS_WSZ_WSZLEN("Feature not supported")),
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because GPORCA does not support this feature.")),
 
 		// MD related messages
 		CMessage(
@@ -131,11 +136,14 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 				 1,	 // mdid
 				 GPOS_WSZ_WSZLEN("Lookup of object in cache failed")),
 
-		CMessage(CException(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported),
-				 CException::ExsevNotice,
-				 GPOS_WSZ_WSZLEN("Feature not supported: %ls"),
-				 1,	 // md obj
-				 GPOS_WSZ_WSZLEN("Feature not supported")),
+		CMessage(
+			CException(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported),
+			CException::ExsevNotice,
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: %ls"),
+			1,	// md obj
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because GPORCA does not support this feature")),
 
 		CMessage(CException(gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError),
 				 CException::ExsevError, GPOS_WSZ_WSZLEN("PG exception raised"),
@@ -154,9 +162,11 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 		CMessage(
 			CException(gpdxl::ExmaDXL, gpdxl::ExmiExpr2DXLUnsupportedFeature),
 			CException::ExsevNotice,
-			GPOS_WSZ_WSZLEN("Feature not supported: %ls"),
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: %ls"),
 			1,	// feature name
-			GPOS_WSZ_WSZLEN("Feature not supported")),
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because GPORCA does not support this feature")),
 
 		CMessage(
 			CException(gpdxl::ExmaConstExprEval,
