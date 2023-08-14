@@ -2000,4 +2000,47 @@ group by i, j;
  2 | 2
 (1 row)
 
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink when this SubLink is inside the GROUP BY clause. Attribute, which is
+-- not grouping column (1 as c), is added to query targetList to make ORCA
+-- perform query normalization. During normalization ORCA modifies the vars of
+-- the grouping elements of targetList in order to produce a new Query tree.
+-- The modification of vars inside nested part of SubLinks should be handled
+-- correctly. ORCA shouldn't fall back due to missing variable entry as a result
+-- of incorrect query normalization.
+explain (verbose, costs off)
+select j, 1 as c,
+(select j from (select j) q2) q1
+from t
+group by j, q1;
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: t.j, 1, ((SubPlan 1))
+   ->  HashAggregate
+         Output: t.j, 1, ((SubPlan 1))
+         Group Key: t.j, ((SubPlan 1))
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Output: t.j, ((SubPlan 1))
+               Hash Key: t.j, ((SubPlan 1))
+               ->  HashAggregate
+                     Output: t.j, ((SubPlan 1))
+                     Group Key: t.j, (SubPlan 1)
+                     ->  Seq Scan on public.t
+                           Output: t.j, (SubPlan 1)
+                           SubPlan 1
+                             ->  Result
+                                   Output: t.j
+ Optimizer: Postgres-based planner
+(17 rows)
+
+select j, 1 as c,
+(select j from (select j) q2) q1
+from t
+group by j, q1;
+ j | c | q1 
+---+---+----
+ 2 | 1 |  2
+(1 row)
+
 drop table t;

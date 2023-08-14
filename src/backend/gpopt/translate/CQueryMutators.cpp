@@ -445,11 +445,12 @@ CQueryMutators::RunGroupingColMutator(Node *node,
 
 		GPOS_ASSERT(IsA(old_sublink->subselect, Query));
 
-		new_sublink->subselect = gpdb::MutateQueryOrExpressionTree(
-			old_sublink->subselect,
-			(MutatorWalkerFn) CQueryMutators::RunGroupingColMutator, context,
-			0  // flags -- mutate into cte-lists
-		);
+		// One need to call the Query mutator for subselect and take into
+		// account that SubLink can be multi-level. Therefore, the
+		// context->m_current_query_level must be modified properly
+		// while diving into such nested SubLink.
+		new_sublink->subselect =
+			RunGroupingColMutator(old_sublink->subselect, context);
 
 		context->m_current_query_level--;
 

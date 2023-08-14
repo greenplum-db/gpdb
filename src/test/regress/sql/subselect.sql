@@ -997,4 +997,23 @@ select j,
 from t
 group by i, j;
 
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink when this SubLink is inside the GROUP BY clause. Attribute, which is
+-- not grouping column (1 as c), is added to query targetList to make ORCA
+-- perform query normalization. During normalization ORCA modifies the vars of
+-- the grouping elements of targetList in order to produce a new Query tree.
+-- The modification of vars inside nested part of SubLinks should be handled
+-- correctly. ORCA shouldn't fall back due to missing variable entry as a result
+-- of incorrect query normalization.
+explain (verbose, costs off)
+select j, 1 as c,
+(select j from (select j) q2) q1
+from t
+group by j, q1;
+
+select j, 1 as c,
+(select j from (select j) q2) q1
+from t
+group by j, q1;
+
 drop table t;
