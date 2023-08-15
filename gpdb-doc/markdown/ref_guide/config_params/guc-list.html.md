@@ -2512,13 +2512,17 @@ This parameter can be set for a database system or a session.
 
 ## <a id="optimizer_join_order"></a>optimizer\_join\_order 
 
-When GPORCA is enabled, this parameter sets the optimization level for join ordering during query optimization by specifying which types of join ordering alternatives to evaluate.
+When GPORCA is enabled (the default), this parameter sets the join enumeration algorithm:
 
 -   `query` - Uses the join order specified in the query.
 -   `greedy` - Evaluates the join order specified in the query and alternatives based on minimum cardinalities of the relations in the joins.
--   `exhaustive` - Applies transformation rules to find and evaluate all join ordering alternatives.
+-   `exhaustive` - Applies transformation rules to find and evaluate up to a configurable threshold number \(`optimizer_join_order_threshold`, default 10\) of n-way inner joins, and then changes to and uses the `greedy` method beyond that. While planning time drops significantly at that point, plan quality and execution time may get worse.
+-   `exhaustive2` - Operates with an emphasis on generating join orders that are suitable for dynamic partition elimination. This algorithm applies transformation rules to find and evaluate n-way inner and outer joins. When evaluating very
+large joins with more than `optimizer_join_order_threshold` \(default 10\) tables, this algorithm employs a gradual transition to the `greedy` method; planning time goes up smoothly as the query gets more complicated, and plan quality and execution time only gradually degrade. `exhaustive2` provides a good trade-off between planning time and execution time for many queries.
 
-The default value is `exhaustive`. Setting this parameter to `query` or `greedy` can generate a suboptimal query plan. However, if the administrator is confident that a satisfactory plan is generated with the `query` or `greedy` setting, query optimization time can be improved by setting the parameter to the lower optimization level.
+The default value is `exhaustive2`.
+
+Setting this parameter to `query` or `greedy` can generate a suboptimal query plan. However, if the administrator is confident that a satisfactory plan is generated with the `query` or `greedy` setting, query optimization time can be improved by setting the parameter to the lower optimization level.
 
 Setting this parameter to `query` or `greedy` overrides the `optimizer_join_order_threshold` and `optimizer_join_arity_for_associativity_commutativity` parameters.
 
@@ -2526,7 +2530,7 @@ This parameter can be set for an individual database, a session, or a query.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|query, greedy, exhaustive|exhaustive|coordinator, session, reload|
+|query, greedy, exhaustive, exhaustive2 |exhaustive2|coordinator, session, reload|
 
 ## <a id="optimizer_join_order_threshold"></a>optimizer\_join\_order\_threshold 
 
