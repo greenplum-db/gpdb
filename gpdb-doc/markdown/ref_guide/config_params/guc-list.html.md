@@ -2516,7 +2516,7 @@ When GPORCA is enabled (the default), this parameter sets the join enumeration a
 
 -   `query` - Uses the join order specified in the query.
 -   `greedy` - Evaluates the join order specified in the query and alternatives based on minimum cardinalities of the relations in the joins.
--   `exhaustive` - Applies transformation rules to find and evaluate up to a configurable threshold number \(`optimizer_join_order_threshold`, default 10\) of n-way inner joins, and then changes to and uses the `greedy` method beyond that. While planning time drops significantly at that point, plan quality and execution time may get worse.
+-   `exhaustive` - Applies transformation rules to find and evaluate up to a configurable threshold number \(`optimizer_join_order_threshold`, default 10\) of n-way inner joins, and then uses the `greedy` method for the remainder. While planning time drops significantly at that point, plan quality and execution time may get worse.
 -   `exhaustive2` - Operates with an emphasis on generating join orders that are suitable for dynamic partition elimination. This algorithm applies transformation rules to find and evaluate n-way inner and outer joins. When evaluating very
 large joins with more than `optimizer_join_order_threshold` \(default 10\) tables, this algorithm employs a gradual transition to the `greedy` method; planning time goes up smoothly as the query gets more complicated, and plan quality and execution time only gradually degrade. `exhaustive2` provides a good trade-off between planning time and execution time for many queries.
 
