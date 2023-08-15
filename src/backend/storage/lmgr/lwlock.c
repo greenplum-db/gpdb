@@ -1886,3 +1886,15 @@ LWLockHeldByMeInMode(LWLock *l, LWLockMode mode)
 	}
 	return false;
 }
+
+/*
+ * GPDB: LWLockIsExclusive - test whether a lock is an exclusive one
+ *
+ * Note: this does not assume any other facts about the lock, like whether it
+ * is being held. Caller needs to make sure of that if that is the intention.
+ */
+bool
+LWLockIsExclusive(LWLock *l)
+{
+	return pg_atomic_read_u32(&l->state) & LW_VAL_EXCLUSIVE;
+}

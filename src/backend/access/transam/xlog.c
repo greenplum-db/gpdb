@@ -13500,10 +13500,11 @@ initialize_wal_bytes_written(void)
  * WAL generation and move at sustained speed with network and mirrors.
  *
  * NB: This function should never be called from inside a critical section,
- * meaning caller should never have MyPgXact->delayChkpt set to true. Otherwise,
- * if mirror is down, we will end up in a deadlock situation between the primary
- * and the checkpointer process, because if MyPgXact->delayChkpt is set,
- * checkpointer cannot proceed to unset WalSndCtl->sync_standbys_defined.
+ * meaning caller should never have MyPgXact->delayChkpt set to true, or
+ * holding an exclusive buffer lock. Otherwise, if mirror is down, we will end
+ * up in a deadlock situation between the primary and the checkpointer process,
+ * because if MyPgXact->delayChkpt is set, checkpointer cannot proceed to unset
+ * WalSndCtl->sync_standbys_defined.
  */
 void
 wait_to_avoid_large_repl_lag(void)
