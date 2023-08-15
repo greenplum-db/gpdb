@@ -262,6 +262,8 @@ bool		gp_enable_relsize_collection = false;
 bool		gp_recursive_cte = true;
 bool		gp_eager_two_phase_agg = false;
 bool		gp_force_random_redistribution = false;
+double 		gp_appendonly_random_page_cost = DEFAULT_GP_APPENDONLY_RANDOM_PAGE_COST;
+double 		gp_decompress_random_page_cost = DEFAULT_GP_DECOMPRESS_RANDOM_PAGE_COST;
 
 /* Optimizer related gucs */
 bool		optimizer;
@@ -4378,6 +4380,29 @@ struct config_real ConfigureNamesReal_gp[] =
 		37500, -1, DBL_MAX,
 		NULL, NULL, NULL
 	},
+
+	{
+		{"gp_appendonly_random_page_cost", PGC_USERSET, QUERY_TUNING_COST,
+			gettext_noop("Sets the planner's estimate of the cost of a "
+						 "nonsequentially fetched disk page from an append-only table."),
+			NULL
+		},
+		&gp_appendonly_random_page_cost,
+		DEFAULT_GP_APPENDONLY_RANDOM_PAGE_COST, 0, DBL_MAX,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_decompress_random_page_cost", PGC_USERSET, QUERY_TUNING_COST,
+			gettext_noop("Sets the planner's estimate of the cost of"
+						 "decompressing a page from a compressed append-only table."),
+			NULL
+		},
+		&gp_decompress_random_page_cost,
+		DEFAULT_GP_DECOMPRESS_RANDOM_PAGE_COST, 0, DBL_MAX,
+		NULL, NULL, NULL
+	},
+
 
 	/* End-of-list marker */
 	{

@@ -6291,13 +6291,13 @@ compute_bitmap_pages(PlannerInfo *root, RelOptInfo *baserel_orig, Path *bitmapqu
 static double
 ao_random_page_cost(RangeTblEntry *rte)
 {
-	double random_page_cost = DEFAULT_AO_RAMDOM_PAGE_COST;
+	double random_page_cost = gp_appendonly_random_page_cost;
 	NameData        compresstype;
 	GetAppendOnlyEntryAttributes(rte->relid, NULL, NULL, NULL, &compresstype);
 	if (!(strcmp(NameStr(compresstype), "") == 0 ||
 				pg_strcasecmp(NameStr(compresstype), "none") == 0))
 	{
-		random_page_cost += DEFAULT_COMPRESS_PAGE_COST;
+		random_page_cost += gp_decompress_random_page_cost;
 	}
 	return random_page_cost;
 }

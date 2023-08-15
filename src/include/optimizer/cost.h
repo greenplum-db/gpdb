@@ -33,8 +33,8 @@
 
 #define DEFAULT_EFFECTIVE_CACHE_SIZE  524288	/* measured in pages */
 
-#define DEFAULT_AO_RAMDOM_PAGE_COST  4.0
-#define DEFAULT_COMPRESS_PAGE_COST  4.0
+#define DEFAULT_GP_APPENDONLY_RANDOM_PAGE_COST 4.0
+#define DEFAULT_GP_DECOMPRESS_RANDOM_PAGE_COST 4.0
 
 
 typedef enum
@@ -90,6 +90,8 @@ extern PGDLLIMPORT bool enable_parallel_append;
 extern PGDLLIMPORT bool enable_parallel_hash;
 extern PGDLLIMPORT bool enable_partition_pruning;
 extern PGDLLIMPORT int constraint_exclusion;
+extern PGDLLIMPORT double	gp_appendonly_random_page_cost;
+extern PGDLLIMPORT double	gp_decompress_random_page_cost;
 
 extern bool gp_enable_hashjoin_size_heuristic;          /*CDB*/
 extern bool gp_enable_predicate_propagation;
