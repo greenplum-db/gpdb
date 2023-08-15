@@ -37,9 +37,9 @@ class Pgpass():
             return
 
         st_info = os.stat(PGPASSFILE)
-        mode = str(oct(st_info[stat.ST_MODE] & 0o777))
+        mode = st_info[stat.ST_MODE] & 0o777
 
-        if mode != "0600":
+        if mode != 0o600:
             print('WARNING: password file "%s" has group or world access; permissions should be u=rw (0600) or less' % PGPASSFILE)
             self.valid_pgpass = False
             return
