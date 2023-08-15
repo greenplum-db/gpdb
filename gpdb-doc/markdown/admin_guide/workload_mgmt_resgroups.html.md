@@ -274,7 +274,7 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
 
 Since we manually manage Cgroup files, the above settings will become ineffective after an OS reboot. To avoid repetitive actions, users can consider adding the following Bash script to systemd, which will be executed automatically during OS startup.
     ```
-    sudo usermod -aG root smart
+    sudo usermod -aG root gpadmin
 
     sudo mkdir -p /sys/fs/cgroup/gpdb
     sudo chmod -R 774 /sys/fs/cgroup/gpdb
