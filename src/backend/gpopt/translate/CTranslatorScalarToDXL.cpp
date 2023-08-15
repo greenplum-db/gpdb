@@ -294,7 +294,7 @@ CTranslatorScalarToDXL::TranslateScalarToDXL(
 		// give a better message.
 		if (tag == T_Param)
 		{
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 					   GPOS_WSZ_LIT("Query Parameter"));
 		}
 		else
@@ -302,7 +302,7 @@ CTranslatorScalarToDXL::TranslateScalarToDXL(
 			CHAR *str = (CHAR *) gpdb::NodeToString(const_cast<Expr *>(expr));
 			CWStringDynamic *wcstr =
 				CDXLUtils::CreateDynamicStringFromCharArray(m_mp, str);
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 					   wcstr->GetBuffer());
 		}
 	}
