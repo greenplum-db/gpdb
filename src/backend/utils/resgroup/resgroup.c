@@ -414,7 +414,7 @@ initCgroup(void)
 
 	bool probe_result = cgroupOpsRoutine->probecgroup();
 	if (!probe_result)
-		elog(ERROR, "The control group is not well configured, please check your"
+		elog(ERROR, "The control group is not well configured, please check your "
 					"system configuration.");
 
 	cgroupOpsRoutine->checkcgroup();

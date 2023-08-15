@@ -167,28 +167,20 @@ For cgroup v1, the output is `tmpfs`. For cgroup v2, output is `cgroup2fs`.
 
 Complete the following tasks on each node in your Greenplum Database cluster to set up cgroups v1 for use with resource groups:
 
-1.  If not already installed, install the Control Groups operating system package on each Greenplum Database node. The command that you run to perform this task will differ based on the operating system installed on the node. You must be the superuser or have `sudo` access to run the command:
+1. If not already installed, install the Control Groups operating system package on each Greenplum Database node. The command that you run to perform this task will differ based on the operating system installed on the node. You must be the superuser or have `sudo` access to run the command:
     -   Redhat/Oracle/Rocky 8.x systems:
 
         ```
         sudo yum install libcgroup-tools
         ```
 
-1.  Locate the cgroups configuration file `/etc/cgconfig.conf`. You must be the superuser or have `sudo` access to edit this file:
+2. Locate the cgroups configuration file `/etc/cgconfig.conf`. You must be the superuser or have `sudo` access to edit this file:
 
     ```
     sudo vi /etc/cgconfig.conf
     ```
 
-2.  Add the following configuration information to the file:
-
-    ```
-    group gpdb {
-2.  Add the following configuration information to the file:
-
-    ```
-    group gpdb {
-2.  Add the following configuration information to the file:
+3. Add the following configuration information to the file:
 
     ```
     group gpdb {
@@ -215,14 +207,14 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
 
     This content configures CPU, CPU accounting, CPU core set, and memory control groups managed by the `gpadmin` user. Greenplum Database uses the memory control group only for those resource groups created with the `cgroup` `MEMORY_AUDITOR`.
 
-3.  Start the cgroups service on each Greenplum Database node. The command that you run to perform this task will differ based on the operating system installed on the node. You must be the superuser or have `sudo` access to run the command:
+4. Start the cgroups service on each Greenplum Database node. The command that you run to perform this task will differ based on the operating system installed on the node. You must be the superuser or have `sudo` access to run the command:
     -   Redhat/Oracle/Rocky 8.x systems:
 
         ```
         sudo cgconfigparser -l /etc/cgconfig.conf 
         ```
 
-4.  Identify the `cgroup` directory mount point for the node:
+5. Identify the `cgroup` directory mount point for the node:
 
     ```
     grep cgroup /proc/mounts
@@ -230,7 +222,7 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
 
     The first line of output identifies the `cgroup` mount point.
 
-5.  Verify that you set up the Greenplum Database cgroups configuration correctly by running the following commands. Replace \<cgroup\_mount\_point\> with the mount point that you identified in the previous step:
+6. Verify that you set up the Greenplum Database cgroups configuration correctly by running the following commands. Replace \<cgroup\_mount\_point\> with the mount point that you identified in the previous step:
 
     ```
     ls -l <cgroup_mount_point>/cpu/gpdb
@@ -241,7 +233,7 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
 
     If these directories exist and are owned by `gpadmin:gpadmin`, you have successfully configured cgroups for Greenplum Database CPU resource management.
 
-6.  To automatically recreate Greenplum Database required cgroup hierarchies and parameters when your system is restarted, configure your system to enable the Linux cgroup service daemon `cgconfig.service` \(Redhat/Oracle/Rocky 8.x\) at node start-up. For example, configure one of the following cgroup service commands in your preferred service auto-start tool:
+7. To automatically recreate Greenplum Database required cgroup hierarchies and parameters when your system is restarted, configure your system to enable the Linux cgroup service daemon `cgconfig.service` \(Redhat/Oracle/Rocky 8.x\) at node start-up. For example, configure one of the following cgroup service commands in your preferred service auto-start tool:
     -   Redhat/Oracle/Rocky 8.x systems:
 
         ```
@@ -265,24 +257,40 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
     sudo grubby --update-kernel=ALL --args=“systemd.unified_cgroup_hierarchy=1”
     ```
 
-1. Reboot the system for the changes to take effect.
-1. Create the directory `/sys/fs/cgroup/gpdb` and ensure `gpadmin` user has read and write permission on it.
+2. Reboot the system for the changes to take effect: `sudo reboot now`.
+3. Create the directory `/sys/fs/cgroup/gpdb` and ensure `gpadmin` user has read and write permission on it.
     ```
     mkdir -p /sys/fs/cgroup/gpdb 
     chmod +rw /sys/fs/cgroup/gpdb
     ```
-1. Ensure that `gpadmin` has read and write permission on `/sys/fs/cgroup/cgroup.procs`.
+4. Ensure that `gpadmin` has read and write permission on `/sys/fs/cgroup/cgroup.procs`.
     ```
     chmod +rw /sys/fs/cgroup/cgroup.procs
+    ```
+5. Add all controllers.
+    ```
+   echo "+cpuset +io +cpu +memory" | sudo tee -a /sys/fs/cgroup/cgroup.subtree_control
+   ```
+
+Since we manually manage Cgroup files, the above settings will become ineffective after an OS reboot. To avoid repetitive actions, users can consider adding the following Bash script to systemd, which will be executed automatically during OS startup.
+    ```
+    sudo usermod -aG root smart
+
+    sudo mkdir -p /sys/fs/cgroup/gpdb
+    sudo chmod -R 774 /sys/fs/cgroup/gpdb
+    sudo chmod g+w /sys/fs/cgroup/cgroup.procs
+    
+    echo "+cpuset +io +cpu +memory" | sudo tee -a /sys/fs/cgroup/cgroup.subtree_control
     ```
 
 ## <a id="topic8"></a>Enabling Resource Groups 
 
 When you install Greenplum Database, no resource management policy is enabled by default. To use resource groups, set the [gp_resource_manager](../ref_guide/config_params/guc-list.html#gp_resource_manager) server configuration parameter.
 
-1.  Set the `gp_resource_manager` server configuration parameter to the value `"group-v1"` or `"group-v2"`, depending on the version of cgroup configured on your Linux distribution. For example:
+1.  Set the `gp_resource_manager` server configuration parameter to the value `"group"` or `"group-v2"`, depending on the version of cgroup configured on your Linux distribution. For example:
 
     ```
+    gpconfig -c gp_resource_manager -v "group"
     gpconfig -c gp_resource_manager -v "group-v2"
     ```
 
@@ -317,7 +325,7 @@ When you create a resource group for a role, you must provide a `CPU_MAX_PERCENT
 For example, to create a resource group named *rgroup1* with a CPU limit of 20, a memory limit of 25, a CPU soft priority of 500 and a minimum cost of 50:
 
 ```
-CREATE RESOURCE GROUP rgroup1 WITH (CPU_MAX_PERCENT=20, MEMORY_LIMIT=25, CPU_WEIGHT=500, MIN_COST=50);
+CREATE RESOURCE GROUP rgroup1 WITH (CONCURRENCY=20, CPU_MAX_PERCENT=20, MEMORY_LIMIT=25, CPU_WEIGHT=500, MIN_COST=50);
 ```
 
 The CPU limit of 20 is shared by every role to which `rgroup1` is assigned. Similarly, the memory limit of 25 is shared by every role to which `rgroup1` is assigned. `rgroup1` utilizes the default `CONCURRENCY` setting of 20.
