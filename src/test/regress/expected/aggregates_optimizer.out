@@ -339,7 +339,7 @@ SELECT oldcnt(*) AS cnt_1000 FROM onek;
 
 SELECT sum2(q1,q2) FROM int8_tbl;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "sum3" during startup
        sum2        
 -------------------
@@ -1716,7 +1716,7 @@ drop view aggordview1;
 -- variadic aggregates
 select least_agg(q1,q2) from int8_tbl;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "least_accum" during startup
      least_agg     
 -------------------
@@ -1725,7 +1725,7 @@ CONTEXT:  SQL function "least_accum" during startup
 
 select least_agg(variadic array[q1,q2]) from int8_tbl;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "least_accum" during startup
      least_agg     
 -------------------
@@ -2148,7 +2148,7 @@ drop view aggordview1;
 -- variadic aggregates
 select least_agg(q1,q2) from int8_tbl;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "least_accum" during startup
      least_agg     
 -------------------
@@ -2157,7 +2157,7 @@ CONTEXT:  SQL function "least_accum" during startup
 
 select least_agg(variadic array[q1,q2]) from int8_tbl;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "least_accum" during startup
      least_agg     
 -------------------
