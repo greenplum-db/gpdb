@@ -165,7 +165,7 @@ static float convertcpuusage_v2(int64 usage, int64 duration);
 static List *parseio_v2(const char *io_limit);
 static void setio_v2(Oid group, List *limit_list);
 static void freeio_v2(List *limit_list);
-static int	getiostat_v2(Oid group, List *io_limit, void *result);
+static List	*getiostat_v2(Oid group, List *io_limit);
 
 /*
  * Dump component dir to the log.
@@ -891,10 +891,10 @@ freeio_v2(List *limit_list)
 	io_limit_free(limit_list);
 }
 
-static int
-getiostat_v2(Oid groupid, List *io_limit, void *result)
+static List *
+getiostat_v2(Oid groupid, List *io_limit)
 {
-	return get_iostat(groupid, io_limit, (IOStat *)result);
+	return get_iostat(groupid, io_limit);
 }
 
 static CGroupOpsRoutine cGroupOpsRoutineV2 = {

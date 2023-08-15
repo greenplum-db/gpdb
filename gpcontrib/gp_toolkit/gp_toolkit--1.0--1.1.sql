@@ -129,8 +129,8 @@ CREATE VIEW gp_toolkit.gp_resgroup_iostats_per_host AS
     select rsgname,
            hostname,
            tablespace,
-           pg_size_pretty(avg("rbps")::bigint) "read (per second)",
-           pg_size_pretty(avg("wbps")::bigint) "write (per second)",
+           avg("rbps")::bigint "rbps",
+           avg("wbps")::bigint "wbps",
            avg("riops")::bigint "riops",
            avg("wiops")::bigint "wiops"
     from iostats group by (hostname, rsgname, tablespace);

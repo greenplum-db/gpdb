@@ -236,11 +236,11 @@ freeio_dummy(List *limit_list)
 	unsupported_system();
 }
 
-static int
-getiostat_dummy(Oid group, List *io_limit, void *result)
+static List *
+getiostat_dummy(Oid group, List *io_limit)
 {
 	unsupported_system();
-	return 0;
+	return NIL;
 }
 
 static CGroupOpsRoutine cGroupOpsRoutineDummy = {

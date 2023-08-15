@@ -103,7 +103,7 @@ extern List *io_limit_parse(const char *limit_str);
 extern void io_limit_free(List *limit_list);
 extern void io_limit_validate(List *limit_list);
 
-extern int  get_iostat(Oid groupid, List *io_limit, IOStat *result);
+extern List  *get_iostat(Oid groupid, List *io_limit);
 extern int  compare_iostat(const void *a, const void *b);
 
 #endif

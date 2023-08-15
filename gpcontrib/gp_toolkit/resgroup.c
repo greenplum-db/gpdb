@@ -23,10 +23,10 @@
 
 PG_MODULE_MAGIC;
 
-static int getIOLimitStats(Relation rel_resgroup_caps, IOStat **result);
+static List* getIOLimitStats(Relation rel_resgroup_caps);
 
-static int
-getIOLimitStats(Relation rel_resgroup_caps, IOStat **result)
+static List*
+getIOLimitStats(Relation rel_resgroup_caps)
 {
 	/* save groupid and io limits together */
 	typedef struct IOLimitItem {
@@ -36,10 +36,9 @@ getIOLimitStats(Relation rel_resgroup_caps, IOStat **result)
 
 	SysScanDesc	sscan;
 	HeapTuple	tuple;
-	int			count = 0;
-	int			res_count = 0;
 	List		*io_limit_items = NIL;;
 	ListCell	*cell;
+	List		*result = NIL;
 
 	/* get io limit string from catalog */
 	sscan = systable_beginscan(rel_resgroup_caps, InvalidOid, false,
@@ -76,26 +75,23 @@ getIOLimitStats(Relation rel_resgroup_caps, IOStat **result)
 		item->groupid = id;
 
 		item->io_limit = io_limit_parse(io_limit_str);
-		count += list_length(item->io_limit);
 
 		io_limit_items = lappend(io_limit_items, item);
 	}
 	systable_endscan(sscan);
 
-	*result = (IOStat *) palloc0(sizeof(IOStat) * count);
-
 	foreach(cell, io_limit_items)
 	{
 		IOLimitItem *item = (IOLimitItem *) lfirst(cell);
 
-		res_count += cgroupOpsRoutine->getiostat(item->groupid, item->io_limit, (*result) + res_count);
-	}
+		List *tmp = cgroupOpsRoutine->getiostat(item->groupid, item->io_limit);
 
-	Assert(count == res_count);
+		result = list_concat(result, tmp);
+	}
 
 	list_free_deep(io_limit_items);
 
-	return res_count;
+	return result;
 }
 
 PG_FUNCTION_INFO_V1(pg_resgroup_get_iostats);
@@ -109,6 +105,13 @@ pg_resgroup_get_iostats(PG_FUNCTION_ARGS)
 		int nattr = 8;
 		MemoryContext oldContext;
 		TupleDesc tupdesc;
+
+		List *stats = NIL;
+		ListCell *statCell;
+	  	List *newStats = NIL;
+		ListCell *newStatCell;
+	  	Relation rel_resgroup_caps;
+
 
 		funcctx = SRF_FIRSTCALL_INIT();
 		if (!IsResGroupActivated())
@@ -131,41 +134,33 @@ pg_resgroup_get_iostats(PG_FUNCTION_ARGS)
 
 		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
 
-		IOStat *stats = NULL;
-	  	IOStat *newStats = NULL;
-	  	int     numStats;
-	  	int     newNumStats;
-	  	int		i;
-	  	Relation rel_resgroup_caps;
-
 	  	/* collect stats */
 	  	rel_resgroup_caps = table_open(ResGroupCapabilityRelationId, AccessShareLock);
-	  	numStats = getIOLimitStats(rel_resgroup_caps, &stats);
+	  	stats = getIOLimitStats(rel_resgroup_caps);
 	  	pg_usleep(1000000L);
-	  	newNumStats = getIOLimitStats(rel_resgroup_caps, &newStats);
+	  	newStats = getIOLimitStats(rel_resgroup_caps);
 	  	table_close(rel_resgroup_caps, AccessShareLock);
 
-	  	if (numStats != newNumStats)
+	  	if (list_length(stats) != list_length(newStats))
 	  		ereport(ERROR, (errmsg("stats count differs between runs")));
 
-	  	funcctx->max_calls = numStats;
-	  	funcctx->user_fctx = (void *)stats;
+	  	funcctx->max_calls = list_length(stats);
+	  	funcctx->user_fctx = (void *) list_head(stats);
 
 	  	/* oldStat and newStats maybe have different orders, so it need sort */
-	  	qsort(stats, numStats, sizeof(IOStat), compare_iostat);
-	  	qsort(newStats, newNumStats, sizeof(IOStat), compare_iostat);
+		stats = list_qsort(stats, compare_iostat);
+		newStats = list_qsort(newStats, compare_iostat);
 
-	  	for (i = 0; i < numStats; ++i)
-	  	{
-	  		IOStat *newStat = &newStats[i];
-	  		IOStat *stat = &stats[i];
+		forboth(statCell, stats, newStatCell, newStats)
+		{
+	  		IOStat *newStat = (IOStat *) lfirst(newStatCell);
+	  		IOStat *stat = (IOStat *) lfirst(statCell);
 
 	  		stat->items.rios = newStat->items.rios - stat->items.rios;
 	  		stat->items.wios = newStat->items.wios - stat->items.wios;
 
-	  		/* convert bytes to Megabytes */
-	  		stat->items.rbytes = (newStat->items.rbytes - stat->items.rbytes);
-	  		stat->items.wbytes = (newStat->items.wbytes - stat->items.wbytes);
+	  		stat->items.rbytes = newStat->items.rbytes - stat->items.rbytes;
+	  		stat->items.wbytes = newStat->items.wbytes - stat->items.wbytes;
 	  	}
 
 
@@ -179,24 +174,26 @@ pg_resgroup_get_iostats(PG_FUNCTION_ARGS)
 		Datum values[8];
 		bool nulls[8];
 		HeapTuple tuple;
-		IOStat stat = ((IOStat *)funcctx->user_fctx)[funcctx->call_cntr];
+		ListCell *cell = (ListCell *) funcctx->user_fctx;
+		funcctx->user_fctx = (void *) cell->next;
+		IOStat *stat = (IOStat *) lfirst(cell);
 
 		MemSet(values, 0, sizeof(values));
 		MemSet(nulls, 0, sizeof(nulls));
 
 		values[0] = Int32GetDatum(GpIdentity.segindex);
-		values[1] = CStringGetTextDatum(GetResGroupNameForId(stat.groupid));
-		values[2] = ObjectIdGetDatum(stat.groupid);
+		values[1] = CStringGetTextDatum(GetResGroupNameForId(stat->groupid));
+		values[2] = ObjectIdGetDatum(stat->groupid);
 
-		if (stat.tablespace != InvalidOid)
-			values[3] = CStringGetTextDatum(get_tablespace_name(stat.tablespace));
+		if (stat->tablespace != InvalidOid)
+			values[3] = CStringGetTextDatum(get_tablespace_name(stat->tablespace));
 		else
 			values[3] = CStringGetTextDatum(psprintf("%c", '*'));
 
-		values[4] = Int64GetDatum((int64) stat.items.rbytes);
-		values[5] = Int64GetDatum((int64) stat.items.wbytes);
-		values[6] = Int64GetDatum((int64) stat.items.rios);
-		values[7] = Int64GetDatum((int64) stat.items.wios);
+		values[4] = Int64GetDatum((int64) stat->items.rbytes);
+		values[5] = Int64GetDatum((int64) stat->items.wbytes);
+		values[6] = Int64GetDatum((int64) stat->items.rios);
+		values[7] = Int64GetDatum((int64) stat->items.wios);
 
 		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
 

@@ -231,7 +231,7 @@ typedef float (*convertcpuusage_function) (int64 usage, int64 duration);
 typedef List* (*parseio_function) (const char *io_limit);
 typedef void (*setio_function) (Oid group, List *limit_list);
 typedef void (*freeio_function) (List *limit_list);
-typedef int (*getiostat_function) (Oid groupid, List *io_limit, void *result);
+typedef List* (*getiostat_function) (Oid groupid, List *io_limit);
 
 
 typedef struct CGroupOpsRoutine
