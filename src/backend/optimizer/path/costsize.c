@@ -599,6 +599,9 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	double		pages_fetched;
 	double		rand_heap_pages;
 	double		index_pages;
+	int			numsegments;
+	BlockNumber orig_idx_pages;
+	double 		orig_idx_tuples;
 
 	/* Should only be applied to base relations */
 	Assert(IsA(baserel_orig, RelOptInfo) &&
@@ -635,6 +638,19 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	/* we don't need to check enable_indexonlyscan; indxpath.c does that */
 
 	/*
+	 * GPDB: Adjust index->pages|tuples for the number of segments, like ADJUST_BASESCAN
+	 * does for the underlying table.
+	 */
+	if (baserel_orig->cdbpolicy && baserel_orig->cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
+		numsegments = baserel_orig->cdbpolicy->numsegments;
+	else
+		numsegments = 1;
+	orig_idx_pages = path->indexinfo->pages;
+	orig_idx_tuples = path->indexinfo->tuples;
+	path->indexinfo->pages = ceil(orig_idx_pages / numsegments);
+	path->indexinfo->tuples = clamp_row_est(orig_idx_tuples / numsegments);
+
+	/*
 	 * Call index-access-method-specific code to estimate the processing cost
 	 * for scanning the index, as well as the selectivity of the index (ie,
 	 * the fraction of main-table tuples we will have to retrieve) and its
@@ -647,20 +663,9 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 				   &indexSelectivity, &indexCorrelation,
 				   &index_pages);
 
-	/*
-	 * Adjust index->pages for the number of segments, like ADJUST_BASESCAN
-	 * does for the underlying table.
-	 */
-	{
-		int			numsegments;
-
-		if (baserel_orig->cdbpolicy && baserel_orig->cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
-			numsegments = baserel_orig->cdbpolicy->numsegments;
-		else
-			numsegments = 1;
-
-		index_pages = ceil(index_pages / numsegments);
-	}
+	/* Restore pages|tuples for the index */
+	path->indexinfo->pages = orig_idx_pages;
+	path->indexinfo->tuples = orig_idx_tuples;
 
 	/*
 	 * clamp index correlation to 99% or less, so that we always account for at least a little bit
@@ -6232,10 +6237,22 @@ compute_bitmap_pages(PlannerInfo *root, RelOptInfo *baserel_orig, Path *bitmapqu
 		 * the Mackert and Lohman formula by the number of scans, so that we
 		 * estimate the number of pages fetched by all the scans. Then
 		 * pro-rate for one scan.
+		 *
+		 * GPDB: Adjust index->pages for the number of segments, like
+		 * ADJUST_BASESCAN does for the underlying table.
 		 */
+		double 	index_pages;
+		int 	numsegments;
+
+		if (baserel_orig->cdbpolicy && baserel_orig->cdbpolicy->ptype == POLICYTYPE_PARTITIONED)
+			numsegments = baserel_orig->cdbpolicy->numsegments;
+		else
+			numsegments = 1;
+		index_pages = ceil(get_indexpath_pages(bitmapqual) / numsegments);
+
 		pages_fetched = index_pages_fetched(tuples_fetched * loop_count,
 											baserel->pages,
-											get_indexpath_pages(bitmapqual),
+											index_pages,
 											root);
 		pages_fetched /= loop_count;
 	}

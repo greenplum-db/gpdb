@@ -464,12 +464,12 @@ explain (costs off) select cn, vn, pn, sum(qty*prc) from sale group by rollup(cn
          Group Key: cn, vn, pn, (GROUPINGSET_ID())
          ->  Redistribute Motion 3:3  (slice2; segments: 3)
                Hash Key: cn, vn, pn, (GROUPINGSET_ID())
-               ->  Partial MixedAggregate
-                     Hash Key: cn, vn, pn
-                     Hash Key: cn, vn
-                     Hash Key: cn
+               ->  Partial GroupAggregate
+                     Group Key: cn, vn, pn
+                     Group Key: cn, vn
+                     Group Key: cn
                      Group Key: ()
-                     ->  Seq Scan on sale
+                     ->  Index Scan using sale_pkey on sale
  Optimizer: Postgres query optimizer
 (12 rows)
 

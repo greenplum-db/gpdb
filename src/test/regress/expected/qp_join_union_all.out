@@ -755,13 +755,15 @@ explain analyze select c1 from dist_view_large join
                                        ->  Seq Scan on inner_2  (cost=0.00..1.03 rows=3 width=4) (never executed)
                                        ->  Hash  (cost=1.03..1.03 rows=1 width=4) (actual time=0.000..0.054 rows=0 loops=1)
                                              Buckets: 262144  Batches: 1  Memory Usage: 2048kB
-                                             ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..1.03 rows=1 width=4) (actual time=0.000..0.048 rows=0 loops=1)
-                                                   ->  Seq Scan on inner_1  (cost=0.00..1.01 rows=1 width=4) (actual time=0.000..2.255 rows=0 loops=1)
-         ->  Append  (cost=0.00..1018.44 rows=22222 width=4) (never executed)
-               ->  Seq Scan on dist_large_1  (cost=0.00..453.67 rows=11111 width=4) (never executed)
-                     Filter: (c1 < inner_2.cc)
-               ->  Seq Scan on dist_large_2  (cost=0.00..453.67 rows=11111 width=4) (never executed)
-                     Filter: (c1 < inner_2.cc)
+                                             ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..1.03 rows=1 width=4) (actual time=0.000..0.165 rows=0 loops=1)
+                                                   ->  Seq Scan on inner_1  (cost=0.00..1.01 rows=1 width=4) (actual time=0.000..0.006 rows=0 loops=1)
+         ->  Append  (cost=0.17..961.73 rows=22222 width=4) (never executed)
+               ->  Index Only Scan using dist_large_1_index on dist_large_1  (cost=0.17..425.31 rows=11111 width=4) (never executed)
+                     Index Cond: (c1 < inner_2.cc)
+                     Heap Fetches: 0
+               ->  Index Only Scan using dist_large_2_index on dist_large_2  (cost=0.17..425.31 rows=11111 width=4) (never executed)
+                     Index Cond: (c1 < inner_2.cc)
+                     Heap Fetches: 0
  Optimizer: Postgres query optimizer
  Planning Time: 1.368 ms
    (slice0)    Executor memory: 64K bytes.

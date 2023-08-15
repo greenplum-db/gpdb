@@ -361,15 +361,14 @@ SELECT b FROM test_select_best_cover WHERE b>42;
 -- ORCA_FEATURE_NOT_SUPPORTED: use i_test_select_best_cover_ab
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_select_best_cover WHERE a>42 AND b>42;
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=58 loops=1)
-   ->  Index Only Scan using i_test_select_best_cover_a_b on test_select_best_cover (actual rows=25 loops=1)
-         Index Cond: (a > 42)
-         Filter: (b > 42)
+   ->  Index Only Scan using i_test_select_best_cover_ab on test_select_best_cover (actual rows=25 loops=1)
+         Index Cond: ((a > 42) AND (b > 42))
          Heap Fetches: 0
  Optimizer: Postgres query optimizer
-(6 rows)
+(5 rows)
 
 -- KEYS: [a]    INCLUDED: []
 -- KEYS: [a]    INCLUDED: [b]
@@ -504,16 +503,16 @@ SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt JOIN test_basic_cover_index 
 ---------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=1 loops=1)
    ->  Hash Join (actual rows=1 loops=1)
-         Hash Cond: (pt.a = t.a)
-         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 5 of 524288 buckets.
-         ->  Index Only Scan using test_cover_index_on_pt_1_prt_3_a_b_idx on test_cover_index_on_pt_1_prt_3 pt (actual rows=1 loops=1)
+         Hash Cond: (t.a = pt.a)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 524288 buckets.
+         ->  Index Only Scan using i_test_basic_index on test_basic_cover_index t (actual rows=5 loops=1)
                Index Cond: (a < 10)
-               Filter: (b = 2)
                Heap Fetches: 0
-         ->  Hash (actual rows=5 loops=1)
+         ->  Hash (actual rows=1 loops=1)
                Buckets: 524288  Batches: 1  Memory Usage: 4097kB
-               ->  Index Only Scan using i_test_basic_index on test_basic_cover_index t (actual rows=5 loops=1)
+               ->  Index Only Scan using test_cover_index_on_pt_1_prt_3_a_b_idx on test_cover_index_on_pt_1_prt_3 pt (actual rows=1 loops=1)
                      Index Cond: (a < 10)
+                     Filter: (b = 2)
                      Heap Fetches: 0
  Optimizer: Postgres query optimizer
 (14 rows)
