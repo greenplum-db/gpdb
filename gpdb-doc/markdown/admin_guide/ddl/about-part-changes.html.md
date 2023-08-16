@@ -60,7 +60,7 @@ The following items describe the Greenplum 7 *changes* to classic partitioning s
     - `pg_stat_partition_operations`
     - `pg_partition_def()`
 
-    The new [pg_partitioned_table](../../ref_guide/system_catalogs/pg_partitioned_table.html) catalog table and `pg_partition_tree()`, `pg_partition_ancestors()`, and `pg_partition_root()` functions to provide similar information. Refer to [About Viewing Your Partition Design](ddl-partition.html#topic76) for more information on these new functions.
+    The new [pg_partitioned_table](../../ref_guide/system_catalogs/pg_partitioned_table.html) catalog table and `pg_partition_tree()`, `pg_partition_ancestors()`, and `pg_partition_root()` functions provide similar information. Refer to [About Viewing Your Partition Design](ddl-partition.html#topic76) for more information on these new functions.
 - The `FOR (RANK(<value>))` clause is no longer supported. When creating or altering a partitioned table, you must locate a partition by `VALUE`.
 - Partition boundaries are no longer represented as `CHECK` constraints, but rather internally-constructed partition constraints.
 - The interpretation of `START`/`END` and `EXCLUSIVE`/`INCLUSIVE` clauses for range partition boundaries has changed:
