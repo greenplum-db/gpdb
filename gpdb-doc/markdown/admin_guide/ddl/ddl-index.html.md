@@ -43,7 +43,7 @@ VACUUM ANALYZE old_table;
 
 Greenplum Database supports the Postgres index types B-tree, hash, GiST, SP-GiST, GIN, and BRIN. Each index type uses a different algorithm that is best suited to different types of queries. B-tree indexes fit the most common situations and are the default index type. See [Index Types](https://www.postgresql.org/docs/12/indexes-types.html) in the PostgreSQL documentation for a description of these types.
 
-> **Note** Greenplum Database allows unique indexes only if the columns of the index key are the same as \(or a superset of\) the Greenplum distribution key. On partitioned tables, a unique index cannot be enforced across all child tables of a partitioned table. A unique index is supported only within a partition.
+> **Note** Greenplum Database allows unique indexes only if the columns of the index key are the same as \(or a superset of\) the Greenplum distribution key. On a partitioned table, a unique index cannot be enforced across all child tables; a unique index is supported only within a child partition.
 
 ### <a id="topic93"></a>About Bitmap Indexes 
 

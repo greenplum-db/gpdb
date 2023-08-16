@@ -12,7 +12,7 @@ Partitioning does not change the physical distribution of table data across the 
 
 Partitioning can provide several benefits:
 
-- Dramatically improved query performance in certain situations, particularly when most of the heavily accessed rows of the table are in a single partition or a small number of partitions. Partitioning effectively substitutes for the upper tree levels of indexes, making it more likely that the heavily-used parts of the indexes fit in memory.
+- Dramatically improves query performance in certain situations, particularly when most of the heavily accessed rows of the table are in a single partition or a small number of partitions. Partitioning effectively substitutes for the upper tree levels of indexes, making it more likely that the heavily-used parts of the indexes fit in memory.
 - When queries or updates access a large percentage of a single partition, you can improve performance by using a sequential scan of that partition instead of using an index, which would require random-access reads scattered across the whole table.
 - When the partitioning design accounts for the usage pattern, you can perform bulk loads and deletes by adding or removing partitions. Dropping an individual partition using `DROP TABLE`, or doing `ALTER TABLE DETACH PARTITION`, is far faster than a bulk operation. These commands also entirely prevent the `VACUUM` overhead caused by a bulk `DELETE`.
 - You can migrate seldom-used data to cheaper and slower storage media.
@@ -559,7 +559,7 @@ ALTER TABLE msales_mfeb17 RENAME TO msales_month_feb17;
 
 ### <a id="topic80"></a>Adding a Default Partition 
 
-The `DEFAULT` keyword identifies a partition as the default partition. When it encounters data that falls outside of the boundaries of all partitions, Greeplum Database routes the data to the default partition. Greenplum will reject incoming data if it does not match the constraint of any partition and there is no default partition defined. Identifying a default partition ensures that incoming data that does not match a partition is inserted into the partitioned table.
+The `DEFAULT` keyword identifies a partition as the default partition. When it encounters data that falls outside of the boundaries of all partitions, Greeplum Database routes the data to the default partition. Greenplum will reject incoming data if it does not match the constraint of any partition and there is no default partition defined, and returns an error. Identifying a default partition ensures that incoming data that does not match a partition is inserted into the partitioned table.
 
 A partitioned table can only have one default partition. You can add a default partition to a partition hierarchy during or after table creation.
 
