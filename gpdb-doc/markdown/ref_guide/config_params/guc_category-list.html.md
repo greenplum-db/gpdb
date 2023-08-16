@@ -530,11 +530,18 @@ The parameters in this topic control the configuration of the Greenplum Database
 
 These parameters control the configuration of the replication between Greenplum Database primary coordinator and standby coordinator.
 
+- [checkpoint_completion_target](guc-list.html#checkpoint_completion_target)
+- [checkpoint_flush_after](guc-list.html#checkpoint_flush_after)
+- [checkpoint_timeout](guc-list.html#checkpoint_timeout)
+- [checkpoint_warning](guc-list.html#checkpoint_warning)
 - [max_slot_wal_keep_size](guc-list.html#max_slot_wal_keep_size)
+- [max_wal_size](guc-list.html#max_wal_size)
+- [min_wal_size](guc-list.html#min_wal_size)
 - [repl_catchup_within_range](guc-list.html#repl_catchup_within_range)
 - [replication_timeout](guc-list.html#replication_timeout)
 - [track_wal_io_timing](guc-list.html#track_wal_io_timing)
 - [wait_for_replication_threshold](guc-list.html#wait_for_replication_threshold)
+- [wal_buffers](guc-list.html#wal_buffers)
 - [wal_compression](guc-list.html#wal_compression)
 - [wal_keep_size](guc-list.html#wal_keep_size)
 - [wal_receiver_status_interval](guc-list.html#wal_receiver_status_interval)

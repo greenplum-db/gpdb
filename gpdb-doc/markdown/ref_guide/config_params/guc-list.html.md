@@ -157,6 +157,56 @@ When set to off, deactivates validation of the function body string during `CREA
 |-----------|-------|-------------------|
 |Boolean|on|coordinator, session, reload|
 
+## <a id="checkpoint_completion_target"></a>checkpoint\_completion\_target
+
+Specifies the target of checkpoint completion, as a fraction of the total time between checkpoints. The default is `0.5`.
+
+You can set this parameter only in the `postgresql.conf` file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|0.0 - 1.0 (floating point) |0.5|coordinator, system, restart|
+
+## <a id="checkpoint_flush_after"></a>checkpoint\_flush\_after
+
+Specifies the number of pages after which Greenplum Database flushes previously performed writes to disk. Whenever more than the specified amount of data has been written while performing a checkpoint, Greenplum Database attempts to force the operating system to issue these writes to the underlying storage. Doing so limits the amount of dirty data in the kernel's page cache, reducing the likelihood of stalls when an `fsync` is issued at the end of the checkpoint, or when the OS writes data back in larger batches in the background. Often that results in greatly reduced transaction latency, but note that there are some cases where performance may degrade, especially with workloads that are bigger than [shared\_buffers](#shared_buffers), but smaller than the OS's page cache.
+
+If you specify this value without units, it is taken as blocks, that is `BLCKSZ` bytes (typically 32kB). The valid range is between `0`, which disables forced writeback, and `256`. The default is `32`.
+
+You can set this parameter only in the `postgresql.conf` file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|0 - 256 (integer)|32|coordinator, system, restart|
+
+## <a id="checkpoint_timeout"></a>checkpoint\_timeout
+
+Specifies the maximum time between automatic WAL checkpoints.
+
+If you specify this value without units, it is taken as seconds. The valid range is between 30 seconds and one day. The default value is five minutes (`5min` or `300`).
+
+Increasing this parameter can increase the amount of time needed for crash recovery.
+
+You can set this parameter only in the `postgresql.conf` file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|30 - 86400 (integer) |300|coordinator, system, restart|
+
+## <a id="checkpoint_warning"></a>checkpoint\_warning
+
+Enables warnings if checkpoint segments are filled more frequently than the specified value. Greenplum writes a message to the server log if checkpoints caused by the filling of WAL segment files happen closer together than this amount of time (which suggests that you should raise [max_wal_size](#max_wal_size)).
+
+If you specify this value without units, it is taken as seconds. The default is 30 seconds (`30`). The value zero (`0`) disables the warning.
+
+Greenplum generates no warnings if [checkpoint_timeout](#checkpoint_timeout) is less than `checkpoint_warning`.
+
+You can set this parameter only in the `postgresql.conf` file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|0 - `INT_MAX` (integer) |30|coordinator, system, restart|
+
 ## <a id="client_connection_check_interval"></a>client\_connection\_check\_interval 
 
 Sets the time interval between optional checks that the client is still connected, while running queries. 0 deactivates connection checks.
@@ -2229,6 +2279,20 @@ When changing both `max_statement_mem` and `statement_mem`, `max_statement_mem` 
 |-----------|-------|-------------------|
 |number of kilobytes|2000MB|coordinator, session, reload, superuser|
 
+## <a id="max_wal_size"></a>max\_wal\_size
+
+Sets the WAL size at which to trigger a checkpoint. This is the maximum size Greenplum Database allows the WAL to grow during automatic checkpoints. This is a soft limit; WAL size can exceed `max_wal_size` under special circumstances, such as heavy load, a failing archive_command, or a high `wal_keep_segments` setting.
+
+If you specify this value without units, it is taken as megabytes. The default is 1 GB.
+
+Increasing this parameter can increase the amount of time needed for crash recovery.
+
+You can set this parameter only in the `postgresql.conf` file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|2 - `MAX_KILOBYTES` (integer) |1024|coordinator, system, restart|
+
 ## <a id="memory_spill_ratio"></a>memory\_spill\_ratio 
 
 > **Note** The `memory_spill_ratio` server configuration parameter is enforced only when resource group-based resource management is active.
@@ -2242,6 +2306,18 @@ You can specify an integer percentage value from 0 to 100 inclusive. If you spec
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |0 - 100|20|coordinator, session, reload|
+
+## <a id="min_wal_size"></a>min\_wal\_size
+
+Sets the minimum size to which to shrink the WAL. As long as WAL disk usage stays below this setting, Greenplum Database always recycles old WAL files for future use at a checkpoint, rather than remove them. You can use this parameter to ensure that enough WAL space is reserved to handle spikes in WAL usage, for example when running large batch jobs.
+
+If you specify this value without units, it is taken as megabytes. The default is `320` MB.
+
+You can set this parameter only in the `postgresql.conf` file or on the server command line.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|2 - `MAX_KILOBYTES` (integer) |320|coordinator, system, restart|
 
 ## <a id="optimizer"></a>optimizer 
 
@@ -2822,6 +2898,18 @@ If the number of segment files does not exceed the value, Greenplum Database blo
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |0 - 64|1|coordinator, system, reload, superuser|
+
+## <a id="wal_buffers"></a>wal_buffers
+
+Sets the number of disk-page buffers in shared memory for WAL. This is the amount of shared memory used for WAL data that has not yet been written to disk. The default setting of `-1` selects a size equal to 1/32nd (about 3%) of [shared_buffers](#shared_buffers), but not less than `64kB` nor more than the size of one WAL segment, typically `16MB`. You can set this value manually if the automatic choice is too large or too small, but Greenplum Database treats any positive value less than `32kB` as `32kB`. If you specify this value without units, it is taken as WAL blocks, that is `XLOG_BLCKSZ` bytes, typically 32kB.
+
+You can set this parameter only at server start.
+
+The contents of the WAL buffers are written out to disk at every transaction commit, so extremely large values are unlikely to provide a significant benefit. However, setting this value to at least a few megabytes can improve write performance on a busy server where many clients are committing at once. The auto-tuning selected by the default setting of `-1` should give reasonable results in most cases.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|-1 - (INT_MAX / XLOG_BLCKSZ) (integer) | -1 |coordinator, system, restart|
 
 ## <a id="wal_compression"></a>wal_compression
 
