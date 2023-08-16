@@ -699,7 +699,11 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 		}
 	}
 
-	sample_needed = needs_sample(onerel, vacattrstats, attr_cnt);
+	if (onerel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE && inh)
+		sample_needed = false;
+	else
+		sample_needed = needs_sample(onerel, vacattrstats, attr_cnt);
+
 	if (ctx || sample_needed)
 	{
 		if (ctx)
