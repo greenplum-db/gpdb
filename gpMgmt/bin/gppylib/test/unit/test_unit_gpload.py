@@ -70,13 +70,13 @@ class GpLoadTestCase(unittest.TestCase):
 
     def test_case_insert_transaction(self):
         self.help_test_with_config(['-f', os.path.join(os.path.dirname(__file__), 'gpload_insert.yml')],
-                              False,
-                              False)
+                              True,
+                              True)
 
     def test_case_insert_transaction_t(self):
         self.help_test_with_config(['-f', os.path.join(os.path.dirname(__file__), 'gpload_insert.yml')],
-                              False,
-                              False)
+                              True,
+                              True)
 
     def test_case_insert_without_transaction(self):
         self.help_test_with_config(['--no_auto_trans', '-f', os.path.join(os.path.dirname(__file__), 'gpload_insert.yml')],
