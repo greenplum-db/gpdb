@@ -75,7 +75,7 @@ Partitioning does not improve query performance unless the query optimizer can e
 
 > **Caution** Be very careful with multi-level partitioning, as the number of partition files can grow very quickly. For example, if a table is partitioned by both day and city, and there are 1,000 days of data and 1,000 cities, the total number of partitions is one million. Column-oriented tables store each column in a physical table, so if this table has 100 columns, the system would be required to manage 100 million files for the table, for each segment.
 
-XXX Before settling on a multi-level partitioning strategy, consider a single level partition with bitmap indexes. Indexes slow down data loads, so performance testing with your data and schema is recommended to decide on the best strategy.
+Before settling on a multi-level partitioning strategy, consider a single level partition with bitmap indexes. Indexes slow down data loads, so performance testing with your data and schema is recommended to decide on the best strategy.
 
 
 ## <a id="choose"></a>Choosing the Partitioning Syntax
@@ -118,7 +118,7 @@ You partition a table when you create it with the [CREATE TABLE](../../ref_guide
 
 You are not required to manually create table constraints describing the partition boundary conditions for partitions, Greenplum creates such constraints automatically.
 
-After you create a partition, Greenplum directs to the partition any data inserted into the root partitioned table that matches this partitions' constraints. The partition key specified may overlap with the parent's partition key, although take care when specifying the bounds of a sub-partition such that the set of data it accepts constitutes a subset of what the partition's own bounds allow; Greenplum does not check whether that's really the case.
+After you create a partition, Greenplum directs to the partition any data inserted into the root partitioned table that matches this partition's partition constraints. The partition key specified may overlap with the parent's partition key, although take care when specifying the bounds of a sub-partition such that the set of data it accepts constitutes a subset of what the partition's own bounds allow; Greenplum does not check whether that's really the case.
 
 You can use the same partition key column to create sub-partitions if necessary, for example, to partition by month and then sub-partition by day. Consider partitioning by the most granular level. For example, for a table partitioned by date, you can partition by day and have 365 daily partitions, rather than partition by year then sub-partition by month then sub-partition by day. A multi-level design can reduce query planning time, but a flat partition design typically runs faster.
 
@@ -399,8 +399,6 @@ SELECT pg_get_expr(template, relid) FROM gp_partition_template
 
 You can obtain most of the information available via the (removed) Greenplum 6 `pg_partitions` view with the following query:
 
-XXX THIS DOESN'T WORK, IS THERE ANOTHER QUERY WE WANT TO SHARE WITH USERS?
-
 ``` sql
 SELECT
   n.nspname,
@@ -411,7 +409,7 @@ SELECT
   pt.partnatts,
   pt.partattrs AS partkeycol,
   pg_get_expr(pt.partexprs, pt.partrelid) AS partkeyexpr,
-  (SELECT level FROM pg_partition_tree(c.oid)) AS level,
+  (SELECT level FROM pg_partition_tree(pg_partition_root(c.oid)) WHERE relid = c.oid::regclass) AS level,
   pg_get_expr(c.relpartbound, c.oid) AS partbound
 FROM pg_class c
  LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -583,8 +581,6 @@ CREATE TABLE msales_other (LIKE msales);
 ALTER TABLE msales ATTACH PARTITION msales_other DEFAULT;
 ```
 
-XXX If your partition design is multi-level, each level in the hierarchy must have a default partition.
-
 ### <a id="droppart"></a>Dropping a Partition
 
 The simplest option for removing old data is to drop the partition that is no longer necessary:
@@ -660,7 +656,6 @@ Take note of the following Greenplum Database partitioned table limitations:
 - Greenplum does not support partitioning replicated tables (tables created with the `DISTRIBUTED REPLICATED` distribution policy).
 - The Greenplum Query Optimizer (GPORCA) does not support uniform multi-level partitioned tables. If GPORCA is enabled (the default) and the partitioned table is multi-level, Greenplum Database runs queries against the table with the Postgres Planner.
 - The Greenplum Database `gpbackup` utility does not back up data from a leaf partition of a partitioned table when the leaf partition is an external or foreign table.
-- XXX A unique index can omit the partitioning columns; however, it is enforced only on the parts of the partitioned table, not on the partitioned table as a whole.
 - To create a unique or primary key constraint on a partitioned table, the partition keys must not include any expressions or function calls and the constraint's columns must include all of the partition key columns. This limitation exists because the individual indexes making up the constraint can only directly enforce uniqueness within their own partitions; the partition structure itself must guarantee that there are not duplicates in different partitions.
 - There is no way to create an exclusion constraint spanning the whole partitioned table. You can put such a constraint only on each leaf partition individually. This limitation stems from not being able to enforce cross-partition restrictions.
 - Mixing temporary and permanent relations in the same partition hierarchy is not allowed. If the partitioned table is permanent, so must be its partitions and likewise if the partitioned table is temporary. When using temporary relations, all members of the partition hierarchy must be from the same session.
