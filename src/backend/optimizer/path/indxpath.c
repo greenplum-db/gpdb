@@ -806,7 +806,11 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 		 *
 		 * Enable index only scan on AO here, but the index scan is still disabled.
 		 */
-		if (index->amhasgettuple)
+		if (index->amhasgettuple &&
+				((!IsAccessMethodAO(rel->relam) ||
+				  index->amcostestimate == bmcostestimate ||
+				  ipath->path.pathtype == T_IndexOnlyScan ||
+				  (!index->amhasgetbitmap))))
 			add_path(rel, (Path *) ipath);
 
 		if (index->amhasgetbitmap &&
