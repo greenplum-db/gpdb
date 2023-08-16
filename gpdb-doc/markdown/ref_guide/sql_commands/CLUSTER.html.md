@@ -14,7 +14,7 @@ CLUSTER [VERBOSE]
 
 ## <a id="section3"></a>Description 
 
-`CLUSTER` instructs Greenplum Database to order the table specified by `<table_name>` based on the index specified by `<index_name>`. The index must already have been defined on `<table_name>.
+`CLUSTER` instructs Greenplum Database to order the table specified by `<table_name>` based on the index specified by `<index_name>`. The index must already have been defined on `<table_name>`.
 
 XXX `CLUSTER` on non-B-tree indexes is not supported on append-optimized storage tables. XXX
 
