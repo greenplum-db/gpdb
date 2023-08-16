@@ -171,3 +171,5 @@
 		"wal_sender_timeout",
 		"work_mem",
 		"zero_damaged_pages",
+		"gp_appendonly_random_page_cost",
+		"gp_decompress_random_page_cost",
