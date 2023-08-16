@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import fileinput
 import os
-import pipes
 import re
 import signal
 import stat
 import time
 import glob
+import shlex
 import shutil
 import subprocess
 import difflib
@@ -230,7 +230,7 @@ def stop_primary(context, content_id):
     # Thus, need to add pg_ctl to the path when ssh'ing to a demo cluster.
     subprocess.check_call(['ssh', seg_host,
                            'source %s/greenplum_path.sh && pg_ctl stop -m fast -D %s' % (
-                               pipes.quote(os.environ.get("GPHOME")), pipes.quote(seg_data_dir))
+                               shlex.quote(os.environ.get("GPHOME")), shlex.quote(seg_data_dir))
                            ])
 
 

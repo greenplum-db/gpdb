@@ -36,7 +36,6 @@ try:
 except:
     import subprocess
 import threading
-import pipes  # for shell-quoting, pipes.quote()
 import os
 from collections import defaultdict
 import psycopg2

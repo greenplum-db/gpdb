@@ -22,7 +22,7 @@ import tempfile
 import time
 from datetime import datetime, timedelta
 from contextlib import closing
-import pipes  # for shell-quoting, pipes.quote()
+import shlex
 import fcntl
 import itertools
 import psycopg2
@@ -949,7 +949,7 @@ class AnalyzeDb(Operation):
 
 # Create a Command object that executes a query using psql.
 def create_psql_command(dbname, query):
-    psql_cmd = """psql %s -c %s""" % (pipes.quote(dbname), pipes.quote(query))
+    psql_cmd = """psql %s -c %s""" % (shlex.quote(dbname), shlex.quote(query))
     return Command(query, psql_cmd)
 
 

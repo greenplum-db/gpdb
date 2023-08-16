@@ -12,8 +12,7 @@ import pwd
 import socket
 import signal
 import uuid
-import pipes
-
+import shlex
 from gppylib.gplog import get_default_logger
 from gppylib.commands.base import *
 
@@ -559,7 +558,7 @@ class Rsync(Command):
         cmd_tokens.extend(exclude_str)
 
         if progress_file:
-            cmd_tokens.append('> %s 2>&1' % pipes.quote(progress_file))
+            cmd_tokens.append('> %s 2>&1' % shlex.quote(progress_file))
 
         cmdStr = ' '.join(cmd_tokens)
 

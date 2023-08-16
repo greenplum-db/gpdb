@@ -1,6 +1,6 @@
 from contextlib import closing
 import os
-import pipes
+import shlex
 import signal
 import time
 import re
@@ -478,13 +478,13 @@ class GpMirrorListToBuild:
         if self.__progressMode != GpMirrorListToBuild.Progress.NONE:
             return GpMirrorListToBuild.ProgressCommand("tail the last line of the file",
                                                        "set -o pipefail; touch -a {0}; tail -1 {0} | tr '\\r' '\\n' |"
-                                                       " tail -1".format(pipes.quote(progressFile)),
+                                                       " tail -1".format(shlex.quote(progressFile)),
                                                        targetSegmentDbId, progressFile, ctxt=base.REMOTE,
                                                        remoteHost=targetHostname)
         return None
 
     def _get_remove_cmd(self, remove_file, target_host):
-        return base.Command("remove file", "rm -f {}".format(pipes.quote(remove_file)), ctxt=base.REMOTE, remoteHost=target_host)
+        return base.Command("remove file", "rm -f {}".format(shlex.quote(remove_file)), ctxt=base.REMOTE, remoteHost=target_host)
 
     def __runWaitAndCheckWorkerPoolForErrorsAndClear(self, cmds, suppressErrorCheck=False, progressCmds=[]):
         for cmd in cmds:

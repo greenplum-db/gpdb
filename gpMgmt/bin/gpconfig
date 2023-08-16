@@ -15,6 +15,7 @@
 import os
 import sys
 import re
+import shlex
 from psycopg2 import DatabaseError
 try:
     from gppylib.gpparseopts import OptParser, OptChecker
@@ -366,7 +367,7 @@ def do_change(options):
 
     # Replace literal empty strings with empty quotes, or it will look like the
     # user passed in an incorrect argument, which would be misleading
-    params = [pipes.quote(arg) for arg in sys.argv[1:]]
+    params = [shlex.quote(arg) for arg in sys.argv[1:]]
     params = " ".join(params)
     if failure:
         LOGGER.error("finished with errors, parameter string '%s'" % params)
