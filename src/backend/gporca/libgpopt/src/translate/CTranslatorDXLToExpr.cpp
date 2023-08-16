@@ -2140,7 +2140,7 @@ CTranslatorDXLToExpr::Ptabdesc(CDXLTableDescr *table_descr)
 		pmdrel->RetrieveRelStorageType();
 
 	// get append only table version
-	IMDRelation::Erelaoversion rel_ao_version = pmdrel->RetrieveRelAOVersion();
+	IMDRelation::Erelaoversion rel_ao_version = pmdrel->GetRelAOVersion();
 
 	mdid->AddRef();
 	CTableDescriptor *ptabdesc = GPOS_NEW(m_mp) CTableDescriptor(

@@ -116,7 +116,7 @@ public:
 	virtual Erelstoragetype RetrieveRelStorageType() const = 0;
 
 	// append only table version
-	virtual Erelaoversion RetrieveRelAOVersion() const = 0;
+	virtual Erelaoversion GetRelAOVersion() const = 0;
 
 	// distribution policy (none, hash, random)
 	virtual Ereldistrpolicy GetRelDistribution() const = 0;

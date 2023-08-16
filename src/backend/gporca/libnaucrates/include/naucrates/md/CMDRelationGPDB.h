@@ -156,7 +156,7 @@ public:
 	Erelstoragetype RetrieveRelStorageType() const override;
 
 	// append only table version
-	Erelaoversion RetrieveRelAOVersion() const override;
+	Erelaoversion GetRelAOVersion() const override;
 
 	// distribution policy (none, hash, random)
 	Ereldistrpolicy GetRelDistribution() const override;

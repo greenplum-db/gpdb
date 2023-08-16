@@ -148,7 +148,8 @@ CParseHandlerMDRelation::StartElement(const XMLCh *const element_uri,
 	// parse ao version
 	m_rel_ao_version = IMDRelation::AORelationVersion_None;
 	if (IMDRelation::ErelstorageAppendOnlyCols == m_rel_storage_type ||
-		IMDRelation::ErelstorageAppendOnlyRows == m_rel_storage_type)
+		IMDRelation::ErelstorageAppendOnlyRows == m_rel_storage_type ||
+		IMDRelation::ErelstorageMixedPartitioned == m_rel_storage_type)
 	{
 		switch (CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
 			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,

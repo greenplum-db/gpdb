@@ -52,8 +52,7 @@ CXformDynamicIndexGet2DynamicIndexScan::Exfp(CExpressionHandle &exprhdl) const
 	BOOL possible_ao_table = ptabdesc->IsAORowOrColTable() ||
 							 ptabdesc->RetrieveRelStorageType() ==
 								 IMDRelation::ErelstorageMixedPartitioned;
-	if ((ptabdesc->IsPartitioned() && possible_ao_table) ||
-		exprhdl.DeriveHasSubquery(0))
+	if (possible_ao_table || exprhdl.DeriveHasSubquery(0))
 	{
 		// GPDB does not support dynamic index scan on AO/AOCS table.
 		return CXform::ExfpNone;

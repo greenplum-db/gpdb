@@ -219,7 +219,7 @@ public:
 
 	// append only table version
 	IMDRelation::Erelaoversion
-	RetrieveRelAOVersion() const
+	GetRelAOVersion() const
 	{
 		return m_erelaoversion;
 	}

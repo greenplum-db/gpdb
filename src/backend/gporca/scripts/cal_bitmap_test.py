@@ -151,7 +151,6 @@ CREATE TABLE cal_brintest(id int,
 DISTRIBUTED BY (id);
 """
 
-
 _with_appendonly = """
 WITH (appendonly=true)
 """

@@ -148,7 +148,7 @@ public:
 	}
 
 	Erelaoversion
-	RetrieveRelAOVersion() const override
+	GetRelAOVersion() const override
 	{
 		return IMDRelation::GetCurrentAOVersion();
 	}

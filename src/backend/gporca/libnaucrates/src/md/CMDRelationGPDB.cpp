@@ -215,7 +215,7 @@ CMDRelationGPDB::RetrieveRelStorageType() const
 }
 
 IMDRelation::Erelaoversion
-CMDRelationGPDB::RetrieveRelAOVersion() const
+CMDRelationGPDB::GetRelAOVersion() const
 {
 	return m_rel_ao_version;
 }
@@ -622,7 +622,8 @@ CMDRelationGPDB::Serialize(CXMLSerializer *xml_serializer) const
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenRelStorageType),
 		IMDRelation::GetStorageTypeStr(m_rel_storage_type));
-	if (IsAORowOrColTable())
+	if (IsAORowOrColTable() ||
+		IMDRelation::ErelstorageMixedPartitioned == RetrieveRelStorageType())
 	{
 		xml_serializer->AddAttribute(
 			CDXLTokens::GetDXLTokenStr(EdxltokenRelAppendOnlyVersion),
