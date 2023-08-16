@@ -687,7 +687,7 @@ When a leaf partition is an external or foreign table, the following limitations
     -   Adding or dropping a column.
     -   Changing the data type of a column.
 
-These (*classic syntax*) `ALTER TABLE ... ALTER PARTITION` operations are not supported when the partitioned table contains an external or foreign table partition: VERIFY
+These (*classic syntax*) `ALTER TABLE ... ALTER PARTITION` operations are not supported when the partitioned table contains an external or foreign table partition:
 -   Setting a sub-partition template.
 -   Altering the partition properties.
 -   Creating a default partition.
