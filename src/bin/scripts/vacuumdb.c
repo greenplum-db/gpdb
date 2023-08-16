@@ -72,6 +72,11 @@ static void prepare_vacuum_command(PQExpBuffer sql, int serverVersion,
 static void run_vacuum_command(PGconn *conn, const char *sql, bool echo,
 							   const char *table, const char *progname, bool async);
 
+static void append_to_vacuum_command(PQExpBuffer sql, const char *table);
+
+static void finalize_vacuum_command(PQExpBuffer sql);
+
+
 static ParallelSlot *GetIdleSlot(ParallelSlot slots[], int numslots,
 								 const char *progname);
 
@@ -387,6 +392,8 @@ vacuum_one_database(const ConnParams *cparams,
 	SimpleStringList dbtables = {NULL, NULL};
 	int			i;
 	int			ntups;
+	int			processedTables;
+	int			tablesPerConn;
 	bool		failed = false;
 	bool		parallel = concurrentCons > 1;
 	bool		tables_listed = false;
@@ -673,11 +680,34 @@ vacuum_one_database(const ConnParams *cparams,
 
 	initPQExpBuffer(&sql);
 
+	/*
+	 * GPDB: Prepare and execute a database wide VACUUM to save on dispatch
+	 * overhead. We use the only connection slot we have, which we know to be free.
+	 * In this mode, the program terminates in case of an error.
+	 */
+	if (!(parallel || tables_listed))
+	{
+
+		prepare_vacuum_command(&sql, PQserverVersion(slots->connection),
+								vacopts, NULL);
+		finalize_vacuum_command(&sql);
+		run_vacuum_command(slots->connection, sql.data,
+								echo, NULL, progname, parallel);
+		return;
+	}
+
+	/*
+	 * GPDB: Prepare and execute a VACUUM command with a table list.
+	 * The table list is divided evenly across concurrentCons.
+	 */
+	processedTables = 0;
+	tablesPerConn = ntups / concurrentCons;
 	cell = dbtables.head;
 	do
 	{
 		const char *tabname = cell->val;
 		ParallelSlot *free_slot;
+		bool cmdBegin = (processedTables == 0);
 
 		if (CancelRequested)
 		{
@@ -686,39 +716,55 @@ vacuum_one_database(const ConnParams *cparams,
 		}
 
 		/*
+		 * GPDB: Prepare the VACUUM command. If it's not a new command, append
+		 * the table to the query string.
+		 *
 		 * Get the connection slot to use.  If in parallel mode, here we wait
 		 * for one connection to become available if none already is.  In
 		 * non-parallel mode we simply use the only slot we have, which we
 		 * know to be free.
 		 */
-		if (parallel)
+		if (cmdBegin)
 		{
-			/*
-			 * Get a free slot, waiting until one becomes free if none
-			 * currently is.
-			 */
-			free_slot = GetIdleSlot(slots, concurrentCons, progname);
-			if (!free_slot)
+			if (parallel)
 			{
-				failed = true;
-				goto finish;
+				/*
+				* Get a free slot, waiting until one becomes free if none
+				* currently is.
+				*/
+				free_slot = GetIdleSlot(slots, concurrentCons, progname);
+				if (!free_slot)
+				{
+					failed = true;
+					goto finish;
+				}
+				free_slot->isFree = false;
 			}
+			else
+				free_slot = slots;
 
-			free_slot->isFree = false;
+			prepare_vacuum_command(&sql, PQserverVersion(free_slot->connection),
+									vacopts, tabname);
 		}
 		else
-			free_slot = slots;
+			append_to_vacuum_command(&sql, tabname);
 
-		prepare_vacuum_command(&sql, PQserverVersion(free_slot->connection),
-							   vacopts, tabname);
 
 		/*
-		 * Execute the vacuum.  If not in parallel mode, this terminates the
+		 * GPDB: When tablesPerConn tables have been processed or we are
+		 * at the end of the table list, execute the VACUUM.
+		 *
+		 * If not in parallel mode, this terminates the
 		 * program in case of an error.  (The parallel case handles query
 		 * errors in ProcessQueryResult through GetIdleSlot.)
 		 */
-		run_vacuum_command(free_slot->connection, sql.data,
-						   echo, tabname, progname, parallel);
+		if ((++processedTables == tablesPerConn) || (cell->next == NULL))
+		{
+			finalize_vacuum_command(&sql);
+			run_vacuum_command(free_slot->connection, sql.data,
+									echo, tabname, progname, parallel);
+			processedTables = 0;
+		}
 
 		cell = cell->next;
 	} while (cell != NULL);
@@ -743,7 +789,8 @@ vacuum_one_database(const ConnParams *cparams,
 	{
 		resetPQExpBuffer(&sql);
 		appendPQExpBufferStr(&sql, "VACUUM (ONLY_DATABASE_STATS)");
-		run_vacuum_command(slots->connection, &sql, echo, NULL, progname, false);
+		finalize_vacuum_command(&sql);
+		run_vacuum_command(slots->connection, sql.data, echo, NULL, progname, false);
 	}
 
 finish:
@@ -827,8 +874,8 @@ vacuum_all_databases(ConnParams *cparams,
  * Construct a vacuum/analyze command to run based on the given options, in the
  * given string buffer, which may contain previous garbage.
  *
- * The table name used must be already properly quoted.  The command generated
- * depends on the server version involved and it is semicolon-terminated.
+ * The table name used must be already properly quoted. The command generated
+ * depends on the server version involved.
  */
 static void
 prepare_vacuum_command(PQExpBuffer sql, int serverVersion,
@@ -932,7 +979,27 @@ prepare_vacuum_command(PQExpBuffer sql, int serverVersion,
 		}
 	}
 
-	appendPQExpBuffer(sql, " %s;", table);
+	if (table)
+		appendPQExpBuffer(sql, " %s", table);
+}
+
+/*
+ * GPDB: append table to the vacuum command
+ */
+static void
+append_to_vacuum_command(PQExpBuffer sql, const char *table)
+{
+	if (table)
+		appendPQExpBuffer(sql, ", %s", table);
+}
+
+/*
+ * GPDB: semicolon-terminate the vacuum command
+ */
+static void
+finalize_vacuum_command(PQExpBuffer sql)
+{
+	appendPQExpBufferChar(sql, ';');
 }
 
 /*
