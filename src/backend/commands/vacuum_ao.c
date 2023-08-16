@@ -422,7 +422,18 @@ ao_vacuum_rel(Relation rel, VacuumParams *params, BufferAccessStrategy bstrategy
 
 	if (!vacrelstats)
 	{
-		Assert(ao_vacuum_phase == VACOPT_AO_PRE_CLEANUP_PHASE || Gp_role != GP_ROLE_EXECUTE);
+		if (ao_vacuum_phase != VACOPT_AO_PRE_CLEANUP_PHASE && Gp_role == GP_ROLE_EXECUTE)
+		{
+			/*
+			 * If we enter here, it indicates the previous vacuum worker exited
+			 * and we are in a new worker, previous collected data in vacrelstats
+			 * will be lost.
+			 */
+			SIMPLE_FAULT_INJECTOR("vacuum_worker_changed");
+
+			elog(LOG, "Vacuum worker process is changed, progressing status is reset, current state is %d.",
+				 ao_vacuum_phase);
+		}
 
 		pgstat_progress_start_command(PROGRESS_COMMAND_VACUUM, RelationGetRelid(rel));
 		vacrelstats = init_vacrelstats();

@@ -8,9 +8,9 @@ In a normal expansion operation it is not necessary to modify the data stored in
 
 |column|type|references|description|
 |------|----|----------|-----------|
+|`table_oid`|oid| |OID of the table.|
 |`dbname`|text| |Name of the database to which the table belongs.|
 |`fq_name`|text| |Fully qualified name of the table.|
-|`table_oid`|oid| |OID of the table.|
 |`root_partition_oid`|oid| |For a partitioned table, the OID of the root partition. Otherwise, `None`.|
 |`rank`|int| |Rank determines the order in which tables are expanded. The expansion utility will sort on rank and expand the lowest-ranking tables first.|
 |`external_writable`|boolean| |Identifies whether or not the table is an external writable table. \(External writable tables require a different syntax to expand\).|

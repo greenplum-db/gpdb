@@ -19,6 +19,7 @@ extern "C" {
 #include "postgres.h"
 
 #include "access/attnum.h"
+#include "optimizer/plancat.h"
 #include "parser/parse_coerce.h"
 #include "statistics/statistics.h"
 #include "utils/faultinjector.h"
@@ -500,6 +501,8 @@ gpos::BOOL IsChildPartDistributionMismatched(Relation rel);
 
 double CdbEstimatePartitionedNumTuples(Relation rel);
 
+PageEstimate CdbEstimatePartitionedNumPages(Relation rel);
+
 // close the given relation
 void CloseRelation(Relation rel);
 
@@ -664,6 +667,8 @@ Var *MakeVarFromTargetEntry(Index varno, TargetEntry *tle);
 TargetEntry *FlatCopyTargetEntry(TargetEntry *src_tle);
 
 bool IsTypeRange(Oid typid);
+
+char *GetRelAmName(Oid reloid);
 
 }  //namespace gpdb
 

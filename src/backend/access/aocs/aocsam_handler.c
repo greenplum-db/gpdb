@@ -1398,24 +1398,18 @@ aoco_relation_rewrite_columns(Relation rel, List *newvals, TupleDesc oldDesc)
 }
 
 static void
-aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
-                                     Relation OldIndex, bool use_sort,
-                                     TransactionId OldestXmin,
-                                     TransactionId *xid_cutoff,
-                                     MultiXactId *multi_cutoff,
-                                     double *num_tuples,
-                                     double *tups_vacuumed,
-                                     double *tups_recently_dead)
+aoco_relation_cluster_internals(Relation OldHeap, Relation NewHeap, TupleDesc oldTupDesc, 
+						 TransactionId OldestXmin, TransactionId *xid_cutoff,
+						 MultiXactId *multi_cutoff, double *num_tuples,
+						 double *tups_vacuumed, double *tups_recently_dead, 
+						 Tuplesortstate *tuplesort)
 {
-	TupleDesc	oldTupDesc;
 	TupleDesc	newTupDesc;
 	int			natts;
 	Datum	   *values;
 	bool	   *isnull;
 	TransactionId FreezeXid;
 	MultiXactId MultiXactCutoff;
-	Tuplesortstate *tuplesort;
-	PGRUsage	ru0;
 
 	AOTupleId				aoTupleId;
 	AOCSInsertDesc			idesc = NULL;
@@ -1424,28 +1418,10 @@ aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	TupleTableSlot		   *slot;
 	double					n_tuples_written = 0;
 
-	pg_rusage_init(&ru0);
-
-	/*
-	 * Curently AO storage lacks cost model for IndexScan, thus IndexScan
-	 * is not functional. In future, probably, this will be fixed and CLUSTER
-	 * command will support this. Though, random IO over AO on TID stream
-	 * can be impractical anyway.
-	 * Here we are sorting data on on the lines of heap tables, build a tuple
-	 * sort state and sort the entire AO table using the index key, rewrite
-	 * the table, one tuple at a time, in order as returned by tuple sort state.
-	 */
-	if (OldIndex == NULL || !IS_BTREE(OldIndex))
-		ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("cannot cluster append-optimized table \"%s\"", RelationGetRelationName(OldHeap)),
-					errdetail("Append-optimized tables can only be clustered against a B-tree index")));
-
 	/*
 	 * Their tuple descriptors should be exactly alike, but here we only need
 	 * assume that they have the same number of columns.
 	 */
-	oldTupDesc = RelationGetDescr(OldHeap);
 	newTupDesc = RelationGetDescr(NewHeap);
 	Assert(newTupDesc->natts == oldTupDesc->natts);
 
@@ -1498,8 +1474,6 @@ aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	*xid_cutoff = FreezeXid;
 	*multi_cutoff = MultiXactCutoff;
 
-	tuplesort = tuplesort_begin_cluster(oldTupDesc, OldIndex,
-											maintenance_work_mem, NULL, false);
 
 
 	/* Log what we're doing */
@@ -1605,6 +1579,81 @@ aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 
 	/* Finish and deallocate insertion */
 	aocs_insert_finish(idesc);
+
+}
+
+static void
+aoco_relation_copy_for_repack(Relation OldHeap, Relation NewHeap, 
+									int nkeys, AttrNumber *attNums, 
+									Oid *sortOperators, Oid *sortCollations,
+									bool *nullsFirstFlags, TransactionId *frozenXid,
+									MultiXactId *cutoffMulti, TransactionId OldestXmin,
+									double *num_tuples)
+{
+	PGRUsage		ru0;
+	TupleDesc		oldTupDesc;
+	Tuplesortstate	*tuplesort;
+
+	/* These are thrown away, just here so we can share code with CLUSTER */
+	double tups_recently_dead = 0; 
+	double tups_vacuumed = 0;
+
+	pg_rusage_init(&ru0);
+	oldTupDesc = RelationGetDescr(OldHeap);
+
+	tuplesort = tuplesort_begin_repack(
+		oldTupDesc,
+		nkeys, 
+		attNums,
+		sortOperators, 
+		sortCollations,
+		nullsFirstFlags,
+		maintenance_work_mem, 
+		NULL, 
+		false);
+
+	aoco_relation_cluster_internals(OldHeap, NewHeap, oldTupDesc, OldestXmin, frozenXid,
+		cutoffMulti, num_tuples, &tups_vacuumed, &tups_recently_dead, tuplesort);
+}
+
+static void
+aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
+                                     Relation OldIndex, bool use_sort,
+                                     TransactionId OldestXmin,
+                                     TransactionId *xid_cutoff,
+                                     MultiXactId *multi_cutoff,
+                                     double *num_tuples,
+                                     double *tups_vacuumed,
+                                     double *tups_recently_dead)
+{
+	PGRUsage		ru0;
+	TupleDesc		oldTupDesc;
+	Tuplesortstate	*tuplesort;
+
+	pg_rusage_init(&ru0);
+
+	/*
+	 * Curently AO storage lacks cost model for IndexScan, thus IndexScan
+	 * is not functional. In future, probably, this will be fixed and CLUSTER
+	 * command will support this. Though, random IO over AO on TID stream
+	 * can be impractical anyway.
+	 * Here we are sorting data on on the lines of heap tables, build a tuple
+	 * sort state and sort the entire AO table using the index key, rewrite
+	 * the table, one tuple at a time, in order as returned by tuple sort state.
+	 */
+	if (OldIndex == NULL || !IS_BTREE(OldIndex))
+		ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("cannot cluster append-optimized table \"%s\"", RelationGetRelationName(OldHeap)),
+					errdetail("Append-optimized tables can only be clustered against a B-tree index")));
+
+	oldTupDesc = RelationGetDescr(OldHeap);
+
+	tuplesort = tuplesort_begin_cluster(oldTupDesc, OldIndex,
+											maintenance_work_mem, NULL, false);
+
+	aoco_relation_cluster_internals(OldHeap, NewHeap, oldTupDesc, OldestXmin, xid_cutoff,
+		multi_cutoff, num_tuples, tups_vacuumed, tups_recently_dead, tuplesort);
 }
 
 static bool
@@ -2519,6 +2568,7 @@ static const TableAmRoutine ao_column_methods = {
 	.relation_set_new_filenode = aoco_relation_set_new_filenode,
 	.relation_nontransactional_truncate = aoco_relation_nontransactional_truncate,
 	.relation_copy_data = aoco_relation_copy_data,
+	.relation_copy_for_repack = aoco_relation_copy_for_repack,
 	.relation_copy_for_cluster = aoco_relation_copy_for_cluster,
 	.relation_add_columns = aoco_relation_add_columns,
 	.relation_rewrite_columns = aoco_relation_rewrite_columns,

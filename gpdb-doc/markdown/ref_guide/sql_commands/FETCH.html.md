@@ -8,7 +8,7 @@ Retrieves rows from a query using a cursor.
 FETCH [ <forward_direction> { FROM | IN } ] <cursor_name>
 ```
 
-where forward\_direction can be empty or one of:
+where <forward_direction> can be empty or one of:
 
 ```
     NEXT
@@ -28,25 +28,19 @@ where forward\_direction can be empty or one of:
 
 > **Note** You cannot `FETCH` from a `PARALLEL RETRIEVE CURSOR`, you must [RETRIEVE](RETRIEVE.html) the rows from it.
 
-> **Note** This page describes usage of cursors at the SQL command level. If you are trying to use cursors inside a PL/pgSQL function, the rules are different. See [PL/pgSQL function](../../analytics/pl_sql.html#topic1).
-
 A cursor has an associated position, which is used by `FETCH`. The cursor position can be before the first row of the query result, on any particular row of the result, or after the last row of the result. When created, a cursor is positioned before the first row. After fetching some rows, the cursor is positioned on the row most recently retrieved. If `FETCH` runs off the end of the available rows then the cursor is left positioned after the last row. `FETCH ALL` will always leave the cursor positioned after the last row.
+
+> **Note**
+> Because Greenplum Database does not support scrollable cursors, it is not possible to move a cursor position backwards. You can only move a cursor forward in position using `FETCH`.
 
 The forms `NEXT`, `FIRST`, `ABSOLUTE`, `RELATIVE` fetch a single row after moving the cursor appropriately. If there is no such row, an empty result is returned, and the cursor is left positioned before the first row or after the last row as appropriate.
 
-The forms using `FORWARD` retrieve the indicated number of rows moving in the forward direction, leaving the cursor positioned on the last-returned row \(or after all rows, if the count exceeds the number of rows available\). Note that it is not possible to move a cursor position backwards in Greenplum Database, since scrollable cursors are not supported. You can only move a cursor forward in position using `FETCH`.
+The forms using `FORWARD` retrieve the indicated number of rows moving in the forward direction, leaving the cursor positioned on the last-returned row \(or after all rows, if the count exceeds the number of rows available\).
 
 `RELATIVE 0` and `FORWARD 0` request fetching the current row without moving the cursor, that is, re-fetching the most recently fetched row. This will succeed unless the cursor is positioned before the first row or after the last row, in which case no row is returned.
 
-**Outputs**
-
-On successful completion, a `FETCH` command returns a command tag of the form
-
-```
-FETCH <count>
-```
-
-The count is the number of rows fetched \(possibly zero\). Note that in `psql`, the command tag will not actually be displayed, since `psql` displays the fetched rows instead.
+> **Note**
+> This page describes usage of cursors at the SQL command level. If you are trying to use cursors inside a PL/pgSQL function, the rules are different. See [PL/pgSQL function](../../analytics/pl_sql.html#topic1).
 
 ## <a id="section5"></a>Parameters 
 
@@ -83,6 +77,16 @@ FORWARD ALL
 cursor\_name
 :   The name of an open cursor.
 
+## <a id="section5a"></a>Outputs
+
+On successful completion, a `FETCH` command returns a command tag of the form
+
+```
+FETCH <count>
+```
+
+The count is the number of rows fetched \(possibly zero\). Note that in `psql`, the command tag will not actually be displayed, since `psql` displays the fetched rows instead.
+
 ## <a id="section6"></a>Notes 
 
 Greenplum Database does not support scrollable cursors, so you can only use `FETCH` to move the cursor position forward.
@@ -93,19 +97,19 @@ Greenplum Database does not support scrollable cursors, so you can only use `FET
 
 ## <a id="section7"></a>Examples 
 
--- Start the transaction:
+Start the transaction:
 
 ```
 BEGIN;
 ```
 
--- Set up a cursor:
+Set up a cursor:
 
 ```
 DECLARE mycursor CURSOR FOR SELECT * FROM films;
 ```
 
--- Fetch the first 5 rows in the cursor `mycursor`:
+Fetch the first 5 rows in the cursor `mycursor`:
 
 ```
 FETCH FORWARD 5 FROM mycursor;
@@ -118,7 +122,7 @@ FETCH FORWARD 5 FROM mycursor;
  P_302 | Becket                  | 103 | 1964-02-03 | Drama    | 02:28
 ```
 
--- Close the cursor and end the transaction:
+Close the cursor and end the transaction:
 
 ```
 CLOSE mycursor;

@@ -310,7 +310,7 @@ class GpMirrorListToBuild:
                     full_recovery_dbids[ri.target_segment_dbid] = True
 
         # Disable Ctrl-C, going to save metadata in database and transition segments
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        old_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
         backout_map = None
         try:
             self.__logger.info("Updating configuration for mirrors")
@@ -325,7 +325,7 @@ class GpMirrorListToBuild:
             self.__logger.debug("Generating configuration backout scripts")
         finally:
             # Re-enable Ctrl-C
-            signal.signal(signal.SIGINT, signal.default_int_handler)
+            signal.signal(signal.SIGINT, old_handler)
             return backout_map
 
     def _remove_progress_files(self, recovery_info_by_host, recovery_results):
@@ -444,8 +444,14 @@ class GpMirrorListToBuild:
             combined_progress_file.write("".join(complete_progress_output))
             combined_progress_file.flush()
 
-            outfile.write("".join(output))
-            outfile.flush()
+            try:
+                outfile.write("".join(output))
+                outfile.flush()
+
+            # During SSH disconnections, writing to stdout might not be possible. So ignore the
+            # error, but continue writing to the recovery_progress file.
+            except IOError:
+                pass
 
         written = False
         combined_progress_filepath = get_recovery_progress_file(gplog)

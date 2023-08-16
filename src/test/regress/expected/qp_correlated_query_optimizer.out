@@ -833,34 +833,30 @@ explain select A.i, B.i, C.j from A, B, C where A.j = (select sum(C.j) from C wh
                                  ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1324467.58 rows=5 width=4)
                                        ->  Hash Join  (cost=0.00..1324467.58 rows=2 width=4)
                                              Hash Cond: (((sum(c.j)) = (a.j)::bigint) AND (c.j = a.j))
-                                             ->  Finalize GroupAggregate  (cost=0.00..1324036.58 rows=3 width=12)
+                                             ->  GroupAggregate  (cost=0.00..1324036.58 rows=3 width=12)
                                                    Group Key: c.j
-                                                   ->  Sort  (cost=0.00..1324036.58 rows=3 width=12)
+                                                   ->  Sort  (cost=0.00..1324036.58 rows=3 width=4)
                                                          Sort Key: c.j
-                                                         ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..1324036.58 rows=3 width=12)
+                                                         ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..1324036.58 rows=3 width=4)
                                                                Hash Key: c.j
-                                                               ->  Partial GroupAggregate  (cost=0.00..1324036.58 rows=3 width=12)
-                                                                     Group Key: c.j
-                                                                     ->  Sort  (cost=0.00..1324036.58 rows=3 width=4)
-                                                                           Sort Key: c.j
-                                                                           ->  Seq Scan on c  (cost=0.00..1324036.58 rows=3 width=4)
-                                                                                 Filter: (SubPlan 1)
-                                                                                 SubPlan 1
-                                                                                   ->  Result  (cost=0.00..431.00 rows=1 width=1)
-                                                                                         Filter: ((CASE WHEN (sum((CASE WHEN (c.i <> b.i) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (b.i IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (c.i IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (c.i <> b.i) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END) = true)
-                                                                                         ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
-                                                                                               ->  Result  (cost=0.00..431.00 rows=1 width=4)
-                                                                                                     Filter: (c.i = b.i)
-                                                                                                     ->  Materialize  (cost=0.00..431.00 rows=6 width=4)
-                                                                                                           ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
-                                                                                                                 ->  Seq Scan on b  (cost=0.00..431.00 rows=2 width=4)
-                                                                                                                       Filter: (i <> 10)
+                                                               ->  Seq Scan on c  (cost=0.00..1324036.58 rows=3 width=4)
+                                                                     Filter: (SubPlan 1)
+                                                                     SubPlan 1
+                                                                       ->  Result  (cost=0.00..431.00 rows=1 width=1)
+                                                                             Filter: ((CASE WHEN (sum((CASE WHEN (c.i <> b.i) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (b.i IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (c.i IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (c.i <> b.i) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END) = true)
+                                                                             ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
+                                                                                   ->  Result  (cost=0.00..431.00 rows=1 width=4)
+                                                                                         Filter: (c.i = b.i)
+                                                                                         ->  Materialize  (cost=0.00..431.00 rows=6 width=4)
+                                                                                               ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..431.00 rows=6 width=4)
+                                                                                                     ->  Seq Scan on b  (cost=0.00..431.00 rows=2 width=4)
+                                                                                                           Filter: (i <> 10)
                                              ->  Hash  (cost=431.00..431.00 rows=2 width=8)
                                                    ->  Redistribute Motion 3:3  (slice5; segments: 3)  (cost=0.00..431.00 rows=2 width=8)
                                                          Hash Key: a.j
                                                          ->  Seq Scan on a  (cost=0.00..431.00 rows=2 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(44 rows)
+(40 rows)
 
 select A.i, B.i, C.j from A, B, C where A.j = (select sum(C.j) from C where C.j = A.j and C.i = all (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
  i | i  | j  

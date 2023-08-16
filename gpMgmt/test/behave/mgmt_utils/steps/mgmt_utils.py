@@ -19,7 +19,8 @@ from behave import given, when, then
 from datetime import datetime, timedelta
 from os import path
 from contextlib import closing
-
+import psycopg2
+from psycopg2 import extras
 from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, CoordinatorStop
 from gppylib.commands import gp, unix
@@ -375,10 +376,10 @@ def impl(context, content_ids):
         cmd.run(validateAfter=True)
 
 
-@given('the user {action} the walsender on the {segment} on content {content}')
-@when('the user {action} the walsender on the {segment} on content {content}')
-@then('the user {action} the walsender on the {segment} on content {content}')
-def impl(context, action, segment, content):
+@given('the user {action} the walsender on the {segment} on content {content_ids}')
+@when('the user {action} the walsender on the {segment} on content {content_ids}')
+@then('the user {action} the walsender on the {segment} on content {content_ids}')
+def impl(context, action, segment, content_ids):
     if segment == 'mirror':
         role = "'m'"
     elif segment == 'primary':
@@ -389,7 +390,7 @@ def impl(context, action, segment, content):
     create_fault_query = "CREATE EXTENSION IF NOT EXISTS gp_inject_fault;"
     execute_sql('postgres', create_fault_query)
 
-    inject_fault_query = "SELECT gp_inject_fault_infinite('wal_sender_loop', '%s', dbid) FROM gp_segment_configuration WHERE content=%s AND role=%s;" % (action, content, role)
+    inject_fault_query = "SELECT gp_inject_fault_infinite('wal_sender_loop', '%s', dbid) FROM gp_segment_configuration WHERE content IN (%s) AND role=%s;" % (action, content_ids, role)
     execute_sql('postgres', inject_fault_query)
     return
 
@@ -471,11 +472,11 @@ def impl(context, logdir):
             raise Exception('Timed out after {} retries'.format(num_retries))
 
 
-@then( 'verify if the gprecoverseg.lock directory is present in coordinator_data_directory')
-def impl(context):
-    gprecoverseg_lock_file = "%s/gprecoverseg.lock" % gp.get_coordinatordatadir()
-    if not os.path.exists(gprecoverseg_lock_file):
-        raise Exception('gprecoverseg.lock directory does not exist')
+@then( 'verify if the {lock_file} directory is present in coordinator_data_directory')
+def impl(context, lock_file):
+    utility_lock_file = "%s/%s" % (gp.get_coordinatordatadir(), lock_file)
+    if not os.path.exists(utility_lock_file):
+        raise Exception('{0} directory does not exist'.format(utility_lock_file))
     else:
         return
 
@@ -646,26 +647,16 @@ def impl(context, kill_process_name, log_msg, logfile_name):
               "fi; done" % (log_msg, logfile_name, kill_process_name)
     run_async_command(context, command)
 
-@given('the user asynchronously sets up to end {process_name} process with SIGINT')
-@when('the user asynchronously sets up to end {process_name} process with SIGINT')
-@then('the user asynchronously sets up to end {process_name} process with SIGINT')
-def impl(context, process_name):
-    command = "ps ux | grep bin/%s | awk '{print $2}' | xargs kill -2" % (process_name)
-    run_async_command(context, command)
+@given('the user asynchronously sets up to end {process_name} process with {signal_name}')
+@when('the user asynchronously sets up to end {process_name} process with {signal_name}')
+@then('the user asynchronously sets up to end {process_name} process with {signal_name}')
+def impl(context, process_name, signal_name):
+    try:
+        sig = getattr(signal, signal_name)
+    except:
+        raise Exception("Unknown signal: {0}".format(signal_name))
 
-
-@given('the user asynchronously sets up to end {process_name} process with SIGHUP')
-@when('the user asynchronously sets up to end {process_name} process with SIGHUP')
-@then('the user asynchronously sets up to end {process_name} process with SIGHUP')
-def impl(context, process_name):
-    command = "ps ux | grep bin/%s | awk '{print $2}' | xargs kill -9" % (process_name)
-    run_async_command(context, command)
-
-@given('the user asynchronously ends {process_name} process with SIGHUP')
-@when('the user asynchronously ends {process_name} process with SIGHUP')
-@then('the user asynchronously ends {process_name} process with SIGHUP')
-def impl(context, process_name):
-    command = "ps ux | grep %s | awk '{print $2}' | xargs kill -9" % (process_name)
+    command = "ps ux | grep bin/{0} | awk '{{print $2}}' | xargs kill -{1}".format(process_name, sig.value)
     run_async_command(context, command)
 
 @when('the user asynchronously sets up to end gpcreateseg process when it starts')
@@ -896,7 +887,6 @@ def impl(context, command, num):
 @then('{command} should return a return code of {ret_code}')
 def impl(context, command, ret_code):
     check_return_code(context, ret_code)
-
 
 @given('the segments are synchronized')
 @when('the segments are synchronized')
@@ -1560,6 +1550,7 @@ def impl(context, content_ids, expected_status):
 
 @given('the cluster configuration has no segments where "{filter}"')
 @when('the cluster configuration has no segments where "{filter}"')
+@then('the cluster configuration has no segments where "{filter}"')
 def impl(context, filter):
     SLEEP_PERIOD = 5
     MAX_DURATION = 300
@@ -2253,14 +2244,20 @@ def impl(context):
 
 @given('there is a "{tabletype}" table "{tablename}" in "{dbname}" with "{numrows}" rows')
 def impl(context, tabletype, tablename, dbname, numrows):
-    populate_regular_table_data(context, tabletype, tablename, 'None', dbname, with_data=True, rowcount=int(numrows))
+    populate_regular_table_data(context, tabletype, tablename, dbname, compression_type=None, with_data=True, rowcount=int(numrows))
 
 
 @given('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data')
 @then('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data')
 @when('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data')
 def impl(context, tabletype, tablename, dbname):
-    populate_regular_table_data(context, tabletype, tablename, 'None', dbname, with_data=True)
+    populate_regular_table_data(context, tabletype, tablename, dbname, compression_type=None, with_data=True)
+
+@given('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data and description')
+@then('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data and description')
+@when('there is a "{tabletype}" table "{tablename}" in "{dbname}" with data and description')
+def impl(context, tabletype, tablename, dbname):
+	populate_regular_table_data(context, tabletype, tablename, dbname, compression_type=None, with_data=True, with_desc=True)
 
 
 @given('there is a "{tabletype}" partition table "{table_name}" in "{dbname}" with data')
@@ -2699,6 +2696,21 @@ def impl(context, command, target):
     if target not in contents:
         raise Exception("cannot find %s in %s" % (target, filename))
 
+
+@then('{command} should print "{target}" regex to logfile')
+def impl(context, command, target):
+    log_dir = _get_gpAdminLogs_directory()
+    filename = glob.glob('%s/%s_*.log' % (log_dir, command))[0]
+    contents = ''
+    with open(filename) as fr:
+        for line in fr:
+            contents += line
+
+    pat = re.compile(target)
+    if not pat.search(contents):
+        raise Exception("cannot find %s in %s" % (target, filename))
+
+
 @given('verify that a role "{role_name}" exists in database "{dbname}"')
 @then('verify that a role "{role_name}" exists in database "{dbname}"')
 def impl(context, role_name, dbname):
@@ -3055,31 +3067,41 @@ def impl(context, table_name):
     dbname = 'gptest'
     conn = dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)
     context.long_run_select_only_conn = conn
+    cursor = conn.cursor()
+    context.long_run_select_only_cursor = cursor
+
+    # Start a readonly transaction.
+    cursor.execute("BEGIN")
 
     query = """SELECT gp_segment_id, * from %s order by 1, 2""" % table_name
-    data_result = dbconn.query(conn, query).fetchall()
+    cursor.execute(query)
+    data_result = cursor.fetchall()
+
     context.long_run_select_only_data_result = data_result
 
     query = """SELECT txid_current()"""
-    xid = dbconn.querySingleton(conn, query)
+    cursor.execute(query)
+    xid = cursor.fetchone()[0]
     context.long_run_select_only_xid = xid
 
 @then('verify that long-run read-only transaction still exists on {table_name}')
 def impl(context, table_name):
     dbname = 'gptest'
-    conn = context.long_run_select_only_conn
+    cursor = context.long_run_select_only_cursor
 
     query = """SELECT gp_segment_id, * from %s order by 1, 2""" % table_name
-    data_result = dbconn.query(conn, query).fetchall()
+    cursor.execute(query)
+    data_result = cursor.fetchall()
 
     query = """SELECT txid_current()"""
-    xid = dbconn.querySingleton(conn, query)
+    cursor.execute(query)
+    xid = cursor.fetchone()[0]
 
     if (xid != context.long_run_select_only_xid or
         data_result != context.long_run_select_only_data_result):
         error_str = "Incorrect xid or select result of long run read-only transaction: \
-                xid(before %s, after %), result(before %s, after %s)"
-        raise Exception(error_str % (context.long_run_select_only_xid, xid, context.long_run_select_only_data_result, data_result))
+                xid(before {}, after {}), result(before {}, after {})"
+        raise Exception(error_str.format(context.long_run_select_only_xid, xid, context.long_run_select_only_data_result, data_result))
 
 @given('a long-run transaction starts')
 def impl(context):
@@ -3087,30 +3109,36 @@ def impl(context):
     conn = dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)
     context.long_run_conn = conn
 
+    cursor = conn.cursor()
+    context.long_run_cursor = cursor
+
+    cursor.execute("BEGIN")
+
     query = """SELECT txid_current()"""
-    xid = dbconn.querySingleton(conn, query)
+    cursor.execute(query)
+    xid = cursor.fetchone()[0]
     context.long_run_xid = xid
 
 @then('verify that long-run transaction aborted for changing the catalog by creating table {table_name}')
 def impl(context, table_name):
-    dbname = 'gptest'
-    conn = context.long_run_conn
+    cursor = context.long_run_cursor
 
     query = """SELECT txid_current()"""
-    xid = dbconn.querySingleton(conn, query)
+    cursor.execute(query)
+    xid = cursor.fetchone()[0]
     if context.long_run_xid != xid:
         raise Exception("Incorrect xid of long run transaction: before %s, after %s" %
                         (context.long_run_xid, xid));
 
     query = """CREATE TABLE %s (a INT)""" % table_name
     try:
-        data_result = dbconn.query(conn, query)
-    except Exception as msg:
-        key_msg = "FATAL:  cluster is expanded"
-        if key_msg not in msg.__str__():
-            raise Exception("transaction not abort correctly, errmsg:%s" % msg)
+        cursor.execute(query)
+    except Exception as e:
+        key_msg = "cluster is expanded from"
+        if key_msg not in str(e):
+            raise Exception("transaction not abort correctly, errmsg:%s" % str(e))
     else:
-        raise Exception("transaction not abort, result:%s" % data_result)
+        raise Exception("transaction not abort")
 
 @when('verify that the cluster has {num_of_segments} new segments')
 @then('verify that the cluster has {num_of_segments} new segments')
@@ -3667,7 +3695,10 @@ def impl(context):
 
 
 @when('the user runs {command} and selects {input}')
+@then('the user runs {command} and selects {input}')
 def impl(context, command, input):
+    if input == "no mode but presses enter":
+        input = os.linesep
     p = Popen(command.split(), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     stdout, stderr = p.communicate(input=input.encode())
 
@@ -3676,6 +3707,17 @@ def impl(context, command, input):
     context.ret_code = p.returncode
     context.stdout_message = stdout.decode()
     context.error_message = stderr.decode()
+
+@when('the user runs {command}, selects {input} and interrupt the process')
+def impl(context, command, input):
+    p = Popen(command.split(), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    p.stdin.write(input.encode())
+    p.stdin.flush()
+    time.sleep(120)
+    # interrupt the process.
+    p.terminate()
+    p.communicate(input=input.encode())
+
 
 def are_on_different_subnets(primary_hostname, mirror_hostname):
     primary_broadcast = check_output(['ssh', '-n', primary_hostname, "/sbin/ip addr show | grep 'inet .* brd' | awk '{ print $4 }'"])
@@ -3728,7 +3770,7 @@ def impl(context):
 
 @then('the database locales are saved')
 def impl(context):
-    with closing(dbconn.connect(dbconn.DbURL())) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(), cursorFactory=psycopg2.extras.NamedTupleCursor)) as conn:
         rows = dbconn.query(conn, "SELECT name, setting FROM pg_settings WHERE name LIKE 'lc_%'").fetchall()
         context.database_locales = {row.name: row.setting for row in rows}
 
@@ -3925,7 +3967,7 @@ def impl(context, slot):
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
     segments = gparray.getDbList()
     dbname = "template1"
-    query = "SELECT count(*) FROM pg_catalog.pg_replication_slots WHERE slot_name = '{}'".format(slot)
+    query = "SELECT count(*) FROM pg_catalog.pg_replication_slots WHERE slot_name = '{}' and active = 't'".format(slot)
 
     for seg in segments:
         if seg.isSegmentPrimary(current_role=True):
@@ -3935,7 +3977,7 @@ def impl(context, slot):
                                         utility=True, unsetSearchPath=False)) as conn:
                 result = dbconn.querySingleton(conn, query)
                 if result == 0:
-                    raise Exception("Slot does not exist for host:{}, port:{}".format(host, port))
+                    raise Exception("Slot either does not exist or is inactive for host:{}, port:{}".format(host, port))
 
 
 @given('user waits until gp_stat_replication table has no pg_basebackup entries for content {contentids}')
@@ -4028,3 +4070,39 @@ def impl(context):
             continue
         else:
             raise Exception("segment process not running in execute mode for DBID:{0}".format(dbid))
+
+
+@when('the user would run "{command}" and terminate the process with SIGINT and selects "{input}" {delay} delay')
+def impl(context, command, input, delay):
+    p = Popen(command.split(), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+
+    context.execute_steps('''Then verify that pg_basebackup is running for content 0''')
+    p.send_signal(signal.SIGINT)
+
+    if delay == "with":
+        context.execute_steps('''When the user waits until mirror on content 0 is up''')
+
+    p.stdin.write(input.encode("utf-8"))
+    p.stdin.flush()
+
+    if input == "n":
+        context.execute_steps('''Then the user reset the walsender on the primary on content 0''')
+
+    stdout, stderr = p.communicate()
+    context.ret_code = p.returncode
+    context.stdout_message = stdout.decode()
+    context.error_message = stderr.decode()
+
+
+@when('the user would run "{command}" and terminate the process with SIGTERM')
+def impl(context, command):
+    p = Popen(command.split(), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+
+    context.execute_steps('''Then the user just waits until recovery_progress.file is created in gpAdminLogs''')
+    p.send_signal(signal.SIGTERM)
+
+    stdout, stderr = p.communicate()
+    context.ret_code = p.returncode
+    context.stdout_message = stdout.decode()
+    context.error_message = stderr.decode()
+

@@ -701,7 +701,7 @@ where coalesce(t2.fname, t3.fname) is not null;
     <dxl:Plan Id="0" SpaceSize="126">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1678.860841" Rows="2.250000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1678.285454" Rows="2.250000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="26" Alias="fname">
@@ -712,7 +712,7 @@ where coalesce(t2.fname, t3.fname) is not null;
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1678.860760" Rows="2.250000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="1678.285373" Rows="2.250000" Width="8"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="26"/>
@@ -725,7 +725,7 @@ where coalesce(t2.fname, t3.fname) is not null;
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1678.860746" Rows="2.250000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="1678.285359" Rows="2.250000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="26" Alias="fname">
@@ -740,7 +740,7 @@ where coalesce(t2.fname, t3.fname) is not null;
             <dxl:LimitOffset/>
             <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1678.860738" Rows="2.250000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="1678.285351" Rows="2.250000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="26" Alias="fname">
@@ -756,7 +756,7 @@ where coalesce(t2.fname, t3.fname) is not null;
               </dxl:HashExprList>
               <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1678.860709" Rows="2.250000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1678.285322" Rows="2.250000" Width="8"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="26"/>

@@ -1,6 +1,11 @@
 -- Tests for Dynamic Partition Elimination, or partition pruning in
 -- PostgreSQL terms, based on join quals.
 
+-- This test requires autovacuum to be disabled to guarantee a consistent state
+-- after vacuum. An inopportune autovacuum could cause an explicit vacuum to
+-- skip. That leads to stale relallvisible stats which may prevent picking index
+-- only scan plan shapes.
+
 -- start_matchsubs
 -- m/Memory Usage: \d+\w?B/
 -- s/Memory Usage: \d+\w?B/Memory Usage: ###B/
@@ -65,6 +70,7 @@ create table t(dist int, tid int, t1 text, t2 text);
 
 create index pt1_idx on pt using btree (pt1);
 create index ptid_idx on pt using btree (ptid);
+create index ptid_pt1_idx on pt using btree (ptid, pt1);
 
 insert into pt select i, 'hello' || i, 'world', 'drop this', i % 6 from generate_series(0,53) i;
 
@@ -78,7 +84,7 @@ insert into pt1 select dist, pt1, pt2, pt3, ptid-100 from pt;
 
 alter table pt1 set with(REORGANIZE=false) DISTRIBUTED RANDOMLY;
 
-analyze pt;
+vacuum analyze pt;
 analyze pt1;
 analyze t;
 analyze t1;
@@ -110,6 +116,10 @@ select * from t, pt where t1 = pt1 and ptid = tid;
 explain (costs off, timing off, summary off, analyze) select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
 
 select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
+
+explain (costs off, timing off, summary off, analyze) select ptid from pt where ptid in (select tid from t where t1 = 'hello' || tid) and pt1 = 'hello1';
+
+select ptid from pt where ptid in (select tid from t where t1 = 'hello' || tid) and pt1 = 'hello1';
 
 -- start_ignore
 -- Known_opt_diff: MPP-21320

@@ -11,6 +11,7 @@ import platform
 import re
 #import yaml
 import pytest
+import psycopg2
 
 from gppylib.commands.gp import get_coordinatordatadir
 
@@ -18,20 +19,6 @@ try:
     import subprocess32 as subprocess
 except:
     import subprocess
-try:
-    import pg
-except ImportError:
-    try:
-        from pygresql import pg
-    except Exception as e:
-        pass
-except Exception as e:
-    print(repr(e))
-    errorMsg = "gpload was unable to import The PyGreSQL Python module (pg.py) - %s\n" % str(e)
-    sys.stderr.write(str(errorMsg))
-    errorMsg = "Please check if you have the correct Visual Studio redistributable package installed.\n"
-    sys.stderr.write(str(errorMsg))
-    sys.exit(2)
 
 def get_port_from_conf():
     file = get_coordinatordatadir()+'/postgresql.conf'
@@ -410,49 +397,38 @@ def copy_data(source='',target=''):
 
 
 def get_table_name():
-    try:
-        db = pg.DB(dbname='reuse_gptest'
-                  ,host='localhost'
-                  ,port=int(PGPORT)
-                  )
-    except Exception as e:
-        errorMessage = str(e)
-        print ('could not connect to database: ' + errorMessage)
-    queryString = """SELECT sch.table_schema, cls.relname
-                     FROM pg_class AS cls, information_schema.tables AS sch
-                     WHERE
-                     (cls.relname LIKE 'ext_gpload_reusable%'
-                     OR
-                     relname LIKE 'staging_gpload_reusable%')
-                     AND cls.relname=sch.table_name;"""
-    resultList = db.query(queryString.encode('utf-8')).getresult()
-    print(resultList)
-    return resultList
+    with psycopg2.connect(dbname='reuse_gptest',
+                          host='localhost',
+                          port=int(PGPORT)) as conn:
+        with conn.cursor() as cur:
+            queryString = """SELECT sch.table_schema, cls.relname
+            FROM pg_class AS cls, information_schema.tables AS sch
+            WHERE
+            (cls.relname LIKE 'ext_gpload_reusable%'
+            OR
+            relname LIKE 'staging_gpload_reusable%')
+            AND cls.relname=sch.table_name;"""
+            cur.execute(queryString)
+            resultList = cur.fetchall()
+            return resultList
 
 
 def drop_tables():
     '''drop external and staging tables'''
-    try:
-        db = pg.DB(dbname='reuse_gptest'
-                  ,host='localhost'
-                  ,port=int(PGPORT)
-                  )
-    except Exception as e:
-        errorMessage = str(e)
-        print ('could not connect to database: ' + errorMessage)
-
     tableList = get_table_name()
-    for i in tableList:
-        schema = i[0]
-        name = i[1]
-        match = re.search('ext_gpload',name)
-        if match:
-            queryString = 'DROP EXTERNAL TABLE "%s"."%s";'%(schema, name)
-            db.query(queryString.encode('utf-8'))
-
-        else:
-            queryString = 'DROP TABLE "%s"."%s";'%(schema, name)
-            db.query(queryString.encode('utf-8'))
+    with psycopg2.connect(dbname='reuse_gptest',
+                          host='localhost',
+                          port=int(PGPORT)) as conn:
+        with conn.cursor() as cur:
+            for i in tableList:
+                schema = i[0]
+                name = i[1]
+                match = re.search('ext_gpload',name)
+                if match:
+                    queryString = 'DROP EXTERNAL TABLE "%s"."%s";'%(schema, name)
+                else:
+                    queryString = 'DROP TABLE "%s"."%s";'%(schema, name)
+                cur.execute(queryString)
 
 class PSQLError(Exception):
     '''

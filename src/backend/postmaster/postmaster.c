@@ -5828,6 +5828,9 @@ sigusr1_handler(SIGNAL_ARGS)
 		MaybeStartWalReceiver();
 	}
 
+	if (CheckPostmasterSignal(PMSIGNAL_WALRCV_STREAMING) && WalReceiverPID != 0)
+		AddToDataDirLockFile(LOCK_FILE_LINE_PM_STATUS, PM_STATUS_WALRECV_STARTED_STREAMING);
+
 	if (CheckPostmasterSignal(PMSIGNAL_WAKEN_FTS) && FtsProbePID() != 0)
 	{
 		signal_child(FtsProbePID(), SIGINT);

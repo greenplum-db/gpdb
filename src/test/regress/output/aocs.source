@@ -535,6 +535,40 @@ SELECT count(*) FROM tenk_aocs4;
  10000
 (1 row)
 
+-- Issue #15904
+set optimizer = off;
+EXPLAIN (verbose, costs off) SELECT max(unique1) FROM tenk_aocs1;
+                   QUERY PLAN                    
+-------------------------------------------------
+ Finalize Aggregate
+   Output: max(unique1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL max(unique1))
+         ->  Partial Aggregate
+               Output: PARTIAL max(unique1)
+               ->  Seq Scan on public.tenk_aocs1
+                     Output: unique1
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(10 rows)
+
+CREATE TABLE tenk_aorow WITH(appendonly=true, orientation=row) AS SELECT * FROM tenk_heap_for_aocs;
+EXPLAIN (verbose, costs off) SELECT max(unique1) FROM tenk_aorow;
+                   QUERY PLAN                    
+-------------------------------------------------
+ Finalize Aggregate
+   Output: max(unique1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL max(unique1))
+         ->  Partial Aggregate
+               Output: PARTIAL max(unique1)
+               ->  Seq Scan on public.tenk_aorow
+                     Output: unique1
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(10 rows)
+
+reset optimizer;
 -- LIKE
 -- Should not copy storage options if not specified
 CREATE TABLE tenk_like_nocopy_storage (LIKE tenk_aocs1);
@@ -1044,6 +1078,7 @@ DROP TABLE tenk_aocs2;
 DROP TABLE tenk_aocs3;
 DROP TABLE tenk_aocs4;
 DROP TABLE tenk_aocs5;
+DROP TABLE tenk_aorow;
 set client_min_messages='WARNING';
 -- Test case for MPP-10086, make sure that we handle "else" clauses properly.
 DROP TABLE IF EXISTS aocs_new;

@@ -64,7 +64,6 @@ OBJS        = CExpression.o \
               CLogicalMaxOneRow.o \
               CLogicalDynamicForeignGet.o \
               CLogicalNAryJoin.o \
-              CLogicalPartitionSelector.o \
               CLogicalProject.o \
               CLogicalRightOuterJoin.o \
               CLogicalSelect.o \
@@ -90,6 +89,7 @@ OBJS        = CExpression.o \
               CPhysicalConstTableGet.o \
               CPhysicalDML.o \
               CPhysicalDynamicBitmapTableScan.o \
+              CPhysicalDynamicIndexOnlyScan.o \
               CPhysicalDynamicIndexScan.o \
               CPhysicalDynamicScan.o \
               CPhysicalDynamicTableScan.o \

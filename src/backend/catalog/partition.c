@@ -150,7 +150,7 @@ get_partition_ancestors_worker(Relation inhRel, Oid relid, List **ancestors)
  * wrapper around get_partition_ancestors.
  *
  * This assumes that the given relation is a partition (i.e. relispartition is
- * true)
+ * true). If no parent partition is found, returns InvalidOid.
  *
  * Note: we depend on the order of results returned by get_partition_ancestors
  */
@@ -161,7 +161,7 @@ get_top_level_partition_root(Oid relid)
 
 	Assert(OidIsValid(relid));
 	ancestors = get_partition_ancestors(relid);
-	return llast_oid(ancestors);
+	return list_length(ancestors) > 0 ? llast_oid(ancestors) : InvalidOid;
 }
 
 /*

@@ -311,15 +311,14 @@ SELECT b FROM test_select_best_cover_@amname@ WHERE b>42;
 -- ORCA_FEATURE_NOT_SUPPORTED: use i_test_select_best_cover_ab_@amname@
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_select_best_cover_@amname@ WHERE a>42 AND b>42;
-                                                         QUERY PLAN                                                         
-----------------------------------------------------------------------------------------------------------------------------
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=58 loops=1)
-   ->  Index Only Scan using i_test_select_best_cover_a_bc_@amname@ on test_select_best_cover_@amname@ (actual rows=25 loops=1)
-         Index Cond: (a > 42)
-         Filter: (b > 42)
+   ->  Index Only Scan using i_test_select_best_cover_ab_@amname@ on test_select_best_cover_@amname@ (actual rows=25 loops=1)
+         Index Cond: ((a > 42) AND (b > 42))
          Heap Fetches: 0
  Optimizer: Postgres query optimizer
-(6 rows)
+(5 rows)
 
 -- KEYS: [a]    INCLUDED: []
 -- KEYS: [a]    INCLUDED: [b]

@@ -170,6 +170,11 @@ class SimpleMainLock:
             if self.pidfilepid == self.parentpid:
                 return None
 
+            # Check if the process that holds the lock exists.
+            # If the process is already killed, remove the lock directory.
+            if not unix.check_pid(self.pidfilepid):
+                shutil.rmtree(self.ppath)
+
         # try and acquire the lock
         try:
             self.pidlockfile.acquire()
@@ -232,7 +237,7 @@ class ExceptionNoStackTraceNeeded(Exception):
 
 class UserAbortedException(Exception):
     """
-    UserAbortedException should be thrown when a user decides to stop the 
+    UserAbortedException should be thrown when a user decides to stop the
     program (at a y/n prompt, for example).
     """
     pass
@@ -462,4 +467,3 @@ def parseStatusLine(line, isStart = False, isStop = False):
     reasonArr = reasonArr[1:]
     reasonStr = ":".join(reasonArr)
     return reasonCode, reasonStr, started, dir
-

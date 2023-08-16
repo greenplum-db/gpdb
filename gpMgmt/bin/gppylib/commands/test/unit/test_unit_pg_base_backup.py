@@ -4,10 +4,13 @@
 #
 
 import unittest
-from mock import call, Mock, patch
+from mock import call, Mock, patch, MagicMock
 from gppylib.commands import pg
 from test.unit.gp_unittest import GpTestCase, run_tests
-from pgdb import DatabaseError
+from psycopg2 import DatabaseError
+
+from gppylib.test.unit.gp_unittest import GpTestCase
+from gppylib.commands.base import CommandResult
 
 class TestUnitPgReplicationSlot(GpTestCase):
     def setUp(self):
@@ -182,6 +185,66 @@ class TestUnitPgBaseBackup(unittest.TestCase):
         self.assertNotIn("-x", base_backup.command_tokens)
         self.assertNotIn("--xlog", base_backup.command_tokens)
 
+class PgTests(GpTestCase):
+    def setUp(self):
+        self.apply_patches([
+            patch('gppylib.commands.pg.logger', return_value=Mock(spec=['log', 'info', 'debug', 'error', 'warning'])),
+            patch('gppylib.db.dbconn.connect'),
+            patch('gppylib.db.dbconn.querySingleton')
+        ])
+        self.logger = self.get_mock_from_apply_patch('logger')
+        self.connect = self.get_mock_from_apply_patch('connect')
+        self.query = self.get_mock_from_apply_patch('querySingleton')
+
+    def test_kill_existing_walsenders(self):
+        primary_config = [("sdw1", 20000), ("sdw1", 20001)]
+
+        # Prepare mock return values
+        self.query.return_value = True
+
+        # Run the function being tested
+        pg.kill_existing_walsenders_on_primary(primary_config)
+
+        # Assertions
+        expected_calls = [
+            call.info('killing existing walsender process on primary sdw1:20000 to refresh replication connection'),
+            call.info('killing existing walsender process on primary sdw1:20001 to refresh replication connection')
+        ]
+        self.logger.info.assert_has_calls(expected_calls)
+        self.logger.warning.assert_not_called()
+
+    def test_kill_existing_walsenders_failure(self):
+        primary_config = [("sdw1", 20000), ("sdw1", 20001)]
+
+        # Prepare mock return values
+        self.query.return_value = False
+
+        # Run the function being tested
+        pg.kill_existing_walsenders_on_primary(primary_config)
+
+        # Assertions
+        expected_calls = [
+            call.info('killing existing walsender process on primary sdw1:20000 to refresh replication connection'),
+            call.info('killing existing walsender process on primary sdw1:20001 to refresh replication connection')
+        ]
+        self.logger.info.assert_has_calls(expected_calls)
+        assert self.logger.warning.call_count == 2
+        args, _ = self.logger.warning.call_args
+        assert "Unable to kill walsender on primary host" in args[0]
+
+    def test_kill_existing_walsenders_one_host_failure_and_other_succeed(self):
+        primary_config = [("sdw1", 20000), ("sdw2", 20001)]
+
+        # Prepare mock return values
+        self.query.side_effect = [False, True]
+
+        # Run the function being tested
+        pg.kill_existing_walsenders_on_primary(primary_config)
+
+        # Assertions
+        self.logger.warning.assert_called_once()
+        self.assertEqual([call("Unable to kill walsender on primary host {0}:{1}", "sdw1", 20000)],
+                         self.logger.warning.call_args_list)
 
 if __name__ == '__main__':
     run_tests()

@@ -82,7 +82,8 @@ and <table_constraint> is:
 and <like_option> is:
 
   { INCLUDING | EXCLUDING }
-  { COMMENTS | CONSTRAINTS | DEFAULTS | GENERATED | IDENTITY | INDEXES | STATISTICS | STORAGE | ALL }
+  { AM | COMMENTS | CONSTRAINTS | DEFAULTS | ENCODING | GENERATED | IDENTITY
+       | INDEXES | RELOPT | STATISTICS | STORAGE | ALL }
 
 and <partition_bound_spec> is:
 
@@ -338,6 +339,10 @@ LIKE source\_table \[like\_option `...`\]
 
 :   The optional like\_option clauses specify which additional properties of the original table to copy. Specifying `INCLUDING` copies the property, specifying `EXCLUDING` omits the property. `EXCLUDING` is the default. If multiple specifications are made for the same kind of object, the last one is used. The available options are:
 
+    INCLUDING AM
+    :   The access method of the original table will be copied.
+    :   When you include `AM`, you must not explicitly specify the access method of the new table using the `WITH` or the `USING` clauses.
+
     INCLUDING COMMENTS
     :   Comments for the copied columns, constraints, and indexes will be copied. The default behavior is to exclude comments, resulting in the copied columns and constraints in the new table having no comments.
 
@@ -347,6 +352,9 @@ LIKE source\_table \[like\_option `...`\]
     INCLUDING DEFAULTS
     :   Default expressions for the copied column definitions will be copied. Otherwise, default expressions are not copied, resulting in the copied columns in the new table having null defaults. Note that copying defaults that call database-modification functions, such as `nextval`, may create a functional linkage between the original and new tables.
 
+    INCLUDING ENCODING
+    :   For an append-optimized, column-oriented original table, copies the per-column encodings.
+
     INCLUDING GENERATED
     :   Any generation expressions of copied column definitions will be copied. By default, new columns will be regular base columns.
 
@@ -355,6 +363,10 @@ LIKE source\_table \[like\_option `...`\]
 
     INCLUDING INDEXES
     :   Indexes, `PRIMARY KEY`, `UNIQUE`, and `EXCLUDE` constraints on the original table will be created on the new table. Names for the new indexes and constraints are chosen according to the default rules, regardless of how the originals were named. (This behavior avoids possible duplicate-name failures for the new indexes.)
+
+    INCLUDING RELOPT
+    :   Copies relation storage options from the original table. For append-optimized and append-optimized, column-oriented tables, copies the `blocksize`, `compresslevel`, and `compresstype.` For heap tables, copies the `fillfactor`. You can also specify relation [storage parameters](#storage_parameters).
+    : When you include `RELOPT` options, you must not explicitly specify relation storage options for the new table using the `WITH` clause.
 
     INCLUDING STATISTICS
     :   Extended statistics are copied to the new table.

@@ -181,13 +181,9 @@ DROP TABLE trunc_trigger_log;
 DROP FUNCTION trunctrigger();
 
 -- test TRUNCATE ... RESTART IDENTITY
--- the column id should change back to serial when issue #15579 be fixed.
--- details see issue: https://github.com/greenplum-db/gpdb/issues/15579
-CREATE SEQUENCE truncate_a_id CACHE 1;
 CREATE SEQUENCE truncate_a_id1 START WITH 33 CACHE 1;
-CREATE TABLE truncate_a (id integer default nextval('truncate_a_id'),
+CREATE TABLE truncate_a (id serial,
                          id1 integer default nextval('truncate_a_id1'));
-ALTER SEQUENCE truncate_a_id OWNED BY truncate_a.id;
 ALTER SEQUENCE truncate_a_id1 OWNED BY truncate_a.id1;
 
 INSERT INTO truncate_a DEFAULT VALUES;

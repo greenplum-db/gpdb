@@ -239,7 +239,7 @@
     <dxl:Plan Id="0" SpaceSize="17">
       <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000236" Rows="1.000000" Width="29"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000247" Rows="1.000000" Width="29"/>
         </dxl:Properties>
         <dxl:GroupingColumns>
           <dxl:GroupingColumn ColId="1"/>
@@ -252,7 +252,7 @@
         <dxl:Filter/>
         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000191" Rows="1.000000" Width="29"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000202" Rows="1.000000" Width="29"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="test_array">
@@ -265,7 +265,7 @@
           </dxl:SortingColumnList>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000083" Rows="1.000000" Width="29"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000094" Rows="1.000000" Width="29"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="test_array">
@@ -280,7 +280,7 @@
             <dxl:LimitOffset/>
             <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000083" Rows="1.000000" Width="29"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000094" Rows="1.000000" Width="29"/>
               </dxl:Properties>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="1"/>

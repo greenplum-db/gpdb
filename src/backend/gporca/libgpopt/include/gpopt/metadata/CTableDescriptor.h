@@ -88,6 +88,9 @@ private:
 	// lockmode from the parser
 	INT m_lockmode;
 
+	// acl mode from the parser
+	ULONG m_acl_mode;
+
 	// identifier of query to which current table belongs.
 	// This field is used for assigning current table entry with
 	// target one within DML operation. If descriptor doesn't point
@@ -102,7 +105,7 @@ public:
 					 BOOL convert_hash_to_random,
 					 IMDRelation::Ereldistrpolicy rel_distr_policy,
 					 IMDRelation::Erelstoragetype erelstoragetype,
-					 ULONG ulExecuteAsUser, INT lockmode,
+					 ULONG ulExecuteAsUser, INT lockmode, ULONG acl_mode,
 					 ULONG assigned_query_id_for_target_rel);
 
 	// dtor
@@ -149,6 +152,12 @@ public:
 	LockMode() const
 	{
 		return m_lockmode;
+	}
+
+	ULONG
+	GetAclMode() const
+	{
+		return m_acl_mode;
 	}
 
 	// return the position of a particular attribute (identified by attno)

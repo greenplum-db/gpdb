@@ -185,7 +185,8 @@ private:
 		CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprGet,
 		ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
 		CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
-		const IMDIndex *pmdindex, const IMDRelation *pmdrel);
+		const IMDIndex *pmdindex, const IMDRelation *pmdrel,
+		BOOL indexForOrderBy = false);
 
 	// create a dynamic operator for a btree index plan
 	static CLogical *
@@ -249,7 +250,7 @@ private:
 		CTableDescriptor *ptabdesc, const IMDRelation *pmdrel,
 		CColRefArray *pdrgpcrOutput, CColRefSet *pcrsOuterRefs,
 		CExpression **ppexprRecheck, CExpression **ppexprResidual,
-		BOOL alsoConsiderBTreeIndexes);
+		BOOL alsoConsiderOtherIndexes);
 
 	// iterate over given hash map and return array of arrays of project elements sorted by the column id of the first entries
 	static CExpressionArrays *PdrgpdrgpexprSortedPrjElemsArray(
@@ -444,11 +445,12 @@ public:
 						 CExpression *pexprGet, ULONG ulOriginOpId,
 						 CExpressionArray *pdrgpexprConds,
 						 CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
-						 const IMDIndex *pmdindex, const IMDRelation *pmdrel)
+						 const IMDIndex *pmdindex, const IMDRelation *pmdrel,
+						 BOOL indexForOrderBy = false)
 	{
-		return PexprBuildBtreeIndexPlan(mp, md_accessor, pexprGet, ulOriginOpId,
-										pdrgpexprConds, pcrsScalarExpr,
-										outer_refs, pmdindex, pmdrel);
+		return PexprBuildBtreeIndexPlan(
+			mp, md_accessor, pexprGet, ulOriginOpId, pdrgpexprConds,
+			pcrsScalarExpr, outer_refs, pmdindex, pmdrel, indexForOrderBy);
 	}
 
 	// helper for creating bitmap bool op expressions
@@ -569,6 +571,10 @@ public:
 	static CExpression *AddALinearStackOfUnaryExpressions(
 		CMemoryPool *mp, CExpression *lowerPartOfExpr, CExpression *topOfStack,
 		CExpression *exclusiveBottomOfStack);
+
+	static BOOL FCoverIndex(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
+							CTableDescriptor *ptabdesc,
+							CColRefArray *pdrgpcrOutput);
 
 };	// class CXformUtils
 

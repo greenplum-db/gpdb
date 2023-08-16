@@ -4971,6 +4971,7 @@ where q2 = 456;
 create temp table parttbl (a integer primary key) partition by range (a);
 create temp table parttbl1 partition of parttbl for values from (1) to (100);
 insert into parttbl values (11), (12);
+set optimizer_enable_dynamicindexonlyscan=off;
 explain (costs off)
 select * from
   (select *, 12 as phv from parttbl) as ss
@@ -4988,6 +4989,7 @@ where ss.a = ss.phv and f1 = 0;
  Optimizer: Postgres query optimizer
 (8 rows)
 
+reset optimizer_enable_dynamicindexonlyscan;
 select * from
   (select *, 12 as phv from parttbl) as ss
   right join int4_tbl on true
@@ -6661,16 +6663,17 @@ analyze j1; -- GPDB also needs this to get the same plan as in upstream
 explain (costs off) select * from j1
 inner join j2 on j1.id1 = j2.id1 and j1.id2 = j2.id2
 where j1.id1 % 1000 = 1 and j2.id1 % 1000 = 1;
-                  QUERY PLAN                   
------------------------------------------------
+                          QUERY PLAN                           
+---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Merge Join
-         Merge Cond: (j1.id1 = j2.id1)
-         Join Filter: (j1.id2 = j2.id2)
-         ->  Index Scan using j1_id1_idx on j1
-         ->  Index Scan using j2_id1_idx on j2
+         Merge Cond: ((j1.id1 = j2.id1) AND (j1.id2 = j2.id2))
+         ->  Index Only Scan using j1_pkey on j1
+               Filter: ((id1 % 1000) = 1)
+         ->  Index Only Scan using j2_pkey on j2
+               Filter: ((id1 % 1000) = 1)
  Optimizer: Postgres query optimizer
-(7 rows)
+(8 rows)
 
 select * from j1
 inner join j2 on j1.id1 = j2.id1 and j1.id2 = j2.id2

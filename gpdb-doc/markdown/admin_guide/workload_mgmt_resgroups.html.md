@@ -121,13 +121,15 @@ Roles in `test` have a CPU ratio of 10/(10+30+10+10)=16%. However, as the hard l
 
 When you enable resource groups, memory usage is managed at the Greenplum Database segment and resource group levels. You can also manage memory at the transaction level. See [Greenplum Database Memory Overview](wlmgmt_intro.html) to estimate how much memory each Greenplum Database segment has available to use. This will help you estimate how much memory to assign to the resource groups. 
 
+The amount of memory allocated to a query is determined by the following parameters:
+
 The parameter `MEMORY_LIMIT` of a resource group sets the maximum amount of memory reserved for this resource group on a segment. This determines the total amount of memory that all worker processes for a query can consume on the segment host during query execution. The amount of memory allotted to a query is the group memory limit divided by the group concurrency limit: `MEMORY_LIMIT` / `CONCURRENCY`. 
 
 If a query requires a large amount of memory, you may use the server configuration parameter [gp_resgroup_memory_query_fixed_mem](../ref_guide/config_params/guc-list.html#gp_resgroup_memory_query_fixed_mem) to set a fixed memory amount for the query at the session level. This parameter overrides and can surpass the allocated memory of the resource group.
 
 Greenplum allocates memory for an incoming query using the `gp_resgroup_memory_query_fixed_mem` value, if set, to bypass the resource group settings. Otherwise, it uses `MEMORY_LIMIT` / `CONCURRENCY` as the memory allocated for the query. If `MEMORY_LIMIT` is not set, the value for the query memory allocation defaults to [statement_mem](../ref_guide/config_params/guc-list.html#statement_mem).
 
-Memory allocation is based on first-come-first-served principle for all queries. When a query is admitted, the memory allocated to it is subtracted from `MEMORY_LIMIT` (except if it is using `gp_resgroup_memory_query_fixed_mem`). If `MEMORY_LIMIT` is exhausted, new queries in the same resource group must wait. This happens even if `CONCURRENCY` has not yet been reached. Once a query has started running, it holds its allotted memory in the group until it completes, even if during execution it actually consumes less than its allotted amount of memory. When using `gp_resgroup_memory_query_fixed_mem` to override the memory limits set by the current resource group, if there is not enough memory, the query spills to disk. When the limit [gp_workfile_limit_files_per_query](../ref_guide/config_params/guc-list.html#gp_workfile_limit_files_per_query) is reached, Greenplum Database generates an out of memory (OOM).
+For all queries, if there is not enough memory in the system, they spill to disk. When the limit [gp_workfile_limit_files_per_query](../ref_guide/config_params/guc-list.html#gp_workfile_limit_files_per_query) is reached, Greenplum Database generates an out of memory (OOM) error.
 
 For example, consider a resource group named `adhoc` with `MEMORY_LIMIT`set to 1.5 GB and `CONCURRENCY` set to 3. By default, each statement submitted to the group is allocated 500 MB of memory. Now consider the following series of events:
 

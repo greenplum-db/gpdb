@@ -3,8 +3,6 @@
 -- complain if script is sourced in psql, rather than via CREATE EXTENSION
 \echo Use "CREATE EXTENSION gp_distribution_policy" to load this file. \quit
 
-SET search_path = public;
-
 -- This function validates the data distribution in a table in a segment.
 CREATE OR REPLACE FUNCTION gp_distribution_policy_table_check(relid regclass)
 RETURNS boolean

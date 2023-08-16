@@ -35,16 +35,19 @@ class LeakedSchemaDropper:
     """
 
     def __get_leaked_schemas(self, db_connection):
-        leaked_schemas = db_connection.query(self.leaked_schema_query)
+        with db_connection.cursor() as curs:
+            curs.execute(self.leaked_schema_query)
+            leaked_schemas = curs.fetchall()
 
-        if not leaked_schemas:
-            return []
+            if not leaked_schemas:
+                return []
 
-        return [row[0] for row in leaked_schemas.getresult() if row[0]]
+            return [row[0] for row in leaked_schemas if row[0]]
 
     def drop_leaked_schemas(self, db_connection):
         leaked_schemas = self.__get_leaked_schemas(db_connection)
         for leaked_schema in leaked_schemas:
             escaped_schema_name = escapeDoubleQuoteInSQLString(leaked_schema)
-            db_connection.query('DROP SCHEMA IF EXISTS %s CASCADE;' % (escaped_schema_name))
+            with db_connection.cursor() as curs:
+                curs.execute('DROP SCHEMA IF EXISTS %s CASCADE;' % (escaped_schema_name))
         return leaked_schemas

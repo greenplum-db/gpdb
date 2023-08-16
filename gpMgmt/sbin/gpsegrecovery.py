@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import os
-import sys
+import signal
 
 from gppylib.recoveryinfo import RecoveryErrorType
 from gppylib.commands.pg import PgBaseBackup, PgRewind, PgReplicationSlot
@@ -14,6 +14,7 @@ from gppylib.commands.gp import ModifyConfSetting
 from gppylib.db.catalog import RemoteQueryCommand
 from gppylib.operations.get_segments_in_recovery import is_seg_in_backup_mode
 from gppylib.operations.segment_tablespace_locations import get_segment_tablespace_locations
+from gppylib.commands.unix import terminate_proc_tree
 
 
 class FullRecovery(Command):
@@ -91,8 +92,9 @@ class DifferentialRecovery(Command):
         self.era = era
         self.logger = logger
         self.error_type = RecoveryErrorType.DEFAULT_ERROR
+        self.replication_slot_name = 'internal_wal_replication_slot'
         self.replication_slot = PgReplicationSlot(self.recovery_info.source_hostname, self.recovery_info.source_port,
-                                                  'internal_wal_replication_slot')
+                                                  self.replication_slot_name)
 
     @set_recovery_cmd_results
     def run(self):
@@ -234,6 +236,7 @@ class DifferentialRecovery(Command):
                            self.recovery_info.source_hostname,
                            str(self.recovery_info.source_port),
                            writeconffilesonly=True,
+                           replication_slot_name=self.replication_slot_name,
                            target_gp_dbid=self.recovery_info.target_segment_dbid,
                            recovery_mode=False)
         self.logger.debug("Running pg_basebackup to only write configuration files")
@@ -312,6 +315,17 @@ class SegRecovery(object):
 
     def main(self):
         recovery_base = RecoveryBase(__file__)
+
+        def signal_handler(sig, frame):
+            recovery_base.logger.warning("Recieved termination signal, stopping gpsegrecovery")
+
+            while not recovery_base.pool.isDone():
+
+                # gpsegrecovery will be the parent for all the child processes (pg_basebackup/pg_rewind/rsync)
+                terminate_proc_tree(pid=os.getpid(), include_parent=False)
+
+        signal.signal(signal.SIGTERM, signal_handler)
+
         recovery_base.main(self.get_recovery_cmds(recovery_base.seg_recovery_info_list, recovery_base.options.forceoverwrite,
                                                   recovery_base.logger, recovery_base.options.era))
 

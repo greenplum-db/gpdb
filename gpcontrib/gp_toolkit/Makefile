@@ -1,5 +1,5 @@
 EXTENSION = gp_toolkit
-DATA = gp_toolkit--1.0.sql
+DATA = gp_toolkit--1.0--1.1.sql gp_toolkit--1.0.sql
 MODULES =
 
 REGRESS = resource_manager_restore_to_none gp_toolkit resource_manager_switch_to_queue gp_toolkit_resqueue gp_toolkit_ao_funcs

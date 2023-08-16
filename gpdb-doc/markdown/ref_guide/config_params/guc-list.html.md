@@ -37,6 +37,22 @@ When enabled, Greenplum Database starts up the autovacuum daemon, which operates
 |-----------|-------|-------------------|
 |Boolean|on|coordinator, system, restart|
 
+## <a id="autovacuum_analyze_scale_factor"></a>autovacuum_analyze_scale_factor
+
+Specifies a fraction of the table size to add to `autovacuum_analyze_threshold` when deciding whether or not to trigger an `ANALYZE`. The default is 0.1 (10% of table size). This parameter may be set only in the `postgresql.conf file` or on the server command line; but the setting can be overridden for individual tables by changing table storage parameters.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Floating point|0.1|coordinator, system, restart|
+
+## <a id="autovacuum_analyze_threshold"></a>autovacuum_analyze_threshold
+
+Specifies the minimum number of inserted, updated or deleted tuples needed to trigger an `ANALYZE` in any one table. The default is 50 tuples. This parameter may be set only in the `postgresql.conf` file or on the server command line; but the setting can be overridden for individual tables by changing table storage parameters.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Integer|50|coordinator, system, restart|
+
 ## <a id="autovacuum_freeze_max_age"></a>autovacuum_freeze_max_age
 
 Specifies the maximum age at which to automatically vacuum a table to prevent transaction ID wraparound. Note that the system will launch autovacuum processes to prevent wraparound even when `autovacuum=off`. The default value is 200 million transactions. 
@@ -44,6 +60,24 @@ Specifies the maximum age at which to automatically vacuum a table to prevent tr
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |100000 < integer < 2000000000|200000000|local, system, restart|
+
+## <a id="autovacuum_max_workers"></a>autovacuum_max_workers
+
+Specifies the maximum number of autovacuum processes (other than the autovacuum launcher) that may be running at any one time. The default is three. This parameter may be set only at server start.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Integer|3|coordinator, system, restart|
+
+## <a id="autovacuum_multixact_freeze_max_age"></a>autovacuum_multixact_freeze_max_age
+
+Specifies the maximum age (in multixacts) that a table's `pg_class.relminmxid` field can attain before a `VACUUM` operation is forced to prevent multixact ID wraparound within the table. Note that the system will launch autovacuum processes to prevent wraparound even when autovacuum is otherwise disabled.
+
+Vacuuming multixacts also allows removal of old files from the `pg_multixact/members` and `pg_multixact/offsets subdirectories`, which is why the default is a relatively low 400 million multixacts. This parameter may be set only at server start, but the setting can be reduced for individual tables by changing table storage parameters.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Integer|400000000|coordinator, system, restart|
 
 ## <a id="autovacuum_naptime"></a>autovacuum\_naptime
 
@@ -66,6 +100,14 @@ A value without units is taken to be milliseconds. The default is 2 milliseconds
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 | floating point < 100 | 2 |local, system, reload|
+
+## <a id="autovacuum_vacuum_cost_limit"></a>autovacuum_vacuum_cost_limit
+
+Specifies the cost limit value that will be used in automatic `VACUUM` operations. If -1 is specified (which is the default), the regular `vacuum_cost_limit` value will be used. Note that the value is distributed proportionally among the running autovacuum workers, if there is more than one, so that the sum of the limits for each worker does not exceed the value of this variable. This parameter may be set only in the `postgresql.conf` file or on the server command line; but the setting can be overridden for individual tables by changing table storage parameters.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+| Integer | -1 |local, system, reload|
 
 ## <a id="autovacuum_vacuum_scale_factor"></a>autovacuum_vacuum_scale_factor
 
@@ -895,7 +937,7 @@ Enable `LIMIT` operation to be performed while sorting. Sorts more efficiently w
 
 ## <a id="gp_external_enable_exec"></a>gp\_external\_enable\_exec 
 
- Activates or deactivates  the use of external tables that run OS commands or scripts on the segment hosts \(`CREATE EXTERNAL TABLE EXECUTE` syntax\). Must be enabled if using the Command Center or MapReduce features.
+ Activates or deactivates  the use of external tables that run OS commands or scripts on the segment hosts \(`CREATE EXTERNAL TABLE EXECUTE` syntax\). Must be enabled if using the VMware Greenplum Command Center.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2374,6 +2416,22 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 |-----------|-------|-------------------|
 |Boolean|off|coordinator, session, reload|
 
+## <a id="optimizer_enable_push_join_below_union_all"></a>optimizer\_enable\_push\_join\_below\_union\_all
+
+When GPORCA is enabled \(the default\), the `optimizer_enable_push_join_below_union_all` parameter controls GPORCA's behaviour when it encounters a query that includes a `JOIN` of a `UNION ALL`.
+
+The default value is `off`, GPORCA performs no transforms when a query includes a `JOIN` of a `UNION ALL`.
+
+When set to `on` and the plan cost makes it eligible, GPORCA transforms a `JOIN` of `UNION ALL` to a `UNION ALL` of `JOIN`s. This transform may improve join performance when the `UNION ALL` children can benefit from join operations for which they are not eligible. Such an example is an indexed nested loop join, which is highly performant when the inner side is large and indexed, and the outer side is small. When the `UNION ALL` of multiple indexed large tables is joined with a small table, this transform pushes the join condition down as the index condition, and generates a more performant query than that utilizing a hash join.
+
+Enabling this transform may increase planning time, so be sure to run and examine `EXPLAIN` output for the query with both parameter settings.
+
+The `optimizer_enable_push_join_below_union_all` parameter can be set for a database system, an individual database, or a session or query.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|coordinator, session, reload|
+
 ## <a id="optimizer_enable_replicated_table"></a>optimizer\_enable\_replicated\_table 
 
 When GPORCA is enabled \(the default\), this parameter controls GPORCA's behavior when it encounters DML operations on a replicated table.
@@ -2418,7 +2476,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|true|coordinator, session, reload|
+|Boolean|false|coordinator, session, reload|
 
 ## <a id="optimizer_force_three_stage_scalar_dqa"></a>optimizer\_force\_three\_stage\_scalar\_dqa 
 
@@ -2470,13 +2528,17 @@ This parameter can be set for a database system or a session.
 
 ## <a id="optimizer_join_order"></a>optimizer\_join\_order 
 
-When GPORCA is enabled, this parameter sets the optimization level for join ordering during query optimization by specifying which types of join ordering alternatives to evaluate.
+When GPORCA is enabled (the default), this parameter sets the join enumeration algorithm:
 
 -   `query` - Uses the join order specified in the query.
 -   `greedy` - Evaluates the join order specified in the query and alternatives based on minimum cardinalities of the relations in the joins.
--   `exhaustive` - Applies transformation rules to find and evaluate all join ordering alternatives.
+-   `exhaustive` - Applies transformation rules to find and evaluate up to a configurable threshold number \(`optimizer_join_order_threshold`, default 10\) of n-way inner joins, and then uses the `greedy` method for the remainder. While planning time drops significantly at that point, plan quality and execution time may get worse.
+-   `exhaustive2` - Operates with an emphasis on generating join orders that are suitable for dynamic partition elimination. This algorithm applies transformation rules to find and evaluate n-way inner and outer joins. When evaluating very
+large joins with more than `optimizer_join_order_threshold` \(default 10\) tables, this algorithm employs a gradual transition to the `greedy` method; planning time goes up smoothly as the query gets more complicated, and plan quality and execution time only gradually degrade. `exhaustive2` provides a good trade-off between planning time and execution time for many queries.
 
-The default value is `exhaustive`. Setting this parameter to `query` or `greedy` can generate a suboptimal query plan. However, if the administrator is confident that a satisfactory plan is generated with the `query` or `greedy` setting, query optimization time can be improved by setting the parameter to the lower optimization level.
+The default value is `exhaustive2`.
+
+Setting this parameter to `query` or `greedy` can generate a suboptimal query plan. However, if the administrator is confident that a satisfactory plan is generated with the `query` or `greedy` setting, query optimization time can be improved by setting the parameter to the lower optimization level.
 
 Setting this parameter to `query` or `greedy` overrides the `optimizer_join_order_threshold` and `optimizer_join_arity_for_associativity_commutativity` parameters.
 
@@ -2484,7 +2546,7 @@ This parameter can be set for an individual database, a session, or a query.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|query, greedy, exhaustive|exhaustive|coordinator, session, reload|
+|query, greedy, exhaustive, exhaustive2 |exhaustive2|coordinator, session, reload|
 
 ## <a id="optimizer_join_order_threshold"></a>optimizer\_join\_order\_threshold 
 
@@ -2780,6 +2842,16 @@ If the number of segment files does not exceed the value, Greenplum Database blo
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |0 - 64|1|coordinator, system, reload, superuser|
+
+## <a id="wal_compression"></a>wal_compression
+
+Enables compression of full page writes in a WAL file. This parameter can only be changed by superusers.
+
+> **Note** `wal_compression` can reduce the WAL volume without increasing the risk of unrecoverable data corruption, but at the cost of some extra CPU spent on the compression during WAL logging and on the decompression during WAL replay.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|on|local, session, reload, superuser|
 
 ## <a id="replication_timeout"></a>wal\_sender\_timeout 
 

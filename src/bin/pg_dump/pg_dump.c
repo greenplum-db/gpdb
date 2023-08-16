@@ -6384,20 +6384,19 @@ getTables(Archive *fout, int *numTables)
 	int			i_is_identity_sequence;
 	int			i_relacl;
 	int			i_acldefault;
-	int			i_partkeydef;
 	int			i_ispartition;
-	int			i_partbound;
 	int			i_amname;
 	int			i_relstorage;
 	int			i_parrelid;
 	int			i_parlevel;
 	int			i_toast_index_oid;
 	int			i_distclause;
-	int			i_partclause;
-	int			i_parttemplate;
 
 	/*
 	 * Find all the tables and table-like objects.
+	 *
+	 * We must fetch all tables in this phase because otherwise we cannot
+	 * correctly identify inherited columns, owned sequences, etc.
 	 *
 	 * We include system catalogs, so that we can work if a user table is
 	 * defined to inherit from a system catalog (pretty weird, but...)
@@ -6412,8 +6411,10 @@ getTables(Archive *fout, int *numTables)
 	 *
 	 * Note: in this phase we should collect only a minimal amount of
 	 * information about each table, basically just enough to decide if it is
-	 * interesting. We must fetch all tables in this phase because otherwise
-	 * we cannot correctly identify inherited columns, owned sequences, etc.
+	 * interesting.  In particular, since we do not yet have lock on any user
+	 * table, we MUST NOT invoke any server-side data collection functions
+	 * (for instance, pg_get_partkeydef()).  Those are likely to fail or give
+	 * wrong answers if any concurrent DDL is happening.
 	 */
 
 	appendPQExpBuffer(query,
@@ -6503,10 +6504,10 @@ getTables(Archive *fout, int *numTables)
 
 	if (fout->remoteVersion >= 90000)
 		appendPQExpBufferStr(query,
-						  "CASE WHEN c.reloftype <> 0 THEN c.reloftype::pg_catalog.regtype ELSE NULL END AS reloftype, ");
+						  "c.reloftype, ");
 	else
 		appendPQExpBufferStr(query,
-						  "NULL AS reloftype, ");
+						  "0 AS reloftype, ");
 
 	if (fout->remoteVersion >= 90600)
 		appendPQExpBufferStr(query,
@@ -6564,20 +6565,10 @@ getTables(Archive *fout, int *numTables)
 
 	if (fout->remoteVersion >= 100000)
 		appendPQExpBufferStr(query,
-						  "pg_get_partkeydef(c.oid) AS partkeydef, "
-						  "c.relispartition AS ispartition, "
-						  "pg_get_expr(c.relpartbound, c.oid) AS partbound, "
-							"NULL as partclause, "
-							"NULL as parttemplate");
+							 "c.relispartition AS ispartition ");
 	else
 		appendPQExpBufferStr(query,
-						  "NULL AS partkeydef, "
-						  "0 AS ispartition,"
-						  "NULL AS partbound, "
-							"CASE WHEN pl.parlevel = 0 THEN "
-							"(SELECT pg_get_partition_def(c.oid, true, true)) END AS partclause, "
-							"CASE WHEN pl.parlevel = 0 THEN "
-							"(SELECT pg_get_partition_template_def(c.oid, true, true)) END as parttemplate ");
+							 "false AS ispartition ");
 
 	/*
 	 * Left join to pg_depend to pick up dependency info linking sequences to
@@ -6705,16 +6696,12 @@ getTables(Archive *fout, int *numTables)
 	i_is_identity_sequence = PQfnumber(res, "is_identity_sequence");
 	i_relacl = PQfnumber(res, "relacl");
 	i_acldefault = PQfnumber(res, "acldefault");
-	i_partkeydef = PQfnumber(res, "partkeydef");
 	i_ispartition = PQfnumber(res, "ispartition");
-	i_partbound = PQfnumber(res, "partbound");
 	i_relstorage = PQfnumber(res, "relstorage");
 	i_parrelid = PQfnumber(res, "parrelid");
 	i_parlevel = PQfnumber(res, "parlevel");
 	i_toast_index_oid = PQfnumber(res, "toast_index_oid");
 	i_distclause = PQfnumber(res, "distclause");
-	i_partclause = PQfnumber(res, "partclause");
-	i_parttemplate = PQfnumber(res, "parttemplate");
 
 	if (dopt->lockWaitTimeout)
 	{
@@ -6783,18 +6770,13 @@ getTables(Archive *fout, int *numTables)
 			tblinfo[i].checkoption = pg_strdup(PQgetvalue(res, i, i_checkoption));
 		tblinfo[i].toast_reloptions = pg_strdup(PQgetvalue(res, i, i_toastreloptions));
 		tblinfo[i].parrelid = atooid(PQgetvalue(res, i, i_parrelid));
-		if (PQgetisnull(res, i, i_reloftype))
-			tblinfo[i].reloftype = NULL;
-		else
-			tblinfo[i].reloftype = pg_strdup(PQgetvalue(res, i, i_reloftype));
+		tblinfo[i].reloftype = atooid(PQgetvalue(res, i, i_reloftype));
 		if (PQgetisnull(res, i, i_amname))
 			tblinfo[i].amname = NULL;
 		else
 			tblinfo[i].amname = pg_strdup(PQgetvalue(res, i, i_amname));
 		tblinfo[i].is_identity_sequence = (strcmp(PQgetvalue(res, i, i_is_identity_sequence), "t") == 0);
-		tblinfo[i].partkeydef = pg_strdup(PQgetvalue(res, i, i_partkeydef));
 		tblinfo[i].ispartition = (strcmp(PQgetvalue(res, i, i_ispartition), "t") == 0);
-		tblinfo[i].partbound = pg_strdup(PQgetvalue(res, i, i_partbound));
 
 		tblinfo[i].relstorage = *(PQgetvalue(res, i, i_relstorage));
 		tblinfo[i].distclause = pg_strdup(PQgetvalue(res, i, i_distclause));
@@ -6803,11 +6785,7 @@ getTables(Archive *fout, int *numTables)
 			atoi(PQgetvalue(res, i, i_parlevel)) > 0)
 			tblinfo[i].parparent = false;
 		else
-		{
 			tblinfo[i].parparent = true;
-			tblinfo[i].partclause = pg_strdup(PQgetvalue(res, i, i_partclause));
-			tblinfo[i].parttemplate = pg_strdup(PQgetvalue(res, i, i_parttemplate));
-		}
 
 		if (!tblinfo[i].parparent && tblinfo[i].parrelid != 0 && tblinfo[i].relstorage == 'x')
 		{
@@ -7182,6 +7160,89 @@ getInherits(Archive *fout, int *numInherits)
 	destroyPQExpBuffer(query);
 
 	return inhinfo;
+}
+
+/*
+ * getPartitionDefs
+ *	get information about GPDB partition definitions on a dumpable table
+ */
+
+void
+getPartitionDefs(Archive *fout, TableInfo tblinfo[], int numTables)
+{
+
+	PQExpBuffer query = createPQExpBuffer();
+	PQExpBuffer tbloids = createPQExpBuffer();
+	PGresult   *res;
+	int			ntups;
+	int			i_oid;
+	int			i_partclause;
+	int			i_parttemplate;
+
+	/* Only relevant for GP5/GP6 */
+	if (fout->remoteVersion > GPDB6_MAJOR_PGVERSION)
+		return;
+
+	/*
+	 * We want to perform just one query against pg_class.
+	 * However, we mustn't try to select every row of those catalogs and then
+	 * sort it out on the client side, because some of the server-side functions
+	 * we need would be unsafe to apply to tables we don't have lock on.
+	 * Hence, we build an array of the OIDs of tables we care about
+	 * (and now have lock on!), and use a WHERE clause to constrain which rows are selected.
+	 */
+	appendPQExpBufferChar(tbloids, '{');
+	for (int i = 0; i < numTables; i++)
+	{
+		TableInfo  *tbinfo = &tblinfo[i];
+
+		/* We're only interested in dumping the partition definition for parent partitions */
+		if (!tbinfo->parparent)
+			continue;
+
+		/*
+		 * We can ignore uninteresting tables, i.e. tables that will not be dumped.
+		 */
+		if (!tbinfo->interesting)
+			continue;
+
+		/* OK, we need info for this table */
+		if (tbloids->len > 1)	/* do we have more than the '{'? */
+			appendPQExpBufferChar(tbloids, ',');
+		appendPQExpBuffer(tbloids, "%u", tbinfo->dobj.catId.oid);
+	}
+
+	appendPQExpBufferChar(tbloids, '}');
+	resetPQExpBuffer(query);
+
+	appendPQExpBuffer(query,
+						"SELECT src.oid,\n"
+						"(SELECT pg_get_partition_def(src.oid, true, true)) AS partclause,\n"
+						"(SELECT pg_get_partition_template_def(src.oid, true, true)) AS parttemplate\n"
+						"FROM unnest('%s'::pg_catalog.oid[]) AS src(tbloid)\n", tbloids->data);
+
+	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
+
+	ntups = PQntuples(res);
+
+	i_oid = PQfnumber(res, "oid");
+	i_partclause = PQfnumber(res, "partclause");
+	i_parttemplate = PQfnumber(res, "parttemplate");
+
+	for (int i = 0; i < ntups; i++)
+	{
+		TableInfo *tbinfo = findTableByOid(atooid(PQgetvalue(res, i, i_oid)));
+		if (tblinfo)
+		{
+			tbinfo->partclause = pg_strdup(PQgetvalue(res, i, i_partclause));
+			tbinfo->parttemplate = pg_strdup(PQgetvalue(res, i, i_parttemplate));
+		}
+
+	}
+	PQclear(res);
+
+	destroyPQExpBuffer(query);
+	destroyPQExpBuffer(tbloids);
 }
 
 /*
@@ -16592,7 +16653,7 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 	bool		hasExternalPartitions = false;
 	char	   *ftoptions = NULL;
 	char	   *srvname = NULL;
-
+	char	   *partkeydef = NULL;
 
 	/* We had better have loaded per-column details about this table */
 	Assert(tbinfo->interesting);
@@ -16650,8 +16711,29 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 	}
 	else
 	{
+		/*
+		 * Set reltypename, and collect any relkind-specific data that we
+		 * didn't fetch during getTables().
+		 */
 		switch (tbinfo->relkind)
 		{
+			case RELKIND_PARTITIONED_TABLE:
+				{
+					PQExpBuffer query = createPQExpBuffer();
+					PGresult   *res;
+
+					reltypename = "TABLE";
+
+					/* retrieve partition key definition */
+					appendPQExpBuffer(query,
+									  "SELECT pg_get_partkeydef('%u')",
+									  tbinfo->dobj.catId.oid);
+					res = ExecuteSqlQueryForSingleRow(fout, query->data);
+					partkeydef = pg_strdup(PQgetvalue(res, 0, 0));
+					PQclear(res);
+					destroyPQExpBuffer(query);
+					break;
+				}
 			case RELKIND_FOREIGN_TABLE:
 				{
 					PQExpBuffer query = createPQExpBuffer();
@@ -16689,10 +16771,10 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 				break;
 			default:
 				reltypename = "TABLE";
-
 				/* Is it an external table (server GPDB 6.x and below.) */
 				if (tbinfo->relstorage == RELSTORAGE_EXTERNAL)
 					reltypename = "EXTERNAL TABLE";
+				break;
 		}
 	}
 
@@ -16772,8 +16854,10 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 		 * Attach to type, if reloftype; except in case of a binary upgrade,
 		 * we dump the table normally and attach it to the type afterward.
 		 */
-		if (tbinfo->reloftype && !dopt->binary_upgrade)
-			appendPQExpBuffer(q, " OF %s", tbinfo->reloftype);
+		if (OidIsValid(tbinfo->reloftype) && !dopt->binary_upgrade)
+			appendPQExpBuffer(q, " OF %s",
+							  getFormattedTypeName(fout, tbinfo->reloftype,
+												   zeroAsOpaque));
 
 		if (tbinfo->relkind != RELKIND_MATVIEW)
 		{
@@ -16811,7 +16895,8 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 					 * Skip column if fully defined by reloftype, except in
 					 * binary upgrade
 					 */
-					if (tbinfo->reloftype && !print_default && !print_notnull &&
+					if (OidIsValid(tbinfo->reloftype) &&
+						!print_default && !print_notnull &&
 						!dopt->binary_upgrade)
 						continue;
 
@@ -16852,7 +16937,7 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 					 * table ('OF type_name'), but in binary-upgrade mode,
 					 * print it in that case too.
 					 */
-					if (dopt->binary_upgrade || !tbinfo->reloftype)
+					if (dopt->binary_upgrade || !OidIsValid(tbinfo->reloftype))
 					{
 						appendPQExpBuffer(q, " %s",
 										  tbinfo->atttypnames[j]);
@@ -16942,7 +17027,7 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 
 			if (actual_atts)
 				appendPQExpBufferStr(q, "\n)");
-			else if (!(tbinfo->reloftype && !dopt->binary_upgrade))
+			else if (!(OidIsValid(tbinfo->reloftype) && !dopt->binary_upgrade))
 			{
 				/*
 				 * No attributes? we must have a parenthesized attribute list,
@@ -16971,7 +17056,7 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 			}
 
 			if (tbinfo->relkind == RELKIND_PARTITIONED_TABLE)
-				appendPQExpBuffer(q, "\nPARTITION BY %s", tbinfo->partkeydef);
+				appendPQExpBuffer(q, "\nPARTITION BY %s", partkeydef);
 
 			if (tbinfo->relkind == RELKIND_FOREIGN_TABLE)
 				appendPQExpBuffer(q, "\nSERVER %s", fmtId(srvname));
@@ -17320,12 +17405,13 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 				}
 			}
 
-			if (tbinfo->reloftype)
+			if (OidIsValid(tbinfo->reloftype))
 			{
 				appendPQExpBufferStr(q, "\n-- For binary upgrade, set up typed tables this way.\n");
 				appendPQExpBuffer(q, "ALTER TABLE ONLY %s OF %s;\n",
 								  qualrelname,
-								  tbinfo->reloftype);
+								  getFormattedTypeName(fout, tbinfo->reloftype,
+													   zeroAsOpaque));
 			}
 			appendPQExpBuffer(q, "RESET allow_system_table_mods;\n");
 		}
@@ -17502,6 +17588,8 @@ dumpTableSchema(Archive *fout, const TableInfo *tbinfo)
 			}
 		}
 
+		if (partkeydef)
+			free(partkeydef);
 		if (ftoptions)
 			free(ftoptions);
 		if (srvname)
@@ -17610,6 +17698,8 @@ dumpTableAttach(Archive *fout, const TableAttachInfo *attachinfo)
 {
 	DumpOptions *dopt = fout->dopt;
 	PQExpBuffer q;
+	PGresult   *res;
+	char	   *partbound;
 
 	/* Do nothing in data-only dump */
 	if (dopt->dataOnly)
@@ -17620,14 +17710,23 @@ dumpTableAttach(Archive *fout, const TableAttachInfo *attachinfo)
 
 	q = createPQExpBuffer();
 
-	/* Perform ALTER TABLE on the parent */
+	/* Fetch the partition's partbound */
 	appendPQExpBuffer(q,
+					  "SELECT pg_get_expr(c.relpartbound, c.oid) "
+					  "FROM pg_class c "
+					  "WHERE c.oid = '%u'",
+					  attachinfo->partitionTbl->dobj.catId.oid);
+	res = ExecuteSqlQueryForSingleRow(fout, q->data);
+	partbound = PQgetvalue(res, 0, 0);
+
+	/* Perform ALTER TABLE on the parent */
+	printfPQExpBuffer(q,
 					  "ALTER TABLE ONLY %s ",
 					  fmtQualifiedDumpable(attachinfo->parentTbl));
 	appendPQExpBuffer(q,
 					  "ATTACH PARTITION %s %s;\n",
 					  fmtQualifiedDumpable(attachinfo->partitionTbl),
-					  attachinfo->partitionTbl->partbound);
+					  partbound);
 
 	/*
 	 * There is no point in creating a drop query as the drop is done by table
@@ -17644,6 +17743,7 @@ dumpTableAttach(Archive *fout, const TableAttachInfo *attachinfo)
 							  .section = SECTION_PRE_DATA,
 							  .createStmt = q->data));
 
+	PQclear(res);
 	destroyPQExpBuffer(q);
 }
 

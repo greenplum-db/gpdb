@@ -328,9 +328,18 @@ $$ LANGUAGE plpython3u;
 
 0: CREATE OR REPLACE FUNCTION rmdir(dirname text) RETURNS BOOL AS $$
     import shutil
+    import fcntl
     import os
 
+    try:
+        f = os.open(dirname, os.O_RDONLY)
+    except FileNotFoundError:
+        return True
+
+    fcntl.flock(f, fcntl.LOCK_EX)
+
     if not os.path.exists(dirname):
+        os.close(f)
         return True
 
     try:
@@ -339,4 +348,6 @@ $$ LANGUAGE plpython3u;
         plpy.error("cannot remove dir {}".format(e))
     else:
         return True
+    finally:
+        os.close(f)
 $$ LANGUAGE plpython3u;

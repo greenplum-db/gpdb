@@ -347,3 +347,36 @@ insert. So, we can safely position the revmap iterator at the end of the chain
 (instead of traversing the chain unnecessarily from the front).
 
 Note: Multiple revmap pages across chains can map to the same data page.
+
+(4) Default pages_per_range:
+For heap tables, we have decided to scale back the default to 32, since in GPDB
+one heap block is 4x the default size in PG.
+
+For AO/CO tables, since many more tuples fit in 1 logical heap block as opposed
+to heap (for e.g. the tpch lineitem table will have at most 248 tuples/block,
+whereas an AO/CO table is bound to have 32768 tuples/block).
+Having a default of 32 will thus be counter-productive - CPU processing cost
+from unwanted tuples will far outweigh any IO cost savings and will dominate the
+total cost of the query (as per planner cost estimation).
+Thus, we use the lowest default possible: a default value of 1.
+
+(5) VACUUM:
+
+For BRIN indexes on AO/CO tables, we exploit a property of exhausted logical
+block ranges (fast sequence numbers used up) belonging to a segment that
+undergoes VACUUM (i.e. a segment awaiting drop). The property is that these
+ranges will never be reused for future inserts.
+
+This is because we don't reset gp_fastsequence when we VACUUM AO/CO tables and
+gp_fastsequence is always increasing.
+
+So, these ranges are effectively dead and can thus be marked as empty. Doing so
+brings about a couple of benefits:
+(1) These dead ranges will never result in false positives when their summaries
+match scan keys - we will not bloat the output tidbitmap unnecessarily.
+(2) Cycles will not be spent trying to summarize them, as empty ranges are not
+summarized. This saves cycles for both the summarization call at the end of
+VACUUM and for all future summarization calls.
+
+We mark these ranges as empty in the brinbulkdelete callback, which is called
+when we are sure that it is safe to recycle a segment awaiting drop.

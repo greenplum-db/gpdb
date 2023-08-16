@@ -5,7 +5,7 @@ Closes a cursor.
 ## <a id="section2"></a>Synopsis 
 
 ``` {#sql_command_synopsis}
-CLOSE <cursor_name>
+CLOSE { <cursor_name> | ALL }
 ```
 
 ## <a id="section3"></a>Description 
@@ -16,16 +16,19 @@ Every non-holdable open cursor is implicitly closed when a transaction is termin
 
 ## <a id="section4"></a>Parameters 
 
-<cursor\_name\>
+cursor\_name
 :   The name of an open cursor to close.
+
+ALL
+:   Close all open cursors.
 
 ## <a id="section5"></a>Notes 
 
-Greenplum Database does not have an explicit `OPEN` cursor statement. A cursor is considered open when it is declared. Use the `DECLARE` statement to declare \(and open\) a cursor.
+Greenplum Database does not have an explicit `OPEN` cursor statement. A cursor is considered open when it is declared. Use the [DECLARE](DECLARE.html) statement to declare \(and open\) a cursor.
 
 You can see all available cursors by querying the [pg\_cursors](../system_catalogs/catalog_ref-views.html#pg_cursors) system view.
 
-If a cursor is closed after a savepoint which is later rolled back, the `CLOSE` is not rolled back; that is the cursor remains closed.
+If a cursor is closed after a savepoint which is later rolled back, the `CLOSE` is not rolled back; that is, the cursor remains closed.
 
 ## <a id="section6"></a>Examples 
 
@@ -37,7 +40,7 @@ CLOSE portala;
 
 ## <a id="section7"></a>Compatibility 
 
-`CLOSE` is fully conforming with the SQL standard.
+`CLOSE` is fully conforming with the SQL standard. `CLOSE ALL` is a Greenplum Database extension.
 
 ## <a id="section8"></a>See Also 
 

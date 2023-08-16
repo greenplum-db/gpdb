@@ -2234,8 +2234,14 @@ do_autovacuum(void)
 		/* Get oid of top level partition root and add to separate set */
 		if (doanalyze && classForm->relispartition)
 		{
+			/*
+			 * If partition is detached/exchanged between the relispartition
+			 * check and getting the root partition, the root relid will be
+			 * invalid and we skip merging this root
+			 */
 			Oid root_parent_relid = get_top_level_partition_root(relid);
-			(void) hash_search(top_level_partition_roots, (void *) &root_parent_relid, HASH_ENTER, NULL);
+			if (OidIsValid(root_parent_relid))
+				(void) hash_search(top_level_partition_roots, (void *) &root_parent_relid, HASH_ENTER, NULL);
 		}
 		/*
 		 * Remember TOAST associations for the second pass.  Note: we must do

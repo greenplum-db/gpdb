@@ -144,10 +144,9 @@ WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
                                                                            ->  Hash Join
                                                                                  Hash Cond: ((min((keo4.keo_para_budget_date)::text)) = (keo4_1.keo_para_budget_date)::text)
                                                                                  ->  Redistribute Motion 1:3  (slice5; segments: 1)
-                                                                                       ->  Finalize Aggregate
+                                                                                       ->  Aggregate
                                                                                              ->  Gather Motion 3:1  (slice6; segments: 3)
-                                                                                                   ->  Partial Aggregate
-                                                                                                         ->  Seq Scan on keo4
+                                                                                                   ->  Seq Scan on keo4
                                                                                  ->  Hash
                                                                                        ->  Broadcast Motion 3:3  (slice7; segments: 3)
                                                                                              ->  Seq Scan on keo4 keo4_1

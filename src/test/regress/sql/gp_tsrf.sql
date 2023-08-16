@@ -41,5 +41,24 @@ explain verbose select generate_series(1,a+1),b+generate_series(1,4),c from test
 select generate_series(1,a+1),b+generate_series(1,4),c from test_srf;
 drop table test_srf;
 
--- Below query giving incorrect output with ORCA.Works fine on planner.Github Issue #15644
+-- Test that the preprocessor step where
+-- IN subquery is converted to EXIST subquery with a predicate,
+-- is not happening if inner sub query is SRF
+-- Fixed as part of github issue #15644
+
+explain verbose SELECT a IN (SELECT generate_series(1,a)) AS x FROM (SELECT generate_series(1, 3) AS a) AS s;
 SELECT a IN (SELECT generate_series(1,a)) AS x FROM (SELECT generate_series(1, 3) AS a) AS s;
+
+SELECT a FROM (values(1),(2),(3)) as t(a) where a IN (SELECT generate_series(1,a));
+EXPLAIN (VERBOSE, COSTS OFF)
+  SELECT a FROM (values(1),(2),(3)) as t(a) where a IN (SELECT generate_series(1,a));
+
+CREATE TABLE t_outer (a int, b int) DISTRIBUTED BY (a);
+INSERT INTO t_outer SELECT i, i+1 FROM generate_series(1,3) as i;  
+CREATE TABLE t_inner (a int, b int) DISTRIBUTED BY (a);
+INSERT INTO t_inner SELECT i, i+1 FROM generate_series(1,3) as i;
+
+SELECT * FROM t_outer WHERE t_outer.b IN (SELECT generate_series(1, t_outer.b) FROM t_inner);
+EXPLAIN (VERBOSE, COSTS OFF)
+  SELECT * FROM t_outer WHERE t_outer.b IN (SELECT generate_series(1, t_outer.b)  FROM t_inner);
+DROP TABLE t_outer, t_inner;

@@ -321,7 +321,7 @@ extern double vac_estimate_reltuples(Relation relation,
 									 BlockNumber total_pages,
 									 BlockNumber scanned_pages,
 									 double scanned_tuples);
-extern void vac_send_relstats_to_qd(Relation relation,
+extern void vac_send_relstats_to_qd(Oid relid,
 						BlockNumber num_pages,
 						double num_tuples,
 						BlockNumber num_all_visible_pages);

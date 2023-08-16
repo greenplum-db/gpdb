@@ -5,7 +5,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 2021-01-11 19:20:03|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data/external_file_01.txt" -t 30
 2021-01-11 19:20:03|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_08aff1d5e0be087569323178726e90f6
 2021-01-11 19:20:03|INFO|did not find an external table to reuse. creating ext_gpload_reusable_f39a934e_53fe_11eb_898a_005056983e1a
-2021-01-11 19:20:04|ERROR|could not execute SQL in sql:after "INSERT INTO test_667_after VALUES('a')": ERROR:  invalid input syntax for type integer: "a"
+2021-01-11 19:20:04|ERROR|could not execute SQL in sql:after "INSERT INTO test_667_after VALUES('a')": invalid input syntax for type integer: "a"
 LINE 1: INSERT INTO test_667_after VALUES('a')
                                           ^
 

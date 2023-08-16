@@ -956,13 +956,12 @@ explain select 1 as mrs_t1 where 1 <= ALL (select x from z);
    Join Filter: true
    ->  Result  (cost=0.00..431.00 rows=1 width=1)
          Filter: ((CASE WHEN (sum((CASE WHEN (1 > x) THEN 1 ELSE 0 END)) IS NULL) THEN true WHEN (sum((CASE WHEN (x IS NULL) THEN 1 ELSE 0 END)) > '0'::bigint) THEN NULL::boolean WHEN (1 IS NULL) THEN NULL::boolean WHEN (sum((CASE WHEN (1 > x) THEN 1 ELSE 0 END)) = '0'::bigint) THEN true ELSE false END) = true)
-         ->  Finalize Aggregate  (cost=0.00..431.00 rows=1 width=16)
-               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-                     ->  Partial Aggregate  (cost=0.00..431.00 rows=1 width=16)
-                           ->  Seq Scan on z  (cost=0.00..431.00 rows=1 width=4)
+         ->  Aggregate  (cost=0.00..431.00 rows=1 width=16)
+               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Seq Scan on z  (cost=0.00..431.00 rows=1 width=4)
    ->  Result  (cost=0.00..0.00 rows=1 width=1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(10 rows)
+(9 rows)
 
 --
 -- Test for wrong results in window functions under joins #1

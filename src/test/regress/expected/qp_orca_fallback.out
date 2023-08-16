@@ -256,6 +256,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 create external web table p2_ext (like p1) EXECUTE 'cat something.txt' FORMAT 'TEXT';
 alter table ext_part attach partition p1 for values in (1);
 alter table ext_part attach partition p2_ext for values in (2);
+NOTICE:  partition constraints are not validated when attaching a readable external table
 explain insert into ext_part values (1);
                       QUERY PLAN                      
 ------------------------------------------------------

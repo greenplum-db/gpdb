@@ -1808,8 +1808,10 @@ CTranslatorRelcacheToDXL::RetrieveRelStats(CMemoryPool *mp, IMDId *mdid)
 		relation_empty = true;
 	}
 
-	ULONG relpages = rel->rd_rel->relpages;
-	ULONG relallvisible = rel->rd_rel->relallvisible;
+	PageEstimate pages = gpdb::CdbEstimatePartitionedNumPages(rel.get());
+
+	ULONG relpages = pages.totalpages;
+	ULONG relallvisible = pages.totalallvisiblepages;
 
 	CDXLRelStats *dxl_rel_stats = GPOS_NEW(mp)
 		CDXLRelStats(mp, m_rel_stats_mdid, mdname, CDouble(num_rows),
@@ -2720,15 +2722,39 @@ CTranslatorRelcacheToDXL::IsIndexSupported(Relation index_rel)
 	HeapTupleData *tup = index_rel->rd_indextuple;
 
 	// index expressions and index constraints not supported
-	return gpdb::HeapAttIsNull(tup, Anum_pg_index_indexprs) &&
-		   gpdb::HeapAttIsNull(tup, Anum_pg_index_indpred) &&
-		   index_rel->rd_index->indisvalid &&
-		   (BTREE_AM_OID == index_rel->rd_rel->relam ||
-			HASH_AM_OID == index_rel->rd_rel->relam ||
-			BITMAP_AM_OID == index_rel->rd_rel->relam ||
-			GIST_AM_OID == index_rel->rd_rel->relam ||
-			GIN_AM_OID == index_rel->rd_rel->relam ||
-			BRIN_AM_OID == index_rel->rd_rel->relam);
+	BOOL index_supported = gpdb::HeapAttIsNull(tup, Anum_pg_index_indexprs) &&
+						   gpdb::HeapAttIsNull(tup, Anum_pg_index_indpred) &&
+						   index_rel->rd_index->indisvalid &&
+						   (BTREE_AM_OID == index_rel->rd_rel->relam ||
+							HASH_AM_OID == index_rel->rd_rel->relam ||
+							BITMAP_AM_OID == index_rel->rd_rel->relam ||
+							GIST_AM_OID == index_rel->rd_rel->relam ||
+							GIN_AM_OID == index_rel->rd_rel->relam ||
+							BRIN_AM_OID == index_rel->rd_rel->relam);
+	if (index_supported)
+	{
+		return true;
+	}
+
+	// Fall back if query is on a relation with a pgvector index (ivfflat)
+	// Orca currently does not generate index scan alternatives here
+	// Fall back to ensure users can get better performing index plans using planner
+	CAutoMemoryPool amp;
+	CMemoryPool *mp = amp.Pmp();
+	CWStringDynamic *am_name_str = CDXLUtils::CreateDynamicStringFromCharArray(
+		mp, gpdb::GetRelAmName(index_rel->rd_rel->relam));
+
+	CWStringConst str_pgvector_am(GPOS_WSZ_LIT("ivfflat"));
+	if (am_name_str->Equals(&str_pgvector_am))
+	{
+		GPOS_DELETE(am_name_str);
+		GPOS_RAISE(
+			gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
+			GPOS_WSZ_LIT(
+				"Queries on relations with pgvector indexes (ivfflat) are not supported"));
+	}
+	GPOS_DELETE(am_name_str);
+	return false;
 }
 
 //---------------------------------------------------------------------------

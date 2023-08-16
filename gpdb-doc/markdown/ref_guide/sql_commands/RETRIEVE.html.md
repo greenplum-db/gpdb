@@ -14,17 +14,14 @@ RETRIEVE { <count> | ALL } FROM ENDPOINT <endpoint_name>
 
 A parallel retrieve cursor has an associated position, which is used by `RETRIEVE`. The cursor position can be before the first row of the query result, on any particular row of the result, or after the last row of the result.
 
+> **Note**
+> Because Greenplum Database does not support scrollable cursors, the `RETRIEVE` command moves a parallel retrieve cursor only forward in position.
+
 When it is created, a parallel retrieve cursor is positioned before the first row. After retrieving some rows, the cursor is positioned on the row most recently retrieved.
 
 If `RETRIEVE` runs off the end of the available rows then the cursor is left positioned after the last row.
 
 `RETRIEVE ALL` always leaves the parallel retrieve cursor positioned after the last row.
-
-> **Note** Greenplum Database does not support scrollable cursors; you can only move a cursor forward in position using the `RETRIEVE` command.
-
-**Outputs**
-
-On successful completion, a `RETRIEVE` command returns the fetched rows \(possibly empty\) and a count of the number of rows fetched \(possibly zero\).
 
 ## <a id="section5"></a>Parameters 
 
@@ -37,6 +34,10 @@ ALL
 endpoint\_name
 :   The name of the endpoint from which to retrieve the rows.
 
+## <a id="section5a"></a>Outputs
+
+On successful completion, a `RETRIEVE` command returns the fetched rows \(possibly empty\) and a count of the number of rows fetched \(possibly zero\).
+
 ## <a id="section6"></a>Notes 
 
 Use `DECLARE ... PARALLEL RETRIEVE CURSOR` to define a parallel retrieve cursor.
@@ -45,41 +46,45 @@ Parallel retrieve cursors do not support `FETCH` or `MOVE` operations.
 
 ## <a id="section7"></a>Examples 
 
--- Start the transaction:
+Start the transaction:
 
 ```
 BEGIN;
 ```
 
--- Create a parallel retrieve cursor:
+Create a parallel retrieve cursor:
 
 ```
 DECLARE mycursor PARALLEL RETRIEVE CURSOR FOR SELECT * FROM films;
 ```
 
--- List the cursor endpoints:
+List the cursor endpoints:
 
 ```
 SELECT * FROM gp_endpoints WHERE cursorname='mycursor';
 ```
 
--- Note the hostname, port, auth\_token, and name associated with each endpoint.
+Note the hostname, port, auth\_token, and name associated with each endpoint.
 
--- In another terminal window, initiate a retrieve session using a hostname, port, and auth\_token returned from the previous query. For example:
+In another terminal window, initiate a retrieve session using a hostname, port, and auth\_token returned from the previous query. For example:
 
 ```
 PGPASSWORD=d3825fc07e56bee5fcd2b1d0b600c85e PGOPTIONS='-c gp_retrieve_conn=true' psql -d testdb -h sdw3 -p 6001;
 ```
 
--- Fetch all rows from an endpoint \(for example, the endpoint named `prc10000001100000005`\):
+Fetch all rows from an endpoint \(for example, the endpoint named `prc10000001100000005`\):
 
 ```
 RETRIEVE ALL FROM ENDPOINT prc10000001100000005;
 ```
 
--- Exit the retrieve session
+Exit the retrieve session.
 
--- Back in the original session, close the cursor and end the transaction:
+```
+\q
+```
+
+Back in the original session, close the cursor and end the transaction:
 
 ```
 CLOSE mycursor;

@@ -8,8 +8,16 @@
 -- N.B. "VACUUM ANALYZE" is to update relallvisible used to determine cost of an
 --      index-only scan.
 -- start_matchsubs
+-- m/Memory Usage: \d+\w?B/
+-- s/Memory Usage: \d+\w?B/Memory Usage: ###B/
 -- m/Memory: \d+kB/
 -- s/Memory: \d+kB/Memory: ###kB/
+-- m/Buckets: \d+/
+-- s/Buckets: \d+/Buckets: ###/
+-- m/Hash chain length \d+\.\d+ avg, \d+ max/
+-- s/Hash chain length \d+\.\d+ avg, \d+ max/Hash chain length ###/
+-- m/using \d+ of \d+ buckets/
+-- s/using \d+ of \d+ buckets/using ## of ### buckets/
 -- end_matchsubs
 set optimizer_trace_fallback=on;
 set enable_seqscan=off;
@@ -353,15 +361,14 @@ SELECT b FROM test_select_best_cover WHERE b>42;
 -- ORCA_FEATURE_NOT_SUPPORTED: use i_test_select_best_cover_ab
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_select_best_cover WHERE a>42 AND b>42;
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=58 loops=1)
-   ->  Index Only Scan using i_test_select_best_cover_a_b on test_select_best_cover (actual rows=25 loops=1)
-         Index Cond: (a > 42)
-         Filter: (b > 42)
+   ->  Index Only Scan using i_test_select_best_cover_ab on test_select_best_cover (actual rows=25 loops=1)
+         Index Cond: ((a > 42) AND (b > 42))
          Heap Fetches: 0
  Optimizer: Postgres query optimizer
-(6 rows)
+(5 rows)
 
 -- KEYS: [a]    INCLUDED: []
 -- KEYS: [a]    INCLUDED: [b]
@@ -418,7 +425,6 @@ CREATE INDEX i_test_cover_index_scan_on_partition_table ON test_cover_index_on_p
 INSERT INTO test_cover_index_on_pt SELECT i+i, i%4 FROM generate_series(1, 10)i;
 VACUUM ANALYZE test_cover_index_on_pt;
 -- KEYS: [a]    INCLUDED: [b]
--- ORCA_FEATURE_NOT_SUPPORTED: dynamic index only scan
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_cover_index_on_pt WHERE a<10;
                                                              QUERY PLAN                                                             
@@ -476,6 +482,72 @@ SELECT a, b, c FROM test_cover_index_on_pt WHERE b<10;
                Filter: (b < 10)
  Optimizer: Postgres query optimizer
 (11 rows)
+
+-- Expect static eliminated partitions due to predicate on column 'b'
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT a, b FROM test_cover_index_on_pt WHERE a<10 and b=2;
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=1 loops=1)
+   ->  Index Only Scan using test_cover_index_on_pt_1_prt_3_a_b_idx on test_cover_index_on_pt_1_prt_3 (actual rows=1 loops=1)
+         Index Cond: (a < 10)
+         Filter: (b = 2)
+         Heap Fetches: 0
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+-- Expect both sides of join to perform index only scan
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt JOIN test_basic_cover_index AS t ON pt.a=t.a WHERE pt.a<10 and pt.b=2;
+                                                              QUERY PLAN                                                               
+---------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=1 loops=1)
+   ->  Hash Join (actual rows=1 loops=1)
+         Hash Cond: (t.a = pt.a)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 524288 buckets.
+         ->  Index Only Scan using i_test_basic_index on test_basic_cover_index t (actual rows=5 loops=1)
+               Index Cond: (a < 10)
+               Heap Fetches: 0
+         ->  Hash (actual rows=1 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               ->  Index Only Scan using test_cover_index_on_pt_1_prt_3_a_b_idx on test_cover_index_on_pt_1_prt_3 pt (actual rows=1 loops=1)
+                     Index Cond: (a < 10)
+                     Filter: (b = 2)
+                     Heap Fetches: 0
+ Optimizer: Postgres query optimizer
+(14 rows)
+
+SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt JOIN test_basic_cover_index AS t ON pt.a=t.a WHERE pt.a<10 and pt.b=2;
+ a | b 
+---+---
+ 4 | 2
+(1 row)
+
+-- Expect both sides of join to perform index only scan
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt LEFT JOIN test_basic_cover_index AS t ON pt.a=t.a WHERE pt.a<10 and pt.b=2;
+                                                                 QUERY PLAN                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=1 loops=1)
+   ->  Hash Right Join (actual rows=1 loops=1)
+         Hash Cond: (t.a = pt.a)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 524288 buckets.
+         ->  Index Only Scan using i_test_basic_index on test_basic_cover_index t (actual rows=38 loops=1)
+               Heap Fetches: 0
+         ->  Hash (actual rows=1 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               ->  Index Only Scan using test_cover_index_on_pt_1_prt_3_a_b_idx on test_cover_index_on_pt_1_prt_3 pt (actual rows=1 loops=1)
+                     Index Cond: (a < 10)
+                     Filter: (b = 2)
+                     Heap Fetches: 0
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt LEFT JOIN test_basic_cover_index AS t ON pt.a=t.a WHERE pt.a<10 and pt.b=2;
+ a | b 
+---+---
+ 4 | 2
+(1 row)
 
 CREATE TABLE leaf_part(a int, b int, c int) DISTRIBUTED BY (a);
 -- without explicit index declared on leaf_part

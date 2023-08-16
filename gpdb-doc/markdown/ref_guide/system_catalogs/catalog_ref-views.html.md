@@ -161,9 +161,9 @@ The `gp_cursors` view is a cluster-wide view that displays the [`pg_config`](#pg
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
 |`name`|text| |The name of the cursor.|
 |`statement`|text| |The verbatim query string submitted to declare this cursor.|
-|`is_holdable`|boolean| |`true` if the cursor is holdable \(that is, it can be accessed after the transaction that declared the cursor has committed\); `false` otherwise.<br/><br/>> **Note** Greenplum Database does not support holdable parallel retrieve cursors, this value is always `false` for such cursors.|
+|`is_holdable`|boolean| |`true` if the cursor is holdable \(that is, it can be accessed after the transaction that declared the cursor has committed\); `false` otherwise.<br/><br/> **Note** Greenplum Database does not support holdable parallel retrieve cursors, this value is always `false` for such cursors.|
 |`is_binary`|boolean| |`true` if the cursor was declared `BINARY`; `false` otherwise.|
-|`is_scrollable`|boolean| |`true` if the cursor is scrollable \(that is, it allows rows to be retrieved in a nonsequential manner\); `false` otherwise.<br/><br/>> **Note** Greenplum Database does not support scrollable cursors, this value is always `false`.|
+|`is_scrollable`|boolean| |`true` if the cursor is scrollable \(that is, it allows rows to be retrieved in a nonsequential manner\); `false` otherwise.<br/><br/> **Note** Greenplum Database does not support scrollable cursors, this value is always `false`.|
 |`creation_time`|timestamptz| |The time at which the cursor was declared.|
 |`is_parallel`|boolean| |`true` if the cursor was declared `PARALLEL RETRIEVE`; `false` otherwise.|
 

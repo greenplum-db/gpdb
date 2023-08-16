@@ -19,6 +19,7 @@
 
 #include "access/relscan.h"
 #include "access/sdir.h"
+#include "c.h"
 #include "utils/guc.h"
 #include "utils/rel.h"
 #include "utils/snapshot.h"
@@ -564,6 +565,19 @@ typedef struct TableAmRoutine
 											  double *tups_vacuumed,
 											  double *tups_recently_dead);
 
+	/* See table_relation_copy_for_repack() */
+	void		(*relation_copy_for_repack) (Relation origTable,
+											 Relation newTable,
+											 int nkeys,
+											 AttrNumber *attNums,
+											 Oid *sortOperators,
+											 Oid *sortCollations,
+											 bool *nullsFirstFlags, 
+											 TransactionId *xid_cutoff,
+											 MultiXactId *multi_cutoff,
+											 TransactionId OldestXmin,
+											 double *num_tuples);
+									 
 	/*
 	 * React to VACUUM command on the relation. The VACUUM can be
 	 * triggered by a user or by autovacuum. The specific actions
@@ -1643,6 +1657,32 @@ table_relation_copy_for_cluster(Relation OldTable, Relation NewTable,
 													xid_cutoff, multi_cutoff,
 													num_tuples, tups_vacuumed,
 													tups_recently_dead);
+}
+
+/* 
+ * Routine to support a repack operation, which rewrites the table in physically sorted 
+ * order on disk. It is similar in spirit to cluster, except that an index is not used 
+ * to perform the sort. Due to the lack of an index, tuplesort metadata is 
+ * separately specified. Other than that this interface is exactly similar to 
+ * relation_copy_for_cluster (please refer to it for a description of the args).
+ */
+static inline void
+table_relation_copy_for_repack(Relation origTable, Relation newTable,
+								int nkeys, AttrNumber *attNums,
+								Oid *sortOperators, Oid *sortCollations,
+								bool *nullsFirstFlags, TransactionId *xid_cutoff,
+								MultiXactId *multi_cutoff, TransactionId OldestXmin,
+								double *num_tuples)
+{
+	origTable->rd_tableam->relation_copy_for_repack(origTable, newTable, 
+													nkeys, attNums, 
+													sortOperators, 
+													sortCollations,
+													nullsFirstFlags,
+													xid_cutoff,
+													multi_cutoff,
+													OldestXmin,
+													num_tuples);
 }
 
 /*

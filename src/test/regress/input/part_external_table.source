@@ -121,3 +121,51 @@ explain select * from part where b = 53;
 
 -- only select foreign scans
 explain select * from part where b > 22;
+
+--
+-- exchange & attach partition
+--
+alter table part add partition exch1 start(60) end (70);
+alter table part add partition exch2 start(70) end (80);
+
+-- exchange with external tables
+create external web table p3_e (a int, b int) execute 'cat > @abs_srcdir@/data/part-ext.csv' format 'csv' (delimiter as '|' null as 'null' escape as ' ');
+create writable external web table p4_e (a int, b int) execute 'cat > @abs_srcdir@/data/part-ext.csv' format 'csv' (delimiter as '|' null as 'null' escape as ' ');
+
+-- allow exchange readable external table
+alter table part exchange partition exch1 with table p3_e;
+
+-- should disallow writable external table
+alter table part exchange partition exch1 with table p4_e;
+
+-- exchange with foreign tables
+CREATE SERVER file_server3 FOREIGN DATA WRAPPER file_fdw;
+CREATE FOREIGN TABLE ft3 (
+	a int,
+	b int
+) SERVER file_server3
+OPTIONS ( filename '/does/not/exist.csv', format 'csv');
+
+-- exchange works, but no error checking like for external tables
+alter table part exchange partition exch2 with table ft3;
+
+-- same tests for attach partition
+create external web table p5_e (a int, b int) execute 'cat > @abs_srcdir@/data/part-ext.csv' format 'csv' (delimiter as '|' null as 'null' escape as ' ');
+create writable external web table p6_e (a int, b int) execute 'cat > @abs_srcdir@/data/part-ext.csv' format 'csv' (delimiter as '|' null as 'null' escape as ' ');
+
+-- allow attach readable external table
+alter table part attach partition p5_e for values from (80) to (90);
+
+-- should disallow writable external table
+alter table part attach partition p6_e for values from (90) to (100);
+
+-- attach foreign table
+CREATE SERVER file_server4 FOREIGN DATA WRAPPER file_fdw;
+CREATE FOREIGN TABLE ft4 (
+	a int,
+	b int
+) SERVER file_server4
+OPTIONS ( filename '/does/not/exist.csv', format 'csv');
+
+-- exchange works, but no error checking like for external tables
+alter table part attach partition ft4 for values from (100) to (110);

@@ -481,15 +481,13 @@ CREATE INDEX clstr_expression_upper_b ON clstr_expression ((upper(b)));
 BEGIN;
 SET LOCAL enable_seqscan = false;
 EXPLAIN (COSTS OFF) SELECT * FROM clstr_expression WHERE upper(b) = 'PREFIX3';
-                        QUERY PLAN                         
------------------------------------------------------------
+                             QUERY PLAN                              
+---------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on clstr_expression
-         Recheck Cond: (upper(b) = 'PREFIX3'::text)
-         ->  Bitmap Index Scan on clstr_expression_upper_b
-               Index Cond: (upper(b) = 'PREFIX3'::text)
+   ->  Index Scan using clstr_expression_upper_b on clstr_expression
+         Index Cond: (upper(b) = 'PREFIX3'::text)
  Optimizer: Postgres query optimizer
-(6 rows)
+(4 rows)
 
 SELECT * FROM clstr_expression WHERE upper(b) = 'PREFIX3';
  id | a |    b    
@@ -498,18 +496,14 @@ SELECT * FROM clstr_expression WHERE upper(b) = 'PREFIX3';
 (1 row)
 
 EXPLAIN (COSTS OFF) SELECT * FROM clstr_expression WHERE -a = -3 ORDER BY -a, b;
-                           QUERY PLAN                            
------------------------------------------------------------------
+                             QUERY PLAN                              
+---------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: b
-   ->  Sort
-         Sort Key: b COLLATE "C"
-         ->  Bitmap Heap Scan on clstr_expression
-               Recheck Cond: ((- a) = '-3'::integer)
-               ->  Bitmap Index Scan on clstr_expression_minus_a
-                     Index Cond: ((- a) = '-3'::integer)
+   ->  Index Scan using clstr_expression_minus_a on clstr_expression
+         Index Cond: ((- a) = '-3'::integer)
  Optimizer: Postgres query optimizer
-(9 rows)
+(5 rows)
 
 SELECT * FROM clstr_expression WHERE -a = -3 ORDER BY -a, b;
  id  | a |     b     

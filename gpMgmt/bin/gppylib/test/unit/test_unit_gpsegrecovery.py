@@ -639,6 +639,7 @@ class DifferentialRecoveryRunTestCase(GpTestCase):
     def test_basebackup_run_passes(self, mock1, mock2):
         self.diff_recovery_cmd.run()
         expected_init_args = call("/data/mirror0", "sdw1", '40000', writeconffilesonly=True,
+                                  replication_slot_name='internal_wal_replication_slot',
                                   target_gp_dbid=2, recovery_mode=False)
         self._assert_basebackup_runs(expected_init_args)
         self._assert_cmd_passed()
@@ -763,6 +764,7 @@ class DifferentialRecoveryRunTestCase(GpTestCase):
         self.diff_recovery_cmd.run()
 
         expected_init_args = call("/data/mirror0", "sdw1", '40000', writeconffilesonly=True,
+                                  replication_slot_name='internal_wal_replication_slot',
                                   target_gp_dbid=2, recovery_mode=False)
 
         self.assertEqual(1, self.mock_pgbasebackup_init.call_count)
@@ -783,6 +785,7 @@ class DifferentialRecoveryRunTestCase(GpTestCase):
 
         self.diff_recovery_cmd.run()
         expected_init_args = call("/data/mirror0", "sdw1", '40000', writeconffilesonly=True,
+                                  replication_slot_name='internal_wal_replication_slot',
                                   target_gp_dbid=2, recovery_mode=False)
         self.assertEqual(1, self.mock_pgbasebackup_init.call_count)
         self.assertEqual(expected_init_args, self.mock_pgbasebackup_init.call_args)

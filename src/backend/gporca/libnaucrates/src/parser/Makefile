@@ -34,6 +34,7 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerDummy.o \
               CParseHandlerDynamicForeignScan.o \
               CParseHandlerDynamicIndexScan.o \
+              CParseHandlerDynamicIndexOnlyScan.o \
               CParseHandlerDynamicTableScan.o \
               CParseHandlerEnumeratorConfig.o \
               CParseHandlerForeignScan.o \

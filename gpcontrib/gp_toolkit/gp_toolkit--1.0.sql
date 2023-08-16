@@ -1769,6 +1769,83 @@ CREATE VIEW gp_toolkit.gp_resgroup_status AS
 GRANT SELECT ON gp_toolkit.gp_resgroup_status TO public;
 
 --------------------------------------------------------------------------------
+-- vmem tracker function
+--------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.session_state_memory_entries_f_on_master()
+RETURNS SETOF record
+AS '$libdir/gp_session_state_memory_stats', 'gp_session_state_memory_entries'
+LANGUAGE C VOLATILE EXECUTE ON COORDINATOR;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.session_state_memory_entries_f_on_master() TO public;
+
+CREATE FUNCTION gp_toolkit.session_state_memory_entries_f_on_segments()
+RETURNS SETOF record
+AS '$libdir/gp_session_state_memory_stats', 'gp_session_state_memory_entries'
+LANGUAGE C VOLATILE EXECUTE ON ALL SEGMENTS;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.session_state_memory_entries_f_on_segments() TO public;
+
+--------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.resgroup_session_level_memory_consumption
+--
+-- @doc:
+--        List of memory usage entries for sessions through vmem tracker
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.resgroup_session_level_memory_consumption AS
+WITH all_entries AS (
+   SELECT C.*
+          FROM gp_toolkit.session_state_memory_entries_f_on_master() AS C (
+            segid int,
+            sessionid int,
+            vmem_mb int,
+            runaway_status int,
+            qe_count int,
+            active_qe_count int,
+            dirty_qe_count int,
+            runaway_vmem_mb int,
+            runaway_command_cnt int,
+            idle_start timestamp with time zone
+          )
+    UNION ALL
+    SELECT C.*
+          FROM gp_toolkit.session_state_memory_entries_f_on_segments() AS C (
+            segid int,
+            sessionid int,
+            vmem_mb int,
+            runaway_status int,
+            qe_count int,
+            active_qe_count int,
+            dirty_qe_count int,
+            runaway_vmem_mb int,
+            runaway_command_cnt int,
+            idle_start timestamp with time zone
+          ))
+SELECT S.datname,
+       M.sessionid as sess_id,
+       S.rsgid,
+       S.rsgname,
+       S.usename,
+       S.query as query,
+       M.segid,
+       M.vmem_mb,
+       case when M.runaway_status = 0 then false else true end as is_runaway,
+       M.qe_count,
+       M.active_qe_count,
+       M.dirty_qe_count,
+       M.runaway_vmem_mb,
+       M.runaway_command_cnt,
+       idle_start
+FROM all_entries M LEFT OUTER JOIN
+     pg_stat_activity as S
+ON M.sessionid = S.sess_id;
+
+GRANT SELECT ON gp_toolkit.resgroup_session_level_memory_consumption TO public;
+
+--------------------------------------------------------------------------------
 -- @view:
 --              gp_toolkit.gp_resgroup_status_per_host
 --
@@ -1806,6 +1883,31 @@ CREATE VIEW gp_toolkit.gp_resgroup_status_per_host AS
     ;
 
 GRANT SELECT ON gp_toolkit.gp_resgroup_status_per_host TO public;
+
+--------------------------------------------------------------------------------
+-- @view:
+--              gp_toolkit.gp_resgroup_status_per_segment
+--
+-- @doc:
+--              Resource group memory usage calculated by vmem tracker grouped by segment
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.gp_resgroup_status_per_segment AS
+    SELECT
+            v.rsgid AS groupid
+          , v.rsgname AS groupname
+          , v.segid AS segment_id
+          , sum(v.vmem_mb) AS vmem_usage
+    FROM
+        gp_toolkit.resgroup_session_level_memory_consumption AS v
+        INNER JOIN pg_resgroup AS r
+            ON r.oid = v.rsgid
+    GROUP BY
+        v.rsgname
+      , v.rsgid
+      , v.segid
+    ORDER BY v.rsgid, v.segid;
 
 --------------------------------------------------------------------------------
 -- @view:

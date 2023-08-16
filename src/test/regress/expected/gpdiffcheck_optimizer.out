@@ -139,33 +139,31 @@ set optimizer_segments=4;
 set gp_cost_hashjoin_chainwalk=on;
 set optimizer_nestloop_factor = 1.0;
 explain analyze select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c1) from gpd1);
-                                                                    QUERY PLAN                                                                     
----------------------------------------------------------------------------------------------------------------------------------------------------
- Hash Join  (cost=0.00..1724.00 rows=1 width=12) (actual time=1.743..2.097 rows=16 loops=1)
+                                                                     QUERY PLAN                                                                     
+----------------------------------------------------------------------------------------------------------------------------------------------------
+ Hash Join  (cost=0.00..1724.00 rows=1 width=12) (actual time=12.627..13.309 rows=16 loops=1)
    Hash Cond: (gpd1.c1 = (max(gpd1_2.c1)))
    Extra Text: Hash chain length 1.0 avg, 1 max, using 1 of 262144 buckets.
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1293.00 rows=1 width=14) (actual time=0.282..0.291 rows=64 loops=1)
-         ->  Nested Loop  (cost=0.00..1293.00 rows=1 width=14) (actual time=0.949..1.287 rows=32 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1293.00 rows=1 width=14) (actual time=1.565..1.588 rows=64 loops=1)
+         ->  Nested Loop  (cost=0.00..1293.00 rows=1 width=14) (actual time=9.768..12.264 rows=32 loops=1)
                Join Filter: true
-               ->  Seq Scan on gpd1 gpd1_1  (cost=0.00..431.00 rows=1 width=12) (actual time=0.776..0.778 rows=4 loops=1)
-               ->  Materialize  (cost=0.00..431.00 rows=2 width=2) (actual time=0.429..0.449 rows=7 loops=5)
-                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=2 width=2) (actual time=2.121..2.584 rows=8 loops=1)
-                           ->  Seq Scan on gpd1  (cost=0.00..431.00 rows=1 width=2) (actual time=0.736..0.738 rows=4 loops=1)
-   ->  Hash  (cost=431.00..431.00 rows=1 width=8) (actual time=2.959..2.960 rows=1 loops=1)
+               ->  Seq Scan on gpd1 gpd1_1  (cost=0.00..431.00 rows=1 width=12) (actual time=0.271..0.274 rows=4 loops=1)
+               ->  Materialize  (cost=0.00..431.00 rows=2 width=2) (actual time=1.896..2.391 rows=7 loops=5)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=2 width=2) (actual time=9.431..11.896 rows=8 loops=1)
+                           ->  Seq Scan on gpd1  (cost=0.00..431.00 rows=1 width=2) (actual time=1.802..1.805 rows=4 loops=1)
+   ->  Hash  (cost=431.00..431.00 rows=1 width=8) (actual time=10.948..10.949 rows=1 loops=1)
          Buckets: 262144  Batches: 1  Memory Usage: 2049kB
-         ->  Finalize Aggregate  (cost=0.00..431.00 rows=1 width=8) (actual time=2.950..2.952 rows=1 loops=1)
-               ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=8) (actual time=2.546..2.928 rows=3 loops=1)
-                     ->  Partial Aggregate  (cost=0.00..431.00 rows=1 width=8) (actual time=0.372..0.373 rows=1 loops=1)
-                           ->  Seq Scan on gpd1 gpd1_2  (cost=0.00..431.00 rows=1 width=2) (actual time=0.769..0.771 rows=4 loops=1)
+         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8) (actual time=10.938..10.938 rows=1 loops=1)
+               ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=2) (actual time=7.642..10.908 rows=8 loops=1)
+                     ->  Seq Scan on gpd1 gpd1_2  (cost=0.00..431.00 rows=1 width=2) (actual time=4.205..4.207 rows=4 loops=1)
  Optimizer: Pivotal Optimizer (GPORCA)
- Planning Time: 18.591 ms
-   (slice0)    Executor memory: 2141K bytes.  Work_mem: 2049K bytes max.
+ Planning Time: 18.292 ms
+   (slice0)    Executor memory: 2133K bytes.  Work_mem: 2049K bytes max.
    (slice1)    Executor memory: 41K bytes avg x 3 workers, 41K bytes max (seg0).  Work_mem: 17K bytes max.
    (slice2)    Executor memory: 38K bytes avg x 3 workers, 38K bytes max (seg0).
-   (slice3)    Executor memory: 45K bytes avg x 3 workers, 45K bytes max (seg0).
+   (slice3)    Executor memory: 38K bytes avg x 3 workers, 38K bytes max (seg0).
  Memory used:  128000kB
- Optimizer: Pivotal Optimizer (GPORCA) version 3.64.0
- Execution time: 17.954 ms
+ Execution Time: 95.501 ms
 (23 rows)
 
 explain select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c1) from gpd1);
@@ -181,12 +179,11 @@ explain select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c1) from 
                      ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=2 width=2)
                            ->  Seq Scan on gpd1  (cost=0.00..431.00 rows=1 width=2)
    ->  Hash  (cost=431.00..431.00 rows=1 width=8)
-         ->  Finalize Aggregate  (cost=0.00..431.00 rows=1 width=8)
-               ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                     ->  Partial Aggregate  (cost=0.00..431.00 rows=1 width=8)
-                           ->  Seq Scan on gpd1 gpd1_2  (cost=0.00..431.00 rows=1 width=2)
+         ->  Aggregate  (cost=0.00..431.00 rows=1 width=8)
+               ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=2)
+                     ->  Seq Scan on gpd1 gpd1_2  (cost=0.00..431.00 rows=1 width=2)
  Optimizer: Pivotal Optimizer (GPORCA)
-(15 rows)
+(14 rows)
 
 select a.* from gpd1 as a, gpd1 as b where b.c1 in (select max(c1) from gpd1);
  c1 | c2 | c3 

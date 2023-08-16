@@ -144,6 +144,24 @@ select * from mpp23195_t1,mpp23195_t2 where mpp23195_t1.i < mpp23195_t2.i;
 ---+---
 (0 rows)
 
+vacuum mpp23195_t1;
+select find_operator('select * from mpp23195_t1,mpp23195_t2 where mpp23195_t1.i < mpp23195_t2.i;', 'Dynamic Index Only Scan');
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
+NOTICE:  One or more columns in the following table(s) do not have statistics: mpp23195_t1
+HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
+ find_operator 
+---------------
+ ['true']
+(1 row)
+
+select * from mpp23195_t1,mpp23195_t2 where mpp23195_t1.i < mpp23195_t2.i;
+NOTICE:  One or more columns in the following table(s) do not have statistics: mpp23195_t1
+HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
+ i | i 
+---+---
+(0 rows)
+
 -- CLEANUP
 -- start_ignore
 drop table if exists mpp23195_t1;

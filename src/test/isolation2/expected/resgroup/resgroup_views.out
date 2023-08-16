@@ -16,6 +16,11 @@ select groupname , groupid , cpu_usage , memory_usage from gp_toolkit.gp_resgrou
  default_group | 6437    | 0.00      | 0.00         
 (1 row)
 
+select groupname , groupid , segment_id , vmem_usage from gp_toolkit.gp_resgroup_status_per_segment where groupname='default_group' order by segment_id;
+ groupname | groupid | segment_id | vmem_usage 
+-----------+---------+------------+------------
+(0 rows)
+
 select * from gp_toolkit.gp_resgroup_role where rrrolname='gpadmin';
  rrrolname | rrrsgname   
 -----------+-------------
@@ -47,4 +52,12 @@ select * from gp_toolkit.gp_resgroup_status_per_host;
  6437    | default_group | zero     | 0.00      | 0.00         
  6441    | system_group  | zero     | 0.07      | 55.94        
 (3 rows)
+select * from gp_toolkit.gp_resgroup_status_per_segment;
+ groupid | groupname   | segment_id | vmem_usage 
+---------+-------------+------------+------------
+ 6438    | admin_group | -1         | 11         
+ 6438    | admin_group | 0          | 8          
+ 6438    | admin_group | 1          | 8          
+ 6438    | admin_group | 2          | 8          
+(4 rows)
 -- end_ignore

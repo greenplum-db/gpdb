@@ -2143,7 +2143,8 @@ CTranslatorDXLToExpr::Ptabdesc(CDXLTableDescr *table_descr)
 	CTableDescriptor *ptabdesc = GPOS_NEW(m_mp) CTableDescriptor(
 		m_mp, mdid, CName(m_mp, &strName), pmdrel->ConvertHashToRandom(),
 		rel_distr_policy, rel_storage_type, table_descr->GetExecuteAsUserId(),
-		table_descr->LockMode(), table_descr->GetAssignedQueryIdForTargetRel());
+		table_descr->LockMode(), table_descr->GetAclMode(),
+		table_descr->GetAssignedQueryIdForTargetRel());
 
 	const ULONG ulColumns = table_descr->Arity();
 	for (ULONG ul = 0; ul < ulColumns; ul++)
@@ -2342,7 +2343,8 @@ CTranslatorDXLToExpr::PtabdescFromCTAS(CDXLLogicalCTAS *pdxlopCTAS)
 		m_mp, mdid, CName(m_mp, &strName), pmdrel->ConvertHashToRandom(),
 		rel_distr_policy, rel_storage_type,
 		0,	// ulExecuteAsUser, use permissions of current user
-		3,	// CTEs always use a RowExclusiveLock on the table. See createas.c
+		3,	// CTAS always uses a RowExclusiveLock on the table. See createas.c
+		2,	// CTAS always requires SELECT and SELECT only privilege
 		UNASSIGNED_QUERYID);
 
 	// populate column information from the dxl table descriptor

@@ -1,9 +1,7 @@
 set stats_queue_level=on;
 -- start_ignore
 drop role resqueuetest;
-ERROR:  role "resqueuetest" does not exist
 drop resource queue q;
-ERROR:  resource queue "q" does not exist
 -- end_ignore
 create resource queue q with (active_statements = 10);
 create user resqueuetest with resource queue q;
@@ -26,17 +24,19 @@ select 1;
         1
 (1 row)
 
-select pg_sleep(1);
+select pg_sleep(0.1);
  pg_sleep 
 ----------
  
 (1 row)
 
 -- will display q.n_queries_exec=4, and after the query it becomes 5
-select queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q';
- queuename | n_queries_exec 
------------+----------------
- q         |              4
+-- The query should sleep more than PGSTAT_STAT_INTERVAL first to ensure
+-- the fresh resource queue stats are synced to stat files. 
+select pg_sleep(0.6), queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q';
+ pg_sleep | queuename | n_queries_exec 
+----------+-----------+----------------
+          | q         |              4
 (1 row)
 
 -- drop the queue
@@ -66,17 +66,19 @@ select 1;
         1
 (1 row)
 
-select pg_sleep(1);
+select pg_sleep(0.1);
  pg_sleep 
 ----------
  
 (1 row)
 
 -- will display q.n_queries_exec=4, and after the query it becomes 5
-select queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q';
- queuename | n_queries_exec 
------------+----------------
- q         |              4
+-- The query should sleep more than PGSTAT_STAT_INTERVAL first to ensure
+-- the fresh resource queue stats are synced to stat files. 
+select pg_sleep(0.6), queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q';
+ pg_sleep | queuename | n_queries_exec 
+----------+-----------+----------------
+          | q         |              4
 (1 row)
 
 -- create another queue, do switch test
@@ -110,23 +112,25 @@ select 1;
         1
 (1 row)
 
-select pg_sleep(1);
+select pg_sleep(0.1);
  pg_sleep 
 ----------
  
 (1 row)
 
 -- will display q.n_queries_exec=5, q1.n_queries_exec=4
-select queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q1';
- queuename | n_queries_exec 
------------+----------------
- q1        |              4
+-- The query should sleep more than PGSTAT_STAT_INTERVAL first to ensure
+-- the fresh resource queue stats are synced to stat files. 
+select pg_sleep(0.6), queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q1';
+ pg_sleep | queuename | n_queries_exec 
+----------+-----------+----------------
+          | q1        |              4
 (1 row)
 
-select queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q';
- queuename | n_queries_exec 
------------+----------------
- q         |              5
+select pg_sleep(0.6), queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q';
+ pg_sleep | queuename | n_queries_exec 
+----------+-----------+----------------
+          | q         |              5
 (1 row)
 
 -- clean

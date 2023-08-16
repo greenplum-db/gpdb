@@ -58,6 +58,9 @@ For information about the Greenplum Database utilities, see the *Greenplum Datab
 
     Where the `-d` option specifies the data directory of the host you are activating.
 
+    >**NOTE**
+    >Before running `gpactivatestandby`, be sure to run `gpstate -f` to confirm that the standby coordinator is synchronized with the current coordinator node. If synchronized, the final line of the `gpstate -f` output will look similar to this: `20230607:06:50:06:004205 gpstate:test1-m:gpadmin-[INFO]:--Sync state: sync`
+
 3.  After the utility completes, run `gpstate` with the `-b` option to display a summary of the system status:
 
     ```

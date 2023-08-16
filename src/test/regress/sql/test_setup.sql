@@ -1,3 +1,8 @@
+-- start_ignore
+\! gpconfig -c plpython3.python_path -v "''" --skipvalidation;
+\! gpstop -u;
+-- end_ignore
+
 -- Suppress NOTICE messages when schema doesn't exist
 SET client_min_messages TO 'warning';
 DROP SCHEMA IF EXISTS test_util CASCADE;

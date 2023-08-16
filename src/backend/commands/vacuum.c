@@ -1529,7 +1529,7 @@ vac_update_relstats(Relation relation,
 		}
 		else if (Gp_role == GP_ROLE_EXECUTE)
 		{
-			vac_send_relstats_to_qd(relation,
+			vac_send_relstats_to_qd(relation->rd_id,
 									num_pages,
 									num_tuples,
 									num_all_visible_pages);
@@ -2959,8 +2959,8 @@ vacuum_combine_stats(VacuumStatsContext *stats_context,
 	 * indexes. We parse this information, and compute the final stats
 	 * for the QD.
 	 *
-	 * For pg_class stats, we compute the maximum number of tuples and
-	 * maximum number of pages after processing the stats from each QE.
+	 * For pg_class stats, we compute the sum of tuples, number of pages and
+	 * allvisible pages after processing the stats from each QE.
 	 *
 	 */
 	for(result_no = 0; result_no < cdb_pgresults->numResults; result_no++)
@@ -3104,7 +3104,7 @@ vac_update_relstats_from_list(VacuumStatsContext *stats_context)
  * the dispatcher.
  */
 void
-vac_send_relstats_to_qd(Relation relation,
+vac_send_relstats_to_qd(Oid relid,
 						BlockNumber num_pages,
 						double num_tuples,
 						BlockNumber num_all_visible_pages)
@@ -3112,8 +3112,8 @@ vac_send_relstats_to_qd(Relation relation,
 
 	StringInfoData buf;
 	VPgClassStats stats;
-	Oid			relid = RelationGetRelid(relation);
-	Assert(relid != InvalidOid);
+
+	Assert(OidIsValid(relid));
 
 	pq_beginmessage(&buf, 'y');
 	pq_sendstring(&buf, "VACUUM");

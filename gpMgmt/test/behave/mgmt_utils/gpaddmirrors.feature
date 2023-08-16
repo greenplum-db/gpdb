@@ -53,6 +53,7 @@ Feature: Tests for gpaddmirrors
 
         When gpaddmirrors adds 3 mirrors
         Then gpaddmirrors should return a return code of 0
+        And gpaddmirrors should not print "Unable to kill walsender on primary" to stdout
         And verify the database has mirrors
         And the segments are synchronized
         And check segment conf: postgresql.conf
@@ -167,7 +168,7 @@ Feature: Tests for gpaddmirrors
         And the user reset the walsender on the primary on content 0
         And the user waits until saved async process is completed
         And recovery_progress.file should not exist in gpAdminLogs in gpAdminLogs
-        And the user waits until mirror on content 0,1,2 is up
+        And verify that mirror on content 0,1,2 is up
 
         And check if mirrors on content 0,1,2 are moved to new location on input file
         And verify there are no recovery backout files
@@ -208,7 +209,7 @@ Feature: Tests for gpaddmirrors
 #        And the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
 #        And the user waits until saved async process is completed
 #        And recovery_progress.file should not exist in gpAdminLogs
-#        And the user waits until mirror on content 0,1,2 is up
+#        And verify that mirror on content 0,1,2 is up
 #
 #        And check if mirrors on content 0,1,2 are moved to new location on input file
 #        And verify there are no recovery backout files
@@ -334,6 +335,7 @@ Feature: Tests for gpaddmirrors
         And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "samehost"
         And verify that the file "pg_hba.conf" in each segment data directory has "no" line starting with "host.*replication.*\(127.0.0\|::1\).*trust"
         Then verify the database has mirrors
+        And gpaddmirrors should not print "Unable to kill walsender on primary" to stdout
 
         Then the mirror on content 0 is stopped with the immediate flag
         And an FTS probe is triggered
@@ -371,6 +373,7 @@ Feature: Tests for gpaddmirrors
         And gpaddmirrors adds mirrors with options "--hba-hostnames"
         And pg_hba file "/tmp/gpaddmirrors/data/primary/gpseg0/pg_hba.conf" on host "sdw1" contains entries for "cdw, sdw1, sdw2, samehost"
         Then verify the database has mirrors
+        And gpaddmirrors should not print "Unable to kill walsender on primary" to stdout
 
         When the mirror on content 0 is stopped with the immediate flag
         And an FTS probe is triggered
@@ -405,7 +408,8 @@ Feature: Tests for gpaddmirrors
         And the database is not running
         And a cluster is created with no mirrors on "cdw" and "sdw1, sdw2, sdw3"
         And gpaddmirrors adds mirrors
-        Then verify the database has mirrors
+        Then gpaddmirrors should not print "Unable to kill walsender on primary" to stdout
+        And verify the database has mirrors
         And save the gparray to context
         And the database is not running
         And a cluster is created with no mirrors on "cdw" and "sdw1, sdw2, sdw3"
@@ -432,7 +436,8 @@ Feature: Tests for gpaddmirrors
         And the database is not running
         And a cluster is created with no mirrors on "cdw" and "sdw1"
         And gpaddmirrors adds mirrors
-        Then verify the database has mirrors
+        Then gpaddmirrors should not print "Unable to kill walsender on primary" to stdout
+        And verify the database has mirrors
         And check segment conf: postgresql.conf
         And the user runs "gpstop -aqM fast"
 
@@ -469,7 +474,8 @@ Feature: Tests for gpaddmirrors
         And the database is not running
         And a cluster is created with no mirrors on "cdw" and "sdw1"
         When gpaddmirrors adds mirrors
-        Then verify the database has mirrors
+        Then gpaddmirrors should not print "Unable to kill walsender on primary" to stdout
+        And verify the database has mirrors
         And check segment conf: postgresql.conf
         And the user runs "gpstop -aqM fast"
 
@@ -499,7 +505,8 @@ Feature: Tests for gpaddmirrors
           And a cluster is created with no mirrors on "cdw" and "sdw1"
           And a tablespace is created with data
          When gpaddmirrors adds mirrors
-         Then verify the database has mirrors
+         Then gpaddmirrors should not print "Unable to kill walsender on primary" to stdout
+         And verify the database has mirrors
 
          When an FTS probe is triggered
           And the segments are synchronized

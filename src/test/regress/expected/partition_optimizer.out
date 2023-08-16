@@ -388,7 +388,8 @@ alter table foo_p exchange partition for(6) with table bar_p;
 ERROR:  partition constraint is violated by some row  (seg2 127.0.1.1:7004 pid=9703)
 alter table foo_p exchange partition for(6) with table bar_p without
 validation;
-NOTICE:  specifying "WITHOUT VALIDATION" acts as no operation. If the new partition is a regular table, validation is performed to make sure all the rows obey partition constraint. If the new partition is external or foreign table, no validation is performed.
+NOTICE:  specifying "WITHOUT VALIDATION" acts as no operation
+DETAIL:  If the new partition is a regular table, validation is performed to make sure all the rows obey partition constraint. If the new partition is external or foreign table, no validation is performed.
 ERROR:  partition constraint is violated by some row  (seg2 127.0.1.1:7004 pid=4691)
 analyze foo_p;
 select * from foo_p;
@@ -594,6 +595,7 @@ ERROR:  cannot EXCHANGE PARTITION for relation "sto_ao_ao" -- partition has chil
 create table foo_p (i int, j int) distributed by (i) partition by range(j) (start(1) end(10) every(2));
 create readable external table bar_p(i int, j int) location ('gpfdist://host.invalid:8000/file') format 'text';
 alter table foo_p exchange partition for(3) with table bar_p;
+NOTICE:  partition constraints are not validated when attaching a readable external table
 truncate foo_p;
 ERROR:  "foo_p_1_prt_2" is not a table
 drop table foo_p;
@@ -6431,16 +6433,15 @@ insert into test_listPartition values(2,'2022-10-23');
 insert into test_listPartition values(3,'2022-10-24');
 --Test case with condition on date and timestamp
 explain (costs off) select max(d) from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
-                                                       QUERY PLAN                                                        
--------------------------------------------------------------------------------------------------------------------------
- Finalize Aggregate
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Partial Aggregate
-               ->  Dynamic Seq Scan on test_listpartition
-                     Number of partitions to scan: 2 (out of 3)
-                     Filter: ((d = '10-23-2022'::date) OR (d = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
+         ->  Dynamic Seq Scan on test_listpartition
+               Number of partitions to scan: 2 (out of 3)
+               Filter: ((d = '10-23-2022'::date) OR (d = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(6 rows)
 
 select max(d) from test_listPartition where d='2022-10-23' or d=('2022-10-23'::date -interval '1 day');
     max     
@@ -6450,16 +6451,15 @@ select max(d) from test_listPartition where d='2022-10-23' or d=('2022-10-23'::d
 
 --Test case with condition on date and date
 explain (costs off) select max(d) from test_listPartition where d='2022-10-23' or d='2022-10-22';
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Finalize Aggregate
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Partial Aggregate
-               ->  Dynamic Seq Scan on test_listpartition
-                     Number of partitions to scan: 2 (out of 3)
-                     Filter: ((d = '10-23-2022'::date) OR (d = '10-22-2022'::date))
+         ->  Dynamic Seq Scan on test_listpartition
+               Number of partitions to scan: 2 (out of 3)
+               Filter: ((d = '10-23-2022'::date) OR (d = '10-22-2022'::date))
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(6 rows)
 
 select max(d) from test_listPartition where d='2022-10-23' or d='2022-10-22';
     max     
@@ -6469,16 +6469,15 @@ select max(d) from test_listPartition where d='2022-10-23' or d='2022-10-22';
 
 --Test case with condition on timestamp and timestamp
 explain (costs off) select max(d) from test_listPartition where d=('2022-10-23'::date -interval '0 day') or d=('2022-10-23'::date -interval '1 day');
-                                                                          QUERY PLAN                                                                          
---------------------------------------------------------------------------------------------------------------------------------------------------------------
- Finalize Aggregate
+                                                                       QUERY PLAN                                                                       
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Partial Aggregate
-               ->  Dynamic Seq Scan on test_listpartition
-                     Number of partitions to scan: 2 (out of 3)
-                     Filter: ((d = 'Sun Oct 23 00:00:00 2022'::timestamp without time zone) OR (d = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
+         ->  Dynamic Seq Scan on test_listpartition
+               Number of partitions to scan: 2 (out of 3)
+               Filter: ((d = 'Sun Oct 23 00:00:00 2022'::timestamp without time zone) OR (d = 'Sat Oct 22 00:00:00 2022'::timestamp without time zone))
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(6 rows)
 
 select max(d) from test_listPartition where d=('2022-10-23'::date -interval '0 day') or d=('2022-10-23'::date -interval '1 day');
     max     

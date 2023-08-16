@@ -225,8 +225,6 @@ static void send_message_to_frontend(ErrorData *edata);
 static const char *error_severity(int elevel);
 static void append_with_tabs(StringInfo buf, const char *str);
 static bool is_log_level_output(int elevel, int log_min_level);
-static void write_pipe_chunks(char *data, int len, int dest);
-static void write_csvlog(ErrorData *edata);
 static void elog_debug_linger(ErrorData *edata);
 
 /* GPDB: wrapper function to silence unused result warning */

@@ -21,10 +21,9 @@ import time
 import shutil
 import tempfile
 from datetime import datetime, timedelta
-
+import psycopg2
 # import GPDB modules
 try:
-    import pg as pygresql
     from gppylib.commands import unix, gp, pg
     from gppylib.db import dbconn
     from gppylib.gpparseopts import OptParser, OptChecker, OptionGroup, SUPPRESS_HELP
@@ -341,7 +340,7 @@ def promote_standby(coordinator_data_dir):
             dbconn.execSQL(conn, 'CHECKPOINT')
             conn.close()
             return True
-        except pygresql.InternalError as e:
+        except (psycopg2.InternalError, psycopg2.OperationalError) as e:
             pass
         time.sleep(1)
 

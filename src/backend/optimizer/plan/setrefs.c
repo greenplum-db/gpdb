@@ -2841,17 +2841,6 @@ build_tlist_index(List *tlist)
 
 		Assert(expr);
 
-		/*
-		 * Allow a Var in parent node's expr to find matching Var in tlist
-		 * ignoring any RelabelType nodes atop the tlist Var.  Also set
-		 * has_non_vars so tlist expr can be matched as a whole.
-		 */
-		while (IsA(expr, RelabelType))
-		{
-			expr = ((RelabelType *)expr)->arg;
-			itlist->has_non_vars = true;
-		}
-
 		if (expr && IsA(expr, Var))
 		{
 			Var		   *var = (Var *) expr;

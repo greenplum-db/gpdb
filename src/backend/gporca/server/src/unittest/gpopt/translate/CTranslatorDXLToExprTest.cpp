@@ -254,6 +254,7 @@ public:
 			CMDRelationGPDB::EreldistrCoordinatorOnly,
 			CMDRelationGPDB::ErelstorageHeap, ulExecuteAsUser,
 			-1, /* lockmode */
+			2,	/* aclmode SELECT */
 			0 /* UNASSIGNED_QUERYID */);
 	}
 

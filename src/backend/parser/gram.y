@@ -304,7 +304,9 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 		CreateExternalStmt
 		CreateQueueStmt CreateResourceGroupStmt
 		DropQueueStmt DropResourceGroupStmt
-		ExtTypedesc OptSingleRowErrorHandling ExtSingleRowErrorHandling
+		ExtTypedesc ExtSingleRowErrorHandling
+
+%type<list> 	OptSingleRowErrorHandling
 
 %type <node>    deny_login_role deny_interval deny_point deny_day_specifier
 
@@ -834,8 +836,8 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 	QUEUE
 
-	RANDOMLY READABLE READS REJECT_P REPLICATED RESOURCE
-	ROOTPARTITION
+	RANDOMLY READABLE READS REJECT_P REPACK REPLICATED
+	RESOURCE ROOTPARTITION
 
 	SCATTER SEGMENT SEGMENTS SPLIT SUBPARTITION
 
@@ -1110,6 +1112,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc RELEASE
 			%nonassoc RELOPT
 			%nonassoc RENAME
+			%nonassoc REPACK
 			%nonassoc REPEATABLE
 			%nonassoc REPLACE
 			%nonassoc RESET
@@ -3446,6 +3449,14 @@ alter_table_cmd:
 					n->subtype = AT_NoForceRowSecurity;
 					$$ = (Node *)n;
 				}
+			/* ALTER TABLE <name> REPACK BY COLUMNS (...) */
+			| REPACK BY COLUMNS '(' sortby_list ')'
+				{
+					AlterTableCmd *n = makeNode(AlterTableCmd);
+					n->subtype = AT_RepackTable;
+					n->def = (Node *) $5;
+					$$ = (Node *)n;
+				}
 			| alter_generic_options
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
@@ -3724,8 +3735,8 @@ opt_table_partition_exchange_validate:
 			{
 				$$ = +1;
 				ereport(NOTICE,
-						(errmsg("specifying \"WITH VALIDATION\" acts as no operation. "
-								"If the new partition is a regular table, validation is performed "
+						(errmsg("specifying \"WITH VALIDATION\" acts as no operation"),
+						 errdetail("If the new partition is a regular table, validation is performed "
 								"to make sure all the rows obey partition constraint. "
 								"If the new partition is external or foreign table, no validation is performed.")));
 			}
@@ -3733,8 +3744,8 @@ opt_table_partition_exchange_validate:
 			{
 				$$ = +0;
 				ereport(NOTICE,
-						(errmsg("specifying \"WITHOUT VALIDATION\" acts as no operation. "
-								"If the new partition is a regular table, validation is performed "
+						(errmsg("specifying \"WITHOUT VALIDATION\" acts as no operation"),
+						 errdetail("If the new partition is a regular table, validation is performed "
 								"to make sure all the rows obey partition constraint. "
 								"If the new partition is external or foreign table, no validation is performed.")));
 			}
@@ -4334,6 +4345,9 @@ CopyStmt:	COPY opt_binary qualified_name opt_column_list
 						n->options = lappend(n->options, $8);
 					if ($10)
 						n->options = list_concat(n->options, $10);
+					if ($12)
+						n->options = list_concat(n->options, $12);
+
 					$$ = (Node *)n;
 				}
 			| COPY '(' PreparableStmt ')' TO opt_program copy_file_name opt_with copy_options
@@ -6487,7 +6501,7 @@ OptSingleRowErrorHandling:
 					   (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 						errmsg("invalid (ROWS) reject limit. Should be 2 or larger")));
 
-			$$ = (Node *)n;
+			$$ = lappend(NULL, makeDefElem("sreh", (Node *) n, @1));
 		}
 		| /*EMPTY*/		{ $$ = NULL; }
 		;
@@ -18290,6 +18304,7 @@ unreserved_keyword:
 			| RELEASE
 			| RELOPT
 			| RENAME
+			| REPACK
 			| REPEATABLE
 			| REPLACE
 			| REPLICA
@@ -18615,6 +18630,7 @@ PartitionIdentKeyword: ABORT_P
 			| RELEASE
 			| RELOPT
 			| RENAME
+			| REPACK
 			| REPEATABLE
 			| REPLACE
 			| RESET

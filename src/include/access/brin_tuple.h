@@ -89,6 +89,8 @@ extern BrinTuple *brin_form_tuple(BrinDesc *brdesc, BlockNumber blkno,
 								  BrinMemTuple *tuple, Size *size);
 extern BrinTuple *brin_form_placeholder_tuple(BrinDesc *brdesc,
 											  BlockNumber blkno, Size *size);
+extern BrinTuple *brin_form_empty_tuple(BrinDesc *brdesc,
+										BlockNumber blkno, Size *size);
 extern void brin_free_tuple(BrinTuple *tuple);
 extern BrinTuple *brin_copy_tuple(BrinTuple *tuple, Size len,
 								  BrinTuple *dest, Size *destsz);

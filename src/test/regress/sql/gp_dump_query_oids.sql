@@ -4,6 +4,8 @@ CREATE FUNCTION dumptestfunc2(t text) RETURNS integer AS $$ SELECT 123 $$ LANGUA
 create table base(a int);
 create materialized view base_mv as select a from base;
 create view base_v as select a from base;
+CREATE SEQUENCE minirepro_test_b;
+CREATE TABLE minirepro_test(a serial, b int default nextval('minirepro_test_b'));
 
 -- The function returns OIDs. We need to replace them with something reproducable.
 CREATE FUNCTION sanitize_output(t text) RETURNS text AS $$
@@ -13,18 +15,27 @@ declare
   base_oid oid;
   base_mv_oid oid;
   base_v_oid oid;
+  minirepro_test_oid oid;
+  minirepro_test_b_oid oid;
+  minirepro_test_a_seq_oid oid;
 begin
     dumptestfunc_oid = 'dumptestfunc'::regproc::oid;
     dumptestfunc2_oid = 'dumptestfunc2'::regproc::oid;
     base_oid = 'base'::regclass::oid;
     base_mv_oid = 'base_mv'::regclass::oid;
     base_v_oid = 'base_v'::regclass::oid;
+    minirepro_test_oid = 'minirepro_test'::regclass::oid;
+    minirepro_test_b_oid = 'minirepro_test_b'::regclass::oid;
+    minirepro_test_a_seq_oid = 'minirepro_test_a_seq'::regclass::oid;
 
     t := replace(t, dumptestfunc_oid::text, '<dumptestfunc>');
     t := replace(t, dumptestfunc2_oid::text, '<dumptestfunc2>');
     t := replace(t, base_oid::text, '<base_table>');
     t := replace(t, base_mv_oid::text, '<base_mv>');
     t := replace(t, base_v_oid::text, '<base_v>');
+    t := replace(t, minirepro_test_oid::text, '<minirepro_test>');
+    t := replace(t, minirepro_test_b_oid::text, '<minirepro_test_b>');
+    t := replace(t, minirepro_test_a_seq_oid::text, '<minirepro_test_a_seq>');
 
     RETURN t;
 end;
@@ -94,6 +105,11 @@ SELECT sanitize_output(gp_dump_query_oids('EXPLAIN SELECT * FROM base_v'));
 -- gp_dump_query_oids should output relids of view/materialized view and used/accessed objects when query contains explain analyze command
 SELECT sanitize_output(gp_dump_query_oids('EXPLAIN ANALYZE SELECT * FROM base_mv'));
 SELECT sanitize_output(gp_dump_query_oids('EXPLAIN ANALYZE SELECT * FROM base_v'));
+-- gp_dump_query_oids should output relids of referenced sequences
+SELECT sanitize_output(gp_dump_query_oids('SELECT * FROM minirepro_test'));
+
+DROP TABLE minirepro_test;
+DROP SEQUENCE minirepro_test_b;
 DROP TABLE foo;
 DROP TABLE cctable;
 DROP TABLE ctable;

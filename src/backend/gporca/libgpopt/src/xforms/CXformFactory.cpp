@@ -270,8 +270,7 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformLeftSemiApplyIn2LeftSemiJoin(m_mp));
 	Add(GPOS_NEW(m_mp) CXformLeftSemiApplyInWithExternalCorrs2InnerJoin(m_mp));
 	Add(GPOS_NEW(m_mp) CXformLeftSemiApplyIn2LeftSemiJoinNoCorrelations(m_mp));
-	SkipUnused(1);
-	Add(GPOS_NEW(m_mp) CXformImplementPartitionSelector(m_mp));
+	SkipUnused(2);
 	Add(GPOS_NEW(m_mp) CXformMaxOneRow2Assert(m_mp));
 	SkipUnused(6);
 	Add(GPOS_NEW(m_mp) CXformGbAggWithMDQA2Join(m_mp));
@@ -294,6 +293,8 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformExpandDynamicGetWithForeignPartitions(m_mp));
 	Add(GPOS_NEW(m_mp) CXformPushJoinBelowLeftUnionAll(m_mp));
 	Add(GPOS_NEW(m_mp) CXformPushJoinBelowRightUnionAll(m_mp));
+	Add(GPOS_NEW(m_mp) CXformLimit2IndexGet(m_mp));
+	Add(GPOS_NEW(m_mp) CXformDynamicIndexGet2DynamicIndexOnlyScan(m_mp));
 
 	GPOS_ASSERT(nullptr != m_rgpxf[CXform::ExfSentinel - 1] &&
 				"Not all xforms have been instantiated");
@@ -351,44 +352,20 @@ CXformFactory::IsXformIdUsed(CXform::EXformId exfid)
 //		Initializes global instance
 //
 //---------------------------------------------------------------------------
-GPOS_RESULT
+void
 CXformFactory::Init()
 {
 	GPOS_ASSERT(nullptr == Pxff() && "Xform factory was already initialized");
 
-	GPOS_RESULT eres = GPOS_OK;
-
 	// create xform factory memory pool
 	CMemoryPool *mp =
 		CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
-	GPOS_TRY
-	{
-		// create xform factory instance
-		m_pxff = GPOS_NEW(mp) CXformFactory(mp);
-	}
-	GPOS_CATCH_EX(ex)
-	{
-		// destroy memory pool if global instance was not created
-		CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
-		m_pxff = nullptr;
 
-		if (GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiOOM))
-		{
-			eres = GPOS_OOM;
-		}
-		else
-		{
-			eres = GPOS_FAILED;
-		}
-
-		return eres;
-	}
-	GPOS_CATCH_END;
+	// create xform factory instance
+	m_pxff = GPOS_NEW(mp) CXformFactory(mp);
 
 	// instantiating the factory
 	m_pxff->Instantiate();
-
-	return eres;
 }
 
 

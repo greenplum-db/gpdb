@@ -140,6 +140,18 @@ select * from mpp23195_t1,mpp23195_t2 where mpp23195_t1.i < mpp23195_t2.i;
 ---+---
 (0 rows)
 
+vacuum mpp23195_t1;
+select find_operator('select * from mpp23195_t1,mpp23195_t2 where mpp23195_t1.i < mpp23195_t2.i;', 'Dynamic Index Only Scan');
+ find_operator 
+---------------
+ ['false']
+(1 row)
+
+select * from mpp23195_t1,mpp23195_t2 where mpp23195_t1.i < mpp23195_t2.i;
+ i | i 
+---+---
+(0 rows)
+
 -- CLEANUP
 -- start_ignore
 drop table if exists mpp23195_t1;

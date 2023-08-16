@@ -170,6 +170,19 @@ private:
 	// Set the bitmapset of a plan to the list of param_ids defined by the plan
 	static void SetParamIds(Plan *);
 
+	static List *TranslatePartOids(IMdIdArray *parts, INT lockmode);
+
+	static List *TranslateJoinPruneParamids(
+		const ULongPtrArray *selector_ids, OID oid_type,
+		CContextDXLToPlStmt *dxl_to_plstmt_context);
+
+	void TranslatePlan(
+		Plan *plan, const CDXLNode *dxlnode,
+		CDXLTranslateContext *output_context,
+		CContextDXLToPlStmt *dxl_to_plstmt_context,
+		CDXLTranslateContextBaseTable *base_table_context,
+		CDXLTranslationContextArray *ctxt_translation_prev_siblings);
+
 	// translate DXL table scan node into a SeqScan node
 	Plan *TranslateDXLTblScan(
 		const CDXLNode *tbl_scan_dxlnode, CDXLTranslateContext *output_context,
@@ -354,6 +367,14 @@ private:
 			ctxt_translation_prev_siblings	// translation contexts of previous siblings
 	);
 
+	// translate a dynamic index only scan operator
+	Plan *TranslateDXLDynIdxOnlyScan(
+		const CDXLNode *dyn_idx_scan_dxlnode,
+		CDXLTranslateContext *output_context,
+		CDXLTranslationContextArray *
+			ctxt_translation_prev_siblings	// translation contexts of previous siblings
+	);
+
 	// translate a dynamic foreign scan operator
 	Plan *TranslateDXLDynForeignScan(
 		const CDXLNode *dyn_foreign_scan_dxlnode,
@@ -441,8 +462,7 @@ private:
 
 	// create range table entry from a table descriptor
 	Index ProcessDXLTblDescr(const CDXLTableDescr *table_descr,
-							 CDXLTranslateContextBaseTable *base_table_context,
-							 AclMode acl_mode);
+							 CDXLTranslateContextBaseTable *base_table_context);
 
 	// translate DXL projection list into a target list
 	List *TranslateDXLProjList(
@@ -596,6 +616,13 @@ private:
 		CDXLTranslateContext *dxltrctxRight);
 
 	static Node *FixUpperExprMutatorProjectSet(Node *node, List *context);
+
+	// checks if index is used for Order by.
+	bool IsIndexForOrderBy(
+		CDXLTranslateContextBaseTable *base_table_context,
+		CDXLTranslationContextArray *ctxt_translation_prev_siblings,
+		CDXLTranslateContext *output_context,
+		CDXLNode *index_cond_list_dxlnode);
 };
 }  // namespace gpdxl
 

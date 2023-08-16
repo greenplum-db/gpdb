@@ -212,6 +212,7 @@ CContextDXLToPlStmt::GetCTEConsumerList(ULONG cte_id) const
 void
 CContextDXLToPlStmt::AddRTE(RangeTblEntry *rte, BOOL is_result_relation)
 {
+	// add rte to rtable entries list
 	m_rtable_entries_list = gpdb::LAppend(m_rtable_entries_list, rte);
 
 	rte->inFromCl = true;
@@ -223,6 +224,25 @@ CContextDXLToPlStmt::AddRTE(RangeTblEntry *rte, BOOL is_result_relation)
 		rte->inFromCl = false;
 		m_result_relation_index = gpdb::ListLength(m_rtable_entries_list);
 	}
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CContextDXLToPlStmt::InsertUsedRTEIndexes
+//
+//	@doc:
+//		Add assigned query id --> rte index key-value pair
+//		to used rte indexes map
+//
+//---------------------------------------------------------------------------
+void
+CContextDXLToPlStmt::InsertUsedRTEIndexes(
+	ULONG assigned_query_id_for_target_rel, Index index)
+{
+	// update used rte indexes map
+	m_used_rte_indexes->Insert(GPOS_NEW(m_mp)
+								   ULONG(assigned_query_id_for_target_rel),
+							   GPOS_NEW(m_mp) Index(index));
 }
 
 //---------------------------------------------------------------------------
@@ -491,44 +511,68 @@ CContextDXLToPlStmt::GetRTEByIndex(Index index)
 
 //---------------------------------------------------------------------------
 //	@function: of associated
-//		CContextDXLToPlStmt::GetRTEIndexByTableDescr
+//		CContextDXLToPlStmt::GetRTEIndexByAssignedQueryId
 //
 //	@doc:
 //
-//		For given table descriptor this function returns index of rte in
-//		m_rtable_entries_list for furhter processing and set a flag that
-//		rte was processed.
-//		In case of DML operations there is more than one table descr pointing
-//		to the result relation and to detect position of already processed rte
-//		`assigned_query_id_for_target_rel` of table descriptor is used.
+//		For given assigned query id, this function returns the index of rte in
+//		m_rtable_entries_list for further processing and sets is_rte_exists
+//		flag that rte was processed.
+//
+//		assigned query id is a "tag" of a table descriptor. It marks the query
+//		structure that contains the result relation. If two table descriptors
+//		have the same assigned query id, these two table descriptors point to
+//		the same result relation in `ModifyTable` operation. If the assigned
+//		query id is positive, it indicates the query is an INSERT/UPDATE/DELETE
+//		operation (`ModifyTable` operation). If the assigned query id zero
+// 		(UNASSIGNED_QUERYID), usually it indicates the operation is not
+// 		INSERT/UPDATE/DELETE, and doesn't have a result relation. Or sometimes,
+// 		the operation is INSERT/UPDATE/DELETE, but the table descriptor tagged
+//		with the assigned query id doesn't point to a result relation.
+//
+//		m_used_rte_indexes is a hash map. It maps the assigned query id (key)
+//		to the rte index (value) as in m_rtable_entries_list. The hash map only
+//		stores positive id's, because id 0 is reserved for operations that
+//		don't have a result relation.
+//
+//		To look up the rte index, we may encounter three scenarios:
+//
+//		1. If assigned query id == 0, since the hash map only stores positive
+//		id's, the rte index isn't stored in the hash map. In this case, we
+//		return rtable entries list length+1. This means we will add a new rte
+//		to the rte list.
+//
+//		2. If assigned query id > 0, it indicates the operation is
+//		INSERT/UPDATE/DELETE. We look for its index in the hash map. If the
+//		index is found, we return the index. This means we can reuse the rte
+//		that's already in the list.
+//
+// 		3. If assigned query id > 0, but the index isn't found in the hash map,
+// 		it means the id hasn't been processed. We return rtable entries list
+// 		length+1. This means we will add a new rte to the rte list. At the same
+// 		time, we will add the assigned query id --> list_length+1 key-value pair
+// 		to the hash map for future look ups.
+//
+//		Here's an example
+//		```sql
+//		create table b (i int, j int);
+//		create table c (i int);
+//		insert into b(i,j) values (1,2), (2,3), (3,4);
+//		insert into c(i) values (1), (2);
+//		delete from b where i in (select i from c);
+//		```
+//
+//		`b` is a result relation. Table descriptors for `b` will have the same
+//		positive assigned query id. `c` is not a result relation. Table
+//		descriptors for `c` will have zero assigned query id.
 //---------------------------------------------------------------------------
+
 Index
-CContextDXLToPlStmt::GetRTEIndexByTableDescr(const CDXLTableDescr *table_descr,
-											 BOOL *is_rte_exists)
+CContextDXLToPlStmt::GetRTEIndexByAssignedQueryId(
+	ULONG assigned_query_id_for_target_rel, BOOL *is_rte_exists)
 {
 	*is_rte_exists = false;
 
-	//	`assigned_query_id_for_target_rel` is a "tag" of table descriptors, it
-	//	shows id of query structure which contains result relation. If table
-	//	descriptors have the same `assigned_query_id_for_target_rel` - these
-	//	table descriptors point to the same result relation in `ModifyTable`
-	//	operation. It's not zero (0) value (which equal to `UNASSIGNED_QUERYID`
-	//	define) if: user query is a INSERT/UPDATE/DELETE (`ModifyTable`
-	//	operation) and this table descriptor points to the result relation of
-	//	operation, for ex.:
-	//	```sql
-	//	create table b (i int, j int);
-	//	create table c (i int);
-	//	insert into b(i,j) values (1,2), (2,3), (3,4);
-	//	insert into c(i) values (1), (2);
-	//	delete from b where i in (select i from c);
-	//	```
-	//	where `b` is a result relation (table descriptors pointing to it
-	//	will have the same `assigned_query_id_for_target_rel` > 0), and
-	//	`c` is not (all table descriptors which points to `c` will have
-	//	`assigned_query_id_for_target_rel`=0 (equal to `UNASSIGNED_QUERYID`)
-	ULONG assigned_query_id_for_target_rel =
-		table_descr->GetAssignedQueryIdForTargetRel();
 	if (assigned_query_id_for_target_rel == UNASSIGNED_QUERYID)
 	{
 		return gpdb::ListLength(m_rtable_entries_list) + 1;
@@ -549,12 +593,7 @@ CContextDXLToPlStmt::GetRTEIndexByTableDescr(const CDXLTableDescr *table_descr,
 
 	//	`assigned_query_id_for_target_rel` of table descriptor which points to
 	//	result relation wasn't previously processed - create a new index.
-	Index new_index = gpdb::ListLength(m_rtable_entries_list) + 1;
-	m_used_rte_indexes->Insert(GPOS_NEW(m_mp)
-								   ULONG(assigned_query_id_for_target_rel),
-							   GPOS_NEW(m_mp) Index(new_index));
-
-	return new_index;
+	return gpdb::ListLength(m_rtable_entries_list) + 1;
 }
 
 // EOF

@@ -15,6 +15,7 @@ The following Greenplum Database and PostgreSQL `contrib` modules are installed;
 -   [fuzzystrmatch](fuzzystrmatch.html) - Determines similarities and differences between strings.
 -   [gp\_legacy\_string\_agg](gp_legacy_string_agg.html) - Implements a legacy, single-argument `string_agg()` aggregate function that was present in Greenplum Database 5.
 -   [gp\_sparse\_vector](gp_sparse_vector.html) - Implements a Greenplum Database data type that uses compressed storage of zeros to make vector computations on floating point numbers faster.
+-   [greenplum_fdw](greenplum_fdw.html) - Provides a foreign data wrapper (FDW) for accessing data stored in one or more external Greenplum Database clusters.
 -   [hstore](hstore.html) - Provides a data type for storing sets of key/value pairs within a single PostgreSQL value.
 -   [ip4r](ip4r.html) - Provides data types for operations on IPv4 and IPv6 IP addresses.
 -   [ltree](ltree.html) - Provides data types for representing labels of data stored in a hierarchical tree-like structure.
@@ -22,6 +23,7 @@ The following Greenplum Database and PostgreSQL `contrib` modules are installed;
 -   [pageinspect](pageinspect.html) - Provides functions for low level inspection of the contents of database pages; available to superusers only.
 -   [pg\_trgm](pg_trgm.html) - Provides functions and operators for determining the similarity of alphanumeric text based on trigram matching. The module also provides index operator classes that support fast searching for similar strings.
 -   [pgcrypto](pgcrypto.html) - Provides cryptographic functions for Greenplum Database.
+-   [pgvector](pgvector/pgvector.html) - Provides vector similarity search capabilities for Greenplum Database that enable searching, storing, and querying machine language-generated embeddings at large scale.
 -   [postgres\_fdw](postgres_fdw.html) - Provides a foreign data wrapper \(FDW\) for accessing data stored in an external PostgreSQL or Greenplum database.
 -   [postgresql-hll](postgresql-hll.html) - Provides HyperLogLog data types for PostgreSQL and Greenplum Database.
 -   [sslinfo](sslinfo.html) - Provides information about the SSL certificate that the current client provided when connecting to Greenplum.

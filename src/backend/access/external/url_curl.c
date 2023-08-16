@@ -1335,7 +1335,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		set_httpheader(file, "X-GP-USER", ev->GP_USER);
 		set_httpheader(file, "X-GP-SEG-PORT", ev->GP_SEG_PORT);
 		set_httpheader(file, "X-GP-SESSION-ID", ev->GP_SESSION_ID);
-
+#if LIBCURL_VERSION_NUM >= 0x071900
 		int	libcurl_tcp_keepalives_idle = DEFAULT_TCP_KEEPALIVE_TIME;
 		int	libcurl_tcp_keepalives_interval = DEFAULT_TCP_KEEPALIVE_INTVL;
 		int	libcurl_tcp_keepalives_count = DEFAULT_TCP_KEEPALIVE_PROBES;
@@ -1351,6 +1351,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 		curl_easy_setopt(file->curl->handle, CURLOPT_TCP_KEEPIDLE, (long)libcurl_tcp_keepalives_idle);
 		/* interval time between keep-alive probes: libcurl_tcp_keepalives_interval seconds */
 		curl_easy_setopt(file->curl->handle, CURLOPT_TCP_KEEPINTVL, (long)libcurl_tcp_keepalives_interval);
+#endif
 	}
 		
 	{

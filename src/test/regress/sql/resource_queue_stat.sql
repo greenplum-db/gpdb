@@ -14,9 +14,11 @@ select 1;
 select 1;
 select 1;
 
-select pg_sleep(1);
+select pg_sleep(0.1);
 -- will display q.n_queries_exec=4, and after the query it becomes 5
-select queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q';
+-- The query should sleep more than PGSTAT_STAT_INTERVAL first to ensure
+-- the fresh resource queue stats are synced to stat files. 
+select pg_sleep(0.6), queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q';
 
 -- drop the queue
 reset role;
@@ -35,9 +37,11 @@ select 1;
 select 1;
 select 1;
 
-select pg_sleep(1);
+select pg_sleep(0.1);
 -- will display q.n_queries_exec=4, and after the query it becomes 5
-select queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q';
+-- The query should sleep more than PGSTAT_STAT_INTERVAL first to ensure
+-- the fresh resource queue stats are synced to stat files. 
+select pg_sleep(0.6), queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q';
 
 -- create another queue, do switch test
 reset role;
@@ -57,10 +61,12 @@ select 1;
 select 1;
 select 1;
 
-select pg_sleep(1);
+select pg_sleep(0.1);
 -- will display q.n_queries_exec=5, q1.n_queries_exec=4
-select queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q1';
-select queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q';
+-- The query should sleep more than PGSTAT_STAT_INTERVAL first to ensure
+-- the fresh resource queue stats are synced to stat files. 
+select pg_sleep(0.6), queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q1';
+select pg_sleep(0.6), queuename, n_queries_exec from pg_stat_resqueues where queuename = 'q';
 
 -- clean
 reset role;

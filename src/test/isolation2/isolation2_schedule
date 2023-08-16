@@ -11,6 +11,7 @@ test: lockmodes
 test: pg_rewind_fail_missing_xlog
 test: prepared_xact_deadlock_pg_rewind
 test: ao_partition_lock
+test: concurrent_partition_table_operations_should_not_deadlock
 
 test: select_dropped_table
 test: update_hash_col_utilitymode execute_on_utilitymode
@@ -114,7 +115,7 @@ test: uao/cursor_before_update_row
 test: uao/cursor_withhold_row
 test: uao/cursor_withhold2_row
 test: uao/delete_while_vacuum_row
-test: uao/index_build_reltuples_row
+test: uao/index_build_relstats_row
 test: uao/index_only_scan_row
 test: uao/insert_policy_row
 test: uao/insert_while_vacuum_row
@@ -181,7 +182,7 @@ test: uao/cursor_before_update_column
 test: uao/cursor_withhold_column
 test: uao/cursor_withhold2_column
 test: uao/delete_while_vacuum_column
-test: uao/index_build_reltuples_column
+test: uao/index_build_relstats_column
 test: uao/index_only_scan_column
 test: uao/insert_policy_column
 test: uao/insert_while_vacuum_column
@@ -357,5 +358,4 @@ test: spilling_hashagg
 test: brin_heap
 
 # Intensive tests for BRIN
-test: uao/brin_chain_row
-test: uao/brin_chain_column
+test: uao/brin_chain_row uao/brin_chain_column

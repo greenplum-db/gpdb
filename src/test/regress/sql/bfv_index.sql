@@ -465,6 +465,81 @@ DROP TABLE hash_prt_tbl;
 
 RESET enable_seqscan;
 RESET optimizer_enable_dynamictablescan;
+
+--
+-- Test ORCA generates Bitmap/IndexScan alternative for ScalarArrayOpExpr ANY only
+--
+
+CREATE TABLE bitmap_alt (id int, bitmap_idx_col int, btree_idx_col int, hash_idx_col int);
+CREATE INDEX bitmap_alt_idx1 on bitmap_alt using bitmap(bitmap_idx_col);
+CREATE INDEX bitmap_alt_idx2 on bitmap_alt using btree(btree_idx_col);
+CREATE INDEX bitmap_alt_idx3 on bitmap_alt using hash(hash_idx_col);
+INSERT INTO bitmap_alt SELECT i, i, i, i from generate_series(1,10)i;
+ANALYZE bitmap_alt;
+
+-- ORCA should generate bitmap index scan plans for the following
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col IN (3, 5);
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col IN (3, 5);
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE btree_idx_col IN (3, 5);
+SELECT * FROM bitmap_alt WHERE btree_idx_col IN (3, 5);
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE hash_idx_col IN (3, 5);
+SELECT * FROM bitmap_alt WHERE hash_idx_col IN (3, 5);
+
+-- ORCA should generate seq scan plans for the following
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col=ALL(ARRAY[3, 5]);
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col=ALL(ARRAY[3, 5]);
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE btree_idx_col=ALL(ARRAY[3, 5]);
+SELECT * FROM bitmap_alt WHERE btree_idx_col=ALL(ARRAY[3, 5]);
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE hash_idx_col=ALL(ARRAY[3, 5]);
+SELECT * FROM bitmap_alt WHERE hash_idx_col=ALL(ARRAY[3, 5]);
+
+--
+-- Test ORCA considers ScalarArrayOp in indexqual for partitioned table
+-- with multikey indexes only when predicate key is the first index key
+-- (similar test for non-partitioned tables in create_index)
+--
+CREATE TABLE pt_with_multikey_index (a int, key1 char(6), key2 char(1))
+PARTITION BY list(key2)
+(PARTITION p1 VALUES ('R'), PARTITION p2 VALUES ('G'), DEFAULT PARTITION other);
+
+CREATE INDEX multikey_idx on pt_with_multikey_index (key1, key2);
+INSERT INTO pt_with_multikey_index SELECT i, 'KEY'||i, 'R' from generate_series(1,500)i;
+INSERT INTO pt_with_multikey_index SELECT i, 'KEY'||i, 'G' from generate_series(1,500)i;
+INSERT INTO pt_with_multikey_index SELECT i, 'KEY'||i, 'B' from generate_series(1,500)i;
+
+explain (costs off)
+SELECT key1 FROM pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65', 'KEY5')
+ORDER BY key1;
+
+SELECT key1 FROM pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65', 'KEY5')
+ORDER BY key1;
+
+EXPLAIN (costs off)
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 = 'KEY55' AND key2 IN ('R', 'G')
+ORDER BY key2;
+
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 = 'KEY55' AND key2 IN ('R', 'G')
+ORDER BY key2;
+
+EXPLAIN (costs off)
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65') AND key2 = 'R'
+ORDER BY key1;
+
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65') AND key2 = 'R'
+ORDER BY key1;
+
 --
 -- Enable the index only scan in append only table.
 -- Note: expect ORCA to use seq scan rather than index only scan like planner,

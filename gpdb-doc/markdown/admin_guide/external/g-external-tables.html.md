@@ -50,7 +50,6 @@ Greenplum Database provides readable and writable external tables:
 
     -   Selecting data from database tables to insert into the writable external table
     -   Sending data to an application as a stream of data. For example, unload data from Greenplum Database and send it to an application that connects to another database or ETL tool to load the data elsewhere
-    -   Receiving output from Greenplum parallel MapReduce calculations.
     Writable external tables allow only `INSERT` operations.
 
 

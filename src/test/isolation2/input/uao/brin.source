@@ -2,7 +2,6 @@
 -- White-box tests are necessary to ensure that summarization is done
 -- successfully (to avoid cases where ranges have brin data tuples without
 -- values or where the range is not covered by the revmap etc)
-CREATE EXTENSION pageinspect;
 
 -- Turn off sequential scans to force usage of BRIN indexes for scans.
 SET enable_seqscan TO off;
@@ -143,22 +142,16 @@ SELECT gp_inject_fault('brin_bitmap_page_added', 'reset', dbid)
 
 VACUUM brin_ao_summarize_@amname@;
 
--- A new INSERT would always map to the last range on the old segment and that
--- range will be updated to hold the new value, as part of INSERT.
-INSERT INTO brin_ao_summarize_@amname@ VALUES(40);
-
 -- All the live tuples will have been moved to a single new logical heap block
--- in seg2 (67108864). The 1 tuple INSERTed after the VACUUM should have gone to
--- the last block in seg1 (33554438).
+-- in seg2 (67108864).
 SELECT distinct(right(split_part(ctid::text, ',', 1), -1)) AS blknum
   FROM brin_ao_summarize_@amname@;
 
 -- Sanity: There should now be 2 revmap pages (1 new one for the new seg). Also,
--- there will be a new index tuple mapping to that new seg and block number.
--- Note: Since VACUUM summarizes all logical heap blocks (invokes summarization
--- with BRIN_ALL_BLOCKRANGES), and doesn't clean up existing summary info, we
--- can expect entries from the 1st seg to be still there (including blank entries
--- added for the 6th and 7th blocks)
+-- there will be a new index tuple mapping to that new seg and block number, as
+-- VACUUM does summarize the entire table (the empty ranges would be no-ops).
+-- Also, VACUUM should have marked all ranges corresponding to the vacuumed seg
+-- as empty (33554432 - 33554438).
 1U: SELECT blkno, brin_page_type(get_raw_page('brin_ao_summarize_@amname@_i_idx', blkno)) FROM
   generate_series(0, nblocks('brin_ao_summarize_@amname@_i_idx') - 1) blkno;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 1))
@@ -168,8 +161,8 @@ SELECT distinct(right(split_part(ctid::text, ',', 1), -1)) AS blknum
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2),
   'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
 
--- Sanity: Scan should return only first 3 blocks corresponding to the vacuumed
--- seg, as those ranges are left over from the vacuum.
+-- Sanity: Scan should return 0 blocks as all of the blocks that matches the
+-- scan correspond to the empty ranges in the vacuumed seg.
 SELECT gp_inject_fault_infinite('brin_bitmap_page_added', 'skip', dbid)
   FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
 SELECT count(*) FROM brin_ao_summarize_@amname@ WHERE i = 1;
@@ -189,6 +182,13 @@ SELECT brin_summarize_new_values('brin_ao_summarize_@amname@_i_idx');
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_summarize_@amname@_i_idx', 3))
   WHERE pages != '(0,0)' order by 1;
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2),
+  'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
+
+-- The next insert would map to seg1 and will map to the last partial range
+-- 33554438 in seg1.
+INSERT INTO brin_ao_summarize_@amname@ VALUES(40);
+-- Summary info for 33554438 should have been updated.
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_summarize_@amname@_i_idx', 2),
   'brin_ao_summarize_@amname@_i_idx') ORDER BY blknum, attnum;
 
@@ -666,4 +666,3 @@ SELECT brin_summarize_range('brin_abort_fullpage_@amname@_i_idx', 33559886);
   'brin_abort_fullpage_@amname@_i_idx') ORDER BY blknum, attnum;
 
 RESET enable_seqscan;
-DROP EXTENSION pageinspect;

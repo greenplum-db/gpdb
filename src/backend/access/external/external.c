@@ -112,54 +112,22 @@ GetExtTableEntry(Oid relid)
 ExtTableEntry*
 GetExtTableEntryIfExists(Oid relid)
 {
-	Relation	pg_foreign_table_rel;
-	ScanKeyData ftkey;
-	SysScanDesc ftscan;
-	HeapTuple	fttuple;
-	ExtTableEntry *extentry;
-	bool		isNull;
-	List		*ftoptions_list = NIL;;
+	ForeignTable 	*ft;
+	ExtTableEntry 	*extentry;
 
-	pg_foreign_table_rel = table_open(ForeignTableRelationId, RowExclusiveLock);
-
-	ScanKeyInit(&ftkey,
-				Anum_pg_foreign_table_ftrelid,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(relid));
-
-	ftscan = systable_beginscan(pg_foreign_table_rel, ForeignTableRelidIndexId,
-								true, NULL, 1, &ftkey);
-	fttuple = systable_getnext(ftscan);
-
-	if (!HeapTupleIsValid(fttuple))
-	{
-		systable_endscan(ftscan);
-		heap_close(pg_foreign_table_rel, RowExclusiveLock);
-
+	/* do nothing if it's not an external table */
+	if (!rel_is_external_table(relid))
 		return NULL;
-	}
 
-	/* get the foreign table options */
-	Datum ftoptions = heap_getattr(fttuple,
-						   Anum_pg_foreign_table_ftoptions,
-						   RelationGetDescr(pg_foreign_table_rel),
-						   &isNull);
+	ft = GetForeignTable(relid);
 
-	if (isNull)
-	{
-		/* options array is always populated, {} if no options set */
+	/* options array is always populated, {} if no options set */
+	if (ft->options == NULL)
 		elog(ERROR, "could not find options for external protocol");
-	}
-	else
-	{
-		ftoptions_list = untransformRelOptions(ftoptions);
-	}
 
-	extentry = GetExtFromForeignTableOptions(ftoptions_list, relid);
+	extentry = GetExtFromForeignTableOptions(ft->options, relid);
 
-	/* Finish up scan and close catalogs */
-	systable_endscan(ftscan);
-	table_close(pg_foreign_table_rel, RowExclusiveLock);
+	pfree(ft);
 
 	return extentry;
 }

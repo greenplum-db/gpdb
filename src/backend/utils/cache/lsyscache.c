@@ -2322,6 +2322,32 @@ get_relnatts(Oid relid)
 #endif
 
 /*
+ * get_rel_am
+ *		Returns the access method of a given relation.
+ *
+ * Returns InvalidOid if there is no such relation or if the relation is not an
+ * index or a table.
+ */
+Oid
+get_rel_am(Oid relid)
+{
+	HeapTuple       tp;
+
+	tp = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
+	if (HeapTupleIsValid(tp))
+	{
+		Form_pg_class reltup = (Form_pg_class) GETSTRUCT(tp);
+		Oid       result;
+
+		result = reltup->relam;
+		ReleaseSysCache(tp);
+		return result;
+	}
+
+	return InvalidOid;
+}
+
+/*
  * get_rel_name
  *		Returns the name of a given relation.
  *

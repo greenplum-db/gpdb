@@ -4,6 +4,8 @@ import itertools
 
 from collections import namedtuple
 from gpcheckcat_modules.orphan_toast_table_issues import OrphanToastTableIssue, DoubleOrphanToastTableIssue, ReferenceOrphanToastTableIssue, DependencyOrphanToastTableIssue, MismatchOrphanToastTableIssue
+import psycopg2
+from psycopg2 import extras
 
 
 OrphanedTable = namedtuple('OrphanedTable', 'oid catname')
@@ -117,8 +119,10 @@ GROUP BY gp_segment_id, toast_table_oid, toast_table_name, expected_table_oid, e
 """
 
     def runCheck(self, db_connection):
-        orphaned_toast_tables = db_connection.query(self.orphaned_toast_tables_query).dictresult()
-        if len(orphaned_toast_tables) == 0:
+        curs = db_connection.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        curs.execute(self.orphaned_toast_tables_query)
+        orphaned_toast_tables = curs.fetchall()
+        if curs.rowcount == 0:
             return True
 
         for row in orphaned_toast_tables:

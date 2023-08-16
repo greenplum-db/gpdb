@@ -1366,7 +1366,7 @@ addTotalQueueDuration(ResGroupData *group)
 	if (group == NULL)
 		return;
 
-	group->totalQueuedTimeMs += (groupWaitEnd - groupWaitEnd);
+	group->totalQueuedTimeMs += (groupWaitEnd - groupWaitStart);
 }
 
 /*
@@ -1692,6 +1692,10 @@ SwitchResGroupOnSegment(const char *buf, int len)
 
 		Assert(bypassedGroup != NULL);
 
+		/* Add into cgroup */
+		cgroupOpsRoutine->attachcgroup(bypassedGroup->groupId, MyProcPid,
+									   caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
+
 		return;
 	}
 
@@ -1853,6 +1857,7 @@ waitOnGroup(ResGroupData *group, bool isMoveQuery)
 	PG_END_TRY();
 
 	groupAwaited = NULL;
+	groupWaitEnd = GetCurrentTimestamp();
 
 	/* reset ps status */
 	if (update_process_title)
@@ -3561,19 +3566,7 @@ ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 				   sessionId,
 				   quote_literal_cstr(groupName));
 
-	PG_TRY();
-	{
-		CdbDispatchCommand(cmd, 0, NULL);
-	}
-	PG_CATCH();
-	{
-		/*
-		 * we don't have proper mechanics to cancel group move, so just warn
-		 * about something wrong on dispatching stage
-		 */
-		elog(WARNING, "cannot dispatch group move command");
-	}
-	PG_END_TRY();
+	CdbDispatchCommand(cmd, 0, NULL);
 }
 
 /*
