@@ -16,7 +16,7 @@ CLUSTER [VERBOSE]
 
 `CLUSTER` instructs Greenplum Database to order the table specified by `<table_name>` based on the index specified by `<index_name>`. The index must already have been defined on `<table_name>`.
 
-XXX `CLUSTER` on non-B-tree indexes is not supported on append-optimized storage tables. XXX
+Greenplum Database supports `CLUSTER` operations on append-optimized tables only for B-tree indexes.
 
 > **Note** Greenplum Database 7 does not support `CLUSTER`ing a partitioned table.
 
@@ -52,8 +52,6 @@ It is advisable to set the [maintenance\_work\_mem](../config_params/guc-list.ht
 Because the query optimizer records statistics about the ordering of tables, it is advisable to run [ANALYZE](ANALYZE.html) on the newly clustered table. Otherwise, the planner may make poor query plan choices.
 
 Because `CLUSTER` remembers which indexes are clustered, you can cluster the tables you want clustered manually the first time, then set up a periodic maintenance script that runs `CLUSTER` without any parameters, so that the desired tables are periodically reclustered.
-
-> **Note** XXX `CLUSTER` on non-B-tree indexes is not supported with append-optimized tables.
 
 ## <a id="section6"></a>Examples 
 
