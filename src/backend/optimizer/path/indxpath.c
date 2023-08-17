@@ -809,7 +809,8 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 		if (index->amhasgettuple &&
 				((!IsAccessMethodAO(rel->relam) ||
 				 index->amcostestimate == bmcostestimate ||
-				 ipath->path.pathtype == T_IndexOnlyScan)))
+				 ipath->path.pathtype == T_IndexOnlyScan ||
+				 (!index->amhasgetbitmap))))
 			add_path(rel, (Path *) ipath);
 
 		if (index->amhasgetbitmap &&
