@@ -658,11 +658,11 @@ public:
 	// parse index type
 	static IMDIndex::EmdindexType ParseIndexType(const Attributes &attrs);
 
-	// parse a comma-separated boolean list of index Sort or Nulls direction into a ULong array
+	// parse a comma-separated boolean list into a ULong array
 	// will raise an exception if list is not well-formed
 	static ULongPtrArray *ExtractConvertBooleanListToULongArray(
 		CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val,
-		bool extract_sort, ULONG num_of_keys);
+		const XMLCh *false_value, ULONG num_of_keys);
 };
 
 // parse a comma-separated list of integers numbers into a dynamic array

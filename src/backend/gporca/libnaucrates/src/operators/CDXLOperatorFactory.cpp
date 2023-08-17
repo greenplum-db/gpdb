@@ -3726,20 +3726,21 @@ CDXLOperatorFactory::ParseIndexType(const Attributes &attrs)
 //		CDXLOperatorFactory::ExtractConvertBooleanListToULongArray
 //
 //	@doc:
-//		Parse boolean list of index keys sort or nulls directions.
+//		Parse boolean list to ULong Array, maps false_value in the list
+//		to 0 and if value in list isn't equals to false_value it is mapped to 1.
 //---------------------------------------------------------------------------
 ULongPtrArray *
 CDXLOperatorFactory::ExtractConvertBooleanListToULongArray(
 	CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val,
-	bool extract_sort, ULONG num_of_keys)
+	const XMLCh *false_value, ULONG num_of_keys)
 {
 	CMemoryPool *mp = dxl_memory_manager->Pmp();
 
 	ULongPtrArray *ulong_array = GPOS_NEW(mp) ULongPtrArray(mp);
 
 	// Only B-tree indices have sort and nulls directions in dxl
-	// For mdps with btree indices that do not have sort/nulls direction, and any other index
-	// type return array with 0s and consider ASC as default
+	// For mdps with btree indices that do not have sort/nulls direction return array with 0s
+	// and consider ASC as default
 	if (xml_val == nullptr)
 	{
 		for (ULONG ul = 0; ul < num_of_keys; ul++)
@@ -3763,24 +3764,8 @@ CDXLOperatorFactory::ExtractConvertBooleanListToULongArray(
 		XMLCh *current_str = commma_sep_str_components.nextToken();
 		GPOS_ASSERT(nullptr != current_str);
 		ULONG value;
-		if (extract_sort)
-		{
-			value =
-				(0 == XMLString::compareString(
-						  current_str,
-						  CDXLTokens::XmlstrToken(EdxltokenIndexKeySortASC)))
-					? 0
-					: 1;
-		}
-		else
-		{
-			value =
-				(0 == XMLString::compareString(
-						  current_str,
-						  CDXLTokens::XmlstrToken(EdxltokenIndexKeyNullsLast)))
-					? 0
-					: 1;
-		}
+		value =
+			(0 == XMLString::compareString(current_str, false_value)) ? 0 : 1;
 		ulong_array->Append(GPOS_NEW(mp) ULONG(value));
 	}
 	return ulong_array;

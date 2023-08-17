@@ -45,6 +45,9 @@ private:
 	// is the index clustered
 	BOOL m_clustered;
 
+	// Does Index AM support ordering
+	BOOL m_amcanorder;
+
 	// index type
 	IMDIndex::EmdindexType m_index_type;
 

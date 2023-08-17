@@ -38,6 +38,7 @@ CParseHandlerMDIndex::CParseHandlerMDIndex(
 	  m_mdid(nullptr),
 	  m_mdname(nullptr),
 	  m_clustered(false),
+	  m_amcanorder(false),
 	  m_index_type(IMDIndex::EmdindSentinel),
 	  m_mdid_item_type(nullptr),
 	  m_index_key_cols_array(nullptr),
@@ -111,6 +112,11 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const element_uri,
 		m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
 		EdxltokenIndexClustered, EdxltokenIndex);
 
+	// parse index access method ordering
+	m_amcanorder = CDXLOperatorFactory::ExtractConvertAttrValueToBool(
+		m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+		EdxltokenIndexAmCanOrder, EdxltokenIndex, true);
+
 	m_index_type = CDXLOperatorFactory::ParseIndexType(attrs);
 	const XMLCh *xmlszItemType =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenIndexItemType));
@@ -140,7 +146,9 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const element_uri,
 	m_sort_direction =
 		CDXLOperatorFactory::ExtractConvertBooleanListToULongArray(
 			m_parse_handler_mgr->GetDXLMemoryManager(),
-			xmlszIndexKeysSortDirections, true, m_index_key_cols_array->Size());
+			xmlszIndexKeysSortDirections,
+			CDXLTokens::XmlstrToken(EdxltokenIndexKeySortASC),
+			m_index_key_cols_array->Size());
 
 	// extract index keys nulls directions
 	const XMLCh *xmlszIndexKeysNullsDirections =
@@ -149,7 +157,8 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const element_uri,
 	m_nulls_direction =
 		CDXLOperatorFactory::ExtractConvertBooleanListToULongArray(
 			m_parse_handler_mgr->GetDXLMemoryManager(),
-			xmlszIndexKeysNullsDirections, false,
+			xmlszIndexKeysNullsDirections,
+			CDXLTokens::XmlstrToken(EdxltokenIndexKeyNullsLast),
 			m_index_key_cols_array->Size());
 
 	// parse handler for operator class list
@@ -201,11 +210,11 @@ CParseHandlerMDIndex::EndElement(const XMLCh *const,  // element_uri,
 		child_indexes->AddRef();
 	}
 
-	m_imd_obj = GPOS_NEW(m_mp)
-		CMDIndexGPDB(m_mp, m_mdid, m_mdname, m_clustered, is_partitioned,
-					 m_index_type, m_mdid_item_type, m_index_key_cols_array,
-					 m_included_cols_array, mdid_opfamilies_array,
-					 child_indexes, m_sort_direction, m_nulls_direction);
+	m_imd_obj = GPOS_NEW(m_mp) CMDIndexGPDB(
+		m_mp, m_mdid, m_mdname, m_clustered, is_partitioned, m_amcanorder,
+		m_index_type, m_mdid_item_type, m_index_key_cols_array,
+		m_included_cols_array, mdid_opfamilies_array, child_indexes,
+		m_sort_direction, m_nulls_direction);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

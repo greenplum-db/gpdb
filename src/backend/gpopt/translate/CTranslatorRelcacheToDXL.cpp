@@ -1030,6 +1030,7 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 	ULONG *attno_mapping = nullptr;
 	ULongPtrArray *sort_direction = nullptr;
 	ULongPtrArray *nulls_direction = nullptr;
+	bool index_amcanorder = false;
 
 	if (!IsIndexSupported(index_rel.get()))
 	{
@@ -1115,11 +1116,11 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 	// Get IndexAmRoutine Struct
 	IndexAmRoutine *am_routine =
 		gpdb::GetIndexAmRoutineFromAmHandler(index_rel->rd_amhandler);
-	// Check if index can order and supports backwards scans
-	// Note: backward scans are not compatible with indexams having special sort operators
-	// (i.e. with amcandorderbyop=t)
-	// So, we don't consider them here.
-	if (am_routine->amcanorder && am_routine->amcanbackward)
+	index_amcanorder = am_routine->amcanorder;
+	// Check if index can order
+	// If amcanorder is true, index AM must support INDOPTION_DESC, INDOPTION_NULLS_FIRST options
+	// and have provided Sort, Nulls directions
+	if (index_amcanorder)
 	{
 		for (int i = 0; i < form_pg_index->indnkeyatts; i++)
 		{
@@ -1162,10 +1163,11 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 		child_index_oids = GPOS_NEW(mp) IMdIdArray(mp);
 	}
 
-	CMDIndexGPDB *index = GPOS_NEW(mp) CMDIndexGPDB(
-		mp, mdid_index, mdname, index_clustered, index_partitioned, index_type,
-		mdid_item_type, index_key_cols_array, included_cols, op_families_mdids,
-		child_index_oids, sort_direction, nulls_direction);
+	CMDIndexGPDB *index = GPOS_NEW(mp)
+		CMDIndexGPDB(mp, mdid_index, mdname, index_clustered, index_partitioned,
+					 index_amcanorder, index_type, mdid_item_type,
+					 index_key_cols_array, included_cols, op_families_mdids,
+					 child_index_oids, sort_direction, nulls_direction);
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 	return index;

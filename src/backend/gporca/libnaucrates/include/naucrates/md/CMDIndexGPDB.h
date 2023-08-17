@@ -53,6 +53,9 @@ private:
 	// is the index partitioned
 	BOOL m_partitioned;
 
+	// Can index AM order
+	BOOL m_amcanorder;
+
 	// index type
 	EmdindexType m_index_type;
 
@@ -85,7 +88,7 @@ public:
 
 	// ctor
 	CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
-				 BOOL is_clustered, BOOL is_partitioned,
+				 BOOL is_clustered, BOOL is_partitioned, BOOL amcanorder,
 				 EmdindexType index_type, IMDId *mdid_item_type,
 				 ULongPtrArray *index_key_cols_array,
 				 ULongPtrArray *included_cols_array,
@@ -107,6 +110,9 @@ public:
 
 	// is the index partitioned
 	BOOL IsPartitioned() const override;
+
+	// Does index AM support ordering
+	BOOL CanOrder() const override;
 
 	// index type
 	EmdindexType IndexType() const override;
@@ -151,11 +157,6 @@ public:
 
 	// child index oids
 	IMdIdArray *ChildIndexMdids() const override;
-
-	// serialize index keys sort or nulls direction
-	CWStringDynamic *SerializeBooleanArray(CMemoryPool *mp,
-										   ULongPtrArray *dynamic_ptr_array,
-										   bool serialize_Sort) const;
 
 #ifdef GPOS_DEBUG
 	// debug print of the MD index

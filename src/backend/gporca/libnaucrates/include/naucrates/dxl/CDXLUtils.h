@@ -278,6 +278,10 @@ public:
 	static IDatum *GetDatum(CMemoryPool *mp, CMDAccessor *md_accessor,
 							const CDXLDatum *dxl_datum);
 
+	static CWStringDynamic *SerializeBooleanArray(
+		CMemoryPool *mp, ULongPtrArray *dynamic_ptr_array,
+		const CWStringConst *true_value, const CWStringConst *false_value);
+
 #ifdef GPOS_DEBUG
 	// debug print of the metadata relation
 	static void DebugPrintMDIdArray(IOstream &os, IMdIdArray *mdid_array);

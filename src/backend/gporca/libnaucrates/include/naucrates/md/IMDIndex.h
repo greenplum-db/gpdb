@@ -62,6 +62,9 @@ public:
 	// is the index partitioned
 	virtual BOOL IsPartitioned() const = 0;
 
+	// Does index AM support ordering
+	virtual BOOL CanOrder() const = 0;
+
 	// index type
 	virtual EmdindexType IndexType() const = 0;
 

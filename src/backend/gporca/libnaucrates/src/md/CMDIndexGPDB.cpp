@@ -33,16 +33,18 @@ using namespace gpmd;
 //---------------------------------------------------------------------------
 CMDIndexGPDB::CMDIndexGPDB(
 	CMemoryPool *mp, IMDId *mdid, CMDName *mdname, BOOL is_clustered,
-	BOOL is_partitioned, EmdindexType index_type, IMDId *mdid_item_type,
-	ULongPtrArray *index_key_cols_array, ULongPtrArray *included_cols_array,
-	IMdIdArray *mdid_opfamilies_array, IMdIdArray *child_index_oids,
-	ULongPtrArray *sort_direction, ULongPtrArray *nulls_direction)
+	BOOL is_partitioned, BOOL amcanorder, EmdindexType index_type,
+	IMDId *mdid_item_type, ULongPtrArray *index_key_cols_array,
+	ULongPtrArray *included_cols_array, IMdIdArray *mdid_opfamilies_array,
+	IMdIdArray *child_index_oids, ULongPtrArray *sort_direction,
+	ULongPtrArray *nulls_direction)
 
 	: m_mp(mp),
 	  m_mdid(mdid),
 	  m_mdname(mdname),
 	  m_clustered(is_clustered),
 	  m_partitioned(is_partitioned),
+	  m_amcanorder(amcanorder),
 	  m_index_type(index_type),
 	  m_mdid_item_type(mdid_item_type),
 	  m_index_key_cols_array(index_key_cols_array),
@@ -160,6 +162,20 @@ BOOL
 CMDIndexGPDB::IsPartitioned() const
 {
 	return m_partitioned;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CMDIndexGPDB::CanOrder
+//
+//	@doc:
+//		Does Index Access Method support Ordering
+//
+//---------------------------------------------------------------------------
+BOOL
+CMDIndexGPDB::CanOrder() const
+{
+	return m_amcanorder;
 }
 
 //---------------------------------------------------------------------------
@@ -287,6 +303,7 @@ CMDIndexGPDB::KeyNullsDirectionAt(ULONG pos) const
 {
 	return *((*m_nulls_direction)[pos]);
 }
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CMDIndexGPDB::GetIncludedColPos
@@ -336,6 +353,9 @@ CMDIndexGPDB::Serialize(CXMLSerializer *xml_serializer) const
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenIndexClustered), m_clustered);
 
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenIndexAmCanOrder), m_amcanorder);
+
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenIndexType),
 								 GetDXLStr(m_index_type));
 	if (nullptr != m_mdid_item_type)
@@ -358,18 +378,24 @@ CMDIndexGPDB::Serialize(CXMLSerializer *xml_serializer) const
 		available_cols_str);
 	GPOS_DELETE(available_cols_str);
 
-	// Only B-tree indices support sort and nulls direction
-	if (m_index_type == EmdindBtree)
+	// Only if Index Access Method Support Ordering, serialize sort and nulls directions
+	if (m_amcanorder)
 	{
 		CWStringDynamic *key_cols_sort_direction_str =
-			SerializeBooleanArray(m_mp, m_sort_direction, true);
+			CDXLUtils::SerializeBooleanArray(
+				m_mp, m_sort_direction,
+				CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeySortDESC),
+				CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeySortASC));
 		xml_serializer->AddAttribute(
 			CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeysSortDirection),
 			key_cols_sort_direction_str);
 		GPOS_DELETE(key_cols_sort_direction_str);
 
 		CWStringDynamic *key_cols_nulls_direction_str =
-			SerializeBooleanArray(m_mp, m_nulls_direction, false);
+			CDXLUtils::SerializeBooleanArray(
+				m_mp, m_nulls_direction,
+				CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyNullsFirst),
+				CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyNullsLast));
 		xml_serializer->AddAttribute(
 			CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeysNullsDirection),
 			key_cols_nulls_direction_str);
@@ -498,59 +524,4 @@ CMDIndexGPDB::ChildIndexMdids() const
 }
 
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CMDIndexGPDB::SerializeBooleanArray
-//
-//	@doc:
-//		Serialize a boolean array representing B-tree indices sort or nulls direction.
-//
-//---------------------------------------------------------------------------
-CWStringDynamic *
-CMDIndexGPDB::SerializeBooleanArray(CMemoryPool *mp,
-									ULongPtrArray *dynamic_ptr_array,
-									bool serialize_Sort) const
-{
-	CAutoP<CWStringDynamic> string_var(GPOS_NEW(mp) CWStringDynamic(mp));
-
-	if (nullptr == dynamic_ptr_array)
-	{
-		return string_var.Reset();
-	}
-
-	ULONG length = dynamic_ptr_array->Size();
-	for (ULONG ul = 0; ul < length; ul++)
-	{
-		ULONG value = *((*dynamic_ptr_array)[ul]);
-		GPOS_ASSERT(value == 0 || value == 1);
-		const CWStringConst *string_repr;
-		if (serialize_Sort)
-		{
-			string_repr =
-				(value == 1)
-					? CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeySortDESC)
-					: CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeySortASC);
-		}
-		else
-		{
-			string_repr =
-				(value == 1)
-					? CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyNullsFirst)
-					: CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyNullsLast);
-		}
-		if (ul == length - 1)
-		{
-			// last element: do not print a comma
-			string_var->AppendFormat(string_repr->GetBuffer());
-		}
-		else
-		{
-			string_var->AppendFormat(
-				GPOS_WSZ_LIT("%ls%ls"), string_repr->GetBuffer(),
-				CDXLTokens::GetDXLTokenStr(EdxltokenComma)->GetBuffer());
-		}
-	}
-
-	return string_var.Reset();
-}
 // EOF
