@@ -110,6 +110,7 @@ TRUNCATE TABLE postgres_fdw_gp."GP 1";
 set search_path=postgres_fdw_gp;
 alter server loopback options(add num_segments '4');
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1;
+EXPLAIN ANALYZE SELECT * FROM gp_ft1;
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT count(*) FROM gp_ft1;
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1 t1 INNER JOIN gp_ft1 t2 ON t1.f1 = t2.f1 LIMIT 3;
 EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;

@@ -139,6 +139,19 @@ EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1;
  Optimizer: Postgres query optimizer
 (6 rows)
 
+EXPLAIN ANALYZE SELECT * FROM gp_ft1;
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 4:1  (slice1; segments: 4)  (cost=100.00..2872.00 rows=133600 width=68) (actual time=25.301..25.303 rows=0 loops=1)
+   ->  Foreign Scan on gp_ft1  (cost=100.00..1202.00 rows=33400 width=68) (actual time=0.000..9.830 rows=0 loops=1)
+ Optimizer: Postgres query optimizer
+ Planning Time: 6.631 ms
+   (slice0)    Executor memory: 42K bytes.
+   (slice1)    Executor memory: 42K bytes avg x 4 workers, 42K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 45.320 ms
+(8 rows)
+
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT count(*) FROM gp_ft1;
                               QUERY PLAN                               
 -----------------------------------------------------------------------
