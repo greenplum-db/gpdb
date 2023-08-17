@@ -369,12 +369,12 @@ where a=1 and b=0;
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.1962926.1.0" Name="sc_idx_b" IsClustered="false" IndexType="B-tree" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="0.1962926.1.0" Name="sc_idx_b" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.1975983.1.0" Name="sc_idx_bc" IsClustered="false" IndexType="B-tree" KeyColumns="1,2" IncludedColumns="">
+      <dxl:Index Mdid="0.1975983.1.0" Name="sc_idx_bc" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1,2" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
           <dxl:Opfamily Mdid="0.1978.1.0"/>

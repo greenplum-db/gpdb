@@ -264,7 +264,7 @@
           <dxl:Partition Mdid="6.49221002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
-      <dxl:Index Mdid="0.49238.1.0" Name="pt_idx_1_prt_2" IsClustered="false" IndexType="B-tree" KeyColumns="1,2" IncludedColumns="">
+      <dxl:Index Mdid="0.49238.1.0" Name="pt_idx_1_prt_2" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1,2" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1994.1.0"/>
           <dxl:Opfamily Mdid="0.1994.1.0"/>

@@ -981,17 +981,17 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.26.1.0" Value="1664"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.2676.1.0" Name="pg_authid_rolname_index" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.2676.1.0" Name="pg_authid_rolname_index" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2677.1.0" Name="pg_authid_oid_index" IsClustered="false" IndexType="B-tree" KeyColumns="18" IncludedColumns="">
+      <dxl:Index Mdid="0.2677.1.0" Name="pg_authid_oid_index" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="18" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.6029.1.0" Name="pg_authid_rolresqueue_index" IsClustered="false" IndexType="B-tree" KeyColumns="11" IncludedColumns="">
+      <dxl:Index Mdid="0.6029.1.0" Name="pg_authid_rolresqueue_index" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="11" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>

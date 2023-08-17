@@ -953,12 +953,12 @@ SELECT * FROM information_schema.tables;
         <dxl:Commutator Mdid="0.607.1.0"/>
         <dxl:InverseOp Mdid="0.608.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.2663.1.0" Name="pg_class_relname_nsp_index" IsClustered="false" IndexType="B-tree" KeyColumns="0,1" IncludedColumns="">
+      <dxl:Index Mdid="0.2663.1.0" Name="pg_class_relname_nsp_index" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0,1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2662.1.0" Name="pg_class_oid_index" IsClustered="false" IndexType="B-tree" KeyColumns="31" IncludedColumns="">
+      <dxl:Index Mdid="0.2662.1.0" Name="pg_class_oid_index" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="31" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
@@ -1624,12 +1624,12 @@ SELECT * FROM information_schema.tables;
           <dxl:UpperBound Closed="true" TypeMdid="0.26.1.0" Value="10"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.2685.1.0" Name="pg_namespace_oid_index" IsClustered="false" IndexType="B-tree" KeyColumns="4" IncludedColumns="">
+      <dxl:Index Mdid="0.2685.1.0" Name="pg_namespace_oid_index" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="4" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2684.1.0" Name="pg_namespace_nspname_index" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.2684.1.0" Name="pg_namespace_nspname_index" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
         </dxl:Opfamilies>

@@ -1050,7 +1050,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
           <dxl:UpperBound Closed="true" TypeMdid="0.21.1.0" Value="12"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.29404.1.0" Name="solo_idx_1_prt_y2016_2_prt_jan" IsClustered="false" IndexType="B-tree" KeyColumns="1,2,7,17,22,29" IncludedColumns="">
+      <dxl:Index Mdid="0.29404.1.0" Name="solo_idx_1_prt_y2016_2_prt_jan" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1,2,7,17,22,29" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>

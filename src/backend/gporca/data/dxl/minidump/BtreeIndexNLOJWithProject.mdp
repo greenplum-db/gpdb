@@ -606,7 +606,7 @@
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
         </dxl:DistrOpfamilies>
       </dxl:Relation>
-      <dxl:Index Mdid="0.33144.1.0" Name="foo_1_prt_1_dist_a_part_d_idx" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0,3" IncludedColumns="">
+      <dxl:Index Mdid="0.33144.1.0" Name="foo_1_prt_1_dist_a_part_d_idx" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0,3" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>

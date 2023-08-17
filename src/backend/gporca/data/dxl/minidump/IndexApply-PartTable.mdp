@@ -1200,7 +1200,7 @@ ORDER BY 1 asc ;
         <dxl:SumAgg Mdid="0.2114.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.16166830.1.0" Name="my_tq_agg_small_ets_end_ts_ix_1_prt_p1" IsClustered="false" IndexType="B-tree" KeyColumns="0,4" IncludedColumns="">
+      <dxl:Index Mdid="0.16166830.1.0" Name="my_tq_agg_small_ets_end_ts_ix_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0,4" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1980.1.0"/>
           <dxl:Opfamily Mdid="0.1980.1.0"/>

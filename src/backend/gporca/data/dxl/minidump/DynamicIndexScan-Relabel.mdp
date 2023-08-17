@@ -1146,7 +1146,7 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.1043.1.0" Value="AAAABzk3Mw==" LintValue="921330540"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.607634.1.0" Name="p_idx_1_prt_1" IsClustered="false" IndexType="B-tree" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="0.607634.1.0" Name="p_idx_1_prt_1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1" IncludedColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.2003.1.0"/>
         </dxl:Opfamilies>
