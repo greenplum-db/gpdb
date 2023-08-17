@@ -293,6 +293,32 @@ VACUUM ANALYZE test_cover_index_on_pt;
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_cover_index_on_pt WHERE a<10;
 
+-- Test mixed partitioned tables
+--
+-- AO partitioned table contains a non-AO leaf partition
+CREATE TABLE mypt(a bigint) WITH (appendonly=true) PARTITION BY RANGE(a)
+(
+  START (1) END (11) WITH (tablename='pt_1_prt_1'),
+  START (11) END (21) WITH (tablename='pt_1_prt_2', appendonly=false),
+  START (21) END (31) WITH (tablename='pt_1_prt_3')
+);
+INSERT INTO mypt SELECT i FROM generate_series(1,30)i;
+CREATE INDEX idx_mypt_a ON mypt USING btree (a);
+VACUUM ANALYZE mypt;
+
+-- Allow dynamic index-only scan on mixed partitioned AO table
+EXPLAIN SELECT a FROM mypt WHERE a=29;
+
+-- imitate child partition has GPDB 6 version file via catalog
+-- start_ignore
+SET allow_system_table_mods=on;
+UPDATE pg_appendonly SET version=1 WHERE relid='pt_1_prt_3'::regclass;
+RESET allow_system_table_mods;
+-- end_ignore
+
+-- Disallow if the table contains child partition with GPDB 6 version
+EXPLAIN SELECT a FROM mypt WHERE a=29;
+
 
 -- Test various index types
 --

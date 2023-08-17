@@ -474,10 +474,8 @@ CTranslatorRelcacheToDXL::RetrieveExtStatsInfo(CMemoryPool *mp, IMDId *mdid)
 //
 //---------------------------------------------------------------------------
 static IMDRelation::Erelaoversion
-get_ao_version(Oid oid)
+get_ao_version(gpdb::RelationWrapper &rel)
 {
-	gpdb::RelationWrapper rel = gpdb::GetRelation(oid);
-
 	// partitioned table - return lowest version of child partitions
 	if (rel->rd_partdesc)
 	{
@@ -485,8 +483,10 @@ get_ao_version(Oid oid)
 			IMDRelation::MaxAORelationVersion;
 		for (int i = 0; i < rel->rd_partdesc->nparts; i++)
 		{
+			gpdb::RelationWrapper child_rel =
+				gpdb::GetRelation(rel->rd_partdesc->oids[i]);
 			IMDRelation::Erelaoversion child_low_version =
-				get_ao_version(rel->rd_partdesc->oids[i]);
+				get_ao_version(child_rel);
 			if (child_low_version < low_ao_version &&
 				child_low_version != IMDRelation::AORelationVersion_None)
 			{
@@ -567,11 +567,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	rel_storage_type = RetrieveRelStorageType(rel.get());
 
 	// get append only table version
-	if (rel->rd_partdesc || (rel->rd_rel->relam == AO_ROW_TABLE_AM_OID ||
-							 rel->rd_rel->relam == AO_COLUMN_TABLE_AM_OID))
-	{
-		rel_ao_version = get_ao_version(oid);
-	}
+	rel_ao_version = get_ao_version(rel);
 
 	// get relation columns
 	mdcol_array = RetrieveRelColumns(mp, md_accessor, rel.get());
