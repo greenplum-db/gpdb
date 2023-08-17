@@ -165,7 +165,7 @@ COMMENT ON LANGUAGE plpython IS 'Python support for stored procedures';
 COMMENT ON MATERIALIZED VIEW my_matview IS 'Summary of order history';
 COMMENT ON OPERATOR ^ (text, text) IS 'Performs intersection of two texts';
 COMMENT ON OPERATOR - (NONE, integer) IS 'Unary minus';
-COMMENT ON OPERATOR CLASS int4ops USING btree IS '4 byte integer operators for btrees';
+COMMENT ON OPERATOR CLASS int4_ops USING btree IS '4 byte integer operators for btrees';
 COMMENT ON OPERATOR FAMILY integer_ops USING btree IS 'all integer operators for btrees';
 COMMENT ON POLICY my_policy ON mytable IS 'Filter rows by users';
 COMMENT ON PROCEDURE my_proc (integer, integer) IS 'Runs a report';
