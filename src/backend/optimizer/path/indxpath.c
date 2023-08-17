@@ -804,7 +804,10 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 		 * the last decompressed block between fetch calls.
 		 * Index scan path on GPDB's bitmap index should works the same as bitmap paths.
 		 *
-		 * Enable index only scan on AO here, but the index scan is still disabled.
+		 * Enable index only scan on AO here, and other indexes which don't support
+		 * 'ambitmap' as well, such as ivfflat and hsnw indexes in pgvector, otherwise
+		 * they would not be used on AO tables, but they might improve the perfomance
+		 * in some situations.
 		 */
 		if (index->amhasgettuple &&
 				((!IsAccessMethodAO(rel->relam) ||
