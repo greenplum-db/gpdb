@@ -63,6 +63,16 @@ ifeq ($(with_systemd),yes)
 LIBS += -lsystemd
 endif
 
+# Greenplum makes fronted libpq symbols local in binary postgres
+ifeq (,$(filter cygwin win32 aix,$(PORTNAME)))
+exports_file = exports.list
+GP_LINK_SCRIPT := -Wl,--version-script=$(exports_file)
+
+$(OBJS): $(exports_file)
+
+$(exports_file): $(top_builddir)/src/interfaces/libpq/exports.txt
+	( echo '{ global: *; '; echo ' local:'; $(AWK) '/^[^\#]/ {printf "%s;\n",$$1}' $<; echo '};' ) >$@
+endif
 ##########################################################################
 
 all: submake-libpgport submake-catalog-headers submake-utils-headers postgres $(POSTGRES_IMP)
@@ -72,7 +82,7 @@ ifneq ($(PORTNAME), win32)
 ifneq ($(PORTNAME), aix)
 
 postgres: $(OBJS)
-	$(CXX) $(CXXFLAGS) $(call expand_subsys,$^) $(LDFLAGS) $(LDFLAGS_EX) $(export_dynamic) $(LIBS) -o $@
+	$(CXX) $(CXXFLAGS) $(call expand_subsys,$^) $(LDFLAGS) $(LDFLAGS_EX) $(export_dynamic) $(LIBS) $(GP_LINK_SCRIPT) -o $@
 
 endif
 endif
@@ -311,6 +321,9 @@ ifeq ($(PORTNAME), cygwin)
 endif
 ifeq ($(PORTNAME), win32)
 	rm -f postgres.dll libpostgres.a $(WIN32RES)
+endif
+ifeq (,$(filter cygwin win32 aix,$(PORTNAME)))
+	rm -f $(exports_file)
 endif
 
 distclean: clean

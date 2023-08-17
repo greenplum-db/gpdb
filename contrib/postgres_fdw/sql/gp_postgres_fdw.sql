@@ -321,3 +321,49 @@ select * from part_mixed_dpe, non_part where part_mixed_dpe.b=non_part.b;
 explain (costs false) update t1 set b = b + 1 where b in (select a from gp_all where gp_all.a > 10);
 explain (costs false) update t1 set b = b + 1 where b in (select a from gp_any where gp_any.a > 10);
 explain (costs false) update t1 set b = b + 1 where b in (select a from gp_coord where gp_coord.a > 10);
+
+-- GPDB #16219: validate scram-sha-256 in postgres_fdw
+alter system set password_encryption = 'scram-sha-256';
+-- add created user to pg_hba.conf
+\! echo "host    all    u16219  0.0.0.0/0 scram-sha-256" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
+\! echo "local    all    u16219   scram-sha-256" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
+select pg_reload_conf();
+\c postgres
+create user u16219 password '123456';
+
+create database database_16219;
+\c database_16219
+create extension postgres_fdw;
+grant usage on FOREIGN DATA WRAPPER postgres_fdw to public;
+
+set role u16219;
+create table t1 (a int, b int);
+insert into t1 values(generate_series(1,10),generate_series(11,20));
+
+DO $d$
+    BEGIN
+        EXECUTE $$CREATE SERVER database_16219 FOREIGN DATA WRAPPER postgres_fdw
+            OPTIONS (dbname '$$||current_database()||$$',
+                     port '$$||current_setting('port')||$$',
+                     host 'localhost'
+            )$$;
+    END;
+$d$;
+
+CREATE USER MAPPING FOR CURRENT_USER SERVER database_16219
+    OPTIONS (user 'u16219', password '123456');
+
+CREATE FOREIGN TABLE f_t1(a int, b int) 
+	server database_16219 options(schema_name 'public', table_name 't1');
+
+select count(*) from f_t1;
+DO $d$
+    BEGIN
+        EXECUTE $$ALTER SERVER database_16219
+            OPTIONS (SET port '$$||current_setting('port')||$$')$$;
+    END;
+$d$;
+select count(*) from f_t1;
+\c postgres
+drop database database_16219;
+drop user u16219;
