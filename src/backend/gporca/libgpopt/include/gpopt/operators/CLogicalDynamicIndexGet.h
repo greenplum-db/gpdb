@@ -45,9 +45,6 @@ private:
 	// order spec
 	COrderSpec *m_pos;
 
-	// index scan direction
-	EIndexScanDirection m_scan_direction;
-
 public:
 	CLogicalDynamicIndexGet(const CLogicalDynamicIndexGet &) = delete;
 
@@ -59,8 +56,7 @@ public:
 							const CName *pnameAlias, ULONG ulPartIndex,
 							CColRefArray *pdrgpcrOutput,
 							CColRef2dArray *pdrgpdrgpcrPart,
-							IMdIdArray *partition_mdids,
-							EIndexScanDirection scan_direction);
+							IMdIdArray *partition_mdids);
 
 	// dtor
 	~CLogicalDynamicIndexGet() override;
@@ -114,12 +110,6 @@ public:
 		return m_pos;
 	}
 
-	// index scan direction is only used for B-tree indices.
-	EIndexScanDirection
-	ScanDirection() const
-	{
-		return m_scan_direction;
-	}
 	// operator specific hash function
 	ULONG HashValue() const override;
 

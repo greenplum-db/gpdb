@@ -1660,8 +1660,8 @@ select f,d from test_index_with_sort_directions_on_orderby_limit order by f, d l
 
 -- Clean Up
 DROP TABLE test_index_with_sort_directions_on_orderby_limit;
--- Test Case: Test on a Partition table with mixed data type columns.
--- Purpose: Validate if DynamicIndexScan/DynamicIndexOnlyScan with correct scan direction is used on expected index for queries with order by and limit.
+-- Test Case: Test on Leaf Partition of a partition table with mixed data type columns.
+-- Purpose: Validate if IndexScan/IndexOnlyScan with correct scan direction is used on expected index for queries with order by and limit.
 CREATE TABLE test_partition_table(a int, b int, c float, d text, e numeric, f int) DISTRIBUTED BY (a) PARTITION BY range(a);
 CREATE TABLE partition1 PARTITION OF test_partition_table FOR VALUES FROM (1) TO (3000);
 NOTICE:  table has parent, setting distribution columns to match parent table
@@ -1670,127 +1670,11 @@ NOTICE:  table has parent, setting distribution columns to match parent table
 CREATE TABLE partition3 PARTITION OF test_partition_table FOR VALUES FROM (6000) TO (9000);
 NOTICE:  table has parent, setting distribution columns to match parent table
 -- single col index with opp direction on partition column
-CREATE INDEX part_index_a on test_partition_table using btree(a desc);
--- Covering index on partition column
-CREATE INDEX part_covering_index_ab ON test_partition_table(a NULLS FIRST) INCLUDE (b);
--- Creating index on one of the partitions to check if IndexScan is used instead of DynamicIndexScan
-CREATE INDEX index_on_partition ON partition2 using btree(a desc, c);
+CREATE INDEX part_index_ac on test_partition_table using btree(a desc, c);
 INSERT INTO test_partition_table SELECT i, i+3, i/4.2, concat('sample_text ',i), i/5, i from generate_series(1,8998) i;
 -- Inserting nulls to verify results match when index key specifies nulls first or desc
 INSERT INTO test_partition_table values (8999, null, null, null, null, null);
 ANALYZE test_partition_table;
--- Positive tests: Validate if DynamicIndexScan Forward/Backward is chosen.
--- Using explain analyze to validate number of partitions scanned
--- Validate if 'part_index_a' is used for order by cols matching/commutative to the index cols
--- Expected to use Forward DynamicIndexScan
-explain analyze select a from test_partition_table order by a desc limit 3;
-                                                                           QUERY PLAN
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=0.00..7.24 rows=3 width=4) (actual time=0.943..0.945 rows=3 loops=1)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..7.24 rows=3 width=4) (actual time=0.941..0.942 rows=3 loops=1)
-         Merge Key: a
-         ->  Limit  (cost=0.00..7.24 rows=1 width=4) (actual time=0.320..0.322 rows=3 loops=1)
-               ->  Dynamic Index Scan using part_index_a on test_partition_table  (cost=0.00..7.22 rows=3000 width=4) (actual time=0.319..0.320 rows=3 loops=1)
-                     Number of partitions to scan: 3 (out of 3)
-                     Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
- Optimizer: Pivotal Optimizer (GPORCA)
- Planning Time: 6.519 ms
-   (slice0)    Executor memory: 38K bytes.
-   (slice1)    Executor memory: 45K bytes avg x 3 workers, 45K bytes max (seg0).
- Memory used:  128000kB
- Execution Time: 1.306 ms
-(13 rows)
-
-select a from test_partition_table order by a desc limit 3;
-  a   
-------
- 8999
- 8998
- 8997
-(3 rows)
-
--- Expected to use Backward DynamicIndexScan
-explain analyze select a from test_partition_table order by a limit 3;
-                                                                               QUERY PLAN
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=0.00..7.24 rows=3 width=4) (actual time=0.848..0.850 rows=3 loops=1)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..7.24 rows=3 width=4) (actual time=0.847..0.848 rows=3 loops=1)
-         Merge Key: a
-         ->  Limit  (cost=0.00..7.24 rows=1 width=4) (actual time=0.382..0.384 rows=3 loops=1)
-               ->  Dynamic Index Scan Backward using part_index_a on test_partition_table  (cost=0.00..7.22 rows=3000 width=4) (actual time=0.382..0.383 rows=3 loops=1)
-                     Number of partitions to scan: 3 (out of 3)
-                     Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
- Optimizer: Pivotal Optimizer (GPORCA)
- Planning Time: 3.424 ms
-   (slice0)    Executor memory: 38K bytes.
-   (slice1)    Executor memory: 45K bytes avg x 3 workers, 45K bytes max (seg0).
- Memory used:  128000kB
- Execution Time: 1.182 ms
-(13 rows)
-
-select a from test_partition_table order by a limit 3;
- a 
----
- 1
- 2
- 3
-(3 rows)
-
--- Validate if DynamicIndexScan works on covering index
--- Expected to choose Forward DynamicIndexScan
-explain analyze select a from test_partition_table order by a nulls first limit 3;
-                                                                                QUERY PLAN
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=0.00..7.29 rows=3 width=4) (actual time=0.761..0.763 rows=3 loops=1)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..7.29 rows=3 width=4) (actual time=0.760..0.761 rows=3 loops=1)
-         Merge Key: a
-         ->  Limit  (cost=0.00..7.29 rows=1 width=4) (actual time=0.219..0.239 rows=3 loops=1)
-               ->  Dynamic Index Scan using part_covering_index_ab on test_partition_table  (cost=0.00..7.26 rows=3000 width=4) (actual time=0.218..0.236 rows=3 loops=1)
-                     Number of partitions to scan: 3 (out of 3)
-                     Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
- Optimizer: Pivotal Optimizer (GPORCA)
- Planning Time: 3.324 ms
-   (slice0)    Executor memory: 38K bytes.
-   (slice1)    Executor memory: 45K bytes avg x 3 workers, 45K bytes max (seg0).
- Memory used:  128000kB
- Execution Time: 1.077 ms
-(13 rows)
-
-select a from test_partition_table order by a nulls first limit 3;
- a 
----
- 1
- 2
- 3
-(3 rows)
-
--- Expected to choose Backward DynamicIndexScan
-explain analyze select a from test_partition_table order by a desc nulls last limit 3;
-                                                                                    QUERY PLAN
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=0.00..7.29 rows=3 width=4) (actual time=0.906..0.912 rows=3 loops=1)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..7.29 rows=3 width=4) (actual time=0.905..0.909 rows=3 loops=1)
-         Merge Key: a
-         ->  Limit  (cost=0.00..7.29 rows=1 width=4) (actual time=0.196..0.198 rows=3 loops=1)
-               ->  Dynamic Index Scan Backward using part_covering_index_ab on test_partition_table  (cost=0.00..7.26 rows=3000 width=4) (actual time=0.196..0.197 rows=3 loops=1)
-                     Number of partitions to scan: 3 (out of 3)
-                     Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
- Optimizer: Pivotal Optimizer (GPORCA)
- Planning Time: 3.248 ms
-   (slice0)    Executor memory: 38K bytes.
-   (slice1)    Executor memory: 45K bytes avg x 3 workers, 45K bytes max (seg0).
- Memory used:  128000kB
- Execution Time: 1.263 ms
-(13 rows)
-
-select a from test_partition_table order by a desc nulls last limit 3;
-  a   
-------
- 8999
- 8998
- 8997
-(3 rows)
-
 -- Validate if IndexScan Forward/Backward are used for order by on partition2 table(as this is a regular table and don't
 -- have further partitions)
 explain(costs off) select a, c from partition2 order by a desc, c limit 3;
@@ -1800,7 +1684,7 @@ explain(costs off) select a, c from partition2 order by a desc, c limit 3;
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: a, c
          ->  Limit
-               ->  Index Scan using index_on_partition on partition2
+               ->  Index Scan using partition2_a_c_idx on partition2
  Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
@@ -1819,7 +1703,7 @@ explain(costs off) select a, c from partition2 order by a, c desc limit 3;
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: a, c
          ->  Limit
-               ->  Index Scan Backward using index_on_partition on partition2
+               ->  Index Scan Backward using partition2_a_c_idx on partition2
  Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
@@ -1831,131 +1715,47 @@ select a, c from partition2 order by a, c desc limit 3;
  3002 | 714.7619047619048
 (3 rows)
 
--- Purpose: Validate if DynamicIndexOnlyScan Forward/Backward is chosen when required for queries with order by and limit
--- Vacuum table to ensure DynamicIndexOnlyScans are chosen
+-- Purpose: Validate if IndexOnlyScan Forward/Backward is chosen when required for queries with order by and limit
+-- Vacuum table to ensure IndexOnlyScans are chosen
 vacuum test_partition_table;
--- Expected to use DynamicIndexOnlyScan Forward
-explain analyze select a from test_partition_table order by a desc limit 3;
-                                                                             QUERY PLAN
----------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=0.00..6.52 rows=3 width=4) (actual time=0.545..0.547 rows=3 loops=1)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.52 rows=3 width=4) (actual time=0.543..0.544 rows=3 loops=1)
-         Merge Key: a
-         ->  Limit  (cost=0.00..6.52 rows=1 width=4) (actual time=0.233..0.234 rows=3 loops=1)
-               ->  Dynamic Index Only Scan using part_index_a on test_partition_table  (cost=0.00..6.49 rows=3000 width=4) (actual time=0.232..0.233 rows=3 loops=1)
-                     Heap Fetches: 0
-                     Number of partitions to scan: 3 (out of 3)
-                     Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
- Optimizer: Pivotal Optimizer (GPORCA)
- Planning Time: 6.051 ms
-   (slice0)    Executor memory: 38K bytes.
-   (slice1)    Executor memory: 108K bytes avg x 3 workers, 108K bytes max (seg0).
- Memory used:  128000kB
- Execution Time: 0.855 ms
-(14 rows)
-
-select a from test_partition_table order by a desc limit 3;
-  a   
-------
- 8999
- 8998
- 8997
-(3 rows)
-
--- Expected to use DynamicIndexOnlyScan Backward
-explain analyze select a from test_partition_table order by a limit 3;
-                                                                                  QUERY PLAN
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Limit  (cost=0.00..6.52 rows=3 width=4) (actual time=1.162..1.164 rows=3 loops=1)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.52 rows=3 width=4) (actual time=1.161..1.162 rows=3 loops=1)
-         Merge Key: a
-         ->  Limit  (cost=0.00..6.52 rows=1 width=4) (actual time=0.608..0.611 rows=3 loops=1)
-               ->  Dynamic Index Only Scan Backward using part_index_a on test_partition_table  (cost=0.00..6.49 rows=3000 width=4) (actual time=0.606..0.608 rows=3 loops=1)
-                     Heap Fetches: 0
-                     Number of partitions to scan: 3 (out of 3)
-                     Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
- Optimizer: Pivotal Optimizer (GPORCA)
- Planning Time: 3.058 ms
-   (slice0)    Executor memory: 38K bytes.
-   (slice1)    Executor memory: 108K bytes avg x 3 workers, 108K bytes max (seg0).
- Memory used:  128000kB
- Execution Time: 1.590 ms
-(14 rows)
-
-select a from test_partition_table order by a limit 3;
- a 
----
- 1
- 2
- 3
-(3 rows)
-
--- Negative tests
--- Testing various permutations of order by on non-index columns. Expected to choose DynamicSeqScan with Sort
-explain(costs off) select d from test_partition_table order by d limit 3;
-                              QUERY PLAN
-----------------------------------------------------------------------
+-- Expected to use IndexOnlyScan Forward
+explain(costs off) select a, c from partition2 order by a desc, c limit 3;
+                                QUERY PLAN
+--------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: d
+         Merge Key: a, c
          ->  Limit
-               ->  Sort
-                     Sort Key: d
-                     ->  Dynamic Seq Scan on test_partition_table
-                           Number of partitions to scan: 3 (out of 3)
+               ->  Index Only Scan using partition2_a_c_idx on partition2
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(6 rows)
 
-select d from test_partition_table order by d limit 3;
-        d        
------------------
- sample_text 1
- sample_text 10
- sample_text 100
+select a, c from partition2 order by a desc, c limit 3;
+  a   |         c          
+------+--------------------
+ 5999 | 1428.3333333333333
+ 5998 |  1428.095238095238
+ 5997 |  1427.857142857143
 (3 rows)
 
-explain(costs off) select a,e from test_partition_table order by a,e limit 3;
-                              QUERY PLAN
-----------------------------------------------------------------------
+-- Expected to use IndexOnlyScan Backward
+explain(costs off) select a, c from partition2 order by a, c desc limit 3;
+                                    QUERY PLAN
+-----------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: a, e
+         Merge Key: a, c
          ->  Limit
-               ->  Sort
-                     Sort Key: a, e
-                     ->  Dynamic Seq Scan on test_partition_table
-                           Number of partitions to scan: 3 (out of 3)
+               ->  Index Only Scan Backward using partition2_a_c_idx on partition2
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(6 rows)
 
-select a,e from test_partition_table order by a,e limit 3;
- a | e 
----+---
- 1 | 0
- 2 | 0
- 3 | 0
-(3 rows)
-
-explain(costs off) select d,a from test_partition_table order by d,a desc limit 3;
-                              QUERY PLAN
-----------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: d, a
-         ->  Limit
-               ->  Sort
-                     Sort Key: d, a DESC
-                     ->  Dynamic Seq Scan on test_partition_table
-                           Number of partitions to scan: 3 (out of 3)
- Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
-
-select d,a from test_partition_table order by d,a desc limit 3;
-        d        |  a  
------------------+-----
- sample_text 1   |   1
- sample_text 10  |  10
- sample_text 100 | 100
+select a, c from partition2 order by a, c desc limit 3;
+  a   |         c         
+------+-------------------
+ 3000 | 714.2857142857143
+ 3001 | 714.5238095238095
+ 3002 | 714.7619047619048
 (3 rows)
 
 -- Clean Up
@@ -2542,9 +2342,7 @@ explain(costs off) select * from tbl_hash order by col1 limit 3;
 -- Clean Up
 DROP TABLE tbl_hash;
 -- Purpose: Test DynamicIndexScan on a list partitioned table
--- Currently, ORCA cannot support using DynamicIndexScan on List partitioned tables unless
--- we add support for MergeAppend node. This is because both partition and non-partition col values are spread unordered
--- across multiple partitions
+-- Currently, ORCA doesn't support DynamicIndex(Only)Scan on partition tables.
 CREATE TABLE sales_data(year int, geo varchar(2), impressions integer, sales integer) PARTITION BY LIST (geo);
 CREATE TABLE sales_data_UK PARTITION OF sales_data FOR VALUES IN ('UK');
 NOTICE:  table has parent, setting distribution columns to match parent table
@@ -2569,6 +2367,44 @@ explain(costs off) select * from sales_data order by geo limit 3;
 -- Clean Up
 reset enable_seqscan;
 DROP TABLE sales_data;
+-- Purpose: Test DynamicIndexScan on partition table with holes and a default partition
+-- Currently, ORCA doesn't support DynamicIndex(Only)Scan on partition tables.
+CREATE TABLE tbl_range (id int, col1 int, col2 int, col3 int) PARTITION BY RANGE (col1);
+CREATE TABLE p1 PARTITION OF tbl_range FOR VALUES FROM (100) TO (200);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE p2 PARTITION OF tbl_range FOR VALUES FROM (200) TO (300);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE p3 PARTITION OF tbl_range DEFAULT;
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE INDEX idx_on_tbl_range ON tbl_range using btree(col1);
+INSERT INTO tbl_range select i-1,i,i*3,i/2 FROM generate_series(0, 400) i;
+ANALYZE tbl_range;
+-- Demonstrate that Planner could use IndexScan with MergeAppend for these cases
+set enable_seqscan to off;
+explain(costs off) select * from tbl_range order by col1 limit 3;
+                              QUERY PLAN
+----------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: col1
+         ->  Limit
+               ->  Sort
+                     Sort Key: col1
+                     ->  Dynamic Seq Scan on tbl_range
+                           Number of partitions to scan: 3 (out of 3)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select * from tbl_range order by col1 limit 3;
+ id | col1 | col2 | col3 
+----+------+------+------
+ -1 |    0 |    0 |    0
+  0 |    1 |    3 |    0
+  1 |    2 |    6 |    1
+(3 rows)
+
+-- Clean Up
+DROP TABLE tbl_range;
 -- Purpose: This section includes tests on general table where backward index scan could be used, but is not used currently since
 --          those cases are not supported as part of this initial addition of backward index support.
 CREATE TABLE test_yet_unsupported_backwrd_idxscan_cases (a int, b text, c float, d int, e int);
@@ -2857,7 +2693,7 @@ reset enable_seqscan;
 DROP TABLE table1;
 DROP TABLE table2;
 -- Purpose: This section includes tests on partition table where backward DynamicIndexScan could be used, but is not used currently since
---          those cases are not supported as part of this initial addition of backward index support.
+--          ORCA currently doesn't support DynamicIndex(Only)Scan on partition tables.
 CREATE TABLE test_partition_table(a int, b text, c float, d int, e int) DISTRIBUTED BY (a) PARTITION BY range(a) (start (0) end(10000) every(2000));
 -- single col index on partition column
 CREATE INDEX part_index_a on test_partition_table using btree(a);
@@ -2868,6 +2704,50 @@ CREATE INDEX part_index_cad on test_partition_table using btree(c,a,d);
 -- Inserting data to demonstrate that Planner chooses IndexScans for these cases
 INSERT INTO test_partition_table select i, concat('sample_text', i), i/3.3, i,i-2 from generate_series(1,9999)i;
 ANALYZE test_partition_table;
+-- Currently ORCA doesn't support DynamicIndex(Only)Scans for order by on partition tables,
+-- even if a btree index exists matching/commutative to order by cols. ORCA uses DynamicSeqScan with sort.
+explain(costs off) select c,d from test_partition_table order by c, d  limit 3;
+                              QUERY PLAN
+----------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: c, d
+         ->  Limit
+               ->  Sort
+                     Sort Key: c, d
+                     ->  Dynamic Seq Scan on test_partition_table
+                           Number of partitions to scan: 5 (out of 5)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+explain(costs off) select c,a,d from test_partition_table order by c,a,d limit 3;
+                              QUERY PLAN
+----------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: c, a, d
+         ->  Limit
+               ->  Sort
+                     Sort Key: c, a, d
+                     ->  Dynamic Seq Scan on test_partition_table
+                           Number of partitions to scan: 5 (out of 5)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+explain(costs off) select b,c,d from test_partition_table order by b desc,c desc,d desc limit 3;
+                              QUERY PLAN
+----------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: b, c, d
+         ->  Limit
+               ->  Sort
+                     Sort Key: b DESC, c DESC, d DESC
+                     ->  Dynamic Seq Scan on test_partition_table
+                           Number of partitions to scan: 5 (out of 5)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
 -- Cases with just order by without limit
 explain(costs off) select a from test_partition_table order by a desc;
                         QUERY PLAN
@@ -2916,7 +2796,7 @@ explain(costs off) select * from test_partition_table where a>7 order by a desc 
          ->  Limit
                ->  Sort
                      Sort Key: a DESC
-                     ->  Dynamic Index Scan using part_index_a on test_partition_table
+                     ->  Dynamic Index Scan on part_index_a on test_partition_table
                            Index Cond: (a > 7)
                            Number of partitions to scan: 5 (out of 5)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -2963,7 +2843,7 @@ explain(costs off) select  a, sum(d) from test_partition_table group by a having
          Group Key: a
          ->  Sort
                Sort Key: a DESC
-               ->  Dynamic Index Scan using part_index_a on test_partition_table
+               ->  Dynamic Index Scan on part_index_a on test_partition_table
                      Index Cond: (a > 30)
                      Number of partitions to scan: 5 (out of 5)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -2978,7 +2858,7 @@ explain(costs off) select  a, sum(d) from test_partition_table group by a having
          Group Key: a
          ->  Sort
                Sort Key: a DESC
-               ->  Dynamic Index Scan using part_index_a on test_partition_table
+               ->  Dynamic Index Scan on part_index_a on test_partition_table
                      Index Cond: (a > 30)
                      Number of partitions to scan: 5 (out of 5)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -3067,52 +2947,6 @@ explain(costs off) with sorted_by_a as (select a from test_partition_table order
  Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
--- Currently ORCA only supports DynamicIndex(Only)Scans for order by(same as the order of cols in partition key) on partition column(s),
--- given partition colum(s) match prefix of any of existing btree indices keys, for order by on any other columns
--- even if a btree index exists matching them ORCA uses DynamicSeqScan with sort. This is because
--- all other columns are spread unordered across multiple partitions and cannot be ordered(without Sort) unless added support for MergeAppend.
-explain(costs off) select c,d from test_partition_table order by c,d limit 3;
-                              QUERY PLAN
-----------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: c, d
-         ->  Limit
-               ->  Sort
-                     Sort Key: c, d
-                     ->  Dynamic Seq Scan on test_partition_table
-                           Number of partitions to scan: 5 (out of 5)
- Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
-
-explain(costs off) select c,a,d from test_partition_table order by c,a,d limit 3;
-                              QUERY PLAN
-----------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: c, a, d
-         ->  Limit
-               ->  Sort
-                     Sort Key: c, a, d
-                     ->  Dynamic Seq Scan on test_partition_table
-                           Number of partitions to scan: 5 (out of 5)
- Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
-
-explain(costs off) select b,c,d from test_partition_table order by b desc,c desc,d desc limit 3;
-                              QUERY PLAN
-----------------------------------------------------------------------
- Limit
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: b, c, d
-         ->  Limit
-               ->  Sort
-                     Sort Key: b DESC, c DESC, d DESC
-                     ->  Dynamic Seq Scan on test_partition_table
-                           Number of partitions to scan: 5 (out of 5)
- Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
-
 -- Case where DynamicIndexOnlyScan Backwards could be picked, but ORCA fails to produce DynamicIndexOnlyScan alternative.
 -- This is because, in FCoverIndex() function while determining output columns for the query we also consider partition
 -- column as part of the output cols(though query doesn't project it) since partition colum is always marked as Used.
@@ -3133,7 +2967,7 @@ explain(costs off) select b,c,d from test_partition_table order by b desc, c des
 
 -- Clean Up
 DROP TABLE test_partition_table;
--- Test Case: NL Joins can utilize IndexScan's sort property, but currently ORCA doesn't generate IndexScan alternatives for NL joins.
+-- Test Case: NL Joins can utilize IndexScan's sort property, but currently ORCA doesn't generate DynamicIndexScan alternatives for NL joins.
 --            This tests the case where IndexScan's order property could be used for joining two partition tables
 CREATE TABLE part_employee(id int, name text, dep_id int, salary int) PARTITION BY range(id) (start (0) end(10000) every(2000));
 CREATE TABLE part_department(dep_id int, dep_name text) PARTITION BY range(dep_id) (start (0) end(10000) every(2000));
@@ -3145,7 +2979,7 @@ set enable_hashjoin to off;
 set optimizer_enable_hashjoin to off;
 set enable_seqscan to off;
 -- Planner uses NL Join with IndexScan Backwards and the sort property of index 'index_salary',
--- but ORCA since doesn't generate IndexScan alternative uses NL join with a Sort operator.
+-- but ORCA since it doesn't generate DynamicIndexScan alternative uses NL join with a Sort operator.
 explain(costs off) select e.id, e.name, e.salary, d.dep_name from part_employee e join part_department d on e.id=d.dep_id order by e.id desc;
                                 QUERY PLAN
 ---------------------------------------------------------------------------
@@ -3157,7 +2991,7 @@ explain(costs off) select e.id, e.name, e.salary, d.dep_name from part_employee 
                Join Filter: true
                ->  Dynamic Seq Scan on part_department
                      Number of partitions to scan: 5 (out of 5)
-               ->  Dynamic Index Scan using part_index_id on part_employee
+               ->  Dynamic Index Scan on part_index_id on part_employee
                      Index Cond: (id = part_department.dep_id)
                      Number of partitions to scan: 5 (out of 5)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -3175,7 +3009,7 @@ explain(costs off) select e.id, e.name, e.salary, d.dep_name from part_employee 
                      Join Filter: true
                      ->  Dynamic Seq Scan on part_department
                            Number of partitions to scan: 5 (out of 5)
-                     ->  Dynamic Index Scan using part_index_id on part_employee
+                     ->  Dynamic Index Scan on part_index_id on part_employee
                            Index Cond: (id = part_department.dep_id)
                            Number of partitions to scan: 5 (out of 5)
  Optimizer: Pivotal Optimizer (GPORCA)

@@ -3723,13 +3723,13 @@ CDXLOperatorFactory::ParseIndexType(const Attributes &attrs)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLOperatorFactory::ExtractSortAndNullsToULongArray
+//		CDXLOperatorFactory::ExtractConvertBooleanListToULongArray
 //
 //	@doc:
-//		Parse index keys sort and nulls directions.
+//		Parse boolean list of index keys sort or nulls directions.
 //---------------------------------------------------------------------------
 ULongPtrArray *
-CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
+CDXLOperatorFactory::ExtractConvertBooleanListToULongArray(
 	CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val,
 	bool extract_sort, ULONG num_of_keys)
 {
@@ -3738,7 +3738,8 @@ CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
 	ULongPtrArray *ulong_array = GPOS_NEW(mp) ULongPtrArray(mp);
 
 	// Only B-tree indices have sort and nulls directions in dxl
-	// For any other index type, return empty array
+	// For mdps with btree indices that do not have sort/nulls direction, and any other index
+	// type return array with 0s and consider ASC as default
 	if (xml_val == nullptr)
 	{
 		for (ULONG ul = 0; ul < num_of_keys; ul++)

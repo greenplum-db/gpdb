@@ -41,9 +41,6 @@ private:
 	// order
 	COrderSpec *m_pos;
 
-	// index scan direction
-	EIndexScanDirection m_scan_direction;
-
 public:
 	CPhysicalDynamicIndexScan(const CPhysicalDynamicIndexScan &) = delete;
 
@@ -54,8 +51,7 @@ public:
 							  CColRefArray *pdrgpcrOutput, ULONG scan_id,
 							  CColRef2dArray *pdrgpdrgpcrPart, COrderSpec *pos,
 							  IMdIdArray *partition_mdids,
-							  ColRefToUlongMapArray *root_col_mapping_per_part,
-							  EIndexScanDirection scan_direction);
+							  ColRefToUlongMapArray *root_col_mapping_per_part);
 
 	// dtor
 	~CPhysicalDynamicIndexScan() override;
@@ -80,13 +76,6 @@ public:
 	Pindexdesc() const
 	{
 		return m_pindexdesc;
-	}
-
-	// index scan direction is only used for B-tree indices.
-	EIndexScanDirection
-	ScanDirection() const
-	{
-		return m_scan_direction;
 	}
 
 	// operator specific hash function

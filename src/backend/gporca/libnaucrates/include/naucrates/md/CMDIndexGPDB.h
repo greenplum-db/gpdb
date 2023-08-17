@@ -152,10 +152,10 @@ public:
 	// child index oids
 	IMdIdArray *ChildIndexMdids() const override;
 
-	// serialize index keys sort and nulls direction
-	CWStringDynamic *SerializeSortAndNullsDirection(
-		CMemoryPool *mp, ULongPtrArray *dynamic_ptr_array,
-		bool serialize_Sort) const;
+	// serialize index keys sort or nulls direction
+	CWStringDynamic *SerializeBooleanArray(CMemoryPool *mp,
+										   ULongPtrArray *dynamic_ptr_array,
+										   bool serialize_Sort) const;
 
 #ifdef GPOS_DEBUG
 	// debug print of the MD index

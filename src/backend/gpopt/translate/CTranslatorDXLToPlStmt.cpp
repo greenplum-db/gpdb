@@ -4442,22 +4442,14 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxOnlyScan(
 	List *index_strategy_list = NIL;
 	List *index_subtype_list = NIL;
 
-	CDXLNode *index_cond_list_dxlnode = (*dyn_idx_only_scan_dxlnode)
-		[CDXLPhysicalDynamicIndexScan::EdxldisIndexCondition];
-	// Translate Index Conditions if Index isn't used for order by.
-	// If an index is used just as part of ORDER BY clause and query doesn't
-	// have any predicates, skip translating conditions as predicate doesn't exist.
-	if (!IsIndexForOrderBy(&base_table_context, ctxt_translation_prev_siblings,
-						   output_context, index_cond_list_dxlnode))
-	{
-		TranslateIndexConditions(
-			index_cond_list_dxlnode,
-			dyn_index_only_scan_dxlop->GetDXLTableDescr(),
-			false,	// is_bitmap_index_probe
-			md_index, md_rel, output_context, &base_table_context,
-			ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
-			&index_strategy_list, &index_subtype_list);
-	}
+	TranslateIndexConditions(
+		(*dyn_idx_only_scan_dxlnode)
+			[CDXLPhysicalDynamicIndexScan::EdxldisIndexCondition],
+		dyn_index_only_scan_dxlop->GetDXLTableDescr(),
+		false,	// is_bitmap_index_probe
+		md_index, md_rel, output_context, &base_table_context,
+		ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
+		&index_strategy_list, &index_subtype_list);
 
 
 	dyn_idx_only_scan->indexscan.indexqual = index_cond;
@@ -4533,21 +4525,14 @@ CTranslatorDXLToPlStmt::TranslateDXLDynIdxScan(
 	List *index_strategy_list = NIL;
 	List *index_subtype_list = NIL;
 
-	CDXLNode *index_cond_list_dxlnode = (*dyn_idx_only_scan_dxlnode)
-		[CDXLPhysicalDynamicIndexScan::EdxldisIndexCondition];
-	// Translate Index Conditions if Index isn't used for order by.
-	// If an index is used just as part of ORDER BY clause and query doesn't
-	// have any predicates, skip translating conditions as predicate doesn't exist.
-	if (!IsIndexForOrderBy(&base_table_context, ctxt_translation_prev_siblings,
-						   output_context, index_cond_list_dxlnode))
-	{
-		TranslateIndexConditions(
-			index_cond_list_dxlnode, dyn_index_scan_dxlop->GetDXLTableDescr(),
-			false,	// is_bitmap_index_probe
-			md_index, md_rel, output_context, &base_table_context,
-			ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
-			&index_strategy_list, &index_subtype_list);
-	}
+	TranslateIndexConditions(
+		(*dyn_idx_only_scan_dxlnode)
+			[CDXLPhysicalDynamicIndexScan::EdxldisIndexCondition],
+		dyn_index_scan_dxlop->GetDXLTableDescr(),
+		false,	// is_bitmap_index_probe
+		md_index, md_rel, output_context, &base_table_context,
+		ctxt_translation_prev_siblings, &index_cond, &index_orig_cond,
+		&index_strategy_list, &index_subtype_list);
 
 
 	dyn_idx_only_scan->indexscan.indexqual = index_cond;

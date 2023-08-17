@@ -91,7 +91,7 @@ VACUUM
  QUERY PLAN                                         
 ----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)           
-   ->  Dynamic Index Scan using idx on pt           
+   ->  Dynamic Index Scan on idx on pt              
          Index Cond: (a < 4)                        
          Number of partitions to scan: 2 (out of 5) 
  Optimizer: Pivotal Optimizer (GPORCA)              
@@ -159,7 +159,7 @@ VACUUM
  QUERY PLAN                                         
 ----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)           
-   ->  Dynamic Index Only Scan using idx on pt      
+   ->  Dynamic Index Only Scan on idx on pt         
          Index Cond: (a < 4)                        
          Number of partitions to scan: 2 (out of 5) 
  Optimizer: Pivotal Optimizer (GPORCA)              

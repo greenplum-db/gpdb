@@ -38,12 +38,11 @@ public:
 		CColRefArray *pdrgpcrOutput, ULONG scan_id,
 		CColRef2dArray *pdrgpdrgpcrPart, COrderSpec *pos,
 		IMdIdArray *partition_mdids,
-		ColRefToUlongMapArray *root_col_mapping_per_part,
-		EIndexScanDirection scan_direction)
+		ColRefToUlongMapArray *root_col_mapping_per_part)
 		: CPhysicalDynamicIndexScan(mp, pindexdesc, ptabdesc, ulOriginOpId,
 									pnameAlias, pdrgpcrOutput, scan_id,
 									pdrgpdrgpcrPart, pos, partition_mdids,
-									root_col_mapping_per_part, scan_direction)
+									root_col_mapping_per_part)
 	{
 	}
 

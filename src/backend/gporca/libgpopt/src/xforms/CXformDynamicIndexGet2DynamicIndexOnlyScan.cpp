@@ -119,8 +119,7 @@ CXformDynamicIndexGet2DynamicIndexOnlyScan::Transform(
 			GPOS_NEW(mp) CName(mp, popIndexGet->Name()), pdrgpcrOutput,
 			popIndexGet->ScanId(), pdrgpdrgpcrPart, pos,
 			popIndexGet->GetPartitionMdids(),
-			popIndexGet->GetRootColMappingPerPart(),
-			popIndexGet->ScanDirection()),
+			popIndexGet->GetRootColMappingPerPart()),
 		pexprIndexCond));
 }
 

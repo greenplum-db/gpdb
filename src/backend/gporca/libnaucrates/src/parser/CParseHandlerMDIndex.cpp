@@ -137,17 +137,20 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const element_uri,
 	const XMLCh *xmlszIndexKeysSortDirections =
 		CDXLOperatorFactory::ExtractAttrValue(
 			attrs, EdxltokenIndexKeysSortDirection, EdxltokenIndex, true);
-	m_sort_direction = CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
-		m_parse_handler_mgr->GetDXLMemoryManager(),
-		xmlszIndexKeysSortDirections, true, m_index_key_cols_array->Size());
+	m_sort_direction =
+		CDXLOperatorFactory::ExtractConvertBooleanListToULongArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(),
+			xmlszIndexKeysSortDirections, true, m_index_key_cols_array->Size());
 
 	// extract index keys nulls directions
 	const XMLCh *xmlszIndexKeysNullsDirections =
 		CDXLOperatorFactory::ExtractAttrValue(
 			attrs, EdxltokenIndexKeysNullsDirection, EdxltokenIndex, true);
-	m_nulls_direction = CDXLOperatorFactory::ExtractSortAndNullsToULongArray(
-		m_parse_handler_mgr->GetDXLMemoryManager(),
-		xmlszIndexKeysNullsDirections, false, m_index_key_cols_array->Size());
+	m_nulls_direction =
+		CDXLOperatorFactory::ExtractConvertBooleanListToULongArray(
+			m_parse_handler_mgr->GetDXLMemoryManager(),
+			xmlszIndexKeysNullsDirections, false,
+			m_index_key_cols_array->Size());
 
 	// parse handler for operator class list
 	CParseHandlerBase *opfamilies_list_parse_handler =

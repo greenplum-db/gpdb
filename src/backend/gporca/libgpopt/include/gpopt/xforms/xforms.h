@@ -118,7 +118,6 @@
 #include "gpopt/xforms/CXformLeftSemiJoin2InnerJoin.h"
 #include "gpopt/xforms/CXformLeftSemiJoin2InnerJoinUnderGb.h"
 #include "gpopt/xforms/CXformLeftSemiJoin2NLJoin.h"
-#include "gpopt/xforms/CXformLimit2DynamicIndexGet.h"
 #include "gpopt/xforms/CXformLimit2IndexGet.h"
 #include "gpopt/xforms/CXformMaxOneRow2Assert.h"
 #include "gpopt/xforms/CXformProject2Apply.h"

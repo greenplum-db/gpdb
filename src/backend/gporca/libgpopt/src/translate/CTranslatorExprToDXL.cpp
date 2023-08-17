@@ -1583,45 +1583,9 @@ CTranslatorExprToDXL::PdxlnDynamicIndexScan(
 
 
 	// construct dynamic table scan operator
-	// Determine partitions ordering based on the required order spec
-	IMdIdArray *part_mdids = nullptr;
-	CEnfdOrder *peo = prpp->Peo();
-	COrderSpec *req_order = peo->PosRequired();
-	if (req_order->UlSortColumns() > 0)
-	{
-		const CColRef *colref = req_order->Pcr(0);
-		IMDId *order_col_mdid = req_order->GetMdIdSortOp(0);
-		IMDId *greater_than_mdid =
-			colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG);
-		// If Order by is DESC, reverse the partitions order
-		if (order_col_mdid->Equals(greater_than_mdid))
-		{
-			part_mdids = GPOS_NEW(m_mp) IMdIdArray(m_mp);
-			IMdIdArray *current_mdids = popDIS->GetPartitionMdids();
-			for (INT i = current_mdids->Size() - 1; i >= 0; i--)
-			{
-				IMDId *mdid = (*current_mdids)[i];
-				mdid->AddRef();
-				part_mdids->Append(mdid);
-			}
-		}
-		else
-		{
-			part_mdids = popDIS->GetPartitionMdids();
-			part_mdids->AddRef();
-		}
-	}
-	// Ignore if query doesn't have order by clause
-	else
-	{
-		part_mdids = popDIS->GetPartitionMdids();
-		part_mdids->AddRef();
-	}
+	IMdIdArray *part_mdids = popDIS->GetPartitionMdids();
+	part_mdids->AddRef();
 
-	// get scan direction from PhysicalDynamicIndexScan operator
-	EdxlIndexScanDirection scan_direction =
-		(popDIS->ScanDirection() == EForwardScan) ? EdxlisdForward
-												  : EdxlisdBackward;
 	ULongPtrArray *selector_ids = GPOS_NEW(m_mp) ULongPtrArray(m_mp);
 	CPartitionPropagationSpec *pps_reqd = prpp->Pepp()->PppsRequired();
 	if (pps_reqd->Contains(popDIS->ScanId()))
@@ -1634,20 +1598,22 @@ CTranslatorExprToDXL::PdxlnDynamicIndexScan(
 		}
 	}
 
+	// TODO: we assume that the index are always forward access for partition
+	//  tables as ORCA currently doesn't support backward scans on partition tables.
 	CDXLNode *pdxlnDIS = nullptr;
 	if (indexOnly)
 	{
 		pdxlnDIS = GPOS_NEW(m_mp)
 			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLPhysicalDynamicIndexOnlyScan(
 							   m_mp, table_descr, dxl_index_descr,
-							   scan_direction, part_mdids, selector_ids));
+							   EdxlisdForward, part_mdids, selector_ids));
 	}
 	else
 	{
 		pdxlnDIS = GPOS_NEW(m_mp)
 			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLPhysicalDynamicIndexScan(
 							   m_mp, table_descr, dxl_index_descr,
-							   scan_direction, part_mdids, selector_ids));
+							   EdxlisdForward, part_mdids, selector_ids));
 	}
 
 	// set plan costs

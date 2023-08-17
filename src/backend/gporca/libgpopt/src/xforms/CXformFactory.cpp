@@ -295,7 +295,6 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformPushJoinBelowRightUnionAll(m_mp));
 	Add(GPOS_NEW(m_mp) CXformLimit2IndexGet(m_mp));
 	Add(GPOS_NEW(m_mp) CXformDynamicIndexGet2DynamicIndexOnlyScan(m_mp));
-	Add(GPOS_NEW(m_mp) CXformLimit2DynamicIndexGet(m_mp));
 
 	GPOS_ASSERT(nullptr != m_rgpxf[CXform::ExfSentinel - 1] &&
 				"Not all xforms have been instantiated");

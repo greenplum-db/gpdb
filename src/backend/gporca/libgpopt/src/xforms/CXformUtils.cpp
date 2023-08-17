@@ -2523,7 +2523,7 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 		popLogicalGet = PopDynamicBtreeIndexOpConstructor(
 			mp, pmdindex, ptabdesc, ulOriginOpId,
 			GPOS_NEW(mp) CName(mp, CName(alias)), ulPartIndex, pdrgpcrOutput,
-			pdrgpdrgpcrPart, partition_mdids, indexscanDirection);
+			pdrgpdrgpcrPart, partition_mdids);
 	}
 	else
 	{

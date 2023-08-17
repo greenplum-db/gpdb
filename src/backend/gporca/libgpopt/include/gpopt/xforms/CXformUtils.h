@@ -190,15 +190,17 @@ private:
 
 	// create a dynamic operator for a btree index plan
 	static CLogical *
-	PopDynamicBtreeIndexOpConstructor(
-		CMemoryPool *mp, const IMDIndex *pmdindex, CTableDescriptor *ptabdesc,
-		ULONG ulOriginOpId, CName *pname, ULONG ulPartIndex,
-		CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrPart,
-		IMdIdArray *partition_mdids, EIndexScanDirection scan_direction)
+	PopDynamicBtreeIndexOpConstructor(CMemoryPool *mp, const IMDIndex *pmdindex,
+									  CTableDescriptor *ptabdesc,
+									  ULONG ulOriginOpId, CName *pname,
+									  ULONG ulPartIndex,
+									  CColRefArray *pdrgpcrOutput,
+									  CColRef2dArray *pdrgpdrgpcrPart,
+									  IMdIdArray *partition_mdids)
 	{
 		return GPOS_NEW(mp) CLogicalDynamicIndexGet(
 			mp, pmdindex, ptabdesc, ulOriginOpId, pname, ulPartIndex,
-			pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids, scan_direction);
+			pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids);
 	}
 
 	//	create a static operator for a btree index plan

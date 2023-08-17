@@ -280,7 +280,7 @@ CMDIndexGPDB::KeySortDirectionAt(ULONG pos) const
 //	@doc:
 //		Returns n-th column Nulls direction
 //		0 corresponds to NULLS LAST
-//      1 corresponds to NULLS FIRST
+//		1 corresponds to NULLS FIRST
 //---------------------------------------------------------------------------
 ULONG
 CMDIndexGPDB::KeyNullsDirectionAt(ULONG pos) const
@@ -362,14 +362,14 @@ CMDIndexGPDB::Serialize(CXMLSerializer *xml_serializer) const
 	if (m_index_type == EmdindBtree)
 	{
 		CWStringDynamic *key_cols_sort_direction_str =
-			SerializeSortAndNullsDirection(m_mp, m_sort_direction, true);
+			SerializeBooleanArray(m_mp, m_sort_direction, true);
 		xml_serializer->AddAttribute(
 			CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeysSortDirection),
 			key_cols_sort_direction_str);
 		GPOS_DELETE(key_cols_sort_direction_str);
 
 		CWStringDynamic *key_cols_nulls_direction_str =
-			SerializeSortAndNullsDirection(m_mp, m_nulls_direction, false);
+			SerializeBooleanArray(m_mp, m_nulls_direction, false);
 		xml_serializer->AddAttribute(
 			CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeysNullsDirection),
 			key_cols_nulls_direction_str);
@@ -500,16 +500,16 @@ CMDIndexGPDB::ChildIndexMdids() const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CMDIndexGPDB::SerializeSortAndNullsDirection
+//		CMDIndexGPDB::SerializeBooleanArray
 //
 //	@doc:
-//		Serialize B-tree indices sort and nulls direction.
+//		Serialize a boolean array representing B-tree indices sort or nulls direction.
 //
 //---------------------------------------------------------------------------
 CWStringDynamic *
-CMDIndexGPDB::SerializeSortAndNullsDirection(CMemoryPool *mp,
-											 ULongPtrArray *dynamic_ptr_array,
-											 bool serialize_Sort) const
+CMDIndexGPDB::SerializeBooleanArray(CMemoryPool *mp,
+									ULongPtrArray *dynamic_ptr_array,
+									bool serialize_Sort) const
 {
 	CAutoP<CWStringDynamic> string_var(GPOS_NEW(mp) CWStringDynamic(mp));
 
@@ -522,6 +522,7 @@ CMDIndexGPDB::SerializeSortAndNullsDirection(CMemoryPool *mp,
 	for (ULONG ul = 0; ul < length; ul++)
 	{
 		ULONG value = *((*dynamic_ptr_array)[ul]);
+		GPOS_ASSERT(value == 0 || value == 1);
 		const CWStringConst *string_repr;
 		if (serialize_Sort)
 		{

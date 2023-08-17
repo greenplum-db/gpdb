@@ -40,8 +40,7 @@ CLogicalDynamicIndexGet::CLogicalDynamicIndexGet(CMemoryPool *mp)
 	: CLogicalDynamicGetBase(mp),
 	  m_pindexdesc(nullptr),
 	  m_ulOriginOpId(gpos::ulong_max),
-	  m_pos(nullptr),
-	  m_scan_direction(EForwardScan)
+	  m_pos(nullptr)
 {
 }
 
@@ -57,21 +56,20 @@ CLogicalDynamicIndexGet::CLogicalDynamicIndexGet(
 	CMemoryPool *mp, const IMDIndex *pmdindex, CTableDescriptor *ptabdesc,
 	ULONG ulOriginOpId, const CName *pnameAlias, ULONG part_idx_id,
 	CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrPart,
-	IMdIdArray *partition_mdids, EIndexScanDirection scan_direction)
+	IMdIdArray *partition_mdids)
 	: CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, part_idx_id,
 							 pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids),
 	  m_pindexdesc(nullptr),
-	  m_ulOriginOpId(ulOriginOpId),
-	  m_scan_direction(scan_direction)
+	  m_ulOriginOpId(ulOriginOpId)
 {
 	GPOS_ASSERT(nullptr != pmdindex);
 
 	// create the index descriptor
 	m_pindexdesc = CIndexDescriptor::Pindexdesc(mp, ptabdesc, pmdindex);
 
-	// compute the order spec
+	// Assumes scan direction always Forward as Backwards Scan isn't supported for partition tables
 	m_pos = PosFromIndex(m_mp, pmdindex, m_pdrgpcrOutput, ptabdesc,
-						 m_scan_direction);
+						 EForwardScan /*scan direction*/);
 }
 
 //---------------------------------------------------------------------------
@@ -171,7 +169,7 @@ CLogicalDynamicIndexGet::PopCopyWithRemappedColumns(
 
 	return GPOS_NEW(mp) CLogicalDynamicIndexGet(
 		mp, pmdindex, m_ptabdesc, m_ulOriginOpId, pnameAlias, m_scan_id,
-		pdrgpcrOutput, pdrgpdrgpcrPart, m_partition_mdids, m_scan_direction);
+		pdrgpcrOutput, pdrgpdrgpcrPart, m_partition_mdids);
 }
 
 //---------------------------------------------------------------------------
@@ -252,10 +250,8 @@ CLogicalDynamicIndexGet::OsPrint(IOstream &os) const
 	os << "Columns: [";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrOutput);
 	os << "] Scan Id: " << m_scan_id;
-	if (m_scan_direction == EBackwardScan)
-	{
-		os << ", Backward Scan";
-	}
+
+
 	return os;
 }
 

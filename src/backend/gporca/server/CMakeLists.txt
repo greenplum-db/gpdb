@@ -144,13 +144,10 @@ DynamicIndexScan-DefaultPartition DynamicIndexScan-DefaultPartition-2
 DynamicIndexScan-Homogenous-UnsupportedConstraint DynamicIndexScan-Heterogenous-UnsupportedConstraint
 DynamicIndexScan-Heterogenous-PartSelectEquality
 DynamicIndexScan-Heterogenous-PartSelectRange DynamicIndexScan-OpenEndedPartitions
-DynamicIndexScan-Relabel DynamicIndexScan-DroppedCols Forward-DynamicIndexScan-OrderBy-on-SingleCol-Index
-Backward-DynamicIndexScan-OrderBy-on-SingleCol-Index DynamicIndexScan-OrderBy-on-MultiCol-NonIndex;
+DynamicIndexScan-Relabel DynamicIndexScan-DroppedCols;
 
 CDynamicIndexOnlyScanTest:
-DynamicIndexOnlyScan-Homogenous DynamicIndexOnlyScan-InnerJoin DynamicIndexOnlyScan-LeftJoin
-Forward-DynamicIndexOnlyScan-OrderBy-on-SingleCol-Index Backward-DynamicIndexOnlyScan-OrderBy-on-SingleCol-Index
-DynamicIndexOnlyScan-OrderBy-on-MultiCol-NonIndex;
+DynamicIndexOnlyScan-Homogenous DynamicIndexOnlyScan-InnerJoin DynamicIndexOnlyScan-LeftJoin;
 
 CIndexScanOnLeafTest:
 IndexOnLeaf-AddNewPartitionToRootTableContainingHeterogenousIndex
