@@ -212,7 +212,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Index Mdid="0.310609.1.0" Name="p_1_prt_3_ab" IsClustered="false" IsPartial="true" KeyColumns="0,1" IncludedColumns="">
+      <dxl:Index Mdid="0.310609.1.0" Name="p_1_prt_3_ab" IsClustered="false" IsPartial="true" KeyColumns="0,1" IncludedColumns="" ReturnableColumns="0,1">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
@@ -225,7 +225,7 @@
           <dxl:Partition Mdid="6.310609002.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
-      <dxl:Index Mdid="0.327405.1.0" Name="p_1_prt_extra_a_key" IsClustered="false" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.327405.1.0" Name="p_1_prt_extra_a_key" IsClustered="false" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

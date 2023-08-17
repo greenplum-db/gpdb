@@ -138,7 +138,7 @@
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.3373430.1.0" Name="idx_yj" IsClustered="false" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="0.3373430.1.0" Name="idx_yj" IsClustered="false" KeyColumns="1" IncludedColumns="" ReturnableColumns="1">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

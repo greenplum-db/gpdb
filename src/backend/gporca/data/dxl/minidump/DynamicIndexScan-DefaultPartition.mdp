@@ -168,7 +168,7 @@
       </dxl:GPDBScalarOp>
       <dxl:ColumnStatistics Mdid="1.274855.1.1.3" Name="ctid" Width="6.000000"/>
       <dxl:ColumnStatistics Mdid="1.274855.1.1.2" Name="c" Width="8.000000"/>
-      <dxl:Index Mdid="0.275094.1.0" Name="ppp_1_prt_extra_ind_c" IsClustered="false" KeyColumns="2" IncludedColumns="">
+      <dxl:Index Mdid="0.275094.1.0" Name="ppp_1_prt_extra_ind_c" IsClustered="false" KeyColumns="2" IncludedColumns="" ReturnableColumns="2">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

@@ -55,7 +55,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.98319.1.0" Name="bar" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Index Mdid="0.98318.1.0" Name="foo_idx" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1,2" IncludedColumns="">
+      <dxl:Index Mdid="0.98318.1.0" Name="foo_idx" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1,2" IncludedColumns="" ReturnableColumns="1,2">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>

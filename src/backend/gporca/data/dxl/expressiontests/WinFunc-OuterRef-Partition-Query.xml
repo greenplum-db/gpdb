@@ -613,7 +613,7 @@ select * from x where x.i in (select row_number() over(partition by x.i) from y)
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
       <dxl:MDScalarComparison Mdid="4.23.1.0;20.1.0;0" Name="=" ComparisonType="Eq" LeftType="0.23.1.0" RightType="0.20.1.0" OperatorMdid="0.15.1.0"/>
-      <dxl:Index Mdid="0.17159874.1.0" Name="idx_x_j" IsClustered="false" IndexType="B-tree" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="0.17159874.1.0" Name="idx_x_j" IsClustered="false" IndexType="B-tree" KeyColumns="1" IncludedColumns="" ReturnableColumns="1">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -659,7 +659,7 @@ select * from x where x.i in (select row_number() over(partition by x.i) from y)
         <dxl:ResultType Mdid="0.20.1.0"/>
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
-      <dxl:Index Mdid="0.17159920.1.0" Name="idx_x_i" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.17159920.1.0" Name="idx_x_i" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>

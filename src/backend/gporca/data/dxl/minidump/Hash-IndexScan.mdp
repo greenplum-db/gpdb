@@ -181,7 +181,7 @@
           <dxl:DistrOpfamily Mdid="0.1977.1.0"/>
         </dxl:DistrOpfamilies>
       </dxl:Relation>
-      <dxl:Index Mdid="7.52423.1.0" Name="idx1" IsClustered="false" IndexType="Hash" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="7.52423.1.0" Name="idx1" IsClustered="false" IndexType="Hash" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1977.1.0"/>
         </dxl:Opfamilies>

@@ -195,7 +195,7 @@ explain select * from xfoo where j = 1 and k = 2;
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.51565282.1.0" Name="idx_jk" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1,2" IncludedColumns="">
+      <dxl:Index Mdid="0.51565282.1.0" Name="idx_jk" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1,2" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
           <dxl:Opfamily Mdid="0.3027.1.0"/>

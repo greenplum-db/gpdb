@@ -33,7 +33,7 @@
       </dxl:IndexInfoList>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Index Mdid="0.2345.2.1" Name="T_a" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1" IncludedColumns="" SortDirection="ASC" NullsDirection="LAST">
+    <dxl:Index Mdid="0.2345.2.1" Name="T_a" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1" IncludedColumns="" SortDirection="ASC" NullsDirection="LAST" ReturnableColumns="1">
       <dxl:Opfamilies/>
     </dxl:Index>
     <dxl:Relation Mdid="6.1258.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" AppendOnlyVersion="2" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="0;0,1" PartitionColumns="1">
@@ -100,7 +100,7 @@
         </dxl:And>
       </dxl:PartConstraint>
     </dxl:Relation>
-    <dxl:Index Mdid="0.812178.1.0" Name="date_dim_1_prt_p1_1_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0,6" IncludedColumns="" SortDirection="ASC,ASC" NullsDirection="LAST,LAST">
+    <dxl:Index Mdid="0.812178.1.0" Name="date_dim_1_prt_p1_1_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0,6" IncludedColumns="" SortDirection="ASC,ASC" NullsDirection="LAST,LAST" ReturnableColumns="0,6">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.3027.1.0"/>
         <dxl:Opfamily Mdid="0.3027.1.0"/>
@@ -211,7 +211,7 @@
         <dxl:Ident ColId="2" ColName="B" TypeMdid="0.23.1.0"/>
       </dxl:Comparison>
     </dxl:CheckConstraint>
-    <dxl:Index Mdid="0.17027.1.0" Name="r_ind" IsClustered="false" AmCanOrder="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="">
+    <dxl:Index Mdid="0.17027.1.0" Name="r_ind" IsClustered="false" AmCanOrder="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="" ReturnableColumns="">
       <dxl:Opfamilies/>
     </dxl:Index>
     <dxl:Relation Mdid="6.378383.1.0" Name="ext_1" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="10,4" ForeignServer="0.91908.1.0">

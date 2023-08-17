@@ -125,7 +125,7 @@
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Index Mdid="0.57364.1.0" Name="country_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.57364.1.0" Name="country_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.426.1.0"/>
         </dxl:Opfamilies>
@@ -296,7 +296,7 @@
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Index Mdid="0.57385.1.0" Name="countrylanguage_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0,1" IncludedColumns="">
+      <dxl:Index Mdid="0.57385.1.0" Name="countrylanguage_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0,1" IncludedColumns="" ReturnableColumns="0,1">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.426.1.0"/>
           <dxl:Opfamily Mdid="0.1994.1.0"/>

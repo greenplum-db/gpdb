@@ -104,7 +104,7 @@
       </dxl:IndexInfoList>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Index Mdid="0.2345.2.1" Name="T_a" IsClustered="false" KeyColumns="1" IncludedColumns="">
+    <dxl:Index Mdid="0.2345.2.1" Name="T_a" IsClustered="false" KeyColumns="1" IncludedColumns="" ReturnableColumns="1">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.1978.1.0"/>
       </dxl:Opfamilies>
@@ -113,7 +113,7 @@
         <dxl:Partition Mdid="6.2351.2.1"/>
       </dxl:Partitions>
     </dxl:Index>
-    <dxl:Index Mdid="0.2347.1.1" Name="T_a" IsClustered="false" KeyColumns="0" IncludedColumns="">
+    <dxl:Index Mdid="0.2347.1.1" Name="T_a" IsClustered="false" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
@@ -1176,7 +1176,7 @@
         </dxl:And>
       </dxl:PartConstraint>
     </dxl:Relation>
-    <dxl:Index Mdid="0.13144342.1.0" Name="idx_p1_j_1_prt_p11" IsClustered="false" KeyColumns="1" IncludedColumns="">
+    <dxl:Index Mdid="0.13144342.1.0" Name="idx_p1_j_1_prt_p11" IsClustered="false" KeyColumns="1" IncludedColumns="" ReturnableColumns="1">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
@@ -1185,7 +1185,7 @@
         <dxl:Partition Mdid="6.13144344.1.0"/>
       </dxl:Partitions>
     </dxl:Index>
-    <dxl:Index Mdid="0.13144285.1.0" Name="idx_p1_i_1_prt_p11" IsClustered="false" KeyColumns="0" IncludedColumns="">
+    <dxl:Index Mdid="0.13144285.1.0" Name="idx_p1_i_1_prt_p11" IsClustered="false" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
@@ -2688,13 +2688,13 @@
       <dxl:SumAgg Mdid="0.0.0.0"/>
       <dxl:CountAgg Mdid="0.2147.1.0"/>
     </dxl:Type>
-    <dxl:Index Mdid="0.197454.1.1" Name="foo_ab" IsClustered="false" KeyColumns="0,1" IncludedColumns="">
+    <dxl:Index Mdid="0.197454.1.1" Name="foo_ab" IsClustered="false" KeyColumns="0,1" IncludedColumns="" ReturnableColumns="0,1">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
     </dxl:Index>
-    <dxl:Index Mdid="0.197514.1.1" Name="foo_bitmap_c" IsClustered="false" KeyColumns="2" IncludedColumns="">
+    <dxl:Index Mdid="0.197514.1.1" Name="foo_bitmap_c" IsClustered="false" KeyColumns="2" IncludedColumns="" ReturnableColumns="2">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
@@ -3688,7 +3688,7 @@
         </dxl:And>
       </dxl:PartConstraint>
     </dxl:Relation>
-    <dxl:Index Mdid="0.27324.1.0" Name="p_ind" IsClustered="false" KeyColumns="1" IncludedColumns="">
+    <dxl:Index Mdid="0.27324.1.0" Name="p_ind" IsClustered="false" KeyColumns="1" IncludedColumns="" ReturnableColumns="1">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>

@@ -56,12 +56,12 @@ with results as
       <dxl:TraceFlags Value="102001,102002,102003,102120,102144,103001,103014,103015,103022,103027,103033,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:Index Mdid="0.8404352.1.0" Name="store_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.8404352.1.0" Name="store_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.8404104.1.0" Name="date_dim_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.8404104.1.0" Name="date_dim_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -6318,7 +6318,7 @@ with results as
         <dxl:ResultType Mdid="0.20.1.0"/>
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
-      <dxl:Index Mdid="0.8404414.1.0" Name="store_sales_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="2,9" IncludedColumns="">
+      <dxl:Index Mdid="0.8404414.1.0" Name="store_sales_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="2,9" IncludedColumns="" ReturnableColumns="2,9">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
           <dxl:Opfamily Mdid="0.1980.1.0"/>

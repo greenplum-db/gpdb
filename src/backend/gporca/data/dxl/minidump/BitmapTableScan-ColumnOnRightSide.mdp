@@ -234,7 +234,7 @@ SELECT * FROM my_tq_agg_small tq WHERE 110 >= tq.ets;
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="1200"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.31763881.1.0" Name="my_idx" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.31763881.1.0" Name="my_idx" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

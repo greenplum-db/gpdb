@@ -156,7 +156,7 @@ Optimizer status: PQO version 2.65.1
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Index Mdid="0.566276.1.0" Name="gist_tbl_point_index" IsClustered="false" IndexType="Gist" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="0.566276.1.0" Name="gist_tbl_point_index" IsClustered="false" IndexType="Gist" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.2594.1.0"/>
         </dxl:Opfamilies>

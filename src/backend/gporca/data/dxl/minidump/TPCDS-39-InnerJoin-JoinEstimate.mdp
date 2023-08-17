@@ -9,7 +9,7 @@
       <dxl:TraceFlags Value="101013,102001,102002,102003,102144,103001,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:Index Mdid="0.32912.1.0" Name="date_dim_pkey" IsClustered="false" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.32912.1.0" Name="date_dim_pkey" IsClustered="false" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
@@ -67,7 +67,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.33600.1.0" Name="index_33600" IsClustered="false" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="0.33600.1.0" Name="index_33600" IsClustered="false" KeyColumns="1" IncludedColumns="" ReturnableColumns="1">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

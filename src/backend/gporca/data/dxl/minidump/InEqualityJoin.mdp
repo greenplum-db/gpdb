@@ -2354,7 +2354,7 @@
         <dxl:SumAgg Mdid="0.2114.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.26529.1.0" Name="web_sales_pkey" IsClustered="false" KeyColumns="3,17" IncludedColumns="">
+      <dxl:Index Mdid="0.26529.1.0" Name="web_sales_pkey" IsClustered="false" KeyColumns="3,17" IncludedColumns="" ReturnableColumns="3,17">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

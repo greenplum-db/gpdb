@@ -354,7 +354,7 @@
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.417828.1.0.0" Name="a" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:Index Mdid="0.417854.1.0" Name="tinner_1_prt_1_a_idx" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.417854.1.0" Name="tinner_1_prt_1_a_idx" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.7027.1.0"/>
         </dxl:Opfamilies>

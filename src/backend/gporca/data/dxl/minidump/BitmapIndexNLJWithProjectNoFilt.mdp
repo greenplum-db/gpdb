@@ -198,7 +198,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.33184.1.0" Name="foo_1_prt_1_dist_a_part_d_idx" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0,3" IncludedColumns="">
+      <dxl:Index Mdid="0.33184.1.0" Name="foo_1_prt_1_dist_a_part_d_idx" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0,3" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.12738.1.0"/>
           <dxl:Opfamily Mdid="0.12738.1.0"/>

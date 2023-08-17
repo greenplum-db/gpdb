@@ -191,7 +191,7 @@ see sql/BitmapIndexScan.sql
       <dxl:ColumnStatistics Mdid="1.24702.1.1.12" Name="dataowner" Width="0.000000" NullFreq="1.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.24702.1.1.5" Name="created_by" Width="0.000000" NullFreq="1.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.24702.1.1.4" Name="creation_date" Width="4.000000" NullFreq="1.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false"/>
-      <dxl:Index Mdid="0.24762.1.0" Name="inner_table_idx" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="0.24762.1.0" Name="inner_table_idx" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1988.1.0"/>
         </dxl:Opfamilies>

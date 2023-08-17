@@ -91,7 +91,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.16662.1.0" Name="t1_b" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="0.16662.1.0" Name="t1_b" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.7027.1.0"/>
         </dxl:Opfamilies>
@@ -573,7 +573,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.16679.1.0" Name="t1_b_c_d" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1,2,3" IncludedColumns="">
+      <dxl:Index Mdid="0.16679.1.0" Name="t1_b_c_d" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1,2,3" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.7027.1.0"/>
           <dxl:Opfamily Mdid="0.7027.1.0"/>
@@ -982,7 +982,7 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="9999"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.16696.1.0" Name="t1_g_h" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="6,7" IncludedColumns="">
+      <dxl:Index Mdid="0.16696.1.0" Name="t1_g_h" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="6,7" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.7027.1.0"/>
           <dxl:Opfamily Mdid="0.7027.1.0"/>

@@ -1145,7 +1145,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Index Mdid="0.30058.1.0" Name="solo_idx" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1,2,7,17,22,29" IncludedColumns="">
+      <dxl:Index Mdid="0.30058.1.0" Name="solo_idx" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1,2,7,17,22,29" IncludedColumns="" ReturnableColumns="1,2,7,17,22,29">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>

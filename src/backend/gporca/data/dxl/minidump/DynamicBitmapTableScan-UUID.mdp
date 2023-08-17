@@ -333,7 +333,7 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.2950.1.0" IsNull="false" Value="An6J9DnRTROsv3WhVjnmNQ==" LintValue="4123921962"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.20403.1.0" Name="i_1_prt_1" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.20403.1.0" Name="i_1_prt_1" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.2968.1.0"/>
         </dxl:Opfamilies>

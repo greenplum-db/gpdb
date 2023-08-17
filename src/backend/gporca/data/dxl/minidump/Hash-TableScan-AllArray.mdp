@@ -857,7 +857,7 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="100"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="7.16950.1.0" Name="hash_idx1" IsClustered="false" IndexType="Hash" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="7.16950.1.0" Name="hash_idx1" IsClustered="false" IndexType="Hash" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1977.1.0"/>
         </dxl:Opfamilies>

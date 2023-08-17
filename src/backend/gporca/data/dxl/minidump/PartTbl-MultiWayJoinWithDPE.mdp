@@ -941,7 +941,7 @@
       <dxl:ColumnStatistics Mdid="1.810130.1.1.4" Name="hd_vehicle_count" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.810176.1.1.5" Name="xmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.810176.1.1.4" Name="ctid" Width="6.000000"/>
-      <dxl:Index Mdid="0.812178.1.0" Name="date_dim_1_prt_p1_1_pkey" IsClustered="false" KeyColumns="0,6" IncludedColumns="">
+      <dxl:Index Mdid="0.812178.1.0" Name="date_dim_1_prt_p1_1_pkey" IsClustered="false" KeyColumns="0,6" IncludedColumns="" ReturnableColumns="0,6">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
@@ -1273,7 +1273,7 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="7200"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.818378.1.0" Name="household_demographics_pkey" IsClustered="false" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.818378.1.0" Name="household_demographics_pkey" IsClustered="false" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

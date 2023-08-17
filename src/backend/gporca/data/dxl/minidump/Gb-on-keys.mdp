@@ -56,7 +56,7 @@
       </dxl:Type>
       <dxl:ColumnStatistics Mdid="1.1154027.1.1.5" Name="cmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.1154027.1.1.4" Name="xmin" Width="4.000000"/>
-      <dxl:Index Mdid="0.1154050.1.0" Name="keys_pkey" IsClustered="false" KeyColumns="0,1" IncludedColumns="">
+      <dxl:Index Mdid="0.1154050.1.0" Name="keys_pkey" IsClustered="false" KeyColumns="0,1" IncludedColumns="" ReturnableColumns="0,1">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

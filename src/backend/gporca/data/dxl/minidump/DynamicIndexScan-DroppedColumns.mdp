@@ -497,7 +497,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.567110.1.0" Name="testbug_char5_tag1_1_prt_part201203" IsClustered="false" KeyColumns="3" IncludedColumns="">
+      <dxl:Index Mdid="0.567110.1.0" Name="testbug_char5_tag1_1_prt_part201203" IsClustered="false" KeyColumns="3" IncludedColumns="" ReturnableColumns="3">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.426.1.0"/>
         </dxl:Opfamilies>

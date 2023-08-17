@@ -482,7 +482,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.2662.1.0" Name="pg_class_oid_index" IsClustered="false" KeyColumns="31" IncludedColumns="">
+      <dxl:Index Mdid="0.2662.1.0" Name="pg_class_oid_index" IsClustered="false" KeyColumns="31" IncludedColumns="" ReturnableColumns="31">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
@@ -928,7 +928,7 @@
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Index Mdid="0.2663.1.0" Name="pg_class_relname_nsp_index" IsClustered="false" KeyColumns="0,1" IncludedColumns="">
+      <dxl:Index Mdid="0.2663.1.0" Name="pg_class_relname_nsp_index" IsClustered="false" KeyColumns="0,1" IncludedColumns="" ReturnableColumns="0,1">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1086.1.0"/>
           <dxl:Opfamily Mdid="0.1089.1.0"/>

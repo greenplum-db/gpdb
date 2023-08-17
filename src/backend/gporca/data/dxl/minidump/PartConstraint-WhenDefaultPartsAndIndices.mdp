@@ -1709,7 +1709,7 @@ EXPLAIN SELECT * FROM date_parts WHERE month BETWEEN 1 AND 4;
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="3650"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.3749921.1.0" Name="date_parts_ind_1_prt_outlying_years_2_prt_q1_3_prt_other_days" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="2" IncludedColumns="">
+      <dxl:Index Mdid="0.3749921.1.0" Name="date_parts_ind_1_prt_outlying_years_2_prt_q1_3_prt_other_days" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="2" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

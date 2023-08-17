@@ -120,7 +120,7 @@
       <dxl:ColumnStatistics Mdid="1.1119916.1.1.8" Name="gp_segment_id" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.1119916.1.1.1" Name="b" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.1119916.1.1.0" Name="a" Width="8.000000"/>
-      <dxl:Index Mdid="0.1119939.1.0" Name="t_a" IsClustered="false" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.1119939.1.0" Name="t_a" IsClustered="false" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

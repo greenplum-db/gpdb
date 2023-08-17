@@ -210,7 +210,7 @@ explain select * from foo left join bar on foo.a = bar.a and foo.b = bar.b left 
       </dxl:Relation>
       <dxl:MDCast Mdid="3.1043.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.1043.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>
       <dxl:RelationStatistics Mdid="2.65603.1.0" Name="zoo" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Index Mdid="0.65602.1.0" Name="bar_idx_ab" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1,0" IncludedColumns="">
+      <dxl:Index Mdid="0.65602.1.0" Name="bar_idx_ab" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1,0" IncludedColumns="" ReturnableColumns="1,0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1994.1.0"/>
@@ -238,7 +238,7 @@ explain select * from foo left join bar on foo.a = bar.a and foo.b = bar.b left 
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.65577.1.0.1" Name="b" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.65577.1.0.0" Name="a" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:Index Mdid="0.65626.1.0" Name="zoo_idx_ab" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1,0" IncludedColumns="">
+      <dxl:Index Mdid="0.65626.1.0" Name="zoo_idx_ab" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1,0" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1994.1.0"/>

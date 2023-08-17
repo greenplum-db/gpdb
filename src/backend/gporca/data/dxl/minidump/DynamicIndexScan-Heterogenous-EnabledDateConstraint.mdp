@@ -187,7 +187,7 @@
       <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:Index Mdid="0.318973.1.0" Name="test_orders_2_1_prt_orders_1_ind" IsClustered="false" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="0.318973.1.0" Name="test_orders_2_1_prt_orders_1_ind" IsClustered="false" KeyColumns="1" IncludedColumns="" ReturnableColumns="1">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.434.1.0"/>
         </dxl:Opfamilies>

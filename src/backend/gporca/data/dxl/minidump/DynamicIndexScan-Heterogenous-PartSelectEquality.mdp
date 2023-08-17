@@ -87,7 +87,7 @@
       <dxl:GPDBFunc Mdid="0.6086.1.0" Name="gp_partition_inverse" ReturnsSet="true" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.2249.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:Index Mdid="0.303004.1.0" Name="p_1_a" IsClustered="false" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.303004.1.0" Name="p_1_a" IsClustered="false" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

@@ -320,7 +320,7 @@ SELECT * FROM pp WHERE b=2 AND c=2;
       </dxl:Type>
       <dxl:ColumnStatistics Mdid="1.2435227.1.1.7" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.2435227.1.1.6" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:Index Mdid="0.2435371.1.0" Name="pp_1_prt_1_idx" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="2" IncludedColumns="">
+      <dxl:Index Mdid="0.2435371.1.0" Name="pp_1_prt_1_idx" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="2" IncludedColumns="" ReturnableColumns="2">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
@@ -330,7 +330,7 @@ SELECT * FROM pp WHERE b=2 AND c=2;
           <dxl:Partition Mdid="6.2435371003.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
-      <dxl:Index Mdid="0.2435390.1.0" Name="pp_rest_1_idx" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="2,0" IncludedColumns="">
+      <dxl:Index Mdid="0.2435390.1.0" Name="pp_rest_1_idx" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="2,0" IncludedColumns="" ReturnableColumns="2,0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>

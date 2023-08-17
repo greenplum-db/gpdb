@@ -611,7 +611,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.16033549.1.1.7" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.16033549.1.1.6" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
-      <dxl:Index Mdid="0.16033719.1.0" Name="my_tq_agg_small_part_ets_end_ts_ix_1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0,4" IncludedColumns="">
+      <dxl:Index Mdid="0.16033719.1.0" Name="my_tq_agg_small_part_ets_end_ts_ix_1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0,4" IncludedColumns="" ReturnableColumns="0,4">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
@@ -637,7 +637,7 @@ WHERE tt.event_ts &gt;= tq.ets AND
       <dxl:GPDBFunc Mdid="0.6086.1.0" Name="gp_partition_inverse" ReturnsSet="true" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.2249.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:Index Mdid="0.16033738.1.0" Name="my_tq_agg_small_part_ets_end_ts_ix_2" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.16033738.1.0" Name="my_tq_agg_small_part_ets_end_ts_ix_2" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>

@@ -150,7 +150,7 @@
         <dxl:ResultType Mdid="0.20.1.0"/>
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
-      <dxl:Index Mdid="0.471042.1.0" Name="sale_pkey" IsClustered="false" KeyColumns="0,1,2" IncludedColumns="">
+      <dxl:Index Mdid="0.471042.1.0" Name="sale_pkey" IsClustered="false" KeyColumns="0,1,2" IncludedColumns="" ReturnableColumns="0,1,2">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>

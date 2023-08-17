@@ -28,7 +28,7 @@ select  i_item_id
       <dxl:TraceFlags Value="103027,101013,102120,103001,103014,103015,103026"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:Index Mdid="0.42129794.1.0" Name="item_idx03" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="11" IncludedColumns="">
+      <dxl:Index Mdid="0.42129794.1.0" Name="item_idx03" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="11" IncludedColumns="" ReturnableColumns="11">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -3973,7 +3973,7 @@ select  i_item_id
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.42129547.1.0" Name="inventory_idx02_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="0.42129547.1.0" Name="inventory_idx02_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1" IncludedColumns="" ReturnableColumns="1">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -4019,7 +4019,7 @@ select  i_item_id
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.42120598.1.0" Name="catalog_sales_idx02_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="3" IncludedColumns="">
+      <dxl:Index Mdid="0.42120598.1.0" Name="catalog_sales_idx02_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="3" IncludedColumns="" ReturnableColumns="3">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -4068,12 +4068,12 @@ select  i_item_id
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.42129813.1.0" Name="item_idx04" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="9" IncludedColumns="">
+      <dxl:Index Mdid="0.42129813.1.0" Name="item_idx04" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="9" IncludedColumns="" ReturnableColumns="9">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.42120465.1.0" Name="catalog_sales_idx01_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="4" IncludedColumns="">
+      <dxl:Index Mdid="0.42120465.1.0" Name="catalog_sales_idx01_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="4" IncludedColumns="" ReturnableColumns="4">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -5551,7 +5551,7 @@ select  i_item_id
           <dxl:UpperBound Closed="true" TypeMdid="0.1700.1.0" Value="AAAADAAAAgBjAKwm" DoubleValue="99.990000"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.42112159.1.0" Name="date_dim_1_prt_p1_1_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0,6" IncludedColumns="">
+      <dxl:Index Mdid="0.42112159.1.0" Name="date_dim_1_prt_p1_1_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0,6" IncludedColumns="" ReturnableColumns="0,6">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
@@ -5601,7 +5601,7 @@ select  i_item_id
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.42125595.1.0" Name="date_dim_idx02_1_prt_p1_1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="4" IncludedColumns="">
+      <dxl:Index Mdid="0.42125595.1.0" Name="date_dim_idx02_1_prt_p1_1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="4" IncludedColumns="" ReturnableColumns="4">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -5650,7 +5650,7 @@ select  i_item_id
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.42120731.1.0" Name="catalog_sales_idx03_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="5" IncludedColumns="">
+      <dxl:Index Mdid="0.42120731.1.0" Name="catalog_sales_idx03_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="5" IncludedColumns="" ReturnableColumns="5">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -5669,7 +5669,7 @@ select  i_item_id
           <dxl:Partition Mdid="6.42120731005.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
-      <dxl:Index Mdid="0.42129433.1.0" Name="inventory_idx01_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.42129433.1.0" Name="inventory_idx01_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -5688,7 +5688,7 @@ select  i_item_id
           <dxl:Partition Mdid="6.42129433005.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
-      <dxl:Index Mdid="0.42120997.1.0" Name="catalog_sales_idx05_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="15" IncludedColumns="">
+      <dxl:Index Mdid="0.42120997.1.0" Name="catalog_sales_idx05_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="15" IncludedColumns="" ReturnableColumns="15">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -5719,7 +5719,7 @@ select  i_item_id
           <dxl:Opfamily Mdid="0.3018.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.42120864.1.0" Name="catalog_sales_idx04_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="11" IncludedColumns="">
+      <dxl:Index Mdid="0.42120864.1.0" Name="catalog_sales_idx04_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="11" IncludedColumns="" ReturnableColumns="11">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -7745,7 +7745,7 @@ select  i_item_id
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.42110028.1.1.7" Name="xmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.42110028.1.1.6" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:Index Mdid="0.42121263.1.0" Name="catalog_sales_idx07_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="13" IncludedColumns="">
+      <dxl:Index Mdid="0.42121263.1.0" Name="catalog_sales_idx07_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="13" IncludedColumns="" ReturnableColumns="13">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -7765,7 +7765,7 @@ select  i_item_id
         </dxl:Partitions>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.42110250.1.1" Name="item" Rows="18000.000000" EmptyRelation="false"/>
-      <dxl:Index Mdid="0.42121130.1.0" Name="catalog_sales_idx06_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="17" IncludedColumns="">
+      <dxl:Index Mdid="0.42121130.1.0" Name="catalog_sales_idx06_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="17" IncludedColumns="" ReturnableColumns="17">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1980.1.0"/>
         </dxl:Opfamilies>
@@ -7784,7 +7784,7 @@ select  i_item_id
           <dxl:Partition Mdid="6.42121130005.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
-      <dxl:Index Mdid="0.42129832.1.0" Name="item_idx05" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.42129832.1.0" Name="item_idx05" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -7934,7 +7934,7 @@ select  i_item_id
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.42101810.1.1" Name="catalog_sales" Rows="14745100288.000000" EmptyRelation="false"/>
-      <dxl:Index Mdid="0.42121396.1.0" Name="catalog_sales_idx08_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.42121396.1.0" Name="catalog_sales_idx08_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -8629,7 +8629,7 @@ select  i_item_id
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Index Mdid="0.42118452.1.0" Name="inventory_1_prt_p1_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0,1,2" IncludedColumns="">
+      <dxl:Index Mdid="0.42118452.1.0" Name="inventory_1_prt_p1_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0,1,2" IncludedColumns="" ReturnableColumns="0,1,2">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.0.0.0"/>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
@@ -9326,7 +9326,7 @@ select  i_item_id
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Index Mdid="0.42121776.1.0" Name="date_dim_idx01_1_prt_p1_1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.42121776.1.0" Name="date_dim_idx01_1_prt_p1_1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -11235,7 +11235,7 @@ select  i_item_id
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.42121529.1.0" Name="catalog_sales_idx09_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="14" IncludedColumns="">
+      <dxl:Index Mdid="0.42121529.1.0" Name="catalog_sales_idx09_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="14" IncludedColumns="" ReturnableColumns="14">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -11254,7 +11254,7 @@ select  i_item_id
           <dxl:Partition Mdid="6.42121529005.1.0"/>
         </dxl:Partitions>
       </dxl:Index>
-      <dxl:Index Mdid="0.42129851.1.0" Name="item_idx06" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="14" IncludedColumns="">
+      <dxl:Index Mdid="0.42129851.1.0" Name="item_idx06" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="14" IncludedColumns="" ReturnableColumns="14">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.426.1.0"/>
         </dxl:Opfamilies>
@@ -14649,7 +14649,7 @@ select  i_item_id
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Index Mdid="0.42118607.1.0" Name="item_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.42118607.1.0" Name="item_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -17736,7 +17736,7 @@ select  i_item_id
           <dxl:Opfamily Mdid="0.3032.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.42129756.1.0" Name="item_idx01" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="7" IncludedColumns="">
+      <dxl:Index Mdid="0.42129756.1.0" Name="item_idx01" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="7" IncludedColumns="" ReturnableColumns="7">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -20237,12 +20237,12 @@ select  i_item_id
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="5"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.42129775.1.0" Name="item_idx02" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="12" IncludedColumns="">
+      <dxl:Index Mdid="0.42129775.1.0" Name="item_idx02" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="12" IncludedColumns="" ReturnableColumns="12">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.426.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.42111849.1.0" Name="catalog_sales_1_prt_p1_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="15,17,0" IncludedColumns="">
+      <dxl:Index Mdid="0.42111849.1.0" Name="catalog_sales_1_prt_p1_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="15,17,0" IncludedColumns="" ReturnableColumns="15,17,0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.0.0.0"/>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
@@ -21619,7 +21619,7 @@ select  i_item_id
           <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="mQIAAA==" DoubleValue="57456000000000.000000"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.42129661.1.0" Name="inventory_idx03_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="2" IncludedColumns="">
+      <dxl:Index Mdid="0.42129661.1.0" Name="inventory_idx03_1_prt_p1" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="2" IncludedColumns="" ReturnableColumns="2">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>

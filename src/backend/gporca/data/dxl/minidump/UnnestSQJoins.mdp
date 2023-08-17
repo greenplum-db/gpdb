@@ -131,13 +131,13 @@ WHERE
         <dxl:Commutator Mdid="0.410.1.0"/>
         <dxl:InverseOp Mdid="0.411.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.2654.1.0" Name="pg_amop_opr_opc_index" IsClustered="false" KeyColumns="4,0" IncludedColumns="">
+      <dxl:Index Mdid="0.2654.1.0" Name="pg_amop_opr_opc_index" IsClustered="false" KeyColumns="4,0" IncludedColumns="" ReturnableColumns="4,0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2652.1.0" Name="pg_am_oid_index" IsClustered="false" KeyColumns="26" IncludedColumns="">
+      <dxl:Index Mdid="0.2652.1.0" Name="pg_am_oid_index" IsClustered="false" KeyColumns="26" IncludedColumns="" ReturnableColumns="26">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
@@ -501,26 +501,26 @@ WHERE
         <dxl:Commutator Mdid="0.1869.1.0"/>
         <dxl:InverseOp Mdid="0.1862.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.2653.1.0" Name="pg_amop_opc_strat_index" IsClustered="false" KeyColumns="0,1,2" IncludedColumns="">
+      <dxl:Index Mdid="0.2653.1.0" Name="pg_amop_opc_strat_index" IsClustered="false" KeyColumns="0,1,2" IncludedColumns="" ReturnableColumns="0,1,2">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2651.1.0" Name="pg_am_name_index" IsClustered="false" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.2651.1.0" Name="pg_am_name_index" IsClustered="false" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2686.1.0" Name="pg_opclass_am_name_nsp_index" IsClustered="false" KeyColumns="0,1,2" IncludedColumns="">
+      <dxl:Index Mdid="0.2686.1.0" Name="pg_opclass_am_name_nsp_index" IsClustered="false" KeyColumns="0,1,2" IncludedColumns="" ReturnableColumns="0,1,2">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2687.1.0" Name="pg_opclass_oid_index" IsClustered="false" KeyColumns="8" IncludedColumns="">
+      <dxl:Index Mdid="0.2687.1.0" Name="pg_opclass_oid_index" IsClustered="false" KeyColumns="8" IncludedColumns="" ReturnableColumns="8">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>

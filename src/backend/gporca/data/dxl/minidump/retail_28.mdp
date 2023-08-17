@@ -2139,7 +2139,7 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
           <dxl:UpperBound Closed="true" TypeMdid="0.1043.1.0" Value="AAAADTU4OTk1NTc3Mg==" LintValue="759579644"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.4449193.1.0" Name="order_lineitems_cust_id_1_prt_default_part" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="4" IncludedColumns="">
+      <dxl:Index Mdid="0.4449193.1.0" Name="order_lineitems_cust_id_1_prt_default_part" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="4" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>

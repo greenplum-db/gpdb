@@ -212,7 +212,7 @@ EXPLAIN SELECT * FROM table_with_two_indices_ao WHERE b = 15 AND c BETWEEN 10000
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Index Mdid="0.44979.1.0" Name="idx_b_1_prt_1" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="0.44979.1.0" Name="idx_b_1_prt_1" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -684,7 +684,7 @@ EXPLAIN SELECT * FROM table_with_two_indices_ao WHERE b = 15 AND c BETWEEN 10000
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="10001"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.45040.1.0" Name="idx_c_1_prt_1" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="2" IncludedColumns="">
+      <dxl:Index Mdid="0.45040.1.0" Name="idx_c_1_prt_1" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="2" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
