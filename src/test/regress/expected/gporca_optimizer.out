@@ -10,8 +10,8 @@ SELECT count(*) from gp_opt_version();
 
 -- Mask out Log & timestamp for orca message that has feature not supported.
 -- start_matchsubs
--- m/^LOG.*\"Feature/
--- s/^LOG.*\"Feature/\"Feature/
+-- m/^LOG.*\"Falling/
+-- s/^LOG.*\"Falling/\"Falling/
 -- end_matchsubs
 -- fix the number of segments for Orca
 set optimizer_segments = 3;
@@ -39,8 +39,8 @@ set optimizer_enable_indexjoin=on;
 set optimizer_trace_fallback = on;
 -- expected fall back to the planner
 select sum(distinct a), count(distinct b) from orca.r;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  sum | count 
 -----+-------
  210 |     7
@@ -6811,7 +6811,7 @@ select * from orca.r where a in (select count(*)+1 as v from orca.foo full join 
 (1 row)
 
 select * from orca.r where r.a in (select d+r.b+1 as v from orca.foo full join orca.bar on (foo.d = bar.a) group by d+r.b) order by r.a, r.b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Query-to-DXL Translation: No attribute entry found due to incorrect normalization of query
  a  | b 
 ----+---
@@ -8202,11 +8202,11 @@ partition bb start(100) end(200) every (50) );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into orca.multilevel_p values (1,1), (100,200);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
 select * from orca.multilevel_p;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
   a  |  b  
 -----+-----
    1 |   1
@@ -8826,8 +8826,8 @@ select foo.b+1, sum((with cte as (select * from jazz) select 1 from cte where ct
 
 -- ctes inside aggs
 select foo.b+1, sum((with cte as (select * from jazz) select 1 from cte cte1, cte cte2 where cte1.h = foo.b)) as t FROM foo GROUP BY foo.b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? | t 
 ----------+---
         3 | 1
@@ -9052,8 +9052,8 @@ CREATE FUNCTION sum_sfunc(anyelement,anyelement) returns anyelement AS 'select $
 CREATE FUNCTION sum_combinefunc(anyelement,anyelement) returns anyelement AS 'select $1+$2' LANGUAGE SQL STRICT;
 CREATE AGGREGATE myagg1(anyelement) (SFUNC = sum_sfunc, COMBINEFUNC = sum_combinefunc, STYPE = anyelement, INITCOND = '0');
 SELECT myagg1(i) FROM orca.tab1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "sum_sfunc" during startup
  myagg1 
 --------
@@ -9063,8 +9063,8 @@ CONTEXT:  SQL function "sum_sfunc" during startup
 CREATE FUNCTION sum_sfunc2(anyelement,anyelement,anyelement) returns anyelement AS 'select $1+$2+$3' LANGUAGE SQL STRICT;
 CREATE AGGREGATE myagg2(anyelement,anyelement) (SFUNC = sum_sfunc2, STYPE = anyelement, INITCOND = '0');
 SELECT myagg2(i,j) FROM orca.tab1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "sum_sfunc2" during startup
  myagg2 
 --------
@@ -9086,10 +9086,10 @@ INSERT INTO array_table values(6,array[222],'c');
 INSERT INTO array_table values(7,array[3],'a');
 INSERT INTO array_table values(8,array[3],'b');
 SELECT f3, myagg3(f1) from (select * from array_table order by f1 limit 10) as foo GROUP BY f3 ORDER BY f3;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
  f3 | myagg3  
 ----+---------
  a  | {4,1,7}
@@ -9698,8 +9698,8 @@ create table orca.arrtest (
 insert into orca.arrtest (a[1:5], b[1:1][1:2][1:2], c, d)
 values ('{1,2,3,4,5}', '{{{0,0},{1,2}}}', '{}', '{}');
 select a[1:3], b[1][2][1], c[1], d[1][1] FROM orca.arrtest order by 1,2,3,4;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-default collation
     a    | b | c | d 
 ---------+---+---+---
  {1,2,3} | 1 |   | 
@@ -10014,8 +10014,8 @@ set optimizer_enable_bitmapscan=on;
 set optimizer_enable_dynamictablescan = off;
 -- gather on 1 segment because of direct dispatch
 explain select * from orca.bm_dyn_test_onepart where i=2 and t='2';
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                                          QUERY PLAN                                         
 --------------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..6.85 rows=22 width=10)
@@ -10036,8 +10036,8 @@ DETAIL:  No plan has been computed for required properties
 (15 rows)
 
 select * from orca.bm_dyn_test_onepart where i=2 and t='2';
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  i | j | t 
 ---+---+---
  2 | 2 | 2
@@ -10067,14 +10067,14 @@ distributed by (id) partition by range (year)
       default subpartition other_regions )
   ( start (2018) end (2020) every (1) );
 insert into orca.bm_dyn_test_multilvl_part select i, 2018 + (i%2), i%2 + 1, 'usa' from generate_series(1,100)i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
 create index bm_multi_test_idx_part on orca.bm_dyn_test_multilvl_part using bitmap(year);
 analyze orca.bm_dyn_test_multilvl_part;
 -- print name of parent index
 explain select * from orca.bm_dyn_test_multilvl_part where year = 2019;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
                                                         QUERY PLAN                                                        
 --------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..7.95 rows=53 width=18)
@@ -10091,8 +10091,8 @@ DETAIL:  Feature not supported: Multi-level partitioned tables
 (11 rows)
 
 select count(*) from orca.bm_dyn_test_multilvl_part where year = 2019;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
  count 
 -------
     50
@@ -10740,8 +10740,8 @@ CREATE TYPE rainbow AS ENUM('red','yellow','blue');
 CREATE FUNCTION func_enum_element(ANYENUM, ANYELEMENT) RETURNS TABLE(a ANYENUM, b ANYARRAY)
 AS $$ SELECT $1, ARRAY[$2] $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_enum_element('red'::rainbow, 'blue'::rainbow::anyelement);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_enum_element" during startup
   a  |   b    
 -----+--------
@@ -10753,8 +10753,8 @@ DROP FUNCTION IF EXISTS func_enum_element(ANYENUM, ANYELEMENT);
 CREATE FUNCTION func_element_array(ANYELEMENT, ANYARRAY) RETURNS TABLE(a ANYELEMENT, b ANYENUM)
 AS $$ SELECT $1, $2[1]$$ LANGUAGE SQL STABLE;
 SELECT * FROM func_element_array('red'::rainbow, ARRAY['blue'::rainbow]);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_element_array" during startup
   a  |  b   
 -----+------
@@ -10766,8 +10766,8 @@ DROP FUNCTION IF EXISTS func_element_array(ANYELEMENT, ANYARRAY);
 CREATE FUNCTION func_element_array(ANYARRAY, ANYENUM) RETURNS TABLE(a ANYELEMENT, b ANYELEMENT)
 AS $$ SELECT $1[1], $2 $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_element_array(ARRAY['blue'::rainbow], 'blue'::rainbow);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_element_array" during startup
   a   |  b   
 ------+------
@@ -10779,8 +10779,8 @@ DROP FUNCTION IF EXISTS func_element_array(ANYARRAY, ANYENUM);
 CREATE FUNCTION func_array(ANYARRAY) RETURNS TABLE(a ANYELEMENT, b ANYENUM)
 AS $$ SELECT $1[1], $1[2] $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_array(ARRAY['blue'::rainbow, 'yellow'::rainbow]);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_array" during startup
   a   |   b    
 ------+--------
@@ -10792,8 +10792,8 @@ DROP FUNCTION IF EXISTS func_array(ANYARRAY);
 CREATE FUNCTION func_element_variadic(ANYELEMENT, VARIADIC ANYARRAY) RETURNS TABLE(a ANYARRAY)
 AS $$ SELECT array_prepend($1, $2); $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_element_variadic(1.1, 1.1, 2.2, 3.3);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_element_variadic" during startup
          a         
 -------------------
@@ -10805,8 +10805,8 @@ DROP FUNCTION IF EXISTS func_element_variadic(ANYELEMENT, VARIADIC ANYARRAY);
 CREATE FUNCTION func_nonarray(ANYNONARRAY) RETURNS TABLE(a ANYNONARRAY)
 AS $$ SELECT $1; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_nonarray(5);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_nonarray" during startup
  a 
 ---
@@ -10818,8 +10818,8 @@ DROP FUNCTION IF EXISTS func_nonarray(ANYNONARRAY);
 CREATE FUNCTION func_nonarray_enum(ANYNONARRAY, ANYENUM) RETURNS TABLE(a ANYARRAY)
 AS $$ SELECT ARRAY[$1, $2]; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_nonarray_enum('blue'::rainbow, 'red'::rainbow);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_nonarray_enum" during startup
      a      
 ------------
@@ -10831,8 +10831,8 @@ DROP FUNCTION IF EXISTS func_nonarray_enum(ANYNONARRAY, ANYENUM);
 CREATE FUNCTION func_array_nonarray_enum(ANYARRAY, ANYNONARRAY, ANYENUM) RETURNS TABLE(a ANYNONARRAY)
 AS $$ SELECT $1[1]; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_array_nonarray_enum(ARRAY['blue'::rainbow, 'red'::rainbow], 'red'::rainbow, 'yellow'::rainbow);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_array_nonarray_enum" during startup
   a   
 ------
@@ -10844,8 +10844,8 @@ DROP FUNCTION IF EXISTS func_array_nonarray_enum(ANYARRAY, ANYNONARRAY, ANYENUM)
 CREATE FUNCTION return_enum_as_array(ANYENUM, ANYELEMENT, ANYELEMENT) RETURNS TABLE (ae ANYENUM, aa ANYARRAY)
 AS $$ SELECT $1, array[$2, $3] $$ LANGUAGE SQL STABLE;
 SELECT * FROM return_enum_as_array('red'::rainbow, 'yellow'::rainbow, 'blue'::rainbow);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "return_enum_as_array" during startup
  ae  |      aa       
 -----+---------------
@@ -10877,9 +10877,9 @@ set log_statement='none';
 set log_min_duration_statement=-1;
 set client_min_messages='log';
 create table foo_ctas(a) as (select generate_series(1,10)) distributed by (a);
-LOG:  2017-05-31 14:43:22:338568 PDT,THD000,NOTICE,"Feature not supported: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA",
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA
+LOG:  2023-08-17 15:11:09:454388 PDT,THD000,NOTICE,"Falling back to Postgres-based planner because GPORCA does not support the following feature: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA",
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA
 reset client_min_messages;
 reset log_min_duration_statement;
 reset log_statement;
@@ -11680,7 +11680,7 @@ update gp_distribution_policy set numsegments = numsegments-1 where localoid = '
 reset allow_system_table_mods;
 -- populate the tables on this smaller cluster
 explain insert into gpexp_hash select i, i from generate_series(1,50) i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                                          QUERY PLAN                                         
 --------------------------------------------------------------------------------------------
@@ -11692,13 +11692,13 @@ DETAIL:  Unknown error: Partially Distributed Data
 (5 rows)
 
 insert into gpexp_hash select i, i from generate_series(1,50) i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 insert into gpexp_rand select i, i from generate_series(1,50) i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 insert into gpexp_repl select i, i from generate_series(1,50) i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 analyze gpexp_hash;
 analyze gpexp_rand;
@@ -11706,7 +11706,7 @@ analyze gpexp_repl;
 -- the segment ids in the unmodified table should have one extra number
 select max(noexp_hash.gp_segment_id) - max(gpexp_hash.gp_segment_id) as expect_one
 from noexp_hash, gpexp_hash;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  expect_one 
 ------------
@@ -11715,7 +11715,7 @@ DETAIL:  Unknown error: Partially Distributed Data
 
 -- join should have a redistribute motion for gpexp_hash
 explain select count(*) from noexp_hash n join gpexp_hash x on n.a=x.a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
@@ -11733,7 +11733,7 @@ DETAIL:  Unknown error: Partially Distributed Data
 (11 rows)
 
 select count(*) from noexp_hash n join gpexp_hash x on n.a=x.a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  count 
 -------
@@ -11741,10 +11741,10 @@ DETAIL:  Unknown error: Partially Distributed Data
 (1 row)
 
 delete from gpexp_hash where b between 21 and 50;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 select count(*) from gpexp_hash;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  count 
 -------
@@ -11752,10 +11752,10 @@ DETAIL:  Unknown error: Partially Distributed Data
 (1 row)
 
 update gpexp_hash set b=-1 where b between 11 and 100;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 select b, count(*) from gpexp_hash group by b order by b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  b  | count 
 ----+-------
@@ -11773,7 +11773,7 @@ DETAIL:  Unknown error: Partially Distributed Data
 (11 rows)
 
 explain update gpexp_rand set b=(select b from gpexp_hash where gpexp_rand.a = gpexp_hash.a);
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                                                 QUERY PLAN                                                
 ----------------------------------------------------------------------------------------------------------
@@ -11789,10 +11789,10 @@ DETAIL:  Unknown error: Partially Distributed Data
 (9 rows)
 
 update gpexp_rand set b=(select b from gpexp_hash where gpexp_rand.a = gpexp_hash.a);
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 select b, count(*) from gpexp_rand group by b order by b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  b  | count 
 ----+-------
@@ -11811,10 +11811,10 @@ DETAIL:  Unknown error: Partially Distributed Data
 (12 rows)
 
 delete from gpexp_repl where b >= 20;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 explain insert into gpexp_repl values (20, 20);
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                        QUERY PLAN                       
 --------------------------------------------------------
@@ -11824,10 +11824,10 @@ DETAIL:  Unknown error: Partially Distributed Data
 (3 rows)
 
 insert into gpexp_repl values (20, 20);
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 explain select count(*) from gpexp_hash h join gpexp_repl r on h.a=r.a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                                         QUERY PLAN                                         
 -------------------------------------------------------------------------------------------
@@ -11843,7 +11843,7 @@ DETAIL:  Unknown error: Partially Distributed Data
 (9 rows)
 
 select count(*) as expect_20 from gpexp_hash h join gpexp_repl r on h.a=r.a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  expect_20 
 -----------
@@ -11851,7 +11851,7 @@ DETAIL:  Unknown error: Partially Distributed Data
 (1 row)
 
 explain select count(*) as expect_20 from noexp_hash h join gpexp_repl r on h.a=r.a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
@@ -11869,7 +11869,7 @@ DETAIL:  Unknown error: Partially Distributed Data
 (11 rows)
 
 select count(*) as expect_20 from noexp_hash h join gpexp_repl r on h.a=r.a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  expect_20 
 -----------
@@ -12568,8 +12568,8 @@ select *
 from tcorr1 out
 where out.b in (select coalesce(tcorr2.a, 99)
                 from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  a | b  
 ---+----
  1 | 99
@@ -12692,8 +12692,8 @@ select *
 from tcorr1 out
 where out.b in (select coalesce(tcorr2.a, 99)
                 from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  a | b  
 ---+----
  1 | 99
@@ -14449,8 +14449,8 @@ explain select c2 from quad_func_cast();
 (2 rows)
 
 explain select (c1).r from quad_func_cast();
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: FIELDSELECT
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: FIELDSELECT
                             QUERY PLAN                             
 -------------------------------------------------------------------
  Function Scan on quad_func_cast  (cost=0.00..0.01 rows=1 width=8)
@@ -14458,8 +14458,8 @@ DETAIL:  Feature not supported: FIELDSELECT
 (2 rows)
 
 explain select (c2).i from quad_func_cast();
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: FIELDSELECT
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: FIELDSELECT
                             QUERY PLAN                             
 -------------------------------------------------------------------
  Function Scan on quad_func_cast  (cost=0.00..0.01 rows=1 width=8)
@@ -14479,16 +14479,16 @@ select c2 from quad_func_cast();
 (1 row)
 
 select (c1).r from quad_func_cast();
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: FIELDSELECT
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: FIELDSELECT
   r  
 -----
  1.1
 (1 row)
 
 select (c2).i from quad_func_cast();
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: FIELDSELECT
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: FIELDSELECT
  i 
 ---
   
@@ -14548,8 +14548,8 @@ with cte as (
 select * 
 from empty_cte_tl_test
 where id in(select id from cte);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Empty target list
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Empty target list
  id 
 ----
 (0 rows)

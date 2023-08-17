@@ -152,8 +152,8 @@ create table p4 (a int, b int) distributed by (a);
 alter table part attach partition p3 for values from (20) to (30);
 alter table part attach partition p4 for values from (30) to (40);
 insert into part select i,i from generate_series(25,35)i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Insert with External/foreign partition storage types
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Insert with External/foreign partition storage types
 analyze part;
 WARNING:  skipping "p2_e" --- cannot analyze this foreign table
 WARNING:  skipping "p1_e" --- cannot analyze this foreign table

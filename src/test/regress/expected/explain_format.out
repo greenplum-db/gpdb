@@ -55,7 +55,7 @@ EXPLAIN SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT 
                            ->  Seq Scan on apples  (cost=0.00..1111.00 rows=33334 width=36)
          ->  Hash  (cost=596.00..596.00 rows=16534 width=36)
                ->  Seq Scan on box_locations  (cost=0.00..596.00 rows=16534 width=36)
- Optimizer: Postgres query optimizer
+ Optimizer: Postgres-based planner
 (15 rows)
 
 -- explain_processing_on
@@ -80,7 +80,7 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
          ->  Hash  (cost=199.33..199.33 rows=16533 width=36) (actual time=0.000..0.010 rows=0 loops=1)
                Buckets: 131072  Batches: 1  Memory Usage: 1024kB
                ->  Seq Scan on box_locations  (cost=0.00..199.33 rows=16533 width=36) (actual time=0.000..0.010 rows=0 loops=1)
- Optimizer: Postgres query optimizer
+ Optimizer: Postgres-based planner
  Planning Time: 0.893 ms
    (slice0)    Executor memory: 64K bytes.
    (slice1)    Executor memory: 1051K bytes avg x 3 workers, 1051K bytes max (seg0).  Work_mem: 1024K bytes max.
@@ -261,7 +261,7 @@ QUERY PLAN
                 Total Cost: 596.00
                 Plan Rows: 49600
                 Plan Width: 36
-  Optimizer: "Postgres query optimizer"
+  Optimizer: "Postgres-based planner"
 (1 row)
 SET random_page_cost = 1;
 SET cpu_index_tuple_cost = 0.1;
@@ -301,7 +301,7 @@ QUERY PLAN
           - "id"
           - "apple_id"
           - "location_id"
-  Optimizer: "Postgres query optimizer"
+  Optimizer: "Postgres-based planner"
   Settings: 
     cpu_index_tuple_cost: "0.1"
     random_page_cost: "1"
@@ -346,7 +346,7 @@ QUERY PLAN
           - "id"
           - "apple_id"
           - "location_id"
-  Optimizer: "Postgres query optimizer"
+  Optimizer: "Postgres-based planner"
   Settings: 
     cpu_index_tuple_cost: "0.1"
     random_page_cost: "1"
@@ -532,7 +532,7 @@ QUERY PLAN
                 Actual Total Time: 0.000
                 Actual Rows: 0
                 Actual Loops: 0
-  Optimizer: "Postgres query optimizer"
+  Optimizer: "Postgres-based planner"
   Planning Time: 5.148
   Triggers: 
   Slice statistics: 
@@ -588,7 +588,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=2197.59..3301.17 rows=77900 widt
         work_mem: 177kB  Segments: 3  Max: 59kB (segment 0)  Workfile: (0 spilling)
         ->  Seq Scan on public.boxes  (cost=0.00..293.67 rows=25967 width=12) (actual time=0.000..0.010 rows=0 loops=1)
               Output: id, apple_id, location_id
-Optimizer: Postgres query optimizer
+Optimizer: Postgres-based planner
 Settings: cpu_index_tuple_cost = '0.1', random_page_cost = '1'
 Planning Time: 0.397 ms
   (slice0)    Executor memory: 40K bytes.
@@ -624,7 +624,7 @@ QUERY PLAN
       "Function Name": "generate_series",
       "Alias": "generate_series"
     },
-    "Optimizer": "Postgres query optimizer"
+    "Optimizer": "Postgres-based planner"
   }
 ]
 (1 row)
@@ -641,7 +641,7 @@ QUERY PLAN
       <Function-Name>generate_series</Function-Name>
       <Alias>generate_series</Alias>
     </Plan>
-    <Optimizer>Postgres query optimizer</Optimizer>
+    <Optimizer>Postgres-based planner</Optimizer>
   </Query>
 </explain>
 (1 row)
@@ -676,7 +676,7 @@ QUERY PLAN
         }
       ]
     },
-    "Optimizer": "Postgres query optimizer"
+    "Optimizer": "Postgres-based planner"
   }
 ]
 (1 row)
@@ -705,7 +705,7 @@ Limit  (cost=35.50..35.67 rows=10 width=4)
   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=35.50..36.01 rows=30 width=4)
         ->  Limit  (cost=35.50..35.61 rows=10 width=4)
               ->  Seq Scan on jit_explain_output  (cost=0.00..355.00 rows=32100 width=4)
-Optimizer: Postgres query optimizer
+Optimizer: Postgres-based planner
 JIT:
   Functions: 2
   Options: Inlining false, Optimization false, Expressions true, Deforming true
@@ -719,7 +719,7 @@ Limit  (cost=35.50..35.67 rows=10 width=4) (actual time=13.199..13.310 rows=10 l
   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=35.50..36.01 rows=30 width=4) (actual time=11.848..11.890 rows=10 loops=1)
         ->  Limit  (cost=35.50..35.61 rows=10 width=4) (actual time=0.861..0.971 rows=10 loops=1)
               ->  Seq Scan on jit_explain_output  (cost=0.00..355.00 rows=32100 width=4) (actual time=0.029..0.070 rows=10 loops=1)
-Optimizer: Postgres query optimizer
+Optimizer: Postgres-based planner
 Planning Time: 0.158 ms
   (slice0)    Executor memory: 37K bytes.
   (slice1)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
@@ -842,7 +842,7 @@ QUERY PLAN
         }
       ]
     },
-    "Optimizer": "Postgres query optimizer",
+    "Optimizer": "Postgres-based planner",
     "Planning Time": 0.244,
     "Triggers": [
     ],

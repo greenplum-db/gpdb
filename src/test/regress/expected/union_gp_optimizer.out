@@ -51,8 +51,8 @@ select 1 a, row_number() over (partition by 'a') union all (select 1 a , 2 b);
 -- This should preserve domain types
 select pg_typeof(a) from (select 'a'::information_schema.sql_identifier a union all
 select 'b'::information_schema.sql_identifier)a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-default collation
              pg_typeof             
 -----------------------------------
  information_schema.sql_identifier
@@ -78,8 +78,8 @@ DETAIL:  Feature not supported: Non-default collation
 
 -- Yet, we keep behaviors on text-like columns
 select pg_typeof(a) from(select 'foo' a union select 'foo'::name)s;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-default collation
  pg_typeof 
 -----------
  name
@@ -87,8 +87,8 @@ DETAIL:  Feature not supported: Non-default collation
 
 select pg_typeof(a) from(select 1 x, 'foo' a union
     select 1, 'foo' union select 1, 'foo'::name)s;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-default collation
  pg_typeof 
 -----------
  text
@@ -96,8 +96,8 @@ DETAIL:  Feature not supported: Non-default collation
 
 select pg_typeof(a) from(select 1 x, 'foo' a union
     (select 1, 'foo' union select 1, 'foo'::name))s;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-default collation
  pg_typeof 
 -----------
  name
@@ -302,13 +302,13 @@ create table rep3(c1 int, c2 int) distributed replicated;
 set allow_system_table_mods = on;
 update gp_distribution_policy set numsegments = 2
   where localoid = 'rep2'::regclass;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on coordinator-only tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Queries on coordinator-only tables
 select localoid::regclass, policytype, numsegments
   from gp_distribution_policy
   where localoid::regclass in ('rep2', 'rep3');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on coordinator-only tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Queries on coordinator-only tables
  localoid | policytype | numsegments 
 ----------+------------+-------------
  rep3     | r          |           3
@@ -316,7 +316,7 @@ DETAIL:  Feature not supported: Queries on coordinator-only tables
 (2 rows)
 
 explain select * from rep2 union all select * from rep3;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                                       QUERY PLAN                                       
 ---------------------------------------------------------------------------------------
@@ -328,7 +328,7 @@ DETAIL:  Unknown error: Partially Distributed Data
 (5 rows)
 
 select * from rep2 union all select * from rep3;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  c1 | c2 
 ----+----
@@ -707,8 +707,8 @@ UNION ALL
 (select d1 from T_constant)
 order by 1;'
 , 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -728,8 +728,8 @@ UNION ALL
 (select d1 from T_constant)
 order by 1;'
 , 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -749,8 +749,8 @@ UNION ALL
 (select d1 from T_constant)
 order by 1;'
 , 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -770,8 +770,8 @@ UNION ALL
 (select b1 from T_b2)
 order by 1;'
 , 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -993,8 +993,8 @@ UNION
 (select d1 from T_constant)
 order by 1;'
 , 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -1014,8 +1014,8 @@ UNION
 (select d1 from T_constant)
 order by 1;'
 , 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -1035,8 +1035,8 @@ UNION
 (select d1 from T_constant)
 order by 1;'
 , 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -1056,8 +1056,8 @@ UNION
 (select b1 from T_b2)
 order by 1;'
 , 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -1493,56 +1493,56 @@ UNION ALL SELECT 300, 300)
 -- Binary UNION ALL explain
 --
 select count_operator('(select a1 from T_a1) UNION ALL (select b1 from T_b2) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               1
 (1 row)
 
 select count_operator('(select b1 from T_b2) UNION ALL (select a1 from T_a1) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               1
 (1 row)
 
 select count_operator('(select a1 from T_a1) UNION ALL (select c1 from T_random) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               1
 (1 row)
 
 select count_operator('(select c1 from T_random) UNION ALL (select a1 from T_a1) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               1
 (1 row)
 
 select count_operator('(select * from T_a1) UNION ALL (select * from T_b2) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               1
 (1 row)
 
 select count_operator('(select * from T_a1) UNION ALL (select * from T_random) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               1
 (1 row)
 
 select count_operator('(select * from T_b2) UNION ALL (select * from T_random) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               1
@@ -1554,8 +1554,8 @@ SELECT 100, 100
 UNION ALL SELECT 200, 200
 UNION ALL SELECT 300, 300)
 (select a1 from T_a1) UNION ALL (select d1 from T_constant) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -1567,8 +1567,8 @@ SELECT 100, 100
 UNION ALL SELECT 200, 200
 UNION ALL SELECT 300, 300)
 (select d1 from T_constant) UNION ALL (select a1 from T_a1) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -1580,8 +1580,8 @@ SELECT 100, 100
 UNION ALL SELECT 200, 200
 UNION ALL SELECT 300, 300)
 (select c1 from T_random) UNION ALL (select d1 from T_constant) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -1592,8 +1592,8 @@ SELECT 100, 100
 UNION ALL SELECT 200, 200
 UNION ALL SELECT 300, 300)
 (select d1 from T_constant) UNION ALL (select c1 from T_random) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -1949,56 +1949,56 @@ UNION SELECT 300, 300)
 -- Binary UNION explain
 --
 select count_operator('(select a1 from T_a1) UNION (select b1 from T_b2) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               1
 (1 row)
 
 select count_operator('(select b1 from T_b2) UNION (select a1 from T_a1) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               1
 (1 row)
 
 select count_operator('(select a1 from T_a1) UNION (select c1 from T_random) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               1
 (1 row)
 
 select count_operator('(select c1 from T_random) UNION (select a1 from T_a1) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               1
 (1 row)
 
 select count_operator('(select * from T_a1) UNION (select * from T_b2) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               1
 (1 row)
 
 select count_operator('(select * from T_a1) UNION (select * from T_random) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               1
 (1 row)
 
 select count_operator('(select * from T_b2) UNION (select * from T_random) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               1
@@ -2010,8 +2010,8 @@ SELECT 100, 100
 UNION SELECT 200, 200
 UNION SELECT 300, 300)
 (select a1 from T_a1) UNION (select d1 from T_constant) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -2023,8 +2023,8 @@ SELECT 100, 100
 UNION SELECT 200, 200
 UNION SELECT 300, 300)
 (select d1 from T_constant) UNION (select a1 from T_a1) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -2036,8 +2036,8 @@ SELECT 100, 100
 UNION SELECT 200, 200
 UNION SELECT 300, 300)
 (select c1 from T_random) UNION (select d1 from T_constant) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -2048,8 +2048,8 @@ SELECT 100, 100
 UNION SELECT 200, 200
 UNION SELECT 300, 300)
 (select d1 from T_constant) UNION (select c1 from T_random) order by 1;', 'APPEND');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  count_operator 
 ----------------
               2
@@ -2133,20 +2133,20 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 set allow_system_table_mods = on;
 update gp_distribution_policy set numsegments = 1
   where localoid = 'union_schema.t1'::regclass::oid;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on coordinator-only tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Queries on coordinator-only tables
 update gp_distribution_policy set numsegments = 2
   where localoid = 'union_schema.t2'::regclass::oid;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on coordinator-only tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Queries on coordinator-only tables
 select relname, policytype, numsegments, distkey
   from pg_class, gp_distribution_policy, pg_namespace ns
   where pg_class.oid = localoid and relnamespace = ns.oid
     and nspname = 'union_schema'
     and relname in ('t1', 't2', 't3')
   order by relname;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-default collation
  relname | policytype | numsegments | distkey 
 ---------+------------+-------------+---------
  t1      | p          |           1 | 1
@@ -2155,16 +2155,16 @@ DETAIL:  Feature not supported: Non-default collation
 (3 rows)
 
 insert into union_schema.t1 select i, i from generate_series(1,10)i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 insert into union_schema.t2 select i, i from generate_series(1,20)i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 analyze union_schema.t1;
 analyze union_schema.t2;
 explain select * from union_schema.t1 join union_schema.t2
     on union_schema.t1.a = union_schema.t2.b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                                           QUERY PLAN                                           
 -----------------------------------------------------------------------------------------------
@@ -2184,7 +2184,7 @@ explain select union_schema.t1.a, union_schema.t2.b
     on union_schema.t1.a = union_schema.t2.b
   union all
   select * from union_schema.t3;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
@@ -2204,7 +2204,7 @@ DETAIL:  Unknown error: Partially Distributed Data
 
 select * from union_schema.t1 join union_schema.t2
   on union_schema.t1.a = union_schema.t2.b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  a  | b  | a  | b  
 ----+----+----+----
@@ -2225,7 +2225,7 @@ select union_schema.t1.a, union_schema.t2.b
     on union_schema.t1.a = union_schema.t2.b
 union all
 select * from union_schema.t3;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  a  | b  
 ----+----
@@ -2243,16 +2243,16 @@ DETAIL:  Unknown error: Partially Distributed Data
 
 truncate union_schema.t1, union_schema.t2;
 insert into union_schema.t1 select i, i from generate_series(1,20)i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 insert into union_schema.t2 select i, i from generate_series(1,10)i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 analyze union_schema.t1;
 analyze union_schema.t2;
 explain select * from union_schema.t1 join union_schema.t2
     on union_schema.t1.a = union_schema.t2.b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
@@ -2272,7 +2272,7 @@ explain select union_schema.t1.a, union_schema.t2.b
 	  on union_schema.t1.a = union_schema.t2.b
   union all
   select * from union_schema.t3;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
@@ -2292,7 +2292,7 @@ DETAIL:  Unknown error: Partially Distributed Data
 
 select * from union_schema.t1 join union_schema.t2
   on union_schema.t1.a = union_schema.t2.b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  a  | b  | a  | b  
 ----+----+----+----
@@ -2313,7 +2313,7 @@ select union_schema.t1.a, union_schema.t2.b
     on union_schema.t1.a = union_schema.t2.b
 union all
 select * from union_schema.t3;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  a  | b  
 ----+----

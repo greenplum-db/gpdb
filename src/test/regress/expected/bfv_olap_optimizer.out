@@ -839,7 +839,7 @@ select (select rn from (select row_number() over () as rn, name
 ,sum(sum(a.salary)) over()
 from t2_github_issue_10143 a
 group by a.code;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Query-to-DXL Translation: No variable entry found due to incorrect normalization of query
  dongnm | sum  
 --------+------

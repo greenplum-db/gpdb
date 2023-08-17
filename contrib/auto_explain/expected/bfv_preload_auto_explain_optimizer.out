@@ -43,7 +43,7 @@ Aggregate  (cost=0.00..862.00 rows=1 width=8) (actual time=10.250..10.256 rows=1
               ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..0.170 rows=0 loops=1)
                     Buckets: 524288  Batches: 1  Memory Usage: 4096kB
                     ->  Seq Scan on t2  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.166 rows=0 loops=1)
-Optimizer: Pivotal Optimizer (GPORCA)
+Optimizer: GPORCA
   (slice0)    Executor memory: 45K bytes.
   (slice1)    Executor memory: 4116K bytes avg x 3 workers, 4116K bytes max (seg0).  Work_mem: 4096K bytes max.
   (slice2)    Executor memory: 38K bytes (entry db).

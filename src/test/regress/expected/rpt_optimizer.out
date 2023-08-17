@@ -1290,8 +1290,8 @@ explain (costs off) select * from rep_tab;
 set optimizer_enable_replicated_table=off;
 set optimizer_trace_fallback=on;
 explain (costs off) select * from rep_tab;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Use optimizer_enable_replicated_table to enable replicated tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Use optimizer_enable_replicated_table to enable replicated tables
                 QUERY PLAN
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
