@@ -4,6 +4,8 @@ image_resource:
 inputs:
   - name: gpdb_src
   - name: bin_gpdb
+  - name: llvm-with-asserts-packages
+    optional: true
   - name: binary_swap_gpdb
 outputs:
   - name: sqldump

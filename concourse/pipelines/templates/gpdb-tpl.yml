@@ -209,6 +209,9 @@ groups:
   - Publish Server Builds
   {% endif %}
   - compile_gpdb_[[ compile_platform ]]
+  {% if os_type == "rhel8" or os_type == "oel8" or os_type == "rocky8" %}
+  - prepare_binary_swap_gpdb_[[ os_type ]]
+  {% endif %}
   - test_gpdb_clients_[[ os_type ]]
   - gate_compile_end
 {% if "ICW" in test_sections %}
@@ -273,6 +276,9 @@ groups:
   jobs:
   - gate_compile_start
   - compile_gpdb_[[ compile_platform ]]
+    {% if os_type == "rhel8" or os_type == "oel8" or os_type == "rocky8" %}
+  - prepare_binary_swap_gpdb_[[ os_type ]]
+  {% endif %}
   - test_gpdb_clients_[[ os_type ]]
   {% if os_type == default_os_type %}
   - compile_gpdb_clients_windows
@@ -337,6 +343,11 @@ resource_types:
   source:
     repository: ljfranklin/terraform-resource
     tag: 0.11.14
+- name: tanzunet
+  type: registry-image
+  source:
+    repository: pivotalcf/pivnet-resource
+    tag: latest-final
 - name: gcs
   type: registry-image
   source:
@@ -420,6 +431,15 @@ resources:
   {% else %}
     repository: gcr.io/data-gpdb-public-images/gpdb7-[[ os_type ]]-build
   {% endif %}
+{% endif %}
+
+  {% if os_type == "rhel8" or os_type == "oel8" or os_type == "rocky8" %}
+- name: previous_gpdb
+  type: tanzunet
+  source:
+    api_token: ((pivotal-gpdb-pivnet-api-token))
+    product_slug: pivotal-gpdb
+    product_version: ((pivotal-gpdb-pivnet-product-version))
 {% endif %}
 
 {% if os_type != compile_platform %}
@@ -535,6 +555,15 @@ resources:
     bucket: pivotal-gpdb-concourse-resources-prod
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/[[ default_os_type ]]/llvm-with-asserts-(.*)-el8_x86_64.tar.gz
+{% endif %}
+
+  {% if os_type == "rhel8" or os_type == "oel8" or os_type == "rocky8" %}
+- name: binary_swap_gpdb_[[ os_type ]]
+  type: gcs
+  source:
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/binary_swap_gpdb_[[ os_type ]]/bin_gpdb.tar.gz
 {% endif %}
 
 {% if os_type == default_os_type %}
@@ -656,6 +685,27 @@ jobs:
         params:
           file: gpdb_artifacts/bin_gpdb_clients.tar.gz
 
+  {% if os_type == "rhel8" or os_type == "oel8" or os_type == "rocky8" %}
+- name: prepare_binary_swap_gpdb_[[ os_type ]]
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        trigger: true
+        passed: [compile_gpdb_[[ compile_platform ]]]
+      - get: gpdb_package
+        resource: previous_gpdb
+        params:
+          globs: [greenplum-db-7*-el8-x86_64.rpm]
+      - get: gpdb7-[[ compile_platform ]]-build
+  - task: generate_previous_bin_gpdb
+    file: gpdb_src/concourse/tasks/extract_package.yml
+    image: gpdb7-[[ compile_platform ]]-build
+  - put: binary_swap_gpdb_[[ os_type ]]
+    params:
+      file: gpdb_artifacts/bin_gpdb.tar.gz
+{% endif %}
+
 - name: test_gpdb_clients_[[ os_type ]]
   plan:
     - in_parallel:
@@ -743,6 +793,9 @@ jobs:
       params:
         skip_download: 'true'
       passed:
+        {% if os_type == "rhel8" or os_type == "oel8" or os_type == "rocky8" %}
+      - prepare_binary_swap_gpdb_[[ os_type ]]
+      {% endif %}
       {% if os_type == default_os_type %}
       - compile_gpdb_clients_windows
       - Publish Server Builds
@@ -772,6 +825,12 @@ jobs:
         skip_download: 'true'
       passed: [Publish Server Builds]
     {% endif %}
+      {% if os_type == "rhel8" or os_type == "oel8" or os_type == "rocky8" %}
+    - get: binary_swap_gpdb_[[ os_type ]]
+      params:
+        skip_download: 'true'
+      passed: [ prepare_binary_swap_gpdb_[[ os_type ]] ]
+    {% endif %}
 
 {% if "ICW" in test_sections %}
 ## ======================================================================
@@ -790,6 +849,10 @@ jobs:
             skip_download: 'true'
           passed: [gate_compile_end]
           trigger: true
+        - get: binary_swap_gpdb_[[ os_type ]]
+          params:
+            skip_download: 'true'
+          passed: [gate_compile_end]
         - get: gpdb_src
           params:
             skip_download: 'true'
@@ -903,6 +966,9 @@ jobs:
       - get: bin_gpdb
         passed: [gate_icw_start]
         trigger: true
+      - get: binary_swap_gpdb
+        passed: [gate_icw_start]
+        resource: binary_swap_gpdb_[[ os_type ]]
       - get: gpdb7-[[ os_type ]]-test
       {% if compile_platform == default_os_type %}
       - get: llvm-with-asserts-packages
@@ -911,7 +977,7 @@ jobs:
     {% if use_ICW_workers %}
     tags: [icw-worker]
     {% endif %}
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
     image: gpdb7-[[ os_type ]]-test
     timeout: 24h
     params:
@@ -933,6 +999,9 @@ jobs:
       - get: bin_gpdb
         passed: [gate_icw_start]
         trigger: true
+      - get: binary_swap_gpdb
+        passed: [gate_icw_start]
+        resource: binary_swap_gpdb_[[ os_type ]]
       - get: gpdb7-[[ os_type ]]-test
       {% if compile_platform == default_os_type %}
       - get: llvm-with-asserts-packages
@@ -941,12 +1010,13 @@ jobs:
     {% if use_ICW_workers %}
     tags: [icw-worker]
     {% endif %}
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
     image: gpdb7-[[ os_type ]]-test
     timeout: 24h
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off -c jit=on -c jit_above_cost=0 -c gp_explain_jit=off' installcheck
       TEST_OS: [[ test_os ]]
+      TEST_BINARY_SWAP: ((test-binary-swap))
       CONFIGURE_FLAGS: ((configure_flags))
 
 - name: icw_gporca_icproxy_[[ os_type ]]
@@ -1386,6 +1456,11 @@ jobs:
           skip_download: 'true'
         passed:
         - gate_compile_end
+      - get: binary_swap_gpdb_[[ os_type ]]
+        params:
+          skip_download: 'true'
+        passed:
+          - gate_compile_end
 
 - name: unit_tests_gpmgmt_[[ os_type ]]
   plan:
