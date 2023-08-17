@@ -77,20 +77,6 @@ Cluster all tables in the database that have previously been clustered:
 CLUSTER;
 ```
 
-XXX
-
-Cluster a large table by recreating it and loading it in the correct index order:
-
-```
-CREATE TABLE newtable AS SELECT * FROM table ORDER BY column;
-DROP table;
-ALTER TABLE newtable RENAME TO table;
-CREATE INDEX column_ix ON table (column);
-VACUUM ANALYZE table;
-```
-
-XXX
-
 ## <a id="section7"></a>Compatibility 
 
 There is no `CLUSTER` statement in the SQL standard.
