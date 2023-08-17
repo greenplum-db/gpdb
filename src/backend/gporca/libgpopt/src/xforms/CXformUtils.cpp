@@ -1857,6 +1857,38 @@ CXformUtils::PcrsIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 //		appear in the index columns of the specified type (included / key)
 //
 //---------------------------------------------------------------------------
+CColRefSet *
+CXformUtils::PcrsIndexReturnableColumns(CMemoryPool *mp,
+										CColRefArray *colref_array,
+										const IMDIndex *pmdindex,
+										const IMDRelation *pmdrel)
+{
+	CColRefSet *pcrsCols = GPOS_NEW(mp) CColRefSet(mp);
+
+	// returnable columns
+	for (ULONG ul = 0; ul < pmdindex->ReturnableCols(); ul++)
+	{
+		ULONG ulPos = pmdindex->ReturnableColAt(ul);
+
+		ULONG ulPosNonDropped = pmdrel->NonDroppedColAt(ulPos);
+		GPOS_ASSERT(gpos::ulong_max != ulPosNonDropped);
+		GPOS_ASSERT(ulPosNonDropped < colref_array->Size());
+		CColRef *colref = (*colref_array)[ulPosNonDropped];
+		pcrsCols->Include(colref);
+	}
+
+	return pcrsCols;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CXformUtils::PdrgpcrIndexColumns
+//
+//	@doc:
+//		Return the ordered list of columns from the given array of columns which
+//		appear in the index columns of the specified type (included / key)
+//
+//---------------------------------------------------------------------------
 CColRefArray *
 CXformUtils::PdrgpcrIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 								 const IMDIndex *pmdindex,
@@ -4098,7 +4130,7 @@ CXformUtils::FCoverIndex(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
 	GPOS_ASSERT(nullptr != pdrgpcrOutput);
 	pdrgpcrOutput->AddRef();
 
-	CColRefSet *matched_cols = CXformUtils::PcrsIndexKeysAndIncludes(
+	CColRefSet *matched_cols = CXformUtils::PcrsIndexReturnableColumns(
 		mp, pdrgpcrOutput, pmdindex, pmdrel);
 	CColRefSet *output_cols = GPOS_NEW(mp) CColRefSet(mp);
 

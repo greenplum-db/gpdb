@@ -146,8 +146,7 @@ BOOL
 CIndexDescriptor::SupportsIndexOnlyScan(CTableDescriptor *ptabdesc) const
 {
 	// index only scan is not supported on GPDB 6 append-only tables.
-	return m_index_type == IMDIndex::EmdindBtree &&
-		   !((ptabdesc->IsAORowOrColTable() ||
+	return !((ptabdesc->IsAORowOrColTable() ||
 			  IMDRelation::ErelstorageMixedPartitioned ==
 				  ptabdesc->RetrieveRelStorageType()) &&
 			 ptabdesc->GetRelAOVersion() < IMDRelation::AORelationVersion_GP7);

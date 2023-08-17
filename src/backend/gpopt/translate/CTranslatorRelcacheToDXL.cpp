@@ -1023,6 +1023,7 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 	// extract the position of the key columns
 	index_key_cols_array = GPOS_NEW(mp) ULongPtrArray(mp);
 	ULongPtrArray *included_cols = GPOS_NEW(mp) ULongPtrArray(mp);
+	ULongPtrArray *returnable_cols = GPOS_NEW(mp) ULongPtrArray(mp);
 
 	for (int i = 0; i < form_pg_index->indnatts; i++)
 	{
@@ -1039,6 +1040,13 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 		else
 		{
 			included_cols->Append(
+				GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+		}
+
+		// check if index can return column or index-only scans
+		if (gpdb::IndexCanReturn(index_rel.get(), attno))
+		{
+			returnable_cols->Append(
 				GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
 		}
 	}
@@ -1099,11 +1107,11 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 		child_index_oids = GPOS_NEW(mp) IMdIdArray(mp);
 	}
 
-	CMDIndexGPDB *index = GPOS_NEW(mp)
-		CMDIndexGPDB(mp, mdid_index, mdname, index_clustered, index_partitioned,
-					 index_amcanorder, index_type, mdid_item_type,
-					 index_key_cols_array, included_cols, op_families_mdids,
-					 child_index_oids, sort_direction, nulls_direction);
+	CMDIndexGPDB *index = GPOS_NEW(mp) CMDIndexGPDB(
+		mp, mdid_index, mdname, index_clustered, index_partitioned,
+		index_amcanorder, index_type, mdid_item_type, index_key_cols_array,
+		included_cols, returnable_cols, op_families_mdids, child_index_oids,
+		sort_direction, nulls_direction);
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 	return index;

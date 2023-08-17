@@ -55,7 +55,6 @@ CXformIndexGet2IndexOnlyScan::Exfp(CExpressionHandle &exprhdl) const
 
 	if (!pindexdesc->SupportsIndexOnlyScan(ptabdesc))
 	{
-		// FIXME: relax btree requirement. GiST and SP-GiST indexes can support some operator classes, but Gin cannot
 		return CXform::ExfpNone;
 	}
 

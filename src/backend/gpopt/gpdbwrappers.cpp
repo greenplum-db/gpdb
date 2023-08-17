@@ -35,6 +35,7 @@
 extern "C" {
 #include "access/amapi.h"
 #include "access/external.h"
+#include "access/genam.h"
 #include "catalog/pg_inherits.h"
 #include "foreign/fdwapi.h"
 #include "nodes/nodeFuncs.h"
@@ -2107,6 +2108,17 @@ gpdb::IndexOpProperties(Oid opno, Oid opfamily, StrategyNumber *strategynumber,
 					strategy <= std::numeric_limits<StrategyNumber>::max());
 		*strategynumber = static_cast<StrategyNumber>(strategy);
 		return;
+	}
+	GP_WRAP_END;
+}
+
+// check whether index column is returnable (for index-only scans)
+gpos::BOOL
+gpdb::IndexCanReturn(Relation index, int attno)
+{
+	GP_WRAP_START;
+	{
+		return index_can_return(index, attno);
 	}
 	GP_WRAP_END;
 }

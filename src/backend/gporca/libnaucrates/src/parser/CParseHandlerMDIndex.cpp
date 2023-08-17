@@ -43,6 +43,7 @@ CParseHandlerMDIndex::CParseHandlerMDIndex(
 	  m_mdid_item_type(nullptr),
 	  m_index_key_cols_array(nullptr),
 	  m_included_cols_array(nullptr),
+	  m_returnable_cols_array(nullptr),
 	  m_sort_direction(nullptr),
 	  m_nulls_direction(nullptr),
 	  m_child_indexes_parse_handler(nullptr)
@@ -139,6 +140,14 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const element_uri,
 		m_parse_handler_mgr->GetDXLMemoryManager(), xmlszIndexIncludedCols,
 		EdxltokenIndexIncludedCols, EdxltokenIndex);
 
+	// parse index returnable column information
+	const XMLCh *xmlszIndexReturnableCols =
+		CDXLOperatorFactory::ExtractAttrValue(
+			attrs, EdxltokenIndexReturnableCols, EdxltokenIndex);
+	m_returnable_cols_array = CDXLOperatorFactory::ExtractIntsToUlongArray(
+		m_parse_handler_mgr->GetDXLMemoryManager(), xmlszIndexReturnableCols,
+		EdxltokenIndexReturnableCols, EdxltokenIndex);
+
 	// extract index keys sort directions
 	const XMLCh *xmlszIndexKeysSortDirections =
 		CDXLOperatorFactory::ExtractAttrValue(
@@ -215,8 +224,8 @@ CParseHandlerMDIndex::EndElement(const XMLCh *const,  // element_uri,
 	m_imd_obj = GPOS_NEW(m_mp) CMDIndexGPDB(
 		m_mp, m_mdid, m_mdname, m_clustered, is_partitioned, m_amcanorder,
 		m_index_type, m_mdid_item_type, m_index_key_cols_array,
-		m_included_cols_array, mdid_opfamilies_array, child_indexes,
-		m_sort_direction, m_nulls_direction);
+		m_included_cols_array, m_returnable_cols_array, mdid_opfamilies_array,
+		child_indexes, m_sort_direction, m_nulls_direction);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

@@ -35,9 +35,9 @@ CMDIndexGPDB::CMDIndexGPDB(
 	CMemoryPool *mp, IMDId *mdid, CMDName *mdname, BOOL is_clustered,
 	BOOL is_partitioned, BOOL amcanorder, EmdindexType index_type,
 	IMDId *mdid_item_type, ULongPtrArray *index_key_cols_array,
-	ULongPtrArray *included_cols_array, IMdIdArray *mdid_opfamilies_array,
-	IMdIdArray *child_index_oids, ULongPtrArray *sort_direction,
-	ULongPtrArray *nulls_direction)
+	ULongPtrArray *included_cols_array, ULongPtrArray *returnable_cols_array,
+	IMdIdArray *mdid_opfamilies_array, IMdIdArray *child_index_oids,
+	ULongPtrArray *sort_direction, ULongPtrArray *nulls_direction)
 
 	: m_mp(mp),
 	  m_mdid(mdid),
@@ -49,6 +49,7 @@ CMDIndexGPDB::CMDIndexGPDB(
 	  m_mdid_item_type(mdid_item_type),
 	  m_index_key_cols_array(index_key_cols_array),
 	  m_included_cols_array(included_cols_array),
+	  m_returnable_cols_array(returnable_cols_array),
 	  m_mdid_opfamilies_array(mdid_opfamilies_array),
 	  m_child_index_oids(child_index_oids),
 	  m_sort_direction(sort_direction),
@@ -59,6 +60,7 @@ CMDIndexGPDB::CMDIndexGPDB(
 	GPOS_ASSERT(nullptr != index_key_cols_array);
 	GPOS_ASSERT(0 < index_key_cols_array->Size());
 	GPOS_ASSERT(nullptr != included_cols_array);
+	GPOS_ASSERT(nullptr != returnable_cols_array);
 	GPOS_ASSERT_IMP(nullptr != mdid_item_type,
 					IMDIndex::EmdindBitmap == index_type ||
 						IMDIndex::EmdindBtree == index_type ||
@@ -92,6 +94,7 @@ CMDIndexGPDB::~CMDIndexGPDB()
 	CRefCount::SafeRelease(m_mdid_item_type);
 	m_index_key_cols_array->Release();
 	m_included_cols_array->Release();
+	m_returnable_cols_array->Release();
 	m_mdid_opfamilies_array->Release();
 	CRefCount::SafeRelease(m_child_index_oids);
 	m_sort_direction->Release();
@@ -306,6 +309,34 @@ CMDIndexGPDB::KeyNullsDirectionAt(ULONG pos) const
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CMDIndexGPDB::ReturnableCols
+//
+//	@doc:
+//		Returns the number of returnable columns
+//
+//---------------------------------------------------------------------------
+ULONG
+CMDIndexGPDB::ReturnableCols() const
+{
+	return m_returnable_cols_array->Size();
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CMDIndexGPDB::ReturnableColAt
+//
+//	@doc:
+//		Returns the n-th returnable column
+//
+//---------------------------------------------------------------------------
+ULONG
+CMDIndexGPDB::ReturnableColAt(ULONG pos) const
+{
+	return *((*m_returnable_cols_array)[pos]);
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CMDIndexGPDB::GetIncludedColPos
 //
 //	@doc:
@@ -377,6 +408,13 @@ CMDIndexGPDB::Serialize(CXMLSerializer *xml_serializer) const
 		CDXLTokens::GetDXLTokenStr(EdxltokenIndexIncludedCols),
 		available_cols_str);
 	GPOS_DELETE(available_cols_str);
+
+	CWStringDynamic *returnable_cols_str =
+		CDXLUtils::Serialize(m_mp, m_returnable_cols_array);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenIndexReturnableCols),
+		returnable_cols_str);
+	GPOS_DELETE(returnable_cols_str);
 
 	// Only if Index Access Method Support Ordering, serialize sort and nulls
 	// directions

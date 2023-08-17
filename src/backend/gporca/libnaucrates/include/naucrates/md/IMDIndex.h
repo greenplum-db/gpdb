@@ -83,6 +83,12 @@ public:
 	// return the n-th included column
 	virtual ULONG IncludedColAt(ULONG pos) const = 0;
 
+	// number of returnable columns
+	virtual ULONG ReturnableCols() const = 0;
+
+	// return the n-th returnable column
+	virtual ULONG ReturnableColAt(ULONG pos) const = 0;
+
 	// return the n-th column sort direction
 	virtual ULONG KeySortDirectionAt(ULONG pos) const = 0;
 

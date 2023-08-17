@@ -98,6 +98,13 @@ private:
 										const IMDRelation *pmdrel,
 										EIndexCols eic);
 
+	// return the set of columns from the given array of columns which are
+	// returnable through the index (to determine index-only scan capable)
+	static CColRefSet *PcrsIndexReturnableColumns(CMemoryPool *mp,
+												  CColRefArray *colref_array,
+												  const IMDIndex *pmdindex,
+												  const IMDRelation *pmdrel);
+
 	// return the ordered array of columns from the given array of columns which appear
 	// in the index included / key columns
 	static CColRefArray *PdrgpcrIndexColumns(CMemoryPool *mp,

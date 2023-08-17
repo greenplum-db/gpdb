@@ -67,6 +67,9 @@ private:
 	// included columns
 	ULongPtrArray *m_included_cols_array;
 
+	// returnable columns
+	ULongPtrArray *m_returnable_cols_array;
+
 	// operator families for each index key
 	IMdIdArray *m_mdid_opfamilies_array;
 
@@ -91,6 +94,7 @@ public:
 				 EmdindexType index_type, IMDId *mdid_item_type,
 				 ULongPtrArray *index_key_cols_array,
 				 ULongPtrArray *included_cols_array,
+				 ULongPtrArray *returnable_cols_array,
 				 IMdIdArray *mdid_opfamilies_array,
 				 IMdIdArray *child_index_oids, ULongPtrArray *sort_direction,
 				 ULongPtrArray *nulls_direction);
@@ -130,6 +134,12 @@ public:
 
 	// return the n-th included column
 	ULONG IncludedColAt(ULONG pos) const override;
+
+	// number of returnable columns
+	ULONG ReturnableCols() const override;
+
+	// return the n-th returnable column
+	ULONG ReturnableColAt(ULONG pos) const override;
 
 	// return the n-th column sort direction
 	ULONG KeySortDirectionAt(ULONG pos) const override;

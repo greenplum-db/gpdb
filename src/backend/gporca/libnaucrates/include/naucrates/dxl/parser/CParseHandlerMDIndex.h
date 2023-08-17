@@ -61,6 +61,9 @@ private:
 	// included columns
 	ULongPtrArray *m_included_cols_array;
 
+	// returnable columns
+	ULongPtrArray *m_returnable_cols_array;
+
 	// index key's sort direction
 	ULongPtrArray *m_sort_direction;
 

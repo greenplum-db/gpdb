@@ -575,6 +575,9 @@ bool HasUpdateTriggers(Oid relid);
 void IndexOpProperties(Oid opno, Oid opfamily, StrategyNumber *strategynumber,
 					   Oid *righttype);
 
+// check whether index column is returnable (for index-only scans)
+gpos::BOOL IndexCanReturn(Relation index, int attno);
+
 // get oids of families this operator belongs to
 List *GetOpFamiliesForScOp(Oid opno);
 
