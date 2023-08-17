@@ -698,7 +698,7 @@ CCostModelGPDB::CostSort(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(COperator::EopPhysicalSort == exprhdl.Pop()->Eopid());
 
 	// log operation below
-	const CDouble rows = CDouble(std::max(1.0, pci->Rows()));
+	const CDouble rows = CDouble(std::max(2.0, pci->Rows()));
 	const CDouble num_rebinds = CDouble(pci->NumRebinds());
 	const CDouble width = CDouble(pci->Width());
 
