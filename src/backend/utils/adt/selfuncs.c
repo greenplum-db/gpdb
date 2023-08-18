@@ -4928,6 +4928,8 @@ static void
 examine_simple_variable(PlannerInfo *root, Var *var,
 						VariableStatData *vardata)
 {
+	if (!root)
+		return;
 	RangeTblEntry *rte = root->simple_rte_array[var->varno];
 
 	Assert(IsA(rte, RangeTblEntry));
