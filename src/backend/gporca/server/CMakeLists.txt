@@ -404,8 +404,9 @@ OrderedAggUsingGroupColumnInDirectArg OrderedAgg_multiple_samecol OrderedAgg_wit
 OrderedAgg_array_fraction OrderedAgg_multiple_samecol_difforderespec OrderedAgg_with_nonconst_fraction
 OrderedAgg_skewed_data;
 
-CoverintIndexTest:
-CoveringIndex-1 CoveringIndex-2 CoveringIndex-3 CoveringIndex-Cost-1 CoveringIndex-Cost-2;
+CoveringIndexTest:
+CoveringIndex-1 CoveringIndex-2 CoveringIndex-3 CoveringIndex-Cost-1 CoveringIndex-Cost-2
+CoveringIndex-DoesSupport-Gist CoveringIndex-DoesNotSupport-Gin;
 
 CForeignPartTest:
 ForeignPartUniform PartForeignMixed PartForeignDifferentServer PartForeignDifferentExecLocation PartForeignMixedDPE PartForeignMixedSPE PartForeignUniformSPE ForeignScanExecLocAnySimpleScan ForeignScanExecLocAnyJoin ForeignPartOneTimeFilterDPE
