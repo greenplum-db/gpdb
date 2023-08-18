@@ -603,23 +603,23 @@ SELECT a, b FROM test_cover_index_on_pt WHERE a<10;
 -- Test mixed partitioned tables
 --
 -- AO partitioned table contains a non-AO leaf partition
-CREATE TABLE mypt(a bigint) WITH (appendonly=true) PARTITION BY RANGE(a)
+CREATE TABLE ao_pt(a bigint) WITH (appendonly=true) PARTITION BY RANGE(a)
 (
-  START (1) END (11) WITH (tablename='pt_1_prt_1'),
-  START (11) END (21) WITH (tablename='pt_1_prt_2', appendonly=false),
-  START (21) END (31) WITH (tablename='pt_1_prt_3')
+  START (1) END (11) WITH (tablename='ao_pt_1_prt_1'),
+  START (11) END (21) WITH (tablename='ao_pt_1_prt_2', appendonly=false),
+  START (21) END (31) WITH (tablename='ao_pt_1_prt_3')
 );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-INSERT INTO mypt SELECT i FROM generate_series(1,30)i;
-CREATE INDEX idx_mypt_a ON mypt USING btree (a);
-VACUUM ANALYZE mypt;
+INSERT INTO ao_pt SELECT i FROM generate_series(1,30)i;
+CREATE INDEX idx_ao_pt_a ON ao_pt USING btree (a);
+VACUUM ANALYZE ao_pt;
 -- Allow dynamic index-only scan on mixed partitioned AO table
-EXPLAIN SELECT a FROM mypt WHERE a=29;
-                                          QUERY PLAN                                          
-----------------------------------------------------------------------------------------------
+EXPLAIN SELECT a FROM ao_pt WHERE a=29;
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.14..4.17 rows=1 width=8)
-   ->  Index Only Scan using pt_1_prt_3_a_idx on pt_1_prt_3  (cost=0.14..4.15 rows=1 width=8)
+   ->  Index Only Scan using ao_pt_1_prt_3_a_idx on ao_pt_1_prt_3  (cost=0.14..4.15 rows=1 width=8)
          Index Cond: (a = 29)
  Optimizer: Postgres query optimizer
 (4 rows)
@@ -627,17 +627,57 @@ EXPLAIN SELECT a FROM mypt WHERE a=29;
 -- imitate child partition has GPDB 6 version file via catalog
 -- start_ignore
 SET allow_system_table_mods=on;
-UPDATE pg_appendonly SET version=1 WHERE relid='pt_1_prt_3'::regclass;
+UPDATE pg_appendonly SET version=1 WHERE relid='ao_pt_1_prt_3'::regclass;
 RESET allow_system_table_mods;
 -- end_ignore
 -- Disallow if the table contains child partition with GPDB 6 version
-EXPLAIN SELECT a FROM mypt WHERE a=29;
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
+EXPLAIN SELECT a FROM ao_pt WHERE a=29;
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=4.14..8.18 rows=1 width=8)
-   ->  Bitmap Heap Scan on pt_1_prt_3  (cost=4.14..8.16 rows=1 width=8)
+   ->  Bitmap Heap Scan on ao_pt_1_prt_3  (cost=4.14..8.16 rows=1 width=8)
          Recheck Cond: (a = 29)
-         ->  Bitmap Index Scan on pt_1_prt_3_a_idx  (cost=0.00..4.14 rows=1 width=0)
+         ->  Bitmap Index Scan on ao_pt_1_prt_3_a_idx  (cost=0.00..4.14 rows=1 width=0)
+               Index Cond: (a = 29)
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+-- AO/CO partitioned table contains a non-AO leaf partition
+CREATE TABLE aocs_pt(a bigint) WITH (appendonly=true, orientation=column) PARTITION BY RANGE(a)
+(
+  START (1) END (11) WITH (tablename='aocs_pt_1_prt_1'),
+  START (11) END (21) WITH (tablename='aocs_pt_1_prt_2', appendonly=false),
+  START (21) END (31) WITH (tablename='aocs_pt_1_prt_3')
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO aocs_pt SELECT i FROM generate_series(1,30)i;
+CREATE INDEX idx_aocs_pt_a ON aocs_pt USING btree (a);
+VACUUM ANALYZE aocs_pt;
+-- Allow dynamic index-only scan on mixed partitioned AO/CO table
+EXPLAIN SELECT a FROM aocs_pt WHERE a=29;
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.14..4.17 rows=1 width=8)
+   ->  Index Only Scan using aocs_pt_1_prt_3_a_idx on aocs_pt_1_prt_3  (cost=0.14..4.15 rows=1 width=8)
+         Index Cond: (a = 29)
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+-- imitate child partition has GPDB 6 version file via catalog
+-- start_ignore
+SET allow_system_table_mods=on;
+UPDATE pg_appendonly SET version=1 WHERE relid='aocs_pt_1_prt_3'::regclass;
+RESET allow_system_table_mods;
+-- end_ignore
+-- Disallow if the table contains child partition with GPDB 6 version
+EXPLAIN SELECT a FROM aocs_pt WHERE a=29;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=4.14..8.18 rows=1 width=8)
+   ->  Bitmap Heap Scan on aocs_pt_1_prt_3  (cost=4.14..8.16 rows=1 width=8)
+         Recheck Cond: (a = 29)
+         ->  Bitmap Index Scan on aocs_pt_1_prt_3_a_idx  (cost=0.00..4.14 rows=1 width=0)
                Index Cond: (a = 29)
  Optimizer: Postgres query optimizer
 (6 rows)
