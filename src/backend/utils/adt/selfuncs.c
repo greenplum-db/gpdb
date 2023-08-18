@@ -5540,7 +5540,8 @@ get_variable_range(PlannerInfo *root, VariableStatData *vardata,
 	 * data.  Proceed only if the MCVs represent the whole table (to within
 	 * roundoff error).
 	 */
-	if (get_attstatsslot(&sslot, vardata->statsTuple,
+	bool has_mcv = (!vardata->rel || vardata->rel->rtekind != RTE_CTE);
+	if (has_mcv && get_attstatsslot(&sslot, vardata->statsTuple,
 						 STATISTIC_KIND_MCV, InvalidOid,
 						 have_data ? ATTSTATSSLOT_VALUES :
 						 (ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS)))
