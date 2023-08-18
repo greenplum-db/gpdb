@@ -2923,11 +2923,13 @@ MarkBufferDirtyHint(Buffer buffer, bool buffer_std)
 		{
 			MyPgXact->delayChkpt = false;
 			/*
-			 * Wait for wal replication only after checkpoiter is no longer
-			 * delayed by us. Otherwise, we might end up in a deadlock situation
+			 * Wait for wal replication only when (1) after checkpoiter is no longer
+			 * delayed by us and (2) we are not holding an exclusive buffer content
+			 * lock. Otherwise, we might end up in a deadlock situation
 			 * if mirror is marked down while we are waiting for wal replication
 			 */
-			wait_to_avoid_large_repl_lag();
+			if (bufHdr->content_lock->exclusive == 0)
+				wait_to_avoid_large_repl_lag();
 		}
 
 		if (dirtied)
