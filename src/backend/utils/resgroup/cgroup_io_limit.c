@@ -47,7 +47,8 @@ typedef struct BDICmp {
  * Because bdi_t is unsigned long now, larger than int. And the
  * implementation of bdi_t maybe changes in the future.
  */
-static int bdi_cmp(const void *a, const void *b) {
+static int
+bdi_cmp(const void *a, const void *b) {
   BDICmp x = *(BDICmp *)a;
   BDICmp y = *(BDICmp *)b;
 
@@ -65,14 +66,16 @@ static int bdi_cmp(const void *a, const void *b) {
  *  1. fill bdi_list of TblSpcIOLimit.
  *  2. check duplicate bdi.
  */
-void io_limit_validate(List *limit_list) {
+void
+io_limit_validate(List *limit_list) {
   ListCell *limit_cell;
   int bdi_count = 0;
   int i = 0;
   BDICmp *bdi_array;
   bool is_star = false;
 
-  foreach (limit_cell, limit_list) {
+  foreach (limit_cell, limit_list)
+  {
     TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(limit_cell);
     bdi_count += fill_bdi_list(limit);
 
@@ -82,13 +85,15 @@ void io_limit_validate(List *limit_list) {
 
   bdi_array = (BDICmp *)palloc(bdi_count * sizeof(BDICmp));
   /* fill bdi list and check wbps/rbps range */
-  foreach (limit_cell, limit_list) {
+  foreach (limit_cell, limit_list)
+  {
     TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(limit_cell);
     ListCell *bdi_cell;
 
     ioconfig_validate(limit->ioconfig);
 
-    foreach (bdi_cell, limit->bdi_list) {
+    foreach (bdi_cell, limit->bdi_list)
+	{
       bdi_array[i].bdi = *(bdi_t *)lfirst(bdi_cell);
       bdi_array[i].ts = limit->tablespace_oid;
       i++;
@@ -102,8 +107,10 @@ void io_limit_validate(List *limit_list) {
     return;
 
   qsort(bdi_array, bdi_count, sizeof(BDICmp), bdi_cmp);
-  for (i = 0; i < bdi_count - 1; ++i) {
-    if (bdi_array[i].bdi == bdi_array[i + 1].bdi) {
+  for (i = 0; i < bdi_count - 1; ++i)
+  {
+    if (bdi_array[i].bdi == bdi_array[i + 1].bdi)
+	{
       ereport(
           ERROR,
           (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
@@ -126,20 +133,23 @@ void io_limit_validate(List *limit_list) {
  *
  * Return bdi count of tablespace.
  */
-int fill_bdi_list(TblSpcIOLimit *iolimit) {
+int fill_bdi_list(TblSpcIOLimit *iolimit)
+{
   int result_cnt = 0;
 
   /* caller should init the bdi_list */
   Assert(iolimit->bdi_list == NULL);
 
-  if (iolimit->tablespace_oid == InvalidOid) {
+  if (iolimit->tablespace_oid == InvalidOid)
+  {
     Relation rel = table_open(TableSpaceRelationId, AccessShareLock);
     TableScanDesc scan = table_beginscan_catalog(rel, 0, NULL);
     HeapTuple tuple;
     /*
      * scan all tablespaces and get bdi
      */
-    while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL) {
+    while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
+	{
       bdi_t *bdi;
       Form_pg_tablespace spaceform = (Form_pg_tablespace)GETSTRUCT(tuple);
 
@@ -150,7 +160,9 @@ int fill_bdi_list(TblSpcIOLimit *iolimit) {
     }
     table_endscan(scan);
     table_close(rel, AccessShareLock);
-  } else {
+  }
+  else
+  {
     bdi_t *bdi;
 
     bdi = (bdi_t *)palloc0(sizeof(bdi_t));
@@ -171,7 +183,9 @@ int fill_bdi_list(TblSpcIOLimit *iolimit) {
  * /sys/dev/block/{bdi}), if it is a disk, just return it, if not, find the disk
  * and return it's bdi.
  */
-bdi_t get_bdi_of_path(const char *ori_path) {
+bdi_t
+get_bdi_of_path(const char *ori_path)
+{
   int maj;
   int min;
   size_t max_match_len = 0;
@@ -186,7 +200,8 @@ bdi_t get_bdi_of_path(const char *ori_path) {
   char path[PATH_MAX];
 
   char *res = realpath(ori_path, path);
-  if (res == NULL) {
+  if (res == NULL)
+  {
     ereport(ERROR, (errcode(ERRCODE_IO_ERROR),
                     errmsg("io limit: cannot find realpath of %s, details: %m.",
                            ori_path)));
@@ -196,12 +211,15 @@ bdi_t get_bdi_of_path(const char *ori_path) {
 
   /* find mount point of path */
   while ((mnt = getmntent_r(fp, &result, mntent_buffer,
-                            sizeof(mntent_buffer))) != NULL) {
+                            sizeof(mntent_buffer))) != NULL)
+  {
     size_t dir_len = strlen(mnt->mnt_dir);
 
     if (strstr(path, mnt->mnt_dir) != NULL &&
-        strncmp(path, mnt->mnt_dir, dir_len) == 0) {
-      if (dir_len > max_match_len) {
+        strncmp(path, mnt->mnt_dir, dir_len) == 0)
+	{
+      if (dir_len > max_match_len)
+	  {
         max_match_len = dir_len;
         match_mnt.mnt_passno = mnt->mnt_passno;
         match_mnt.mnt_freq = mnt->mnt_freq;
@@ -228,7 +246,8 @@ bdi_t get_bdi_of_path(const char *ori_path) {
   endmntent(fp);
 
   struct stat sb;
-  if (stat(match_mnt.mnt_fsname, &sb) == -1) {
+  if (stat(match_mnt.mnt_fsname, &sb) == -1)
+  {
     ereport(ERROR,
             (errcode(ERRCODE_IO_ERROR),
              errmsg("cannot find disk of %s, details: %m", path),
@@ -246,7 +265,8 @@ bdi_t get_bdi_of_path(const char *ori_path) {
     return make_bdi(maj, min);
 
   res = realpath(sysfs_path, real_path);
-  if (res == NULL) {
+  if (res == NULL)
+  {
     ereport(ERROR, (errcode(ERRCODE_IO_ERROR),
                     errmsg("io limit: cannot find realpath of %s, details: %m.",
                            sysfs_path)));
@@ -258,7 +278,8 @@ bdi_t get_bdi_of_path(const char *ori_path) {
            "/dev");
 
   FILE *f = fopen(real_path, "r");
-  if (f == NULL) {
+  if (f == NULL)
+  {
     ereport(ERROR, (errcode(ERRCODE_IO_ERROR),
                     errmsg("cannot find disk of %s\n", path)));
   }
@@ -266,7 +287,8 @@ bdi_t get_bdi_of_path(const char *ori_path) {
   int parent_maj;
   int parent_min;
   int scan_result = fscanf(f, "%d:%d", &parent_maj, &parent_min);
-  if (scan_result < 2) {
+  if (scan_result < 2)
+  {
     fclose(f);
     ereport(
         ERROR,
@@ -279,7 +301,8 @@ bdi_t get_bdi_of_path(const char *ori_path) {
   return make_bdi(parent_maj, parent_min);
 }
 
-static void ioconfig_validate(IOconfig *config) {
+static void ioconfig_validate(IOconfig *config)
+{
   const uint64 ULMAX = ULLONG_MAX / 1024 / 1024;
   const uint32 UMAX = UINT_MAX;
 
@@ -308,11 +331,14 @@ static void ioconfig_validate(IOconfig *config) {
              errmsg("io limit: riops must in range [2, %u] or equal 0", UMAX)));
 }
 
-char *get_tablespace_path(Oid spcid) {
+char *
+get_tablespace_path(Oid spcid)
+{
   if (spcid == InvalidOid)
     return NULL;
 
-  if (spcid == DEFAULTTABLESPACE_OID || spcid == GLOBALTABLESPACE_OID) {
+  if (spcid == DEFAULTTABLESPACE_OID || spcid == GLOBALTABLESPACE_OID)
+  {
     Oid dbid = MyDatabaseId;
 
     if (spcid == GLOBALTABLESPACE_OID)
@@ -324,10 +350,13 @@ char *get_tablespace_path(Oid spcid) {
   return psprintf("pg_tblspc/%u", spcid);
 }
 
-void io_limit_free(List *limit_list) {
+void
+io_limit_free(List *limit_list)
+{
   ListCell *cell;
 
-  foreach (cell, limit_list) {
+  foreach (cell, limit_list)
+  {
     TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(cell);
     list_free_deep(limit->bdi_list);
     pfree(limit->ioconfig);
@@ -351,7 +380,8 @@ void io_limit_free(List *limit_list) {
  *
  */
 List *
-get_iostat(Oid groupid, List *io_limit) {
+get_iostat(Oid groupid, List *io_limit)
+{
 #define MAX_LINE 1024
 
   List *result = NIL;
@@ -468,7 +498,8 @@ get_iostat(Oid groupid, List *io_limit) {
  * sort a list of IOStat
  */
 int
-compare_iostat(const void *x, const void *y) {
+compare_iostat(const void *x, const void *y)
+{
   IOStat *a = (IOStat *) lfirst((ListCell *) x);
   IOStat *b = (IOStat *) lfirst((ListCell *) y);
   if (a->groupid != b->groupid)
