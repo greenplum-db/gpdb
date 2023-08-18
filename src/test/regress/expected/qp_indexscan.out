@@ -1959,17 +1959,15 @@ analyze test_on_views;
 create view test_view as select b from test_on_views;
 -- Expected to use IndexScan Forward
 explain(costs off) select * from test_view order by b limit 3;
-                    QUERY PLAN
----------------------------------------------------
+                             QUERY PLAN
+---------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: test_on_views.b
          ->  Limit
-               ->  Sort
-                     Sort Key: test_on_views.b
-                     ->  Seq Scan on test_on_views
+               ->  Index Only Scan using view_index on test_on_views
  Optimizer: Postgres query optimizer
-(8 rows)
+(6 rows)
 
 select * from test_view order by b limit 3;
  b 
@@ -1981,17 +1979,15 @@ select * from test_view order by b limit 3;
 
 -- Expected to use IndexScan Backwards
 explain(costs off) select * from test_view order by b desc limit 3;
-                     QUERY PLAN
-----------------------------------------------------
+                                  QUERY PLAN
+------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: test_on_views.b
          ->  Limit
-               ->  Sort
-                     Sort Key: test_on_views.b DESC
-                     ->  Seq Scan on test_on_views
+               ->  Index Only Scan Backward using view_index on test_on_views
  Optimizer: Postgres query optimizer
-(8 rows)
+(6 rows)
 
 select * from test_view order by b desc limit 3;
   b  
@@ -2034,17 +2030,15 @@ INSERT INTO test_on_pk_column SELECT i+3, i, i/4.2 from generate_series(1,100) i
 analyze test_on_pk_column;
 -- Expected to use Forward IndexScan
 explain(costs off) select a from test_on_pk_column order by a limit 3;
-                      QUERY PLAN
--------------------------------------------------------
+                                     QUERY PLAN
+-------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: a
          ->  Limit
-               ->  Sort
-                     Sort Key: a
-                     ->  Seq Scan on test_on_pk_column
+               ->  Index Only Scan using test_on_pk_column_pkey on test_on_pk_column
  Optimizer: Postgres query optimizer
-(8 rows)
+(6 rows)
 
 select a from test_on_pk_column order by a limit 3;
  a 
@@ -2056,17 +2050,15 @@ select a from test_on_pk_column order by a limit 3;
 
 -- Expected to use Backward IndexScan
 explain(costs off) select a from test_on_pk_column order by a desc limit 3;
-                      QUERY PLAN
--------------------------------------------------------
+                                          QUERY PLAN
+----------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: a
          ->  Limit
-               ->  Sort
-                     Sort Key: a DESC
-                     ->  Seq Scan on test_on_pk_column
+               ->  Index Only Scan Backward using test_on_pk_column_pkey on test_on_pk_column
  Optimizer: Postgres query optimizer
-(8 rows)
+(6 rows)
 
 select a from test_on_pk_column order by a desc limit 3;
   a  
@@ -2084,17 +2076,15 @@ INSERT INTO test_on_unique_column SELECT i+3, i, i/4.2 from generate_series(1,10
 analyze test_on_unique_column;
 -- Expected to use Forward IndexScan
 explain(costs off) select a from test_on_unique_column order by b limit 3;
-                        QUERY PLAN
------------------------------------------------------------
+                                       QUERY PLAN
+-----------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b
          ->  Limit
-               ->  Sort
-                     Sort Key: b
-                     ->  Seq Scan on test_on_unique_column
+               ->  Index Scan using test_on_unique_column_b_key on test_on_unique_column
  Optimizer: Postgres query optimizer
-(8 rows)
+(6 rows)
 
 select a from test_on_unique_column order by b limit 3;
  a 
@@ -2106,17 +2096,15 @@ select a from test_on_unique_column order by b limit 3;
 
 -- Expected to use Backward IndexScan
 explain(costs off) select a from test_on_unique_column order by b desc limit 3;
-                        QUERY PLAN
------------------------------------------------------------
+                                            QUERY PLAN
+--------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b
          ->  Limit
-               ->  Sort
-                     Sort Key: b DESC
-                     ->  Seq Scan on test_on_unique_column
+               ->  Index Scan Backward using test_on_unique_column_b_key on test_on_unique_column
  Optimizer: Postgres query optimizer
-(8 rows)
+(6 rows)
 
 select a from test_on_unique_column order by b desc limit 3;
   a  
@@ -2230,17 +2218,15 @@ insert into test_on_custom_data_type select i, i/3, (concat('person', i), i)::cu
 analyze test_on_custom_data_type;
 -- Expected to use Forward IndexScan
 explain(costs off) select c from test_on_custom_data_type order by c limit 3;
-                          QUERY PLAN
---------------------------------------------------------------
+                                        QUERY PLAN
+------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: c
          ->  Limit
-               ->  Sort
-                     Sort Key: c
-                     ->  Seq Scan on test_on_custom_data_type
+               ->  Index Only Scan using index_on_custom_type on test_on_custom_data_type
  Optimizer: Postgres query optimizer
-(8 rows)
+(6 rows)
 
 select c from test_on_custom_data_type order by c limit 3;
         c        
@@ -2252,17 +2238,15 @@ select c from test_on_custom_data_type order by c limit 3;
 
 -- Expected to use Backward IndexScan
 explain(costs off) select c from test_on_custom_data_type order by c desc limit 3;
-                          QUERY PLAN
---------------------------------------------------------------
+                                            QUERY PLAN
+---------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: c
          ->  Limit
-               ->  Sort
-                     Sort Key: c DESC
-                     ->  Seq Scan on test_on_custom_data_type
+               ->  Index Only Scan Backward using index_on_custom_type on test_on_custom_data_type
  Optimizer: Postgres query optimizer
-(8 rows)
+(6 rows)
 
 select c from test_on_custom_data_type order by c desc limit 3;
        c       
