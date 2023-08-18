@@ -1,5 +1,6 @@
 #include "postgres.h"
 
+#include "fmgr.h"
 #include "lib/stringinfo.h"
 #include "nodes/parsenodes.h"
 #include "nodes/plannodes.h"
@@ -22,7 +23,7 @@ Datum
 LibraryVersion(void)
 {
 	elog(ERROR, "mock implementation of LibraryVersion called");
-	return NULL;
+	return (Datum) 0;
 }
 
 Datum
