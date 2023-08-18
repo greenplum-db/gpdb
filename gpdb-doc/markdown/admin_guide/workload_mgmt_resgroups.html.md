@@ -205,7 +205,7 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
     } 
     ```
 
-    This content configures CPU, CPU accounting, CPU core set, and memory control groups managed by the `gpadmin` user. Greenplum Database uses the memory control group only for those resource groups created with the `cgroup` `MEMORY_AUDITOR`.
+    This content configures CPU, CPU accounting, CPU core set, and memory control groups managed by the `gpadmin` user. Greenplum Database uses the memory control group only for monitoring the memory usage.
 
 4. Start the cgroups service on each Greenplum Database node. The command that you run to perform this task will differ based on the operating system installed on the node. You must be the superuser or have `sudo` access to run the command:
     -   Redhat/Oracle/Rocky 8.x systems:
@@ -257,7 +257,10 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
     sudo grubby --update-kernel=ALL --args=“systemd.unified_cgroup_hierarchy=1”
     ```
 
-2. Reboot the system for the changes to take effect: `sudo reboot now`.
+2. Reboot the system for the changes to take effect.
+    ```
+    sudo reboot now
+    ```
 3. Create the directory `/sys/fs/cgroup/gpdb` and ensure `gpadmin` user has read and write permission on it.
     ```
     mkdir -p /sys/fs/cgroup/gpdb 
@@ -272,7 +275,7 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
    echo "+cpuset +io +cpu +memory" | sudo tee -a /sys/fs/cgroup/cgroup.subtree_control
    ```
 
-Since we manually manage Cgroup files, the above settings will become ineffective after an OS reboot. To avoid repetitive actions, users can consider adding the following Bash script to systemd, which will be executed automatically during OS startup.
+Since resource groups manually manage cgroup files, the above settings may become ineffective after a system reboot. Consider adding the following bash script for systemd so it runs automatically during system startup:
     ```
     sudo usermod -aG root gpadmin
 
