@@ -47,4 +47,17 @@ SELECT 1 AS one FROM test_having HAVING 1 < 2;
 -- and just to prove that we aren't scanning the table:
 SELECT 1 AS one FROM test_having WHERE 1/a = 1 HAVING 1 < 2;
 
+-- placeholder var in haveingQual
+select
+  count(t2.b), count(t1c) t1c
+from
+  test_having t2
+  left join (
+    select
+      a, format('%s', c) t1c
+    from
+      test_having t1
+  ) tt on t2.a = tt.a
+having count(t1c) is not null;
+
 DROP TABLE test_having;

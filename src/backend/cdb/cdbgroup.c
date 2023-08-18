@@ -2706,14 +2706,12 @@ make_subplan_tlist(List *tlist, Node *havingQual,
 
 	Assert(dqa_args != NIL ? pnum_dqas != NULL && pcols_dqas != NULL : true);
 
-	/* GPDB_84_MERGE_FIXME: Should we pass includePlaceHolderVars as true */
-	/* in pull_var_clause ? */
 	sub_tlist = flatten_tlist(tlist,
 							  PVC_RECURSE_AGGREGATES,
 							  PVC_INCLUDE_PLACEHOLDERS);
 	extravars = pull_var_clause(havingQual,
 								PVC_RECURSE_AGGREGATES,
-								PVC_REJECT_PLACEHOLDERS);
+								PVC_INCLUDE_PLACEHOLDERS);
 	sub_tlist = add_to_flat_tlist(sub_tlist, extravars);
 	list_free(extravars);
 
