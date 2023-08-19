@@ -1037,6 +1037,7 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 				int			elevel = ((options & VACOPT_VERBOSE) ? LOG : DEBUG2);
 
 				parent_relid = get_partition_parent(child_relid);
+				ispartition = get_rel_relispartition(parent_relid);
 
 				/*
 				 * Only ANALYZE the parent if the stats can be updated by merging
@@ -1045,9 +1046,11 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 				if (!leaf_parts_analyzed(parent_relid, child_relid, vrel->va_cols, elevel))
 					break;
 
-				if(!(get_rel_relkind(parent_relid) == RELKIND_PARTITIONED_TABLE &&
-					get_rel_relispartition(parent_relid)) &&
-					optimizer_analyze_midlevel_partition)
+				/*
+				 * Do not add midlevel partition unless optimizer_analyze_midlevel_partition
+				 * is enabled.
+				 */
+				if(!ispartition || optimizer_analyze_midlevel_partition)
 				{
 					oldcontext = MemoryContextSwitchTo(vac_context);
 					vacrels = lappend(vacrels, makeVacuumRelation(vrel->relation,
@@ -1056,8 +1059,6 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 					MemoryContextSwitchTo(oldcontext);
 				}
 
-				/* If the parent is also a partition, update its parent too. */
-				ispartition = get_rel_relispartition(parent_relid);
 				child_relid = parent_relid;
 			}
 		}
