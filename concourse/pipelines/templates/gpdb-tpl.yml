@@ -239,7 +239,7 @@ groups:
 {% for test in CLI_BEHAVE_TESTS %}
   - [[ test.name ]]_[[ os_type ]]
 {% endfor %}
-  - gpmgmt_unit_tests_[[ os_type ]]
+  - unit_tests_gpmgmt_[[ os_type ]]
   - combine_cli_coverage
   - resource_group_[[ os_type ]]
   - resource_group_v2_[[ os_type ]]
@@ -315,7 +315,7 @@ groups:
   {% for test in CLI_BEHAVE_TESTS %}
   - [[ test.name ]]_[[ os_type ]]
   {% endfor %}
-  - gpmgmt_unit_tests_[[ os_type ]]
+  - unit_tests_gpmgmt_[[ os_type ]]
   - combine_cli_coverage
   - resource_group_[[ os_type ]]
   - resource_group_v2_[[ os_type ]]
@@ -1387,7 +1387,7 @@ jobs:
         passed:
         - gate_compile_end
 
-- name: gpmgmt_unit_tests_[[ os_type ]]
+- name: unit_tests_gpmgmt_[[ os_type ]]
   plan:
   - in_parallel:
       steps:
@@ -1397,12 +1397,12 @@ jobs:
         passed: [gate_cli_start]
         trigger: true
       - get: gpdb7-[[ os_type ]]-test
-  - task: gpmgmt_unit_tests_[[ os_type ]]
+  - task: unit_tests_gpmgmt_[[ os_type ]]
     file: gpdb_src/concourse/tasks/gpMgmt_check_gpdb.yml
     image: gpdb7-[[ os_type ]]-test
     params:
       TEST_OS: [[ test_os ]]
-      TEST_NAME: gpmgmt_unit_tests
+      TEST_NAME: unit_tests_gpmgmt
   - task: publish_coverage
     image: gpdb7-[[ os_type ]]-test
     config:
@@ -1726,7 +1726,7 @@ jobs:
             {% for test in CLI_BEHAVE_TESTS %}
             - [[ test.name ]]_[[ os_type ]]
             {% endfor %}
-            - gpmgmt_unit_tests_[[ os_type ]]
+            - unit_tests_gpmgmt_[[ os_type ]]
             - resource_group_[[ os_type ]]
             - resource_group_v2_[[ os_type ]]
         - get: bin_gpdb
@@ -1736,7 +1736,7 @@ jobs:
           {% for test in CLI_BEHAVE_TESTS %}
             - [[ test.name ]]_[[ os_type ]]
             {% endfor %}
-            - gpmgmt_unit_tests_[[ os_type ]]
+            - unit_tests_gpmgmt_[[ os_type ]]
             - resource_group_[[ os_type ]]
             - resource_group_v2_[[ os_type ]]
     - task: combine_coverage

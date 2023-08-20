@@ -219,7 +219,7 @@ groups:
   - gpssh-exkeys_rocky8
   - gpstart_rocky8
   - gpstop_rocky8
-  - gpmgmt_unit_tests_rocky8
+  - unit_tests_gpmgmt_rocky8
   - combine_cli_coverage
   - resource_group_rocky8
   - resource_group_v2_rocky8
@@ -294,7 +294,7 @@ groups:
   - gpssh-exkeys_rocky8
   - gpstart_rocky8
   - gpstop_rocky8
-  - gpmgmt_unit_tests_rocky8
+  - unit_tests_gpmgmt_rocky8
   - combine_cli_coverage
   - resource_group_rocky8
   - resource_group_v2_rocky8
@@ -1234,7 +1234,7 @@ jobs:
         passed:
         - gate_compile_end
 
-- name: gpmgmt_unit_tests_rocky8
+- name: unit_tests_gpmgmt_rocky8
   plan:
   - in_parallel:
       steps:
@@ -1244,12 +1244,12 @@ jobs:
         passed: [gate_cli_start]
         trigger: true
       - get: gpdb7-rocky8-test
-  - task: gpmgmt_unit_tests_rocky8
+  - task: unit_tests_gpmgmt_rocky8
     file: gpdb_src/concourse/tasks/gpMgmt_check_gpdb.yml
     image: gpdb7-rocky8-test
     params:
       TEST_OS: centos
-      TEST_NAME: gpmgmt_unit_tests
+      TEST_NAME: unit_tests_gpmgmt
   - task: publish_coverage
     image: gpdb7-rocky8-test
     config:
@@ -1603,38 +1603,6 @@ jobs:
       - get: gpdb7-rocky8-test
   - in_parallel:
       steps:
-      - do:
-        - get: gpdb_binary
-          resource: bin_gpdb
-          passed: [gate_cli_start]
-          trigger: true
-        - get: ccp_src
-        - get: terraform.d
-          params:
-            unpack: true
-        - put: terraform
-          params:
-            <<: *ccp_default_params
-            vars:
-              <<: *ccp_default_vars
-              instance_type: n1-standard-2
-              
-        - task: gen_cluster
-          file: ccp_src/ci/tasks/gen_cluster.yml
-          params:
-            <<: *ccp_gen_cluster_default_params
-        - task: gpinitsystem
-          file: ccp_src/ci/tasks/gpinitsystem.yml
-        - task: gpcheckcat_concourse_cluster_tests
-          file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
-          image: gpdb7-rocky8-test
-          params:
-            BEHAVE_FLAGS: --tags=gpcheckcat --tags=concourse_cluster
-            
-          on_success:
-            <<: *ccp_destroy
-          ensure:
-            <<: *set_failed
       - do:
         - get: bin_gpdb
           passed: [gate_cli_start]
@@ -2340,7 +2308,7 @@ jobs:
             - gpssh-exkeys_rocky8
             - gpstart_rocky8
             - gpstop_rocky8
-            - gpmgmt_unit_tests_rocky8
+            - unit_tests_gpmgmt_rocky8
             - resource_group_rocky8
             - resource_group_v2_rocky8
         - get: bin_gpdb
@@ -2365,7 +2333,7 @@ jobs:
             - gpssh-exkeys_rocky8
             - gpstart_rocky8
             - gpstop_rocky8
-            - gpmgmt_unit_tests_rocky8
+            - unit_tests_gpmgmt_rocky8
             - resource_group_rocky8
             - resource_group_v2_rocky8
     - task: combine_coverage
