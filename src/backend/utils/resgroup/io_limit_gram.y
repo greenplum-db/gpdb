@@ -1,19 +1,27 @@
-%define api.pure true
-%define api.prefix {io_limit_yy}
+%{
+#include "postgres.h"
 
-%code top {
-	#include "postgres.h"
-	#include "commands/tablespace.h"
-	#include "catalog/pg_tablespace.h"
-	#include "catalog/pg_tablespace_d.h"
+#include "commands/tablespace.h"
+#include "catalog/pg_tablespace.h"
+#include "catalog/pg_tablespace_d.h"
+#include "utils/cgroup_io_limit.h"
 
-	#define YYMALLOC palloc
-	#define YYFREE	 pfree
-}
+union YYSTYPE;
+/* flex 2.5.4 doesn't bother with a decl for this */
+int io_limit_yylex(union YYSTYPE *yylval_param, void *scanner);
+List *io_limit_parse(const char *limit_str);
+void io_limit_yyerror(IOLimitParserContext *parser_context, void *scanner, const char *message);
 
-%code requires {
-	#include "utils/cgroup_io_limit.h"
-}
+#define YYMALLOC palloc
+#define YYFREE	 pfree
+%}
+
+%pure-parser
+%expect 0
+%name-prefix="io_limit_yy"
+%parse-param { IOLimitParserContext *context }
+%parse-param { void *scanner }
+%lex-param   { void *scanner }
 
 %union {
 	char *str;
@@ -25,15 +33,6 @@
 }
 
 
-%parse-param { IOLimitParserContext *context }
-
-%param { void *scanner }
-
-%code {
-	int io_limit_yylex(void *lval, void *scanner);
-	void io_limit_yyerror(IOLimitParserContext *parser_context, void *scanner, const char *message);
-}
-
 %token IOLIMIT_CONFIG_DELIM TABLESPACE_IO_CONFIG_START STAR IOCONFIG_DELIM VALUE_MAX
 %token <str> ID IO_KEY
 %token <integer> VALUE
@@ -44,13 +43,6 @@
 %type <tblspciolimit> tablespace_io_config
 %type <list> iolimit_config_string start
 %type <ioconfigitem> ioconfig
-
-%destructor { pfree($$); } <str> <ioconfig> <ioconfigitem>
-%destructor {
-	pfree($$->ioconfig);
-	list_free_deep($$->bdi_list);
-	pfree($$);
-} <tblspciolimit>
 
 %%
 
@@ -172,3 +164,15 @@ io_limit_parse(const char *limit_str)
 
 	return result;
 }
+
+/*
+ * io_limit_scanner.l is compiled as part of io_limit_gram.y.
+ * Currently, this is unavoidable because exprparse does not create
+ * a .h file to export its token symbols.  If these files ever grow
+ * large enough to be worth compiling separately, that could be fixed;
+ * but for now it seems like useless complication.
+ */
+
+/* Get rid of "#define yylval", becase flex will have its own definition */
+#undef yylval
+#include "io_limit_scanner.c"
