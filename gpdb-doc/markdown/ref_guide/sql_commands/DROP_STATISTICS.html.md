@@ -14,7 +14,7 @@ DROP STATISTICS [ IF EXISTS ] <name> [, ...] [ CASCADE | RESTRICT ]
 
 ## <a id="section4"></a>Parameters 
 
-`IF EXISTS`
+IF EXISTS
 :   Do not throw an error if the statistics object does not exist. Greenplum Database issues a notice in this case.
 
 name
