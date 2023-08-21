@@ -76,7 +76,7 @@ As with all databases, the size of your raw data will be slightly larger once it
 On each segment host, you will also want to account for space for Greenplum Database log files and metadata:
 
 -   **System Metadata** — For each Greenplum Database segment instance \(primary or mirror\) or coordinator instance running on a host, estimate approximately 20 MB for the system catalogs and metadata.
--   **Write Ahead Log** — For each Greenplum Database segment \(primary or mirror\) or coordinator instance running on a host, allocate space for the write ahead log \(WAL\). The WAL is divided into segment files of 64 MB each. At most, the number of WAL files will be:
+-   XXX **Write Ahead Log** — For each Greenplum Database segment \(primary or mirror\) or coordinator instance running on a host, allocate space for the write ahead log \(WAL\). The WAL is divided into segment files of 64 MB each. At most, the number of WAL files will be:
 
     ```
     2 * checkpoint_segments + 1
