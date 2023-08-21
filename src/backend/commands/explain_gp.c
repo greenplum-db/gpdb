@@ -324,7 +324,8 @@ cdbexplain_localExecStats(struct PlanState *planstate,
 
 	/* Set up a temporary StatHdr for both collecting and depositing stats. */
 	ctx.msgptrs[0] = &ctx.send.hdr;
-	ctx.send.hdr.segindex = GpIdentity.segindex;
+	ctx.send.hdr.segindex = qe_identifier;
+	ctx.send.hdr.realsegindex = GpIdentity.segindex;
 	ctx.send.hdr.nInst = 1;
 
 	/* Set up receive context area referencing our temp StatHdr. */
