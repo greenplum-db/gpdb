@@ -80,7 +80,7 @@ Before settling on a multi-level partitioning strategy, consider a single level 
 
 ## <a id="choose"></a>Choosing the Partitioning Syntax
 
-Greenplum Database 7 retains most aspects of the partitioning syntax of prior versions of Greenplum, referred to as the *classic* syntax. Version 7 also introduces support for PostgreSQL declarative partitioning syntax, the *modern* syntax.
+Greenplum Database 7 retains most aspects of the partitioning syntax of prior versions of Greenplum, referred to as the *classic* syntax. Version 7 also introduces support for a *modern* syntax, derived from the PostgreSQL declarative partitioning syntax.
 
 The classic syntax is provided for backwards compatibility with previous Greenplum versions. It is appropriate for a homogenous partitioned table, where all partitions are at the same leaf level and have the same partition rule.
 

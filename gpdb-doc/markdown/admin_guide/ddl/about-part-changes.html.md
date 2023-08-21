@@ -2,7 +2,7 @@
 title: About Changes to Table Partitioning in Greenplum 7
 ---
 
-VMware Greenplum 7 retains most aspects of the partitioning syntax of prior versions of Greenplum, now referred to as the *classic* partitioning syntax. Version 7 also introduces support for the PostgreSQL declarative partitioning syntax, the *modern* syntax.
+VMware Greenplum 7 retains most aspects of the partitioning syntax of prior versions of Greenplum, now referred to as the *classic* partitioning syntax. Version 7 also introduces support for a *modern* syntax, derived from the PostgreSQL declarative partitioning syntax.
 
 This topic describes the Greenplum 7 partitioning syntax and behavior changes, and is geared toward existing users of Greenplum 6.
 
