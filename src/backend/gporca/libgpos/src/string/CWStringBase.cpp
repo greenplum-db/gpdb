@@ -89,28 +89,8 @@ BOOL
 CWStringBase::Equals(const CWStringBase *str) const
 {
 	GPOS_ASSERT(nullptr != str);
-	return Equals(str->GetBuffer());
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CWStringBase::Equals
-//
-//	@doc:
-//		Checks whether the string is byte-wise equal to a string literal
-//
-//---------------------------------------------------------------------------
-BOOL
-CWStringBase::Equals(const WCHAR *w_str_buffer) const
-{
-	GPOS_ASSERT(nullptr != w_str_buffer);
-	ULONG length = GPOS_WSZ_LENGTH(w_str_buffer);
-	if (Length() == length &&
-		0 == clib::Wcsncmp(GetBuffer(), w_str_buffer, length))
-	{
-		return true;
-	}
-	return false;
+	return Length() == str->Length() &&
+		   0 == clib::Wcsncmp(GetBuffer(), str->GetBuffer(), Length());
 }
 
 //---------------------------------------------------------------------------
