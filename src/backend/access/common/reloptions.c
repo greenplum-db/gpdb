@@ -235,7 +235,7 @@ static relopt_int intRelOpts[] =
 		{
 			"autovacuum_analyze_threshold",
 			"Minimum number of tuple inserts, updates or deletes prior to analyze",
-			RELOPT_KIND_HEAP,
+			RELOPT_KIND_HEAP | RELOPT_KIND_APPENDOPTIMIZED,
 			ShareUpdateExclusiveLock
 		},
 		-1, 0, INT_MAX
@@ -393,7 +393,7 @@ static relopt_real realRelOpts[] =
 		{
 			"autovacuum_analyze_scale_factor",
 			"Number of tuple inserts, updates or deletes prior to analyze as a fraction of reltuples",
-			RELOPT_KIND_HEAP,
+			RELOPT_KIND_HEAP | RELOPT_KIND_APPENDOPTIMIZED,
 			ShareUpdateExclusiveLock
 		},
 		-1, 0.0, 100.0
