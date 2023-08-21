@@ -1,0 +1,143 @@
+name: Greenplum ABI Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 6X_STABLE
+      - 6x-abi-check
+    paths:
+      - 'src/*'
+      - '.github/workflows/greenplum-abi-tests.yml'
+
+jobs:
+  abi-dump-setup:
+    runs-on: ubuntu-latest
+    outputs:
+      BASELINE_REF: ${{ steps.vars.outputs.BASELINE_REF }}
+      BASELINE_VERSION: ${{ steps.vars.outputs.BASELINE_VERSION }}
+      ABI_LIBS: ${{ steps.vars.outputs.ABI_LIBS }}
+      ABI_HEADERS: ${{ steps.vars.outputs.ABI_HEADERS }}
+    steps:
+      - name: Fetch source
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 250
+
+      - name: Get Greenplum version variables
+        id: vars
+        run: |
+          remote_repo='https://github.com/greenplum-db/gpdb.git'
+          git ls-remote --tags --refs --sort='v:refname' $remote_repo '6.*' | tail -n 1  > baseline_version_ref
+          baseline_ref=$(cat baseline_version_ref | awk '{print $1}')
+          baseline_version=$(cat baseline_version_ref | awk '{print $2}')
+          echo "BASELINE_REF=${baseline_ref}" | tee -a $GITHUB_OUTPUT
+          echo "BASELINE_VERSION=${baseline_version#'refs/tags/'}" | tee -a $GITHUB_OUTPUT
+          echo "ABI_LIBS=postgres" | tee -a $GITHUB_OUTPUT
+          echo "ABI_HEADERS=." | tee -a $GITHUB_OUTPUT
+
+  abi-dump:
+    needs: abi-dump-setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        name:
+          - build-baseline
+          - build-latest
+        include:
+          - name: build-baseline
+            repo: greenplum-db/gpdb
+            ref: ${{ needs.abi-dump-setup.outputs.BASELINE_VERSION }}
+          - name: build-latest
+            repo: ${{ github.repository }}
+            ref: ${{ github.sha }}
+
+    steps:
+      - name: Install abi-compliance-checker
+        run: |
+          sudo apt-get install abi-dumper
+
+      ## - name: Install universal-ctags
+      ##   run: |
+      ##     git clone https://github.com/universal-ctags/ctags.git
+      ##     cd ctags
+      ##     ./autogen.sh
+      ##     env CC=$(which clang) CXX=$(which clang++) ./configure
+      ##     make -j`nproc`
+      ##     sudo make install
+
+      - name: Download Greenplum source code
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ matrix.repo }}
+          ref: ${{ matrix.ref }}
+
+      ## - name: Download gp-xerces
+      ##   uses: actions/checkout@v3
+      ##   with:
+      ##     repository: greenplum-db/gp-xerces
+      ##     path: gp-xerces
+      ## 
+      ## - name: Build & Install gp-xerces
+      ##   run: |
+      ##     cd gp-xerces && mkdir build && cd build
+      ##     env CFLAGS="-g" CXXFLAGS="-g" CC=$(which clang) CXX=$(which clang++) ../configure --prefix=/usr/local
+      ##     make -j`nproc` && sudo make install
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install libapr1-dev libxml2-dev libevent-dev libcurl4-openssl-dev python2 python2.7-dev lld
+          ## Greenplum 6 requires python points to python2
+          sudo update-alternatives --install /usr/bin/x86_64-linux-gnu-gcc x86_64-linux-gnu-gcc $(which clang) 1
+          sudo update-alternatives --install /usr/bin/python python $(which python2) 1
+          python -c "print 'hello'"
+
+      - name: Configure Greenplum
+        run: |
+          env CC=$(which clang) CXX=$(which clang++) CLANG=$(which clang) LD=$(which lld) CFLAGS='-g1 -Og -fuse-ld=lld' CXXFLAGS='-g1 -Og -fuse-ld=lld' \
+            ./configure --with-libxml --disable-orca --enable-cassert --enable-debug --prefix=$(pwd)/install
+
+      - name: Build Greenplum
+        run: |
+          make -j`nproc` && make install
+
+      - name: Dump ABI
+        run: |
+          abi-dumper -lver ${{ matrix.ref }} -skip-cxx -public-headers $(pwd)/install/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o postgres-${{ matrix.ref }}.abi $(pwd)/install/bin/postgres
+
+      - name: Upload ABI file
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.name }}
+          path: '*${{ matrix.ref }}.abi'
+
+  abi-compare:
+    needs:
+      - abi-dump-setup
+      - abi-dump
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download baseline
+        uses: actions/download-artifact@v3
+        with:
+          name: build-baseline
+          path: build-baseline/
+      - name: Download latest
+        uses: actions/download-artifact@v3
+        with:
+          name: build-latest
+          path: build-latest/
+
+      - name: Install abi-compliance-checker
+        run: sudo apt-get install abi-compliance-checker
+
+      - name: Compare ABI
+        run: |
+          abi-compliance-checker -lib postgres -old build-baseline/postgres*.abi -new build-latest/postgres*.abi
+
+      - name: Upload ABI Comparison
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: compat-report-${{ github.sha }}
+          path: compat_reports/
