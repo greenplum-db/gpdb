@@ -132,7 +132,6 @@ typedef struct CdbExplain_NodeSummary
 
 	/* insts array info */
 	int			segindex0;		/* segment id of insts[0], or called qe_identifier */
-	int			realsegindex0;	/* from 0 to number of segments - 1 */
 	int			ninst;			/* num of StatInst entries in inst array */
 
 	/* Array [0..ninst-1] of StatInst entries is appended starting here */
@@ -148,7 +147,6 @@ typedef struct CdbExplain_SliceSummary
 	/* worker array */
 	int			nworker;		/* num of SliceWorker slots in worker array */
 	int			segindex0;		/* segment id of workers[0], or called qe_identifier */
-	int			realsegindex0;	/* from 0 to number of segments - 1 */
 	CdbExplain_SliceWorker *workers;	/* -> array [0..nworker-1] of
 										 * SliceWorker */
 	int			*realsegindexs;		/* -> array [0..nworker-1] of real segindex */
@@ -227,8 +225,6 @@ typedef struct CdbExplain_RecvStatCtx
 	 * (i.e., saved msgptrs)
 	 */
 	int			segindexMax;
-
-	int			realSegindexMin;
 
 	/*
 	 * We deposit stat for one slice at a time. sliceIndex saves the current
@@ -634,12 +630,6 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 		else if (ctx.segindexMin > hdr->segindex)
 			ctx.segindexMin = hdr->segindex;
 
-		/* Also Save lowest real segment id for which we have stats. */
-		if (iDispatch == 0)
-			ctx.realSegindexMin = hdr->realsegindex;
-		else if (ctx.realSegindexMin > hdr->realsegindex)
-			ctx.realSegindexMin = hdr->realsegindex;
-
 		/* Save message ptr for easy reference. */
 		ctx.msgptrs[ctx.nmsgptr] = hdr;
 		ctx.nmsgptr++;
@@ -781,7 +771,6 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr *hdr,
 	{
 		/* Allocate SliceWorker array and attach it to the SliceSummary. */
 		ss->segindex0 = recvstatctx->segindexMin;
-		ss->realsegindex0 = recvstatctx->realSegindexMin;
 		ss->nworker = recvstatctx->segindexMax + 1 - ss->segindex0;
 		ss->workers = (CdbExplain_SliceWorker *) palloc0(ss->nworker * sizeof(ss->workers[0]));
 		ss->realsegindexs = (int *) palloc0(ss->nworker * sizeof(int));
@@ -1018,7 +1007,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	ns = (CdbExplain_NodeSummary *) palloc0(sizeof(*ns) - sizeof(ns->insts) +
 											nInst * sizeof(ns->insts[0]));
 	ns->segindex0 = ctx->segindexMin;
-	ns->realsegindex0 = ctx->realSegindexMin;
 	ns->ninst = nInst;
 
 	/* Attach our new NodeSummary to the Instrumentation node. */
