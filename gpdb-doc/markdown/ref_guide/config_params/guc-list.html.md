@@ -2380,7 +2380,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Boolean|false|coordinator, session, reload|
+|Boolean|on|coordinator, session, reload|
 
 ## <a id="optimizer_enable_foreign_table"></a>optimizer\_enable\_foreign\_table
 
