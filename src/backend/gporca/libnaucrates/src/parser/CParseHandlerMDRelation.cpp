@@ -151,28 +151,11 @@ CParseHandlerMDRelation::StartElement(const XMLCh *const element_uri,
 		IMDRelation::ErelstorageAppendOnlyRows == m_rel_storage_type ||
 		IMDRelation::ErelstorageMixedPartitioned == m_rel_storage_type)
 	{
-		switch (CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
-			m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
-			EdxltokenRelAppendOnlyVersion, EdxltokenRelation, true, 0))
-		{
-			case 1:
-			{
-				m_rel_ao_version = IMDRelation::AORelationVersion_GP6;
-				break;
-			}
-			case 2:
-			{
-				m_rel_ao_version = IMDRelation::AORelationVersion_GP7;
-				break;
-			}
-			default:
-			{
-				m_rel_ao_version =
-					static_cast<gpmd::IMDRelation::Erelaoversion>(
-						IMDRelation::MaxAORelationVersion - 1);
-				break;
-			}
-		}
+		m_rel_ao_version = (IMDRelation::Erelaoversion)
+			CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
+				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+				EdxltokenRelAppendOnlyVersion, EdxltokenRelation, true,
+				IMDRelation::MaxAORelationVersion - 1);
 	}
 
 	const XMLCh *xmlszPartColumns =

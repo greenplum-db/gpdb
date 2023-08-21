@@ -318,6 +318,7 @@ RESET allow_system_table_mods;
 
 -- Disallow if the table contains child partition with GPDB 6 version
 EXPLAIN SELECT a FROM ao_pt WHERE a=29;
+DROP TABLE ao_pt;
 
 -- AO/CO partitioned table contains a non-AO leaf partition
 CREATE TABLE aocs_pt(a bigint) WITH (appendonly=true, orientation=column) PARTITION BY RANGE(a)
@@ -342,6 +343,7 @@ RESET allow_system_table_mods;
 
 -- Disallow if the table contains child partition with GPDB 6 version
 EXPLAIN SELECT a FROM aocs_pt WHERE a=29;
+DROP TABLE aocs_pt;
 
 
 -- Test various index types

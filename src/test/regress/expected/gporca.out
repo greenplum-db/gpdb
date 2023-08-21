@@ -13231,7 +13231,6 @@ select * from tpart_dim d join t_ao_btree f on d.a=f.a where d.b=1;
  1 | 1 | 1 | 1
 (1 row)
 
--- expect a fallback for this query
 select * from tpart_dim d join tpart_ao_btree f on d.a=f.a where d.b=1;
  a | b | a | b 
 ---+---+---+---

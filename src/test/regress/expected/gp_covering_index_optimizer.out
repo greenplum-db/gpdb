@@ -613,6 +613,7 @@ EXPLAIN SELECT a FROM ao_pt WHERE a=29;
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
+DROP TABLE ao_pt;
 -- AO/CO partitioned table contains a non-AO leaf partition
 CREATE TABLE aocs_pt(a bigint) WITH (appendonly=true, orientation=column) PARTITION BY RANGE(a)
 (
@@ -656,6 +657,7 @@ EXPLAIN SELECT a FROM aocs_pt WHERE a=29;
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
+DROP TABLE aocs_pt;
 -- Test various index types
 --
 -- Check that different index types can be used with cover indexes.
