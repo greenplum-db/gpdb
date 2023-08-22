@@ -12588,15 +12588,16 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
                                                       QUERY PLAN                                                      
 ----------------------------------------------------------------------------------------------------------------------
- Nested Loop Semi Join  (cost=10000000001.07..10000000003.21 rows=4 width=8)
+ Nested Loop Semi Join  (cost=10000000001.07..10000000003.19 rows=4 width=8)
    Join Filter: ("out".b = COALESCE((count(*)), '99'::bigint))
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
          ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
    ->  Materialize  (cost=1.07..2.16 rows=2 width=8)
          ->  Hash Left Join  (cost=1.07..2.14 rows=4 width=8)
                Hash Cond: (tcorr1.a = tcorr2.a)
-               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
-                     ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
+               ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
+                     ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                           ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
                ->  Hash  (cost=1.06..1.06 rows=1 width=12)
                      ->  HashAggregate  (cost=1.04..1.05 rows=1 width=12)
                            Group Key: tcorr2.a
@@ -12606,7 +12607,7 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                        ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
                                              ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=8)
  Optimizer: Postgres query optimizer
-(18 rows)
+(19 rows)
 
 -- expect 1 row
 select *
@@ -12704,15 +12705,16 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
                                                       QUERY PLAN                                                      
 ----------------------------------------------------------------------------------------------------------------------
- Nested Loop Semi Join  (cost=10000000001.07..10000000003.21 rows=4 width=8)
+ Nested Loop Semi Join  (cost=10000000001.07..10000000003.19 rows=4 width=8)
    Join Filter: ("out".b = COALESCE((count(*)), '99'::bigint))
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
          ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
    ->  Materialize  (cost=1.07..2.16 rows=2 width=8)
          ->  Hash Left Join  (cost=1.07..2.14 rows=4 width=8)
                Hash Cond: (tcorr1.a = tcorr2.a)
-               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
-                     ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
+               ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
+                     ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                           ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
                ->  Hash  (cost=1.06..1.06 rows=1 width=12)
                      ->  HashAggregate  (cost=1.04..1.05 rows=1 width=12)
                            Group Key: tcorr2.a
@@ -12722,7 +12724,7 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                        ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
                                              ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=8)
  Optimizer: Postgres query optimizer
-(18 rows)
+(19 rows)
 
 -- expect 1 row
 select *

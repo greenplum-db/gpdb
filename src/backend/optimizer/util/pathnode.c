@@ -59,6 +59,8 @@ static CdbVisitOpt pathnode_walk_list(List *pathlist,
 static CdbVisitOpt pathnode_walk_kids(Path *path,
 				   CdbVisitOpt (*walker)(Path *path, void *context),
 				   void *context);
+static Path* ensure_outer_rescannable(PlannerInfo *root, Path *outer_path);
+static Path* ensure_inner_rescannable(PlannerInfo *root, Path *outer_path, Path *inner_path);
 
 /*
  * pathnode_walk_node
@@ -222,6 +224,53 @@ pathnode_walk_kids(Path            *path,
 	}
 	return v;
 }	                            /* pathnode_walk_kids */
+
+
+static Path*
+ensure_outer_rescannable(PlannerInfo *root, Path *outer_path)
+{
+	if (!outer_path->rescannable)
+	{
+		MaterialPath *matouter = create_material_path(root, outer_path->parent, outer_path);
+
+		matouter->cdb_shield_child_from_rescans = true;
+
+		outer_path = (Path *) matouter;
+	}
+
+	return outer_path;
+}
+
+static Path*
+ensure_inner_rescannable(PlannerInfo *root, Path *outer_path, Path *inner_path)
+{
+	if (!inner_path->rescannable)
+	{
+		/*
+		 * NLs potentially rescan the inner; if our inner path
+		 * isn't rescannable we have to add a materialize node
+		 */
+		MaterialPath *matinner = create_material_path(root, inner_path->parent, inner_path);
+
+		matinner->cdb_shield_child_from_rescans = true;
+
+		/*
+		 * If we have motion on the outer, to avoid a deadlock; we
+		 * need to set cdb_strict. In order for materialize to
+		 * fully fetch the underlying (required to avoid our
+		 * deadlock hazard) we must set cdb_strict!
+		 */
+		if (inner_path->motionHazard && outer_path->motionHazard)
+		{
+			matinner->cdb_strict = true;
+			matinner->path.motionHazard = false;
+		}
+
+		inner_path = (Path *) matinner;
+	}
+
+	return inner_path;
+}
 
 
 /*****************************************************************************
@@ -3218,47 +3267,18 @@ create_nestloop_path(PlannerInfo *root,
 
 	/*
 	 * If this join path is parameterized by a parameter above this path, then
-	 * this path needs to be rescannable. A NestLoop is rescannable, when both
+	 * this path needs to be rescannable. Joins are rescannable, when both
 	 * outer and inner paths rescannable, so make them both rescannable.
 	 */
-	if (!outer_path->rescannable && !bms_is_empty(required_outer))
-	{
-		MaterialPath *matouter = create_material_path(root, outer_path->parent, outer_path);
-
-		matouter->cdb_shield_child_from_rescans = true;
-
-		outer_path = (Path *) matouter;
-	}
+	if (!bms_is_empty(required_outer))
+		outer_path = ensure_outer_rescannable(root, outer_path);
 
 	/*
 	 * If outer has at most one row, NJ will make at most one pass over inner.
 	 * Else materialize inner rel after motion so NJ can loop over results.
 	 */
-	if (!inner_path->rescannable &&
-		(!outer_path->parent->onerow || !bms_is_empty(required_outer)))
-	{
-		/*
-		 * NLs potentially rescan the inner; if our inner path
-		 * isn't rescannable we have to add a materialize node
-		 */
-		MaterialPath *matinner = create_material_path(root, inner_path->parent, inner_path);
-
-		matinner->cdb_shield_child_from_rescans = true;
-
-		/*
-		 * If we have motion on the outer, to avoid a deadlock; we
-		 * need to set cdb_strict. In order for materialize to
-		 * fully fetch the underlying (required to avoid our
-		 * deadlock hazard) we must set cdb_strict!
-		 */
-		if (inner_path->motionHazard && outer_path->motionHazard)
-		{
-			matinner->cdb_strict = true;
-			matinner->path.motionHazard = false;
-		}
-
-		inner_path = (Path *) matinner;
-	}
+	if (!outer_path->parent->onerow || !bms_is_empty(required_outer))
+		inner_path = ensure_inner_rescannable(root, outer_path, inner_path);
 
 	/*
 	 * If the inner path is parameterized by the outer, we must drop any
@@ -3456,6 +3476,17 @@ create_mergejoin_path(PlannerInfo *root,
 		inner_path->pathkeys)
 		innersortkeys = NIL;
 
+	/*
+	 * If this join path is parameterized by a parameter above this path, then
+	 * this path needs to be rescannable. Joins are rescannable, when both
+	 * outer and inner paths rescannable, so make them both rescannable.
+	 */
+	if (!bms_is_empty(required_outer))
+	{
+		outer_path = ensure_outer_rescannable(root, outer_path);
+		inner_path = ensure_inner_rescannable(root, outer_path, inner_path);
+	}
+
 	pathnode->jpath.path.pathtype = T_MergeJoin;
 	pathnode->jpath.path.parent = joinrel;
 	pathnode->jpath.path.param_info =
@@ -3573,6 +3604,17 @@ create_hashjoin_path(PlannerInfo *root,
 			return NULL;
 	}
 
+	/*
+	 * If this join path is parameterized by a parameter above this path, then
+	 * this path needs to be rescannable. Joins are rescannable, when both
+	 * outer and inner paths rescannable, so make them both rescannable.
+	 *
+	 * Hash Join inner side was customized in the GPDB to be always rescannable
+	 * (see the SpillCurrentBatch comment for details)
+	 */
+	if (!bms_is_empty(required_outer))
+		outer_path = ensure_outer_rescannable(root, outer_path);
+
 	pathnode = makeNode(HashPath);
 
 	pathnode->jpath.path.pathtype = T_HashJoin;
@@ -3608,12 +3650,12 @@ create_hashjoin_path(PlannerInfo *root,
 	/* final_cost_hashjoin will fill in pathnode->num_batches */
 
 	/*
-	 * If hash table overflows to disk, and an ancestor node requests rescan
-	 * (e.g. because the HJ is in the inner subtree of a NJ), then the HJ has
-	 * to be redone, including rescanning the inner rel in order to rebuild
-	 * the hash table.
+	 * GPDB hash tables was modified to be rescannable even in case of hash
+	 * table overflows to disk, and an ancestor node requests rescan
+	 * (e.g. because the HJ is in the inner subtree of a NJ).
+	 * See the SpillCurrentBatch comment for details
 	 */
-	pathnode->jpath.path.rescannable = outer_path->rescannable && inner_path->rescannable;
+	pathnode->jpath.path.rescannable = outer_path->rescannable;
 
 	/* see the comment above; we may have a motion hazard on our inner ?! */
 	if (pathnode->jpath.path.rescannable)

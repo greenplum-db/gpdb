@@ -6,6 +6,10 @@
 -- start_matchignore
 -- m/ERROR:  workfile compresssion is not supported by this build/
 -- end_matchignore
+-- start_matchsubs
+-- m/ERROR:  could not devise a query plan for the given query \(pathnode.c:\d+\)/
+-- s/ERROR:  could not devise a query plan for the given query \(pathnode.c:\d+\)/ERROR:  could not devise a query plan for the given query (pathnode.c:XX)/
+-- end_matchsubs
 
 --
 -- test numeric hash join

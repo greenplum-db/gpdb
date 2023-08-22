@@ -1190,6 +1190,10 @@ ExecReScanHashJoin(HashJoinState *node)
 	 * if it's a single-batch join, and there is no parameter change for the
 	 * inner subnode, then we can just re-use the existing hash table without
 	 * rebuilding it.
+	 *
+	 * GPDB: hybrid hash join was modified to spill out scanned batches
+	 * (including 0th batch) to disk to provide rescannability if it was
+	 * requested. See the SpillCurrentBatch comment for details.
 	 */
 	if (node->hj_HashTable != NULL)
 	{
