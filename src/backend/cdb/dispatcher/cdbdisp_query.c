@@ -464,23 +464,6 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 	 */
 	ds = cdbdisp_makeDispatcherState(false);
 
-	/*
-	 * Reader gangs use local snapshot to access catalog, as a result, it will
-	 * not synchronize with the global snapshot from write gang which will lead
-	 * to inconsistent visibilty of catalog table. Considering the case:
-	 * 
-	 * select * from t, t t1; -- create a reader gang.
-	 * begin;
-	 * create role r1;
-	 * set role r1;  -- set command will also dispatched to idle reader gang
-	 *
-	 * When set role command dispatched to reader gang, reader gang cannot see
-	 * the new tuple t1 in catalog table pg_auth.
-	 * To fix this issue, we should drop the idle reader gangs after each
-	 * utility statement which may modify the catalog table.
-	 */
-	ds->destroyIdleReaderGang = true;
-
 	queryText = buildGpQueryString(pQueryParms, &queryTextLength);
 
 	/*

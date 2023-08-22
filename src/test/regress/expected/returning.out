@@ -338,7 +338,7 @@ SELECT * FROM voo;
 INSERT INTO foo AS bar DEFAULT VALUES RETURNING *; -- ok
  f1 | f2 | f3 | f4 
 ----+----+----+----
- 21 |    | 42 | 99
+  4 |    | 42 | 99
 (1 row)
 
 INSERT INTO foo AS bar DEFAULT VALUES RETURNING foo.*; -- fails, wrong name
@@ -349,7 +349,7 @@ HINT:  Perhaps you meant to reference the table alias "bar".
 INSERT INTO foo AS bar DEFAULT VALUES RETURNING bar.*; -- ok
  f1 | f2 | f3 | f4 
 ----+----+----+----
- 22 |    | 42 | 99
+  5 |    | 42 | 99
 (1 row)
 
 INSERT INTO foo AS bar DEFAULT VALUES RETURNING bar.f3; -- ok

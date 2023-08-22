@@ -750,15 +750,14 @@ select * from trigtest2;
 -- ensure we still insert, even when all triggers are disabled
 insert into trigtest default values;
 select *  from trigtest;
-  i  
------
-  41
-  81
- 101
-  61
-  21
-  62
-(6 rows)
+ i 
+---
+ 3
+ 4
+ 7
+ 5
+ 6
+(5 rows)
 
 drop table trigtest2;
 drop table trigtest;

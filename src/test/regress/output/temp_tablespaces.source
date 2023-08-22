@@ -162,9 +162,9 @@ WITH a1 as (select * from tts_foo),
            FROM a1
              INNER JOIN a2 ON a2.i = a1.i
 distributed by(xx);
-NOTICE:  sisc_xslice: Use default tablespace  (seg0 slice1 172.17.0.2:7002 pid=2945819)
-NOTICE:  sisc_xslice: Use default tablespace  (seg1 slice1 172.17.0.2:7003 pid=2945820)
-NOTICE:  sisc_xslice: Use default tablespace  (seg2 slice1 172.17.0.2:7004 pid=2945821)
+NOTICE:  sisc_xslice: Use temp tablespace  (seg1 slice2 127.0.1.1:7003 pid=2879969)
+NOTICE:  sisc_xslice: Use temp tablespace  (seg2 slice2 127.0.1.1:7004 pid=2879973)
+NOTICE:  sisc_xslice: Use temp tablespace  (seg0 slice2 127.0.1.1:7002 pid=2879971)
 -- Make sure the following fault injector is triggered.
 select gp_wait_until_triggered_fault('sisc_xslice_temp_files', 1, dbid)
   from gp_segment_configuration where role='p' and content>=0;

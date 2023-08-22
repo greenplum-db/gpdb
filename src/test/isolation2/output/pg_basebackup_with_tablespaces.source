@@ -181,7 +181,7 @@ select count_of_items_in_directory('@testtablespace@/some_basebackup_tablespace_
 select count_of_items_in_directory('@testtablespace@/some_basebackup_tablespace');
  count_of_items_in_directory 
 -----------------------------
- 6                           
+ 3                           
 (1 row)
 
 -- Then we should have the tablespace symlink link to the mapped tablespace directory
