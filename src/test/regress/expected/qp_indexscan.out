@@ -1830,11 +1830,12 @@ select d,a from test_replicated_table order by d,a desc limit 3;
 -- Clean Up
 DROP TABLE test_replicated_table;
 -- Test Case: Test on AO table with mixed data type columns.
--- ORCA_FEATURE_NOT_SUPPORTED: IndexScans not supported on AO tables
+-- IndexOnlyScans are supported but IndexScans aren't supported on AO tables
 CREATE TABLE test_ao_table(a int, b int, c float, d text, e numeric) WITH (appendonly=true) DISTRIBUTED BY (a);
 -- multi col index with mixed index keys properties
 CREATE INDEX ao_index_eda on test_ao_table using btree(e desc nulls last, d,a desc);
--- Expected to choose SeqScan with a Sort as it is an AO table
+INSERT INTO test_ao_table SELECT i, i+3, i/4.2, concat('sample_text ',i), i/5 from generate_series(1,100) i;
+-- Expected to choose IndexOnlyScan Forward
 explain(costs off) select e,d,a from test_ao_table order by e desc nulls last, d, a desc limit 3;
                               QUERY PLAN
 -----------------------------------------------------------------------
@@ -1845,6 +1846,56 @@ explain(costs off) select e,d,a from test_ao_table order by e desc nulls last, d
                ->  Index Only Scan using ao_index_eda on test_ao_table
  Optimizer: Postgres query optimizer
 (6 rows)
+
+select e,d,a from test_ao_table order by e desc nulls last, d, a desc limit 3;
+ e  |        d        |  a  
+----+-----------------+-----
+ 20 | sample_text 100 | 100
+ 19 | sample_text 95  |  95
+ 19 | sample_text 96  |  96
+(3 rows)
+
+-- Expected to choose IndexOnlyScan Backward
+explain(costs off) select e,d,a from test_ao_table order by e nulls first, d desc, a limit 3;
+                                   QUERY PLAN
+--------------------------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d, a
+         ->  Limit
+               ->  Index Only Scan Backward using ao_index_eda on test_ao_table
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select e,d,a from test_ao_table order by e nulls first, d desc, a limit 3;
+ e |       d       | a 
+---+---------------+---
+ 0 | sample_text 4 | 4
+ 0 | sample_text 3 | 3
+ 0 | sample_text 2 | 2
+(3 rows)
+
+-- Expected to choose SeqScan with a Sort as IndexOnlyScan doesn't support, since it selects all columns
+explain(costs off) select * from test_ao_table order by e desc nulls last, d, a desc limit 3;
+                         QUERY PLAN
+------------------------------------------------------------
+ Limit
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: e, d, a
+         ->  Limit
+               ->  Sort
+                     Sort Key: e DESC NULLS LAST, d, a DESC
+                     ->  Seq Scan on test_ao_table
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from test_ao_table order by e desc nulls last, d, a desc limit 3;
+  a  |  b  |         c          |        d        | e  
+-----+-----+--------------------+-----------------+----
+ 100 | 103 |  23.80952380952381 | sample_text 100 | 20
+  95 |  98 |  22.61904761904762 | sample_text 95  | 19
+  96 |  99 | 22.857142857142858 | sample_text 96  | 19
+(3 rows)
 
 -- Clean Up
 DROP TABLE test_ao_table;

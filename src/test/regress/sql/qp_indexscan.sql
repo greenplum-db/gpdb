@@ -328,12 +328,20 @@ DROP TABLE test_replicated_table;
 
 
 -- Test Case: Test on AO table with mixed data type columns.
--- ORCA_FEATURE_NOT_SUPPORTED: IndexScans not supported on AO tables
+-- IndexOnlyScans are supported but IndexScans aren't supported on AO tables
 CREATE TABLE test_ao_table(a int, b int, c float, d text, e numeric) WITH (appendonly=true) DISTRIBUTED BY (a);
 -- multi col index with mixed index keys properties
 CREATE INDEX ao_index_eda on test_ao_table using btree(e desc nulls last, d,a desc);
--- Expected to choose SeqScan with a Sort as it is an AO table
+INSERT INTO test_ao_table SELECT i, i+3, i/4.2, concat('sample_text ',i), i/5 from generate_series(1,100) i;
+-- Expected to choose IndexOnlyScan Forward
 explain(costs off) select e,d,a from test_ao_table order by e desc nulls last, d, a desc limit 3;
+select e,d,a from test_ao_table order by e desc nulls last, d, a desc limit 3;
+-- Expected to choose IndexOnlyScan Backward
+explain(costs off) select e,d,a from test_ao_table order by e nulls first, d desc, a limit 3;
+select e,d,a from test_ao_table order by e nulls first, d desc, a limit 3;
+-- Expected to choose SeqScan with a Sort as IndexOnlyScan doesn't support, since it selects all columns
+explain(costs off) select * from test_ao_table order by e desc nulls last, d, a desc limit 3;
+select * from test_ao_table order by e desc nulls last, d, a desc limit 3;
 -- Clean Up
 DROP TABLE test_ao_table;
 
