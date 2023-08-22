@@ -63,16 +63,6 @@ ifeq ($(with_systemd),yes)
 LIBS += -lsystemd
 endif
 
-# Greenplum makes fronted libpq symbols local in binary postgres
-ifeq (,$(filter cygwin win32 aix,$(PORTNAME)))
-exports_file = exports.list
-GP_LINK_SCRIPT := -Wl,--version-script=$(exports_file)
-
-$(OBJS): $(exports_file)
-
-$(exports_file): $(top_builddir)/src/interfaces/libpq/exports.txt
-	( echo '{ global: *; '; echo ' local:'; $(AWK) '/^[^\#]/ {printf "%s;\n",$$1}' $<; echo '};' ) >$@
-endif
 ##########################################################################
 
 all: submake-libpgport submake-catalog-headers submake-utils-headers postgres $(POSTGRES_IMP)
@@ -81,8 +71,22 @@ ifneq ($(PORTNAME), cygwin)
 ifneq ($(PORTNAME), win32)
 ifneq ($(PORTNAME), aix)
 
-postgres: $(OBJS)
-	$(CXX) $(CXXFLAGS) $(call expand_subsys,$^) $(LDFLAGS) $(LDFLAGS_EX) $(export_dynamic) $(LIBS) $(GP_LINK_SCRIPT) -o $@
+# Due to Greenplum's MPP architecture, the postgres process needs to connect to
+# databases, some symbols from frontend are compiled to the postgres binary.
+# Some extensions requires frontend symbols and are dynamically linked to libpq.so.
+# However, some symbols are not safe to be exported both in the postgres binary
+# and libpq.so. E.g., some of the functions are using palloc()/pfree() to allocate
+# and free memory in backend codes while using malloc()/free() to allocate and free
+# memory in frontend codes. We use linker version script to make these symbols exported
+# in libpq.so and private in the postgres binary.
+# FIXME: Can we teach the postgres binary to dynamically link against libpq.so? So that
+# we don't need this hack.
+SAFELY_EXPORTED_SYMBOLS_PATTERN = "(pqsignal|pg_*)"
+postgres_symbols.map: $(top_builddir)/src/interfaces/libpq/exports.txt
+	( echo '{ global: *; '; echo ' local:'; $(AWK) '/^[^\#]/ {printf "%s;\n",$$1}' $< | grep -v -E $(SAFELY_EXPORTED_SYMBOLS_PATTERN); echo '};' ) >$@
+
+postgres: $(OBJS) postgres_symbols.map
+	$(CXX) $(CXXFLAGS) $(call expand_subsys,$(OBJS)) $(LDFLAGS) $(LDFLAGS_EX) $(export_dynamic) $(LIBS) -Wl,--version-script=postgres_symbols.map -o $@
 
 endif
 endif
@@ -323,7 +327,7 @@ ifeq ($(PORTNAME), win32)
 	rm -f postgres.dll libpostgres.a $(WIN32RES)
 endif
 ifeq (,$(filter cygwin win32 aix,$(PORTNAME)))
-	rm -f $(exports_file)
+	rm -f postgres_symbols.map
 endif
 
 distclean: clean

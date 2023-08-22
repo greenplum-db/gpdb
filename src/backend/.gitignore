@@ -1,4 +1,4 @@
 /postgres
 /postgres.def
 /postgres.imp
-/exports.list
+/postgres_symbols.map
