@@ -147,6 +147,7 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const element_uri,
 		CDXLOperatorFactory::ExtractConvertBooleanListToULongArray(
 			m_parse_handler_mgr->GetDXLMemoryManager(),
 			xmlszIndexKeysSortDirections,
+			CDXLTokens::XmlstrToken(EdxltokenIndexKeySortDESC),
 			CDXLTokens::XmlstrToken(EdxltokenIndexKeySortASC),
 			m_index_key_cols_array->Size());
 
@@ -158,6 +159,7 @@ CParseHandlerMDIndex::StartElement(const XMLCh *const element_uri,
 		CDXLOperatorFactory::ExtractConvertBooleanListToULongArray(
 			m_parse_handler_mgr->GetDXLMemoryManager(),
 			xmlszIndexKeysNullsDirections,
+			CDXLTokens::XmlstrToken(EdxltokenIndexKeyNullsFirst),
 			CDXLTokens::XmlstrToken(EdxltokenIndexKeyNullsLast),
 			m_index_key_cols_array->Size());
 

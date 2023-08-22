@@ -280,7 +280,7 @@ CMDIndexGPDB::IncludedColAt(ULONG pos) const
 //	@doc:
 //		Returns n-th column sort direction.
 //		0 corresponds to ASC
-//      1 corresponds to DESC
+//		1 corresponds to DESC
 //---------------------------------------------------------------------------
 ULONG
 CMDIndexGPDB::KeySortDirectionAt(ULONG pos) const

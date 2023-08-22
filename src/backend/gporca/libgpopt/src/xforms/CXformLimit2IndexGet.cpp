@@ -180,7 +180,8 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 //		Function to validate if index is applicable, given OrderSpec and index
 //		columns. This function checks if
 //	        1. ORDER BY columns are prefix of the index columns
-//	        2. Sort and Nulls Direction of ORDER BY columns is either equal or commutative to the index columns
+//	        2. Sort and Nulls Direction of ORDER BY columns is either equal or
+//	           commutative to the index columns
 //---------------------------------------------------------------------------
 BOOL
 CXformLimit2IndexGet::FIndexApplicableForOrderBy(
@@ -211,7 +212,7 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(
 
 	for (ULONG i = 0; i < totalOrderByCols; i++)
 	{
-		// Index is not applicable if either Order By Column do not match with index key
+		// Index is not applicable if Order By Column do not match with index key
 		const CColRef *colref = pos->Pcr(i);
 		if (!CColRef::Equals(colref, (*pdrgpcrIndexColumns)[i]))
 		{
@@ -222,26 +223,31 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(
 			colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG);
 		if (greater_than_mdid->Equals(pos->GetMdIdSortOp(i)))
 		{
-			// If order spec's sort mdid is DESC set req_sort_direction for the key
+			// If order spec's sort mdid is DESC
+			// set req_sort_direction for the key
 			req_sort_direction->ExchangeSet(i);
 		}
 		if (pmdindex->KeySortDirectionAt(i) == SORT_DESC)
 		{
-			// If index key's sort direction is DESC set derived_sort_direction for the key
+			// If index key's sort direction is DESC
+			// set derived_sort_direction for the key
 			derived_sort_direction->ExchangeSet(i);
 		}
 		if (pos->Ent(i) == COrderSpec::EntFirst)
 		{
-			// If order spec's nulls direction is FIRST set req_nulls_direction for the key
+			// If order spec's nulls direction is FIRST
+			// set req_nulls_direction for the key
 			req_nulls_direction->ExchangeSet(i);
 		}
 		if (pmdindex->KeyNullsDirectionAt(i) == NULLS_FIRST)
 		{
-			// If index key's nulls direction is FIRST set derived_nulls_direction for the key
+			// If index key's nulls direction is FIRST
+			// set derived_nulls_direction for the key
 			derived_nulls_direction->ExchangeSet(i);
 		}
 
-		// If the derived, required sort directions and nulls directions are not equal or not commutative, then the index is not applicable.
+		// If the derived, required sort directions and nulls directions are not equal
+		// or not commutative, then the index is not applicable.
 		if (!(req_sort_direction->Equals(derived_sort_direction) &&
 			  req_nulls_direction->Equals(derived_nulls_direction)) &&
 			!(CXformUtils::FIndicesCommutative(req_sort_direction,

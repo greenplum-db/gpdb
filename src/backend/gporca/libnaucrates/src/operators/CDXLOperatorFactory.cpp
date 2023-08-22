@@ -3732,15 +3732,15 @@ CDXLOperatorFactory::ParseIndexType(const Attributes &attrs)
 ULongPtrArray *
 CDXLOperatorFactory::ExtractConvertBooleanListToULongArray(
 	CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val,
-	const XMLCh *false_value, ULONG num_of_keys)
+	const XMLCh *true_value, const XMLCh *false_value, ULONG num_of_keys)
 {
 	CMemoryPool *mp = dxl_memory_manager->Pmp();
 
 	ULongPtrArray *ulong_array = GPOS_NEW(mp) ULongPtrArray(mp);
 
 	// Only B-tree indices have sort and nulls directions in dxl
-	// For mdps with btree indices that do not have sort/nulls direction return array with 0s
-	// and consider ASC as default
+	// For mdps with btree indices that do not have sort/nulls direction
+	// return array with 0s and consider ASC as default
 	if (xml_val == nullptr)
 	{
 		for (ULONG ul = 0; ul < num_of_keys; ul++)
@@ -3763,6 +3763,8 @@ CDXLOperatorFactory::ExtractConvertBooleanListToULongArray(
 	{
 		XMLCh *current_str = commma_sep_str_components.nextToken();
 		GPOS_ASSERT(nullptr != current_str);
+		GPOS_ASSERT(0 == XMLString::compareString(current_str, true_value) ||
+					0 == XMLString::compareString(current_str, false_value));
 		ULONG value;
 		value =
 			(0 == XMLString::compareString(current_str, false_value)) ? 0 : 1;

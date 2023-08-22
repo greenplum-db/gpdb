@@ -662,7 +662,7 @@ public:
 	// will raise an exception if list is not well-formed
 	static ULongPtrArray *ExtractConvertBooleanListToULongArray(
 		CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val,
-		const XMLCh *false_value, ULONG num_of_keys);
+		const XMLCh *true_value, const XMLCh *false_value, ULONG num_of_keys);
 };
 
 // parse a comma-separated list of integers numbers into a dynamic array

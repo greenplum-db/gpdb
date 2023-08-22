@@ -4148,12 +4148,18 @@ CXformUtils::FCoverIndex(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
 //		Function to determine index scan direction given required order spec and
 //		index information. This function assumes that caller already validated
 //		if Index Scan is applicable on given index for the required order spec.
-//	    	1. Picks Forward if ORDER BY columns and index keys sort and nulls directions are equal.
-//	    	2. Picks Backward if ORDER BY columns and index keys sort and nulls directions are commutative.
+//	    	1. Picks Forward if ORDER BY columns and index keys sort and nulls directions
+//	    	are equal.
+//	    	2. Picks Backward if ORDER BY columns and index keys sort and nulls directions
+//	    	are commutative.
 //---------------------------------------------------------------------------
 EIndexScanDirection
 CXformUtils::GetIndexScanDirection(COrderSpec *pos, const IMDIndex *pmdindex)
 {
+	// This function only checks direction of first column because it assumes
+	// caller has already validated that Index Scan is applicable and in that
+	// case just checking for any one of the columns directions is sufficient
+	// to determine scan direction.
 	const CColRef *colref = pos->Pcr(0);
 	IMDId *greater_than_mdid =
 		colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG);
