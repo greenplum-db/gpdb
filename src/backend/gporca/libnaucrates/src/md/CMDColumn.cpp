@@ -29,15 +29,14 @@ using namespace gpmd;
 //---------------------------------------------------------------------------
 CMDColumn::CMDColumn(CMDName *mdname, INT attrnum, IMDId *mdid_type,
 					 INT type_modifier, BOOL is_nullable, BOOL is_dropped,
-					 CDXLNode *dxl_dafault_value, ULONG length)
+					 ULONG length)
 	: m_mdname(mdname),
 	  m_attno(attrnum),
 	  m_mdid_type(mdid_type),
 	  m_type_modifier(type_modifier),
 	  m_is_nullable(is_nullable),
 	  m_is_dropped(is_dropped),
-	  m_length(length),
-	  m_dxl_default_val(dxl_dafault_value)
+	  m_length(length)
 {
 }
 
@@ -53,7 +52,6 @@ CMDColumn::~CMDColumn()
 {
 	GPOS_DELETE(m_mdname);
 	m_mdid_type->Release();
-	CRefCount::SafeRelease(m_dxl_default_val);
 }
 
 
@@ -179,11 +177,6 @@ CMDColumn::Serialize(CXMLSerializer *xml_serializer) const
 	xml_serializer->OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
 		CDXLTokens::GetDXLTokenStr(EdxltokenColumnDefaultValue));
-
-	if (nullptr != m_dxl_default_val)
-	{
-		m_dxl_default_val->SerializeToDXL(xml_serializer);
-	}
 
 	xml_serializer->CloseElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),

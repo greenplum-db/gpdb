@@ -438,9 +438,6 @@ void GpdbEreportImpl(int xerrcode, int severitylevel, const char *xerrmsg,
 // string representation of a node
 char *NodeToString(void *obj);
 
-// node representation from a string
-Node *StringToNode(char *string);
-
 // return the default value of the type
 Node *GetTypeDefault(Oid typid);
 

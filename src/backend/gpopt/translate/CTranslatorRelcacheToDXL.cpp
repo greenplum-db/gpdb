@@ -690,15 +690,6 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 		CMDName *md_colname =
 			CDXLUtils::CreateMDNameFromCharArray(mp, NameStr(att->attname));
 
-		// translate the default column value
-		CDXLNode *dxl_default_col_val = nullptr;
-
-		if (!att->attisdropped && !att->attgenerated)
-		{
-			dxl_default_col_val = GetDefaultColumnValue(
-				mp, md_accessor, rel->rd_att, att->attnum);
-		}
-
 		ULONG col_len = gpos::ulong_max;
 		CMDIdGPDB *mdid_col =
 			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, att->atttypid);
@@ -740,8 +731,7 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 
 		CMDColumn *md_col = GPOS_NEW(mp)
 			CMDColumn(md_colname, att->attnum, mdid_col, att->atttypmod,
-					  !att->attnotnull, att->attisdropped,
-					  dxl_default_col_val /* default value */, col_len);
+					  !att->attnotnull, att->attisdropped, col_len);
 
 		mdcol_array->Append(md_col);
 	}
@@ -753,61 +743,6 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 	}
 
 	return mdcol_array;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorRelcacheToDXL::GetDefaultColumnValue
-//
-//	@doc:
-//		Return the dxl representation of column's default value
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorRelcacheToDXL::GetDefaultColumnValue(CMemoryPool *mp,
-												CMDAccessor *md_accessor,
-												TupleDesc rd_att,
-												AttrNumber attno)
-{
-	GPOS_ASSERT(attno > 0);
-
-	Node *node = nullptr;
-
-	// Scan to see if relation has a default for this column
-	if (nullptr != rd_att->constr && 0 < rd_att->constr->num_defval)
-	{
-		AttrDefault *defval = rd_att->constr->defval;
-		INT num_def = rd_att->constr->num_defval;
-
-		GPOS_ASSERT(nullptr != defval);
-		for (ULONG ul = 0; ul < (ULONG) num_def; ul++)
-		{
-			if (attno == defval[ul].adnum)
-			{
-				// found it, convert string representation to node tree.
-				node = gpdb::StringToNode(defval[ul].adbin);
-				break;
-			}
-		}
-	}
-
-	if (nullptr == node)
-	{
-		// get the default value for the type
-		Form_pg_attribute att_tup = &rd_att->attrs[attno - 1];
-		node = gpdb::GetTypeDefault(att_tup->atttypid);
-	}
-
-	if (nullptr == node)
-	{
-		return nullptr;
-	}
-
-	// translate the default value expression
-	return CTranslatorScalarToDXL::TranslateStandaloneExprToDXL(
-		mp, md_accessor,
-		nullptr, /* var_colid_mapping --- subquery or external variable are not supported in default expression */
-		(Expr *) node);
 }
 
 //---------------------------------------------------------------------------
@@ -987,9 +922,8 @@ CTranslatorRelcacheToDXL::AddSystemColumns(CMemoryPool *mp,
 			md_colname, attno,
 			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, att_tup->atttypid),
 			default_type_modifier,
-			false,	  // is_nullable
-			false,	  // is_dropped
-			nullptr,  // default value
+			false,	// is_nullable
+			false,	// is_dropped
 			att_tup->attlen);
 
 		mdcol_array->Append(md_col);

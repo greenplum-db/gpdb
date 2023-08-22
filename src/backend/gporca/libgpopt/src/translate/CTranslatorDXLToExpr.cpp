@@ -2253,9 +2253,7 @@ CTranslatorDXLToExpr::RegisterMDRelationCtas(CDXLLogicalCTAS *pdxlopCTAS)
 			GPOS_NEW(m_mp) CMDName(m_mp, pdxlcd->MdName()->GetMDName()),
 			pdxlcd->AttrNum(), pdxlcd->MdidType(), pdxlcd->TypeModifier(),
 			true,  // is_nullable,
-			pdxlcd->IsDropped(),
-			nullptr,  // pdxlnDefaultValue,
-			pdxlcd->Width());
+			pdxlcd->IsDropped(), pdxlcd->Width());
 		mdcol_array->Append(pmdcol);
 	}
 

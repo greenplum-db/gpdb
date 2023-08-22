@@ -38,7 +38,6 @@ CParseHandlerMetadataColumn::CParseHandlerMetadataColumn(
 	  m_mdcol(nullptr),
 	  m_mdname(nullptr),
 	  m_mdid_type(nullptr),
-	  m_dxl_default_val(nullptr),
 	  m_width(gpos::ulong_max)
 {
 }
@@ -165,22 +164,9 @@ CParseHandlerMetadataColumn::EndElement(const XMLCh *const,	 // element_uri,
 				   str->GetBuffer());
 	}
 
-	GPOS_ASSERT(1 == this->Length());
-
-	// get node for default value expression from child parse handler
-	CParseHandlerScalarOp *op_parse_handler =
-		dynamic_cast<CParseHandlerScalarOp *>((*this)[0]);
-
-	m_dxl_default_val = op_parse_handler->CreateDXLNode();
-
-	if (nullptr != m_dxl_default_val)
-	{
-		m_dxl_default_val->AddRef();
-	}
-
 	m_mdcol = GPOS_NEW(m_mp)
 		CMDColumn(m_mdname, m_attno, m_mdid_type, m_type_modifier,
-				  m_is_nullable, m_is_dropped, m_dxl_default_val, m_width);
+				  m_is_nullable, m_is_dropped, m_width);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

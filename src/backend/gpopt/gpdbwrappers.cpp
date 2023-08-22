@@ -1588,18 +1588,6 @@ gpdb::NodeToString(void *obj)
 }
 
 Node *
-gpdb::StringToNode(char *string)
-{
-	GP_WRAP_START;
-	{
-		return (Node *) stringToNode(string);
-	}
-	GP_WRAP_END;
-	return nullptr;
-}
-
-
-Node *
 gpdb::GetTypeDefault(Oid typid)
 {
 	GP_WRAP_START;

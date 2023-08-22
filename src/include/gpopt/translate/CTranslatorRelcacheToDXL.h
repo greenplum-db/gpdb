@@ -225,12 +225,6 @@ private:
 											  CMDAccessor *md_accessor,
 											  Relation rel);
 
-	// return the dxl representation of the column's default value
-	static CDXLNode *GetDefaultColumnValue(CMemoryPool *mp,
-										   CMDAccessor *md_accessor,
-										   TupleDesc rd_att, AttrNumber attrno);
-
-
 	// get the distribution columns
 	static ULongPtrArray *RetrieveRelDistributionCols(
 		CMemoryPool *mp, GpPolicy *gp_policy, CMDColumnArray *mdcol_array,
