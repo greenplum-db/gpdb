@@ -1027,7 +1027,7 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 		 * If current table is skipped, no need to merge stats for it's parent
 		 * since current table's stats is not get updated.
 		 */
-		if (optimizer_analyze_root_partition && !skip_this)
+		if ((options & VACOPT_ANALYZE) && optimizer_analyze_root_partition && !skip_this)
 		{
 			Oid			child_relid = relid;
 
