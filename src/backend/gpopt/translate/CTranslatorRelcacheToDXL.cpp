@@ -2809,50 +2809,6 @@ CTranslatorRelcacheToDXL::IsIndexSupported(Relation index_rel)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorRelcacheToDXL::RetrievePartConstraintForIndex
-//
-//	@doc:
-//		Retrieve part constraint for index
-//
-//---------------------------------------------------------------------------
-CMDPartConstraintGPDB *
-CTranslatorRelcacheToDXL::RetrievePartConstraintForIndex(
-	CMemoryPool *mp, CMDAccessor *md_accessor, const IMDRelation *md_rel,
-	Node *part_constraint, ULongPtrArray *level_with_default_part_array,
-	BOOL is_unbounded)
-{
-	CDXLColDescrArray *dxl_col_descr_array = GPOS_NEW(mp) CDXLColDescrArray(mp);
-	const ULONG num_columns = md_rel->ColumnCount();
-
-	for (ULONG ul = 0; ul < num_columns; ul++)
-	{
-		const IMDColumn *md_col = md_rel->GetMdCol(ul);
-		CMDName *md_colname =
-			GPOS_NEW(mp) CMDName(mp, md_col->Mdname().GetMDName());
-		CMDIdGPDB *mdid_col_type = CMDIdGPDB::CastMdid(md_col->MdidType());
-		mdid_col_type->AddRef();
-
-		// create a column descriptor for the column
-		CDXLColDescr *dxl_col_descr = GPOS_NEW(mp) CDXLColDescr(
-			md_colname,
-			ul + 1,	 // colid
-			md_col->AttrNum(), mdid_col_type, md_col->TypeModifier(),
-			false  // fColDropped
-		);
-		dxl_col_descr_array->Append(dxl_col_descr);
-	}
-
-	CMDPartConstraintGPDB *mdpart_constraint = RetrievePartConstraintFromNode(
-		mp, md_accessor, dxl_col_descr_array, part_constraint,
-		level_with_default_part_array, is_unbounded);
-
-	dxl_col_descr_array->Release();
-
-	return mdpart_constraint;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CTranslatorRelcacheToDXL::RetrievePartConstraintForRel
 //
 //	@doc:
@@ -2909,45 +2865,6 @@ CTranslatorRelcacheToDXL::RetrievePartConstraintForRel(
 			mp, md_accessor, &var_colid_mapping, (Expr *) node);
 
 	return scalar_dxlnode;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorRelcacheToDXL::RetrievePartConstraintFromNode
-//
-//	@doc:
-//		Retrieve part constraint from GPDB node
-//
-//---------------------------------------------------------------------------
-CMDPartConstraintGPDB *
-CTranslatorRelcacheToDXL::RetrievePartConstraintFromNode(
-	CMemoryPool *mp, CMDAccessor *md_accessor,
-	CDXLColDescrArray *dxl_col_descr_array, Node *part_constraints,
-	ULongPtrArray *level_with_default_part_array, BOOL is_unbounded)
-{
-	if (nullptr == part_constraints)
-	{
-		return nullptr;
-	}
-
-	// generate a mock mapping between var to column information
-	CMappingVarColId *var_colid_mapping = GPOS_NEW(mp) CMappingVarColId(mp);
-
-	var_colid_mapping->LoadColumns(0 /*query_level */, 1 /* rteIndex */,
-								   dxl_col_descr_array);
-
-	// translate the check constraint expression
-	CDXLNode *scalar_dxlnode =
-		CTranslatorScalarToDXL::TranslateStandaloneExprToDXL(
-			mp, md_accessor, var_colid_mapping, (Expr *) part_constraints);
-
-	// cleanup
-	GPOS_DELETE(var_colid_mapping);
-
-	level_with_default_part_array->AddRef();
-	return GPOS_NEW(mp) CMDPartConstraintGPDB(mp, level_with_default_part_array,
-											  is_unbounded, scalar_dxlnode);
 }
 
 //---------------------------------------------------------------------------

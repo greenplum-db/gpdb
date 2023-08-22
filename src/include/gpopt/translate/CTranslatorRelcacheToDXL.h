@@ -245,26 +245,11 @@ private:
 	// check if index is supported
 	static BOOL IsIndexSupported(Relation index_rel);
 
-	// is given level included in the default partitions
-	static BOOL LevelHasDefaultPartition(List *default_levels, ULONG level);
-
-	// retrieve part constraint for index
-	static CMDPartConstraintGPDB *RetrievePartConstraintForIndex(
-		CMemoryPool *mp, CMDAccessor *md_accessor, const IMDRelation *md_rel,
-		Node *part_constraint, ULongPtrArray *level_with_default_part_array,
-		BOOL is_unbounded);
-
 	// retrieve part constraint for relation
 	static CDXLNode *RetrievePartConstraintForRel(CMemoryPool *mp,
 												  CMDAccessor *md_accessor,
 												  Relation rel,
 												  CMDColumnArray *mdcol_array);
-
-	// retrieve part constraint from a GPDB node
-	static CMDPartConstraintGPDB *RetrievePartConstraintFromNode(
-		CMemoryPool *mp, CMDAccessor *md_accessor,
-		CDXLColDescrArray *dxl_col_descr_array, Node *part_constraint,
-		ULongPtrArray *level_with_default_part_array, BOOL is_unbounded);
 
 	// return relation name
 	static CMDName *GetRelName(CMemoryPool *mp, Relation rel);
