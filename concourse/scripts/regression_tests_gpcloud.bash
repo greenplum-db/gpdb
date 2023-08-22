@@ -37,7 +37,7 @@ function setup_gpadmin_user() {
 }
 
 function make_cluster() {
-  PYTHONPATH=${SCRIPT_DIR}:${PYTHONPATH} python2 -c "from builds.GpBuild import GpBuild; GpBuild(\"planner\").create_demo_cluster(install_dir='/usr/local/greenplum-db-devel')"
+  PYTHONPATH=${SCRIPT_DIR}:${PYTHONPATH} ${GPDB_INSTALL_DIR}/ext/python/bin/python2 -c "from builds.GpBuild import GpBuild; GpBuild(\"planner\").create_demo_cluster(install_dir='/usr/local/greenplum-db-devel')"
 }
 
 function configure_with_planner() {
