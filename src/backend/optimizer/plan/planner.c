@@ -7344,6 +7344,15 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 	List	   *havingQual = (List *) extra->havingQual;
 	AggClauseCosts *agg_final_costs = &extra->agg_final_costs;
 
+	/*
+	 * gp_eager_two_phase_agg is used to generate mutli-stage agg path manually.
+	 * Both can_hash and can_sort come from upstream to generate single-stage agg
+	 * path, when gp_eager_two_phase_agg is on then we shouldn't have single-stage agg
+	 * path then we just set can_hash/can_sort off.
+	 */
+	if (gp_eager_two_phase_agg)
+		can_hash = can_sort = false;
+
 	if (can_sort)
 	{
 		/*
@@ -7684,16 +7693,6 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 		 * will lose the filter of MultiDQA.
 		 */
 		PathTarget *final_target = (PathTarget *)copyObject(grouped_rel->reltarget);
-
-		if (gp_eager_two_phase_agg)
-		{
-			ListCell *lc;
-			foreach(lc, grouped_rel->pathlist)
-			{
-				Path *path = (Path *) lfirst(lc);
-				path->total_cost += disable_cost;
-			}
-		}
 
 		if (partially_grouped_rel == NULL)
 			partially_grouped_target =

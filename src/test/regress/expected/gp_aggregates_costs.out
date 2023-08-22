@@ -73,7 +73,9 @@ drop table cost_agg_t2;
 reset statement_mem;
 -- The following case is to test GUC gp_eager_two_phase_agg for planner
 -- When it is set true, planner will choose two stage agg.
-create table t_planner_force_multi_stage(a int, b int) distributed randomly;
+create table t_planner_force_multi_stage(a int, b int, c int, d int, e int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 analyze t_planner_force_multi_stage;
 show gp_eager_two_phase_agg;
  gp_eager_two_phase_agg 
@@ -81,9 +83,8 @@ show gp_eager_two_phase_agg;
  off
 (1 row)
 
--- the GUC gp_eager_two_phase_agg is default false, the table contains no data
--- so one stage agg will win.
-explain (costs off) select b, sum(a) from t_planner_force_multi_stage group by b;
+-- the GUC gp_eager_two_phase_agg is default false.
+explain (costs off) select sum(a) from t_planner_force_multi_stage group by b;
                          QUERY PLAN                         
 ------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -95,9 +96,37 @@ explain (costs off) select b, sum(a) from t_planner_force_multi_stage group by b
  Optimizer: Postgres query optimizer
 (7 rows)
 
-set gp_eager_two_phase_agg = on;
+explain (costs off) select count(distinct a) from t_planner_force_multi_stage group by b;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
+         Group Key: b
+         ->  Sort
+               Sort Key: b
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: b
+                     ->  Seq Scan on t_planner_force_multi_stage
+ Optimizer: Postgres-based planner
+(9 rows)
+
+explain (costs off) select count(distinct a), count(distinct b) from t_planner_force_multi_stage group by c;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
+         Group Key: c
+         ->  Sort
+               Sort Key: c
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: c
+                     ->  Seq Scan on t_planner_force_multi_stage
+ Optimizer: Postgres-based planner
+(9 rows)
+
 -- when forcing two stage, it should generate two stage agg plan.
-explain (costs off) select b, sum(a) from t_planner_force_multi_stage group by b;
+set gp_eager_two_phase_agg = on;
+explain (costs off) select sum(a) from t_planner_force_multi_stage group by b;
                         QUERY PLAN                         
 -----------------------------------------------------------
  Finalize HashAggregate
@@ -108,6 +137,41 @@ explain (costs off) select b, sum(a) from t_planner_force_multi_stage group by b
                ->  Seq Scan on t_planner_force_multi_stage
  Optimizer: Postgres query optimizer
 (7 rows)
+
+explain (costs off) select count(distinct a) from t_planner_force_multi_stage group by b;
+                           QUERY PLAN                            
+-----------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  HashAggregate
+         Group Key: b
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: b
+               ->  HashAggregate
+                     Group Key: b, a
+                     ->  Seq Scan on t_planner_force_multi_stage
+ Optimizer: Postgres-based planner
+(9 rows)
+
+explain (costs off) select count(distinct a), count(distinct b) from t_planner_force_multi_stage group by c;
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Finalize HashAggregate
+   Group Key: c
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial HashAggregate
+               Group Key: c
+               ->  HashAggregate
+                     Group Key: (AggExprId), a, b, c
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: c, a, b, (AggExprId)
+                           ->  Streaming HashAggregate
+                                 Group Key: AggExprId, a, b, c
+                                 ->  TupleSplit
+                                       Split by Col: (a), (b)
+                                       Group Key: c
+                                       ->  Seq Scan on t_planner_force_multi_stage
+ Optimizer: Postgres-based planner
+(16 rows)
 
 reset gp_eager_two_phase_agg;
 drop table t_planner_force_multi_stage;

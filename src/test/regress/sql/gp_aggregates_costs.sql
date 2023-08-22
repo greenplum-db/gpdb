@@ -36,15 +36,18 @@ reset statement_mem;
 
 -- The following case is to test GUC gp_eager_two_phase_agg for planner
 -- When it is set true, planner will choose two stage agg.
-create table t_planner_force_multi_stage(a int, b int) distributed randomly;
+create table t_planner_force_multi_stage(a int, b int, c int, d int, e int);
 analyze t_planner_force_multi_stage;
 show gp_eager_two_phase_agg;
--- the GUC gp_eager_two_phase_agg is default false, the table contains no data
--- so one stage agg will win.
-explain (costs off) select b, sum(a) from t_planner_force_multi_stage group by b;
-set gp_eager_two_phase_agg = on;
+-- the GUC gp_eager_two_phase_agg is default false.
+explain (costs off) select sum(a) from t_planner_force_multi_stage group by b;
+explain (costs off) select count(distinct a) from t_planner_force_multi_stage group by b;
+explain (costs off) select count(distinct a), count(distinct b) from t_planner_force_multi_stage group by c;
 -- when forcing two stage, it should generate two stage agg plan.
-explain (costs off) select b, sum(a) from t_planner_force_multi_stage group by b;
+set gp_eager_two_phase_agg = on;
+explain (costs off) select sum(a) from t_planner_force_multi_stage group by b;
+explain (costs off) select count(distinct a) from t_planner_force_multi_stage group by b;
+explain (costs off) select count(distinct a), count(distinct b) from t_planner_force_multi_stage group by c;
 reset gp_eager_two_phase_agg;
 drop table t_planner_force_multi_stage;
 
