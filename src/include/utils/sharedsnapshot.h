@@ -39,7 +39,6 @@ typedef struct SharedSnapshotSlot
 	/* only used by cursor dump identification, dose not always set */
 	volatile DistributedTransactionId distributedXid;
 
-	volatile bool			ready;
 	volatile uint32			segmateSync;
 	SnapshotData	snapshot;
 	LWLock		   *slotLock;

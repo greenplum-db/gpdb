@@ -1646,7 +1646,6 @@ updateSharedLocalSnapshot(DtxContextInfo *dtxContextInfo,
 	
 	SharedLocalSnapshotSlot->distributedXid = dtxContextInfo->distributedXid;
 	SharedLocalSnapshotSlot->segmateSync = dtxContextInfo->segmateSync;
-	SharedLocalSnapshotSlot->ready = true;
 
 	ereport((Debug_print_full_dtm ? LOG : DEBUG5),
 			(errmsg("updateSharedLocalSnapshot for DistributedTransactionContext = '%s' "
@@ -1776,8 +1775,7 @@ readerFillLocalSnapshot(Snapshot snapshot, DtxContext distributedTransactionCont
 	{
 		LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
 
-		if (QEDtxContextInfo.segmateSync == SharedLocalSnapshotSlot->segmateSync &&
-			SharedLocalSnapshotSlot->ready)
+		if (QEDtxContextInfo.segmateSync == SharedLocalSnapshotSlot->segmateSync)
 		{
 			if (QEDtxContextInfo.distributedXid != SharedLocalSnapshotSlot->distributedXid)
 				elog(ERROR, "transaction ID doesn't match between the reader gang "
@@ -1798,13 +1796,13 @@ readerFillLocalSnapshot(Snapshot snapshot, DtxContext distributedTransactionCont
 					 errmsg("GetSnapshotData timed out waiting for Writer to set the shared snapshot."),
 					 errdetail("We are waiting for the shared snapshot to have XID: "UINT64_FORMAT" but the value "
 							   "is currently: "UINT64_FORMAT"."
-							   " waiting for syncount to be %d but is currently %d.  ready=%d."
+							   " waiting for syncount to be %d but is currently %d."
 							   "DistributedTransactionContext = %s. "
 							   " Our slotindex is: %d \n"
 							   "Dump of all sharedsnapshots in shmem: %s",
 							   QEDtxContextInfo.distributedXid, SharedLocalSnapshotSlot->distributedXid,
 							   QEDtxContextInfo.segmateSync,
-							   SharedLocalSnapshotSlot->segmateSync, SharedLocalSnapshotSlot->ready,
+							   SharedLocalSnapshotSlot->segmateSync,
 							   DtxContextToString(distributedTransactionContext),
 							   SharedLocalSnapshotSlot->slotindex, SharedSnapshotDump())));
 		}
@@ -1826,12 +1824,11 @@ readerFillLocalSnapshot(Snapshot snapshot, DtxContext distributedTransactionCont
 			ereport(LOG,
 					(errmsg("GetSnapshotData did not find shared local snapshot information. "
 							"We are waiting for the shared snapshot to have XID: "UINT64_FORMAT"/%u but the value "
-							"is currently: "UINT64_FORMAT"/%u, ready=%d."
+							"is currently: "UINT64_FORMAT"/%u."
 							" Our slotindex is: %d \n"
 							"DistributedTransactionContext = %s.",
 							QEDtxContextInfo.distributedXid, QEDtxContextInfo.segmateSync,
 							SharedLocalSnapshotSlot->distributedXid, SharedLocalSnapshotSlot->segmateSync,
-							SharedLocalSnapshotSlot->ready,
 							SharedLocalSnapshotSlot->slotindex,
 							DtxContextToString(distributedTransactionContext))));
 			warning_sleep_time_us = 0;
