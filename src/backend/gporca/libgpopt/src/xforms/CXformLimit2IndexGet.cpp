@@ -212,7 +212,8 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(
 
 	for (ULONG i = 0; i < totalOrderByCols; i++)
 	{
-		// Index is not applicable if Order By Column do not match with index key
+		// Index is not applicable if Order By Column do not match with index
+		// key
 		const CColRef *colref = pos->Pcr(i);
 		if (!CColRef::Equals(colref, (*pdrgpcrIndexColumns)[i]))
 		{
@@ -246,8 +247,8 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(
 			derived_nulls_direction->ExchangeSet(i);
 		}
 
-		// If the derived, required sort directions and nulls directions are not equal
-		// or not commutative, then the index is not applicable.
+		// If the derived, required sort directions and nulls directions are
+		// not equal or not commutative, then the index is not applicable.
 		if (!(req_sort_direction->Equals(derived_sort_direction) &&
 			  req_nulls_direction->Equals(derived_nulls_direction)) &&
 			!(CXformUtils::FIndicesCommutative(req_sort_direction,

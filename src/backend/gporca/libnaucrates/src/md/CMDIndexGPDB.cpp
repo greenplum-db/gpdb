@@ -378,7 +378,8 @@ CMDIndexGPDB::Serialize(CXMLSerializer *xml_serializer) const
 		available_cols_str);
 	GPOS_DELETE(available_cols_str);
 
-	// Only if Index Access Method Support Ordering, serialize sort and nulls directions
+	// Only if Index Access Method Support Ordering, serialize sort and nulls
+	// directions
 	if (m_amcanorder)
 	{
 		CWStringDynamic *key_cols_sort_direction_str =

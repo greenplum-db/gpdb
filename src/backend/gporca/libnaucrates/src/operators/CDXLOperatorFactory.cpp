@@ -3732,7 +3732,8 @@ CDXLOperatorFactory::ParseIndexType(const Attributes &attrs)
 ULongPtrArray *
 CDXLOperatorFactory::ExtractConvertBooleanListToULongArray(
 	CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val,
-	const XMLCh *true_value, const XMLCh *false_value, ULONG num_of_keys)
+	const XMLCh *true_value GPOS_ASSERTS_ONLY, const XMLCh *false_value,
+	ULONG num_of_keys)
 {
 	CMemoryPool *mp = dxl_memory_manager->Pmp();
 

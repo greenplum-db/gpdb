@@ -189,34 +189,38 @@ CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 
 		IMDId *mdid = nullptr;
 		COrderSpec::ENullTreatment ent = COrderSpec::EntLast;
-		// if scan direction is forward, order spec computed should match the index's
-		// sort and nulls order.
+		// if scan direction is forward, order spec computed should match
+		// the index's sort and nulls order.
 		if (scan_direction == EForwardScan)
 		{
-			// if sort direction of key is 0(ASC), choose MDID for less than type and vice-versa
+			// if sort direction of key is 0(ASC), choose MDID for less than
+			// type and vice-versa
 			mdid =
 				(pmdindex->KeySortDirectionAt(ul) == SORT_ASC)
 					? colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptL)
 					: colref->RetrieveType()->GetMdidForCmpType(
 						  IMDType::EcmptG);
 
-			// if nulls direction of key is 0(LAST), choose ENTLast and vice-versa
+			// if nulls direction of key is 0(LAST), choose ENTLast and
+			// vice-versa
 			ent = (pmdindex->KeyNullsDirectionAt(ul) == NULLS_LAST)
 					  ? COrderSpec::EntLast
 					  : COrderSpec::EntFirst;
 		}
-		// if scan direction is backward, order spec computed should be commutative to index's
-		// sort and nulls order.
+		// if scan direction is backward, order spec computed should be
+		// commutative to index's sort and nulls order.
 		else if (scan_direction == EBackwardScan)
 		{
-			// if sort order of key is 0(ASC), choose MDID for greater than type and vice-versa
+			// if sort order of key is 0(ASC), choose MDID for greater than
+			// type and vice-versa
 			mdid =
 				(pmdindex->KeySortDirectionAt(ul) == SORT_ASC)
 					? colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG)
 					: colref->RetrieveType()->GetMdidForCmpType(
 						  IMDType::EcmptL);
 
-			// if nulls direction of key is 0(LAST), choose ENTFirst and vice-versa
+			// if nulls direction of key is 0(LAST), choose ENTFirst and
+			// vice-versa
 			ent = (pmdindex->KeyNullsDirectionAt(ul) == NULLS_LAST)
 					  ? COrderSpec::EntFirst
 					  : COrderSpec::EntLast;

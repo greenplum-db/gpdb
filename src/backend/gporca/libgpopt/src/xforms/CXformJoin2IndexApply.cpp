@@ -201,8 +201,9 @@ CXformJoin2IndexApply::CreateAlternativesForBtreeIndex(
 	CColRefSet *outer_refs, const IMDRelation *pmdrel, const IMDIndex *pmdindex,
 	CXformResult *pxfres)
 {
-	// We consider ForwardScan here because, BackwardScan is only supported in the case where we have Order by clause
-	// in the query, but this xform doesn't have one.
+	// We consider ForwardScan here because, BackwardScan is only supported
+	// in the case where we have Order by clause in the query, but this xform
+	// doesn't have one.
 	CExpression *pexprLogicalIndexGet = CXformUtils::PexprLogicalIndexGet(
 		mp, md_accessor, pexprInner, joinOp->UlOpId(), pdrgpexprConjuncts,
 		pcrsScalarExpr, outer_refs, pmdindex, pmdrel, false /*indexForOrderBy*/,

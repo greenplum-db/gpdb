@@ -580,7 +580,8 @@ public:
 							CTableDescriptor *ptabdesc,
 							CColRefArray *pdrgpcrOutput);
 
-	// function to determine scan direction given required order spec and index information.
+	// function to determine scan direction given required order spec and
+	// index information.
 	static EIndexScanDirection GetIndexScanDirection(COrderSpec *pos,
 													 const IMDIndex *pmdindex);
 

@@ -1118,8 +1118,8 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 		gpdb::GetIndexAmRoutineFromAmHandler(index_rel->rd_amhandler);
 	index_amcanorder = am_routine->amcanorder;
 	// Check if index can order
-	// If amcanorder is true, index AM must support INDOPTION_DESC, INDOPTION_NULLS_FIRST options
-	// and have provided Sort, Nulls directions
+	// If amcanorder is true, index AM must support INDOPTION_DESC,
+	// INDOPTION_NULLS_FIRST options and have provided Sort, Nulls directions
 	if (index_amcanorder)
 	{
 		for (int i = 0; i < form_pg_index->indnkeyatts; i++)

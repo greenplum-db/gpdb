@@ -34,7 +34,8 @@ private:
 	// helper function to validate if index is applicable, given OrderSpec
 	// and index columns. This function checks if
 	// 1. ORDER BY columns are prefix of the index columns
-	// 2. Sort and Nulls Direction of ORDER BY columns is either equal or commutative to the index columns
+	// 2. Sort and Nulls Direction of ORDER BY columns is either equal or
+	//    commutative to the index columns
 	static BOOL FIndexApplicableForOrderBy(CMemoryPool *mp, COrderSpec *pos,
 										   CColRefArray *pdrgpcrIndexColumns,
 										   const IMDIndex *pmdindex);
