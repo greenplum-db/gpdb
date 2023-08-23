@@ -129,10 +129,10 @@ CREATE VIEW gp_toolkit.gp_resgroup_iostats_per_host AS
     select rsgname,
            hostname,
            tablespace,
-           avg("rbps")::bigint "rbps",
-           avg("wbps")::bigint "wbps",
-           avg("riops")::bigint "riops",
-           avg("wiops")::bigint "wiops"
+           avg("rbps")::bigint rbps,
+           avg("wbps")::bigint wbps,
+           avg("riops")::bigint riops,
+           avg("wiops")::bigint wiops
     from iostats group by (hostname, rsgname, tablespace);
 
 GRANT SELECT ON gp_toolkit.gp_resgroup_iostats_per_host TO public;

@@ -13,6 +13,7 @@
 #include "catalog/pg_tablespace_d.h"
 #include "commands/resgroupcmds.h"
 #include "commands/tablespace.h"
+#include "common/string.h"
 #include "fmgr.h"
 #include "port.h"
 #include "storage/fd.h"
@@ -37,9 +38,10 @@ const char *IOconfigFields[4] = {"rbps", "wbps", "riops", "wiops"};
 static int bdi_cmp(const void *a, const void *b);
 static void ioconfig_validate(IOconfig *config);
 
-typedef struct BDICmp {
-  Oid ts;
-  bdi_t bdi;
+typedef struct BDICmp
+{
+	Oid ts;
+	bdi_t bdi;
 } BDICmp;
 
 /*
@@ -48,16 +50,17 @@ typedef struct BDICmp {
  * implementation of bdi_t maybe changes in the future.
  */
 static int
-bdi_cmp(const void *a, const void *b) {
-  BDICmp x = *(BDICmp *)a;
-  BDICmp y = *(BDICmp *)b;
+bdi_cmp(const void *a, const void *b)
+{
+	BDICmp x = *(BDICmp *)a;
+	BDICmp y = *(BDICmp *)b;
 
-  if (x.bdi < y.bdi)
-    return -1;
-  if (x.bdi > y.bdi)
-    return 1;
+	if (x.bdi < y.bdi)
+		return -1;
+	if (x.bdi > y.bdi)
+		return 1;
 
-  return 0;
+	return 0;
 }
 
 /*
@@ -67,64 +70,61 @@ bdi_cmp(const void *a, const void *b) {
  *  2. check duplicate bdi.
  */
 void
-io_limit_validate(List *limit_list) {
-  ListCell *limit_cell;
-  int bdi_count = 0;
-  int i = 0;
-  BDICmp *bdi_array;
-  bool is_star = false;
+io_limit_validate(List *limit_list)
+{
+	ListCell *limit_cell;
+	int bdi_count = 0;
+	int i = 0;
+	BDICmp *bdi_array;
+	bool is_star = false;
 
-  foreach (limit_cell, limit_list)
-  {
-    TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(limit_cell);
-    bdi_count += fill_bdi_list(limit);
-
-    if (limit->tablespace_oid == InvalidOid)
-      is_star = true;
-  }
-
-  bdi_array = (BDICmp *)palloc(bdi_count * sizeof(BDICmp));
-  /* fill bdi list and check wbps/rbps range */
-  foreach (limit_cell, limit_list)
-  {
-    TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(limit_cell);
-    ListCell *bdi_cell;
-
-    ioconfig_validate(limit->ioconfig);
-
-    foreach (bdi_cell, limit->bdi_list)
+	foreach(limit_cell, limit_list)
 	{
-      bdi_array[i].bdi = *(bdi_t *)lfirst(bdi_cell);
-      bdi_array[i].ts = limit->tablespace_oid;
-      i++;
-    }
-  }
+		TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(limit_cell);
+		bdi_count += fill_bdi_list(limit);
 
-  Assert(i == bdi_count);
+		if (limit->tablespace_oid == InvalidOid)
+			is_star = true;
+	}
 
-  /* check duplicate bdi */
-  if (is_star)
-    return;
-
-  qsort(bdi_array, bdi_count, sizeof(BDICmp), bdi_cmp);
-  for (i = 0; i < bdi_count - 1; ++i)
-  {
-    if (bdi_array[i].bdi == bdi_array[i + 1].bdi)
+	bdi_array = (BDICmp *) palloc(bdi_count * sizeof(BDICmp));
+	/* fill bdi list and check wbps/rbps range */
+	foreach(limit_cell, limit_list)
 	{
-      ereport(
-          ERROR,
-          (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-           errmsg(
-               "io limit: tablespaces of io limit must locate at different "
-               "disks, tablespace '%s' and '%s' have the same disk identifier.",
-               get_tablespace_name(bdi_array[i].ts),
-               get_tablespace_name(bdi_array[i + 1].ts))),
-          errhint("either omit these tablespaces from the IO limit or mount "
-                  "them separately"));
-    }
-  }
+		TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(limit_cell);
+		ListCell	  *bdi_cell;
 
-  pfree(bdi_array);
+		ioconfig_validate(limit->ioconfig);
+
+		foreach (bdi_cell, limit->bdi_list)
+		{
+			bdi_array[i].bdi = *(bdi_t *)lfirst(bdi_cell);
+			bdi_array[i].ts = limit->tablespace_oid;
+			i++;
+		}
+	}
+
+	Assert(i == bdi_count);
+
+	/* check duplicate bdi */
+	if (is_star)
+		return;
+
+	qsort(bdi_array, bdi_count, sizeof(BDICmp), bdi_cmp);
+	for (i = 0; i < bdi_count - 1; ++i)
+	{
+		if (bdi_array[i].bdi == bdi_array[i + 1].bdi)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("io limit: tablespaces of io limit must locate at different disks, tablespace '%s' and '%s' have the same disk identifier.",
+							get_tablespace_name(bdi_array[i].ts),
+							get_tablespace_name(bdi_array[i + 1].ts))),
+					errhint("either omit these tablespaces from the IO limit or mount them separately"));
+		}
+	}
+
+	pfree(bdi_array);
 }
 
 /*
@@ -133,46 +133,47 @@ io_limit_validate(List *limit_list) {
  *
  * Return bdi count of tablespace.
  */
-int fill_bdi_list(TblSpcIOLimit *iolimit)
+int
+fill_bdi_list(TblSpcIOLimit *iolimit)
 {
-  int result_cnt = 0;
+	int result_cnt = 0;
 
-  /* caller should init the bdi_list */
-  Assert(iolimit->bdi_list == NULL);
+	/* caller should init the bdi_list */
+	Assert(iolimit->bdi_list == NULL);
 
-  if (iolimit->tablespace_oid == InvalidOid)
-  {
-    Relation rel = table_open(TableSpaceRelationId, AccessShareLock);
-    TableScanDesc scan = table_beginscan_catalog(rel, 0, NULL);
-    HeapTuple tuple;
-    /*
-     * scan all tablespaces and get bdi
-     */
-    while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
+	if (iolimit->tablespace_oid == InvalidOid)
 	{
-      bdi_t *bdi;
-      Form_pg_tablespace spaceform = (Form_pg_tablespace)GETSTRUCT(tuple);
+		Relation rel = table_open(TableSpaceRelationId, AccessShareLock);
+		TableScanDesc scan = table_beginscan_catalog(rel, 0, NULL);
+		HeapTuple tuple;
+		/*
+		 * scan all tablespaces and get bdi
+		 */
+		while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
+		{
+			bdi_t *bdi;
+			Form_pg_tablespace spaceform = (Form_pg_tablespace) GETSTRUCT(tuple);
 
-      bdi = (bdi_t *)palloc0(sizeof(bdi_t));
-      *bdi = get_bdi_of_path(get_tablespace_path(spaceform->oid));
-      iolimit->bdi_list = lappend(iolimit->bdi_list, bdi);
-      result_cnt++;
-    }
-    table_endscan(scan);
-    table_close(rel, AccessShareLock);
-  }
-  else
-  {
-    bdi_t *bdi;
+			bdi = (bdi_t *)palloc0(sizeof(bdi_t));
+			*bdi = get_bdi_of_path(get_tablespace_path(spaceform->oid));
+			iolimit->bdi_list = lappend(iolimit->bdi_list, bdi);
+			result_cnt++;
+		}
+		table_endscan(scan);
+		table_close(rel, AccessShareLock);
+	}
+	else
+	{
+		bdi_t *bdi;
 
-    bdi = (bdi_t *)palloc0(sizeof(bdi_t));
-    *bdi = get_bdi_of_path(get_tablespace_path(iolimit->tablespace_oid));
+		bdi = (bdi_t *)palloc0(sizeof(bdi_t));
+		*bdi = get_bdi_of_path(get_tablespace_path(iolimit->tablespace_oid));
 
-    iolimit->bdi_list = lappend(iolimit->bdi_list, bdi);
-    result_cnt++;
-  }
+		iolimit->bdi_list = lappend(iolimit->bdi_list, bdi);
+		result_cnt++;
+	}
 
-  return result_cnt;
+	return result_cnt;
 }
 
 /*
@@ -186,183 +187,175 @@ int fill_bdi_list(TblSpcIOLimit *iolimit)
 bdi_t
 get_bdi_of_path(const char *ori_path)
 {
-  int maj;
-  int min;
-  size_t max_match_len = 0;
-  struct mntent *mnt;
-  struct mntent result;
-  struct mntent match_mnt = {};
-  /* default size of glibc */
-  char mntent_buffer[PATH_MAX];
-  char sysfs_path[PATH_MAX];
-  char sysfs_path_start[PATH_MAX];
-  char real_path[PATH_MAX];
-  char path[PATH_MAX];
+	int maj;
+	int min;
+	size_t max_match_len = 0;
+	struct mntent *mnt;
+	struct mntent result;
+	struct mntent match_mnt = {};
+	/* default size of glibc */
+	char mntent_buffer[PATH_MAX];
+	char sysfs_path[PATH_MAX];
+	char sysfs_path_start[PATH_MAX];
+	char real_path[PATH_MAX];
+	char path[PATH_MAX];
 
-  char *res = realpath(ori_path, path);
-  if (res == NULL)
-  {
-    ereport(ERROR, (errcode(ERRCODE_IO_ERROR),
-                    errmsg("io limit: cannot find realpath of %s, details: %m.",
-                           ori_path)));
-  }
+	char *res = realpath(ori_path, path);
+	if (res == NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("io limit: cannot find realpath of %s, details: %m.", ori_path)));
 
-  FILE *fp = setmntent("/proc/self/mounts", "r");
+	FILE *fp = setmntent("/proc/self/mounts", "r");
 
-  /* find mount point of path */
-  while ((mnt = getmntent_r(fp, &result, mntent_buffer,
-                            sizeof(mntent_buffer))) != NULL)
-  {
-    size_t dir_len = strlen(mnt->mnt_dir);
-
-    if (strstr(path, mnt->mnt_dir) != NULL &&
-        strncmp(path, mnt->mnt_dir, dir_len) == 0)
+	/* find mount point of path */
+	while ((mnt = getmntent_r(fp, &result, mntent_buffer, sizeof(mntent_buffer))) != NULL)
 	{
-      if (dir_len > max_match_len)
-	  {
-        max_match_len = dir_len;
-        match_mnt.mnt_passno = mnt->mnt_passno;
-        match_mnt.mnt_freq = mnt->mnt_freq;
+		size_t dir_len = strlen(mnt->mnt_dir);
 
-        /* copy string */
-        if (match_mnt.mnt_fsname != NULL)
-          pfree(match_mnt.mnt_fsname);
-        match_mnt.mnt_fsname = pstrdup(mnt->mnt_fsname);
+		if (strstr(path, mnt->mnt_dir) != NULL && strncmp(path, mnt->mnt_dir, dir_len) == 0)
+		{
+			if (dir_len > max_match_len)
+			{
+				max_match_len = dir_len;
+				match_mnt.mnt_passno = mnt->mnt_passno;
+				match_mnt.mnt_freq = mnt->mnt_freq;
 
-        if (match_mnt.mnt_dir != NULL)
-          pfree(match_mnt.mnt_dir);
-        match_mnt.mnt_dir = pstrdup(mnt->mnt_dir);
+				/* copy string */
+				if (match_mnt.mnt_fsname != NULL)
+					pfree(match_mnt.mnt_fsname);
+				match_mnt.mnt_fsname = pstrdup(mnt->mnt_fsname);
 
-        if (match_mnt.mnt_type != NULL)
-          pfree(match_mnt.mnt_type);
-        match_mnt.mnt_type = pstrdup(mnt->mnt_type);
+				if (match_mnt.mnt_dir != NULL)
+					pfree(match_mnt.mnt_dir);
+				match_mnt.mnt_dir = pstrdup(mnt->mnt_dir);
 
-        if (match_mnt.mnt_opts != NULL)
-          pfree(match_mnt.mnt_opts);
-        match_mnt.mnt_opts = pstrdup(mnt->mnt_opts);
-      }
-    }
-  }
-  endmntent(fp);
+				if (match_mnt.mnt_type != NULL)
+					pfree(match_mnt.mnt_type);
+				match_mnt.mnt_type = pstrdup(mnt->mnt_type);
 
-  struct stat sb;
-  if (stat(match_mnt.mnt_fsname, &sb) == -1)
-  {
-    ereport(ERROR,
-            (errcode(ERRCODE_IO_ERROR),
-             errmsg("cannot find disk of %s, details: %m", path),
-             errhint("mount point of %s is: %s", path, match_mnt.mnt_fsname)));
-  }
+				if (match_mnt.mnt_opts != NULL)
+					pfree(match_mnt.mnt_opts);
+				match_mnt.mnt_opts = pstrdup(mnt->mnt_opts);
+			}
+		}
+	}
+	endmntent(fp);
 
-  maj = major(sb.st_rdev);
-  min = minor(sb.st_rdev);
+	struct stat sb;
+	if (stat(match_mnt.mnt_fsname, &sb) == -1)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				 errmsg("cannot find disk of %s, details: %m", path),
+				 errhint("mount point of %s is: %s", path, match_mnt.mnt_fsname)));
+	}
 
-  snprintf(sysfs_path, sizeof(sysfs_path), "/sys/dev/block/%d:%d", maj, min);
+	maj = major(sb.st_rdev);
+	min = minor(sb.st_rdev);
 
-  snprintf(sysfs_path_start, sizeof(sysfs_path_start), "%s/start", sysfs_path);
+	snprintf(sysfs_path, sizeof(sysfs_path), "/sys/dev/block/%d:%d", maj, min);
 
-  if (access(sysfs_path_start, F_OK) == -1)
-    return make_bdi(maj, min);
+	snprintf(sysfs_path_start, sizeof(sysfs_path_start), "%s/start", sysfs_path);
 
-  res = realpath(sysfs_path, real_path);
-  if (res == NULL)
-  {
-    ereport(ERROR, (errcode(ERRCODE_IO_ERROR),
-                    errmsg("io limit: cannot find realpath of %s, details: %m.",
-                           sysfs_path)));
-  }
+	if (access(sysfs_path_start, F_OK) == -1)
+		return make_bdi(maj, min);
 
-  dirname(real_path);
+	res = realpath(sysfs_path, real_path);
+	if (res == NULL)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("io limit: cannot find realpath of %s, details: %m.", sysfs_path)));
+	}
 
-  snprintf(real_path + strlen(real_path), sizeof(real_path) - strlen(real_path),
-           "/dev");
+	dirname(real_path);
 
-  FILE *f = fopen(real_path, "r");
-  if (f == NULL)
-  {
-    ereport(ERROR, (errcode(ERRCODE_IO_ERROR),
-                    errmsg("cannot find disk of %s\n", path)));
-  }
+	snprintf(real_path + strlen(real_path), sizeof(real_path) - strlen(real_path), "/dev");
 
-  int parent_maj;
-  int parent_min;
-  int scan_result = fscanf(f, "%d:%d", &parent_maj, &parent_min);
-  if (scan_result < 2)
-  {
-    fclose(f);
-    ereport(
-        ERROR,
-        (errcode(ERRCODE_IO_ERROR),
-         errmsg("io limit: cannot read block device id from %s, details: %m.",
-                real_path)));
-  }
-  fclose(f);
+	FILE *f = fopen(real_path, "r");
+	if (f == NULL)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				 errmsg("cannot find disk of %s\n", path)));
+	}
 
-  return make_bdi(parent_maj, parent_min);
+	int parent_maj;
+	int parent_min;
+	int scan_result = fscanf(f, "%d:%d", &parent_maj, &parent_min);
+	if (scan_result < 2)
+	{
+		fclose(f);
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				errmsg("io limit: cannot read block device id from %s, details: %m.", real_path)));
+	}
+	fclose(f);
+
+	return make_bdi(parent_maj, parent_min);
 }
 
-static void ioconfig_validate(IOconfig *config)
+static void
+ioconfig_validate(IOconfig *config)
 {
-  const uint64 ULMAX = ULLONG_MAX / 1024 / 1024;
-  const uint32 UMAX = UINT_MAX;
+	const uint64 ULMAX = ULLONG_MAX / 1024 / 1024;
+	const uint32 UMAX = UINT_MAX;
 
-  if (config->rbps != IO_LIMIT_MAX &&
-      (config->rbps > ULMAX || config->rbps < 2))
-    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-                    errmsg("io limit: rbps must in range [2, %lu] or equal 0",
-                           ULMAX)));
+	if (config->rbps != IO_LIMIT_MAX && (config->rbps > ULMAX || config->rbps < 2))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("io limit: rbps must in range [2, %lu] or equal 0", ULMAX)));
 
-  if (config->wbps != IO_LIMIT_MAX &&
-      (config->wbps > ULMAX || config->wbps < 2))
-    ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-                    errmsg("io limit: wbps must in range [2, %lu] or equal 0",
-                           ULMAX)));
+	if (config->wbps != IO_LIMIT_MAX && (config->wbps > ULMAX || config->wbps < 2))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("io limit: wbps must in range [2, %lu] or equal 0", ULMAX)));
 
-  if (config->wiops != IO_LIMIT_MAX &&
-      (config->wiops > UMAX || config->wiops < 2))
-    ereport(ERROR,
-            (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-             errmsg("io limit: wiops must in range [2, %u] or equal 0", UMAX)));
+	if (config->wiops != IO_LIMIT_MAX && (config->wiops > UMAX || config->wiops < 2))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("io limit: wiops must in range [2, %u] or equal 0", UMAX)));
 
-  if (config->riops != IO_LIMIT_MAX &&
-      (config->riops > UMAX || config->riops < 2))
-    ereport(ERROR,
-            (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-             errmsg("io limit: riops must in range [2, %u] or equal 0", UMAX)));
+	if (config->riops != IO_LIMIT_MAX && (config->riops > UMAX || config->riops < 2))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("io limit: riops must in range [2, %u] or equal 0", UMAX)));
 }
 
 char *
 get_tablespace_path(Oid spcid)
 {
-  if (spcid == InvalidOid)
-    return NULL;
+	if (spcid == InvalidOid)
+		return NULL;
 
-  if (spcid == DEFAULTTABLESPACE_OID || spcid == GLOBALTABLESPACE_OID)
-  {
-    Oid dbid = MyDatabaseId;
+	if (spcid == DEFAULTTABLESPACE_OID ||
+		spcid == GLOBALTABLESPACE_OID)
+	{
+		Oid dbid = MyDatabaseId;
 
-    if (spcid == GLOBALTABLESPACE_OID)
-      dbid = 0;
+		if (spcid == GLOBALTABLESPACE_OID)
+			dbid = 0;
 
-    return GetDatabasePath(dbid, spcid);
-  }
+		return GetDatabasePath(dbid, spcid);
+	}
 
-  return psprintf("pg_tblspc/%u", spcid);
+	return psprintf("pg_tblspc/%u", spcid);
 }
 
 void
 io_limit_free(List *limit_list)
 {
-  ListCell *cell;
+	ListCell *cell;
 
-  foreach (cell, limit_list)
-  {
-    TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(cell);
-    list_free_deep(limit->bdi_list);
-    pfree(limit->ioconfig);
-  }
+	foreach (cell, limit_list)
+	{
+		TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(cell);
+		list_free_deep(limit->bdi_list);
+		pfree(limit->ioconfig);
+	}
 
-  list_free_deep(limit_list);
+	list_free_deep(limit_list);
 }
 
 /*
@@ -382,116 +375,105 @@ io_limit_free(List *limit_list)
 List *
 get_iostat(Oid groupid, List *io_limit)
 {
-#define MAX_LINE 1024
+	List *result = NIL;
 
-  List *result = NIL;
+	HTAB *io_stat_hash = NULL;
+	HASHCTL ctl;
 
-  HTAB *io_stat_hash = NULL;
-  HASHCTL ctl;
+	char io_stat_path[PATH_MAX];
+	ListCell *cell;
+	List *lines = NIL;
+	StringInfo line = makeStringInfo();
+	FILE *f;
 
-  char io_stat_path[PATH_MAX];
-  char tmp_line[MAX_LINE] = {};
-  ListCell *cell;
-  List *lines = NIL;
-  StringInfo line = makeStringInfo();
-  FILE *f;
+	buildPath(groupid, BASEDIR_GPDB, CGROUP_COMPONENT_PLAIN, "io.stat",
+			  io_stat_path, sizeof(io_stat_path));
+	f = AllocateFile(io_stat_path, "r");
+	if (f == NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				 errmsg("io limit: cannot read %s, details: %m.", io_stat_path)));
 
-  buildPath(groupid, BASEDIR_GPDB, CGROUP_COMPONENT_PLAIN, "io.stat",
-            io_stat_path, sizeof(io_stat_path));
-  f = AllocateFile(io_stat_path, "r");
-  if (f == NULL)
-  {
-    ereport(ERROR,
-            (errcode(ERRCODE_IO_ERROR),
-             errmsg("io limit: cannot read %s, details: %m.", io_stat_path)));
-  }
+	/*
+	 * read all lines at a time
+	 */
+	while (pg_get_line_buf(f, line))
+		lines = lappend(lines, line->data);
+	FreeFile(f);
 
-  /*
-   * read all lines at a time
-   */
-  while (fgets(tmp_line, MAX_LINE, f))
-  {
-    appendStringInfoString(line, tmp_line);
-    if (tmp_line[strlen(tmp_line) - 1] == '\n')
+	/*
+	 * parse file content.
+	 * content example:
+	 * "8:16 rbytes=1459200 wbytes=314773504 rios=192 wios=353 ..."
+	 */
+	memset(&ctl, 0, sizeof(ctl));
+	ctl.keysize = sizeof(bdi_t);
+	ctl.entrysize = sizeof(IOStatHashEntry);
+	ctl.hcxt = CurrentMemoryContext;
+	io_stat_hash =
+		hash_create("hash table for bdi -> io stat", list_length(io_limit), &ctl,
+					HASH_ELEM | HASH_CONTEXT);
+	foreach (cell, lines)
 	{
-      lines = lappend(lines, line->data);
-      initStringInfo(line);
-    }
-  }
-  FreeFile(f);
+		uint64 maj, min, wbytes = 0, rbytes = 0, rios = 0, wios = 0;
+		bdi_t bdi;
+		IOStatHashEntry *entry;
 
-  /*
-   * parse file content.
-   * content example:
-   * "8:16 rbytes=1459200 wbytes=314773504 rios=192 wios=353 ..."
-   */
-  memset(&ctl, 0, sizeof(ctl));
-  ctl.keysize = sizeof(bdi_t);
-  ctl.entrysize = sizeof(IOStatHashEntry);
-  ctl.hcxt = CurrentMemoryContext;
-  io_stat_hash =
-      hash_create("hash table for bdi -> io stat", list_length(io_limit), &ctl,
-                  HASH_ELEM | HASH_CONTEXT);
-  foreach (cell, lines)
-  {
-    uint64 maj, min, wbytes = 0, rbytes = 0, rios = 0, wios = 0;
-    bdi_t bdi;
-    IOStatHashEntry *entry;
+		char *str = (char *) lfirst(cell);
+		int res = sscanf(str, "%lu:%lu rbytes=%lu wbytes=%lu rios=%lu wios=%lu",
+						 &maj, &min, &rbytes, &wbytes, &rios, &wios);
 
-    char *str = (char *)lfirst(cell);
-    int res = sscanf(str, "%lu:%lu rbytes=%lu wbytes=%lu rios=%lu wios=%lu",
-                     &maj, &min, &rbytes, &wbytes, &rios, &wios);
+		if (res == EOF)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_IO_ERROR),
+					 errmsg("io limit: cannot parse content from '%s', details: %m.",
+							str)));
+		}
 
-    if (res == EOF) {
-      ereport(ERROR,
-              (errcode(ERRCODE_IO_ERROR),
-               errmsg("io limit: cannot parse content from '%s', details: %m.",
-                      str)));
-    }
+		bdi = make_bdi(maj, min);
+		entry = hash_search(io_stat_hash, (void *)&bdi, HASH_ENTER, NULL);
+		entry->id = bdi;
+		entry->items.rbytes = rbytes;
+		entry->items.wbytes = wbytes;
+		entry->items.rios = rios;
+		entry->items.wios = wios;
+	}
 
-    bdi = make_bdi(maj, min);
-    entry = hash_search(io_stat_hash, (void *)&bdi, HASH_ENTER, NULL);
-    entry->id = bdi;
-    entry->items.rbytes = rbytes;
-    entry->items.wbytes = wbytes;
-    entry->items.rios = rios;
-    entry->items.wios = wios;
-  }
-
-  /* construct result list */
-  foreach (cell, io_limit)
-  {
-    ListCell *bdi_cell;
-    IOStat *stat = (IOStat *) palloc0(sizeof(IOStat));
-
-    TblSpcIOLimit *limit = (TblSpcIOLimit *) lfirst(cell);
-    fill_bdi_list(limit);
-    stat->tablespace = limit->tablespace_oid;
-    stat->groupid = groupid;
-
-    foreach (bdi_cell, limit->bdi_list)
+	/* construct result list */
+	foreach (cell, io_limit)
 	{
-      bdi_t *bdi = (bdi_t *)lfirst(bdi_cell);
-      IOStatHashEntry *entry =
-          hash_search(io_stat_hash, (void *)bdi, HASH_FIND, NULL);
+		ListCell *bdi_cell;
+		IOStat *stat = (IOStat *) palloc0(sizeof(IOStat));
 
-      if (entry != NULL)
-	  {
-        stat->items.wbytes += entry->items.wbytes;
-        stat->items.rbytes += entry->items.rbytes;
-        stat->items.rios += entry->items.rios;
-        stat->items.wios += entry->items.wios;
-      }
-    }
+		TblSpcIOLimit *limit = (TblSpcIOLimit *) lfirst(cell);
+		fill_bdi_list(limit);
+		stat->tablespace = limit->tablespace_oid;
+		stat->groupid = groupid;
 
-	result = lappend(result, stat);
-  }
+		foreach (bdi_cell, limit->bdi_list)
+		{
+			bdi_t *bdi = (bdi_t *)lfirst(bdi_cell);
+			IOStatHashEntry *entry =
+				hash_search(io_stat_hash, (void *)bdi, HASH_FIND, NULL);
 
-  hash_destroy(io_stat_hash);
-  io_limit_free(io_limit);
-  list_free_deep(lines);
+			if (entry != NULL)
+			{
+				stat->items.wbytes += entry->items.wbytes;
+				stat->items.rbytes += entry->items.rbytes;
+				stat->items.rios += entry->items.rios;
+				stat->items.wios += entry->items.wios;
+			}
+		}
 
-  return result;
+		result = lappend(result, stat);
+	}
+
+	hash_destroy(io_stat_hash);
+	io_limit_free(io_limit);
+	list_free_deep(lines);
+
+	return result;
 }
 
 /*
@@ -500,21 +482,21 @@ get_iostat(Oid groupid, List *io_limit)
 int
 compare_iostat(const void *x, const void *y)
 {
-  IOStat *a = (IOStat *) lfirst((ListCell *) x);
-  IOStat *b = (IOStat *) lfirst((ListCell *) y);
-  if (a->groupid != b->groupid)
-  {
-    if (a->groupid < b->groupid)
-      return -1;
-    return 1;
-  }
+	IOStat *a = (IOStat *) lfirst((ListCell *) x);
+	IOStat *b = (IOStat *) lfirst((ListCell *) y);
+	if (a->groupid != b->groupid)
+	{
+		if (a->groupid < b->groupid)
+			return -1;
+		return 1;
+	}
 
-  if (a->tablespace != b->tablespace)
-  {
-    if (a->tablespace < b->tablespace)
-      return -1;
-    return 1;
-  }
+	if (a->tablespace != b->tablespace)
+	{
+		if (a->tablespace < b->tablespace)
+			return -1;
+		return 1;
+	}
 
-  return 0;
+	return 0;
 }
