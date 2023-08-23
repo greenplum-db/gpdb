@@ -67,8 +67,6 @@ typedef struct CdbExplain_StatInst
 	HashInstrumentation hashstats; /* Hash stats, if this is a Hash node */
 	int			bnotes;			/* Offset to beginning of node's extra text */
 	int			enotes;			/* Offset to end of node's extra text */
-
-	int			segindex;		/* segment id */
 } CdbExplain_StatInst;
 
 
@@ -133,6 +131,7 @@ typedef struct CdbExplain_NodeSummary
 	/* insts array info */
 	int			qe_identifier0;		/* qe identifier of insts[0] */
 	int			ninst;			/* num of StatInst entries in inst array */
+	int			*segindexes;	/* list of segindex */
 
 	/* Array [0..ninst-1] of StatInst entries is appended starting here */
 	CdbExplain_StatInst insts[1];	/* variable size - must be last */
@@ -215,13 +214,13 @@ typedef struct CdbExplain_RecvStatCtx
 	int			nStatInst;
 
 	/*
-	 * qeIdentifierMin is the min of segment index from which we collected message
+	 * qeIdentifierMin is the min of qe_identifier from which we collected message
 	 * (i.e., saved msgptrs)
 	 */
 	int			qeIdentifierMin;
 
 	/*
-	 * qeIdentifierMax is the max of segment index from which we collected message
+	 * qeIdentifierMax is the max of qe_identifier from which we collected message
 	 * (i.e., saved msgptrs)
 	 */
 	int			qeIdentifierMax;
@@ -622,7 +621,7 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 			Assert(ctx.nStatInst == hdr->nInst);
 		}
 
-		/* Save lowest and highest segment id for which we have stats. */
+		/* Save lowest and highest qe_identifier for which we have stats. */
 		if (iDispatch == 0)
 			ctx.qeIdentifierMin = ctx.qeIdentifierMax = hdr->qe_identifier;
 		else if (ctx.qeIdentifierMax < hdr->qe_identifier)
@@ -869,8 +868,6 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 		if (hashstate->hashtable)
 			ExecHashGetInstrumentation(&si->hashstats, hashstate->hashtable);
 	}
-
-	si->segindex = GpIdentity.segindex;
 }								/* cdbexplain_collectStatsFromNode */
 
 
@@ -1008,6 +1005,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 											nInst * sizeof(ns->insts[0]));
 	ns->qe_identifier0 = ctx->qeIdentifierMin;
 	ns->ninst = nInst;
+	ns->segindexes = (int *) palloc0(nInst * sizeof(int));
 
 	/* Attach our new NodeSummary to the Instrumentation node. */
 	instr->cdbNodeSummary = ns;
@@ -1038,6 +1036,7 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 
 		/* Locate this qExec's StatInst slot in node's NodeSummary block. */
 		nsi = &ns->insts[rsh->qe_identifier - ns->qe_identifier0];
+		ns->segindexes[rsh->qe_identifier - ns->qe_identifier0] = rsh->segindex;
 
 		/* Copy the StatInst to NodeSummary from dispatch result buffer. */
 		*nsi = *rsi;
@@ -1689,7 +1688,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 			cdbexplain_formatExtraText(&extraData,
 									   0,
 									   (ns->ninst == 1) ? -1
-									   : nsi->segindex,
+									   : ns->segindexes[i],
 									   ctx->extratextbuf.data + nsi->bnotes,
 									   nsi->enotes - nsi->bnotes);
 			ExplainPropertyStringInfo("Extra Text", es, "%s", extraData.data);
@@ -1741,7 +1740,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 										 nsi->total, true);
 				appendStringInfo(es->str,
 								 "/seg%d_%s_%s_%.0f",
-								 nsi->segindex,
+								 ns->segindexes[i],
 								 startbuf,
 								 totalbuf,
 								 nsi->ntuples);
@@ -1754,7 +1753,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 										 nsi->total, false);
 
 				ExplainOpenGroup("Segment", NULL, false, es);
-				ExplainPropertyInteger("Segment index", NULL, nsi->segindex, es);
+				ExplainPropertyInteger("Segment index", NULL, ns->segindexes[i], es);
 				ExplainPropertyText("Time To First Result", startbuf, es);
 				ExplainPropertyText("Time To Total Result", totalbuf, es);
 				ExplainPropertyFloat("Tuples", NULL, nsi->ntuples, 1, es);
