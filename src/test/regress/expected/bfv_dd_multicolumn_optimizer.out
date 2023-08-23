@@ -223,18 +223,14 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 
 -- group by and sort
 select a, count(*) from dd_multicol_1 where a=1 and b=1 group by a,b;
-INFO:  (slice 3) Dispatch command to ALL contents: 0 1 2
-INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
  a | count 
 ---+-------
  1 |     1
 (1 row)
 
 select a, count(*) from dd_multicol_1 where a=1 and b=1 group by a,b  order by a,b;
-INFO:  (slice 3) Dispatch command to ALL contents: 0 1 2
-INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
  a | count 
 ---+-------
  1 |     1
