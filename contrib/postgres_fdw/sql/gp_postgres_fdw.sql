@@ -326,6 +326,7 @@ explain (costs false) update t1 set b = b + 1 where b in (select a from gp_coord
 alter system set password_encryption = 'scram-sha-256';
 -- add created user to pg_hba.conf
 \! echo "host    all    u16219  0.0.0.0/0 scram-sha-256" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
+\! echo "host    all    u16219   ::1/128  scram-sha-256" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
 \! echo "local    all    u16219   scram-sha-256" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
 select pg_reload_conf();
 \c postgres
@@ -367,3 +368,5 @@ select count(*) from f_t1;
 \c postgres
 drop database database_16219;
 drop user u16219;
+alter system reset password_encryption;
+select pg_reload_conf();
