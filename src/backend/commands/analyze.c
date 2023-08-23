@@ -700,7 +700,6 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 	}
 
 	sample_needed = needs_sample(onerel, vacattrstats, attr_cnt);
-
 	if (ctx || sample_needed)
 	{
 		if (ctx)
