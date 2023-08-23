@@ -496,28 +496,28 @@ SET enable_mergejoin TO true;
 -- inner join; expressions in the clauses appear in the equivalence class list
 EXPLAIN (VERBOSE, COSTS OFF)
 	SELECT t1.c1, t2."C 1" FROM ft2 t1 JOIN "S 1"."T 1" t2 ON (t1.c1 = t2."C 1") order by t1.c1 OFFSET 100 LIMIT 10;
-                                QUERY PLAN                                 
+                                QUERY PLAN
 ---------------------------------------------------------------------------
  Limit
    Output: c1, "T 1"."C 1"
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Output: c1, "T 1"."C 1"
          Merge Key: c1
-         ->  Sort
+         ->  Nested Loop
                Output: c1, "T 1"."C 1"
-               Sort Key: c1
-               ->  Nested Loop
-                     Output: c1, "T 1"."C 1"
-                     Join Filter: true
+               Join Filter: true
+               ->  Sort
+                     Output: c1
+                     Sort Key: c1
                      ->  Redistribute Motion 1:3  (slice2)
                            Output: c1
                            Hash Key: c1
                            ->  Foreign Scan on public.ft2
                                  Output: c1
                                  Remote SQL: SELECT "C 1" FROM "S 1"."T 1"
-                     ->  Index Scan using t1_pkey on "S 1"."T 1"
-                           Output: "T 1"."C 1"
-                           Index Cond: ("T 1"."C 1" = c1)
+               ->  Index Scan using t1_pkey on "S 1"."T 1"
+                     Output: "T 1"."C 1"
+                     Index Cond: ("T 1"."C 1" = c1)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: enable_hashjoin = 'off', enable_mergejoin = 'on'
 (22 rows)
@@ -541,28 +541,28 @@ SELECT t1.c1, t2."C 1" FROM ft2 t1 JOIN "S 1"."T 1" t2 ON (t1.c1 = t2."C 1") ord
 -- list but no output change as compared to the previous query
 EXPLAIN (VERBOSE, COSTS OFF)
 	SELECT t1.c1, t2."C 1" FROM ft2 t1 LEFT JOIN "S 1"."T 1" t2 ON (t1.c1 = t2."C 1") order by t1.c1 OFFSET 100 LIMIT 10;
-                                QUERY PLAN                                 
+                                QUERY PLAN
 ---------------------------------------------------------------------------
  Limit
    Output: c1, "T 1"."C 1"
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Output: c1, "T 1"."C 1"
          Merge Key: c1
-         ->  Sort
+         ->  Nested Loop Left Join
                Output: c1, "T 1"."C 1"
-               Sort Key: c1
-               ->  Nested Loop Left Join
-                     Output: c1, "T 1"."C 1"
-                     Join Filter: true
+               Join Filter: true
+               ->  Sort
+                     Output: c1
+                     Sort Key: c1
                      ->  Redistribute Motion 1:3  (slice2)
                            Output: c1
                            Hash Key: c1
                            ->  Foreign Scan on public.ft2
                                  Output: c1
                                  Remote SQL: SELECT "C 1" FROM "S 1"."T 1"
-                     ->  Index Scan using t1_pkey on "S 1"."T 1"
-                           Output: "T 1"."C 1"
-                           Index Cond: ("T 1"."C 1" = c1)
+               ->  Index Scan using t1_pkey on "S 1"."T 1"
+                     Output: "T 1"."C 1"
+                     Index Cond: ("T 1"."C 1" = c1)
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: enable_hashjoin = 'off', enable_mergejoin = 'on'
 (22 rows)
@@ -3521,22 +3521,19 @@ select c2 * (random() <= 1)::int as sum1, sum(c1) * c2 as sum2 from ft1 group by
 -- Aggregate with unshippable GROUP BY clause are not pushed
 explain (verbose, costs off)
 select c2 * (random() <= 1)::int as c2 from ft2 group by c2 * (random() <= 1)::int order by 1;
-                                   QUERY PLAN                                   
---------------------------------------------------------------------------------
- Sort
+                                QUERY PLAN
+--------------------------------------------------------------------------
+ GroupAggregate
    Output: ((c2 * int4((random() <= '1'::double precision))))
-   Sort Key: ((ft2.c2 * int4((random() <= '1'::double precision))))
-   ->  GroupAggregate
+   Group Key: ((ft2.c2 * int4((random() <= '1'::double precision))))
+   ->  Sort
          Output: ((c2 * int4((random() <= '1'::double precision))))
-         Group Key: ((ft2.c2 * int4((random() <= '1'::double precision))))
-         ->  Sort
-               Output: ((c2 * int4((random() <= '1'::double precision))))
-               Sort Key: ((ft2.c2 * int4((random() <= '1'::double precision))))
-               ->  Foreign Scan on public.ft2
-                     Output: (c2 * int4((random() <= '1'::double precision)))
-                     Remote SQL: SELECT c2 FROM "S 1"."T 1"
+         Sort Key: ((ft2.c2 * int4((random() <= '1'::double precision))))
+         ->  Foreign Scan on public.ft2
+               Output: (c2 * int4((random() <= '1'::double precision)))
+               Remote SQL: SELECT c2 FROM "S 1"."T 1"
  Optimizer: Pivotal Optimizer (GPORCA)
-(13 rows)
+(10 rows)
 
 -- GROUP BY clause in various forms, cardinal, alias and constant expression
 explain (verbose, costs off)

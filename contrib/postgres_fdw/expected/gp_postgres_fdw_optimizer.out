@@ -1393,26 +1393,22 @@ explain (costs false) update t1 set b = b + 1 where b in (select a from gp_all w
 (8 rows)
 
 explain (costs false) update t1 set b = b + 1 where b in (select a from gp_any where gp_any.a > 10);
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
+                               QUERY PLAN
+------------------------------------------------------------------------
  Update on t1
    ->  Result
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
                Hash Key: t1.a
-               ->  Hash Join
+               ->  Hash Semi Join
                      Hash Cond: (t1.b = a)
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Hash Key: t1.b
                            ->  Seq Scan on t1
                      ->  Hash
-                           ->  GroupAggregate
-                                 Group Key: a
-                                 ->  Sort
-                                       Sort Key: a
-                                       ->  Result
-                                             ->  Foreign Scan on gp_any
+                           ->  Result
+                                 ->  Foreign Scan on gp_any
  Optimizer: Pivotal Optimizer (GPORCA)
-(17 rows)
+(13 rows)
 
 explain (costs false) update t1 set b = b + 1 where b in (select a from gp_coord where gp_coord.a > 10);
                                           QUERY PLAN                                           
