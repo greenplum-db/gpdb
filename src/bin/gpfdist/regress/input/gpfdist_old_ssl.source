@@ -1,4 +1,3 @@
--- test disable tls1.0 and tls1.1
 CREATE EXTERNAL WEB TABLE curl_with_tls10 (x text)
 execute E'
 curl --help | grep tls-max >/dev/null 2>&1;ret=$?;if [ $ret -eq 0 ];then max_tls="--tls-max 1.0";fi;
