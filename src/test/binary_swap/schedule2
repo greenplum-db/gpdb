@@ -4,4 +4,5 @@ test: inserts views
 test: pg_dumpall_other
 test: gpcheckcat
 
+test: resgroup_switch_queue
 test: resgroup_other_2_queue
