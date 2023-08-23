@@ -2774,19 +2774,17 @@ update ab_a1 set b = 3 from ab_a2 where ab_a2.b = (select 1);
                      ->  Materialize (actual rows=1 loops=4)
                            ->  Broadcast Motion 3:3  (slice1; segments: 3) (actual rows=1 loops=1)
                                  ->  Hash Join (actual rows=1 loops=1)
-                                       Hash Cond: ((1) = ab_a2.b)
-                                       Extra Text: (seg2)   Hash chain length 1.0 avg, 1 max, using 1 of 262144 buckets.
-                                       ->  Result (actual rows=1 loops=1)
-                                             One-Time Filter: (gp_execution_segment() = 2)
-                                             ->  Result (actual rows=1 loops=1)
+                                       Hash Cond: (ab_a2.b = (1))
+                                       Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 1 of 262144 buckets.
+                                       ->  Dynamic Seq Scan on ab_a2 (actual rows=1 loops=1)
+                                             Number of partitions to scan: 3 (out of 3)
+                                             Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
                                        ->  Hash (actual rows=1 loops=1)
                                              Buckets: 262144  Batches: 1  Memory Usage: 2049kB
-                                             ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=1 loops=1)
-                                                   ->  Dynamic Seq Scan on ab_a2 (actual rows=1 loops=1)
-                                                         Number of partitions to scan: 3 (out of 3)
-                                                         Partitions scanned:  Avg 3.0 x 3 workers.  Max 3 parts (seg0).
+                                             ->  Partition Selector (selector id: $0) (actual rows=1 loops=1)
+                                                   ->  Result (actual rows=1 loops=1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(23 rows)
+(21 rows)
 
 select tableoid::regclass, * from ab;
  tableoid | a | b 

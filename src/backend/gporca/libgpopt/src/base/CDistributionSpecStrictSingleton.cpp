@@ -53,9 +53,9 @@ CDistributionSpecStrictSingleton::FSatisfies(
 		return false;
 	}
 
-	if (EdtAny == pdss->Edt())
+	if (EdtAny == pdss->Edt() || EdtNonReplicated == pdss->Edt())
 	{
-		// a singleton distribution satisfies "any"
+		// a singleton distribution satisfies "any" and "non-replicated" distribution
 		return true;
 	}
 

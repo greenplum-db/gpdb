@@ -450,10 +450,10 @@ SELECT * FROM foo,bar WHERE a=(VALUES (1));
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="27">
+    <dxl:Plan Id="0" SpaceSize="33">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1377.995318" Rows="1000000.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="1377.961011" Rows="1000000.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -471,9 +471,9 @@ SELECT * FROM foo,bar WHERE a=(VALUES (1));
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
-        <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false">
+        <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1318.368651" Rows="1000000.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="1318.334344" Rows="1000000.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -495,7 +495,7 @@ SELECT * FROM foo,bar WHERE a=(VALUES (1));
           </dxl:JoinFilter>
           <dxl:BroadcastMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.258519" Rows="3000.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.224212" Rows="3000.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -509,7 +509,7 @@ SELECT * FROM foo,bar WHERE a=(VALUES (1));
             <dxl:SortingColumnList/>
             <dxl:HashJoin JoinType="Inner">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.115319" Rows="1000.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.081012" Rows="1000.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">
@@ -523,39 +523,10 @@ SELECT * FROM foo,bar WHERE a=(VALUES (1));
               <dxl:JoinFilter/>
               <dxl:HashCondList>
                 <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                  <dxl:Ident ColId="18" ColName="column1" TypeMdid="0.23.1.0"/>
                   <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
+                  <dxl:Ident ColId="18" ColName="column1" TypeMdid="0.23.1.0"/>
                 </dxl:Comparison>
               </dxl:HashCondList>
-              <dxl:RedistributeMotion InputSegments="0" OutputSegments="0,1,2" DuplicateSensitive="true">
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="0.000017" Rows="1.000000" Width="4"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="18" Alias="column1">
-                    <dxl:Ident ColId="18" ColName="column1" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:SortingColumnList/>
-                <dxl:HashExprList>
-                  <dxl:HashExpr>
-                    <dxl:Ident ColId="18" ColName="column1" TypeMdid="0.23.1.0"/>
-                  </dxl:HashExpr>
-                </dxl:HashExprList>
-                <dxl:Result>
-                  <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="0.000004" Rows="1.000000" Width="4"/>
-                  </dxl:Properties>
-                  <dxl:ProjList>
-                    <dxl:ProjElem ColId="18" Alias="column1">
-                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-                    </dxl:ProjElem>
-                  </dxl:ProjList>
-                  <dxl:Filter/>
-                  <dxl:OneTimeFilter/>
-                </dxl:Result>
-              </dxl:RedistributeMotion>
               <dxl:TableScan>
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="431.006967" Rows="1000.000000" Width="8"/>
@@ -583,6 +554,18 @@ SELECT * FROM foo,bar WHERE a=(VALUES (1));
                   </dxl:Columns>
                 </dxl:TableDescriptor>
               </dxl:TableScan>
+              <dxl:Result>
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="0.000004" Rows="1.000000" Width="4"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="18" Alias="column1">
+                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+                <dxl:Filter/>
+                <dxl:OneTimeFilter/>
+              </dxl:Result>
             </dxl:HashJoin>
           </dxl:BroadcastMotion>
           <dxl:TableScan>

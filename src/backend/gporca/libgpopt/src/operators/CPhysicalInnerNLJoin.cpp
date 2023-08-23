@@ -15,6 +15,7 @@
 
 #include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
+#include "gpopt/base/CDistributionSpecNonReplicated.h"
 #include "gpopt/base/CDistributionSpecNonSingleton.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CUtils.h"
@@ -152,9 +153,10 @@ CPhysicalInnerNLJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[0])->Pds();
 	if (CDistributionSpec::EdtUniversal == pdsOuter->Edt())
 	{
-		// first child is universal, request second child to execute on a single host to avoid duplicates
+		// Outer child is universal, request the inner child to be non-replicated.
+		// It doesn't have to be a singleton, because inner join is deduplicated.
 		return GPOS_NEW(mp) CEnfdDistribution(
-			GPOS_NEW(mp) CDistributionSpecSingleton(), dmatch);
+			GPOS_NEW(mp) CDistributionSpecNonReplicated(), dmatch);
 	}
 
 	return GPOS_NEW(mp)

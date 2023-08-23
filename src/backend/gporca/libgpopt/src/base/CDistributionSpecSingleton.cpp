@@ -72,9 +72,9 @@ CDistributionSpecSingleton::FSatisfies(const CDistributionSpec *pds) const
 		return false;
 	}
 
-	if (EdtAny == pds->Edt())
+	if (EdtAny == pds->Edt() || EdtNonReplicated == pds->Edt())
 	{
-		// a singleton distribution satisfies "any" distributions
+		// a singleton distribution satisfies "any" and "non-replicated" distributions
 		return true;
 	}
 
