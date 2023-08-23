@@ -16,6 +16,8 @@
 #include "gpos/common/DbgPrintMixin.h"
 #include "gpos/string/CWStringConst.h"
 
+// The max identifier length in GPDB is 64, but we'll be conservative and set this to 256
+#define MAX_NAME_LENGTH 256
 #define GPOPT_NAME_QUOTE_BEGIN "\""
 #define GPOPT_NAME_QUOTE_END "\""
 

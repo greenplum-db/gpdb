@@ -1515,14 +1515,12 @@ CDXLUtils::CreateMDNameFromCharArray(CMemoryPool *mp, const CHAR *c)
 {
 	GPOS_ASSERT(nullptr != c);
 
-	CWStringDynamic *dxl_string =
-		CDXLUtils::CreateDynamicStringFromCharArray(mp, c);
-	CMDName *md_name = GPOS_NEW(mp) CMDName(mp, dxl_string);
+	WCHAR w_str_buffer[MAX_NAME_LENGTH];
+	clib::Mbstowcs(w_str_buffer, c, MAX_NAME_LENGTH);
 
-	// CMDName ctor created a copy of the string
-	GPOS_DELETE(dxl_string);
+	CMDName *mdname = GPOS_NEW(mp) CMDName(mp, w_str_buffer);
 
-	return md_name;
+	return mdname;
 }
 
 //---------------------------------------------------------------------------

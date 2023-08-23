@@ -41,6 +41,7 @@ public:
 	// ctor/dtor
 	CMDName(CMemoryPool *mp, const CWStringBase *str);
 	CMDName(const CWStringConst *, BOOL fOwnsMemory = false);
+	CMDName(CMemoryPool *mp, WCHAR *c);
 
 	// shallow copy ctor
 	CMDName(const CMDName &);
