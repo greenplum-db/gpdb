@@ -210,9 +210,6 @@ void FreeAttrStatsSlot(AttStatsSlot *sslot);
 // attribute statistics
 HeapTuple GetAttStats(Oid relid, AttrNumber attnum);
 
-// attribute width
-int32 GetAttAvgWidth(Oid relid, AttrNumber attnum);
-
 List *GetExtStats(Relation rel);
 
 char *GetExtStatsName(Oid statOid);

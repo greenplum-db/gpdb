@@ -3510,6 +3510,44 @@ create table baz ( a varchar);
 explain select * from baz where baz.a::bpchar='b' or baz.a='c';
 drop table baz;
 
+-- While retrieving the columns width in partitioned tables, inherited stats i.e.
+-- stats that cover all the child tables should be used
+
+-- start_ignore
+create language plpython3u;
+-- end_ignore
+create or replace function check_col_width(query text, operator text, width text) returns int as
+$$
+rv = plpy.execute('EXPLAIN '+ query)
+search_text_1 = operator
+search_text_2 = width
+result = 0
+for i in range(len(rv)):
+    cur_line = rv[i]['QUERY PLAN']
+    if search_text_1 in cur_line and search_text_2 in cur_line:
+        result = result+1
+return result
+$$
+language plpython3u;
+
+create table testPartWidth (a numeric(7,2), b numeric(7,2)) distributed by (a)
+partition by range(a) (start(0.0) end(4.0) every(2.0));
+insert into testPartWidth values (0.001,0.001),(2.123,2.123);
+analyze testPartWidth;
+
+--------------------------------------------------------------------------------
+-- The below query shows the column width of 'a' and 'b'
+-- select attname,avg_width from pg_stats where tablename='testPartWidth';
+-- attname | avg_width
+-- ---------+-----------
+--  a       |         5
+--  b       |         5
+--------------------------------------------------------------------------------
+
+select check_col_width('select a from testPartWidth;','Dynamic Seq Scan','width=5') = 1;
+select check_col_width('select b from testPartWidth;','Dynamic Seq Scan','width=5') = 1;
+drop function check_col_width(query text, operator text, width text);
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore
