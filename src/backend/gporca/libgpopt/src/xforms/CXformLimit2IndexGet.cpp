@@ -138,7 +138,7 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 			mp, popGet->PdrgpcrOutput(), pmdindex, pmdrel);
 		// Check if index is applicable and get Scan direction
 		EIndexScanDirection scan_direction =
-			FIndexApplicableForOrderBy(pos, pdrgpcrIndexColumns, pmdindex);
+			GetScanDirection(pos, pdrgpcrIndexColumns, pmdindex);
 		// Proceed if index is applicable
 		if (scan_direction != EisdSentinel)
 		{
@@ -175,19 +175,19 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformLimit2IndexGet::FIndexApplicableForOrderBy
+//		CXformLimit2IndexGet::GetScanDirection
 //
 //	@doc:
 //		Function to validate if index is applicable and determine Index Scan
 //		direction, given OrderSpec and index columns. This function checks if
 //	        1. ORDER BY columns are prefix of the index columns
 //	        2. Sort and Nulls Direction of ORDER BY columns is either equal or
-//	           commutative to the index columns
+//	           reversed to the index columns
 //---------------------------------------------------------------------------
 EIndexScanDirection
-CXformLimit2IndexGet::FIndexApplicableForOrderBy(
-	COrderSpec *pos, CColRefArray *pdrgpcrIndexColumns,
-	const IMDIndex *pmdindex)
+CXformLimit2IndexGet::GetScanDirection(COrderSpec *pos,
+									   CColRefArray *pdrgpcrIndexColumns,
+									   const IMDIndex *pmdindex)
 {
 	// Ordered IndexScan is only applicable for BTree index
 	if (pmdindex->IndexType() != IMDIndex::EmdindBtree)
@@ -250,7 +250,7 @@ CXformLimit2IndexGet::FIndexApplicableForOrderBy(
 		}
 		else if ((reqOrder ^ indexOrder) == 3)
 		{
-			// Choose ForwardScan if index order and required order are commutative
+			// Choose ForwardScan if index order and required order are reversed
 			direction = EBackwardScan;
 		}
 		else

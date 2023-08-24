@@ -35,8 +35,8 @@ private:
 	// direction, given OrderSpec and index columns. This function checks if
 	// 1. ORDER BY columns are prefix of the index columns
 	// 2. Sort and Nulls Direction of ORDER BY columns is either equal or
-	//    commutative to the index columns
-	static EIndexScanDirection FIndexApplicableForOrderBy(
+	//    reversed to the index columns
+	static EIndexScanDirection GetScanDirection(
 		COrderSpec *pos, CColRefArray *pdrgpcrIndexColumns,
 		const IMDIndex *pmdindex);
 
