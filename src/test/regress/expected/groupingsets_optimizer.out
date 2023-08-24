@@ -1767,17 +1767,14 @@ explain (costs off)
                                        ->  Sort
                                              Sort Key: share0_ref2.a, share0_ref2.b
                                              ->  Shared Scan (share slice:id 1:0)
-                                 ->  Finalize GroupAggregate
+                                 ->  GroupAggregate
                                        Group Key: share0_ref3.b
                                        ->  Sort
                                              Sort Key: share0_ref3.b
                                              ->  Redistribute Motion 3:3  (slice2; segments: 3)
                                                    Hash Key: share0_ref3.b
-                                                   ->  Partial GroupAggregate
-                                                         Group Key: share0_ref3.b
-                                                         ->  Sort
-                                                               Sort Key: share0_ref3.b
-                                                               ->  Shared Scan (share slice:id 2:0)
+                                                   ->  Result
+                                                         ->  Shared Scan (share slice:id 2:0)
                                  ->  GroupAggregate
                                        Group Key: share0_ref4.a
                                        ->  Sort
@@ -1790,7 +1787,7 @@ explain (costs off)
                                                          ->  Partial Aggregate
                                                                ->  Shared Scan (share slice:id 4:0)
  Optimizer: Pivotal Optimizer (GPORCA)
-(40 rows)
+(37 rows)
 
 select a, b, sum(v.x)
   from (values (1),(2)) v(x), gstest_data(v.x)
@@ -2054,22 +2051,20 @@ explain (costs off)
          count(hundred), count(thousand), count(twothousand),
          count(*)
     from tenk1 group by grouping sets (unique1,twothousand,thousand,hundred,ten,four,two);
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Sequence
          ->  Shared Scan (share slice:id 1:0)
                ->  Seq Scan on tenk1
          ->  Append
-               ->  Finalize GroupAggregate
+               ->  Finalize HashAggregate
                      Group Key: share0_ref2.two
-                     ->  Sort
-                           Sort Key: share0_ref2.two
-                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                 Hash Key: share0_ref2.two
-                                 ->  Streaming Partial HashAggregate
-                                       Group Key: share0_ref2.two
-                                       ->  Shared Scan (share slice:id 2:0)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: share0_ref2.two
+                           ->  Streaming Partial HashAggregate
+                                 Group Key: share0_ref2.two
+                                 ->  Shared Scan (share slice:id 2:0)
                ->  Finalize HashAggregate
                      Group Key: share0_ref3.four
                      ->  Redistribute Motion 3:3  (slice3; segments: 3)
@@ -2108,7 +2103,7 @@ explain (costs off)
                      Group Key: share0_ref8.unique1
                      ->  Shared Scan (share slice:id 1:0)
  Optimizer: Pivotal Optimizer (GPORCA)
-(52 rows)
+(50 rows)
 
 explain (costs off)
   select unique1,
@@ -2116,22 +2111,20 @@ explain (costs off)
          count(hundred), count(thousand), count(twothousand),
          count(*)
     from tenk1 group by grouping sets (unique1,hundred,ten,four,two);
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Sequence
          ->  Shared Scan (share slice:id 1:0)
                ->  Seq Scan on tenk1
          ->  Append
-               ->  Finalize GroupAggregate
+               ->  Finalize HashAggregate
                      Group Key: share0_ref2.two
-                     ->  Sort
-                           Sort Key: share0_ref2.two
-                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                 Hash Key: share0_ref2.two
-                                 ->  Streaming Partial HashAggregate
-                                       Group Key: share0_ref2.two
-                                       ->  Shared Scan (share slice:id 2:0)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: share0_ref2.two
+                           ->  Streaming Partial HashAggregate
+                                 Group Key: share0_ref2.two
+                                 ->  Shared Scan (share slice:id 2:0)
                ->  Finalize HashAggregate
                      Group Key: share0_ref3.four
                      ->  Redistribute Motion 3:3  (slice3; segments: 3)
@@ -2157,7 +2150,7 @@ explain (costs off)
                      Group Key: share0_ref6.unique1
                      ->  Shared Scan (share slice:id 1:0)
  Optimizer: Pivotal Optimizer (GPORCA)
-(39 rows)
+(37 rows)
 
 set work_mem = '384kB';
 WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
@@ -2167,22 +2160,20 @@ explain (costs off)
          count(hundred), count(thousand), count(twothousand),
          count(*)
     from tenk1 group by grouping sets (unique1,twothousand,thousand,hundred,ten,four,two);
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
+                               QUERY PLAN                               
+------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Sequence
          ->  Shared Scan (share slice:id 1:0)
                ->  Seq Scan on tenk1
          ->  Append
-               ->  Finalize GroupAggregate
+               ->  Finalize HashAggregate
                      Group Key: share0_ref2.two
-                     ->  Sort
-                           Sort Key: share0_ref2.two
-                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                 Hash Key: share0_ref2.two
-                                 ->  Streaming Partial HashAggregate
-                                       Group Key: share0_ref2.two
-                                       ->  Shared Scan (share slice:id 2:0)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: share0_ref2.two
+                           ->  Streaming Partial HashAggregate
+                                 Group Key: share0_ref2.two
+                                 ->  Shared Scan (share slice:id 2:0)
                ->  Finalize HashAggregate
                      Group Key: share0_ref3.four
                      ->  Redistribute Motion 3:3  (slice3; segments: 3)
@@ -2221,7 +2212,7 @@ explain (costs off)
                      Group Key: share0_ref8.unique1
                      ->  Shared Scan (share slice:id 1:0)
  Optimizer: Pivotal Optimizer (GPORCA)
-(52 rows)
+(50 rows)
 
 -- check collation-sensitive matching between grouping expressions
 -- (similar to a check for aggregates, but there are additional code

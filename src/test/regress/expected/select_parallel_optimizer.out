@@ -1073,32 +1073,25 @@ explain (costs off, verbose)
 explain (costs off)
   select * from tenk1 a where two in
     (select two from tenk1 b where stringu1 like '%AAAA' limit 3);
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
          Hash Cond: (tenk1.two = tenk1_1.two)
          ->  Seq Scan on tenk1
          ->  Hash
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Broadcast Motion 1:3  (slice2)
                      ->  GroupAggregate
                            Group Key: tenk1_1.two
                            ->  Sort
                                  Sort Key: tenk1_1.two
-                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                       Hash Key: tenk1_1.two
-                                       ->  GroupAggregate
-                                             Group Key: tenk1_1.two
-                                             ->  Sort
-                                                   Sort Key: tenk1_1.two
-                                                   ->  Redistribute Motion 1:3  (slice4)
-                                                         ->  Limit
-                                                               ->  Gather Motion 3:1  (slice5; segments: 3)
-                                                                     ->  Limit
-                                                                           ->  Seq Scan on tenk1 tenk1_1
-                                                                                 Filter: (stringu1 ~~ '%AAAA'::text)
+                                 ->  Limit
+                                       ->  Gather Motion 3:1  (slice3; segments: 3)
+                                             ->  Limit
+                                                   ->  Seq Scan on tenk1 tenk1_1
+                                                         Filter: (stringu1 ~~ '%AAAA'::text)
  Optimizer: Pivotal Optimizer (GPORCA)
-(23 rows)
+(16 rows)
 
 -- to increase the parallel query test coverage
 SAVEPOINT settings;

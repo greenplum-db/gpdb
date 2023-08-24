@@ -10,8 +10,8 @@ insert into dml_14027_union_s select generate_series(1,1), generate_series(1,1);
 begin;
 drop table dml_14027_union_s_1_prt_def;
 explain select count(distinct(b)) from dml_14027_union_s;
-                                                     QUERY PLAN                                                      
----------------------------------------------------------------------------------------------------------------------
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
  Aggregate  (cost=0.00..431.00 rows=1 width=8)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
          ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=8)
@@ -20,14 +20,12 @@ explain select count(distinct(b)) from dml_14027_union_s;
                      Sort Key: b
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
                            Hash Key: b
-                           ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=8)
+                           ->  Streaming HashAggregate  (cost=0.00..431.00 rows=1 width=8)
                                  Group Key: b
-                                 ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-                                       Sort Key: b
-                                       ->  Dynamic Seq Scan on dml_14027_union_s  (cost=0.00..431.00 rows=1 width=8)
-                                             Number of partitions to scan: 1 (out of 1)
+                                 ->  Dynamic Seq Scan on dml_14027_union_s  (cost=0.00..431.00 rows=1 width=8)
+                                       Number of partitions to scan: 1 (out of 1)
  Optimizer: Pivotal Optimizer (GPORCA)
-(15 rows)
+(13 rows)
 
 select count(distinct(b)) from dml_14027_union_s;
  count 

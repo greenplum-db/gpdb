@@ -920,23 +920,21 @@ SELECT * FROM
    SELECT 2 AS t, 4 AS x) ss
 WHERE x < 4
 ORDER BY x;
-                            QUERY PLAN                            
-------------------------------------------------------------------
- Sort
-   Sort Key: (generate_series(1, 10))
-   ->  GroupAggregate
-         Group Key: (1), (generate_series(1, 10))
-         ->  Sort
-               Sort Key: (1), (generate_series(1, 10))
-               ->  Append
-                     ->  Result
-                           Filter: ((generate_series(1, 10)) < 4)
-                           ->  ProjectSet
-                                 ->  Result
-                     ->  Result
-                           One-Time Filter: false
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(14 rows)
+                         QUERY PLAN                         
+------------------------------------------------------------
+ GroupAggregate
+   Group Key: (1), (generate_series(1, 10))
+   ->  Sort
+         Sort Key: (generate_series(1, 10)), (1)
+         ->  Append
+               ->  Result
+                     Filter: ((generate_series(1, 10)) < 4)
+                     ->  ProjectSet
+                           ->  Result
+               ->  Result
+                     One-Time Filter: false
+ Optimizer: Pivotal Optimizer (GPORCA)
+(12 rows)
 
 SELECT * FROM
   (SELECT 1 AS t, generate_series(1,10) AS x

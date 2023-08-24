@@ -2631,23 +2631,19 @@ analyze num_table;
 -- The trans func building process errored out due to mismatch between
 -- the input type (int) and trans type (bigint), and caused missing plan
 explain select count(distinct a), sum(b) from num_table;
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
  Finalize Aggregate  (cost=0.00..431.00 rows=1 width=16)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-         ->  Partial GroupAggregate  (cost=0.00..431.00 rows=1 width=16)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=16)
+         ->  Partial HashAggregate  (cost=0.00..431.00 rows=1 width=16)
                Group Key: a
-               ->  Sort  (cost=0.00..431.00 rows=1 width=16)
-                     Sort Key: a
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-                           Hash Key: a
-                           ->  Partial GroupAggregate  (cost=0.00..431.00 rows=1 width=16)
-                                 Group Key: a
-                                 ->  Sort  (cost=0.00..431.00 rows=1 width=12)
-                                       Sort Key: a
-                                       ->  Seq Scan on num_table  (cost=0.00..431.00 rows=1 width=12)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+                     Hash Key: a
+                     ->  Streaming Partial HashAggregate  (cost=0.00..431.00 rows=1 width=16)
+                           Group Key: a
+                           ->  Seq Scan on num_table  (cost=0.00..431.00 rows=1 width=12)
  Optimizer: Pivotal Optimizer (GPORCA)
-(14 rows)
+(10 rows)
 
 select count(distinct a), sum(b) from num_table;
  count | sum 
@@ -2686,23 +2682,19 @@ select count(distinct a), sum(b) from num_table group by id;
 -- The executor then evaluated the aggregation state without deserializing it first
 -- This led to the creation of garbage NaN count, and caused NaN output
 explain select count(distinct a), sum(c) from num_table;
-                                                 QUERY PLAN                                                  
--------------------------------------------------------------------------------------------------------------
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
  Finalize Aggregate  (cost=0.00..431.00 rows=1 width=16)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-         ->  Partial GroupAggregate  (cost=0.00..431.00 rows=1 width=16)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=3 width=16)
+         ->  Partial HashAggregate  (cost=0.00..431.00 rows=1 width=16)
                Group Key: a
-               ->  Sort  (cost=0.00..431.00 rows=1 width=16)
-                     Sort Key: a
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-                           Hash Key: a
-                           ->  Partial GroupAggregate  (cost=0.00..431.00 rows=1 width=16)
-                                 Group Key: a
-                                 ->  Sort  (cost=0.00..431.00 rows=1 width=16)
-                                       Sort Key: a
-                                       ->  Seq Scan on num_table  (cost=0.00..431.00 rows=1 width=16)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
+                     Hash Key: a
+                     ->  Streaming Partial HashAggregate  (cost=0.00..431.00 rows=1 width=16)
+                           Group Key: a
+                           ->  Seq Scan on num_table  (cost=0.00..431.00 rows=1 width=13)
  Optimizer: Pivotal Optimizer (GPORCA)
-(14 rows)
+(10 rows)
 
 select count(distinct a), sum(c) from num_table;
  count | sum 
@@ -2884,12 +2876,12 @@ explain (verbose on, costs off) select sum(Distinct c), count(a), sum(d) from dq
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Output: (sum(c)), (count(a)), (sum(d)), b
          Merge Key: b
-         ->  Sort
-               Output: (sum(c)), (count(a)), (sum(d)), b
-               Sort Key: dqa_f3.b
-               ->  Finalize HashAggregate
-                     Output: sum(c), count(a), sum(d), b
-                     Group Key: dqa_f3.b
+         ->  Finalize GroupAggregate
+               Output: sum(c), count(a), sum(d), b
+               Group Key: dqa_f3.b
+               ->  Sort
+                     Output: b, c, (PARTIAL count(a)), (PARTIAL sum(d))
+                     Sort Key: dqa_f3.b
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Output: b, c, (PARTIAL count(a)), (PARTIAL sum(d))
                            Hash Key: b
@@ -3111,29 +3103,26 @@ reset gp_enable_agg_distinct_pruning;
  *                          -> input
  */
 explain (verbose on, costs off) select sum(Distinct b), count(c), sum(a) from dqa_f3;
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
  Finalize Aggregate
    Output: sum(b), count(c), sum(a)
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Output: b, (PARTIAL count(c)), (PARTIAL sum(a))
-         ->  Partial GroupAggregate
+         ->  Partial HashAggregate
                Output: b, PARTIAL count(c), PARTIAL sum(a)
                Group Key: dqa_f3.b
-               ->  Sort
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Output: b, (PARTIAL count(c)), (PARTIAL sum(a))
-                     Sort Key: dqa_f3.b
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                           Output: b, (PARTIAL count(c)), (PARTIAL sum(a))
-                           Hash Key: b
-                           ->  Streaming Partial HashAggregate
-                                 Output: b, PARTIAL count(c), PARTIAL sum(a)
-                                 Group Key: dqa_f3.b
-                                 ->  Seq Scan on public.dqa_f3
-                                       Output: a, b, c
+                     Hash Key: b
+                     ->  Streaming Partial HashAggregate
+                           Output: b, PARTIAL count(c), PARTIAL sum(a)
+                           Group Key: dqa_f3.b
+                           ->  Seq Scan on public.dqa_f3
+                                 Output: a, b, c
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1'
-(20 rows)
+(17 rows)
 
 select sum(Distinct b), count(c), sum(a) from dqa_f3;
  sum | count | sum  
@@ -3142,29 +3131,26 @@ select sum(Distinct b), count(c), sum(a) from dqa_f3;
 (1 row)
 
 explain (verbose on, costs off) select distinct sum(Distinct b), count(c), sum(a) from dqa_f3;
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
  Finalize Aggregate
    Output: sum(b), count(c), sum(a)
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Output: b, (PARTIAL count(c)), (PARTIAL sum(a))
-         ->  Partial GroupAggregate
+         ->  Partial HashAggregate
                Output: b, PARTIAL count(c), PARTIAL sum(a)
                Group Key: dqa_f3.b
-               ->  Sort
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Output: b, (PARTIAL count(c)), (PARTIAL sum(a))
-                     Sort Key: dqa_f3.b
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                           Output: b, (PARTIAL count(c)), (PARTIAL sum(a))
-                           Hash Key: b
-                           ->  Streaming Partial HashAggregate
-                                 Output: b, PARTIAL count(c), PARTIAL sum(a)
-                                 Group Key: dqa_f3.b
-                                 ->  Seq Scan on public.dqa_f3
-                                       Output: a, b, c
+                     Hash Key: b
+                     ->  Streaming Partial HashAggregate
+                           Output: b, PARTIAL count(c), PARTIAL sum(a)
+                           Group Key: dqa_f3.b
+                           ->  Seq Scan on public.dqa_f3
+                                 Output: a, b, c
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1'
-(20 rows)
+(17 rows)
 
 select distinct sum(Distinct b), count(c), sum(a) from dqa_f3;
  sum | count | sum  
