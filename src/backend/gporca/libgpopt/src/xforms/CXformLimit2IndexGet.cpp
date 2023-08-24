@@ -39,8 +39,7 @@ CXformLimit2IndexGet::CXformLimit2IndexGet(CMemoryPool *mp)
 		  GPOS_NEW(mp) CExpression(
 			  mp, GPOS_NEW(mp) CLogicalLimit(mp),
 			  GPOS_NEW(mp) CExpression(
-				  mp,
-				  GPOS_NEW(mp) CLogicalGet(mp)),  // relational child
+				  mp, GPOS_NEW(mp) CLogicalGet(mp)),  // relational child
 			  GPOS_NEW(mp) CExpression(mp, GPOS_NEW(mp) CPatternLeaf(
 											   mp)),  // scalar child for offset
 			  GPOS_NEW(mp) CExpression(
@@ -210,6 +209,8 @@ CXformLimit2IndexGet::GetScanDirection(COrderSpec *pos,
 			return EisdSentinel;
 		}
 
+		// 1st bit represents sort direction, 1 for DESC.
+		// 2nd bit represents nulls direction, 1 for NULLS FIRST.
 		// track required order's sort, nulls direction
 		ULONG reqOrder = 0;
 		// track index key's sort, nulls direction
@@ -219,26 +220,22 @@ CXformLimit2IndexGet::GetScanDirection(COrderSpec *pos,
 		if (greater_than_mdid->Equals(pos->GetMdIdSortOp(i)))
 		{
 			// If order spec's sort mdid is DESC
-			// First bit represents Sort direction
 			reqOrder |= 1 << 0;
 		}
 		if (pos->Ent(i) == COrderSpec::EntFirst)
 		{
 			// If order spec's nulls direction is FIRST
-			// Second bit represents nulls direction
 			reqOrder |= 1 << 1;
 		}
 
 		if (pmdindex->KeySortDirectionAt(i) == SORT_DESC)
 		{
 			// If index key's sort direction is DESC
-			// First bit represents Sort direction
 			indexOrder |= 1 << 0;
 		}
 		if (pmdindex->KeyNullsDirectionAt(i) == COrderSpec::EntFirst)
 		{
 			// If index key's nulls direction is FIRST
-			// Second bit represents nulls direction
 			indexOrder |= 1 << 1;
 		}
 

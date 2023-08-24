@@ -2685,8 +2685,9 @@ explain(costs off) with sorted_by_cd as (select c,d from test_yet_unsupported_ba
 
 -- Clean Up
 DROP TABLE test_yet_unsupported_backwrd_idxscan_cases;
--- Test Case: NL Joins can utilize IndexScan's sort property, but currently ORCA doesn't generate IndexScan alternatives
---            for NL joins. This tests the case where IndexScan's order property could be used for joining two tables
+-- NL Joins can utilize IndexScan's sort property, but currently ORCA doesn't
+-- generate IndexScan alternatives for NL joins. This tests the case where
+-- IndexScan's order property could be used for joining two tables
 CREATE TABLE employee(id int, name text, dep_id int, salary int);
 CREATE TABLE department(dep_id int, dep_name text);
 CREATE INDEX index_salary on employee using btree(salary);
@@ -2733,15 +2734,16 @@ reset optimizer_enable_hashjoin;
 reset enable_seqscan;
 DROP TABLE employee;
 DROP TABLE department;
--- Test Case: Union all of two tables with order by on their indexed column uses IndexScan's sort property with MergeAppend node
---            in Planner. However in ORCA we don't generate IndexScan alternative for union all, also we don't support MergeAppend.
---            But documenting this case for reference
+-- Union all of two tables with order by on their indexed column uses
+-- IndexScan's sort property with MergeAppend node in Planner. However in ORCA
+-- we don't generate IndexScan alternative for union all, also we don't support
+-- MergeAppend. But documenting this case for reference
 CREATE TABLE table1(a int, b int);
 CREATE TABLE table2(a int, b int);
 CREATE INDEX tab1_idx on table1 using btree(b);
 CREATE INDEX tab2_idx on table2 using btree(b);
--- inserting data and disabling seq_scan to avoid Planner generating a plan with Sort operator and Append node
--- instead of IndexScan with MergeAppend
+-- inserting data and disabling seq_scan to avoid Planner generating a plan with
+-- Sort operator and Append node instead of IndexScan with MergeAppend
 set enable_seqscan to off;
 INSERT INTO table1 select i, i from generate_series(1,99)i;
 INSERT INTO table2 select i, i from generate_series(1,99)i;
@@ -2763,8 +2765,9 @@ explain(costs off) select b from table1 union all select b from table2 order by 
 reset enable_seqscan;
 DROP TABLE table1;
 DROP TABLE table2;
--- Purpose: This section includes tests on partition table where backward DynamicIndexScan could be used, but is not used currently since
---          ORCA currently doesn't support DynamicIndex(Only)Scan on partition tables.
+-- Purpose: This section includes tests on partition table where backward
+-- DynamicIndexScan could be used, but is not used currently since ORCA currently
+-- doesn't support DynamicIndex(Only)Scan on partition tables.
 CREATE TABLE test_partition_table(a int, b text, c float, d int, e int) DISTRIBUTED BY (a) PARTITION BY range(a) (start (0) end(10000) every(2000));
 -- single col index on partition column
 CREATE INDEX part_index_a on test_partition_table using btree(a);
@@ -3038,8 +3041,10 @@ explain(costs off) select b,c,d from test_partition_table order by b desc, c des
 
 -- Clean Up
 DROP TABLE test_partition_table;
--- Test Case: NL Joins can utilize IndexScan's sort property, but currently ORCA doesn't generate DynamicIndexScan alternatives for NL joins.
---            This tests the case where IndexScan's order property could be used for joining two partition tables
+-- NL Joins can utilize IndexScan's sort property, but currently ORCA doesn't
+-- generate DynamicIndexScan alternatives for NL joins. This tests the case
+-- where IndexScan's order property could be used for joining two partition
+-- tables
 CREATE TABLE part_employee(id int, name text, dep_id int, salary int) PARTITION BY range(id) (start (0) end(10000) every(2000));
 CREATE TABLE part_department(dep_id int, dep_name text) PARTITION BY range(dep_id) (start (0) end(10000) every(2000));
 CREATE INDEX part_index_id on part_employee using btree(id);
@@ -3049,8 +3054,9 @@ ANALYZE part_department;
 set enable_hashjoin to off;
 set optimizer_enable_hashjoin to off;
 set enable_seqscan to off;
--- Planner uses NL Join with IndexScan Backwards and the sort property of index 'index_salary',
--- but ORCA since it doesn't generate DynamicIndexScan alternative uses NL join with a Sort operator.
+-- Planner uses NL Join with IndexScan Backwards and the sort property of index
+-- 'index_salary', but ORCA since it doesn't generate DynamicIndexScan
+-- alternative uses NL join with a Sort operator.
 explain(costs off) select e.id, e.name, e.salary, d.dep_name from part_employee e join part_department d on e.id=d.dep_id order by e.id desc;
                                 QUERY PLAN
 ---------------------------------------------------------------------------
@@ -3092,15 +3098,16 @@ reset optimizer_enable_hashjoin;
 reset enable_seqscan;
 DROP TABLE part_employee;
 DROP TABLE part_department;
--- Test Case: Union all of two partition tables with order by on their indexed column uses IndexScan's sort property with MergeAppend node
---            in Planner. However in ORCA we don't generate DynamicIndexScan alternative for union all, also we don't support MergeAppend.
---            But documenting this case for reference
+-- Union all of two partition tables with order by on their indexed column uses
+-- IndexScan's sort property with MergeAppend node in Planner. However in ORCA
+-- we don't generate DynamicIndexScan alternative for union all, also we don't
+-- support MergeAppend. But documenting this case for reference
 CREATE TABLE part_table1(a int, b int) PARTITION BY range(a) (start (0) end(100) every(20));
 CREATE TABLE part_table2(a int, b int) PARTITION BY range(a) (start (0) end(100) every(20));
 CREATE INDEX part_tab1_idx on part_table1 using btree(a);
 CREATE INDEX part_tab2_idx on part_table2 using btree(a);
--- inserting data and disabling seq_scan to avoid Planner generating a plan with Sort operator and Append node
--- instead of IndexScan with MergeAppend
+-- inserting data and disabling seq_scan to avoid Planner generating a plan with
+-- Sort operator and Append node instead of IndexScan with MergeAppend
 set enable_seqscan to off;
 INSERT INTO part_table1 select i, i from generate_series(1,99)i;
 INSERT INTO part_table2 select i, i from generate_series(1,99)i;

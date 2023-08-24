@@ -16,7 +16,6 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/base/COrderSpec.h"
 #include "naucrates/md/IMDIndex.h"
 
 namespace gpmd
