@@ -528,9 +528,7 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 	Node	   *result;
 	SubPlan    *splan;
 	ListCell   *lc;
-	Bitmapset  *tmpset;
 	Bitmapset  *plan_param_set;
-	int         paramid;
 
 	/*
 	 * Initialize the SubPlan node.  Note plan_id, plan_name, and cost fields
@@ -579,20 +577,6 @@ build_subplan(PlannerInfo *root, Plan *plan, PlannerInfo *subroot,
 		splan->parParam = lappend_int(splan->parParam, pitem->paramId);
 		splan->args = lappend(splan->args, arg);
 		plan_param_set = bms_add_member(plan_param_set, pitem->paramId);
-	}
-
-	/*
-	 * For gpdb, we need extParam to evaluate if we can process initplan
-	 * in ExecutorStart.
-	 */
-	if (plan->extParam)
-	{
-		tmpset = bms_difference(plan->extParam, plan_param_set);
-
-		while ((paramid = bms_first_member(tmpset)) >= 0)
-			splan->extParam = lappend_int(splan->extParam, paramid);
-
-		pfree(tmpset);
 	}
 
 	/*
@@ -2712,6 +2696,29 @@ finalize_plan(PlannerInfo *root, Plan *plan,
 		foreach(l2, initsubplan->setParam)
 		{
 			initSetParam = bms_add_member(initSetParam, lfirst_int(l2));
+		}
+
+		/*
+		 * For gpdb, we need extParam to evaluate if we can process initplan
+		 * in ExecutorStart.
+		 */
+		if (initplan->extParam)
+		{
+			int paramid;
+			ListCell *lc;
+			Bitmapset *upperset = NULL;
+			Bitmapset *parentset = NULL;
+			Bitmapset *extset = initplan->extParam;
+
+			foreach(lc, initsubplan->parParam)
+			{
+				int tmpid = lfirst_int(lc);
+				parentset = bms_add_member(parentset, tmpid);
+			}
+
+			upperset = bms_difference(extset, parentset);
+			while ((paramid = bms_first_member(upperset)) >= 0)
+				initsubplan->extParam = lappend_int(initsubplan->extParam, paramid);
 		}
 	}
 

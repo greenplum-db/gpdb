@@ -24,7 +24,7 @@
 #include "cdb/cdbvars.h"		/* currentSliceId */
 #include "utils/tuplestore.h"
 
-static bool isParamExecutableNow(SubPlanState *spstate, ParamExecData *prmList);
+static bool isParamExecutableNow(SubPlanState *spstate, ParamExecData *prmList, Bitmapset *setparams);
 
 /*
  * Function preprocess_initplans() is called from ExecutorRun running a
@@ -65,6 +65,7 @@ preprocess_initplans(QueryDesc *queryDesc)
 	EState	   *estate = queryDesc->estate;
 	int			originalSlice,
 				rootIndex;
+	Bitmapset  *setparams = NULL;
 
 	nParamExec = list_length(queryDesc->plannedstmt->paramExecTypes);
 	if (nParamExec == 0)
@@ -72,6 +73,32 @@ preprocess_initplans(QueryDesc *queryDesc)
 
 	originalSlice = LocallyExecutingSliceIndex(queryDesc->estate);
 	Assert(originalSlice == 0); /* Original slice being executed is slice 0 */
+
+	/*
+	 * Loop through the estate->es_param_exec_vals and collect all setparams
+	 * which should only execute initplan once so that we could get result.
+	 */
+	for(i = 0; i < nParamExec; i++)
+	{
+		ParamExecData *prm;
+		SubPlanState *sps;
+		ListCell *lc;
+
+		prm = &estate->es_param_exec_vals[i];
+		sps = (SubPlanState *) prm->execPlan;
+
+		if (!sps)
+			continue;
+
+		SubPlan *subplan = sps->subplan;
+		if (subplan->setParam)
+		{
+			foreach(lc, subplan->setParam)
+			{
+				setparams = bms_add_member(setparams, lfirst_int(lc));
+			}
+		}
+	}
 
 	/*
 	 * Loop through the estate->es_param_exec_vals. This array has an element
@@ -88,7 +115,7 @@ preprocess_initplans(QueryDesc *queryDesc)
 		prm = &estate->es_param_exec_vals[i];
 		sps = (SubPlanState *) prm->execPlan;
 
-		if (isParamExecutableNow(sps, estate->es_param_exec_vals))
+		if (isParamExecutableNow(sps, estate->es_param_exec_vals, setparams))
 		{
 			SubPlan    *subplan = sps->subplan;
 			int			qDispSliceId;
@@ -182,7 +209,7 @@ postprocess_initplans(QueryDesc *queryDesc)
 }
 
 static bool
-isParamExecutableNow(SubPlanState *spstate, ParamExecData *prmList)
+isParamExecutableNow(SubPlanState *spstate, ParamExecData *prmList, Bitmapset *setparams)
 {
 	Assert(prmList);
 	if (!spstate)
@@ -201,6 +228,14 @@ isParamExecutableNow(SubPlanState *spstate, ParamExecData *prmList)
 	{
 		paramId = lfirst_int(lc);
 		prmData = &prmList[paramId];
+
+		/*
+		 * we have collected all setparams of each query level. If extParams
+		 * from initplan came from setparams, no matter which level setparam
+		 * is related to, we just treat it as non-changable result of initplan.
+		 */
+		if (bms_is_member(paramId, setparams))
+			continue;
 
 		/*
 		 * preprocess_initplans assumes that the params in the

@@ -1396,3 +1396,11 @@ select * from table_left where exists (select 1 from table_right where l1 = r1);
 -- clean up
 drop table table_left;
 drop table table_right;
+-- test cross params of initplan
+-- https://github.com/greenplum-db/gpdb/issues/16268
+create table tmp (a varchar, b varchar, c varchar);
+select (SELECT EXISTS
+                 (SELECT
+                  FROM pg_views
+                  WHERE schemaname = a)) from tmp;
+drop table tmp;
