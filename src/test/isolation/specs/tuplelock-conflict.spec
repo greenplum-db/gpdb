@@ -1,5 +1,8 @@
 # Here we verify that tuple lock levels conform to their documented
 # conflict tables.
+#
+# GPDB: have to run sessions that have SELECT ... FOR ... w/ planner because 
+# ORCA would upgrade lock to ExclusiveLock.
 
 setup {
 	DROP TABLE IF EXISTS multixact_conflict;
@@ -12,6 +15,7 @@ teardown {
 }
 
 session s1
+setup { SET optimizer=off; }
 step s1_begin { BEGIN; }
 step s1_lcksvpt { SELECT * FROM multixact_conflict FOR KEY SHARE; SAVEPOINT foo; }
 step s1_tuplock1 { SELECT * FROM multixact_conflict FOR KEY SHARE; }
@@ -21,6 +25,7 @@ step s1_tuplock4 { SELECT * FROM multixact_conflict FOR UPDATE; }
 step s1_commit { COMMIT; }
 
 session s2
+setup { SET optimizer=off; }
 step s2_tuplock1 { SELECT * FROM multixact_conflict FOR KEY SHARE; }
 step s2_tuplock2 { SELECT * FROM multixact_conflict FOR SHARE; }
 step s2_tuplock3 { SELECT * FROM multixact_conflict FOR NO KEY UPDATE; }

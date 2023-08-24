@@ -2,6 +2,8 @@
 #
 # ADD CONSTRAINT uses ShareRowExclusiveLock so we mix writes with it
 # to see what works or waits.
+# GPDB: have to run sessions that have SELECT ... FOR ... w/ planner because 
+# ORCA would upgrade lock to ExclusiveLock.
 
 setup
 {
@@ -22,6 +24,7 @@ step s1b { ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) 
 step s1c { COMMIT; }
 
 session s2
+setup { SET optimizer=off; }
 step s2a { BEGIN; }
 step s2b { SELECT * FROM a WHERE i = 1 LIMIT 1 FOR UPDATE; }
 step s2c { SELECT * FROM b WHERE a_id = 3 LIMIT 1 FOR UPDATE; }

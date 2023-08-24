@@ -3,6 +3,9 @@
 # should not be able to proceed until the lock has been released.  An UPDATE
 # that changes the key should not be allowed to continue either; but an UPDATE
 # that doesn't modify the key should be able to continue immediately.
+#
+# GPDB: have to run sessions that have SELECT ... FOR ... w/ planner because 
+# ORCA would upgrade lock to ExclusiveLock.
 
 setup
 {
@@ -21,6 +24,7 @@ teardown
 }
 
 session s1
+setup 		{ SET optimizer=off; }
 step s1b	{ BEGIN ISOLATION LEVEL REPEATABLE READ; }
 step s1s	{ SELECT * FROM foo; }	# obtain snapshot
 step s1l	{ SELECT * FROM foo FOR KEY SHARE; } # obtain lock

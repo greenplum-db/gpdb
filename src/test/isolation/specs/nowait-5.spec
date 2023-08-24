@@ -1,4 +1,6 @@
 # Test NOWAIT on an updated tuple chain
+# GPDB: have to run sessions that have SELECT ... FOR ... w/ planner because 
+# ORCA would upgrade lock to ExclusiveLock.
 
 setup
 {
@@ -19,6 +21,7 @@ teardown
 }
 
 session sl1
+setup { SET optimizer=off; }
 step sl1_prep {
 	PREPARE sl1_run AS SELECT id FROM test_nowait WHERE pg_advisory_lock(0) is not null FOR UPDATE NOWAIT;
 }
@@ -46,6 +49,7 @@ step upd_releaselock {
 
 # A session that acquires locks that sl1 is supposed to avoid blocking on
 session lk1
+setup { SET optimizer=off; }
 step lk1_doforshare {
 	BEGIN ISOLATION LEVEL READ COMMITTED;
 	SELECT id FROM test_nowait WHERE id % 2 = 0 FOR SHARE;

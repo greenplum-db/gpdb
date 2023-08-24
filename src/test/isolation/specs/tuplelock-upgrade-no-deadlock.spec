@@ -1,6 +1,9 @@
 # This test checks that multiple sessions locking a single row in a table
 # do not deadlock each other when one of them upgrades its existing lock
 # while the others are waiting for it.
+#
+# GPDB: have to run sessions that have SELECT ... FOR ... w/ planner because 
+# ORCA would upgrade lock to ExclusiveLock.
 
 setup
 {
@@ -17,12 +20,13 @@ teardown
 }
 
 session s0
+setup { SET optimizer=off; }
 step s0_begin { begin; }
 step s0_keyshare { select id from tlu_job where id = 1 for key share;}
 step s0_rollback { rollback; }
 
 session s1
-setup { begin; }
+setup { SET optimizer=off; begin; }
 step s1_keyshare { select id from tlu_job where id = 1 for key share;}
 step s1_share { select id from tlu_job where id = 1 for share; }
 step s1_fornokeyupd { select id from tlu_job where id = 1 for no key update; }
@@ -35,7 +39,7 @@ step s1_rollback { rollback; }
 step s1_commit { commit; }
 
 session s2
-setup { begin; }
+setup { SET optimizer=off; begin; }
 step s2_for_keyshare { select id from tlu_job where id = 1 for key share; }
 step s2_fornokeyupd { select id from tlu_job where id = 1 for no key update; }
 step s2_for_update { select id from tlu_job where id = 1 for update; }
@@ -44,7 +48,7 @@ step s2_delete { delete from tlu_job where id = 1; }
 step s2_rollback { rollback; }
 
 session s3
-setup { begin; }
+setup { SET optimizer=off; begin; }
 step s3_keyshare { select id from tlu_job where id = 1 for key share; }
 step s3_share { select id from tlu_job where id = 1 for share; }
 step s3_for_update { select id from tlu_job where id = 1 for update; }

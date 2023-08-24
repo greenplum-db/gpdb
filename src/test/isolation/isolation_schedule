@@ -26,19 +26,10 @@
 #   4. No sublink and no subquery
 #   5. No set operations (union, intersect, …)
 
-# GPDB_95_MERGE_FIXME: Tests insert-conflict-do-update-3,
-# nowait, nowait-2, nowait-3, nowait-4, nowait-5, skip-locked, skip-locked-2,
-# skip-locked-3, skip-locked-4, tuplelock-conflict, alter-table-2,
-# alter-table-2, create-trigger. If GDD is enabled, it will then take
-# RowExclusiveLock and the tests can probably be enabled back.
 # Additionally, skip-locked-4 uses pg_advisory_lock() which only takes the lock
 # on QD, but it needs to take it on QE segments as well.
 # insert-conflict-do-update-3 related to issue https://github.com/greenplum-db/gpdb/issues/15635
 
-#
-# GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: tuplelock-upgrade-no-deadlock, freeze-the-dead
-# don't pass in normal mode for GPDB as SELECT..FOR SHARE/UPDATE can
-# block each other in gpdb if GDD does not open.
 #
 # GPDB_12_MERGE_FRATURE_NOT_SUPPORTED: disable test predicate-lock-hot-tuple, update-conflict-out
 # because Greenplum does not support serializable transactions.
@@ -80,8 +71,8 @@ test: deadlock-soft-2
 #test: fk-partitioned-2
 #test: eval-plan-qual
 #test: eval-plan-qual-trigger
-#test: lock-update-delete
-#test: lock-update-traversal
+test: lock-update-delete
+test: lock-update-traversal
 test: inherit-temp
 test: temp-schema-cleanup
 test: insert-conflict-do-nothing
@@ -92,33 +83,33 @@ test: insert-conflict-do-update-2
 test: insert-conflict-toast
 test: insert-conflict-specconflict
 test: delete-abort-savept
-#test: delete-abort-savept-2
-#test: aborted-keyrevoke
-#test: multixact-no-deadlock
-#test: multixact-no-forget
-#test: lock-committed-update
-#test: lock-committed-keyupdate
+test: delete-abort-savept-2
+test: aborted-keyrevoke
+test: multixact-no-deadlock
+test: multixact-no-forget
+test: lock-committed-update
+test: lock-committed-keyupdate
 test: update-locked-tuple
 #test: reindex-concurrently
 #test: propagate-lock-delete
-#test: tuplelock-conflict
+test: tuplelock-conflict
 #test: tuplelock-update
-#test: tuplelock-upgrade-no-deadlock
+test: tuplelock-upgrade-no-deadlock
 #test: tuplelock-partition
-#test: freeze-the-dead
-#test: nowait
-#test: nowait-2
-#test: nowait-3
-#test: nowait-4
-#test: nowait-5
-#test: skip-locked
-#test: skip-locked-2
-#test: skip-locked-3
-#test: skip-locked-4
+test: freeze-the-dead
+test: nowait
+test: nowait-2
+test: nowait-3
+test: nowait-4
+test: nowait-5
+test: skip-locked
+test: skip-locked-2
+test: skip-locked-3
+test: skip-locked-4
 test: drop-index-concurrently-1
 #test: multiple-cic
 test: alter-table-1
-#test: alter-table-2
+test: alter-table-2
 #test: alter-table-3
 #test: alter-table-4
 #test: create-trigger

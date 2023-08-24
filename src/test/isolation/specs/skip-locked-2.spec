@@ -1,4 +1,6 @@
 # Test SKIP LOCKED with multixact locks.
+# GPDB: have to run sessions that have SELECT ... FOR ... w/ planner because 
+# ORCA would upgrade lock to ExclusiveLock.
 
 setup
 {
@@ -16,12 +18,12 @@ teardown
 }
 
 session s1
-setup		{ BEGIN; }
+setup		{ SET optimizer=off; BEGIN; }
 step s1a	{ SELECT * FROM queue ORDER BY id FOR SHARE SKIP LOCKED LIMIT 1; }
 step s1b	{ COMMIT; }
 
 session s2
-setup		{ BEGIN; }
+setup		{ SET optimizer=off; BEGIN; }
 step s2a	{ SELECT * FROM queue ORDER BY id FOR SHARE SKIP LOCKED LIMIT 1; }
 step s2b	{ SELECT * FROM queue ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 1; }
 step s2c	{ COMMIT; }

@@ -1,5 +1,8 @@
 # If transaction A holds a lock, and transaction B does an update,
 # make sure we don't forget the lock if B aborts.
+#
+# GPDB: have to run sessions that have SELECT ... FOR ... w/ planner because 
+# ORCA would upgrade lock to ExclusiveLock.
 setup
 {
   CREATE TABLE dont_forget (
@@ -15,7 +18,7 @@ teardown
 }
 
 session s1
-setup			{ BEGIN; }
+setup			{ SET optimizer=off; BEGIN; }
 step s1_show	{ SELECT current_setting('default_transaction_isolation') <> 'read committed'; }
 step s1_lock	{ SELECT * FROM dont_forget FOR KEY SHARE; }
 step s1_commit	{ COMMIT; }
@@ -27,6 +30,7 @@ step s2_abort	{ ROLLBACK; }
 step s2_commit	{ COMMIT; }
 
 session s3
+setup			{ SET optimizer=off; }
 # try cases with both a non-conflicting lock with s1's and a conflicting one
 step s3_forkeyshr	{ SELECT * FROM dont_forget FOR KEY SHARE; }
 step s3_fornokeyupd	{ SELECT * FROM dont_forget FOR NO KEY UPDATE; }
