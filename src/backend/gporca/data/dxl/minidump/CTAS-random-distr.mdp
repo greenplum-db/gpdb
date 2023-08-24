@@ -108,13 +108,10 @@
       <dxl:CTASRelation Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" StorageType="Heap" VarTypeModList="-1,-1,-1" DistributionPolicy="Random">
         <dxl:Columns>
           <dxl:Column Name="time" Attno="1" Mdid="0.1184.1.0" Nullable="true">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="device_id" Attno="2" Mdid="0.23.1.0" Nullable="true">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cpu_usage" Attno="3" Mdid="0.23.1.0" Nullable="true">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:CTASOptions OnCommitAction="NOOP"/>

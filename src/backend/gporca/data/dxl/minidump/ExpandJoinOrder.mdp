@@ -172,55 +172,38 @@
       <dxl:Relation Mdid="6.91393.1.1" Name="t49" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="16,14">
         <dxl:Columns>
           <dxl:Column Name="c586" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="67753">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c587" Attno="2" Mdid="0.25.1.0" Nullable="true" ColWidth="58776">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c588" Attno="3" Mdid="0.25.1.0" Nullable="true" ColWidth="66851">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c589" Attno="4" Mdid="0.25.1.0" Nullable="true" ColWidth="77346">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c590" Attno="5" Mdid="0.25.1.0" Nullable="true" ColWidth="67257">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c591" Attno="6" Mdid="0.25.1.0" Nullable="true" ColWidth="88322">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c592" Attno="7" Mdid="0.25.1.0" Nullable="true" ColWidth="58666">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c593" Attno="8" Mdid="0.25.1.0" Nullable="true" ColWidth="70776">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c594" Attno="9" Mdid="0.25.1.0" Nullable="true" ColWidth="58406">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c595" Attno="10" Mdid="0.25.1.0" Nullable="true" ColWidth="80806">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c596" Attno="11" Mdid="0.25.1.0" Nullable="true" ColWidth="82953">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c597" Attno="12" Mdid="0.25.1.0" Nullable="true" ColWidth="80950">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c598" Attno="13" Mdid="0.25.1.0" Nullable="true" ColWidth="71123">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c599" Attno="14" Mdid="0.25.1.0" Nullable="true" ColWidth="69329">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -230,40 +213,28 @@
       <dxl:Relation Mdid="6.92365.1.1" Name="t86" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,9">
         <dxl:Columns>
           <dxl:Column Name="c1047" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="75051">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1048" Attno="2" Mdid="0.25.1.0" Nullable="true" ColWidth="70002">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1049" Attno="3" Mdid="0.25.1.0" Nullable="true" ColWidth="72629">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1050" Attno="4" Mdid="0.25.1.0" Nullable="true" ColWidth="99445">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1051" Attno="5" Mdid="0.25.1.0" Nullable="true" ColWidth="56639">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1052" Attno="6" Mdid="0.25.1.0" Nullable="true" ColWidth="65256">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1053" Attno="7" Mdid="0.25.1.0" Nullable="true" ColWidth="53900">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1054" Attno="8" Mdid="0.25.1.0" Nullable="true" ColWidth="69449">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1055" Attno="9" Mdid="0.25.1.0" Nullable="true" ColWidth="72585">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -273,46 +244,32 @@
       <dxl:Relation Mdid="6.92635.1.1" Name="t97" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,11">
         <dxl:Columns>
           <dxl:Column Name="c1190" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="74602">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1191" Attno="2" Mdid="0.25.1.0" Nullable="true" ColWidth="74056">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1192" Attno="3" Mdid="0.25.1.0" Nullable="true" ColWidth="58124">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1193" Attno="4" Mdid="0.25.1.0" Nullable="true" ColWidth="78963">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1194" Attno="5" Mdid="0.25.1.0" Nullable="true" ColWidth="96292">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1195" Attno="6" Mdid="0.25.1.0" Nullable="true" ColWidth="64714">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1196" Attno="7" Mdid="0.25.1.0" Nullable="true" ColWidth="70669">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1197" Attno="8" Mdid="0.25.1.0" Nullable="true" ColWidth="66286">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1198" Attno="9" Mdid="0.25.1.0" Nullable="true" ColWidth="83271">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1199" Attno="10" Mdid="0.25.1.0" Nullable="true" ColWidth="79376">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1200" Attno="11" Mdid="0.25.1.0" Nullable="true" ColWidth="74241">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -335,25 +292,18 @@
       <dxl:Relation Mdid="6.90124.1.1" Name="t0" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4">
         <dxl:Columns>
           <dxl:Column Name="c0" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="55337">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c1" Attno="2" Mdid="0.25.1.0" Nullable="true" ColWidth="66121">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c2" Attno="3" Mdid="0.25.1.0" Nullable="true" ColWidth="69644">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c3" Attno="4" Mdid="0.25.1.0" Nullable="true" ColWidth="70320">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -368,73 +318,50 @@
       <dxl:Relation Mdid="6.92068.1.1" Name="t74" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,20">
         <dxl:Columns>
           <dxl:Column Name="c910" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="58834">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c911" Attno="2" Mdid="0.25.1.0" Nullable="true" ColWidth="63733">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c912" Attno="3" Mdid="0.25.1.0" Nullable="true" ColWidth="63136">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c913" Attno="4" Mdid="0.25.1.0" Nullable="true" ColWidth="60158">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c914" Attno="5" Mdid="0.25.1.0" Nullable="true" ColWidth="85326">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c915" Attno="6" Mdid="0.25.1.0" Nullable="true" ColWidth="70536">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c916" Attno="7" Mdid="0.25.1.0" Nullable="true" ColWidth="65586">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c917" Attno="8" Mdid="0.25.1.0" Nullable="true" ColWidth="92882">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c918" Attno="9" Mdid="0.25.1.0" Nullable="true" ColWidth="74117">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c919" Attno="10" Mdid="0.25.1.0" Nullable="true" ColWidth="85845">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c920" Attno="11" Mdid="0.25.1.0" Nullable="true" ColWidth="77064">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c921" Attno="12" Mdid="0.25.1.0" Nullable="true" ColWidth="67510">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c922" Attno="13" Mdid="0.25.1.0" Nullable="true" ColWidth="70405">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c923" Attno="14" Mdid="0.25.1.0" Nullable="true" ColWidth="77751">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c924" Attno="15" Mdid="0.25.1.0" Nullable="true" ColWidth="67649">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c925" Attno="16" Mdid="0.25.1.0" Nullable="true" ColWidth="54094">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c926" Attno="17" Mdid="0.25.1.0" Nullable="true" ColWidth="86858">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c927" Attno="18" Mdid="0.25.1.0" Nullable="true" ColWidth="76018">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c928" Attno="19" Mdid="0.25.1.0" Nullable="true" ColWidth="56212">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c929" Attno="20" Mdid="0.25.1.0" Nullable="true" ColWidth="67731">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>

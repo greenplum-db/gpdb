@@ -55,10 +55,8 @@
       <dxl:CTASRelation Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" StorageType="Heap" VarTypeModList="-1,-1" DistributionPolicy="Replicated">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:CTASOptions OnCommitAction="NOOP"/>

@@ -936,169 +936,114 @@
       <dxl:Relation Mdid="6.74486.1.0" Name="foo" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="1,0" Keys="54,52">
         <dxl:Columns>
           <dxl:Column Name="pl" Attno="1" Mdid="0.1043.1.0" TypeModifier="10" Nullable="false" ColWidth="7">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="pcd" Attno="2" Mdid="0.1114.1.0" Nullable="false" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tn" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="st" Attno="4" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="fn" Attno="5" Mdid="0.1043.1.0" TypeModifier="24" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="dd" Attno="6" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="bp" Attno="7" Mdid="0.1043.1.0" TypeModifier="9" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="fsi" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="op" Attno="9" Mdid="0.1043.1.0" TypeModifier="9" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ad" Attno="10" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cc" Attno="11" Mdid="0.1043.1.0" TypeModifier="9" Nullable="true" ColWidth="3">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="mf" Attno="12" Mdid="0.1043.1.0" TypeModifier="24" Nullable="true" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="mc" Attno="13" Mdid="0.1043.1.0" TypeModifier="9" Nullable="true" ColWidth="3">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="at" Attno="14" Mdid="0.1043.1.0" TypeModifier="24" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="bc" Attno="15" Mdid="0.1043.1.0" TypeModifier="24" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="sc" Attno="16" Mdid="0.1043.1.0" TypeModifier="24" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cc1" Attno="17" Mdid="0.1042.1.0" TypeModifier="5" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="sn" Attno="18" Mdid="0.1043.1.0" TypeModifier="24" Nullable="true" ColWidth="3">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ct" Attno="19" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="bs" Attno="20" Mdid="0.1043.1.0" TypeModifier="24" Nullable="true" ColWidth="3">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="chi" Attno="21" Mdid="0.1042.1.0" TypeModifier="5" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="pfs" Attno="22" Mdid="0.1043.1.0" TypeModifier="24" Nullable="true" ColWidth="0">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="acn" Attno="23" Mdid="0.1043.1.0" TypeModifier="19" Nullable="true" ColWidth="11">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ofa" Attno="24" Mdid="0.1043.1.0" TypeModifier="24" Nullable="true" ColWidth="11">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ofc" Attno="25" Mdid="0.1043.1.0" TypeModifier="9" Nullable="true" ColWidth="3">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="atl" Attno="26" Mdid="0.1043.1.0" TypeModifier="39" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="acc" Attno="27" Mdid="0.1043.1.0" TypeModifier="39" Nullable="true" ColWidth="3">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="bcd" Attno="28" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cor" Attno="29" Mdid="0.1043.1.0" TypeModifier="6" Nullable="true" ColWidth="0">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="sfi" Attno="30" Mdid="0.1042.1.0" TypeModifier="5" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="zz" Attno="31" Mdid="0.1043.1.0" TypeModifier="24" Nullable="true" ColWidth="14">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="zzd" Attno="32" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xc" Attno="33" Mdid="0.1043.1.0" TypeModifier="24" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xc1" Attno="34" Mdid="0.1043.1.0" TypeModifier="24" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xcz" Attno="35" Mdid="0.1043.1.0" TypeModifier="24" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="vbn" Attno="36" Mdid="0.1043.1.0" TypeModifier="6" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="dsd" Attno="37" Mdid="0.1043.1.0" TypeModifier="24" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="nat" Attno="38" Mdid="0.1043.1.0" TypeModifier="6" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="erer" Attno="39" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="fgg" Attno="40" Mdid="0.1042.1.0" TypeModifier="5" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="nnn" Attno="41" Mdid="0.1043.1.0" TypeModifier="19" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="fnbc" Attno="42" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="zxcv" Attno="43" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="zd" Attno="44" Mdid="0.1043.1.0" TypeModifier="24" Nullable="true" ColWidth="3">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xyz" Attno="45" Mdid="0.1043.1.0" TypeModifier="36" Nullable="true" ColWidth="0">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xyz1" Attno="46" Mdid="0.1114.1.0" Nullable="false" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xyz2" Attno="47" Mdid="0.1114.1.0" Nullable="false" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xyz3" Attno="48" Mdid="0.1043.1.0" TypeModifier="34" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xyz4" Attno="49" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xyz5" Attno="50" Mdid="0.1043.1.0" TypeModifier="34" Nullable="true" ColWidth="7">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xyz6" Attno="51" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xyz7" Attno="52" Mdid="0.1043.1.0" TypeModifier="8" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
