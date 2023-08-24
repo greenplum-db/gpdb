@@ -79,7 +79,7 @@ static inline void tts_buffer_heap_store_tuple(TupleTableSlot *slot,
 											   Buffer buffer,
 											   bool transfer_pin);
 static void tts_heap_store_tuple(TupleTableSlot *slot, HeapTuple tuple, bool shouldFree);
-
+static void tts_ao_store_tuple(TupleTableSlot *slot, MemTuple mtup, MemTupleBinding *mt_bind, bool shouldFree);
 
 const TupleTableSlotOps TTSOpsVirtual;
 const TupleTableSlotOps TTSOpsHeapTuple;
@@ -474,7 +474,17 @@ tts_heap_store_tuple(TupleTableSlot *slot, HeapTuple tuple, bool shouldFree)
 		slot->tts_flags |= TTS_FLAG_SHOULDFREE;
 }
 
-
+static void
+tts_ao_store_tuple(TupleTableSlot *slot, MemTuple mtup, MemTupleBinding *mt_bind, bool shouldFree)
+{
+    AOTupleTableSlot *aoslot = (AOTupleTableSlot *)slot;
+    aoslot->tuple = mtup;
+    aoslot->mt_bind = mt_bind;
+    slot->tts_nvalid = 0;
+    
+    if (shouldFree)
+        slot->tts_flags |= TTS_FLAG_SHOULDFREE;
+}
 /*
  * TupleTableSlotOps implementation for MinimalTupleTableSlot.
  */
@@ -868,6 +878,44 @@ tts_buffer_heap_copy_minimal_tuple(TupleTableSlot *slot)
 	return minimal_tuple_from_heap_tuple(bslot->base.tuple);
 }
 
+static void
+tts_ao_getsomeattrs(TupleTableSlot *slot, int natts)
+{
+    AOTupleTableSlot *aoSlot = (AOTupleTableSlot *)slot;
+    memtuple_deform(aoSlot->tuple, aoSlot->mt_bind, slot->tts_values, slot->tts_isnull);
+    slot->tts_nvalid = slot->tts_tupleDescriptor->natts;
+}
+
+static HeapTuple
+tts_ao_copy_heap_tuple(TupleTableSlot *slot)
+{
+    AOTupleTableSlot *aoslot = (AOTupleTableSlot *) slot;
+    Assert(!TTS_EMPTY(slot));
+    if (slot->tts_nvalid < slot->tts_tupleDescriptor->natts)
+    {
+        memtuple_deform(aoslot->tuple, aoslot->mt_bind, slot->tts_values, slot->tts_isnull);
+        slot->tts_nvalid = slot->tts_tupleDescriptor->natts;
+    }
+
+    return heap_form_tuple(slot->tts_tupleDescriptor,
+                           slot->tts_values,
+                           slot->tts_isnull);
+}
+
+static MinimalTuple
+tts_ao_copy_minimal_tuple(TupleTableSlot *slot)
+{
+    AOTupleTableSlot *aoslot = (AOTupleTableSlot *) slot;
+    Assert(!TTS_EMPTY(slot));
+
+    memtuple_deform(aoslot->tuple, aoslot->mt_bind, slot->tts_values, slot->tts_isnull);
+    slot->tts_nvalid = slot->tts_tupleDescriptor->natts;
+
+    return heap_form_minimal_tuple(slot->tts_tupleDescriptor,
+                                   slot->tts_values,
+                                   slot->tts_isnull);
+}
+
 static inline void
 tts_buffer_heap_store_tuple(TupleTableSlot *slot, HeapTuple tuple,
 							Buffer buffer, bool transfer_pin)
@@ -1106,6 +1154,25 @@ const TupleTableSlotOps TTSOpsBufferHeapTuple = {
 	.copy_minimal_tuple = tts_buffer_heap_copy_minimal_tuple
 };
 
+const TupleTableSlotOps TTSOpsAOTuple = {
+    .base_slot_size = sizeof(AOTupleTableSlot),
+    .init = tts_virtual_init,
+    .release = tts_virtual_release,
+    .clear = tts_virtual_clear,
+    .getsomeattrs = tts_ao_getsomeattrs,
+    .getsysattr = tts_virtual_getsysattr,
+    .materialize = tts_virtual_materialize,
+    .copyslot = tts_virtual_copyslot,
+
+    /*
+     * A ao tuple table slot can not "own" a heap tuple or a minimal
+     * tuple.
+     */
+    .get_heap_tuple = NULL,
+    .get_minimal_tuple = NULL,
+    .copy_heap_tuple = tts_ao_copy_heap_tuple,
+    .copy_minimal_tuple = tts_ao_copy_minimal_tuple
+};
 
 /* ----------------------------------------------------------------
  *				  tuple table create/delete functions
@@ -1472,6 +1539,33 @@ ExecStoreMinimalTuple(MinimalTuple mtup,
 	tts_minimal_store_tuple(slot, mtup, shouldFree);
 
 	return slot;
+}
+
+/* --------------------------------
+ *		ExecStoreVirtualTuple
+ *			Mark a slot as containing a virtual tuple.
+ *
+ * The protocol for loading a slot with virtual tuple data is:
+ *		* Call ExecClearTuple to mark the slot empty.
+ *		* Store data into the Datum/isnull arrays.
+ *		* Call ExecStoreVirtualTuple to mark the slot valid.
+ * This is a bit unclean but it avoids one round of data copying.
+ * --------------------------------
+ */
+TupleTableSlot *
+ExecStoreAOTuple(TupleTableSlot *slot, MemTuple mtup, MemTupleBinding *mt_bind, bool *shouldFree)
+{
+    /*
+     * sanity checks
+     */
+    Assert(slot != NULL);
+    Assert(slot->tts_tupleDescriptor != NULL);
+    Assert(TTS_EMPTY(slot));
+
+    slot->tts_flags &= ~TTS_FLAG_EMPTY;
+
+    tts_ao_store_tuple(slot, mtup, mt_bind, shouldFree);
+    return slot;
 }
 
 /*

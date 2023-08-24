@@ -892,11 +892,9 @@ AppendOnlyExecutorReadBlock_ProcessTuple(AppendOnlyExecutorReadBlock *executorRe
 
 	{
 		Assert(executorReadBlock->mt_bind);
-
 		ExecClearTuple(slot);
-		memtuple_deform(tuple, executorReadBlock->mt_bind, slot->tts_values, slot->tts_isnull);
 		slot->tts_tid = fake_ctid;
-		ExecStoreVirtualTuple(slot);
+		ExecStoreAOTuple(slot, tuple, executorReadBlock->mt_bind, false);
 	}
 
 	/* skip visibility test, all tuples are visible */

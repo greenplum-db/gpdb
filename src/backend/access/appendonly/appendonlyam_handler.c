@@ -425,7 +425,7 @@ get_or_create_unique_check_desc(Relation relation, Snapshot snapshot)
 static const TupleTableSlotOps *
 appendonly_slot_callbacks(Relation relation)
 {
-	return &TTSOpsVirtual;
+	return &TTSOpsAOTuple;
 }
 
 MemTuple
@@ -438,7 +438,7 @@ appendonly_form_memtuple(TupleTableSlot *slot, MemTupleBinding *mt_bind)
 	 * In case of a non virtal tuple, make certain that the slot's values are
 	 * populated, for example during a CTAS.
 	 */
-	if (!TTS_IS_VIRTUAL(slot))
+	if (slot->tts_nvalid < slot->tts_tupleDescriptor->natts)
 		slot_getsomeattrs(slot, slot->tts_tupleDescriptor->natts);
 
 	oldContext = MemoryContextSwitchTo(slot->tts_mcxt);
