@@ -450,7 +450,7 @@
     <dxl:Plan Id="0" SpaceSize="2048">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1299.001542" Rows="3.000000" Width="20"/>
+          <dxl:Cost StartupCost="0" TotalCost="1299.001769" Rows="3.000000" Width="20"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -473,7 +473,7 @@
         <dxl:SortingColumnList/>
         <dxl:MergeJoin JoinType="Full" UniqueOuter="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1299.001318" Rows="3.000000" Width="20"/>
+            <dxl:Cost StartupCost="0" TotalCost="1299.001545" Rows="3.000000" Width="20"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -502,7 +502,7 @@
           </dxl:MergeCondList>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="437.000359" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="437.000404" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -591,7 +591,7 @@
                       <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
                     </dxl:Comparison>
                   </dxl:IndexCondList>
-	<dxl:Partitions/>
+                  <dxl:Partitions/>
                   <dxl:IndexDescriptor Mdid="0.32772.1.0" IndexName="t2_d"/>
                   <dxl:TableDescriptor Mdid="6.24579.1.0" TableName="t2">
                     <dxl:Columns>
@@ -615,7 +615,7 @@
           </dxl:Sort>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000552" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000734" Rows="1.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="18" Alias="a">
@@ -685,7 +685,7 @@
                 <dxl:HashCondList>
                   <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
                     <dxl:Cast TypeMdid="0.23.1.0" FuncId="0.313.1.0">
-                      <dxl:FuncExpr FuncId="0.314.1.0" FuncRetSet="false" TypeMdid="0.21.1.0">
+                      <dxl:FuncExpr FuncId="0.314.1.0" FuncRetSet="false" TypeMdid="0.21.1.0" FuncVariadic="false">
                         <dxl:Ident ColId="18" ColName="a" TypeMdid="0.23.1.0"/>
                       </dxl:FuncExpr>
                     </dxl:Cast>

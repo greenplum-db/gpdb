@@ -275,7 +275,7 @@
     <dxl:Plan Id="0" SpaceSize="20">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000070" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000161" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="ten">
@@ -288,7 +288,7 @@
         </dxl:SortingColumnList>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000055" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000146" Rows="1.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="ten">
@@ -303,7 +303,7 @@
           <dxl:LimitOffset/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000055" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000100" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="ten">
@@ -315,7 +315,7 @@
                 <dxl:Ident ColId="1" ColName="ten" TypeMdid="0.23.1.0"/>
                 <dxl:OpExpr OperatorName="+" OperatorMdid="0.692.1.0" OperatorType="0.20.1.0">
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
-                  <dxl:FuncExpr FuncId="0.1574.1.0" FuncRetSet="false" TypeMdid="0.20.1.0">
+                  <dxl:FuncExpr FuncId="0.1574.1.0" FuncRetSet="false" TypeMdid="0.20.1.0" FuncVariadic="false">
                     <dxl:ConstValue TypeMdid="0.2205.1.0" Value="6EoDAA=="/>
                   </dxl:FuncExpr>
                 </dxl:OpExpr>
@@ -324,7 +324,7 @@
             <dxl:OneTimeFilter/>
             <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000022" Rows="1.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000067" Rows="1.000000" Width="4"/>
               </dxl:Properties>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="1"/>
@@ -337,7 +337,7 @@
               <dxl:Filter/>
               <dxl:Sort SortDiscardDuplicates="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000016" Rows="1.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000061" Rows="1.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="1" Alias="ten">
@@ -362,7 +362,7 @@
                   <dxl:Filter/>
                   <dxl:SortingColumnList/>
                   <dxl:HashExprList>
-                    <dxl:HashExpr TypeMdid="0.23.1.0">
+                    <dxl:HashExpr>
                       <dxl:Ident ColId="1" ColName="ten" TypeMdid="0.23.1.0"/>
                     </dxl:HashExpr>
                   </dxl:HashExprList>

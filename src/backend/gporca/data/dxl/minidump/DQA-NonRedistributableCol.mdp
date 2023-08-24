@@ -233,7 +233,7 @@ explain select count(distinct h) from testhstore;
     <dxl:Plan Id="0" SpaceSize="18">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.000041" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000098" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:GroupingColumns/>
         <dxl:ProjList>
@@ -251,7 +251,7 @@ explain select count(distinct h) from testhstore;
         <dxl:Filter/>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000040" Rows="1.000000" Width="5"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000097" Rows="1.000000" Width="5"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="0"/>
@@ -264,7 +264,7 @@ explain select count(distinct h) from testhstore;
           <dxl:Filter/>
           <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000033" Rows="1.000000" Width="5"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000089" Rows="1.000000" Width="5"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="h">
@@ -277,7 +277,7 @@ explain select count(distinct h) from testhstore;
             </dxl:SortingColumnList>
             <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000014" Rows="1.000000" Width="5"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000071" Rows="1.000000" Width="5"/>
               </dxl:Properties>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="0"/>
@@ -290,7 +290,7 @@ explain select count(distinct h) from testhstore;
               <dxl:Filter/>
               <dxl:Sort SortDiscardDuplicates="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="5"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000066" Rows="1.000000" Width="5"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="h">

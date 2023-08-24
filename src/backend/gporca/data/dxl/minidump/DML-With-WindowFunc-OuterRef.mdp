@@ -341,10 +341,10 @@
         </dxl:LogicalSelect>
       </dxl:LogicalCTAS>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="25">
+    <dxl:Plan Id="0" SpaceSize="137">
       <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" StorageType="Heap" DistributionPolicy="Random" InsertColumns="0" VarTypeModList="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.010884" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.010975" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:DistrOpclasses/>
         <dxl:Columns>
@@ -358,7 +358,7 @@
         </dxl:ProjList>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000468" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.000558" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -372,7 +372,7 @@
           <dxl:OneTimeFilter/>
           <dxl:RandomMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000465" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000556" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="i">
@@ -383,7 +383,7 @@
             <dxl:SortingColumnList/>
             <dxl:HashJoin JoinType="Inner">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="862.000461" Rows="1.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="862.000552" Rows="1.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="i">
@@ -402,7 +402,7 @@
               </dxl:HashCondList>
               <dxl:RedistributeMotion InputSegments="0" OutputSegments="0,1,2">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000048" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000139" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="16" Alias="row_number">
@@ -418,7 +418,7 @@
                 </dxl:HashExprList>
                 <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000114" Rows="1.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:GroupingColumns>
                     <dxl:GroupingColumn ColId="16"/>
@@ -431,7 +431,7 @@
                   <dxl:Filter/>
                   <dxl:Sort SortDiscardDuplicates="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000011" Rows="1.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000101" Rows="1.000000" Width="8"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="16" Alias="row_number">
@@ -484,7 +484,7 @@
                       <dxl:WindowKeyList>
                         <dxl:WindowKey>
                           <dxl:SortingColumnList/>
-                          <dxl:WindowFrame FrameSpec="Range" ExclusionStrategy="Nulls">
+                          <dxl:WindowFrame FrameSpec="Range" ExclusionStrategy="Nulls" StartInRange="0" EndInRange="0" InRangeColl="0" InRangeAsc="false" InRangeNullsFirst="false">
                             <dxl:TrailingEdge TrailingBoundary="UnboundedPreceding"/>
                             <dxl:LeadingEdge LeadingBoundary="CurrentRow"/>
                           </dxl:WindowFrame>

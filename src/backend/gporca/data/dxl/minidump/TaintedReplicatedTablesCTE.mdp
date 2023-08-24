@@ -353,7 +353,7 @@
     <dxl:Plan Id="0" SpaceSize="10">
       <dxl:Sequence>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.001107" Rows="2.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.001221" Rows="2.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="29" Alias="tblnm">
@@ -368,7 +368,7 @@
         </dxl:ProjList>
         <dxl:CTEProducer CTEId="0" Columns="0,8">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000220" Rows="1.000000" Width="1"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000334" Rows="1.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="name">
@@ -380,7 +380,7 @@
           </dxl:ProjList>
           <dxl:GatherMotion InputSegments="0" OutputSegments="-1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000219" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000333" Rows="1.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="name">
@@ -394,7 +394,7 @@
             <dxl:SortingColumnList/>
             <dxl:Window PartitionColumns="0">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000041" Rows="3.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000154" Rows="3.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="name">
@@ -407,7 +407,7 @@
               <dxl:Filter/>
               <dxl:Sort SortDiscardDuplicates="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000041" Rows="3.000000" Width="10"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000154" Rows="3.000000" Width="10"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="name">
@@ -447,7 +447,7 @@
               <dxl:WindowKeyList>
                 <dxl:WindowKey>
                   <dxl:SortingColumnList/>
-                  <dxl:WindowFrame FrameSpec="Range" ExclusionStrategy="Nulls">
+                  <dxl:WindowFrame FrameSpec="Range" ExclusionStrategy="Nulls" StartInRange="0" EndInRange="0" InRangeColl="0" InRangeAsc="false" InRangeNullsFirst="false">
                     <dxl:TrailingEdge TrailingBoundary="UnboundedPreceding"/>
                     <dxl:LeadingEdge LeadingBoundary="CurrentRow"/>
                   </dxl:WindowFrame>

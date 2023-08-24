@@ -446,7 +446,7 @@
     <dxl:Plan Id="0" SpaceSize="84">
       <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" StorageType="Heap" DistributionPolicy="Random" InsertColumns="20" VarTypeModList="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1324033.270477" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1324033.549169" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:DistrOpclasses/>
         <dxl:Columns>
@@ -460,7 +460,7 @@
         </dxl:ProjList>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1324033.254852" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="1324033.533544" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="20" Alias="coalesce">
@@ -474,7 +474,7 @@
           <dxl:OneTimeFilter/>
           <dxl:Sequence>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1324033.254848" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="1324033.533540" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="20" Alias="coalesce">
@@ -499,12 +499,12 @@
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="1" Alias="val">
-                    <dxl:FuncExpr FuncId="0.2331.1.0" FuncRetSet="true" TypeMdid="0.25.1.0">
+                    <dxl:FuncExpr FuncId="0.2331.1.0" FuncRetSet="true" TypeMdid="0.25.1.0" FuncVariadic="false">
                       <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAqAEAAAAAAAAAGQAAABEAAAABAAAAAAAACXJlcnVtAAAAAAAACXZlbGl0&#xA;AAAAAAAABXAAAAAAAAAFcQAAAAAAAAVyAAAAAAAABXMAAAAAAAAFdAAAAAAA&#xA;AAZ1bQAAAAAABXYAAAAAAAAFcQAAAAAAAAV3AAAAAAAABWUAAAAAAAAFcgAA&#xA;AAAAAAV0AAAAAAAABXkAAAAAAAAFdQAAAAAAAAVpAAAA"/>
                     </dxl:FuncExpr>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="2" Alias="wt">
-                    <dxl:FuncExpr FuncId="0.2331.1.0" FuncRetSet="true" TypeMdid="0.701.1.0">
+                    <dxl:FuncExpr FuncId="0.2331.1.0" FuncRetSet="true" TypeMdid="0.701.1.0" FuncVariadic="false">
                       <dxl:ConstValue TypeMdid="0.1022.1.0" Value="AAAAoAEAAAAAAAAAvQIAABEAAAABAAAAAAAAAAAA8D8AAAAAAADwPwAAAAAA&#xA;APA/AAAAAAAA8D8AAAAAAADwPwAAAAAAAPA/AAAAAAAA8D8AAAAAAADwPwAA&#xA;AAAAAPA/AAAAAAAA8D8AAAAAAADwPwAAAAAAAPA/AAAAAAAA8D8AAAAAAADw&#xA;PwAAAAAAAPA/AAAAAAAA8D8AAAAAAADwPw=="/>
                     </dxl:FuncExpr>
                   </dxl:ProjElem>
@@ -527,7 +527,7 @@
             </dxl:CTEProducer>
             <dxl:RandomMotion InputSegments="0" OutputSegments="0,1,2" DuplicateSensitive="true">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1324033.254728" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="1324033.533420" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="20" Alias="coalesce">
@@ -538,7 +538,7 @@
               <dxl:SortingColumnList/>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1324033.254707" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1324033.533399" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="20" Alias="coalesce">
@@ -558,7 +558,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1324033.254699" Rows="1.000000" Width="16"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1324033.533391" Rows="1.000000" Width="16"/>
                   </dxl:Properties>
                   <dxl:GroupingColumns/>
                   <dxl:ProjList>
@@ -615,7 +615,7 @@
                   <dxl:Filter/>
                   <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="1324033.254613" Rows="3.000000" Width="32"/>
+                      <dxl:Cost StartupCost="0" TotalCost="1324033.533305" Rows="3.000000" Width="32"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="9" Alias="val">
@@ -637,7 +637,7 @@
                     </dxl:JoinFilter>
                     <dxl:MergeJoin JoinType="Full" UniqueOuter="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000759" Rows="3.000000" Width="24"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.001032" Rows="3.000000" Width="24"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="9" Alias="val">
@@ -660,7 +660,7 @@
                       </dxl:MergeCondList>
                       <dxl:Sort SortDiscardDuplicates="false">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000039" Rows="1.000000" Width="16"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000220" Rows="1.000000" Width="16"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="9" Alias="val">
@@ -692,7 +692,7 @@
                       </dxl:Sort>
                       <dxl:Sort SortDiscardDuplicates="false">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="0.000109" Rows="1.000000" Width="8"/>
+                          <dxl:Cost StartupCost="0" TotalCost="0.000200" Rows="1.000000" Width="8"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="12" Alias="val">
@@ -711,7 +711,7 @@
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="12" Alias="val">
-                              <dxl:FuncExpr FuncId="0.2331.1.0" FuncRetSet="true" TypeMdid="0.25.1.0">
+                              <dxl:FuncExpr FuncId="0.2331.1.0" FuncRetSet="true" TypeMdid="0.25.1.0" FuncVariadic="false">
                                 <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAZAEAAAAAAAAAGQAAAAkAAAABAAAAAAAACG9kaW8AAAAKYmVhdGFlAAAA&#xA;AAAFYQAAAAAAAAViAAAAAAAABWMAAAAAAAAFZAAAAAAAAAVlAAAAAAAABWYA&#xA;AAAAAAAFZwAAAA=="/>
                               </dxl:FuncExpr>
                             </dxl:ProjElem>

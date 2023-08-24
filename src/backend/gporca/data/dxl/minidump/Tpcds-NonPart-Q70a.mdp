@@ -14682,7 +14682,7 @@ with results as
     <dxl:Plan Id="0" SpaceSize="0">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="21917.445999" Rows="20.062500" Width="36"/>
+          <dxl:Cost StartupCost="0" TotalCost="21917.448324" Rows="20.062500" Width="36"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="842" Alias="total_sum">
@@ -14705,7 +14705,7 @@ with results as
         <dxl:OneTimeFilter/>
         <dxl:GatherMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="21917.445999" Rows="20.062500" Width="36"/>
+            <dxl:Cost StartupCost="0" TotalCost="21917.448324" Rows="20.062500" Width="36"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="842" Alias="sum">
@@ -14735,7 +14735,7 @@ with results as
           </dxl:SortingColumnList>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="21917.443930" Rows="20.062500" Width="44"/>
+              <dxl:Cost StartupCost="0" TotalCost="21917.446256" Rows="20.062500" Width="44"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="842" Alias="sum">
@@ -14767,7 +14767,7 @@ with results as
             <dxl:LimitOffset/>
             <dxl:Sequence>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="21917.443930" Rows="20.062500" Width="44"/>
+                <dxl:Cost StartupCost="0" TotalCost="21917.445757" Rows="20.062500" Width="44"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="842" Alias="sum">
@@ -14791,7 +14791,7 @@ with results as
               </dxl:ProjList>
               <dxl:CTEProducer CTEId="0" Columns="204,89,88,205,206">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="20624.442907" Rows="14.062500" Width="1"/>
+                  <dxl:Cost StartupCost="0" TotalCost="20624.443362" Rows="14.062500" Width="1"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="204" Alias="sum">
@@ -14812,7 +14812,7 @@ with results as
                 </dxl:ProjList>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="20624.442906" Rows="14.062500" Width="32"/>
+                    <dxl:Cost StartupCost="0" TotalCost="20624.443361" Rows="14.062500" Width="32"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="204" Alias="sum">
@@ -14833,9 +14833,9 @@ with results as
                   </dxl:ProjList>
                   <dxl:Filter/>
                   <dxl:OneTimeFilter/>
-                  <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
+                  <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="20624.442892" Rows="14.062500" Width="26"/>
+                      <dxl:Cost StartupCost="0" TotalCost="20624.443347" Rows="14.062500" Width="26"/>
                     </dxl:Properties>
                     <dxl:GroupingColumns>
                       <dxl:GroupingColumn ColId="89"/>
@@ -14860,9 +14860,9 @@ with results as
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:Sort SortDiscardDuplicates="false">
+                    <dxl:RedistributeMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="20624.442860" Rows="14.062500" Width="26"/>
+                        <dxl:Cost StartupCost="0" TotalCost="20624.443095" Rows="14.062500" Width="26"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="88" Alias="s_county">
@@ -14876,15 +14876,18 @@ with results as
                         </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:SortingColumnList>
-                        <dxl:SortingColumn ColId="89" SortOperatorMdid="0.1058.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                        <dxl:SortingColumn ColId="88" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                      </dxl:SortingColumnList>
-                      <dxl:LimitCount/>
-                      <dxl:LimitOffset/>
-                      <dxl:RedistributeMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
+                      <dxl:SortingColumnList/>
+                      <dxl:HashExprList>
+                        <dxl:HashExpr>
+                          <dxl:Ident ColId="89" ColName="s_state" TypeMdid="0.1042.1.0"/>
+                        </dxl:HashExpr>
+                        <dxl:HashExpr>
+                          <dxl:Ident ColId="88" ColName="s_county" TypeMdid="0.1043.1.0"/>
+                        </dxl:HashExpr>
+                      </dxl:HashExprList>
+                      <dxl:Result>
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="20624.442860" Rows="14.062500" Width="26"/>
+                          <dxl:Cost StartupCost="0" TotalCost="20624.443047" Rows="14.062500" Width="26"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="88" Alias="s_county">
@@ -14898,50 +14901,41 @@ with results as
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:SortingColumnList/>
-                        <dxl:HashExprList>
-                          <dxl:HashExpr>
-                            <dxl:Ident ColId="89" ColName="s_state" TypeMdid="0.1042.1.0"/>
-                          </dxl:HashExpr>
-                          <dxl:HashExpr>
-                            <dxl:Ident ColId="88" ColName="s_county" TypeMdid="0.1043.1.0"/>
-                          </dxl:HashExpr>
-                        </dxl:HashExprList>
-                        <dxl:Result>
+                        <dxl:OneTimeFilter/>
+                        <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="20624.442812" Rows="14.062500" Width="26"/>
+                            <dxl:Cost StartupCost="0" TotalCost="20624.443047" Rows="14.062500" Width="26"/>
                           </dxl:Properties>
+                          <dxl:GroupingColumns>
+                            <dxl:GroupingColumn ColId="89"/>
+                            <dxl:GroupingColumn ColId="88"/>
+                          </dxl:GroupingColumns>
                           <dxl:ProjList>
+                            <dxl:ProjElem ColId="1487" Alias="ColRef_1487">
+                              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                                <dxl:ValuesList ParamType="aggargs">
+                                  <dxl:Ident ColId="22" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
+                                </dxl:ValuesList>
+                                <dxl:ValuesList ParamType="aggdirectargs"/>
+                                <dxl:ValuesList ParamType="aggorder"/>
+                                <dxl:ValuesList ParamType="aggdistinct"/>
+                              </dxl:AggFunc>
+                            </dxl:ProjElem>
                             <dxl:ProjElem ColId="88" Alias="s_county">
                               <dxl:Ident ColId="88" ColName="s_county" TypeMdid="0.1043.1.0"/>
                             </dxl:ProjElem>
                             <dxl:ProjElem ColId="89" Alias="s_state">
                               <dxl:Ident ColId="89" ColName="s_state" TypeMdid="0.1042.1.0"/>
                             </dxl:ProjElem>
-                            <dxl:ProjElem ColId="1487" Alias="ColRef_1487">
-                              <dxl:Ident ColId="1487" ColName="ColRef_1487" TypeMdid="0.1700.1.0"/>
-                            </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter/>
-                          <dxl:OneTimeFilter/>
-                          <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
+                          <dxl:HashJoin JoinType="Inner">
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="20624.442812" Rows="14.062500" Width="26"/>
+                              <dxl:Cost StartupCost="0" TotalCost="20103.452667" Rows="67819601.064540" Width="26"/>
                             </dxl:Properties>
-                            <dxl:GroupingColumns>
-                              <dxl:GroupingColumn ColId="89"/>
-                              <dxl:GroupingColumn ColId="88"/>
-                            </dxl:GroupingColumns>
                             <dxl:ProjList>
-                              <dxl:ProjElem ColId="1487" Alias="ColRef_1487">
-                                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
-                                  <dxl:ValuesList ParamType="aggargs">
-                                    <dxl:Ident ColId="22" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
-                                  </dxl:ValuesList>
-                                  <dxl:ValuesList ParamType="aggdirectargs"/>
-                                  <dxl:ValuesList ParamType="aggorder"/>
-                                  <dxl:ValuesList ParamType="aggdistinct"/>
-                                </dxl:AggFunc>
+                              <dxl:ProjElem ColId="22" Alias="ss_net_profit">
+                                <dxl:Ident ColId="22" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
                               </dxl:ProjElem>
                               <dxl:ProjElem ColId="88" Alias="s_county">
                                 <dxl:Ident ColId="88" ColName="s_county" TypeMdid="0.1043.1.0"/>
@@ -14951,13 +14945,115 @@ with results as
                               </dxl:ProjElem>
                             </dxl:ProjList>
                             <dxl:Filter/>
+                            <dxl:JoinFilter/>
+                            <dxl:HashCondList>
+                              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                                <dxl:Ident ColId="7" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
+                                <dxl:Ident ColId="65" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
+                              </dxl:Comparison>
+                            </dxl:HashCondList>
                             <dxl:HashJoin JoinType="Inner">
                               <dxl:Properties>
-                                <dxl:Cost StartupCost="0" TotalCost="20103.452432" Rows="67819601.064540" Width="26"/>
+                                <dxl:Cost StartupCost="0" TotalCost="8141.454737" Rows="169549002.661349" Width="12"/>
                               </dxl:Properties>
                               <dxl:ProjList>
+                                <dxl:ProjElem ColId="7" Alias="ss_store_sk">
+                                  <dxl:Ident ColId="7" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
+                                </dxl:ProjElem>
                                 <dxl:ProjElem ColId="22" Alias="ss_net_profit">
                                   <dxl:Ident ColId="22" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
+                                </dxl:ProjElem>
+                              </dxl:ProjList>
+                              <dxl:Filter/>
+                              <dxl:JoinFilter/>
+                              <dxl:HashCondList>
+                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                                  <dxl:Ident ColId="0" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
+                                  <dxl:Ident ColId="30" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
+                                </dxl:Comparison>
+                              </dxl:HashCondList>
+                              <dxl:TableScan>
+                                <dxl:Properties>
+                                  <dxl:Cost StartupCost="0" TotalCost="2572.718951" Rows="737331968.000000" Width="16"/>
+                                </dxl:Properties>
+                                <dxl:ProjList>
+                                  <dxl:ProjElem ColId="0" Alias="ss_sold_date_sk">
+                                    <dxl:Ident ColId="0" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
+                                  </dxl:ProjElem>
+                                  <dxl:ProjElem ColId="7" Alias="ss_store_sk">
+                                    <dxl:Ident ColId="7" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
+                                  </dxl:ProjElem>
+                                  <dxl:ProjElem ColId="22" Alias="ss_net_profit">
+                                    <dxl:Ident ColId="22" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
+                                  </dxl:ProjElem>
+                                </dxl:ProjList>
+                                <dxl:Filter/>
+                                <dxl:TableDescriptor Mdid="6.8403512.1.1" TableName="store_sales">
+                                  <dxl:Columns>
+                                    <dxl:Column ColId="0" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
+                                    <dxl:Column ColId="2" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
+                                    <dxl:Column ColId="7" Attno="8" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
+                                    <dxl:Column ColId="9" Attno="10" ColName="ss_ticket_number" TypeMdid="0.20.1.0"/>
+                                    <dxl:Column ColId="22" Attno="23" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
+                                    <dxl:Column ColId="23" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                                    <dxl:Column ColId="24" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                                    <dxl:Column ColId="25" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                                    <dxl:Column ColId="26" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                                    <dxl:Column ColId="27" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                                    <dxl:Column ColId="28" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                                    <dxl:Column ColId="29" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                                  </dxl:Columns>
+                                </dxl:TableDescriptor>
+                              </dxl:TableScan>
+                              <dxl:BroadcastMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
+                                <dxl:Properties>
+                                  <dxl:Cost StartupCost="0" TotalCost="431.252171" Rows="13414.324949" Width="4"/>
+                                </dxl:Properties>
+                                <dxl:ProjList>
+                                  <dxl:ProjElem ColId="30" Alias="d_date_sk">
+                                    <dxl:Ident ColId="30" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
+                                  </dxl:ProjElem>
+                                </dxl:ProjList>
+                                <dxl:Filter/>
+                                <dxl:SortingColumnList/>
+                                <dxl:TableScan>
+                                  <dxl:Properties>
+                                    <dxl:Cost StartupCost="0" TotalCost="431.247306" Rows="419.197655" Width="4"/>
+                                  </dxl:Properties>
+                                  <dxl:ProjList>
+                                    <dxl:ProjElem ColId="30" Alias="d_date_sk">
+                                      <dxl:Ident ColId="30" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
+                                    </dxl:ProjElem>
+                                  </dxl:ProjList>
+                                  <dxl:Filter>
+                                    <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                                      <dxl:Ident ColId="36" ColName="d_year" TypeMdid="0.23.1.0"/>
+                                      <dxl:ConstValue TypeMdid="0.23.1.0" Value="2000"/>
+                                    </dxl:Comparison>
+                                  </dxl:Filter>
+                                  <dxl:TableDescriptor Mdid="6.8402992.1.1" TableName="date_dim">
+                                    <dxl:Columns>
+                                      <dxl:Column ColId="30" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
+                                      <dxl:Column ColId="36" Attno="7" ColName="d_year" TypeMdid="0.23.1.0"/>
+                                      <dxl:Column ColId="58" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                                      <dxl:Column ColId="59" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                                      <dxl:Column ColId="60" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                                      <dxl:Column ColId="61" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                                      <dxl:Column ColId="62" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                                      <dxl:Column ColId="63" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                                      <dxl:Column ColId="64" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                                    </dxl:Columns>
+                                  </dxl:TableDescriptor>
+                                </dxl:TableScan>
+                              </dxl:BroadcastMotion>
+                            </dxl:HashJoin>
+                            <dxl:BroadcastMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
+                              <dxl:Properties>
+                                <dxl:Cost StartupCost="0" TotalCost="10809.474483" Rows="4147.200000" Width="22"/>
+                              </dxl:Properties>
+                              <dxl:ProjList>
+                                <dxl:ProjElem ColId="65" Alias="s_store_sk">
+                                  <dxl:Ident ColId="65" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
                                 </dxl:ProjElem>
                                 <dxl:ProjElem ColId="88" Alias="s_county">
                                   <dxl:Ident ColId="88" ColName="s_county" TypeMdid="0.1043.1.0"/>
@@ -14967,111 +15063,10 @@ with results as
                                 </dxl:ProjElem>
                               </dxl:ProjList>
                               <dxl:Filter/>
-                              <dxl:JoinFilter/>
-                              <dxl:HashCondList>
-                                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                  <dxl:Ident ColId="7" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
-                                  <dxl:Ident ColId="65" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
-                                </dxl:Comparison>
-                              </dxl:HashCondList>
-                              <dxl:HashJoin JoinType="Inner">
+                              <dxl:SortingColumnList/>
+                              <dxl:HashJoin JoinType="In">
                                 <dxl:Properties>
-                                  <dxl:Cost StartupCost="0" TotalCost="8141.454737" Rows="169549002.661349" Width="12"/>
-                                </dxl:Properties>
-                                <dxl:ProjList>
-                                  <dxl:ProjElem ColId="7" Alias="ss_store_sk">
-                                    <dxl:Ident ColId="7" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
-                                  </dxl:ProjElem>
-                                  <dxl:ProjElem ColId="22" Alias="ss_net_profit">
-                                    <dxl:Ident ColId="22" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
-                                  </dxl:ProjElem>
-                                </dxl:ProjList>
-                                <dxl:Filter/>
-                                <dxl:JoinFilter/>
-                                <dxl:HashCondList>
-                                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                    <dxl:Ident ColId="0" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
-                                    <dxl:Ident ColId="30" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                                  </dxl:Comparison>
-                                </dxl:HashCondList>
-                                <dxl:TableScan>
-                                  <dxl:Properties>
-                                    <dxl:Cost StartupCost="0" TotalCost="2572.718951" Rows="737331968.000000" Width="16"/>
-                                  </dxl:Properties>
-                                  <dxl:ProjList>
-                                    <dxl:ProjElem ColId="0" Alias="ss_sold_date_sk">
-                                      <dxl:Ident ColId="0" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
-                                    </dxl:ProjElem>
-                                    <dxl:ProjElem ColId="7" Alias="ss_store_sk">
-                                      <dxl:Ident ColId="7" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
-                                    </dxl:ProjElem>
-                                    <dxl:ProjElem ColId="22" Alias="ss_net_profit">
-                                      <dxl:Ident ColId="22" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
-                                    </dxl:ProjElem>
-                                  </dxl:ProjList>
-                                  <dxl:Filter/>
-                                  <dxl:TableDescriptor Mdid="6.8403512.1.1" TableName="store_sales">
-                                    <dxl:Columns>
-                                      <dxl:Column ColId="0" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
-                                      <dxl:Column ColId="2" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
-                                      <dxl:Column ColId="7" Attno="8" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
-                                      <dxl:Column ColId="9" Attno="10" ColName="ss_ticket_number" TypeMdid="0.20.1.0"/>
-                                      <dxl:Column ColId="22" Attno="23" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
-                                      <dxl:Column ColId="23" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                                      <dxl:Column ColId="24" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                                      <dxl:Column ColId="25" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                                      <dxl:Column ColId="26" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                                      <dxl:Column ColId="27" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                                      <dxl:Column ColId="28" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                                      <dxl:Column ColId="29" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                                    </dxl:Columns>
-                                  </dxl:TableDescriptor>
-                                </dxl:TableScan>
-                                <dxl:BroadcastMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
-                                  <dxl:Properties>
-                                    <dxl:Cost StartupCost="0" TotalCost="431.252171" Rows="13414.324949" Width="4"/>
-                                  </dxl:Properties>
-                                  <dxl:ProjList>
-                                    <dxl:ProjElem ColId="30" Alias="d_date_sk">
-                                      <dxl:Ident ColId="30" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                                    </dxl:ProjElem>
-                                  </dxl:ProjList>
-                                  <dxl:Filter/>
-                                  <dxl:SortingColumnList/>
-                                  <dxl:TableScan>
-                                    <dxl:Properties>
-                                      <dxl:Cost StartupCost="0" TotalCost="431.247306" Rows="419.197655" Width="4"/>
-                                    </dxl:Properties>
-                                    <dxl:ProjList>
-                                      <dxl:ProjElem ColId="30" Alias="d_date_sk">
-                                        <dxl:Ident ColId="30" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                                      </dxl:ProjElem>
-                                    </dxl:ProjList>
-                                    <dxl:Filter>
-                                      <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                        <dxl:Ident ColId="36" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="2000"/>
-                                      </dxl:Comparison>
-                                    </dxl:Filter>
-                                    <dxl:TableDescriptor Mdid="6.8402992.1.1" TableName="date_dim">
-                                      <dxl:Columns>
-                                        <dxl:Column ColId="30" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                                        <dxl:Column ColId="36" Attno="7" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                        <dxl:Column ColId="58" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                                        <dxl:Column ColId="59" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                                        <dxl:Column ColId="60" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                                        <dxl:Column ColId="61" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                                        <dxl:Column ColId="62" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                                        <dxl:Column ColId="63" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                                        <dxl:Column ColId="64" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                                      </dxl:Columns>
-                                    </dxl:TableDescriptor>
-                                  </dxl:TableScan>
-                                </dxl:BroadcastMotion>
-                              </dxl:HashJoin>
-                              <dxl:BroadcastMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
-                                <dxl:Properties>
-                                  <dxl:Cost StartupCost="0" TotalCost="10809.474248" Rows="4147.200000" Width="22"/>
+                                  <dxl:Cost StartupCost="0" TotalCost="10809.466210" Rows="129.600000" Width="22"/>
                                 </dxl:Properties>
                                 <dxl:ProjList>
                                   <dxl:ProjElem ColId="65" Alias="s_store_sk">
@@ -15085,10 +15080,16 @@ with results as
                                   </dxl:ProjElem>
                                 </dxl:ProjList>
                                 <dxl:Filter/>
-                                <dxl:SortingColumnList/>
-                                <dxl:HashJoin JoinType="In">
+                                <dxl:JoinFilter/>
+                                <dxl:HashCondList>
+                                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
+                                    <dxl:Ident ColId="89" ColName="s_state" TypeMdid="0.1042.1.0"/>
+                                    <dxl:Ident ColId="155" ColName="s_state" TypeMdid="0.1042.1.0"/>
+                                  </dxl:Comparison>
+                                </dxl:HashCondList>
+                                <dxl:TableScan>
                                   <dxl:Properties>
-                                    <dxl:Cost StartupCost="0" TotalCost="10809.465975" Rows="129.600000" Width="22"/>
+                                    <dxl:Cost StartupCost="0" TotalCost="431.004243" Rows="324.000000" Width="22"/>
                                   </dxl:Properties>
                                   <dxl:ProjList>
                                     <dxl:ProjElem ColId="65" Alias="s_store_sk">
@@ -15102,132 +15103,128 @@ with results as
                                     </dxl:ProjElem>
                                   </dxl:ProjList>
                                   <dxl:Filter/>
-                                  <dxl:JoinFilter/>
-                                  <dxl:HashCondList>
-                                    <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
-                                      <dxl:Ident ColId="89" ColName="s_state" TypeMdid="0.1042.1.0"/>
+                                  <dxl:TableDescriptor Mdid="6.8403408.1.1" TableName="store">
+                                    <dxl:Columns>
+                                      <dxl:Column ColId="65" Attno="1" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
+                                      <dxl:Column ColId="88" Attno="24" ColName="s_county" TypeMdid="0.1043.1.0" ColWidth="30"/>
+                                      <dxl:Column ColId="89" Attno="25" ColName="s_state" TypeMdid="0.1042.1.0" ColWidth="2"/>
+                                      <dxl:Column ColId="94" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                                      <dxl:Column ColId="95" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                                      <dxl:Column ColId="96" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                                      <dxl:Column ColId="97" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                                      <dxl:Column ColId="98" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                                      <dxl:Column ColId="99" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                                      <dxl:Column ColId="100" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                                    </dxl:Columns>
+                                  </dxl:TableDescriptor>
+                                </dxl:TableScan>
+                                <dxl:BroadcastMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
+                                  <dxl:Properties>
+                                    <dxl:Cost StartupCost="0" TotalCost="10378.459009" Rows="64.000000" Width="3"/>
+                                  </dxl:Properties>
+                                  <dxl:ProjList>
+                                    <dxl:ProjElem ColId="155" Alias="s_state">
                                       <dxl:Ident ColId="155" ColName="s_state" TypeMdid="0.1042.1.0"/>
-                                    </dxl:Comparison>
-                                  </dxl:HashCondList>
-                                  <dxl:TableScan>
+                                    </dxl:ProjElem>
+                                  </dxl:ProjList>
+                                  <dxl:Filter/>
+                                  <dxl:SortingColumnList/>
+                                  <dxl:Result>
                                     <dxl:Properties>
-                                      <dxl:Cost StartupCost="0" TotalCost="431.004243" Rows="324.000000" Width="22"/>
-                                    </dxl:Properties>
-                                    <dxl:ProjList>
-                                      <dxl:ProjElem ColId="65" Alias="s_store_sk">
-                                        <dxl:Ident ColId="65" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
-                                      </dxl:ProjElem>
-                                      <dxl:ProjElem ColId="88" Alias="s_county">
-                                        <dxl:Ident ColId="88" ColName="s_county" TypeMdid="0.1043.1.0"/>
-                                      </dxl:ProjElem>
-                                      <dxl:ProjElem ColId="89" Alias="s_state">
-                                        <dxl:Ident ColId="89" ColName="s_state" TypeMdid="0.1042.1.0"/>
-                                      </dxl:ProjElem>
-                                    </dxl:ProjList>
-                                    <dxl:Filter/>
-                                    <dxl:TableDescriptor Mdid="6.8403408.1.1" TableName="store">
-                                      <dxl:Columns>
-                                        <dxl:Column ColId="65" Attno="1" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
-                                        <dxl:Column ColId="88" Attno="24" ColName="s_county" TypeMdid="0.1043.1.0" ColWidth="30"/>
-                                        <dxl:Column ColId="89" Attno="25" ColName="s_state" TypeMdid="0.1042.1.0" ColWidth="2"/>
-                                        <dxl:Column ColId="94" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                                        <dxl:Column ColId="95" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                                        <dxl:Column ColId="96" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                                        <dxl:Column ColId="97" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                                        <dxl:Column ColId="98" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                                        <dxl:Column ColId="99" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                                        <dxl:Column ColId="100" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                                      </dxl:Columns>
-                                    </dxl:TableDescriptor>
-                                  </dxl:TableScan>
-                                  <dxl:BroadcastMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
-                                    <dxl:Properties>
-                                      <dxl:Cost StartupCost="0" TotalCost="10378.458774" Rows="64.000000" Width="3"/>
+                                      <dxl:Cost StartupCost="0" TotalCost="10378.458731" Rows="2.000000" Width="3"/>
                                     </dxl:Properties>
                                     <dxl:ProjList>
                                       <dxl:ProjElem ColId="155" Alias="s_state">
                                         <dxl:Ident ColId="155" ColName="s_state" TypeMdid="0.1042.1.0"/>
                                       </dxl:ProjElem>
                                     </dxl:ProjList>
-                                    <dxl:Filter/>
-                                    <dxl:SortingColumnList/>
-                                    <dxl:Result>
+                                    <dxl:Filter>
+                                      <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.420.1.0">
+                                        <dxl:Ident ColId="203" ColName="ranking" TypeMdid="0.20.1.0"/>
+                                        <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
+                                      </dxl:Comparison>
+                                    </dxl:Filter>
+                                    <dxl:OneTimeFilter/>
+                                    <dxl:Window PartitionColumns="155">
                                       <dxl:Properties>
-                                        <dxl:Cost StartupCost="0" TotalCost="10378.458496" Rows="2.000000" Width="3"/>
+                                        <dxl:Cost StartupCost="0" TotalCost="10378.458698" Rows="5.000000" Width="11"/>
                                       </dxl:Properties>
                                       <dxl:ProjList>
+                                        <dxl:ProjElem ColId="203" Alias="ranking">
+                                          <dxl:WindowFunc Mdid="0.7001.1.0" TypeMdid="0.20.1.0" Distinct="false" WindowStarArg="false" WindowSimpleAgg="false" WindowStrategy="Immediate" WinSpecPos="0"/>
+                                        </dxl:ProjElem>
                                         <dxl:ProjElem ColId="155" Alias="s_state">
                                           <dxl:Ident ColId="155" ColName="s_state" TypeMdid="0.1042.1.0"/>
                                         </dxl:ProjElem>
+                                        <dxl:ProjElem ColId="202" Alias="att_2">
+                                          <dxl:Ident ColId="202" ColName="att_2" TypeMdid="0.1700.1.0"/>
+                                        </dxl:ProjElem>
                                       </dxl:ProjList>
-                                      <dxl:Filter>
-                                        <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.420.1.0">
-                                          <dxl:Ident ColId="203" ColName="ranking" TypeMdid="0.20.1.0"/>
-                                          <dxl:ConstValue TypeMdid="0.23.1.0" Value="5"/>
-                                        </dxl:Comparison>
-                                      </dxl:Filter>
-                                      <dxl:OneTimeFilter/>
-                                      <dxl:Window PartitionColumns="155">
+                                      <dxl:Filter/>
+                                      <dxl:Sort SortDiscardDuplicates="false">
                                         <dxl:Properties>
-                                          <dxl:Cost StartupCost="0" TotalCost="10378.458463" Rows="5.000000" Width="11"/>
+                                          <dxl:Cost StartupCost="0" TotalCost="10378.458687" Rows="5.000000" Width="11"/>
                                         </dxl:Properties>
                                         <dxl:ProjList>
-                                          <dxl:ProjElem ColId="203" Alias="ranking">
-                                            <dxl:WindowFunc Mdid="0.7001.1.0" TypeMdid="0.20.1.0" Distinct="false" WindowStarArg="false" WindowSimpleAgg="false" WindowStrategy="Immediate" WinSpecPos="0"/>
+                                          <dxl:ProjElem ColId="202" Alias="att_2">
+                                            <dxl:Ident ColId="202" ColName="att_2" TypeMdid="0.1700.1.0"/>
                                           </dxl:ProjElem>
                                           <dxl:ProjElem ColId="155" Alias="s_state">
                                             <dxl:Ident ColId="155" ColName="s_state" TypeMdid="0.1042.1.0"/>
                                           </dxl:ProjElem>
-                                          <dxl:ProjElem ColId="202" Alias="att_2">
-                                            <dxl:Ident ColId="202" ColName="att_2" TypeMdid="0.1700.1.0"/>
-                                          </dxl:ProjElem>
                                         </dxl:ProjList>
                                         <dxl:Filter/>
-                                        <dxl:Sort SortDiscardDuplicates="false">
+                                        <dxl:SortingColumnList>
+                                          <dxl:SortingColumn ColId="155" SortOperatorMdid="0.1058.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                                          <dxl:SortingColumn ColId="202" SortOperatorMdid="0.1756.1.0" SortOperatorName="&gt;" SortNullsFirst="false"/>
+                                        </dxl:SortingColumnList>
+                                        <dxl:LimitCount/>
+                                        <dxl:LimitOffset/>
+                                        <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
                                           <dxl:Properties>
-                                            <dxl:Cost StartupCost="0" TotalCost="10378.458452" Rows="5.000000" Width="11"/>
+                                            <dxl:Cost StartupCost="0" TotalCost="10378.458562" Rows="5.000000" Width="11"/>
                                           </dxl:Properties>
+                                          <dxl:GroupingColumns>
+                                            <dxl:GroupingColumn ColId="155"/>
+                                          </dxl:GroupingColumns>
                                           <dxl:ProjList>
                                             <dxl:ProjElem ColId="202" Alias="att_2">
-                                              <dxl:Ident ColId="202" ColName="att_2" TypeMdid="0.1700.1.0"/>
+                                              <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                                                <dxl:ValuesList ParamType="aggargs">
+                                                  <dxl:Ident ColId="1486" ColName="ColRef_1486" TypeMdid="0.1700.1.0"/>
+                                                </dxl:ValuesList>
+                                                <dxl:ValuesList ParamType="aggdirectargs"/>
+                                                <dxl:ValuesList ParamType="aggorder"/>
+                                                <dxl:ValuesList ParamType="aggdistinct"/>
+                                              </dxl:AggFunc>
                                             </dxl:ProjElem>
                                             <dxl:ProjElem ColId="155" Alias="s_state">
                                               <dxl:Ident ColId="155" ColName="s_state" TypeMdid="0.1042.1.0"/>
                                             </dxl:ProjElem>
                                           </dxl:ProjList>
                                           <dxl:Filter/>
-                                          <dxl:SortingColumnList>
-                                            <dxl:SortingColumn ColId="155" SortOperatorMdid="0.1058.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                                            <dxl:SortingColumn ColId="202" SortOperatorMdid="0.1756.1.0" SortOperatorName="&gt;" SortNullsFirst="false"/>
-                                          </dxl:SortingColumnList>
-                                          <dxl:LimitCount/>
-                                          <dxl:LimitOffset/>
-                                          <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
+                                          <dxl:RedistributeMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
                                             <dxl:Properties>
-                                              <dxl:Cost StartupCost="0" TotalCost="10378.458452" Rows="5.000000" Width="11"/>
+                                              <dxl:Cost StartupCost="0" TotalCost="10378.458435" Rows="5.000000" Width="11"/>
                                             </dxl:Properties>
-                                            <dxl:GroupingColumns>
-                                              <dxl:GroupingColumn ColId="155"/>
-                                            </dxl:GroupingColumns>
                                             <dxl:ProjList>
-                                              <dxl:ProjElem ColId="202" Alias="att_2">
-                                                <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
-                                                  <dxl:ValuesList ParamType="aggargs">
-                                                    <dxl:Ident ColId="1486" ColName="ColRef_1486" TypeMdid="0.1700.1.0"/>
-                                                  </dxl:ValuesList>
-                                                  <dxl:ValuesList ParamType="aggdirectargs"/>
-                                                  <dxl:ValuesList ParamType="aggorder"/>
-                                                  <dxl:ValuesList ParamType="aggdistinct"/>
-                                                </dxl:AggFunc>
-                                              </dxl:ProjElem>
                                               <dxl:ProjElem ColId="155" Alias="s_state">
                                                 <dxl:Ident ColId="155" ColName="s_state" TypeMdid="0.1042.1.0"/>
                                               </dxl:ProjElem>
+                                              <dxl:ProjElem ColId="1486" Alias="ColRef_1486">
+                                                <dxl:Ident ColId="1486" ColName="ColRef_1486" TypeMdid="0.1700.1.0"/>
+                                              </dxl:ProjElem>
                                             </dxl:ProjList>
                                             <dxl:Filter/>
-                                            <dxl:Sort SortDiscardDuplicates="false">
+                                            <dxl:SortingColumnList/>
+                                            <dxl:HashExprList>
+                                              <dxl:HashExpr>
+                                                <dxl:Ident ColId="155" ColName="s_state" TypeMdid="0.1042.1.0"/>
+                                              </dxl:HashExpr>
+                                            </dxl:HashExprList>
+                                            <dxl:Result>
                                               <dxl:Properties>
-                                                <dxl:Cost StartupCost="0" TotalCost="10378.458435" Rows="5.000000" Width="11"/>
+                                                <dxl:Cost StartupCost="0" TotalCost="10378.458422" Rows="5.000000" Width="11"/>
                                               </dxl:Properties>
                                               <dxl:ProjList>
                                                 <dxl:ProjElem ColId="155" Alias="s_state">
@@ -15238,254 +15235,215 @@ with results as
                                                 </dxl:ProjElem>
                                               </dxl:ProjList>
                                               <dxl:Filter/>
-                                              <dxl:SortingColumnList>
-                                                <dxl:SortingColumn ColId="155" SortOperatorMdid="0.1058.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                                              </dxl:SortingColumnList>
-                                              <dxl:LimitCount/>
-                                              <dxl:LimitOffset/>
-                                              <dxl:RedistributeMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
+                                              <dxl:OneTimeFilter/>
+                                              <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                                                 <dxl:Properties>
-                                                  <dxl:Cost StartupCost="0" TotalCost="10378.458435" Rows="5.000000" Width="11"/>
+                                                  <dxl:Cost StartupCost="0" TotalCost="10378.458422" Rows="5.000000" Width="11"/>
                                                 </dxl:Properties>
+                                                <dxl:GroupingColumns>
+                                                  <dxl:GroupingColumn ColId="155"/>
+                                                </dxl:GroupingColumns>
                                                 <dxl:ProjList>
+                                                  <dxl:ProjElem ColId="1486" Alias="ColRef_1486">
+                                                    <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                                                      <dxl:ValuesList ParamType="aggargs">
+                                                        <dxl:Ident ColId="123" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
+                                                      </dxl:ValuesList>
+                                                      <dxl:ValuesList ParamType="aggdirectargs"/>
+                                                      <dxl:ValuesList ParamType="aggorder"/>
+                                                      <dxl:ValuesList ParamType="aggdistinct"/>
+                                                    </dxl:AggFunc>
+                                                  </dxl:ProjElem>
                                                   <dxl:ProjElem ColId="155" Alias="s_state">
                                                     <dxl:Ident ColId="155" ColName="s_state" TypeMdid="0.1042.1.0"/>
                                                   </dxl:ProjElem>
-                                                  <dxl:ProjElem ColId="1486" Alias="ColRef_1486">
-                                                    <dxl:Ident ColId="1486" ColName="ColRef_1486" TypeMdid="0.1700.1.0"/>
-                                                  </dxl:ProjElem>
                                                 </dxl:ProjList>
                                                 <dxl:Filter/>
-                                                <dxl:SortingColumnList/>
-                                                <dxl:HashExprList>
-                                                  <dxl:HashExpr>
-                                                    <dxl:Ident ColId="155" ColName="s_state" TypeMdid="0.1042.1.0"/>
-                                                  </dxl:HashExpr>
-                                                </dxl:HashExprList>
-                                                <dxl:Result>
+                                                <dxl:HashJoin JoinType="Inner">
                                                   <dxl:Properties>
-                                                    <dxl:Cost StartupCost="0" TotalCost="10378.458422" Rows="5.000000" Width="11"/>
+                                                    <dxl:Cost StartupCost="0" TotalCost="9736.121994" Rows="169549002.661349" Width="11"/>
                                                   </dxl:Properties>
                                                   <dxl:ProjList>
+                                                    <dxl:ProjElem ColId="123" Alias="ss_net_profit">
+                                                      <dxl:Ident ColId="123" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
+                                                    </dxl:ProjElem>
                                                     <dxl:ProjElem ColId="155" Alias="s_state">
                                                       <dxl:Ident ColId="155" ColName="s_state" TypeMdid="0.1042.1.0"/>
                                                     </dxl:ProjElem>
-                                                    <dxl:ProjElem ColId="1486" Alias="ColRef_1486">
-                                                      <dxl:Ident ColId="1486" ColName="ColRef_1486" TypeMdid="0.1700.1.0"/>
-                                                    </dxl:ProjElem>
                                                   </dxl:ProjList>
                                                   <dxl:Filter/>
-                                                  <dxl:OneTimeFilter/>
-                                                  <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
+                                                  <dxl:JoinFilter/>
+                                                  <dxl:HashCondList>
+                                                    <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                                                      <dxl:Ident ColId="108" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
+                                                      <dxl:Ident ColId="131" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
+                                                    </dxl:Comparison>
+                                                  </dxl:HashCondList>
+                                                  <dxl:HashJoin JoinType="Inner">
                                                     <dxl:Properties>
-                                                      <dxl:Cost StartupCost="0" TotalCost="10378.458422" Rows="5.000000" Width="11"/>
+                                                      <dxl:Cost StartupCost="0" TotalCost="8141.454737" Rows="169549002.661349" Width="12"/>
                                                     </dxl:Properties>
-                                                    <dxl:GroupingColumns>
-                                                      <dxl:GroupingColumn ColId="155"/>
-                                                    </dxl:GroupingColumns>
                                                     <dxl:ProjList>
-                                                      <dxl:ProjElem ColId="1486" Alias="ColRef_1486">
-                                                        <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
-                                                          <dxl:ValuesList ParamType="aggargs">
-                                                            <dxl:Ident ColId="123" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
-                                                          </dxl:ValuesList>
-                                                          <dxl:ValuesList ParamType="aggdirectargs"/>
-                                                          <dxl:ValuesList ParamType="aggorder"/>
-                                                          <dxl:ValuesList ParamType="aggdistinct"/>
-                                                        </dxl:AggFunc>
+                                                      <dxl:ProjElem ColId="108" Alias="ss_store_sk">
+                                                        <dxl:Ident ColId="108" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
+                                                      </dxl:ProjElem>
+                                                      <dxl:ProjElem ColId="123" Alias="ss_net_profit">
+                                                        <dxl:Ident ColId="123" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
+                                                      </dxl:ProjElem>
+                                                    </dxl:ProjList>
+                                                    <dxl:Filter/>
+                                                    <dxl:JoinFilter/>
+                                                    <dxl:HashCondList>
+                                                      <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                                                        <dxl:Ident ColId="101" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
+                                                        <dxl:Ident ColId="167" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
+                                                      </dxl:Comparison>
+                                                    </dxl:HashCondList>
+                                                    <dxl:TableScan>
+                                                      <dxl:Properties>
+                                                        <dxl:Cost StartupCost="0" TotalCost="2572.718951" Rows="737331968.000000" Width="16"/>
+                                                      </dxl:Properties>
+                                                      <dxl:ProjList>
+                                                        <dxl:ProjElem ColId="101" Alias="ss_sold_date_sk">
+                                                          <dxl:Ident ColId="101" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
+                                                        </dxl:ProjElem>
+                                                        <dxl:ProjElem ColId="108" Alias="ss_store_sk">
+                                                          <dxl:Ident ColId="108" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
+                                                        </dxl:ProjElem>
+                                                        <dxl:ProjElem ColId="123" Alias="ss_net_profit">
+                                                          <dxl:Ident ColId="123" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
+                                                        </dxl:ProjElem>
+                                                      </dxl:ProjList>
+                                                      <dxl:Filter/>
+                                                      <dxl:TableDescriptor Mdid="6.8403512.1.1" TableName="store_sales">
+                                                        <dxl:Columns>
+                                                          <dxl:Column ColId="101" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
+                                                          <dxl:Column ColId="103" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
+                                                          <dxl:Column ColId="108" Attno="8" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
+                                                          <dxl:Column ColId="110" Attno="10" ColName="ss_ticket_number" TypeMdid="0.20.1.0"/>
+                                                          <dxl:Column ColId="123" Attno="23" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
+                                                          <dxl:Column ColId="124" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                                                          <dxl:Column ColId="125" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                                                          <dxl:Column ColId="126" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                                                          <dxl:Column ColId="127" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                                                          <dxl:Column ColId="128" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                                                          <dxl:Column ColId="129" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                                                          <dxl:Column ColId="130" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                                                        </dxl:Columns>
+                                                      </dxl:TableDescriptor>
+                                                    </dxl:TableScan>
+                                                    <dxl:BroadcastMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
+                                                      <dxl:Properties>
+                                                        <dxl:Cost StartupCost="0" TotalCost="431.252171" Rows="13414.324949" Width="4"/>
+                                                      </dxl:Properties>
+                                                      <dxl:ProjList>
+                                                        <dxl:ProjElem ColId="167" Alias="d_date_sk">
+                                                          <dxl:Ident ColId="167" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
+                                                        </dxl:ProjElem>
+                                                      </dxl:ProjList>
+                                                      <dxl:Filter/>
+                                                      <dxl:SortingColumnList/>
+                                                      <dxl:TableScan>
+                                                        <dxl:Properties>
+                                                          <dxl:Cost StartupCost="0" TotalCost="431.247306" Rows="419.197655" Width="4"/>
+                                                        </dxl:Properties>
+                                                        <dxl:ProjList>
+                                                          <dxl:ProjElem ColId="167" Alias="d_date_sk">
+                                                            <dxl:Ident ColId="167" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
+                                                          </dxl:ProjElem>
+                                                        </dxl:ProjList>
+                                                        <dxl:Filter>
+                                                          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                                                            <dxl:Ident ColId="173" ColName="d_year" TypeMdid="0.23.1.0"/>
+                                                            <dxl:ConstValue TypeMdid="0.23.1.0" Value="2000"/>
+                                                          </dxl:Comparison>
+                                                        </dxl:Filter>
+                                                        <dxl:TableDescriptor Mdid="6.8402992.1.1" TableName="date_dim">
+                                                          <dxl:Columns>
+                                                            <dxl:Column ColId="167" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
+                                                            <dxl:Column ColId="173" Attno="7" ColName="d_year" TypeMdid="0.23.1.0"/>
+                                                            <dxl:Column ColId="195" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                                                            <dxl:Column ColId="196" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                                                            <dxl:Column ColId="197" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                                                            <dxl:Column ColId="198" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                                                            <dxl:Column ColId="199" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                                                            <dxl:Column ColId="200" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                                                            <dxl:Column ColId="201" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                                                          </dxl:Columns>
+                                                        </dxl:TableDescriptor>
+                                                      </dxl:TableScan>
+                                                    </dxl:BroadcastMotion>
+                                                  </dxl:HashJoin>
+                                                  <dxl:BroadcastMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
+                                                    <dxl:Properties>
+                                                      <dxl:Cost StartupCost="0" TotalCost="431.010956" Rows="10368.000000" Width="7"/>
+                                                    </dxl:Properties>
+                                                    <dxl:ProjList>
+                                                      <dxl:ProjElem ColId="131" Alias="s_store_sk">
+                                                        <dxl:Ident ColId="131" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
                                                       </dxl:ProjElem>
                                                       <dxl:ProjElem ColId="155" Alias="s_state">
                                                         <dxl:Ident ColId="155" ColName="s_state" TypeMdid="0.1042.1.0"/>
                                                       </dxl:ProjElem>
                                                     </dxl:ProjList>
                                                     <dxl:Filter/>
-                                                    <dxl:HashJoin JoinType="Inner">
+                                                    <dxl:SortingColumnList/>
+                                                    <dxl:TableScan>
                                                       <dxl:Properties>
-                                                        <dxl:Cost StartupCost="0" TotalCost="9736.121994" Rows="169549002.661349" Width="11"/>
+                                                        <dxl:Cost StartupCost="0" TotalCost="431.004243" Rows="324.000000" Width="7"/>
                                                       </dxl:Properties>
                                                       <dxl:ProjList>
-                                                        <dxl:ProjElem ColId="123" Alias="ss_net_profit">
-                                                          <dxl:Ident ColId="123" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
+                                                        <dxl:ProjElem ColId="131" Alias="s_store_sk">
+                                                          <dxl:Ident ColId="131" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
                                                         </dxl:ProjElem>
                                                         <dxl:ProjElem ColId="155" Alias="s_state">
                                                           <dxl:Ident ColId="155" ColName="s_state" TypeMdid="0.1042.1.0"/>
                                                         </dxl:ProjElem>
                                                       </dxl:ProjList>
                                                       <dxl:Filter/>
-                                                      <dxl:JoinFilter/>
-                                                      <dxl:HashCondList>
-                                                        <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                                          <dxl:Ident ColId="108" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
-                                                          <dxl:Ident ColId="131" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
-                                                        </dxl:Comparison>
-                                                      </dxl:HashCondList>
-                                                      <dxl:HashJoin JoinType="Inner">
-                                                        <dxl:Properties>
-                                                          <dxl:Cost StartupCost="0" TotalCost="8141.454737" Rows="169549002.661349" Width="12"/>
-                                                        </dxl:Properties>
-                                                        <dxl:ProjList>
-                                                          <dxl:ProjElem ColId="108" Alias="ss_store_sk">
-                                                            <dxl:Ident ColId="108" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
-                                                          </dxl:ProjElem>
-                                                          <dxl:ProjElem ColId="123" Alias="ss_net_profit">
-                                                            <dxl:Ident ColId="123" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
-                                                          </dxl:ProjElem>
-                                                        </dxl:ProjList>
-                                                        <dxl:Filter/>
-                                                        <dxl:JoinFilter/>
-                                                        <dxl:HashCondList>
-                                                          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                                            <dxl:Ident ColId="101" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
-                                                            <dxl:Ident ColId="167" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                                                          </dxl:Comparison>
-                                                        </dxl:HashCondList>
-                                                        <dxl:TableScan>
-                                                          <dxl:Properties>
-                                                            <dxl:Cost StartupCost="0" TotalCost="2572.718951" Rows="737331968.000000" Width="16"/>
-                                                          </dxl:Properties>
-                                                          <dxl:ProjList>
-                                                            <dxl:ProjElem ColId="101" Alias="ss_sold_date_sk">
-                                                              <dxl:Ident ColId="101" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
-                                                            </dxl:ProjElem>
-                                                            <dxl:ProjElem ColId="108" Alias="ss_store_sk">
-                                                              <dxl:Ident ColId="108" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
-                                                            </dxl:ProjElem>
-                                                            <dxl:ProjElem ColId="123" Alias="ss_net_profit">
-                                                              <dxl:Ident ColId="123" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
-                                                            </dxl:ProjElem>
-                                                          </dxl:ProjList>
-                                                          <dxl:Filter/>
-                                                          <dxl:TableDescriptor Mdid="6.8403512.1.1" TableName="store_sales">
-                                                            <dxl:Columns>
-                                                              <dxl:Column ColId="101" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
-                                                              <dxl:Column ColId="103" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
-                                                              <dxl:Column ColId="108" Attno="8" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
-                                                              <dxl:Column ColId="110" Attno="10" ColName="ss_ticket_number" TypeMdid="0.20.1.0"/>
-                                                              <dxl:Column ColId="123" Attno="23" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
-                                                              <dxl:Column ColId="124" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                                                              <dxl:Column ColId="125" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                                                              <dxl:Column ColId="126" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                                                              <dxl:Column ColId="127" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                                                              <dxl:Column ColId="128" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                                                              <dxl:Column ColId="129" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                                                              <dxl:Column ColId="130" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                                                            </dxl:Columns>
-                                                          </dxl:TableDescriptor>
-                                                        </dxl:TableScan>
-                                                        <dxl:BroadcastMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
-                                                          <dxl:Properties>
-                                                            <dxl:Cost StartupCost="0" TotalCost="431.252171" Rows="13414.324949" Width="4"/>
-                                                          </dxl:Properties>
-                                                          <dxl:ProjList>
-                                                            <dxl:ProjElem ColId="167" Alias="d_date_sk">
-                                                              <dxl:Ident ColId="167" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                                                            </dxl:ProjElem>
-                                                          </dxl:ProjList>
-                                                          <dxl:Filter/>
-                                                          <dxl:SortingColumnList/>
-                                                          <dxl:TableScan>
-                                                            <dxl:Properties>
-                                                              <dxl:Cost StartupCost="0" TotalCost="431.247306" Rows="419.197655" Width="4"/>
-                                                            </dxl:Properties>
-                                                            <dxl:ProjList>
-                                                              <dxl:ProjElem ColId="167" Alias="d_date_sk">
-                                                                <dxl:Ident ColId="167" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                                                              </dxl:ProjElem>
-                                                            </dxl:ProjList>
-                                                            <dxl:Filter>
-                                                              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                                                                <dxl:Ident ColId="173" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                                                <dxl:ConstValue TypeMdid="0.23.1.0" Value="2000"/>
-                                                              </dxl:Comparison>
-                                                            </dxl:Filter>
-                                                            <dxl:TableDescriptor Mdid="6.8402992.1.1" TableName="date_dim">
-                                                              <dxl:Columns>
-                                                                <dxl:Column ColId="167" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                                                                <dxl:Column ColId="173" Attno="7" ColName="d_year" TypeMdid="0.23.1.0"/>
-                                                                <dxl:Column ColId="195" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                                                                <dxl:Column ColId="196" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                                                                <dxl:Column ColId="197" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                                                                <dxl:Column ColId="198" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                                                                <dxl:Column ColId="199" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                                                                <dxl:Column ColId="200" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                                                                <dxl:Column ColId="201" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                                                              </dxl:Columns>
-                                                            </dxl:TableDescriptor>
-                                                          </dxl:TableScan>
-                                                        </dxl:BroadcastMotion>
-                                                      </dxl:HashJoin>
-                                                      <dxl:BroadcastMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
-                                                        <dxl:Properties>
-                                                          <dxl:Cost StartupCost="0" TotalCost="431.010956" Rows="10368.000000" Width="7"/>
-                                                        </dxl:Properties>
-                                                        <dxl:ProjList>
-                                                          <dxl:ProjElem ColId="131" Alias="s_store_sk">
-                                                            <dxl:Ident ColId="131" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
-                                                          </dxl:ProjElem>
-                                                          <dxl:ProjElem ColId="155" Alias="s_state">
-                                                            <dxl:Ident ColId="155" ColName="s_state" TypeMdid="0.1042.1.0"/>
-                                                          </dxl:ProjElem>
-                                                        </dxl:ProjList>
-                                                        <dxl:Filter/>
-                                                        <dxl:SortingColumnList/>
-                                                        <dxl:TableScan>
-                                                          <dxl:Properties>
-                                                            <dxl:Cost StartupCost="0" TotalCost="431.004243" Rows="324.000000" Width="7"/>
-                                                          </dxl:Properties>
-                                                          <dxl:ProjList>
-                                                            <dxl:ProjElem ColId="131" Alias="s_store_sk">
-                                                              <dxl:Ident ColId="131" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
-                                                            </dxl:ProjElem>
-                                                            <dxl:ProjElem ColId="155" Alias="s_state">
-                                                              <dxl:Ident ColId="155" ColName="s_state" TypeMdid="0.1042.1.0"/>
-                                                            </dxl:ProjElem>
-                                                          </dxl:ProjList>
-                                                          <dxl:Filter/>
-                                                          <dxl:TableDescriptor Mdid="6.8403408.1.1" TableName="store">
-                                                            <dxl:Columns>
-                                                              <dxl:Column ColId="131" Attno="1" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
-                                                              <dxl:Column ColId="155" Attno="25" ColName="s_state" TypeMdid="0.1042.1.0" ColWidth="2"/>
-                                                              <dxl:Column ColId="160" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                                                              <dxl:Column ColId="161" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                                                              <dxl:Column ColId="162" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                                                              <dxl:Column ColId="163" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                                                              <dxl:Column ColId="164" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                                                              <dxl:Column ColId="165" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                                                              <dxl:Column ColId="166" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                                                            </dxl:Columns>
-                                                          </dxl:TableDescriptor>
-                                                        </dxl:TableScan>
-                                                      </dxl:BroadcastMotion>
-                                                    </dxl:HashJoin>
-                                                  </dxl:Aggregate>
-                                                </dxl:Result>
-                                              </dxl:RedistributeMotion>
-                                            </dxl:Sort>
-                                          </dxl:Aggregate>
-                                        </dxl:Sort>
-                                        <dxl:WindowKeyList>
-                                          <dxl:WindowKey>
-                                            <dxl:SortingColumnList>
-                                              <dxl:SortingColumn ColId="202" SortOperatorMdid="0.1756.1.0" SortOperatorName="&gt;" SortNullsFirst="false"/>
-                                            </dxl:SortingColumnList>
-                                          </dxl:WindowKey>
-                                        </dxl:WindowKeyList>
-                                      </dxl:Window>
-                                    </dxl:Result>
-                                  </dxl:BroadcastMotion>
-                                </dxl:HashJoin>
-                              </dxl:BroadcastMotion>
-                            </dxl:HashJoin>
-                          </dxl:Aggregate>
-                        </dxl:Result>
-                      </dxl:RedistributeMotion>
-                    </dxl:Sort>
+                                                      <dxl:TableDescriptor Mdid="6.8403408.1.1" TableName="store">
+                                                        <dxl:Columns>
+                                                          <dxl:Column ColId="131" Attno="1" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
+                                                          <dxl:Column ColId="155" Attno="25" ColName="s_state" TypeMdid="0.1042.1.0" ColWidth="2"/>
+                                                          <dxl:Column ColId="160" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                                                          <dxl:Column ColId="161" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                                                          <dxl:Column ColId="162" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                                                          <dxl:Column ColId="163" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                                                          <dxl:Column ColId="164" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                                                          <dxl:Column ColId="165" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                                                          <dxl:Column ColId="166" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                                                        </dxl:Columns>
+                                                      </dxl:TableDescriptor>
+                                                    </dxl:TableScan>
+                                                  </dxl:BroadcastMotion>
+                                                </dxl:HashJoin>
+                                              </dxl:Aggregate>
+                                            </dxl:Result>
+                                          </dxl:RedistributeMotion>
+                                        </dxl:Aggregate>
+                                      </dxl:Sort>
+                                      <dxl:WindowKeyList>
+                                        <dxl:WindowKey>
+                                          <dxl:SortingColumnList>
+                                            <dxl:SortingColumn ColId="202" SortOperatorMdid="0.1756.1.0" SortOperatorName="&gt;" SortNullsFirst="false"/>
+                                          </dxl:SortingColumnList>
+                                        </dxl:WindowKey>
+                                      </dxl:WindowKeyList>
+                                    </dxl:Window>
+                                  </dxl:Result>
+                                </dxl:BroadcastMotion>
+                              </dxl:HashJoin>
+                            </dxl:BroadcastMotion>
+                          </dxl:HashJoin>
+                        </dxl:Aggregate>
+                      </dxl:Result>
+                    </dxl:RedistributeMotion>
                   </dxl:Aggregate>
                 </dxl:Result>
               </dxl:CTEProducer>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1293.000996" Rows="20.062500" Width="44"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1293.002368" Rows="20.062500" Width="44"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="842" Alias="sum">
@@ -15518,7 +15476,7 @@ with results as
                 <dxl:OneTimeFilter/>
                 <dxl:Window PartitionColumns="847,1477">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1293.000968" Rows="20.062500" Width="31"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1293.002340" Rows="20.062500" Width="31"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="1478" Alias="rank">
@@ -15543,7 +15501,7 @@ with results as
                   <dxl:Filter/>
                   <dxl:Sort SortDiscardDuplicates="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="1293.000949" Rows="20.062500" Width="31"/>
+                      <dxl:Cost StartupCost="0" TotalCost="1293.002321" Rows="20.062500" Width="31"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="842" Alias="sum">
@@ -15572,7 +15530,7 @@ with results as
                     <dxl:LimitOffset/>
                     <dxl:RedistributeMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="1293.000949" Rows="20.062500" Width="31"/>
+                        <dxl:Cost StartupCost="0" TotalCost="1293.001969" Rows="20.062500" Width="31"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="842" Alias="sum">
@@ -15603,7 +15561,7 @@ with results as
                       </dxl:HashExprList>
                       <dxl:Result>
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="1293.000888" Rows="20.062500" Width="31"/>
+                          <dxl:Cost StartupCost="0" TotalCost="1293.001909" Rows="20.062500" Width="31"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="842" Alias="sum">
@@ -15626,7 +15584,7 @@ with results as
                         <dxl:OneTimeFilter/>
                         <dxl:Result>
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="1293.000888" Rows="20.062500" Width="31"/>
+                            <dxl:Cost StartupCost="0" TotalCost="1293.001909" Rows="20.062500" Width="31"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="1477" Alias="?column?">
@@ -15656,7 +15614,7 @@ with results as
                           <dxl:OneTimeFilter/>
                           <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="1293.000869" Rows="20.062500" Width="34"/>
+                              <dxl:Cost StartupCost="0" TotalCost="1293.001889" Rows="20.062500" Width="34"/>
                             </dxl:Properties>
                             <dxl:GroupingColumns>
                               <dxl:GroupingColumn ColId="842"/>
@@ -15689,7 +15647,7 @@ with results as
                             <dxl:Filter/>
                             <dxl:Sort SortDiscardDuplicates="false">
                               <dxl:Properties>
-                                <dxl:Cost StartupCost="0" TotalCost="1293.000819" Rows="20.062500" Width="38"/>
+                                <dxl:Cost StartupCost="0" TotalCost="1293.001839" Rows="20.062500" Width="38"/>
                               </dxl:Properties>
                               <dxl:ProjList>
                                 <dxl:ProjElem ColId="842" Alias="sum">
@@ -15724,7 +15682,7 @@ with results as
                               <dxl:LimitOffset/>
                               <dxl:RedistributeMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
                                 <dxl:Properties>
-                                  <dxl:Cost StartupCost="0" TotalCost="1293.000819" Rows="20.062500" Width="38"/>
+                                  <dxl:Cost StartupCost="0" TotalCost="1293.001408" Rows="20.062500" Width="38"/>
                                 </dxl:Properties>
                                 <dxl:ProjList>
                                   <dxl:ProjElem ColId="842" Alias="sum">
@@ -15770,7 +15728,7 @@ with results as
                                 </dxl:HashExprList>
                                 <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                                   <dxl:Properties>
-                                    <dxl:Cost StartupCost="0" TotalCost="1293.000733" Rows="20.062500" Width="38"/>
+                                    <dxl:Cost StartupCost="0" TotalCost="1293.001322" Rows="20.062500" Width="38"/>
                                   </dxl:Properties>
                                   <dxl:GroupingColumns>
                                     <dxl:GroupingColumn ColId="842"/>
@@ -15803,7 +15761,7 @@ with results as
                                   <dxl:Filter/>
                                   <dxl:Sort SortDiscardDuplicates="false">
                                     <dxl:Properties>
-                                      <dxl:Cost StartupCost="0" TotalCost="1293.000281" Rows="20.062500" Width="38"/>
+                                      <dxl:Cost StartupCost="0" TotalCost="1293.000871" Rows="20.062500" Width="38"/>
                                     </dxl:Properties>
                                     <dxl:ProjList>
                                       <dxl:ProjElem ColId="842" Alias="sum">
@@ -15838,7 +15796,7 @@ with results as
                                     <dxl:LimitOffset/>
                                     <dxl:Append IsTarget="false" IsZapped="false">
                                       <dxl:Properties>
-                                        <dxl:Cost StartupCost="0" TotalCost="1293.000281" Rows="20.062500" Width="38"/>
+                                        <dxl:Cost StartupCost="0" TotalCost="1293.000440" Rows="20.062500" Width="38"/>
                                       </dxl:Properties>
                                       <dxl:ProjList>
                                         <dxl:ProjElem ColId="842" Alias="sum">
@@ -15912,7 +15870,7 @@ with results as
                                       </dxl:Result>
                                       <dxl:Result>
                                         <dxl:Properties>
-                                          <dxl:Cost StartupCost="0" TotalCost="431.000108" Rows="5.000000" Width="31"/>
+                                          <dxl:Cost StartupCost="0" TotalCost="431.000267" Rows="5.000000" Width="31"/>
                                         </dxl:Properties>
                                         <dxl:ProjList>
                                           <dxl:ProjElem ColId="1259" Alias="sum">
@@ -15936,9 +15894,9 @@ with results as
                                         </dxl:ProjList>
                                         <dxl:Filter/>
                                         <dxl:OneTimeFilter/>
-                                        <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
+                                        <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
                                           <dxl:Properties>
-                                            <dxl:Cost StartupCost="0" TotalCost="431.000077" Rows="5.000000" Width="11"/>
+                                            <dxl:Cost StartupCost="0" TotalCost="431.000236" Rows="5.000000" Width="11"/>
                                           </dxl:Properties>
                                           <dxl:GroupingColumns>
                                             <dxl:GroupingColumn ColId="1053"/>
@@ -15959,9 +15917,9 @@ with results as
                                             </dxl:ProjElem>
                                           </dxl:ProjList>
                                           <dxl:Filter/>
-                                          <dxl:Sort SortDiscardDuplicates="false">
+                                          <dxl:RedistributeMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
                                             <dxl:Properties>
-                                              <dxl:Cost StartupCost="0" TotalCost="431.000060" Rows="5.000000" Width="11"/>
+                                              <dxl:Cost StartupCost="0" TotalCost="431.000109" Rows="5.000000" Width="11"/>
                                             </dxl:Properties>
                                             <dxl:ProjList>
                                               <dxl:ProjElem ColId="1053" Alias="s_state">
@@ -15972,14 +15930,15 @@ with results as
                                               </dxl:ProjElem>
                                             </dxl:ProjList>
                                             <dxl:Filter/>
-                                            <dxl:SortingColumnList>
-                                              <dxl:SortingColumn ColId="1053" SortOperatorMdid="0.1058.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                                            </dxl:SortingColumnList>
-                                            <dxl:LimitCount/>
-                                            <dxl:LimitOffset/>
-                                            <dxl:RedistributeMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31">
+                                            <dxl:SortingColumnList/>
+                                            <dxl:HashExprList>
+                                              <dxl:HashExpr>
+                                                <dxl:Ident ColId="1053" ColName="s_state" TypeMdid="0.1042.1.0"/>
+                                              </dxl:HashExpr>
+                                            </dxl:HashExprList>
+                                            <dxl:Result>
                                               <dxl:Properties>
-                                                <dxl:Cost StartupCost="0" TotalCost="431.000060" Rows="5.000000" Width="11"/>
+                                                <dxl:Cost StartupCost="0" TotalCost="431.000096" Rows="5.000000" Width="11"/>
                                               </dxl:Properties>
                                               <dxl:ProjList>
                                                 <dxl:ProjElem ColId="1053" Alias="s_state">
@@ -15990,103 +15949,55 @@ with results as
                                                 </dxl:ProjElem>
                                               </dxl:ProjList>
                                               <dxl:Filter/>
-                                              <dxl:SortingColumnList/>
-                                              <dxl:HashExprList>
-                                                <dxl:HashExpr>
-                                                  <dxl:Ident ColId="1053" ColName="s_state" TypeMdid="0.1042.1.0"/>
-                                                </dxl:HashExpr>
-                                              </dxl:HashExprList>
-                                              <dxl:Result>
+                                              <dxl:OneTimeFilter/>
+                                              <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                                                 <dxl:Properties>
-                                                  <dxl:Cost StartupCost="0" TotalCost="431.000047" Rows="5.000000" Width="11"/>
+                                                  <dxl:Cost StartupCost="0" TotalCost="431.000096" Rows="5.000000" Width="11"/>
                                                 </dxl:Properties>
+                                                <dxl:GroupingColumns>
+                                                  <dxl:GroupingColumn ColId="1053"/>
+                                                </dxl:GroupingColumns>
                                                 <dxl:ProjList>
+                                                  <dxl:ProjElem ColId="1481" Alias="ColRef_1481">
+                                                    <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                                                      <dxl:ValuesList ParamType="aggargs">
+                                                        <dxl:Ident ColId="1052" ColName="sum" TypeMdid="0.1700.1.0"/>
+                                                      </dxl:ValuesList>
+                                                      <dxl:ValuesList ParamType="aggdirectargs"/>
+                                                      <dxl:ValuesList ParamType="aggorder"/>
+                                                      <dxl:ValuesList ParamType="aggdistinct"/>
+                                                    </dxl:AggFunc>
+                                                  </dxl:ProjElem>
                                                   <dxl:ProjElem ColId="1053" Alias="s_state">
                                                     <dxl:Ident ColId="1053" ColName="s_state" TypeMdid="0.1042.1.0"/>
                                                   </dxl:ProjElem>
-                                                  <dxl:ProjElem ColId="1481" Alias="ColRef_1481">
-                                                    <dxl:Ident ColId="1481" ColName="ColRef_1481" TypeMdid="0.1700.1.0"/>
-                                                  </dxl:ProjElem>
                                                 </dxl:ProjList>
                                                 <dxl:Filter/>
-                                                <dxl:OneTimeFilter/>
-                                                <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
+                                                <dxl:CTEConsumer CTEId="0" Columns="1052,1053,1054,1055,1056">
                                                   <dxl:Properties>
-                                                    <dxl:Cost StartupCost="0" TotalCost="431.000047" Rows="5.000000" Width="11"/>
+                                                    <dxl:Cost StartupCost="0" TotalCost="431.000012" Rows="14.062500" Width="11"/>
                                                   </dxl:Properties>
-                                                  <dxl:GroupingColumns>
-                                                    <dxl:GroupingColumn ColId="1053"/>
-                                                  </dxl:GroupingColumns>
                                                   <dxl:ProjList>
-                                                    <dxl:ProjElem ColId="1481" Alias="ColRef_1481">
-                                                      <dxl:AggFunc AggMdid="0.2114.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
-                                                        <dxl:ValuesList ParamType="aggargs">
-                                                          <dxl:Ident ColId="1052" ColName="sum" TypeMdid="0.1700.1.0"/>
-                                                        </dxl:ValuesList>
-                                                        <dxl:ValuesList ParamType="aggdirectargs"/>
-                                                        <dxl:ValuesList ParamType="aggorder"/>
-                                                        <dxl:ValuesList ParamType="aggdistinct"/>
-                                                      </dxl:AggFunc>
+                                                    <dxl:ProjElem ColId="1052" Alias="sum">
+                                                      <dxl:Ident ColId="1052" ColName="sum" TypeMdid="0.1700.1.0"/>
                                                     </dxl:ProjElem>
                                                     <dxl:ProjElem ColId="1053" Alias="s_state">
                                                       <dxl:Ident ColId="1053" ColName="s_state" TypeMdid="0.1042.1.0"/>
                                                     </dxl:ProjElem>
+                                                    <dxl:ProjElem ColId="1054" Alias="s_county">
+                                                      <dxl:Ident ColId="1054" ColName="s_county" TypeMdid="0.1043.1.0"/>
+                                                    </dxl:ProjElem>
+                                                    <dxl:ProjElem ColId="1055" Alias="gstate">
+                                                      <dxl:Ident ColId="1055" ColName="gstate" TypeMdid="0.23.1.0"/>
+                                                    </dxl:ProjElem>
+                                                    <dxl:ProjElem ColId="1056" Alias="g_county">
+                                                      <dxl:Ident ColId="1056" ColName="g_county" TypeMdid="0.23.1.0"/>
+                                                    </dxl:ProjElem>
                                                   </dxl:ProjList>
-                                                  <dxl:Filter/>
-                                                  <dxl:Sort SortDiscardDuplicates="false">
-                                                    <dxl:Properties>
-                                                      <dxl:Cost StartupCost="0" TotalCost="431.000012" Rows="14.062500" Width="11"/>
-                                                    </dxl:Properties>
-                                                    <dxl:ProjList>
-                                                      <dxl:ProjElem ColId="1052" Alias="sum">
-                                                        <dxl:Ident ColId="1052" ColName="sum" TypeMdid="0.1700.1.0"/>
-                                                      </dxl:ProjElem>
-                                                      <dxl:ProjElem ColId="1053" Alias="s_state">
-                                                        <dxl:Ident ColId="1053" ColName="s_state" TypeMdid="0.1042.1.0"/>
-                                                      </dxl:ProjElem>
-                                                      <dxl:ProjElem ColId="1054" Alias="s_county">
-                                                        <dxl:Ident ColId="1054" ColName="s_county" TypeMdid="0.1043.1.0"/>
-                                                      </dxl:ProjElem>
-                                                      <dxl:ProjElem ColId="1055" Alias="gstate">
-                                                        <dxl:Ident ColId="1055" ColName="gstate" TypeMdid="0.23.1.0"/>
-                                                      </dxl:ProjElem>
-                                                      <dxl:ProjElem ColId="1056" Alias="g_county">
-                                                        <dxl:Ident ColId="1056" ColName="g_county" TypeMdid="0.23.1.0"/>
-                                                      </dxl:ProjElem>
-                                                    </dxl:ProjList>
-                                                    <dxl:Filter/>
-                                                    <dxl:SortingColumnList>
-                                                      <dxl:SortingColumn ColId="1053" SortOperatorMdid="0.1058.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                                                    </dxl:SortingColumnList>
-                                                    <dxl:LimitCount/>
-                                                    <dxl:LimitOffset/>
-                                                    <dxl:CTEConsumer CTEId="0" Columns="1052,1053,1054,1055,1056">
-                                                      <dxl:Properties>
-                                                        <dxl:Cost StartupCost="0" TotalCost="431.000012" Rows="14.062500" Width="11"/>
-                                                      </dxl:Properties>
-                                                      <dxl:ProjList>
-                                                        <dxl:ProjElem ColId="1052" Alias="sum">
-                                                          <dxl:Ident ColId="1052" ColName="sum" TypeMdid="0.1700.1.0"/>
-                                                        </dxl:ProjElem>
-                                                        <dxl:ProjElem ColId="1053" Alias="s_state">
-                                                          <dxl:Ident ColId="1053" ColName="s_state" TypeMdid="0.1042.1.0"/>
-                                                        </dxl:ProjElem>
-                                                        <dxl:ProjElem ColId="1054" Alias="s_county">
-                                                          <dxl:Ident ColId="1054" ColName="s_county" TypeMdid="0.1043.1.0"/>
-                                                        </dxl:ProjElem>
-                                                        <dxl:ProjElem ColId="1055" Alias="gstate">
-                                                          <dxl:Ident ColId="1055" ColName="gstate" TypeMdid="0.23.1.0"/>
-                                                        </dxl:ProjElem>
-                                                        <dxl:ProjElem ColId="1056" Alias="g_county">
-                                                          <dxl:Ident ColId="1056" ColName="g_county" TypeMdid="0.23.1.0"/>
-                                                        </dxl:ProjElem>
-                                                      </dxl:ProjList>
-                                                    </dxl:CTEConsumer>
-                                                  </dxl:Sort>
-                                                </dxl:Aggregate>
-                                              </dxl:Result>
-                                            </dxl:RedistributeMotion>
-                                          </dxl:Sort>
+                                                </dxl:CTEConsumer>
+                                              </dxl:Aggregate>
+                                            </dxl:Result>
+                                          </dxl:RedistributeMotion>
                                         </dxl:Aggregate>
                                       </dxl:Result>
                                       <dxl:Result>

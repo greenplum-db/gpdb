@@ -265,7 +265,7 @@ explain insert into CoordinatorOnly select * from distributedtable order by 1;
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:DMLInsert Columns="0,1,2" ActionCol="10" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.078234" Rows="1.000000" Width="20"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.078461" Rows="1.000000" Width="20"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -295,7 +295,7 @@ explain insert into CoordinatorOnly select * from distributedtable order by 1;
         </dxl:TableDescriptor>
         <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000109" Rows="1.000000" Width="20"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000336" Rows="1.000000" Width="20"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -315,7 +315,7 @@ explain insert into CoordinatorOnly select * from distributedtable order by 1;
           <dxl:SortingColumnList/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000034" Rows="1.000000" Width="20"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000261" Rows="1.000000" Width="20"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -335,7 +335,7 @@ explain insert into CoordinatorOnly select * from distributedtable order by 1;
             <dxl:OneTimeFilter/>
             <dxl:Sort SortDiscardDuplicates="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="20"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000248" Rows="1.000000" Width="20"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="a">

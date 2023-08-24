@@ -188,7 +188,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:DMLUpdate Columns="0,1" ActionCol="10" CtidCol="2" SegmentIdCol="8" IsSplitUpdate="true">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.086070" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.086320" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -214,7 +214,7 @@
         </dxl:TableDescriptor>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000133" Rows="2.000000" Width="22"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000382" Rows="2.000000" Width="22"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="c">

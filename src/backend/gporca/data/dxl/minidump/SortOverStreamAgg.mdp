@@ -2037,7 +2037,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.985181" Rows="2.000000" Width="15"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.985351" Rows="2.000000" Width="15"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="19" Alias="id">
@@ -2053,7 +2053,7 @@
         </dxl:SortingColumnList>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.985046" Rows="2.000000" Width="15"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.985216" Rows="2.000000" Width="15"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="19" Alias="year_id">
@@ -2083,7 +2083,7 @@
               <dxl:ProjElem ColId="40" Alias="a">
                 <dxl:AggFunc AggMdid="0.2145.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                   <dxl:ValuesList ParamType="aggargs">
-                  <dxl:Ident ColId="39" ColName="year_name" TypeMdid="0.25.1.0"/>
+                    <dxl:Ident ColId="39" ColName="year_name" TypeMdid="0.25.1.0"/>
                   </dxl:ValuesList>
                   <dxl:ValuesList ParamType="aggdirectargs"/>
                   <dxl:ValuesList ParamType="aggorder"/>
@@ -2103,9 +2103,9 @@
                 <dxl:ProjElem ColId="39" Alias="year_name">
                   <dxl:AggFunc AggMdid="0.2145.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                     <dxl:ValuesList ParamType="aggargs">
-                    <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                      <dxl:Ident ColId="20" ColName="year_name" TypeMdid="0.1043.1.0"/>
-                    </dxl:Cast>
+                      <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
+                        <dxl:Ident ColId="20" ColName="year_name" TypeMdid="0.1043.1.0"/>
+                      </dxl:Cast>
                     </dxl:ValuesList>
                     <dxl:ValuesList ParamType="aggdirectargs"/>
                     <dxl:ValuesList ParamType="aggorder"/>

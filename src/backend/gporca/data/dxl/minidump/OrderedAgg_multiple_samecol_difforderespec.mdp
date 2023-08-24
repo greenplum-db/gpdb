@@ -432,7 +432,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
     <dxl:Plan Id="0" SpaceSize="106000">
       <dxl:Sequence>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="2712060345.624441" Rows="1.000000" Width="16"/>
+          <dxl:Cost StartupCost="0" TotalCost="2712060346.182005" Rows="1.000000" Width="16"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="12" Alias="percentile_cont">
@@ -444,7 +444,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
         </dxl:ProjList>
         <dxl:CTEProducer CTEId="0" Columns="15,16">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000103" Rows="1.000000" Width="1"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000193" Rows="1.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="15" Alias="a2">
@@ -456,7 +456,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
           </dxl:ProjList>
           <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000102" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000192" Rows="1.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="15" Alias="a2">
@@ -470,7 +470,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
             <dxl:SortingColumnList/>
             <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000042" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000133" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="15"/>
@@ -493,7 +493,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
               <dxl:Filter/>
               <dxl:Sort SortDiscardDuplicates="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000031" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000122" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="15" Alias="a2">
@@ -553,7 +553,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
         </dxl:CTEProducer>
         <dxl:Sequence>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="2712059914.624321" Rows="1.000000" Width="16"/>
+            <dxl:Cost StartupCost="0" TotalCost="2712059915.181796" Rows="1.000000" Width="16"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="12" Alias="percentile_cont">
@@ -565,7 +565,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
           </dxl:ProjList>
           <dxl:CTEProducer CTEId="1" Columns="55,56">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000103" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000193" Rows="1.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="55" Alias="a2">
@@ -577,7 +577,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
             </dxl:ProjList>
             <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000102" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000192" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="55" Alias="a2">
@@ -591,7 +591,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
               <dxl:SortingColumnList/>
               <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000042" Rows="1.000000" Width="16"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000133" Rows="1.000000" Width="16"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="55"/>
@@ -614,7 +614,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
                 <dxl:Filter/>
                 <dxl:Sort SortDiscardDuplicates="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000031" Rows="1.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000122" Rows="1.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="55" Alias="a2">
@@ -674,7 +674,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
           </dxl:CTEProducer>
           <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="2712059483.624202" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="2712059484.181586" Rows="1.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="12" Alias="percentile_cont">
@@ -690,7 +690,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
             </dxl:JoinFilter>
             <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1324032.294698" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="1324032.294970" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:GroupingColumns/>
               <dxl:ProjList>
@@ -711,7 +711,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
               <dxl:Filter/>
               <dxl:Limit>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1324032.294690" Rows="1.000000" Width="24"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1324032.294962" Rows="1.000000" Width="24"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="1" Alias="a2">
@@ -726,7 +726,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
                 </dxl:ProjList>
                 <dxl:Sort SortDiscardDuplicates="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1324032.294666" Rows="1.000000" Width="24"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1324032.294938" Rows="1.000000" Width="24"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="1" Alias="a2">
@@ -793,7 +793,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="53" Alias="ColRef_0053">
-                            <dxl:FuncExpr FuncId="0.1779.1.0" FuncRetSet="false" TypeMdid="0.20.1.0">
+                            <dxl:FuncExpr FuncId="0.1779.1.0" FuncRetSet="false" TypeMdid="0.20.1.0" FuncVariadic="false">
                               <dxl:Ident ColId="52" ColName="ColRef_0052" TypeMdid="0.1700.1.0"/>
                             </dxl:FuncExpr>
                           </dxl:ProjElem>
@@ -846,7 +846,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
             </dxl:Aggregate>
             <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1324032.294698" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="1324032.294970" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:GroupingColumns/>
               <dxl:ProjList>
@@ -867,7 +867,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
               <dxl:Filter/>
               <dxl:Limit>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1324032.294690" Rows="1.000000" Width="24"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1324032.294962" Rows="1.000000" Width="24"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="1" Alias="a2">
@@ -882,7 +882,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
                 </dxl:ProjList>
                 <dxl:Sort SortDiscardDuplicates="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1324032.294666" Rows="1.000000" Width="24"/>
+                    <dxl:Cost StartupCost="0" TotalCost="1324032.294938" Rows="1.000000" Width="24"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="1" Alias="a2">
@@ -949,7 +949,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2), percentile_cont(0
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="93" Alias="ColRef_0093">
-                            <dxl:FuncExpr FuncId="0.1779.1.0" FuncRetSet="false" TypeMdid="0.20.1.0">
+                            <dxl:FuncExpr FuncId="0.1779.1.0" FuncRetSet="false" TypeMdid="0.20.1.0" FuncVariadic="false">
                               <dxl:Ident ColId="92" ColName="ColRef_0092" TypeMdid="0.1700.1.0"/>
                             </dxl:FuncExpr>
                           </dxl:ProjElem>

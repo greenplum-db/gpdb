@@ -310,7 +310,7 @@
     <dxl:Plan Id="0" SpaceSize="12">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.000954" Rows="1.000000" Width="28"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.001271" Rows="1.000000" Width="28"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="i">
@@ -335,7 +335,7 @@
         </dxl:SortingColumnList>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.000828" Rows="1.000000" Width="28"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.001145" Rows="1.000000" Width="28"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="i">
@@ -383,10 +383,10 @@
               <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.670.1.0">
                 <dxl:Coalesce TypeMdid="0.701.1.0">
                   <dxl:Ident ColId="2" ColName="f" TypeMdid="0.701.1.0"/>
-                  <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0">
+                  <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false">
                     <dxl:Ident ColId="10" ColName="i" TypeMdid="0.23.1.0"/>
                   </dxl:FuncExpr>
-                  <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0">
+                  <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0" FuncVariadic="false">
                     <dxl:Ident ColId="11" ColName="j" TypeMdid="0.23.1.0"/>
                   </dxl:FuncExpr>
                 </dxl:Coalesce>

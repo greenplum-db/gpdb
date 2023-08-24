@@ -331,7 +331,7 @@ explain select count(distinct b ) from foo;
     <dxl:Plan Id="0" SpaceSize="14">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="438.272743" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="438.272788" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:GroupingColumns/>
         <dxl:ProjList>
@@ -349,7 +349,7 @@ explain select count(distinct b ) from foo;
         <dxl:Filter/>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="438.272742" Rows="2.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="438.272788" Rows="2.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="b">
@@ -360,7 +360,7 @@ explain select count(distinct b ) from foo;
           <dxl:SortingColumnList/>
           <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="438.272706" Rows="2.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="438.272752" Rows="2.000000" Width="4"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="1"/>
@@ -373,7 +373,7 @@ explain select count(distinct b ) from foo;
             <dxl:Filter/>
             <dxl:Sort SortDiscardDuplicates="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="438.272700" Rows="2.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="438.272745" Rows="2.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="b">

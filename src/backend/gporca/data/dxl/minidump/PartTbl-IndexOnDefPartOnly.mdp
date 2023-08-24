@@ -1312,7 +1312,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
     <dxl:Plan Id="0" SpaceSize="8">
       <dxl:Limit>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.000294" Rows="1.000000" Width="17"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.000487" Rows="1.000000" Width="17"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="col1">
@@ -1330,7 +1330,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
         </dxl:ProjList>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.000277" Rows="1.000000" Width="17"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.000470" Rows="1.000000" Width="17"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="col1">
@@ -1353,7 +1353,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
           </dxl:SortingColumnList>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000201" Rows="1.000000" Width="17"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000394" Rows="1.000000" Width="17"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="col1">
@@ -1376,7 +1376,7 @@ SELECT * FROM pt_lt_tab WHERE col2 = 15 ORDER BY col2,col3 LIMIT 5;
             </dxl:SortingColumnList>
             <dxl:LimitCount/>
             <dxl:LimitOffset/>
-            <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="0" PrintablePartIndexId="1" SelectorIds="">
+            <dxl:DynamicIndexScan IndexScanDirection="Forward" SelectorIds="">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="6.000169" Rows="1.000000" Width="17"/>
               </dxl:Properties>
