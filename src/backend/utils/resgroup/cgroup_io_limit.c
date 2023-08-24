@@ -34,6 +34,7 @@
 #include <unistd.h>
 
 const char *IOconfigFields[4] = {"rbps", "wbps", "riops", "wiops"};
+const char	*IOStatFields[4] = {"rbytes", "wbytes", "rios", "wios"};
 
 static int bdi_cmp(const void *a, const void *b);
 static void ioconfig_validate(IOconfig *config);
@@ -398,7 +399,10 @@ get_iostat(Oid groupid, List *io_limit)
 	 * read all lines at a time
 	 */
 	while (pg_get_line_buf(f, line))
+	{
 		lines = lappend(lines, line->data);
+		initStringInfo(line);
+	}
 	FreeFile(f);
 
 	/*
@@ -415,14 +419,13 @@ get_iostat(Oid groupid, List *io_limit)
 					HASH_ELEM | HASH_CONTEXT);
 	foreach (cell, lines)
 	{
-		uint64 maj, min, wbytes = 0, rbytes = 0, rios = 0, wios = 0;
+		uint64 maj, min;
 		bdi_t bdi;
 		IOStatHashEntry *entry;
+		char *t;
 
 		char *str = (char *) lfirst(cell);
-		int res = sscanf(str, "%lu:%lu rbytes=%lu wbytes=%lu rios=%lu wios=%lu",
-						 &maj, &min, &rbytes, &wbytes, &rios, &wios);
-
+		int res = sscanf(str, "%lu:%lu", &maj, &min);
 		if (res == EOF)
 		{
 			ereport(ERROR,
@@ -434,10 +437,29 @@ get_iostat(Oid groupid, List *io_limit)
 		bdi = make_bdi(maj, min);
 		entry = hash_search(io_stat_hash, (void *)&bdi, HASH_ENTER, NULL);
 		entry->id = bdi;
-		entry->items.rbytes = rbytes;
-		entry->items.wbytes = wbytes;
-		entry->items.rios = rios;
-		entry->items.wios = wios;
+
+		t = str;
+		while (true)
+		{
+			char key[64];
+			int i;
+
+			t = index(t, ' ');
+			if (t == NULL)
+				break;
+			t++;
+
+			for (i = 0; i < lengthof(IOStatFields); i++)
+			{
+				if (strncmp(IOStatFields[i], t, strlen(IOStatFields[i])) == 0)
+				{
+					uint64 *value = (uint64 *) &entry->items;
+					sprintf(key, "%s=%%lu", IOStatFields[i]);
+					sscanf(t, key, value + i);
+					break;
+				}
+			}
+		}
 	}
 
 	/* construct result list */
