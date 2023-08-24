@@ -163,16 +163,27 @@ stat -fc %T /sys/fs/cgroup/
 
 For cgroup v1, the output is `tmpfs`. For cgroup v2, output is `cgroup2fs`.
 
+If you want to switch from v2 to v1, run the following command:
+
+```
+sudo grubby --update-kernel=/boot/vmlinuz-$(uname -r) --args="systemd.unified_cgroup_hierarchy=0 systemd.legacy_systemd_cgroup_controller"
+```
+
+If you want to switch from v2 to v1, run the following command:
+
+```
+sudo grubby --update-kernel=/boot/vmlinuz-$(uname -r) --args="systemd.unified_cgroup_hierarchy=1".
+```
+
 #### <a id="cgroupv1"></a>Configuring cgroup v1
 
 Complete the following tasks on each node in your Greenplum Database cluster to set up cgroups v1 for use with resource groups:
 
 1. If not already installed, install the Control Groups operating system package on each Greenplum Database node. The command that you run to perform this task will differ based on the operating system installed on the node. You must be the superuser or have `sudo` access to run the command:
-    -   Redhat/Oracle/Rocky 8.x systems:
 
-        ```
-        sudo yum install libcgroup-tools
-        ```
+    ```
+    sudo yum install libcgroup-tools
+    ```
 
 2. Locate the cgroups configuration file `/etc/cgconfig.conf`. You must be the superuser or have `sudo` access to edit this file:
 
@@ -208,11 +219,10 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
     This content configures CPU, CPU accounting, CPU core set, and memory control groups managed by the `gpadmin` user. Greenplum Database uses the memory control group only for monitoring the memory usage.
 
 4. Start the cgroups service on each Greenplum Database node. The command that you run to perform this task will differ based on the operating system installed on the node. You must be the superuser or have `sudo` access to run the command:
-    -   Redhat/Oracle/Rocky 8.x systems:
 
-        ```
-        sudo cgconfigparser -l /etc/cgconfig.conf 
-        ```
+    ```
+    sudo cgconfigparser -l /etc/cgconfig.conf 
+    ```
 
 5. Identify the `cgroup` directory mount point for the node:
 
@@ -234,19 +244,18 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
     If these directories exist and are owned by `gpadmin:gpadmin`, you have successfully configured cgroups for Greenplum Database CPU resource management.
 
 7. To automatically recreate Greenplum Database required cgroup hierarchies and parameters when your system is restarted, configure your system to enable the Linux cgroup service daemon `cgconfig.service` \(Redhat/Oracle/Rocky 8.x\) at node start-up. For example, configure one of the following cgroup service commands in your preferred service auto-start tool:
-    -   Redhat/Oracle/Rocky 8.x systems:
 
-        ```
-        sudo systemctl enable cgconfig.service
-        ```
+    ```
+    sudo systemctl enable cgconfig.service
+    ```
 
-        To start the service immediately \(without having to reboot\) enter:
+    To start the service immediately \(without having to reboot\) enter:
 
-        ```
-        sudo systemctl start cgconfig.service
-        ```
+    ```
+    sudo systemctl start cgconfig.service
+    ```
 
-    You may choose a different method to recreate the Greenplum Database resource group cgroup hierarchies.
+You may choose a different method to recreate the Greenplum Database resource group cgroup hierarchies.
 
 
 #### <a id="cgroupv2"></a>Configuring cgroup v2
@@ -271,20 +280,19 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
     chmod +rw /sys/fs/cgroup/cgroup.procs
     ```
 5. Add all controllers.
-    ```
+   ```
    echo "+cpuset +io +cpu +memory" | sudo tee -a /sys/fs/cgroup/cgroup.subtree_control
    ```
 
 Since resource groups manually manage cgroup files, the above settings may become ineffective after a system reboot. Consider adding the following bash script for systemd so it runs automatically during system startup:
-    ```
-    sudo usermod -aG root gpadmin
 
-    sudo mkdir -p /sys/fs/cgroup/gpdb
-    sudo chmod -R 774 /sys/fs/cgroup/gpdb
-    sudo chmod g+w /sys/fs/cgroup/cgroup.procs
-    
-    echo "+cpuset +io +cpu +memory" | sudo tee -a /sys/fs/cgroup/cgroup.subtree_control
-    ```
+```
+sudo usermod -aG root gpadmin
+sudo mkdir -p /sys/fs/cgroup/gpdb
+sudo chmod -R 774 /sys/fs/cgroup/gpdb
+sudo chmod g+w /sys/fs/cgroup/cgroup.procs
+echo "+cpuset +io +cpu +memory" | sudo tee -a /sys/fs/cgroup/cgroup.subtree_control
+```
 
 ## <a id="topic8"></a>Enabling Resource Groups 
 
