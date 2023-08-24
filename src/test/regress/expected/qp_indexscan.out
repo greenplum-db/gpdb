@@ -581,42 +581,30 @@ set optimizer_enable_indexscan to on;
 DROP TABLE test_index_with_orderby_limit;
 -- Test Case: Test on a regular table with mixed data type columns.
 -- Purpose: Validate if IndexScan with correct scan direction is used on expected index for queries with order by and limit.
-CREATE TABLE test_index_with_sort_directions_on_orderby_limit (a int, b text, c float, d int, e text, f int);
+CREATE TABLE foo (a int, b text, c float, d int, e text, f int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
--- single col index with default order
-CREATE INDEX dir_index_a on test_index_with_sort_directions_on_orderby_limit using btree(a);
--- single col index with reverse order
-CREATE INDEX dir_index_b on test_index_with_sort_directions_on_orderby_limit using btree(b desc);
--- single col index with opp nulls direction
-CREATE INDEX dir_index_c on test_index_with_sort_directions_on_orderby_limit using btree(c nulls first);
--- multi col index all with all index keys asc
-CREATE INDEX dir_index_bcd on test_index_with_sort_directions_on_orderby_limit using btree(b,c,d);
--- multi col index all with all index keys desc
-CREATE INDEX dir_index_fde on test_index_with_sort_directions_on_orderby_limit using btree(f desc,d desc,e desc);
--- multi col index with mixed index keys properties
-CREATE INDEX dir_index_eda on test_index_with_sort_directions_on_orderby_limit using btree(e, d desc nulls last,a);
--- Covering index with descending and one include column
-CREATE INDEX dir_covering_index_db ON test_index_with_sort_directions_on_orderby_limit(d desc) INCLUDE (b);
-INSERT INTO test_index_with_sort_directions_on_orderby_limit select i, CONCAT('col_b', i)::text, i/3.2, i+1, CONCAT('col_e', i)::text, i+3 from generate_series(1,10000) i;
+INSERT INTO foo select i, CONCAT('col_b', i)::text, i/3.2, i+1, CONCAT('col_e', i)::text, i+3 from generate_series(1,10000) i;
 -- Inserting nulls to verify results match when index key specifies nulls first or desc
-INSERT INTO test_index_with_sort_directions_on_orderby_limit values (null, null, null, null, null);
-ANALYZE test_index_with_sort_directions_on_orderby_limit;
+INSERT INTO foo values (null, null, null, null, null);
+ANALYZE foo;
 -- Positive tests: Validate if IndexScan Forward/Backward is chosen.
+-- single col index with default order
+CREATE INDEX dir_index_a on foo using btree(a);
 -- Validate if 'dir_index_a' is used for order by cols matching/commutative to the index cols
 -- Expected to use Forward IndexScan
-explain (costs off) select a from test_index_with_sort_directions_on_orderby_limit order by a limit 3;
+explain (costs off) select a from foo order by a limit 3;
                                                QUERY PLAN
 ---------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: a
          ->  Limit
-               ->  Index Only Scan using dir_index_a on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan using dir_index_a on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select a from test_index_with_sort_directions_on_orderby_limit order by a limit 3;
+select a from foo order by a limit 3;
  a 
 ---
  1
@@ -625,18 +613,18 @@ select a from test_index_with_sort_directions_on_orderby_limit order by a limit 
 (3 rows)
 
 -- Expected to use Backward IndexScan
-explain (costs off) select a from test_index_with_sort_directions_on_orderby_limit order by a desc limit 3;
+explain (costs off) select a from foo order by a desc limit 3;
                                                     QUERY PLAN
 ------------------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: a
          ->  Limit
-               ->  Index Only Scan Backward using dir_index_a on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan Backward using dir_index_a on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select a from test_index_with_sort_directions_on_orderby_limit order by a desc limit 3;
+select a from foo order by a desc limit 3;
    a   
 -------
       
@@ -644,20 +632,22 @@ select a from test_index_with_sort_directions_on_orderby_limit order by a desc l
   9999
 (3 rows)
 
+-- single col index with reverse order
+CREATE INDEX dir_index_b on foo using btree(b desc);
 -- Validate if 'dir_index_b' is used for order by cols matching/commutative to the index cols
 -- Expected to use Forward IndexScan
-explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
+explain (costs off) select b from foo order by b desc limit 3;
                                                QUERY PLAN
 ---------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b
          ->  Limit
-               ->  Index Only Scan using dir_index_b on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan using dir_index_b on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
+select b from foo order by b desc limit 3;
      b     
 -----------
  
@@ -666,18 +656,18 @@ select b from test_index_with_sort_directions_on_orderby_limit order by b desc l
 (3 rows)
 
 -- Expected to use Backward IndexScan
-explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b limit 3;
+explain (costs off) select b from foo order by b limit 3;
                                                     QUERY PLAN
 ------------------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b
          ->  Limit
-               ->  Index Only Scan Backward using dir_index_b on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan Backward using dir_index_b on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select b from test_index_with_sort_directions_on_orderby_limit order by b limit 3;
+select b from foo order by b limit 3;
     b     
 ----------
  col_b1
@@ -685,20 +675,22 @@ select b from test_index_with_sort_directions_on_orderby_limit order by b limit 
  col_b100
 (3 rows)
 
+-- single col index with opp nulls direction
+CREATE INDEX dir_index_c on foo using btree(c nulls first);
 -- Validate if 'dir_index_c' is used for order by cols matching/commutative to the index cols
 -- Expected to use Forward IndexScan
-explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c nulls first limit 3;
+explain (costs off) select c from foo order by c nulls first limit 3;
                                                QUERY PLAN
 ---------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: c
          ->  Limit
-               ->  Index Only Scan using dir_index_c on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan using dir_index_c on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select c from test_index_with_sort_directions_on_orderby_limit order by c nulls first limit 3;
+select c from foo order by c nulls first limit 3;
    c    
 --------
        
@@ -707,18 +699,18 @@ select c from test_index_with_sort_directions_on_orderby_limit order by c nulls 
 (3 rows)
 
 -- Expected to use Backward IndexScan
-explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit 3;
+explain (costs off) select c from foo order by c desc nulls last limit 3;
                                                     QUERY PLAN
 ------------------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: c
          ->  Limit
-               ->  Index Only Scan Backward using dir_index_c on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan Backward using dir_index_c on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit 3;
+select c from foo order by c desc nulls last limit 3;
      c     
 -----------
       3125
@@ -726,257 +718,289 @@ select c from test_index_with_sort_directions_on_orderby_limit order by c desc n
   3124.375
 (3 rows)
 
+-- multi col index all with all index keys asc
+CREATE INDEX dir_index_bcd on foo using btree(b,c,d);
+-- Inserting rows with duplicate values to ensure results are sorted correctly for order by on multiple columns
+INSERT INTO foo(b,c) values('col_b1',-1);
+INSERT INTO foo(b,c) values('col_b9999',10000);
 -- Validate if 'dir_index_bcd' is used for order by cols matching/commutative to the index cols
 -- Testing various permutations of order by columns that are expected to choose Forward IndexScan
-explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b,c,d limit 3;
-                                                QUERY PLAN
------------------------------------------------------------------------------------------------------------
+explain (costs off) select b,c,d from foo order by b,c,d limit 3;
+                          QUERY PLAN
+--------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b, c, d
          ->  Limit
-               ->  Index Only Scan using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan using dir_index_bcd on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b,c,d limit 3;
-    b     |   c    |  d  
-----------+--------+-----
- col_b1   | 0.3125 |   2
- col_b10  |  3.125 |  11
- col_b100 |  31.25 | 101
+select b,c,d from foo order by b,c,d limit 3;
+    b    |   c    | d  
+---------+--------+----
+ col_b1  |     -1 |   
+ col_b1  | 0.3125 |  2
+ col_b10 |  3.125 | 11
 (3 rows)
 
-explain (costs off) select b,c from test_index_with_sort_directions_on_orderby_limit order by b,c limit 3;
-                                                QUERY PLAN
------------------------------------------------------------------------------------------------------------
+explain (costs off) select b,c from foo order by b,c limit 3;
+                          QUERY PLAN
+--------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b, c
          ->  Limit
-               ->  Index Only Scan using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan using dir_index_bcd on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select b,c from test_index_with_sort_directions_on_orderby_limit order by b,c limit 3;
-    b     |   c    
-----------+--------
- col_b1   | 0.3125
- col_b10  |  3.125
- col_b100 |  31.25
+select b,c from foo order by b,c limit 3;
+    b    |   c    
+---------+--------
+ col_b1  |     -1
+ col_b1  | 0.3125
+ col_b10 |  3.125
 (3 rows)
 
 -- Testing various permutations of order by columns that are expected to choose Backward IndexScan
-explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc,d desc limit 3;
-                                                     QUERY PLAN
---------------------------------------------------------------------------------------------------------------------
+explain (costs off) select b,c,d from foo order by b desc,c desc,d desc limit 4;
+                              QUERY PLAN
+-----------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b, c, d
          ->  Limit
-               ->  Index Only Scan Backward using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan Backward using dir_index_bcd on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc,d desc limit 3;
+select b,c,d from foo order by b desc,c desc,d desc limit 4;
      b     |     c     |   d   
 -----------+-----------+-------
            |           |      
+ col_b9999 |     10000 |      
  col_b9999 | 3124.6875 | 10000
  col_b9998 |  3124.375 |  9999
-(3 rows)
+(4 rows)
 
-explain (costs off) select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc limit 3;
-                                                     QUERY PLAN
---------------------------------------------------------------------------------------------------------------------
+explain (costs off) select b,c from foo order by b desc,c desc limit 4;
+                              QUERY PLAN
+-----------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b, c
          ->  Limit
-               ->  Index Only Scan Backward using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan Backward using dir_index_bcd on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc,c desc limit 3;
+select b,c from foo order by b desc,c desc limit 4;
      b     |     c     
 -----------+-----------
            |          
+ col_b9999 |     10000
  col_b9999 | 3124.6875
  col_b9998 |  3124.375
-(3 rows)
+(4 rows)
 
+-- Delete duplicate rows
+delete from foo where b='col_b1' and c=-1;
+delete from foo where b='col_b9999' and c=10000;
+-- multi col index all with all index keys desc
+CREATE INDEX dir_index_fde on foo using btree(f desc,d desc,e desc);
+-- Inserting rows with duplicate values to ensure results are sorted correctly for order by on multiple columns
+INSERT INTO foo(f,d) values(4,-1);
+INSERT INTO foo(f,d) values(10003,-1);
 -- Validate if 'dir_index_fde' is used for order by cols matching/commutative to the index cols
 -- Testing various permutations of order by columns that are expected to choose Forward IndexScan
-explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
-                                                QUERY PLAN
------------------------------------------------------------------------------------------------------------
+explain (costs off) select f,d,e from foo order by f desc,d desc,e desc limit 4;
+                          QUERY PLAN
+--------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: f, d, e
          ->  Limit
-               ->  Index Only Scan using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan using dir_index_fde on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
+select f,d,e from foo order by f desc,d desc,e desc limit 4;
    f   |   d   |     e      
 -------+-------+------------
        |       | 
  10003 | 10001 | col_e10000
+ 10003 |    -1 | 
  10002 | 10000 | col_e9999
-(3 rows)
+(4 rows)
 
-explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc limit 3;
-                                                QUERY PLAN
------------------------------------------------------------------------------------------------------------
+explain (costs off) select f,d from foo order by f desc,d desc limit 4;
+                          QUERY PLAN
+--------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: f, d
          ->  Limit
-               ->  Index Only Scan using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan using dir_index_fde on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc limit 3;
+select f,d from foo order by f desc,d desc limit 4;
    f   |   d   
 -------+-------
        |      
  10003 | 10001
+ 10003 |    -1
  10002 | 10000
-(3 rows)
+(4 rows)
 
 -- Testing various permutations of order by columns that are expected to choose Backward IndexScan
-explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d,e limit 3;
-                                                     QUERY PLAN
---------------------------------------------------------------------------------------------------------------------
+explain (costs off) select f,d,e from foo order by f,d,e limit 3;
+                              QUERY PLAN
+-----------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: f, d, e
          ->  Limit
-               ->  Index Only Scan Backward using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan Backward using dir_index_fde on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d,e limit 3;
- f | d |   e    
----+---+--------
- 4 | 2 | col_e1
- 5 | 3 | col_e2
- 6 | 4 | col_e3
+select f,d,e from foo order by f,d,e limit 3;
+ f | d  |   e    
+---+----+--------
+ 4 | -1 | 
+ 4 |  2 | col_e1
+ 5 |  3 | col_e2
 (3 rows)
 
-explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f,d limit 3;
-                                                     QUERY PLAN
---------------------------------------------------------------------------------------------------------------------
+explain (costs off) select f,d from foo order by f,d limit 3;
+                              QUERY PLAN
+-----------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: f, d
          ->  Limit
-               ->  Index Only Scan Backward using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan Backward using dir_index_fde on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select f,d from test_index_with_sort_directions_on_orderby_limit order by f,d limit 3;
- f | d 
----+---
- 4 | 2
- 5 | 3
- 6 | 4
+select f,d from foo order by f,d limit 3;
+ f | d  
+---+----
+ 4 | -1
+ 4 |  2
+ 5 |  3
 (3 rows)
 
+-- Delete duplicate rows
+delete from foo where f=4 and d=-1;
+delete from foo where f=10003 and d=-1;
+-- multi col index with mixed index keys properties
+CREATE INDEX dir_index_eda on foo using btree(e, d desc nulls last,a);
+-- Inserting rows with duplicate values to ensure results are sorted correctly for order by on multiple columns
+INSERT INTO foo(d,e) values(9999,'col_e9999');
+INSERT INTO foo(d,e) values(1,'col_e1');
 -- Validate if 'dir_index_eda' is used for order by cols matching/commutative to the index cols
 -- Testing various permutations of order by columns that are expected to choose Forward IndexScan
-explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last,a limit 3;
-                                                QUERY PLAN
------------------------------------------------------------------------------------------------------------
+explain (costs off) select e,d,a from foo order by e, d desc nulls last,a limit 3;
+                          QUERY PLAN
+--------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: e, d, a
          ->  Limit
-               ->  Index Only Scan using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan using dir_index_eda on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last,a limit 3;
-    e     |  d  |  a  
-----------+-----+-----
- col_e1   |   2 |   1
- col_e10  |  11 |  10
- col_e100 | 101 | 100
+select e,d,a from foo order by e, d desc nulls last,a limit 3;
+    e    | d  | a  
+---------+----+----
+ col_e1  |  2 |  1
+ col_e1  |  1 |   
+ col_e10 | 11 | 10
 (3 rows)
 
-explain (costs off) select e,d from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
-                                                QUERY PLAN
------------------------------------------------------------------------------------------------------------
+explain (costs off) select e,d from foo order by e, d desc nulls last limit 3;
+                          QUERY PLAN
+--------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: e, d
          ->  Limit
-               ->  Index Only Scan using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan using dir_index_eda on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select e,d from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
-    e     |  d  
-----------+-----
- col_e1   |   2
- col_e10  |  11
- col_e100 | 101
+select e,d from foo order by e, d desc nulls last limit 3;
+    e    | d  
+---------+----
+ col_e1  |  2
+ col_e1  |  1
+ col_e10 | 11
 (3 rows)
 
 -- Testing various permutations of order by columns that are expected to choose Backward IndexScan
-explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
-                                                     QUERY PLAN
---------------------------------------------------------------------------------------------------------------------
+explain (costs off) select e,d,a from foo order by e desc,d nulls first,a desc limit 4;
+                              QUERY PLAN
+-----------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: e, d, a
          ->  Limit
-               ->  Index Only Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan Backward using dir_index_eda on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
+select e,d,a from foo order by e desc,d nulls first,a desc limit 4;
      e     |   d   |  a   
 -----------+-------+------
            |       |     
+ col_e9999 |  9999 |     
  col_e9999 | 10000 | 9999
  col_e9998 |  9999 | 9998
-(3 rows)
+(4 rows)
 
-explain (costs off) select e,d from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
-                                                     QUERY PLAN
---------------------------------------------------------------------------------------------------------------------
+explain (costs off) select e,d from foo order by e desc,d nulls first limit 4;
+                              QUERY PLAN
+-----------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: e, d
          ->  Limit
-               ->  Index Only Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan Backward using dir_index_eda on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select e,d from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
+select e,d from foo order by e desc,d nulls first limit 4;
      e     |   d   
 -----------+-------
            |      
+ col_e9999 |  9999
  col_e9999 | 10000
  col_e9998 |  9999
-(3 rows)
+(4 rows)
 
+-- Delete duplicate rows
+delete from foo where d=9999 and e='col_e9999';
+delete from foo where d=1 and e='col_e1';
+-- Covering index with descending and one include column
+CREATE INDEX dir_covering_index_db ON foo(d desc) INCLUDE (b);
 -- Validate if IndexScan is chosen and on covering index
 -- Expected to use Forward IndexScan
-explain (costs off) select d from test_index_with_sort_directions_on_orderby_limit order by d desc limit 3;
+explain (costs off) select d from foo order by d desc limit 3;
                                                     QUERY PLAN
 -------------------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: d
          ->  Limit
-               ->  Index Only Scan using dir_covering_index_db on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan using dir_covering_index_db on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select d from test_index_with_sort_directions_on_orderby_limit order by d desc limit 3;
+select d from foo order by d desc limit 3;
    d   
 -------
       
@@ -985,18 +1009,18 @@ select d from test_index_with_sort_directions_on_orderby_limit order by d desc l
 (3 rows)
 
 -- Expected to use Backward IndexScan
-explain (costs off) select d from test_index_with_sort_directions_on_orderby_limit order by d limit 3;
+explain (costs off) select d from foo order by d limit 3;
                                                          QUERY PLAN
 ----------------------------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: d
          ->  Limit
-               ->  Index Only Scan Backward using dir_covering_index_db on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan Backward using dir_covering_index_db on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select d from test_index_with_sort_directions_on_orderby_limit order by d limit 3;
+select d from foo order by d limit 3;
  d 
 ---
  2
@@ -1005,17 +1029,17 @@ select d from test_index_with_sort_directions_on_orderby_limit order by d limit 
 (3 rows)
 
 -- Validate if Backward IndexScan is chosen for query with offset and without limit
-explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc offset 9990;
+explain (costs off) select e,d,a from foo order by e desc,d nulls first,a desc offset 9990;
                                                   QUERY PLAN
 --------------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: e, d, a
-         ->  Index Only Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+         ->  Index Only Scan Backward using dir_index_eda on foo
  Optimizer: Postgres query optimizer
 (5 rows)
 
-select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc offset 9997;
+select e,d,a from foo order by e desc,d nulls first,a desc offset 9997;
      e     |  d   |  a   
 -----------+------+------
  col_e1000 | 1001 | 1000
@@ -1026,19 +1050,19 @@ select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e de
 
 -- Validate if Backward IndexScan is chosen for query with offset value in subquery
 -- ORCA_FEATURE_NOT_SUPPORTED: ORCA doesn't support limit or offset values specified as part of a subquery
-explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last offset (select 9997);
+explain (costs off) select c from foo order by c desc nulls last offset (select 9997);
                                                  QUERY PLAN
 ------------------------------------------------------------------------------------------------------------
  Limit
    InitPlan 1 (returns $0)  (slice2)
      ->  Result
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: test_index_with_sort_directions_on_orderby_limit.c
-         ->  Index Only Scan Backward using dir_index_c on test_index_with_sort_directions_on_orderby_limit
+         Merge Key: foo.c
+         ->  Index Only Scan Backward using dir_index_c on foo
  Optimizer: Postgres query optimizer
 (7 rows)
 
-select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last offset (select 9997);
+select c from foo order by c desc nulls last offset (select 9997);
    c    
 --------
  0.9375
@@ -1049,20 +1073,20 @@ select c from test_index_with_sort_directions_on_orderby_limit order by c desc n
 
 -- Validate if Backward IndexScan is chosen for query with limit value in subquery
 -- ORCA_FEATURE_NOT_SUPPORTED: ORCA doesn't support limit or offset values specified as part of a subquery
-explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit (select 3);
+explain (costs off) select c from foo order by c desc nulls last limit (select 3);
                                                     QUERY PLAN
 ------------------------------------------------------------------------------------------------------------------
  Limit
    InitPlan 1 (returns $0)  (slice2)
      ->  Result
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: test_index_with_sort_directions_on_orderby_limit.c
+         Merge Key: foo.c
          ->  Limit
-               ->  Index Only Scan Backward using dir_index_c on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan Backward using dir_index_c on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select c from test_index_with_sort_directions_on_orderby_limit order by c desc nulls last limit (select 3);
+select c from foo order by c desc nulls last limit (select 3);
      c     
 -----------
       3125
@@ -1073,7 +1097,7 @@ select c from test_index_with_sort_directions_on_orderby_limit order by c desc n
 -- Negative tests: Validate if a SeqScan is chosen if order by cols directions do not matching indices keys directions.
 --                 Expected to choose SeqScan with Sort
 -- Testing various permutations that are not matching keys in 'dir_index_a'
-explain (costs off) select a from test_index_with_sort_directions_on_orderby_limit order by a nulls first limit 3;
+explain (costs off) select a from foo order by a nulls first limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1082,11 +1106,11 @@ explain (costs off) select a from test_index_with_sort_directions_on_orderby_lim
          ->  Limit
                ->  Sort
                      Sort Key: a NULLS FIRST
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select a from test_index_with_sort_directions_on_orderby_limit order by a nulls first limit 3;
+select a from foo order by a nulls first limit 3;
  a 
 ---
   
@@ -1094,7 +1118,7 @@ select a from test_index_with_sort_directions_on_orderby_limit order by a nulls 
  2
 (3 rows)
 
-explain (costs off) select a from test_index_with_sort_directions_on_orderby_limit order by a desc nulls last limit 3;
+explain (costs off) select a from foo order by a desc nulls last limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1103,11 +1127,11 @@ explain (costs off) select a from test_index_with_sort_directions_on_orderby_lim
          ->  Limit
                ->  Sort
                      Sort Key: a DESC NULLS LAST
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select a from test_index_with_sort_directions_on_orderby_limit order by a desc nulls last limit 3;
+select a from foo order by a desc nulls last limit 3;
    a   
 -------
  10000
@@ -1116,7 +1140,7 @@ select a from test_index_with_sort_directions_on_orderby_limit order by a desc n
 (3 rows)
 
 -- Testing various permutations that are not matching keys in 'dir_index_b'
-explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b nulls first limit 3;
+explain (costs off) select b from foo order by b nulls first limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1125,11 +1149,11 @@ explain (costs off) select b from test_index_with_sort_directions_on_orderby_lim
          ->  Limit
                ->  Sort
                      Sort Key: b NULLS FIRST
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select b from test_index_with_sort_directions_on_orderby_limit order by b nulls first limit 3;
+select b from foo order by b nulls first limit 3;
     b    
 ---------
  
@@ -1137,7 +1161,7 @@ select b from test_index_with_sort_directions_on_orderby_limit order by b nulls 
  col_b10
 (3 rows)
 
-explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b desc nulls last limit 3;
+explain (costs off) select b from foo order by b desc nulls last limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1146,11 +1170,11 @@ explain (costs off) select b from test_index_with_sort_directions_on_orderby_lim
          ->  Limit
                ->  Sort
                      Sort Key: b DESC NULLS LAST
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select b from test_index_with_sort_directions_on_orderby_limit order by b desc nulls last limit 3;
+select b from foo order by b desc nulls last limit 3;
      b     
 -----------
  col_b9999
@@ -1159,7 +1183,7 @@ select b from test_index_with_sort_directions_on_orderby_limit order by b desc n
 (3 rows)
 
 -- Testing various permutations that are not matching keys in 'dir_index_c'
-explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c limit 3;
+explain (costs off) select c from foo order by c limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1168,11 +1192,11 @@ explain (costs off) select c from test_index_with_sort_directions_on_orderby_lim
          ->  Limit
                ->  Sort
                      Sort Key: c
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select c from test_index_with_sort_directions_on_orderby_limit order by c  limit 3;
+select c from foo order by c  limit 3;
    c    
 --------
  0.3125
@@ -1180,7 +1204,7 @@ select c from test_index_with_sort_directions_on_orderby_limit order by c  limit
  0.9375
 (3 rows)
 
-explain (costs off) select c from test_index_with_sort_directions_on_orderby_limit order by c desc limit 3;
+explain (costs off) select c from foo order by c desc limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1189,11 +1213,11 @@ explain (costs off) select c from test_index_with_sort_directions_on_orderby_lim
          ->  Limit
                ->  Sort
                      Sort Key: c DESC
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select c from test_index_with_sort_directions_on_orderby_limit order by c desc limit 3;
+select c from foo order by c desc limit 3;
      c     
 -----------
           
@@ -1202,7 +1226,7 @@ select c from test_index_with_sort_directions_on_orderby_limit order by c desc l
 (3 rows)
 
 -- Testing various permutations that are not matching keys in 'dir_index_bcd'
-explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b ,c desc,d desc limit 3;
+explain (costs off) select b,c,d from foo order by b ,c desc,d desc limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1211,11 +1235,11 @@ explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby
          ->  Limit
                ->  Sort
                      Sort Key: b, c DESC, d DESC
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b ,c desc,d desc limit 3;
+select b,c,d from foo order by b ,c desc,d desc limit 3;
     b     |   c    |  d  
 ----------+--------+-----
  col_b1   | 0.3125 |   2
@@ -1223,7 +1247,7 @@ select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b ,c
  col_b100 |  31.25 | 101
 (3 rows)
 
-explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b ,c ,d desc limit 3;
+explain (costs off) select b,c,d from foo order by b ,c ,d desc limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1232,11 +1256,11 @@ explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby
          ->  Limit
                ->  Sort
                      Sort Key: b, c, d DESC
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b ,c ,d desc limit 3;
+select b,c,d from foo order by b ,c ,d desc limit 3;
     b     |   c    |  d  
 ----------+--------+-----
  col_b1   | 0.3125 |   2
@@ -1244,7 +1268,7 @@ select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b ,c
  col_b100 |  31.25 | 101
 (3 rows)
 
-explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc, c ,d desc limit 3;
+explain (costs off) select b,c,d from foo order by b desc, c ,d desc limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1253,11 +1277,11 @@ explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby
          ->  Limit
                ->  Sort
                      Sort Key: b DESC, c, d DESC
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b desc, c ,d desc limit 3;
+select b,c,d from foo order by b desc, c ,d desc limit 3;
      b     |     c     |   d   
 -----------+-----------+-------
            |           |      
@@ -1266,7 +1290,7 @@ select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b de
 (3 rows)
 
 -- Testing various permutations that are not matching keys in 'dir_index_fde'
-explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f ,d desc,e desc limit 3;
+explain (costs off) select f,d,e from foo order by f ,d desc,e desc limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1275,11 +1299,11 @@ explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby
          ->  Limit
                ->  Sort
                      Sort Key: f, d DESC, e DESC
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f ,d desc,e desc limit 3;
+select f,d,e from foo order by f ,d desc,e desc limit 3;
  f | d |   e    
 ---+---+--------
  4 | 2 | col_e1
@@ -1287,7 +1311,7 @@ select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f ,d
  6 | 4 | col_e3
 (3 rows)
 
-explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d ,e desc limit 3;
+explain (costs off) select f,d,e from foo order by f,d ,e desc limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1296,11 +1320,11 @@ explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby
          ->  Limit
                ->  Sort
                      Sort Key: f, d, e DESC
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d ,e desc limit 3;
+select f,d,e from foo order by f,d ,e desc limit 3;
  f | d |   e    
 ---+---+--------
  4 | 2 | col_e1
@@ -1308,7 +1332,7 @@ select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f,d 
  6 | 4 | col_e3
 (3 rows)
 
-explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc, d ,e desc limit 3;
+explain (costs off) select f,d,e from foo order by f desc, d ,e desc limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1317,11 +1341,11 @@ explain (costs off) select f,d,e from test_index_with_sort_directions_on_orderby
          ->  Limit
                ->  Sort
                      Sort Key: f DESC, d, e DESC
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f desc, d ,e desc limit 3;
+select f,d,e from foo order by f desc, d ,e desc limit 3;
    f   |   d   |     e      
 -------+-------+------------
        |       | 
@@ -1330,7 +1354,7 @@ select f,d,e from test_index_with_sort_directions_on_orderby_limit order by f de
 (3 rows)
 
 -- Testing various permutations that are not matching keys in 'dir_index_eda'
-explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc,a desc limit 3;
+explain (costs off) select e,d,a from foo order by e, d desc,a desc limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1339,11 +1363,11 @@ explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby
          ->  Limit
                ->  Sort
                      Sort Key: e, d DESC, a DESC
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc,a desc limit 3;
+select e,d,a from foo order by e, d desc,a desc limit 3;
     e     |  d  |  a  
 ----------+-----+-----
  col_e1   |   2 |   1
@@ -1351,7 +1375,7 @@ select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d
  col_e100 | 101 | 100
 (3 rows)
 
-explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d desc,a desc limit 3;
+explain (costs off) select e,d,a from foo order by e desc,d desc,a desc limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1360,11 +1384,11 @@ explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby
          ->  Limit
                ->  Sort
                      Sort Key: e DESC, d DESC, a DESC
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d desc,a desc limit 3;
+select e,d,a from foo order by e desc,d desc,a desc limit 3;
      e     |   d   |  a   
 -----------+-------+------
            |       |     
@@ -1372,7 +1396,7 @@ select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e de
  col_e9998 |  9999 | 9998
 (3 rows)
 
-explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e ,d ,a  limit 3;
+explain (costs off) select e,d,a from foo order by e ,d ,a  limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1381,11 +1405,11 @@ explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby
          ->  Limit
                ->  Sort
                      Sort Key: e, d, a
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e ,d ,a  limit 3;
+select e,d,a from foo order by e ,d ,a  limit 3;
     e     |  d  |  a  
 ----------+-----+-----
  col_e1   |   2 |   1
@@ -1394,7 +1418,7 @@ select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e ,d
 (3 rows)
 
 -- Testing various permutations of order by on non-index columns. Expected to choose SeqScan with Sort
-explain (costs off) select d, f from test_index_with_sort_directions_on_orderby_limit order by d, f limit 3;
+explain (costs off) select d, f from foo order by d, f limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1403,11 +1427,11 @@ explain (costs off) select d, f from test_index_with_sort_directions_on_orderby_
          ->  Limit
                ->  Sort
                      Sort Key: d, f
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select d, f from test_index_with_sort_directions_on_orderby_limit order by d, f limit 3;
+select d, f from foo order by d, f limit 3;
  d | f 
 ---+---
  2 | 4
@@ -1415,7 +1439,7 @@ select d, f from test_index_with_sort_directions_on_orderby_limit order by d, f 
  4 | 6
 (3 rows)
 
-explain (costs off) select a,e from test_index_with_sort_directions_on_orderby_limit order by a,e limit 3;
+explain (costs off) select a,e from foo order by a,e limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1424,11 +1448,11 @@ explain (costs off) select a,e from test_index_with_sort_directions_on_orderby_l
          ->  Limit
                ->  Sort
                      Sort Key: a, e
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select a,e from test_index_with_sort_directions_on_orderby_limit order by a,e limit 3;
+select a,e from foo order by a,e limit 3;
  a |   e    
 ---+--------
  1 | col_e1
@@ -1436,7 +1460,7 @@ select a,e from test_index_with_sort_directions_on_orderby_limit order by a,e li
  3 | col_e3
 (3 rows)
 
-explain (costs off) select d,a from test_index_with_sort_directions_on_orderby_limit order by d,a desc limit 3;
+explain (costs off) select d,a from foo order by d,a desc limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1445,11 +1469,11 @@ explain (costs off) select d,a from test_index_with_sort_directions_on_orderby_l
          ->  Limit
                ->  Sort
                      Sort Key: d, a DESC
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select d,a from test_index_with_sort_directions_on_orderby_limit order by d,a desc limit 3;
+select d,a from foo order by d,a desc limit 3;
  d | a 
 ---+---
  2 | 1
@@ -1457,7 +1481,7 @@ select d,a from test_index_with_sort_directions_on_orderby_limit order by d,a de
  4 | 3
 (3 rows)
 
-explain (costs off) select d,c from test_index_with_sort_directions_on_orderby_limit order by d desc,c limit 3;
+explain (costs off) select d,c from foo order by d desc,c limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1466,11 +1490,11 @@ explain (costs off) select d,c from test_index_with_sort_directions_on_orderby_l
          ->  Limit
                ->  Sort
                      Sort Key: d DESC, c
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select d,c from test_index_with_sort_directions_on_orderby_limit order by d desc,c limit 3;
+select d,c from foo order by d desc,c limit 3;
    d   |     c     
 -------+-----------
        |          
@@ -1479,7 +1503,7 @@ select d,c from test_index_with_sort_directions_on_orderby_limit order by d desc
 (3 rows)
 
 -- Validate if SeqScan is chosen if order by cols also have the Included Column of covering index
-explain (costs off) select e,b from test_index_with_sort_directions_on_orderby_limit order by e, b limit 3;
+explain (costs off) select e,b from foo order by e, b limit 3;
                                       QUERY PLAN
 --------------------------------------------------------------------------------------
  Limit
@@ -1488,11 +1512,11 @@ explain (costs off) select e,b from test_index_with_sort_directions_on_orderby_l
          ->  Limit
                ->  Sort
                      Sort Key: e, b
-                     ->  Seq Scan on test_index_with_sort_directions_on_orderby_limit
+                     ->  Seq Scan on foo
  Optimizer: Postgres query optimizer
 (8 rows)
 
-select e,b from test_index_with_sort_directions_on_orderby_limit order by e,b limit 3;
+select e,b from foo order by e,b limit 3;
     e     |    b     
 ----------+----------
  col_e1   | col_b1
@@ -1502,20 +1526,20 @@ select e,b from test_index_with_sort_directions_on_orderby_limit order by e,b li
 
 -- Purpose: Validate if IndexOnlyScan Forward/Backward is chosen when required for queries with order by and limit
 -- Vacuum table to Ensure IndexOnlyScan is chosen
-vacuum test_index_with_sort_directions_on_orderby_limit;
+vacuum foo;
 -- Testing various permutations of order by columns that are expected to choose IndexOnlyScan Forward
-explain (costs off) select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
+explain (costs off) select b from foo order by b desc limit 3;
                                                QUERY PLAN
 ---------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b
          ->  Limit
-               ->  Index Only Scan using dir_index_b on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan using dir_index_b on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select b from test_index_with_sort_directions_on_orderby_limit order by b desc limit 3;
+select b from foo order by b desc limit 3;
      b     
 -----------
  
@@ -1523,18 +1547,18 @@ select b from test_index_with_sort_directions_on_orderby_limit order by b desc l
  col_b9998
 (3 rows)
 
-explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
+explain (costs off) select e,d,a from foo order by e, d desc nulls last limit 3;
                                                 QUERY PLAN
 -----------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: e, d
          ->  Limit
-               ->  Index Only Scan using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan using dir_index_eda on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d desc nulls last limit 3;
+select e,d,a from foo order by e, d desc nulls last limit 3;
     e     |  d  |  a  
 ----------+-----+-----
  col_e1   |   2 |   1
@@ -1542,18 +1566,18 @@ select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e, d
  col_e100 | 101 | 100
 (3 rows)
 
-explain (costs off) select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b, c, d limit 3;
+explain (costs off) select b,c,d from foo order by b, c, d limit 3;
                                                 QUERY PLAN
 -----------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b, c, d
          ->  Limit
-               ->  Index Only Scan using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan using dir_index_bcd on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b, c, d limit 3;
+select b,c,d from foo order by b, c, d limit 3;
     b     |   c    |  d  
 ----------+--------+-----
  col_b1   | 0.3125 |   2
@@ -1561,18 +1585,18 @@ select b,c,d from test_index_with_sort_directions_on_orderby_limit order by b, c
  col_b100 |  31.25 | 101
 (3 rows)
 
-explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
+explain (costs off) select f,d from foo order by f desc,d desc,e desc limit 3;
                                                 QUERY PLAN
 -----------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: f, d, e
          ->  Limit
-               ->  Index Only Scan using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan using dir_index_fde on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc,d desc,e desc limit 3;
+select f,d from foo order by f desc,d desc,e desc limit 3;
    f   |   d   
 -------+-------
        |      
@@ -1581,18 +1605,18 @@ select f,d from test_index_with_sort_directions_on_orderby_limit order by f desc
 (3 rows)
 
 -- Testing various permutations of order by columns that are expected to choose IndexOnlyScan Backward
-explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
+explain (costs off) select e,d,a from foo order by e desc,d nulls first limit 3;
                                                      QUERY PLAN
 --------------------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: e, d
          ->  Limit
-               ->  Index Only Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan Backward using dir_index_eda on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first limit 3;
+select e,d,a from foo order by e desc,d nulls first limit 3;
      e     |   d   |  a   
 -----------+-------+------
            |       |     
@@ -1600,18 +1624,18 @@ select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e de
  col_e9998 |  9999 | 9998
 (3 rows)
 
-explain (costs off) select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
+explain (costs off) select e,d,a from foo order by e desc,d nulls first,a desc limit 3;
                                                      QUERY PLAN
 --------------------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: e, d, a
          ->  Limit
-               ->  Index Only Scan Backward using dir_index_eda on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan Backward using dir_index_eda on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e desc,d nulls first,a desc limit 3;
+select e,d,a from foo order by e desc,d nulls first,a desc limit 3;
      e     |   d   |  a   
 -----------+-------+------
            |       |     
@@ -1619,18 +1643,18 @@ select e,d,a from test_index_with_sort_directions_on_orderby_limit order by e de
  col_e9998 |  9999 | 9998
 (3 rows)
 
-explain (costs off) select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc, c desc, d desc limit 3;
+explain (costs off) select b,c from foo order by b desc, c desc, d desc limit 3;
                                                      QUERY PLAN
 --------------------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b, c, d
          ->  Limit
-               ->  Index Only Scan Backward using dir_index_bcd on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan Backward using dir_index_bcd on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc, c desc, d desc limit 3;
+select b,c from foo order by b desc, c desc, d desc limit 3;
      b     |     c     
 -----------+-----------
            |          
@@ -1638,18 +1662,18 @@ select b,c from test_index_with_sort_directions_on_orderby_limit order by b desc
  col_b9998 |  3124.375
 (3 rows)
 
-explain (costs off) select f,d from test_index_with_sort_directions_on_orderby_limit order by f, d limit 3;
+explain (costs off) select f,d from foo order by f, d limit 3;
                                                      QUERY PLAN
 --------------------------------------------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: f, d
          ->  Limit
-               ->  Index Only Scan Backward using dir_index_fde on test_index_with_sort_directions_on_orderby_limit
+               ->  Index Only Scan Backward using dir_index_fde on foo
  Optimizer: Postgres query optimizer
 (6 rows)
 
-select f,d from test_index_with_sort_directions_on_orderby_limit order by f, d limit 3;
+select f,d from foo order by f, d limit 3;
  f | d 
 ---+---
  4 | 2
@@ -1658,7 +1682,7 @@ select f,d from test_index_with_sort_directions_on_orderby_limit order by f, d l
 (3 rows)
 
 -- Clean Up
-DROP TABLE test_index_with_sort_directions_on_orderby_limit;
+DROP TABLE foo;
 -- Test Case: Test on Leaf Partition of a partition table with mixed data type columns.
 -- Purpose: Validate if IndexScan/IndexOnlyScan with correct scan direction is used on expected index for queries with order by and limit.
 CREATE TABLE test_partition_table(a int, b int, c float, d text, e numeric, f int) DISTRIBUTED BY (a) PARTITION BY range(a);
