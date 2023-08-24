@@ -201,9 +201,9 @@ CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 					: colref->RetrieveType()->GetMdidForCmpType(
 						  IMDType::EcmptG);
 
-			// if nulls direction of key is 0(LAST), choose ENTLast and
+			// if nulls direction of key is 0, choose ENTLast and
 			// vice-versa
-			ent = (pmdindex->KeyNullsDirectionAt(ul) == NULLS_LAST)
+			ent = (pmdindex->KeyNullsDirectionAt(ul) == COrderSpec::EntLast)
 					  ? COrderSpec::EntLast
 					  : COrderSpec::EntFirst;
 		}
@@ -219,9 +219,9 @@ CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 					: colref->RetrieveType()->GetMdidForCmpType(
 						  IMDType::EcmptL);
 
-			// if nulls direction of key is 0(LAST), choose ENTFirst and
+			// if nulls direction of key is 0, choose ENTFirst and
 			// vice-versa
-			ent = (pmdindex->KeyNullsDirectionAt(ul) == NULLS_LAST)
+			ent = (pmdindex->KeyNullsDirectionAt(ul) == COrderSpec::EntLast)
 					  ? COrderSpec::EntFirst
 					  : COrderSpec::EntLast;
 		}

@@ -580,16 +580,6 @@ public:
 							CTableDescriptor *ptabdesc,
 							CColRefArray *pdrgpcrOutput);
 
-	// function to determine scan direction given required order spec and
-	// index information.
-	static EIndexScanDirection GetIndexScanDirection(COrderSpec *pos,
-													 const IMDIndex *pmdindex);
-
-	// function to validate if indices sort/nulls direction are commutative.
-	static BOOL FIndicesCommutative(CBitVector *first_index_props,
-									CBitVector *second_index_props,
-									ULONG keys_size);
-
 };	// class CXformUtils
 
 

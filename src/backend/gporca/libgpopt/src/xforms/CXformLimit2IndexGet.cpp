@@ -136,11 +136,12 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		// get columns in the index
 		pdrgpcrIndexColumns = CXformUtils::PdrgpcrIndexKeys(
 			mp, popGet->PdrgpcrOutput(), pmdindex, pmdrel);
-		if (FIndexApplicableForOrderBy(mp, pos, pdrgpcrIndexColumns, pmdindex))
+		// Check if index is applicable and get Scan direction
+		EIndexScanDirection scan_direction =
+			FIndexApplicableForOrderBy(pos, pdrgpcrIndexColumns, pmdindex);
+		// Proceed if index is applicable
+		if (scan_direction != EisdSentinel)
 		{
-			// get Scan direction
-			EIndexScanDirection scan_direction =
-				CXformUtils::GetIndexScanDirection(pos, pmdindex);
 			// build IndexGet expression
 			CExpression *pexprIndexGet = CXformUtils::PexprLogicalIndexGet(
 				mp, md_accessor, pexprUpdtdRltn, popLimit->UlOpId(), pdrgpexpr,
@@ -177,95 +178,98 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 //		CXformLimit2IndexGet::FIndexApplicableForOrderBy
 //
 //	@doc:
-//		Function to validate if index is applicable, given OrderSpec and index
-//		columns. This function checks if
+//		Function to validate if index is applicable and determine Index Scan
+//		direction, given OrderSpec and index columns. This function checks if
 //	        1. ORDER BY columns are prefix of the index columns
 //	        2. Sort and Nulls Direction of ORDER BY columns is either equal or
 //	           commutative to the index columns
 //---------------------------------------------------------------------------
-BOOL
+EIndexScanDirection
 CXformLimit2IndexGet::FIndexApplicableForOrderBy(
-	CMemoryPool *mp, COrderSpec *pos, CColRefArray *pdrgpcrIndexColumns,
+	COrderSpec *pos, CColRefArray *pdrgpcrIndexColumns,
 	const IMDIndex *pmdindex)
 {
 	// Ordered IndexScan is only applicable for BTree index
 	if (pmdindex->IndexType() != IMDIndex::EmdindBtree)
 	{
-		return false;
+		return EisdSentinel;
 	}
-	// get order by columns size
-	ULONG totalOrderByCols = pos->UlSortColumns();
-	if (pdrgpcrIndexColumns->Size() < totalOrderByCols)
+	if (pdrgpcrIndexColumns->Size() < pos->UlSortColumns())
 	{
-		return false;
+		return EisdSentinel;
 	}
-	BOOL indexApplicable = true;
-	// BitVectors to maintain required and derived sort, null directions.
-	CBitVector *req_sort_direction =
-		GPOS_NEW(mp) CBitVector(mp, totalOrderByCols);
-	CBitVector *derived_sort_direction =
-		GPOS_NEW(mp) CBitVector(mp, totalOrderByCols);
-	CBitVector *req_nulls_direction =
-		GPOS_NEW(mp) CBitVector(mp, totalOrderByCols);
-	CBitVector *derived_nulls_direction =
-		GPOS_NEW(mp) CBitVector(mp, totalOrderByCols);
 
-	for (ULONG i = 0; i < totalOrderByCols; i++)
+	EIndexScanDirection finalDirection = EisdSentinel;
+
+	for (ULONG i = 0; i < pos->UlSortColumns(); i++)
 	{
-		// Index is not applicable if Order By Column do not match with index
-		// key
+		// ORDER BY columns must match with leading index columns
 		const CColRef *colref = pos->Pcr(i);
 		if (!CColRef::Equals(colref, (*pdrgpcrIndexColumns)[i]))
 		{
-			indexApplicable = false;
-			break;
+			return EisdSentinel;
 		}
+
+		// track required order's sort, nulls direction
+		ULONG reqOrder = 0;
+		// track index key's sort, nulls direction
+		ULONG indexOrder = 0;
 		IMDId *greater_than_mdid =
 			colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG);
 		if (greater_than_mdid->Equals(pos->GetMdIdSortOp(i)))
 		{
 			// If order spec's sort mdid is DESC
-			// set req_sort_direction for the key
-			req_sort_direction->ExchangeSet(i);
-		}
-		if (pmdindex->KeySortDirectionAt(i) == SORT_DESC)
-		{
-			// If index key's sort direction is DESC
-			// set derived_sort_direction for the key
-			derived_sort_direction->ExchangeSet(i);
+			// First bit represents Sort direction
+			reqOrder |= 1 << 0;
 		}
 		if (pos->Ent(i) == COrderSpec::EntFirst)
 		{
 			// If order spec's nulls direction is FIRST
-			// set req_nulls_direction for the key
-			req_nulls_direction->ExchangeSet(i);
-		}
-		if (pmdindex->KeyNullsDirectionAt(i) == NULLS_FIRST)
-		{
-			// If index key's nulls direction is FIRST
-			// set derived_nulls_direction for the key
-			derived_nulls_direction->ExchangeSet(i);
+			// Second bit represents nulls direction
+			reqOrder |= 1 << 1;
 		}
 
-		// If the derived, required sort directions and nulls directions are
-		// not equal or not commutative, then the index is not applicable.
-		if (!(req_sort_direction->Equals(derived_sort_direction) &&
-			  req_nulls_direction->Equals(derived_nulls_direction)) &&
-			!(CXformUtils::FIndicesCommutative(req_sort_direction,
-											   derived_sort_direction, i) &&
-			  CXformUtils::FIndicesCommutative(req_nulls_direction,
-											   derived_nulls_direction, i)))
+		if (pmdindex->KeySortDirectionAt(i) == SORT_DESC)
 		{
-			indexApplicable = false;
-			break;
+			// If index key's sort direction is DESC
+			// First bit represents Sort direction
+			indexOrder |= 1 << 0;
+		}
+		if (pmdindex->KeyNullsDirectionAt(i) == COrderSpec::EntFirst)
+		{
+			// If index key's nulls direction is FIRST
+			// Second bit represents nulls direction
+			indexOrder |= 1 << 1;
+		}
+
+		EIndexScanDirection direction;
+		if (reqOrder == indexOrder)
+		{
+			// Choose ForwardScan if index order and required order matches
+			direction = EForwardScan;
+		}
+		else if ((reqOrder ^ indexOrder) == 3)
+		{
+			// Choose ForwardScan if index order and required order are commutative
+			direction = EBackwardScan;
+		}
+		else
+		{
+			return EisdSentinel;
+		}
+
+		if (i == 0)
+		{
+			// first column's scan direction decides the overall direction
+			finalDirection = direction;
+		}
+		else if (finalDirection != direction)
+		{
+			return EisdSentinel;
 		}
 	}
 
-	GPOS_DELETE(req_sort_direction);
-	GPOS_DELETE(derived_sort_direction);
-	GPOS_DELETE(req_nulls_direction);
-	GPOS_DELETE(derived_nulls_direction);
-	return indexApplicable;
+	return finalDirection;
 }
 
 // EOF

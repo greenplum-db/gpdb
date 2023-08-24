@@ -1138,11 +1138,13 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 			// Check if the Nulls direction is FIRST
 			if (rel_indoption & INDOPTION_NULLS_FIRST)
 			{
-				nulls_direction->Append(GPOS_NEW(mp) ULONG(NULLS_FIRST));
+				nulls_direction->Append(GPOS_NEW(mp)
+											ULONG(COrderSpec::EntFirst));
 			}
 			else
 			{
-				nulls_direction->Append(GPOS_NEW(mp) ULONG(NULLS_LAST));
+				nulls_direction->Append(GPOS_NEW(mp)
+											ULONG(COrderSpec::EntLast));
 			}
 		}
 	}
