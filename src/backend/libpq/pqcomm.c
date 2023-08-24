@@ -384,6 +384,7 @@ StreamServerPort(int family, char *hostName, unsigned short portNumber,
 	struct addrinfo hint;
 	int			listen_index = 0;
 	int			added = 0;
+	bool		listen_on_ipv4 = false;
 
 #ifdef HAVE_UNIX_SOCKETS
 	char		unixSocketPath[MAXPGPATH];
@@ -632,9 +633,38 @@ StreamServerPort(int family, char *hostName, unsigned short portNumber,
 
 		ListenSocket[listen_index] = fd;
 		added++;
+		if (addr->ai_family == AF_INET)
+			listen_on_ipv4 = true;
 	}
 
 	pg_freeaddrinfo_all(hint.ai_family, addrs);
+
+	/*
+	 * GPDB: When starting the cluster, there is a potential that a segment
+	 * listen on a IPV4 address failed, but succeed on IPV6 address, so the
+	 * segment could start as normal. However,  gang creation will use the
+	 * IPV4 address from `gp_segment_configuration`, which results in normal
+	 * MPP execution and other cluster wide services like FTS, GDD and DTX
+	 * recover process couldn't work normally, and after the startup the FTS
+	 * will mark this segment down. For the case initialize a new cluster,
+	 * the cluster will hang in DTX recovery phase.
+	 * 
+	 * For the coordinator, if it listens on IPV6 address instead of IVP4
+	 * address, some python maintainace utility tools may can't work, this is 
+	 * because some of them will use DbURL to connect the cluster, where the
+	 * hostname it use is IPV4.
+	 * 
+	 * So we'd better let the postmaster exit during the start process when it
+	 * can't listen on IPV4 address.
+	 */
+	if (family == AF_UNSPEC && !listen_on_ipv4)
+	{
+		ereport(WARNING,
+				(errcode_for_socket_access(),
+				 errmsg("GreenplumDB requires that the instance must listen on IPV4 address, "
+				        "this start would be failed")));
+		return STATUS_ERROR;
+	}
 
 	if (!added)
 		return STATUS_ERROR;
