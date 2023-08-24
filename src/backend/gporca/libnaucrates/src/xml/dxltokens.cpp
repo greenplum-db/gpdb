@@ -570,7 +570,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenMetadataColumn, GPOS_WSZ_LIT("MetadataColumn")},
 
 		{EdxltokenColumnNullable, GPOS_WSZ_LIT("Nullable")},
-		{EdxltokenColumnDefaultValue, GPOS_WSZ_LIT("DefaultValue")},
 
 		{EdxltokenIndex, GPOS_WSZ_LIT("Index")},
 

@@ -28,7 +28,6 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerCostParams.o \
               CParseHandlerCtasStorageOptions.o \
               CParseHandlerDXL.o \
-              CParseHandlerDefaultValueExpr.o \
               CParseHandlerDirectDispatchInfo.o \
               CParseHandlerDistinctComp.o \
               CParseHandlerDummy.o \

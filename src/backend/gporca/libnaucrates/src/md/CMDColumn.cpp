@@ -173,15 +173,6 @@ CMDColumn::Serialize(CXMLSerializer *xml_serializer) const
 			CDXLTokens::GetDXLTokenStr(EdxltokenColDropped), m_is_dropped);
 	}
 
-	// serialize default value
-	xml_serializer->OpenElement(
-		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
-		CDXLTokens::GetDXLTokenStr(EdxltokenColumnDefaultValue));
-
-	xml_serializer->CloseElement(
-		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
-		CDXLTokens::GetDXLTokenStr(EdxltokenColumnDefaultValue));
-
 	xml_serializer->CloseElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
 		CDXLTokens::GetDXLTokenStr(EdxltokenColumn));

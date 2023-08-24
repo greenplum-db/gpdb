@@ -29,7 +29,6 @@
 #include "naucrates/dxl/parser/CParseHandlerCostParams.h"
 #include "naucrates/dxl/parser/CParseHandlerCtasStorageOptions.h"
 #include "naucrates/dxl/parser/CParseHandlerDXL.h"
-#include "naucrates/dxl/parser/CParseHandlerDefaultValueExpr.h"
 #include "naucrates/dxl/parser/CParseHandlerDirectDispatchInfo.h"
 #include "naucrates/dxl/parser/CParseHandlerDistinctComp.h"
 #include "naucrates/dxl/parser/CParseHandlerDynamicForeignScan.h"

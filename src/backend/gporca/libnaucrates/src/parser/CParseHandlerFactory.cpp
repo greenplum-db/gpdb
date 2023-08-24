@@ -83,7 +83,6 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		{EdxltokenIndexInfoList, &CreateMDIndexInfoListParseHandler},
 		{EdxltokenMetadataColumns, &CreateMDColsParseHandler},
 		{EdxltokenMetadataColumn, &CreateMDColParseHandler},
-		{EdxltokenColumnDefaultValue, &CreateColDefaultValExprParseHandler},
 		{EdxltokenColumnStatsBucket, &CreateColStatsBucketParseHandler},
 		{EdxltokenGPDBCast, &CreateMDCastParseHandler},
 		{EdxltokenGPDBMDScCmp, &CreateMDScCmpParseHandler},
@@ -668,16 +667,6 @@ CParseHandlerFactory::CreateMDColParseHandler(
 {
 	return GPOS_NEW(mp)
 		CParseHandlerMetadataColumn(mp, parse_handler_mgr, parse_handler_root);
-}
-
-// creates a parse handler for parsing a a default value for a column
-CParseHandlerBase *
-CParseHandlerFactory::CreateColDefaultValExprParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp) CParseHandlerDefaultValueExpr(mp, parse_handler_mgr,
-													  parse_handler_root);
 }
 
 // creates a parse handler for parsing a physical operator
