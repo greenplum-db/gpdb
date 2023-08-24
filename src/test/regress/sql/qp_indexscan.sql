@@ -74,216 +74,216 @@ set optimizer_enable_indexscan to off;
 explain (costs off) select b from test_index_with_orderby_limit order by b limit 10;
 select b from test_index_with_orderby_limit order by b limit 10;
 -- re-enable indexscan
-set optimizer_enable_indexscan to on;
+reset optimizer_enable_indexscan;
 DROP TABLE test_index_with_orderby_limit;
 
 -- Test Case: Test on a regular table with mixed data type columns.
 -- Purpose: Validate if IndexScan with correct scan direction is used on expected index for queries with order by and limit.
 
-CREATE TABLE foo (a int, b text, c float, d int, e text, f int);
-INSERT INTO foo select i, CONCAT('col_b', i)::text, i/3.2, i+1, CONCAT('col_e', i)::text, i+3 from generate_series(1,10000) i;
+CREATE TABLE zoo (a int, b text, c float, d int, e text, f int);
+INSERT INTO zoo select i, CONCAT('col_b', i)::text, i/3.2, i+1, CONCAT('col_e', i)::text, i+3 from generate_series(1,10000) i;
 -- Inserting nulls to verify results match when index key specifies nulls first or desc
-INSERT INTO foo values (null, null, null, null, null);
-ANALYZE foo;
+INSERT INTO zoo values (null, null, null, null, null);
+ANALYZE zoo;
 
 -- Positive tests: Validate if IndexScan Forward/Backward is chosen.
 
 -- single col index with default order
-CREATE INDEX dir_index_a on foo using btree(a);
+CREATE INDEX dir_index_a on zoo using btree(a);
 -- Validate if 'dir_index_a' is used for order by cols matching/commutative to the index cols
 -- Expected to use Forward IndexScan
-explain (costs off) select a from foo order by a limit 3;
-select a from foo order by a limit 3;
+explain (costs off) select a from zoo order by a limit 3;
+select a from zoo order by a limit 3;
 -- Expected to use Backward IndexScan
-explain (costs off) select a from foo order by a desc limit 3;
-select a from foo order by a desc limit 3;
+explain (costs off) select a from zoo order by a desc limit 3;
+select a from zoo order by a desc limit 3;
 
 -- single col index with reverse order
-CREATE INDEX dir_index_b on foo using btree(b desc);
+CREATE INDEX dir_index_b on zoo using btree(b desc);
 -- Validate if 'dir_index_b' is used for order by cols matching/commutative to the index cols
 -- Expected to use Forward IndexScan
-explain (costs off) select b from foo order by b desc limit 3;
-select b from foo order by b desc limit 3;
+explain (costs off) select b from zoo order by b desc limit 3;
+select b from zoo order by b desc limit 3;
 -- Expected to use Backward IndexScan
-explain (costs off) select b from foo order by b limit 3;
-select b from foo order by b limit 3;
+explain (costs off) select b from zoo order by b limit 3;
+select b from zoo order by b limit 3;
 
 -- single col index with opp nulls direction
-CREATE INDEX dir_index_c on foo using btree(c nulls first);
+CREATE INDEX dir_index_c on zoo using btree(c nulls first);
 -- Validate if 'dir_index_c' is used for order by cols matching/commutative to the index cols
 -- Expected to use Forward IndexScan
-explain (costs off) select c from foo order by c nulls first limit 3;
-select c from foo order by c nulls first limit 3;
+explain (costs off) select c from zoo order by c nulls first limit 3;
+select c from zoo order by c nulls first limit 3;
 -- Expected to use Backward IndexScan
-explain (costs off) select c from foo order by c desc nulls last limit 3;
-select c from foo order by c desc nulls last limit 3;
+explain (costs off) select c from zoo order by c desc nulls last limit 3;
+select c from zoo order by c desc nulls last limit 3;
 
 -- multi col index all with all index keys asc
-CREATE INDEX dir_index_bcd on foo using btree(b,c,d);
+CREATE INDEX dir_index_bcd on zoo using btree(b,c,d);
 -- Inserting rows with duplicate values to ensure results are sorted correctly for order by on multiple columns
-INSERT INTO foo(b,c) values('col_b1',-1);
-INSERT INTO foo(b,c) values('col_b9999',10000);
+INSERT INTO zoo(b,c) values('col_b1',-1);
+INSERT INTO zoo(b,c) values('col_b9999',10000);
 -- Validate if 'dir_index_bcd' is used for order by cols matching/commutative to the index cols
 -- Testing various permutations of order by columns that are expected to choose Forward IndexScan
-explain (costs off) select b,c,d from foo order by b,c,d limit 3;
-select b,c,d from foo order by b,c,d limit 3;
-explain (costs off) select b,c from foo order by b,c limit 3;
-select b,c from foo order by b,c limit 3;
+explain (costs off) select b,c,d from zoo order by b,c,d limit 3;
+select b,c,d from zoo order by b,c,d limit 3;
+explain (costs off) select b,c from zoo order by b,c limit 3;
+select b,c from zoo order by b,c limit 3;
 -- Testing various permutations of order by columns that are expected to choose Backward IndexScan
-explain (costs off) select b,c,d from foo order by b desc,c desc,d desc limit 4;
-select b,c,d from foo order by b desc,c desc,d desc limit 4;
-explain (costs off) select b,c from foo order by b desc,c desc limit 4;
-select b,c from foo order by b desc,c desc limit 4;
+explain (costs off) select b,c,d from zoo order by b desc,c desc,d desc limit 4;
+select b,c,d from zoo order by b desc,c desc,d desc limit 4;
+explain (costs off) select b,c from zoo order by b desc,c desc limit 4;
+select b,c from zoo order by b desc,c desc limit 4;
 -- Delete duplicate rows
-delete from foo where b='col_b1' and c=-1;
-delete from foo where b='col_b9999' and c=10000;
+delete from zoo where b='col_b1' and c=-1;
+delete from zoo where b='col_b9999' and c=10000;
 
 -- multi col index all with all index keys desc
-CREATE INDEX dir_index_fde on foo using btree(f desc,d desc,e desc);
+CREATE INDEX dir_index_fde on zoo using btree(f desc,d desc,e desc);
 -- Inserting rows with duplicate values to ensure results are sorted correctly for order by on multiple columns
-INSERT INTO foo(f,d) values(4,-1);
-INSERT INTO foo(f,d) values(10003,-1);
+INSERT INTO zoo(f,d) values(4,-1);
+INSERT INTO zoo(f,d) values(10003,-1);
 -- Validate if 'dir_index_fde' is used for order by cols matching/commutative to the index cols
 -- Testing various permutations of order by columns that are expected to choose Forward IndexScan
-explain (costs off) select f,d,e from foo order by f desc,d desc,e desc limit 4;
-select f,d,e from foo order by f desc,d desc,e desc limit 4;
-explain (costs off) select f,d from foo order by f desc,d desc limit 4;
-select f,d from foo order by f desc,d desc limit 4;
+explain (costs off) select f,d,e from zoo order by f desc,d desc,e desc limit 4;
+select f,d,e from zoo order by f desc,d desc,e desc limit 4;
+explain (costs off) select f,d from zoo order by f desc,d desc limit 4;
+select f,d from zoo order by f desc,d desc limit 4;
 -- Testing various permutations of order by columns that are expected to choose Backward IndexScan
-explain (costs off) select f,d,e from foo order by f,d,e limit 3;
-select f,d,e from foo order by f,d,e limit 3;
-explain (costs off) select f,d from foo order by f,d limit 3;
-select f,d from foo order by f,d limit 3;
+explain (costs off) select f,d,e from zoo order by f,d,e limit 3;
+select f,d,e from zoo order by f,d,e limit 3;
+explain (costs off) select f,d from zoo order by f,d limit 3;
+select f,d from zoo order by f,d limit 3;
 -- Delete duplicate rows
-delete from foo where f=4 and d=-1;
-delete from foo where f=10003 and d=-1;
+delete from zoo where f=4 and d=-1;
+delete from zoo where f=10003 and d=-1;
 
 -- multi col index with mixed index keys properties
-CREATE INDEX dir_index_eda on foo using btree(e, d desc nulls last,a);
+CREATE INDEX dir_index_eda on zoo using btree(e, d desc nulls last,a);
 -- Inserting rows with duplicate values to ensure results are sorted correctly for order by on multiple columns
-INSERT INTO foo(d,e) values(9999,'col_e9999');
-INSERT INTO foo(d,e) values(1,'col_e1');
+INSERT INTO zoo(d,e) values(9999,'col_e9999');
+INSERT INTO zoo(d,e) values(1,'col_e1');
 -- Validate if 'dir_index_eda' is used for order by cols matching/commutative to the index cols
 -- Testing various permutations of order by columns that are expected to choose Forward IndexScan
-explain (costs off) select e,d,a from foo order by e, d desc nulls last,a limit 3;
-select e,d,a from foo order by e, d desc nulls last,a limit 3;
-explain (costs off) select e,d from foo order by e, d desc nulls last limit 3;
-select e,d from foo order by e, d desc nulls last limit 3;
+explain (costs off) select e,d,a from zoo order by e, d desc nulls last,a limit 3;
+select e,d,a from zoo order by e, d desc nulls last,a limit 3;
+explain (costs off) select e,d from zoo order by e, d desc nulls last limit 3;
+select e,d from zoo order by e, d desc nulls last limit 3;
 -- Testing various permutations of order by columns that are expected to choose Backward IndexScan
-explain (costs off) select e,d,a from foo order by e desc,d nulls first,a desc limit 4;
-select e,d,a from foo order by e desc,d nulls first,a desc limit 4;
-explain (costs off) select e,d from foo order by e desc,d nulls first limit 4;
-select e,d from foo order by e desc,d nulls first limit 4;
+explain (costs off) select e,d,a from zoo order by e desc,d nulls first,a desc limit 4;
+select e,d,a from zoo order by e desc,d nulls first,a desc limit 4;
+explain (costs off) select e,d from zoo order by e desc,d nulls first limit 4;
+select e,d from zoo order by e desc,d nulls first limit 4;
 -- Delete duplicate rows
-delete from foo where d=9999 and e='col_e9999';
-delete from foo where d=1 and e='col_e1';
+delete from zoo where d=9999 and e='col_e9999';
+delete from zoo where d=1 and e='col_e1';
 
 -- Covering index with descending and one include column
-CREATE INDEX dir_covering_index_db ON foo(d desc) INCLUDE (b);
+CREATE INDEX dir_covering_index_db ON zoo(d desc) INCLUDE (b);
 -- Validate if IndexScan is chosen and on covering index
 -- Expected to use Forward IndexScan
-explain (costs off) select d from foo order by d desc limit 3;
-select d from foo order by d desc limit 3;
+explain (costs off) select d from zoo order by d desc limit 3;
+select d from zoo order by d desc limit 3;
 -- Expected to use Backward IndexScan
-explain (costs off) select d from foo order by d limit 3;
-select d from foo order by d limit 3;
+explain (costs off) select d from zoo order by d limit 3;
+select d from zoo order by d limit 3;
 
 -- Validate if Backward IndexScan is chosen for query with offset and without limit
-explain (costs off) select e,d,a from foo order by e desc,d nulls first,a desc offset 9990;
-select e,d,a from foo order by e desc,d nulls first,a desc offset 9997;
+explain (costs off) select e,d,a from zoo order by e desc,d nulls first,a desc offset 9990;
+select e,d,a from zoo order by e desc,d nulls first,a desc offset 9997;
 
 -- Validate if Backward IndexScan is chosen for query with offset value in subquery
 -- ORCA_FEATURE_NOT_SUPPORTED: ORCA doesn't support limit or offset values specified as part of a subquery
-explain (costs off) select c from foo order by c desc nulls last offset (select 9997);
-select c from foo order by c desc nulls last offset (select 9997);
+explain (costs off) select c from zoo order by c desc nulls last offset (select 9997);
+select c from zoo order by c desc nulls last offset (select 9997);
 -- Validate if Backward IndexScan is chosen for query with limit value in subquery
 -- ORCA_FEATURE_NOT_SUPPORTED: ORCA doesn't support limit or offset values specified as part of a subquery
-explain (costs off) select c from foo order by c desc nulls last limit (select 3);
-select c from foo order by c desc nulls last limit (select 3);
+explain (costs off) select c from zoo order by c desc nulls last limit (select 3);
+select c from zoo order by c desc nulls last limit (select 3);
 
 -- Negative tests: Validate if a SeqScan is chosen if order by cols directions do not matching indices keys directions.
 --                 Expected to choose SeqScan with Sort
 
 -- Testing various permutations that are not matching keys in 'dir_index_a'
-explain (costs off) select a from foo order by a nulls first limit 3;
-select a from foo order by a nulls first limit 3;
-explain (costs off) select a from foo order by a desc nulls last limit 3;
-select a from foo order by a desc nulls last limit 3;
+explain (costs off) select a from zoo order by a nulls first limit 3;
+select a from zoo order by a nulls first limit 3;
+explain (costs off) select a from zoo order by a desc nulls last limit 3;
+select a from zoo order by a desc nulls last limit 3;
 
 -- Testing various permutations that are not matching keys in 'dir_index_b'
-explain (costs off) select b from foo order by b nulls first limit 3;
-select b from foo order by b nulls first limit 3;
-explain (costs off) select b from foo order by b desc nulls last limit 3;
-select b from foo order by b desc nulls last limit 3;
+explain (costs off) select b from zoo order by b nulls first limit 3;
+select b from zoo order by b nulls first limit 3;
+explain (costs off) select b from zoo order by b desc nulls last limit 3;
+select b from zoo order by b desc nulls last limit 3;
 
 -- Testing various permutations that are not matching keys in 'dir_index_c'
-explain (costs off) select c from foo order by c limit 3;
-select c from foo order by c  limit 3;
-explain (costs off) select c from foo order by c desc limit 3;
-select c from foo order by c desc limit 3;
+explain (costs off) select c from zoo order by c limit 3;
+select c from zoo order by c  limit 3;
+explain (costs off) select c from zoo order by c desc limit 3;
+select c from zoo order by c desc limit 3;
 
 -- Testing various permutations that are not matching keys in 'dir_index_bcd'
-explain (costs off) select b,c,d from foo order by b ,c desc,d desc limit 3;
-select b,c,d from foo order by b ,c desc,d desc limit 3;
-explain (costs off) select b,c,d from foo order by b ,c ,d desc limit 3;
-select b,c,d from foo order by b ,c ,d desc limit 3;
-explain (costs off) select b,c,d from foo order by b desc, c ,d desc limit 3;
-select b,c,d from foo order by b desc, c ,d desc limit 3;
+explain (costs off) select b,c,d from zoo order by b ,c desc,d desc limit 3;
+select b,c,d from zoo order by b ,c desc,d desc limit 3;
+explain (costs off) select b,c,d from zoo order by b ,c ,d desc limit 3;
+select b,c,d from zoo order by b ,c ,d desc limit 3;
+explain (costs off) select b,c,d from zoo order by b desc, c ,d desc limit 3;
+select b,c,d from zoo order by b desc, c ,d desc limit 3;
 
 -- Testing various permutations that are not matching keys in 'dir_index_fde'
-explain (costs off) select f,d,e from foo order by f ,d desc,e desc limit 3;
-select f,d,e from foo order by f ,d desc,e desc limit 3;
-explain (costs off) select f,d,e from foo order by f,d ,e desc limit 3;
-select f,d,e from foo order by f,d ,e desc limit 3;
-explain (costs off) select f,d,e from foo order by f desc, d ,e desc limit 3;
-select f,d,e from foo order by f desc, d ,e desc limit 3;
+explain (costs off) select f,d,e from zoo order by f ,d desc,e desc limit 3;
+select f,d,e from zoo order by f ,d desc,e desc limit 3;
+explain (costs off) select f,d,e from zoo order by f,d ,e desc limit 3;
+select f,d,e from zoo order by f,d ,e desc limit 3;
+explain (costs off) select f,d,e from zoo order by f desc, d ,e desc limit 3;
+select f,d,e from zoo order by f desc, d ,e desc limit 3;
 
 -- Testing various permutations that are not matching keys in 'dir_index_eda'
-explain (costs off) select e,d,a from foo order by e, d desc,a desc limit 3;
-select e,d,a from foo order by e, d desc,a desc limit 3;
-explain (costs off) select e,d,a from foo order by e desc,d desc,a desc limit 3;
-select e,d,a from foo order by e desc,d desc,a desc limit 3;
-explain (costs off) select e,d,a from foo order by e ,d ,a  limit 3;
-select e,d,a from foo order by e ,d ,a  limit 3;
+explain (costs off) select e,d,a from zoo order by e, d desc,a desc limit 3;
+select e,d,a from zoo order by e, d desc,a desc limit 3;
+explain (costs off) select e,d,a from zoo order by e desc,d desc,a desc limit 3;
+select e,d,a from zoo order by e desc,d desc,a desc limit 3;
+explain (costs off) select e,d,a from zoo order by e ,d ,a  limit 3;
+select e,d,a from zoo order by e ,d ,a  limit 3;
 
 -- Testing various permutations of order by on non-index columns. Expected to choose SeqScan with Sort
-explain (costs off) select d, f from foo order by d, f limit 3;
-select d, f from foo order by d, f limit 3;
-explain (costs off) select a,e from foo order by a,e limit 3;
-select a,e from foo order by a,e limit 3;
-explain (costs off) select d,a from foo order by d,a desc limit 3;
-select d,a from foo order by d,a desc limit 3;
-explain (costs off) select d,c from foo order by d desc,c limit 3;
-select d,c from foo order by d desc,c limit 3;
+explain (costs off) select d, f from zoo order by d, f limit 3;
+select d, f from zoo order by d, f limit 3;
+explain (costs off) select a,e from zoo order by a,e limit 3;
+select a,e from zoo order by a,e limit 3;
+explain (costs off) select d,a from zoo order by d,a desc limit 3;
+select d,a from zoo order by d,a desc limit 3;
+explain (costs off) select d,c from zoo order by d desc,c limit 3;
+select d,c from zoo order by d desc,c limit 3;
 
 -- Validate if SeqScan is chosen if order by cols also have the Included Column of covering index
-explain (costs off) select e,b from foo order by e, b limit 3;
-select e,b from foo order by e,b limit 3;
+explain (costs off) select e,b from zoo order by e, b limit 3;
+select e,b from zoo order by e,b limit 3;
 
 -- Purpose: Validate if IndexOnlyScan Forward/Backward is chosen when required for queries with order by and limit
 -- Vacuum table to Ensure IndexOnlyScan is chosen
-vacuum foo;
+vacuum zoo;
 -- Testing various permutations of order by columns that are expected to choose IndexOnlyScan Forward
-explain (costs off) select b from foo order by b desc limit 3;
-select b from foo order by b desc limit 3;
-explain (costs off) select e,d,a from foo order by e, d desc nulls last limit 3;
-select e,d,a from foo order by e, d desc nulls last limit 3;
-explain (costs off) select b,c,d from foo order by b, c, d limit 3;
-select b,c,d from foo order by b, c, d limit 3;
-explain (costs off) select f,d from foo order by f desc,d desc,e desc limit 3;
-select f,d from foo order by f desc,d desc,e desc limit 3;
+explain (costs off) select b from zoo order by b desc limit 3;
+select b from zoo order by b desc limit 3;
+explain (costs off) select e,d,a from zoo order by e, d desc nulls last limit 3;
+select e,d,a from zoo order by e, d desc nulls last limit 3;
+explain (costs off) select b,c,d from zoo order by b, c, d limit 3;
+select b,c,d from zoo order by b, c, d limit 3;
+explain (costs off) select f,d from zoo order by f desc,d desc,e desc limit 3;
+select f,d from zoo order by f desc,d desc,e desc limit 3;
 -- Testing various permutations of order by columns that are expected to choose IndexOnlyScan Backward
-explain (costs off) select e,d,a from foo order by e desc,d nulls first limit 3;
-select e,d,a from foo order by e desc,d nulls first limit 3;
-explain (costs off) select e,d,a from foo order by e desc,d nulls first,a desc limit 3;
-select e,d,a from foo order by e desc,d nulls first,a desc limit 3;
-explain (costs off) select b,c from foo order by b desc, c desc, d desc limit 3;
-select b,c from foo order by b desc, c desc, d desc limit 3;
-explain (costs off) select f,d from foo order by f, d limit 3;
-select f,d from foo order by f, d limit 3;
+explain (costs off) select e,d,a from zoo order by e desc,d nulls first limit 3;
+select e,d,a from zoo order by e desc,d nulls first limit 3;
+explain (costs off) select e,d,a from zoo order by e desc,d nulls first,a desc limit 3;
+select e,d,a from zoo order by e desc,d nulls first,a desc limit 3;
+explain (costs off) select b,c from zoo order by b desc, c desc, d desc limit 3;
+select b,c from zoo order by b desc, c desc, d desc limit 3;
+explain (costs off) select f,d from zoo order by f, d limit 3;
+select f,d from zoo order by f, d limit 3;
 
 -- Clean Up
-DROP TABLE foo;
+DROP TABLE zoo;
 
 
 -- Test Case: Test on Leaf Partition of a partition table with mixed data type columns.
