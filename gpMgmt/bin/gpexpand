@@ -1416,7 +1416,7 @@ class gpexpand:
         Build the list of delete statements based on the COORDINATOR_ONLY_TABLES
         defined in gpcatalog.py
         """
-        statements = ["delete from pg_catalog.%s" % tab for tab in COORDINATOR_ONLY_TABLES]
+        statements = ["truncate pg_catalog.%s" % tab for tab in COORDINATOR_ONLY_TABLES]
 
         """
           Connect to each database in the new segments, and clean up the catalog tables.
