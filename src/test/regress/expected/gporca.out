@@ -12588,7 +12588,7 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
                                                       QUERY PLAN                                                      
 ----------------------------------------------------------------------------------------------------------------------
- Nested Loop Semi Join  (cost=10000000001.07..10000000003.19 rows=4 width=8)
+ Nested Loop Semi Join  (cost=10000000001.07..10000000003.21 rows=4 width=8)
    Join Filter: ("out".b = COALESCE((count(*)), '99'::bigint))
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
          ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
@@ -12705,7 +12705,7 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
                                                       QUERY PLAN                                                      
 ----------------------------------------------------------------------------------------------------------------------
- Nested Loop Semi Join  (cost=10000000001.07..10000000003.19 rows=4 width=8)
+ Nested Loop Semi Join  (cost=10000000001.07..10000000003.21 rows=4 width=8)
    Join Filter: ("out".b = COALESCE((count(*)), '99'::bigint))
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
          ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)

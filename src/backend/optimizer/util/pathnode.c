@@ -3650,12 +3650,12 @@ create_hashjoin_path(PlannerInfo *root,
 	/* final_cost_hashjoin will fill in pathnode->num_batches */
 
 	/*
-	 * GPDB hash tables was modified to be rescannable even in case of hash
-	 * table overflows to disk, and an ancestor node requests rescan
-	 * (e.g. because the HJ is in the inner subtree of a NJ).
-	 * See the SpillCurrentBatch comment for details
+	 * If hash table overflows to disk, and an ancestor node requests rescan
+	 * (e.g. because the HJ is in the inner subtree of a NJ), then the HJ has
+	 * to be redone, including rescanning the inner rel in order to rebuild
+	 * the hash table.
 	 */
-	pathnode->jpath.path.rescannable = outer_path->rescannable;
+	pathnode->jpath.path.rescannable = outer_path->rescannable && inner_path->rescannable;
 
 	/* see the comment above; we may have a motion hazard on our inner ?! */
 	if (pathnode->jpath.path.rescannable)
