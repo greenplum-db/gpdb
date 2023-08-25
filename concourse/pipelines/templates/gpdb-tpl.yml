@@ -210,7 +210,7 @@ groups:
   {% endif %}
   - test_gpdb_clients_[[ os_type ]]
   {% if os_type != "rhel8" and os_type != "oel8" and os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
-  - Publish Server Builds
+  - publish_server_builds
   {% endif %}
   {% if os_type == default_os_type %}
   - check_format
@@ -266,8 +266,8 @@ groups:
   ## --------------------------------------------------------------------
   - gate_advanced_analytics_start
   - madlib_build_gppkg_[[ os_type ]]
-  - MADlib_Test_orca_[[ os_type ]]
-  - MADlib_Test_planner_[[ os_type ]]
+  - madlib_test_orca_[[ os_type ]]
+  - madlib_test_planner_[[ os_type ]]
   - gate_advanced_analytics_end
 {% endif %}
 
@@ -276,25 +276,25 @@ groups:
 {% if "Release" in test_sections or build_test_rc_rpm or directed_release %}
 {% if os_type != "rhel8" and os_type != "oel8" %}
 {% if os_type == "rocky9" %}
-- name: Release
+- name: release
   jobs:
   - gate_compile_end
   - gate_release_candidate_start
-  - Release_Candidate
+  - release_candidate
 {% elif os_type != "oel9" and os_type != "rhel9" %}
-- name: Release
+- name: release
   jobs:
 {% if "Release" in test_sections or directed_release %}
   - gate_icw_end
   - gate_cli_end
   - gate_advanced_analytics_end
   - gate_release_candidate_start
-  - Release_Candidate
+  - release_candidate
 {% endif %}
 
 {% if not directed_release %}
   {% if os_type != "ubuntu20.04" %}
-  - Build_Release_Candidate_RPMs
+  - build_release_candidate_rpms
   {% endif %}
 {% endif %}
 
@@ -303,7 +303,7 @@ groups:
 {% endif %}
 ## ======================================================================
 
-- name: Compile
+- name: compile
   jobs:
   - gate_compile_start
   - compile_gpdb_[[ compile_platform ]]
@@ -312,7 +312,7 @@ groups:
   {% endif %}
   - test_gpdb_clients_[[ os_type ]]
   {% if os_type != "rhel8" and os_type != "oel8" and os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
-  - Publish Server Builds
+  - publish_server_builds
   {% endif %}
   {% if os_type == default_os_type %}
   - check_format
@@ -326,7 +326,7 @@ groups:
 {% if "ICW" in test_sections %}
 ## ======================================================================
 
-- name: ICW
+- name: icw
   jobs:
   - gate_compile_end
   - gate_icw_start
@@ -357,7 +357,7 @@ groups:
 {% if "CLI" in test_sections %}
 ## ======================================================================
 
-- name: CLI
+- name: cli
   jobs:
   - gate_compile_end
   - gate_cli_start
@@ -374,13 +374,13 @@ groups:
 {% endif %}
 
 {% if "AA" in test_sections %}
-- name: AdvancedAnalytics
+- name: advancedanalytics
   jobs:
   - gate_compile_end
   - gate_advanced_analytics_start
   - madlib_build_gppkg_[[ os_type ]]
-  - MADlib_Test_orca_[[ os_type ]]
-  - MADlib_Test_planner_[[ os_type ]]
+  - madlib_test_orca_[[ os_type ]]
+  - madlib_test_planner_[[ os_type ]]
   - gate_advanced_analytics_end
 {% endif %}
 
@@ -1135,7 +1135,8 @@ jobs:
       action: destroy
 {% endif %}
 {% if os_type != "rhel8" and os_type != "oel8" and os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
-- name: Publish Server Builds
+- name: publish_server_builds
+  old_name: Publish Server Builds
   plan:
   - in_parallel:
       steps:
@@ -1146,7 +1147,7 @@ jobs:
       - get: bin_gpdb
         passed: [compile_gpdb_[[ compile_platform ]]]
       - get: gpdb6-[[ os_type ]]-build
-  - task: rename server build artifacts
+  - task: rename_server_build_artifacts
     image: gpdb6-[[ os_type ]]-build
     config:
       platform: linux
@@ -1182,7 +1183,7 @@ jobs:
         {% endif %}
         - test_gpdb_clients_[[ os_type ]]
         {% if os_type != "rhel8" and os_type != "oel8" and os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
-        - Publish Server Builds
+        - publish_server_builds
         {% endif %}
         {% if os_type == default_os_type %}
         - test_gpdb_clients_sles12
@@ -1194,7 +1195,7 @@ jobs:
       passed:
       - test_gpdb_clients_[[ os_type ]]
       {% if os_type != "rhel8" and os_type != "oel8" and os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
-      - Publish Server Builds
+      - publish_server_builds
       {% endif %}
     - get: bin_gpdb_clients
       params:
@@ -1210,7 +1211,7 @@ jobs:
     - get: server-build-[[ os_type ]]
       params:
         skip_download: 'true'
-      passed: [Publish Server Builds]
+      passed: [publish_server_builds]
     {% endif %}
     {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
     - get: bin_gpdb_[[ os_type ]]_without_scram-sha-256
@@ -2339,7 +2340,8 @@ jobs:
       params:
         file: madlib_master_artifacts_[[ os_type ]]/madlib-*.gppkg
 {% endif %}
-- name: MADlib_Test_planner_[[ os_type ]]
+- name: madlib_test_planner_[[ os_type ]]
+  old_name: MADlib_Test_planner_[[ os_type ]]
   plan:
   - in_parallel:
       steps:
@@ -2364,7 +2366,7 @@ jobs:
         resource: madlib_gppkg_[[ os_type ]]
       {% endif %}
         passed: [madlib_build_gppkg_[[ os_type ]]]
-  - task: MADlib_Test
+  - task: madlib_test
     {% if os_type == "ubuntu20.04" %}
     file: madlib_ci/concourse/tasks/madlib_master_ic_gpdb_ubuntu.yml
     image: gpdb6-[[ os_type ]]-test
@@ -2383,7 +2385,8 @@ jobs:
       DBVER: gpdb6
     {% endif %}
 
-- name: MADlib_Test_orca_[[ os_type ]]
+- name: madlib_test_orca_[[ os_type ]]
+  old_name: MADlib_Test_orca_[[ os_type ]]
   plan:
   - in_parallel:
       steps:
@@ -2408,7 +2411,7 @@ jobs:
         resource: madlib_gppkg_[[ os_type ]]
       {% endif %}
         passed: [madlib_build_gppkg_[[ os_type ]]]
-  - task: MADlib_Test
+  - task: madlib_test
     {% if os_type == "ubuntu20.04" %}
     file: madlib_ci/concourse/tasks/madlib_master_ic_gpdb_ubuntu.yml
     image: gpdb6-[[ os_type ]]-test
@@ -2435,15 +2438,15 @@ jobs:
             params:
               skip_download: 'true'
             passed:
-              - MADlib_Test_orca_[[ os_type ]]
-              - MADlib_Test_planner_[[ os_type ]]
+              - madlib_test_orca_[[ os_type ]]
+              - madlib_test_planner_[[ os_type ]]
             trigger: true
           - get: bin_gpdb
             params:
               skip_download: 'true'
             passed:
-              - MADlib_Test_orca_[[ os_type ]]
-              - MADlib_Test_planner_[[ os_type ]]
+              - madlib_test_orca_[[ os_type ]]
+              - madlib_test_planner_[[ os_type ]]
 
 {% endif %}
 
@@ -2508,7 +2511,8 @@ jobs:
         passed: [ gate_icw_end ]
       {% endif %}
 
-- name: Release_Candidate
+- name: release_candidate
+  old_name: Release_Candidate
   plan:
   - in_parallel:
       steps:
@@ -2606,7 +2610,8 @@ jobs:
 
 {% if not directed_release %}
 {% if os_type != "ubuntu20.04" and os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
-- name: Build_Release_Candidate_RPMs
+- name: build_release_candidate_rpms
+  old_name: Build_Release_Candidate_RPMs
   plan:
   - in_parallel:
       steps:
