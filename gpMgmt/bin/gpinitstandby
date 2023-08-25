@@ -325,7 +325,7 @@ def remove_standby_datadir(array):
 
         pool.join()
         try:
-            pool.check_results()
+            pool.empty_completed_items(throw_on_error=True)
         except Exception as ex:
             logger.error('Failed to remove data directory on standby coordinator.')
             raise GpInitStandbyException(ex)

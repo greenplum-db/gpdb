@@ -409,7 +409,7 @@ try:
         else: sys.exit(0)
     else:
         try:
-            pool.check_results()
+            pool.empty_completed_items(throw_on_error=True)
         except Exception as e:
             if options.verbose:
                 logger.exception(e)

@@ -142,33 +142,33 @@ class WorkerPool(object):
         self._assigned -= 1
         return item
 
-    def getCompletedItems(self):
+    def getCompletedItems(self, throw_on_error=False):
         completed_list = []
-        try:
-            while True:
-                item = self._pop_completed() # will throw Empty
-                if item is not None:
-                    completed_list.append(item)
-        except Empty:
-            return completed_list
+        while not self.completed_queue.empty():
+            item = self._pop_completed()
+            if throw_on_error and not item.get_results().wasSuccessful():
+                raise ExecutionError("Error Executing Command: ", item)
+            if item is not None:
+                completed_list.append(item)
 
-    def check_results(self):
-        """ goes through all items in the completed_queue and throws an exception at the
-            first one that didn't execute successfully
+    def join_and_check_results(self):
+        """ Awaits all pool workers, discard result and throw on any incomplete worker run
 
             throws ExecutionError
         """
-        try:
-            while True:
-                item = self._pop_completed() # will throw Empty
-                if not item.get_results().wasSuccessful():
-                    raise ExecutionError("Error Executing Command: ", item)
-        except Empty:
-            return
+        self.join()
+        self.empty_completed_items(throw_on_error=True)
 
-    def empty_completed_items(self):
+    def empty_completed_items(self, throw_on_error=False):
+        """ Discard completed_queue one by. If throw_on_error stops and throws an exception
+            at the first one that didn't execute successfully
+
+            throws ExecutionError
+        """
         while not self.completed_queue.empty():
-            self._pop_completed()
+            item = self._pop_completed()
+            if throw_on_error and not item.get_results().wasSuccessful():
+                raise ExecutionError("Error Executing Command: ", item)
 
     def isDone(self):
         # TODO: not sure that qsize() is safe
@@ -180,7 +180,7 @@ class WorkerPool(object):
         A read-only count of the number of commands that have been added to the
         pool. This count is only decremented when items are removed from the
         completed queue via getCompletedItems(), empty_completed_items(), or
-        check_results().
+        join_and_check_results().
         """
         return self._assigned
 
@@ -678,6 +678,5 @@ def run_remote_commands(name, commands):
         cmd = Command(name=name, cmdStr=cmdStr, ctxt=REMOTE, remoteHost=host)
         pool.addCommand(cmd)
         cmds[host] = cmd
-    pool.join()
-    pool.check_results()
+    pool.join_and_check_results()
     return cmds

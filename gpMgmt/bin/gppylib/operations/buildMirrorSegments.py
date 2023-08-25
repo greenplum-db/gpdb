@@ -498,12 +498,7 @@ class GpMirrorListToBuild:
         else:
             base.join_and_indicate_progress(self.__pool)
 
-        if not suppressErrorCheck:
-            self.__pool.check_results()
-
-        completed_cmds = list(set(self.__pool.getCompletedItems()) & set(cmds))
-
-        self.__pool.empty_completed_items()
+        completed_cmds = list(set(self.__pool.getCompletedItems(throw_on_error=not suppressErrorCheck)) & set(cmds))
 
         return completed_cmds
 
