@@ -40,7 +40,7 @@ typedef struct GpExttableFdwMustOption
 static const GpExttableFdwMustOption gp_exttable_fdw_must_options[] = {
 	{"location_uris", ForeignTableRelationId},
 	{"command", ForeignTableRelationId},
-	{"format_type", ForeignTableRelationId},
+	{"format", ForeignTableRelationId},
 	{NULL, InvalidOid}
 };
 
@@ -72,7 +72,7 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
 	/* default reject_limit_type is r(ROW)*/
 	char		*reject_limit_type = "r";
 	int32		reject_limit = -1;
-	bool		formattype_found = false;
+	bool		format_found = false;
 	bool		locationuris_found = false;
 	bool		command_found = false;
 	bool		rejectlimit_found = false;
@@ -107,18 +107,18 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
 			location_list = TokenizeLocationUris(defGetString(def));
 			locationuris_found = true;
 		}
-		else if(pg_strcasecmp(def->defname, "format_type") == 0)
+		else if(pg_strcasecmp(def->defname, "format") == 0)
 		{
 			char *format = (char *) defGetString(def);
-			if(pg_strcasecmp(format, "t") != 0 && pg_strcasecmp(format, "c") != 0 
-			   && pg_strcasecmp(format, "b") != 0)
+			if(pg_strcasecmp(format, "text") != 0 && pg_strcasecmp(format, "csv") != 0
+			   && pg_strcasecmp(format, "custom") != 0)
 			{
 				ereport(ERROR,
 				        (errcode(ERRCODE_FDW_INVALID_ATTRIBUTE_VALUE),
-				         errmsg("format_type must be [t | c | b], t(text), c(csv), b(custom)")));
+				         errmsg("format must be [text | csv | custom]")));
 			} 
 
-			formattype_found = true;   
+			format_found = true;
 		}
 		else if(pg_strcasecmp(def->defname, "reject_limit_type") == 0)
 		{
@@ -143,11 +143,11 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
 		}
 	}
 
-	if(!formattype_found && is_must_option("format_type", catalog))
+	if(!format_found && is_must_option("format", catalog))
 	{
 		ereport(ERROR,
 		        (errcode(ERRCODE_UNDEFINED_OBJECT),
-		         errmsg("must specify format_type option([t | c | b], t(text), c(csv), b(custom))")));
+		         errmsg("must specify format option([text | csv | custom])")));
 	}
 
 	if(locationuris_found && command_found)

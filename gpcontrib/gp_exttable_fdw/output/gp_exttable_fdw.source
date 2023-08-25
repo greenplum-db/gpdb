@@ -8,60 +8,60 @@ NOTICE:  server "gp_exttable_server" already exists, skipping
 -- ===================================================================
 -- tests for validator
 -- ===================================================================
--- Error, miss format_type option
+-- Error, miss format option
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server
 OPTIONS (delimiter ',',
          location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv');
-ERROR:  must specify format_type option([t | c | b], t(text), c(csv), b(custom))  (seg1 127.0.0.1:7003 pid=5173)
--- Error, invalid format_type
+ERROR:  must specify format option([text | csv | custom])  (seg1 127.0.0.1:7003 pid=5173)
+-- Error, invalid format
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server
-OPTIONS (format_type 'invalid_format_type', delimiter ',',
+OPTIONS (format 'invalid_format_type', delimiter ',',
          location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv');
-ERROR:  format_type must be [t | c | b], t(text), c(csv), b(custom)  (seg2 127.0.0.1:7004 pid=5174)
+ERROR:  format must be [text | csv | custom]  (seg2 127.0.0.1:7004 pid=5174)
 -- Error, miss both location_uris and command option
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server
-OPTIONS (format_type 'c', delimiter ',');
+OPTIONS (format 'csv', delimiter ',');
 ERROR:  must specify one of location_uris and command option  (seg1 127.0.0.1:7003 pid=5173)
 -- Error, conflict location_uris and command option
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server
-OPTIONS (format_type 'c', delimiter ',',
+OPTIONS (format 'csv', delimiter ',',
          location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv',
          command 'command');
 ERROR:  location_uris and command options conflict with each other  (seg1 127.0.0.1:7003 pid=5173)
 -- Error, invalid reject_limit_type option
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server
-OPTIONS (format_type 'c', delimiter ',',
+OPTIONS (format 'csv', delimiter ',',
          location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv',
          reject_limit_type 'invalid_reject_limit_type');
 ERROR:  reject_limit_type must be [r | p], r(ROW) or p(PERCENT)  (seg1 127.0.0.1:7003 pid=5173)
 -- Error, invalid reject_limit option
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server
-OPTIONS (format_type 'c', delimiter ',',
+OPTIONS (format 'csv', delimiter ',',
          location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv',
          reject_limit_type 'r', reject_limit '-1');
 ERROR:  segment reject limit in ROWS must be 2 or larger (got -1)  (seg1 127.0.0.1:7003 pid=5173)
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server
-OPTIONS (format_type 'c', delimiter ',',
+OPTIONS (format 'csv', delimiter ',',
          location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv',
          reject_limit_type 'p', reject_limit '120');
 ERROR:  segment reject limit in PERCENT must be between 1 and 100 (got 120)  (seg1 127.0.0.1:7003 pid=5173)
 -- Error, invalid encoding
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server
-OPTIONS (format_type 'c', delimiter ',', encoding '-1',
+OPTIONS (format 'csv', delimiter ',', encoding '-1',
          location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv');
 ERROR:  -1 is not a valid encoding code  (seg0 127.0.0.1:7002 pid=8289)
 -- OK, no execute_on | log_errors | encoding | is_writable option
 CREATE FOREIGN TABLE tableless_ext_fdw(a int, b int)
 SERVER gp_exttable_server
-OPTIONS (format_type 'c', delimiter ',',
+OPTIONS (format 'csv', delimiter ',',
          location_uris 'file://@hostname@@abs_srcdir@/data/tableless.csv');
 SELECT * FROM tableless_ext_fdw;
  a | b  

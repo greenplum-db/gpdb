@@ -10,7 +10,7 @@ CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open
  high   | double precision |           |          |         | 
  low    | double precision |           |          |         | 
  volume | integer          |           |          |         | 
-FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', format_type 'c', location_uris 's3://s3-us-east-1.amazonaws.com/us-east-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', location_uris 's3://s3-us-east-1.amazonaws.com/us-east-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 SELECT round(sum(open)) FROM s3regress_all_regions;
   round  
@@ -31,7 +31,7 @@ CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open
  high   | double precision |           |          |         | 
  low    | double precision |           |          |         | 
  volume | integer          |           |          |         | 
-FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', format_type 'c', location_uris 's3://s3-us-east-2.amazonaws.com/us-east-2.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', location_uris 's3://s3-us-east-2.amazonaws.com/us-east-2.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 SELECT round(sum(open)) FROM s3regress_all_regions;
   round  
@@ -52,7 +52,7 @@ CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open
  high   | double precision |           |          |         | 
  low    | double precision |           |          |         | 
  volume | integer          |           |          |         | 
-FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', format_type 'c', location_uris 's3://s3-us-west-1.amazonaws.com/us-west-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', location_uris 's3://s3-us-west-1.amazonaws.com/us-west-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 SELECT round(sum(open)) FROM s3regress_all_regions;
   round  
@@ -73,7 +73,7 @@ CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open
  high   | double precision |           |          |         | 
  low    | double precision |           |          |         | 
  volume | integer          |           |          |         | 
-FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', format_type 'c', location_uris 's3://s3-ap-south-1.amazonaws.com/ap-south-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', location_uris 's3://s3-ap-south-1.amazonaws.com/ap-south-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 SELECT round(sum(open)) FROM s3regress_all_regions;
   round  
@@ -94,7 +94,7 @@ CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open
  high   | double precision |           |          |         | 
  low    | double precision |           |          |         | 
  volume | integer          |           |          |         | 
-FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', format_type 'c', location_uris 's3://s3-ap-northeast-2.amazonaws.com/ap-northeast-2.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', location_uris 's3://s3-ap-northeast-2.amazonaws.com/ap-northeast-2.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 SELECT round(sum(open)) FROM s3regress_all_regions;
   round  
@@ -115,7 +115,7 @@ CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open
  high   | double precision |           |          |         | 
  low    | double precision |           |          |         | 
  volume | integer          |           |          |         | 
-FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', format_type 'c', location_uris 's3://s3-ap-southeast-1.amazonaws.com/ap-southeast-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', location_uris 's3://s3-ap-southeast-1.amazonaws.com/ap-southeast-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 SELECT round(sum(open)) FROM s3regress_all_regions;
   round  
@@ -136,7 +136,7 @@ CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open
  high   | double precision |           |          |         | 
  low    | double precision |           |          |         | 
  volume | integer          |           |          |         | 
-FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', format_type 'c', location_uris 's3://s3-ap-southeast-2.amazonaws.com/ap-southeast-2.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', location_uris 's3://s3-ap-southeast-2.amazonaws.com/ap-southeast-2.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 SELECT round(sum(open)) FROM s3regress_all_regions;
   round  
@@ -157,7 +157,7 @@ CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open
  high   | double precision |           |          |         | 
  low    | double precision |           |          |         | 
  volume | integer          |           |          |         | 
-FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', format_type 'c', location_uris 's3://s3-ap-northeast-1.amazonaws.com/ap-northeast-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', location_uris 's3://s3-ap-northeast-1.amazonaws.com/ap-northeast-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 SELECT round(sum(open)) FROM s3regress_all_regions;
   round  
@@ -178,7 +178,7 @@ CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open
  high   | double precision |           |          |         | 
  low    | double precision |           |          |         | 
  volume | integer          |           |          |         | 
-FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', format_type 'c', location_uris 's3://s3-eu-central-1.amazonaws.com/eu-central-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', location_uris 's3://s3-eu-central-1.amazonaws.com/eu-central-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 SELECT round(sum(open)) FROM s3regress_all_regions;
   round  
@@ -199,7 +199,7 @@ CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open
  high   | double precision |           |          |         | 
  low    | double precision |           |          |         | 
  volume | integer          |           |          |         | 
-FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', format_type 'c', location_uris 's3://s3-eu-west-1.amazonaws.com/eu-west-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', location_uris 's3://s3-eu-west-1.amazonaws.com/eu-west-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 SELECT round(sum(open)) FROM s3regress_all_regions;
   round  
@@ -220,7 +220,7 @@ CREATE READABLE EXTERNAL TABLE s3regress_all_regions (date text, time text, open
  high   | double precision |           |          |         | 
  low    | double precision |           |          |         | 
  volume | integer          |           |          |         | 
-FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', format_type 'c', location_uris 's3://s3-sa-east-1.amazonaws.com/sa-east-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'csv', delimiter ',', "null" '', escape '"', quote '"', location_uris 's3://s3-sa-east-1.amazonaws.com/sa-east-1.s3test.pivotal.io/regress/small17/data0000 config=/home/gpadmin/s3.conf', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 SELECT round(sum(open)) FROM s3regress_all_regions;
   round  

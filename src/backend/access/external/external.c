@@ -171,16 +171,15 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 			continue;
 		}
 
-		if (pg_strcasecmp(def->defname, "format_type") == 0)
-		{
-			arg = defGetString(def);
-			extentry->fmtcode = arg[0];
-			continue;
-		}
-
-		/* only CSV format needs this for ProcessCopyOptions(), will do it later */
 		if (pg_strcasecmp(def->defname, "format") == 0)
 		{
+			arg = defGetString(def);
+			if (pg_strcasecmp(arg, "text") == 0)
+				extentry->fmtcode = 't';
+			else if (pg_strcasecmp(arg, "csv") == 0)
+				extentry->fmtcode = 'c';
+			else if (pg_strcasecmp(arg, "custom") == 0)
+				extentry->fmtcode = 'b';
 			continue;
 		}
 

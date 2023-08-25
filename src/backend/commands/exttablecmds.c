@@ -47,7 +47,6 @@ static bool ExtractErrorLogPersistent(List **options);
 static List * GenerateExtTableEntryOptions(Oid tbloid,
 										   bool iswritable,
 										   bool issreh,
-										   char formattype,
 										   char rejectlimittype,
 										   char* commandString,
 										   int rejectlimit,
@@ -293,7 +292,6 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	entryOptions = GenerateExtTableEntryOptions(reloid,
 										   iswritable,
 										   issreh,
-										   formattype,
 										   rejectlimittype,
 										   commandString,
 										   rejectlimit,
@@ -821,7 +819,6 @@ static List*
 GenerateExtTableEntryOptions(Oid 	tbloid,
 							 bool 	iswritable,
 							 bool	issreh,
-							 char	formattype,
 							 char	rejectlimittype,
 							 char*	commandString,
 							 int	rejectlimit,
@@ -831,8 +828,6 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 							 char*	locationUris)
 {
 	List		*entryOptions = NIL;
-
-	entryOptions = lappend(entryOptions, makeDefElem("format_type", (Node *) makeString(psprintf("%c", formattype)), -1));
 
 	if (commandString)
 	{

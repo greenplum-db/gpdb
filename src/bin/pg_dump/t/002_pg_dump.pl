@@ -1756,7 +1756,6 @@ my %tests = (
 		\n\s+\Qescape E'\\',\E
 		\n\s+\Qexecute_on 'ALL_SEGMENTS',\E
 		\n\s+\Qformat 'text',\E
-		\n\s+\Qformat_type 't',\E
 		\n\s+\Qis_writable 'false',\E
 		\n\s+\Qlog_errors 'f',\E
 		\n\s+\Q"null" E'\\N'\E

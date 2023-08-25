@@ -869,7 +869,7 @@ create external table ext_t1 (a int, b int)
 --------+---------+-----------+----------+---------+-------------+---------+--------------+-------------
  a      | integer |           |          |         |             | plain   |              | 
  b      | integer |           |          |         |             | plain   |              | 
-FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
 
 SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 'ext_t1';
  amname 
@@ -886,7 +886,7 @@ create external table ext_error_logging_off (a int, b int)
 --------+---------+-----------+----------+---------+-------------+---------+--------------+-------------
  a      | integer |           |          |         |             | plain   |              | 
  b      | integer |           |          |         |             | plain   |              | 
-FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', reject_limit '100', reject_limit_type 'r', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', reject_limit '100', reject_limit_type 'r', log_errors 'f', encoding '6', is_writable 'false')
 
 SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 'ext_error_logging_off';
  amname 
@@ -903,7 +903,7 @@ create external table ext_t2 (a int, b int)
 --------+---------+-----------+----------+---------+-------------+---------+--------------+-------------
  a      | integer |           |          |         |             | plain   |              | 
  b      | integer |           |          |         |             | plain   |              | 
-FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', reject_limit '100', reject_limit_type 'r', log_errors 't', encoding '6', is_writable 'false')
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', reject_limit '100', reject_limit_type 'r', log_errors 't', encoding '6', is_writable 'false')
 
 SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 'ext_t2';
  amname 
@@ -920,7 +920,7 @@ create external table ext_t3 (a int, b int)
 --------+---------+-----------+----------+---------+-------------+---------+--------------+-------------
  a      | integer |           |          |         |             | plain   |              | 
  b      | integer |           |          |         |             | plain   |              | 
-FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', reject_limit '100', reject_limit_type 'r', log_errors 'p', encoding '6', is_writable 'false')
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', location_uris 'file:///tmp/test.txt', execute_on 'ALL_SEGMENTS', reject_limit '100', reject_limit_type 'r', log_errors 'p', encoding '6', is_writable 'false')
 
 SELECT am.amname FROM pg_class c LEFT JOIN pg_am am ON (c.relam = am.oid) WHERE c.relname = 'ext_t3';
  amname 

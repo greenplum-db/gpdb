@@ -272,11 +272,11 @@ FROM
 		LEFT OUTER JOIN pg_catalog.pg_foreign_table f ON (c.oid = f.ftrelid)
 WHERE
 	c.relname LIKE 't_ext%';
- relname | relkind |                                                                                        ftoptions                                                                                         
----------+---------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- t_ext   | f       | {format=text,"delimiter=        ","null=\\N","escape=\\",format_type=t,location_uris=file://127.0.0.1/tmp/foo,execute_on=ALL_SEGMENTS,log_errors=f,encoding=6,is_writable=false}
- t_ext_b | f       | {format=text,"delimiter=        ","null=\\N","escape=\\",format_type=t,location_uris=file://127.0.0.1/tmp/foo,execute_on=ALL_SEGMENTS,log_errors=f,encoding=6,is_writable=false}
- t_ext_r | f       | {format=csv,"delimiter= ",null=,"escape=\"","quote=\"",format_type=c,location_uris=gpfdist://127.0.0.1:8080/tmp/dummy,execute_on=ALL_SEGMENTS,log_errors=f,encoding=6,is_writable=false}
+ relname | relkind |                                                                                 ftoptions                                                                                  
+---------+---------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ t_ext   | f       | {format=text,"delimiter=        ","null=\\N","escape=\\",location_uris=file://127.0.0.1/tmp/foo,execute_on=ALL_SEGMENTS,log_errors=f,encoding=6,is_writable=false}
+ t_ext_b | f       | {format=text,"delimiter=        ","null=\\N","escape=\\",location_uris=file://127.0.0.1/tmp/foo,execute_on=ALL_SEGMENTS,log_errors=f,encoding=6,is_writable=false}
+ t_ext_r | f       | {format=csv,"delimiter= ",null=,"escape=\"","quote=\"",location_uris=gpfdist://127.0.0.1:8080/tmp/dummy,execute_on=ALL_SEGMENTS,log_errors=f,encoding=6,is_writable=false}
 (3 rows)
 
 -- TEMP TABLE WITH COMMENTS

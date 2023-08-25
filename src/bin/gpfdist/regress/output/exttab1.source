@@ -655,7 +655,7 @@ create writable external table wet_pos1(a text, b text) location('gpfdist://@hos
 --------+------+-----------+----------+---------+-------------
  a      | text |           |          |         | 
  b      | text |           |          |         | 
-FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'gpfdist://@hostname@:7070/wet.out', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', location_uris 'gpfdist://@hostname@:7070/wet.out', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
 Distributed randomly
 
 create writable external table wet_pos2(a text, b text) location('gpfdist://@hostname@:7070/wet.out') format 'text' distributed by(b);
@@ -665,7 +665,7 @@ create writable external table wet_pos2(a text, b text) location('gpfdist://@hos
 --------+------+-----------+----------+---------+-------------
  a      | text |           |          |         | 
  b      | text |           |          |         | 
-FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'gpfdist://@hostname@:7070/wet.out', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', location_uris 'gpfdist://@hostname@:7070/wet.out', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
 Distributed by: (b)
 
 create writable external table wet_pos3(like wet_pos2) location('gpfdist://@hostname@:7070/wet.out') format 'text' distributed by(a,b);
@@ -675,7 +675,7 @@ create writable external table wet_pos3(like wet_pos2) location('gpfdist://@host
 --------+------+-----------+----------+---------+-------------
  a      | text |           |          |         | 
  b      | text |           |          |         | 
-FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'gpfdist://@hostname@:7070/wet.out', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', location_uris 'gpfdist://@hostname@:7070/wet.out', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'true')
 Distributed by: (a, b)
 
 create writable external table wet_region(like reg_region) location('gpfdist://@hostname@:7070/wet_region.out') format 'text';
