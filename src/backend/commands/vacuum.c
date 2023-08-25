@@ -1048,7 +1048,8 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 
 				/*
 				 * Do not add midlevel partition unless optimizer_analyze_midlevel_partition
-				 * is enabled.
+				 * is enabled. But always add root table.
+				 * ispartition is set with relispartition flag of the parent_relid.
 				 */
 				if(!ispartition || optimizer_analyze_midlevel_partition)
 				{
