@@ -3543,9 +3543,10 @@ analyze testPartWidth;
 --  a       |         5
 --  b       |         5
 --------------------------------------------------------------------------------
-
 select check_col_width('select a from testPartWidth;','Dynamic Seq Scan','width=5') = 1;
 select check_col_width('select b from testPartWidth;','Dynamic Seq Scan','width=5') = 1;
+select check_col_width('select a from testPartWidth;','Append','width=5') = 1;
+select check_col_width('select a from testPartWidth;','Append','width=5') = 1;
 drop function check_col_width(query text, operator text, width text);
 
 -- start_ignore
