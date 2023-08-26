@@ -82,11 +82,23 @@ ifneq ($(PORTNAME), aix)
 # FIXME: Can we teach the postgres binary to dynamically link against libpq.so? So that
 # we don't need this hack.
 SAFELY_EXPORTED_SYMBOLS_PATTERN = "(pqsignal|pg_*)"
-postgres_symbols.map: $(top_builddir)/src/interfaces/libpq/exports.txt
-	( echo '{ global: *; '; echo ' local:'; $(AWK) '/^[^\#]/ {printf "%s;\n",$$1}' $< | grep -v -E $(SAFELY_EXPORTED_SYMBOLS_PATTERN); echo '};' ) >$@
+SYMBOL_MAPPING_FLAGS =
+ifeq ($(PORTNAME), darwin)
+SYMBOL_MAP_FILE = hide_symbols.list
+$(SYMBOL_MAP_FILE): $(top_builddir)/src/interfaces/libpq/exports.txt
+	$(AWK) '/^[^\#]/ {printf "_%s\n",$$1}' $< | grep -v -E $(SAFELY_EXPORTED_SYMBOLS_PATTERN) >$@
+SYMBOL_MAPPING_FLAGS = -unexported_symbols_list $(SYMBOL_MAP_FILE)
+endif
 
-postgres: $(OBJS) postgres_symbols.map
-	$(CXX) $(CXXFLAGS) $(call expand_subsys,$(OBJS)) $(LDFLAGS) $(LDFLAGS_EX) $(export_dynamic) $(LIBS) -Wl,--version-script=postgres_symbols.map -o $@
+ifeq ($(PORTNAME), linux)
+SYMBOL_MAP_FILE = postgres_symbols.map
+$(SYMBOL_MAP_FILE): $(top_builddir)/src/interfaces/libpq/exports.txt
+	( echo '{ global: *; '; echo ' local:'; $(AWK) '/^[^\#]/ {printf "%s;\n",$$1}' $< | grep -v -E $(SAFELY_EXPORTED_SYMBOLS_PATTERN); echo '};' ) >$@
+SYMBOL_MAPPING_FLAGS = -Wl,--version-script=$(SYMBOL_MAP_FILE)
+endif
+
+postgres: $(OBJS) $(SYMBOL_MAP_FILE)
+	$(CXX) $(CXXFLAGS) $(call expand_subsys,$(OBJS)) $(LDFLAGS) $(LDFLAGS_EX) $(export_dynamic) $(LIBS) $(SYMBOL_MAPPING_FLAGS) -o $@
 
 endif
 endif
