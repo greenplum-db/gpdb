@@ -1734,7 +1734,7 @@ NOTICE:  skipping foreign table "at_external" for ALTER operation
 --------+---------+-----------+----------+---------+-------------
  i      | integer |           |          |         | 
  j      | integer |           |          |         | 
-FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', location_uris 'gpfdist://host.invalid:8000/file', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', location_uris 'gpfdist://host.invalid:8000/file', execute_on 'ALL_SEGMENTS', log_errors 'disable', encoding 'UTF8', is_writable 'false')
 
 -- Should be a no-op.
 ALTER TABLE at_external SET (compresstype=zlib);
@@ -1745,7 +1745,7 @@ NOTICE:  skipping foreign table "at_external" for ALTER operation
 --------+---------+-----------+----------+---------+-------------
  i      | integer |           |          |         | 
  j      | integer |           |          |         | 
-FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', location_uris 'gpfdist://host.invalid:8000/file', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', location_uris 'gpfdist://host.invalid:8000/file', execute_on 'ALL_SEGMENTS', log_errors 'disable', encoding 'UTF8', is_writable 'false')
 
 -- Now make the table an external partition.
 CREATE TABLE at_part_w_external(i int, j int) DISTRIBUTED BY (i)

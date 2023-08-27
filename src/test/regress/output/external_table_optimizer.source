@@ -578,7 +578,7 @@ create external table ret_too_many_uris(a text, b text) location(
 --------+------+-----------+----------+---------+-------------
  a      | text |           |          |         | 
  b      | text |           |          |         | 
-FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', location_uris 'gpfdist://foo.invalid:7070/ret.tbl1|gpfdist://foo.invalid:7070/ret.tbl2|gpfdist://foo.invalid:7070/ret.tbl3|gpfdist://foo.invalid:7070/ret.tbl4|gpfdist://foo.invalid:7070/ret.tbl5|gpfdist://foo.invalid:7070/ret.tbl6|gpfdist://foo.invalid:7070/ret.tbl7|gpfdist://foo.invalid:7070/ret.tbl8|gpfdist://foo.invalid:7070/ret.tbl9|gpfdist://foo.invalid:7070/ret.tbl10|gpfdist://foo.invalid:7070/ret.tbl11|gpfdist://foo.invalid:7070/ret.tbl12|gpfdist://foo.invalid:7070/ret.tbl13|gpfdist://foo.invalid:7070/ret.tbl14|gpfdist://foo.invalid:7070/ret.tbl15|gpfdist://foo.invalid:7070/ret.tbl16|gpfdist://foo.invalid:7070/ret.tbl17|gpfdist://foo.invalid:7070/ret.tbl18|gpfdist://foo.invalid:7070/ret.tbl19|gpfdist://foo.invalid:7070/ret.tbl20', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', location_uris 'gpfdist://foo.invalid:7070/ret.tbl1|gpfdist://foo.invalid:7070/ret.tbl2|gpfdist://foo.invalid:7070/ret.tbl3|gpfdist://foo.invalid:7070/ret.tbl4|gpfdist://foo.invalid:7070/ret.tbl5|gpfdist://foo.invalid:7070/ret.tbl6|gpfdist://foo.invalid:7070/ret.tbl7|gpfdist://foo.invalid:7070/ret.tbl8|gpfdist://foo.invalid:7070/ret.tbl9|gpfdist://foo.invalid:7070/ret.tbl10|gpfdist://foo.invalid:7070/ret.tbl11|gpfdist://foo.invalid:7070/ret.tbl12|gpfdist://foo.invalid:7070/ret.tbl13|gpfdist://foo.invalid:7070/ret.tbl14|gpfdist://foo.invalid:7070/ret.tbl15|gpfdist://foo.invalid:7070/ret.tbl16|gpfdist://foo.invalid:7070/ret.tbl17|gpfdist://foo.invalid:7070/ret.tbl18|gpfdist://foo.invalid:7070/ret.tbl19|gpfdist://foo.invalid:7070/ret.tbl20', execute_on 'ALL_SEGMENTS', log_errors 'disable', encoding 'UTF8', is_writable 'false')
 
 select * from ret_too_many_uris;
 ERROR:  there are more external files (URLs) than primary segments that can read them
@@ -2679,7 +2679,7 @@ OPTIONS (hello 'world', bonjour 'again', nihao 'again and again' );
 --------+---------+-----------+----------+---------+-------------
  i      | integer |           |          |         | 
  j      | text    |           |          |         | 
-FDW options: (format 'text', delimiter '|', "null" E'\\N', escape E'\\', hello 'world', bonjour 'again', nihao 'again and again', location_uris 'file://@hostname@@abs_srcdir@/data/exttab_few_errors.data', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'text', delimiter '|', "null" E'\\N', escape E'\\', hello 'world', bonjour 'again', nihao 'again and again', location_uris 'file://@hostname@@abs_srcdir@/data/exttab_few_errors.data', execute_on 'ALL_SEGMENTS', log_errors 'disable', encoding 'UTF8', is_writable 'false')
 
 \d exttab_with_option_empty
          Foreign table "public.exttab_with_option_empty"
@@ -2687,7 +2687,7 @@ FDW options: (format 'text', delimiter '|', "null" E'\\N', escape E'\\', hello '
 --------+---------+-----------+----------+---------+-------------
  i      | integer |           |          |         | 
  j      | text    |           |          |         | 
-FDW options: (format 'text', delimiter '|', "null" E'\\N', escape E'\\', location_uris 'file://@hostname@@abs_srcdir@/data/exttab_few_errors.data', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'text', delimiter '|', "null" E'\\N', escape E'\\', location_uris 'file://@hostname@@abs_srcdir@/data/exttab_few_errors.data', execute_on 'ALL_SEGMENTS', log_errors 'disable', encoding 'UTF8', is_writable 'false')
 
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_empty;
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_1;

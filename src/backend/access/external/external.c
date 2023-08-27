@@ -135,22 +135,22 @@ GetExtTableEntryIfExists(Oid relid)
 ExtTableEntry *
 GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 {
-	ExtTableEntry	   *extentry;
-	ListCell		   *lc;
-	List			   *entryOptions = NIL;
-	char			   *arg;
-	bool				rejectlimit_found = false;
-	bool				rejectlimittype_found = false;
-	bool				logerrors_found = false;
-	bool				encoding_found = false;
-	bool				iswritable_found = false;
-	bool				executeon_found = false;
+	ExtTableEntry	*extentry;
+	ListCell		*lc;
+	List			*entryOptions = NIL;
+	char			*arg;
+	bool			rejectlimit_found = false;
+	bool			rejectlimittype_found = false;
+	bool			logerrors_found = false;
+	bool			encoding_found = false;
+	bool			iswritable_found = false;
+	bool			executeon_found = false;
 
-	extentry = (ExtTableEntry *) palloc0(sizeof(ExtTableEntry));
+	extentry = (ExtTableEntry *)palloc0(sizeof(ExtTableEntry));
 
 	foreach(lc, ftoptons)
 	{
-		DefElem    *def = (DefElem *) lfirst(lc);
+		DefElem *def = (DefElem *)lfirst(lc);
 
 		if (pg_strcasecmp(def->defname, "location_uris") == 0)
 		{
@@ -193,7 +193,16 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 		if (pg_strcasecmp(def->defname, "reject_limit_type") == 0)
 		{
 			arg = defGetString(def);
-			extentry->rejectlimittype = arg[0];
+
+			/*
+			 * "rows" and "percentage" are more precise, but the external table
+			 * syntax uses "row" and "percent", be tolerant of them.
+			 */
+			if (pg_strcasecmp(arg, "rows") == 0 || pg_strcasecmp(arg, "row") == 0)
+				extentry->rejectlimittype = 'r';
+			else if (pg_strcasecmp(arg, "percentage") == 0 || pg_strcasecmp(arg, "percent") == 0)
+				extentry->rejectlimittype = 'p';
+
 			rejectlimittype_found = true;
 			continue;
 		}
@@ -201,14 +210,31 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 		if (pg_strcasecmp(def->defname, "log_errors") == 0)
 		{
 			arg = defGetString(def);
-			extentry->logerrors = arg[0];
+
+			/*
+			 * The semantics of this option are somewhat ambiguous because
+			 * previously there were only two choices: 't' and 'f'. Later,
+			 * 'persistently' was added as an option, but the syntax in the
+			 * external table is 'persistent'. Therefore, some tolerances
+			 * are being implemented.
+			 *
+			 * By default, use the names of macros in "cdbsreh.h".
+			 */
+			if (pg_strcasecmp(arg, "enable") == 0 || pg_strcasecmp(arg, "true") == 0)
+				extentry->logerrors = LOG_ERRORS_ENABLE;
+			else if (pg_strcasecmp(arg, "disable") == 0 || pg_strcasecmp(arg, "false") == 0)
+				extentry->logerrors = LOG_ERRORS_DISABLE;
+			else if (pg_strcasecmp(arg, "persistently") == 0 || pg_strcasecmp(arg, "persistent") == 0)
+				extentry->logerrors = LOG_ERRORS_PERSISTENTLY;
+
 			logerrors_found = true;
 			continue;
 		}
 
 		if (pg_strcasecmp(def->defname, "encoding") == 0)
 		{
-			extentry->encoding = atoi(defGetString(def));
+			arg = defGetString(def);
+			extentry->encoding = pg_char_to_encoding(arg);
 			encoding_found = true;
 			continue;
 		}
@@ -220,29 +246,27 @@ GetExtFromForeignTableOptions(List *ftoptons, Oid relid)
 			continue;
 		}
 
-		entryOptions = lappend(entryOptions, makeDefElem(def->defname, (Node *) makeString(pstrdup(defGetString(def))), -1));
+		entryOptions = lappend(entryOptions, makeDefElem(def->defname, (Node *)makeString(defGetString(def)), -1));
 	}
 
 	/* If CSV format was chosen, make it visible to ProcessCopyOptions. */
 	if (fmttype_is_csv(extentry->fmtcode))
-		entryOptions = lappend(entryOptions, makeDefElem("format", (Node *) makeString("csv"), -1));
+		entryOptions = lappend(entryOptions, makeDefElem("format", (Node *)makeString("csv"), -1));
 
 	if (!executeon_found)
 		extentry->execlocations = list_make1(makeString("ALL_SEGMENTS"));
 
-	if(!iswritable_found)
+	if (!iswritable_found)
 		extentry->iswritable = false;
 
-	if(!encoding_found)
+	if (!encoding_found)
 		extentry->encoding = GetDatabaseEncoding();
 
-	if(!logerrors_found)
+	if (!logerrors_found)
 		extentry->logerrors = LOG_ERRORS_DISABLE;
 
-	if (!rejectlimit_found) {
-		/* mark that no SREH requested */
-		extentry->rejectlimit = -1;
-	}
+	if (!rejectlimit_found)
+		extentry->rejectlimit = -1; /* mark that no SREH requested */
 
 	if (!rejectlimittype_found)
 		extentry->rejectlimittype = -1;
