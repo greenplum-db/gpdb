@@ -54,7 +54,6 @@ These features are unsupported when GPORCA is enabled \(the default\):
     - Partial dynamic index scan
     - Index-only scan on GIST indexes
     - Partial indexes
-    - Backward index scan
     - Indexed expressions (an index defined as an expression based on one or more columns of the table)
     - Combined indexes
 
