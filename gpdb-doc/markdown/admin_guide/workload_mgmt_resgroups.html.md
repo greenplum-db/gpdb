@@ -163,31 +163,31 @@ stat -fc %T /sys/fs/cgroup/
 
 For cgroup v1, the output is `tmpfs`. For cgroup v2, output is `cgroup2fs`.
 
-#### If you want to switch from Cgroup v1 to v2, run the following command:
+If you want to switch from cgroup v1 to v2, run the following command:
 
-For Red Hat 8/Rocky 8/Oracle 8:
-```
-sudo grubby --update-kernel=/boot/vmlinuz-$(uname -r) --args="systemd.unified_cgroup_hierarchy=1".
-```
-For Ubuntu:
-```
-sudo vim /etc/default/grub
-add or modify: GRUB_CMDLINE_LINUX="systemd.unified_cgroup_hierarchy=1"
-sudo update-grub && sudo reboot now
-```
+- Red Hat 8/Rocky 8/Oracle 8 systems:
+    ```
+    sudo grubby --update-kernel=/boot/vmlinuz-$(uname -r) --args="systemd.unified_cgroup_hierarchy=1".
+    ```
+- Ubuntu systems:
+    ```
+    sudo vim /etc/default/grub
+    add or modify: GRUB_CMDLINE_LINUX="systemd.unified_cgroup_hierarchy=1"
+    sudo update-grub && sudo reboot now
+    ```
 
-#### If you want to switch from Cgroup v2 to v1, run the following command:
+If you want to switch from cgroup v2 to v1, run the following command:
 
-For Red Hat 8/Rocky 8/Oracle 8:
-```
-sudo grubby --update-kernel=/boot/vmlinuz-$(uname -r) --args="systemd.unified_cgroup_hierarchy=0 systemd.legacy_systemd_cgroup_controller"
-```
-For Ubuntu:
-```
-sudo vim /etc/default/grub
-add or modify: GRUB_CMDLINE_LINUX="systemd.unified_cgroup_hierarchy=0"
-sudo update-grub && sudo reboot now
-```
+- Red Hat 8/Rocky 8/Oracle 8 systems:
+    ```
+    sudo grubby --update-kernel=/boot/vmlinuz-$(uname -r) --args="systemd.unified_cgroup_hierarchy=0 systemd.legacy_systemd_cgroup_controller"
+    ```
+- Ubuntu systems:
+    ```
+    sudo vim /etc/default/grub
+    add or modify: GRUB_CMDLINE_LINUX="systemd.unified_cgroup_hierarchy=0"
+    sudo update-grub && sudo reboot now
+    ```
 
 #### <a id="cgroupv1"></a>Configuring cgroup v1
 
