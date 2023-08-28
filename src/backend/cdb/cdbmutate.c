@@ -845,7 +845,13 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 	if (IsA(newnode, Motion) &&flow->req_move != MOVEMENT_NONE)
 	{
 		plan = ((Motion *) newnode)->plan.lefttree;
-		flow = plan->flow;
+
+		/* We'll recreate this motion later below. But we should save motion
+		 * request to create appropriate motion above the child node.
+		 * Original flow for the child node will be restored
+		 * after motion creation. */
+		flow->flow_before_req_move = plan->flow;
+		plan->flow = flow;
 		newnode = (Node *) plan;
 	}
 

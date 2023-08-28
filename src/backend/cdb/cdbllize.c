@@ -573,6 +573,14 @@ ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerC
 		if (ctx->movement == MOVEMENT_BROADCAST)
 		{
 			Assert (NULL != ctx->currentPlanFlow);
+
+			if (scanPlan->flow->locustype == CdbLocusType_SegmentGeneral &&
+				contain_volatile_functions((Node *) scanPlan->qual))
+			{
+				scanPlan->flow->locustype = CdbLocusType_SingleQE;
+				scanPlan->flow->flotype = FLOW_SINGLETON;
+			}
+
 			broadcastPlan(scanPlan, false /* stable */ , false /* rescannable */,
 						  ctx->currentPlanFlow->numsegments /* numsegments */);
 		}
@@ -1123,13 +1131,11 @@ broadcastPlan(Plan *plan, bool stable, bool rescannable, int numsegments)
 
 	/*
 	 * Already focused and flow is CdbLocusType_SegmentGeneral and data
-	 * is replicated on every segment of target and no volatile functions in
-	 * target list, do nothing.
+	 * is replicated on every segment of target, do nothing.
 	 */
 	if (plan->flow->flotype == FLOW_SINGLETON &&
 		plan->flow->locustype == CdbLocusType_SegmentGeneral &&
-		plan->flow->numsegments >= numsegments &&
-		!contain_volatile_functions((Node *)plan->targetlist))
+		plan->flow->numsegments >= numsegments)
 		return true;
 
 	return adjustPlanFlow(plan, stable, rescannable, MOVEMENT_BROADCAST, NIL, NIL,
