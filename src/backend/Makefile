@@ -340,6 +340,7 @@ ifeq ($(PORTNAME), win32)
 endif
 ifeq (,$(filter cygwin win32 aix,$(PORTNAME)))
 	rm -f postgres_symbols.map
+	rm -f hide_symbols.list
 endif
 
 distclean: clean
