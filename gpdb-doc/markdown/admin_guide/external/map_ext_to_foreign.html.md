@@ -23,15 +23,15 @@ The external table clause to foreign table option mapping follows:
 | CREATE EXTERNAL TABLE | `is_writable 'false'` | Readable external tables are not writable. |
 | CREATE WRITABLE EXTERNAL TABLE | `is_writable 'true'` | Writable external tables are writable and alterable. |
 | `LOCATION ('<location>' [, ...])` | `location_uris '<location>'` |  The location of the external data. `gp_exttable_fdw` uses a pipe (`|`) character to separate locations when you provide more than one.  |
-| `FORMAT 'TEXT'` | `format 'text' format_type 't'` |  The external data is text format. |
-| `FORMAT 'CSV'` | `format 'csv' format_type 'c'` |  The external data is comma-separated value format. |
-| `FORMAT 'CUSTOM'` | `format 'custom' format_type 'b' formatter '<name>'` |  The external data is of a custom format, and Greenplum uses the specified formatter to parse the data. |
+| `FORMAT 'TEXT'` | `format 'text' |  The external data is text format. |
+| `FORMAT 'CSV'` | `format 'csv' |  The external data is comma-separated value format. |
+| `FORMAT 'CUSTOM'` | `format 'custom' formatter '<name>'` |  The external data is of a custom format, and Greenplum uses the specified formatter to parse the data. |
 | formatting options | `delimiter <value>`</br> `escape <value>`</br> `"null" <value>`</br> `<option1> <value>`</br>`...` | Format-dependent formatting options. |
 | `OPTIONS <key> '<value>' [, ...]` | `<key> <value>`</br>`...` |  The data access protocol-specific options. |
-| `ENCODING <encoding>` | `encoding '<num>'` |  The encoding string mapped to an integer. |
-| `LOG ERRORS` | `log_errors 't'` | Log errors to an error log. `gp_exttable_fdw` sets this FDW option to `log_errors 'f'` when the `LOG ERRORS` clause is not provided. |
-| `LOG ERRORS PERSISTENTLY` | `log_errors 'p'` | Log errors to a persistent error log. `gp_exttable_fdw` sets this FDW option to `log_errors 'f'` when the `LOG ERRORS` clause is not provided. |
-| `SEGMENT REJECT LIMIT <num_or_pct>` | `reject_limit '<num>' reject_limit_type '<type>'` |  The number of errored rows (`<type>` is `r`) or the errored row percentage (`<type>` is `p`) allowed.  |
+| `ENCODING <encoding>` | `encoding '<encoding_str>'` |  The table encoding (string). |
+| `LOG ERRORS` | `log_errors 'enable'` | Log errors to an error log. `gp_exttable_fdw` sets this FDW option to `log_errors 'disable'` when the `LOG ERRORS` clause is not provided. |
+| `LOG ERRORS PERSISTENTLY` | `log_errors 'persistently'` | Log errors to a persistent error log. `gp_exttable_fdw` sets this FDW option to `log_errors 'disable'` when the `LOG ERRORS` clause is not provided. |
+| `SEGMENT REJECT LIMIT <num_or_pct>` | `reject_limit '<num>' reject_limit_type '<type>'` |  The number of errored rows (`<type>` is `rows`) or the errored row percentage (`<type>` is `percentage`) allowed.  |
 | n/a | `execute_on 'ALL_SEGMENTS'` | Utilize the parallel processing inherent in Greenplum Database. |
 
 ## <a id="implications"></a>Implications
@@ -65,6 +65,6 @@ LOG ERRORS SEGMENT REJECT LIMIT 5;
  amount   | real              |           |          |         |             | plain    |              | 
  category | text              |           |          |         |             | extended |              | 
  desc1    | character varying |           |          |         |             | extended |              | 
-FDW options: (format 'text', delimiter '|', "null" ' ', escape E'\\', format_type 't', location_uris 'gpfdist://etlhost-1:8081/\*.txt|'gpfdist://etlhost-2:8082/\*.txt', execute_on 'ALL_SEGMENTS', reject_limit '5', reject_limit_type 'r', log_errors 't', encoding '6', is_writable 'false')
+FDW options: (format 'text', delimiter '|', "null" ' ', escape E'\\', location_uris 'gpfdist://etlhost-1:8081/\*.txt|'gpfdist://etlhost-2:8082/\*.txt', execute_on 'ALL_SEGMENTS', reject_limit '5', reject_limit_type 'rows', log_errors 'enable', encoding 'UTF8', is_writable 'false')
 ```
 

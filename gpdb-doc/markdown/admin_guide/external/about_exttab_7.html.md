@@ -76,7 +76,7 @@ Note the following differences in the Greenplum 7 external table implementation 
          amount   | real              |           |          |         |             | plain    |              | 
          category | text              |           |          |         |             | extended |              | 
          desc1    | character varying |           |          |         |             | extended |              | 
-        FDW options: (format 'text', delimiter '|', "null" ' ', escape E'\\', format_type 't', location_uris 'gpfdist://etlhost-1:8081/\*.txt|'gpfdist://etlhost-2:8082/\*.txt', execute_on 'ALL_SEGMENTS', reject_limit '5', reject_limit_type 'r', log_errors 't', encoding '6', is_writable 'false')
+        FDW options: (format 'text', delimiter '|', "null" ' ', escape E'\\', location_uris 'gpfdist://etlhost-1:8081/\*.txt|'gpfdist://etlhost-2:8082/\*.txt', execute_on 'ALL_SEGMENTS', reject_limit '5', reject_limit_type 'rows', log_errors 'enable', encoding 'UTF8', is_writable 'false')
         ```
 - The `EXPLAIN` output for a query including an external table previously returned the text `External Scan`. `EXPLAIN` now returns `Foreign Scan` in this scenario.
 
