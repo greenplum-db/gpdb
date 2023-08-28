@@ -163,16 +163,30 @@ stat -fc %T /sys/fs/cgroup/
 
 For cgroup v1, the output is `tmpfs`. For cgroup v2, output is `cgroup2fs`.
 
-If you want to switch from v2 to v1, run the following command:
+#### If you want to switch from Cgroup v1 to v2, run the following command:
 
+For Red Hat 8/Rocky 8/Oracle 8:
+```
+sudo grubby --update-kernel=/boot/vmlinuz-$(uname -r) --args="systemd.unified_cgroup_hierarchy=1".
+```
+For Ubuntu:
+```
+sudo vim /etc/default/grub
+add or modify: GRUB_CMDLINE_LINUX="systemd.unified_cgroup_hierarchy=1"
+sudo update-grub && sudo reboot now
+```
+
+#### If you want to switch from Cgroup v2 to v1, run the following command:
+
+For Red Hat 8/Rocky 8/Oracle 8:
 ```
 sudo grubby --update-kernel=/boot/vmlinuz-$(uname -r) --args="systemd.unified_cgroup_hierarchy=0 systemd.legacy_systemd_cgroup_controller"
 ```
-
-If you want to switch from v2 to v1, run the following command:
-
+For Ubuntu:
 ```
-sudo grubby --update-kernel=/boot/vmlinuz-$(uname -r) --args="systemd.unified_cgroup_hierarchy=1".
+sudo vim /etc/default/grub
+add or modify: GRUB_CMDLINE_LINUX="systemd.unified_cgroup_hierarchy=0"
+sudo update-grub && sudo reboot now
 ```
 
 #### <a id="cgroupv1"></a>Configuring cgroup v1
@@ -272,12 +286,13 @@ You may choose a different method to recreate the Greenplum Database resource gr
     ```
 3. Create the directory `/sys/fs/cgroup/gpdb` and ensure `gpadmin` user has read and write permission on it.
     ```
-    mkdir -p /sys/fs/cgroup/gpdb 
-    chmod +rw /sys/fs/cgroup/gpdb
+    sudo mkdir -p /sys/fs/cgroup/gpdb
+    sudo chown -R gpadmin:gpadmin /sys/fs/cgroup/gpdb
     ```
-4. Ensure that `gpadmin` has read and write permission on `/sys/fs/cgroup/cgroup.procs`.
+4. Ensure that `gpadmin` has write permission on `/sys/fs/cgroup/cgroup.procs`.
     ```
-    chmod +rw /sys/fs/cgroup/cgroup.procs
+    sudo usermod -aG root gpadmin
+    sudo chmod g+w /sys/fs/cgroup/cgroup.procs
     ```
 5. Add all controllers.
    ```
@@ -286,13 +301,46 @@ You may choose a different method to recreate the Greenplum Database resource gr
 
 Since resource groups manually manage cgroup files, the above settings may become ineffective after a system reboot. Consider adding the following bash script for systemd so it runs automatically during system startup:
 
-```
-sudo usermod -aG root gpadmin
-sudo mkdir -p /sys/fs/cgroup/gpdb
-sudo chmod -R 774 /sys/fs/cgroup/gpdb
-sudo chmod g+w /sys/fs/cgroup/cgroup.procs
-echo "+cpuset +io +cpu +memory" | sudo tee -a /sys/fs/cgroup/cgroup.subtree_control
-```
+1. Create `greenplum-cgroup-v2-config.service`.
+   ```
+   sudo vim /etc/systemd/system/greenplum-cgroup-v2-config.service
+   ```
+2. Write the following content into `greenplum-cgroup-v2-config.service`.
+   ```
+   [Unit]
+   Description=Greenplum Cgroup v2 Configuration Service
+   Requires=network-online.target
+   After=network-online.target
+   
+   [Service]
+   User=root
+   Group=root
+   
+   ExecStart=/bin/sh -c " \
+                       mkdir -p /sys/fs/cgroup/gpdb; \
+                       chown -R gpadmin:gpadmin /sys/fs/cgroup/gpdb; \
+                       echo '+cpuset +io +cpu +memory' | sudo tee -a /sys/fs/cgroup/cgroup.subtree_control; \
+                       usermod -aG root gpadmin; \
+                       chmod g+w /sys/fs/cgroup/cgroup.procs;"
+   ExecStop=
+   
+   # Specifies the maximum file descriptor number that can be opened by this process
+   LimitNOFILE=65536
+   
+   # Disable timeout logic and wait until process is stopped
+   TimeoutStopSec=infinity
+   SendSIGKILL=no
+   
+   [Install]
+   WantedBy=multi-user.target
+   ```
+3. Reload systemd daemon and enable the service:
+   ```
+   sudo systemctl daemon-reload
+   sudo systemctl enable greenplum-cgroup-v2-config.service
+   ```
+
+You may choose a different method to recreate the Greenplum Database resource group cgroup v2 hierarchies.
 
 ## <a id="topic8"></a>Enabling Resource Groups 
 
