@@ -93,7 +93,6 @@ OBJS = $(WIN32RES) regress.o
 
 OBJS += regress_gp.o
 
-# TODO: comment.
 SHLIB_LINK_INTERNAL = $(libpq)
 
 include $(top_srcdir)/src/Makefile.shlib
