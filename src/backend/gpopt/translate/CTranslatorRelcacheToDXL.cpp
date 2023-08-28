@@ -1043,7 +1043,7 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 				GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
 		}
 
-		// check if index can return column or index-only scans
+		// check if index can return column for index-only scans
 		if (gpdb::IndexCanReturn(index_rel.get(), attno))
 		{
 			returnable_cols->Append(

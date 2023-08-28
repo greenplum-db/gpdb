@@ -66,13 +66,6 @@ using CExpressionArrays = CDynamicPtrArray<CExpressionArray, CleanupRelease>;
 class CXformUtils
 {
 private:
-	// enum marking the index column types
-	enum EIndexCols
-	{
-		EicKey,
-		EicKeyAndIncluded
-	};
-
 	// create a logical assert for the not nullable columns of the given table
 	// on top of the given child expression
 	static CExpression *PexprAssertNotNull(CMemoryPool *mp,
@@ -95,8 +88,7 @@ private:
 	static CColRefSet *PcrsIndexColumns(CMemoryPool *mp,
 										CColRefArray *colref_array,
 										const IMDIndex *pmdindex,
-										const IMDRelation *pmdrel,
-										EIndexCols eic);
+										const IMDRelation *pmdrel);
 
 	// return the set of columns from the given array of columns which are
 	// returnable through the index (to determine index-only scan capable)
@@ -110,8 +102,7 @@ private:
 	static CColRefArray *PdrgpcrIndexColumns(CMemoryPool *mp,
 											 CColRefArray *colref_array,
 											 const IMDIndex *pmdindex,
-											 const IMDRelation *pmdrel,
-											 EIndexCols eic);
+											 const IMDRelation *pmdrel);
 
 	// lookup join keys in scalar child group
 	static void LookupJoinKeys(CMemoryPool *mp, CExpression *pexpr,
@@ -389,13 +380,6 @@ public:
 										  CColRefArray *colref_array,
 										  const IMDIndex *pmdindex,
 										  const IMDRelation *pmdrel);
-
-	// return the set of key columns from the given array of columns which appear
-	// in the index key and included columns
-	static CColRefSet *PcrsIndexKeysAndIncludes(CMemoryPool *mp,
-												CColRefArray *colref_array,
-												const IMDIndex *pmdindex,
-												const IMDRelation *pmdrel);
 
 	// return the set of key columns from the given array of columns which appear
 	// in the index key columns
