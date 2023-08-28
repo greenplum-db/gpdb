@@ -163,7 +163,7 @@ stat -fc %T /sys/fs/cgroup/
 
 For cgroup v1, the output is `tmpfs`. For cgroup v2, output is `cgroup2fs`.
 
-If you want to switch from cgroup v1 to v2, run the following command:
+If you want to switch from cgroup v1 to v2, run the following commands:
 
 - Red Hat 8/Rocky 8/Oracle 8 systems:
     ```
@@ -176,7 +176,7 @@ If you want to switch from cgroup v1 to v2, run the following command:
     sudo update-grub && sudo reboot now
     ```
 
-If you want to switch from cgroup v2 to v1, run the following command:
+If you want to switch from cgroup v2 to v1, run the following commands:
 
 - Red Hat 8/Rocky 8/Oracle 8 systems:
     ```
