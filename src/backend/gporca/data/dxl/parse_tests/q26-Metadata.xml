@@ -33,7 +33,7 @@
       </dxl:IndexInfoList>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Index Mdid="0.2345.2.1" Name="T_a" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1" IncludedColumns="" SortDirection="ASC" NullsDirection="LAST" ReturnableColumns="1">
+    <dxl:Index Mdid="0.2345.2.1" Name="T_a" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1" IncludedColumns="" ReturnableColumns="1" SortDirection="ASC" NullsDirection="LAST">
       <dxl:Opfamilies/>
     </dxl:Index>
     <dxl:Relation Mdid="6.1258.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" AppendOnlyVersion="2" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="0;0,1" PartitionColumns="1">
@@ -100,7 +100,7 @@
         </dxl:And>
       </dxl:PartConstraint>
     </dxl:Relation>
-    <dxl:Index Mdid="0.812178.1.0" Name="date_dim_1_prt_p1_1_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0,6" IncludedColumns="" SortDirection="ASC,ASC" NullsDirection="LAST,LAST" ReturnableColumns="0,6">
+    <dxl:Index Mdid="0.812178.1.0" Name="date_dim_1_prt_p1_1_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0,6" IncludedColumns="" ReturnableColumns="0,6" SortDirection="ASC,ASC" NullsDirection="LAST,LAST">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.3027.1.0"/>
         <dxl:Opfamily Mdid="0.3027.1.0"/>
