@@ -654,7 +654,6 @@ class SegmentTemplate:
         """Deploys the template tar file and configures the new segments"""
         self.statusLogger.set_status('BUILD_SEGMENTS_STARTED', self.segTarFile)
         self._distribute_template()
-        # FIXME: truncate the qd only tables' underlying files instead of delete the tuples
         self._configure_new_segments()
         numNewSegments = len(self.gparray.getExpansionSegDbList())
         self.statusLogger.set_status('BUILD_SEGMENTS_DONE', numNewSegments)
