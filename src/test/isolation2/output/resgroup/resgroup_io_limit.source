@@ -2,9 +2,9 @@
 CREATE RESOURCE GROUP rg_test_group1 WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000');
 CREATE RESOURCE GROUP
 SELECT io_limit FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group1';
- io_limit                                             
-------------------------------------------------------
- pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000 
+ io_limit                                       
+------------------------------------------------
+ 1663:rbps=1000,wbps=1000,riops=1000,wiops=1000 
 (1 row)
 
 SELECT check_cgroup_io_max('rg_test_group1', 'pg_default', 'rbps=1048576000 wbps=1048576000 riops=1000 wiops=1000');

@@ -14,6 +14,7 @@
 
 #include "postgres.h"
 
+#include "utils/resgroup.h"
 #include "utils/cgroup.h"
 #include "utils/cgroup-ops-dummy.h"
 
@@ -221,7 +222,7 @@ static List *
 parseio_dummy(const char *io_limit)
 {
 	unsupported_system();
-	return NULL;
+	return NIL;
 }
 
 static void
@@ -241,6 +242,14 @@ getiostat_dummy(Oid group, List *io_limit)
 {
 	unsupported_system();
 	return NIL;
+}
+
+static char *
+dumpio_dummy(List *limit_list)
+{
+	unsupported_system();
+
+	return DefaultIOLimit;
 }
 
 static CGroupOpsRoutine cGroupOpsRoutineDummy = {
@@ -270,7 +279,8 @@ static CGroupOpsRoutine cGroupOpsRoutineDummy = {
 		.parseio = parseio_dummy,
 		.setio = setio_dummy,
 		.freeio = freeio_dummy,
-		.getiostat = getiostat_dummy
+		.getiostat = getiostat_dummy,
+		.dumpio = dumpio_dummy
 };
 
 CGroupOpsRoutine *get_cgroup_routine_dummy(void)
