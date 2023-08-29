@@ -214,7 +214,7 @@ groups:
   {% endif %}
   - test_gpdb_clients_[[ os_type ]]
   - gate_compile_end
-{% if "ICW" in test_sections %}
+{% if "icw" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_icw_start
   - icw_gporca_[[ os_type ]]
@@ -236,7 +236,7 @@ groups:
   - icw_gporca_resgroup_[[ os_type ]]
   - gate_icw_end
 {% endif %}
-{% if "CLI" in test_sections %}
+{% if "cli" in test_sections %}
   - gate_cli_start
   - cli_cross_subnet
 {% for test in CLI_BEHAVE_TESTS %}
@@ -250,7 +250,7 @@ groups:
 {% endif %}
 
 
-{% if ( ("Release" in test_sections and os_type == default_os_type or os_type == "rocky9") or build_test_rc_rpm or directed_release) %}
+{% if ( ("release" in test_sections and os_type == default_os_type or os_type == "rocky9") or build_test_rc_rpm or directed_release) %}
 ## ======================================================================
 
 - name: release
@@ -261,7 +261,7 @@ groups:
 {% else %}
   - gate_compile_end
 {% endif %}
-{% if ( ("Release" in test_sections and os_type == default_os_type or os_type == "rocky9" ) or directed_release) %}
+{% if ( ("release" in test_sections and os_type == default_os_type or os_type == "rocky9" ) or directed_release) %}
   - gate_release_candidate_start
   - release_candidate
 {% endif %}
@@ -287,7 +287,7 @@ groups:
   {% endif %}
   - gate_compile_end
 
-{% if "ICW" in test_sections %}
+{% if "icw" in test_sections %}
 - name: icw
   jobs:
   - gate_compile_end
@@ -312,7 +312,7 @@ groups:
   - gate_icw_end
 {% endif %}
 
-{% if "CLI" in test_sections %}
+{% if "cli" in test_sections %}
 - name: cli
   jobs:
   - gate_compile_end
@@ -360,7 +360,7 @@ resource_types:
 ## ======================================================================
 
 resources:
-{% if "ICW" in test_sections or "CLI" in test_sections %}
+{% if "icw" in test_sections or "cli" in test_sections %}
 - name: ccp_src
   type: git
   source:
@@ -387,7 +387,7 @@ resources:
     tag: latest
 {% endif %}
 
-{% if "ICW" in test_sections %}
+{% if "icw" in test_sections %}
 - name: icw_planner_[[ os_type ]]_dump
   type: gcs
   source:
@@ -396,7 +396,7 @@ resources:
     versioned_file: ((pipeline-name))/icw_planner_[[ os_type ]]_dump/dump.sql.xz
 {% endif %}
 
-{% if "CLI" in test_sections %}
+{% if "cli" in test_sections %}
 - name: alpine-docker
   type: registry-image
   source:
@@ -419,7 +419,7 @@ resources:
     - gpdb-doc/*
     - README*
 
-{% if os_type == compile_platform or (os_type != compile_platform and "ICW" in test_sections) %}
+{% if os_type == compile_platform or (os_type != compile_platform and "icw" in test_sections) %}
 - name: gpdb7-[[ os_type ]]-build
   type: registry-image
   source:
@@ -462,7 +462,7 @@ resources:
     repository: gcr.io/data-gpdb-public-images/gpdb7-[[ os_type ]]-test
 {% endif %}
 
-{% if ( ("Release" in test_sections and os_type == compile_platform ) or directed_release) %}
+{% if ( ("release" in test_sections and os_type == compile_platform ) or directed_release) %}
 {% if not directed_release %}
 {% if os_type == default_os_type %}
 - name: bin_gpdb_icw_green
@@ -510,7 +510,7 @@ resources:
 {% endif %}
 {% endif %}
 
-{% if ( ("Release" in test_sections and os_type == default_os_type) or build_test_rc_rpm) %}
+{% if ( ("release" in test_sections and os_type == default_os_type) or build_test_rc_rpm) %}
 - name: gpdb_rpm_installer_[[ os_type ]]
   type: gcs
   source:
@@ -833,7 +833,7 @@ jobs:
       passed: [ prepare_binary_swap_gpdb_[[ os_type ]] ]
     {% endif %}
 
-{% if "ICW" in test_sections %}
+{% if "icw" in test_sections %}
 ## ======================================================================
 ##  ___ ______        __
 ## |_ _/ ___\ \      / /
@@ -1426,14 +1426,14 @@ jobs:
         params:
           skip_download: 'true'
         passed: [unit_tests_gporca_[[ os_type ]]]
-{% if ("Release" in test_sections and os_type == default_os_type) %}
+{% if ("release" in test_sections and os_type == default_os_type) %}
   - put: bin_gpdb_icw_green
     params:
       file: bin_gpdb/bin_gpdb.tar.gz
 {% endif %}
 {% endif %}
 
-{% if "CLI" in test_sections %}
+{% if "cli" in test_sections %}
 ## ======================================================================
 ##   ____ _     ___
 ##  / ___| |   |_ _|
@@ -1846,9 +1846,9 @@ jobs:
             passed:
             - combine_cli_coverage
 
-{% endif %} # end CLI test_sections
+{% endif %} # end cli test_sections
 
-{% if ( ("Release" in test_sections and os_type == default_os_type or os_type == "rocky9") or build_test_rc_rpm or directed_release) %}
+{% if ( ("release" in test_sections and os_type == default_os_type or os_type == "rocky9") or build_test_rc_rpm or directed_release) %}
 ## ======================================================================
 ##  ____      _
 ## |  _ \ ___| | ___  __ _ ___  ___
@@ -1857,7 +1857,7 @@ jobs:
 ## |_| \_\___|_|\___|\__,_|___/\___|
 ## ======================================================================
 
-{% if ( ("Release" in test_sections and os_type == compile_platform ) or directed_release) %}
+{% if ( ("release" in test_sections and os_type == compile_platform ) or directed_release) %}
 - name: gate_release_candidate_start
   plan:
   - in_parallel:
