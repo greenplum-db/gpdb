@@ -544,6 +544,7 @@ SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists_bool WHERE NOT a AND
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists_bool WHERE NOT a AND b AND NOT c');
 
 -- check the ability to use multiple MCV lists
+SET optimizer = off;
 CREATE TABLE mcv_lists_multi (
 	a INTEGER,
 	b INTEGER,
@@ -577,7 +578,7 @@ SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists_multi WHERE c = 0 AN
 SELECT * FROM check_estimated_rows('SELECT * FROM mcv_lists_multi WHERE a = 0 AND b = 0 AND c = 0 AND d = 0');
 
 DROP TABLE mcv_lists_multi;
-
+RESET optimizer;
 -- Permission tests. Users should not be able to see specific data values in
 -- the extended statistics, if they lack permission to see those values in
 -- the underlying table.
