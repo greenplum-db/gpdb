@@ -10,9 +10,9 @@ Greenplum Database 7 runs on the following operating system platforms:
 -   Oracle Linux 64-bit 8.7 or later, using the Red Hat Compatible Kernel \(RHCK\)
 -   Rocky Linux 8.7 or later
 
-> **Important** A kernel issue in Red Hat Enterprise Linux 8.5 and 8.6 can cause I/O freezes and synchronization problems with XFS filesystems. This issue is fixed in RHEL 8.7. See [RHEL8: xfs_buf deadlock between inode deletion and block allocation](https://access.redhat.com/solutions/6984334).
+> **Caution** Do not install anti-virus software of any type on Greenplum Database hosts. VMware Greenplum is not supported for use with anti-virus software because the additional CPU and IO load interferes with Greenplum Database operations.
 
-> **Note** Do not install anti-virus software on Greenplum Database hosts as the software might cause extra CPU and IO load that interferes with Greenplum Database operations.
+> **Caution** A kernel issue in Red Hat Enterprise Linux 8.5 and 8.6 can cause I/O freezes and synchronization problems with XFS filesystems. This issue is fixed in RHEL 8.7. See [RHEL8: xfs_buf deadlock between inode deletion and block allocation](https://access.redhat.com/solutions/6984334).
 
 Greenplum Database server supports TLS version 1.2 on RHEL/CentOS systems, and TLS version 1.3 on Ubuntu systems.
 
