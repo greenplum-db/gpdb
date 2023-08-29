@@ -100,7 +100,7 @@ class GpRecoverSegmentProgram:
         if self.__options.rebalanceSegments:
             return GpSegmentRebalanceOperation(gpEnv, gpArray, self.__options.parallelDegree, self.__options.parallelPerHost)
         else:
-            instance = RecoveryTripletsFactory.instance(gpArray, self.__options.recoveryConfigFile, self.__options.newRecoverHosts)
+            instance = RecoveryTripletsFactory.instance(gpArray, self.__options.recoveryConfigFile, self.__options.newRecoverHosts, self.__options.parallelDegree)
             segs = [GpMirrorToBuild(t.failed, t.live, t.failover, self.__options.forceFullResynchronization, self.__options.differentialResynchronization)
                     for t in instance.getTriplets()]
             return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,

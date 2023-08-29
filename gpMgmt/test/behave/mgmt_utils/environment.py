@@ -103,6 +103,9 @@ def before_scenario(context, scenario):
     if 'gprecoverseg' in context.feature.tags:
         context.mirror_context = MirrorMgmtContext()
 
+    if 'gprecoverseg_newhost' in context.feature.tags:
+        context.mirror_context = MirrorMgmtContext()
+
     if 'gpconfig' in context.feature.tags:
         context.gpconfig_context = GpConfigContext()
 
