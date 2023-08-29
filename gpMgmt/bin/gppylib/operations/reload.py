@@ -222,6 +222,7 @@ class GpReload:
             conn.close()
 
     def run(self):
+        logger.warning("gpreload is deprecated and may be removed in a future release. consider using ALTER TABLE REPACK BY statements instead.")
         self.validate_options()
         logger.info('Validating table file {table_file}'.format(table_file=self.table_file))
         self.table_list = self.validate_table_file()
