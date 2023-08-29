@@ -289,9 +289,6 @@ probecgroup_v2(void)
 	if (!getCgroupMountDir())
 		return false;
 
-	if (!normalPermissionCheck(permlists, CGROUP_ROOT_ID, false))
-		return false;
-
 	return true;
 }
 

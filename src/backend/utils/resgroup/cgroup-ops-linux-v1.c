@@ -542,9 +542,6 @@ probecgroup_v1(void)
 
 	detect_component_dirs_v1();
 
-	if (!normalPermissionCheck(permlists, CGROUP_ROOT_ID, false))
-		return false;
-
 	return true;
 }
 

@@ -167,13 +167,13 @@ If you want to switch from cgroup v1 to v2, run the following commands:
 
 - Red Hat 8/Rocky 8/Oracle 8 systems:
     ```
-    sudo grubby --update-kernel=/boot/vmlinuz-$(uname -r) --args="systemd.unified_cgroup_hierarchy=1".
+    sudo grubby --update-kernel=/boot/vmlinuz-$(uname -r) --args="systemd.unified_cgroup_hierarchy=1"
     ```
 - Ubuntu systems:
     ```
     sudo vim /etc/default/grub
     add or modify: GRUB_CMDLINE_LINUX="systemd.unified_cgroup_hierarchy=1"
-    sudo update-grub && sudo reboot now
+    sudo update-grub
     ```
 
 If you want to switch from cgroup v2 to v1, run the following commands:
@@ -186,8 +186,10 @@ If you want to switch from cgroup v2 to v1, run the following commands:
     ```
     sudo vim /etc/default/grub
     add or modify: GRUB_CMDLINE_LINUX="systemd.unified_cgroup_hierarchy=0"
-    sudo update-grub && sudo reboot now
+    sudo update-grub
     ```
+
+After that, reboot your host and make the changes take effect.
 
 #### <a id="cgroupv1"></a>Configuring cgroup v1
 
@@ -287,17 +289,16 @@ You may choose a different method to recreate the Greenplum Database resource gr
 3. Create the directory `/sys/fs/cgroup/gpdb` and ensure `gpadmin` user has read and write permission on it.
     ```
     sudo mkdir -p /sys/fs/cgroup/gpdb
+    echo "+cpuset +io +cpu +memory" | sudo tee -a /sys/fs/cgroup/cgroup.subtree_control
     sudo chown -R gpadmin:gpadmin /sys/fs/cgroup/gpdb
     ```
 4. Ensure that `gpadmin` has write permission on `/sys/fs/cgroup/cgroup.procs`.
     ```
-    sudo usermod -aG root gpadmin
-    sudo chmod g+w /sys/fs/cgroup/cgroup.procs
+    sudo chmod a+w /sys/fs/cgroup/cgroup.procs
     ```
-5. Add all controllers.
-   ```
-   echo "+cpuset +io +cpu +memory" | sudo tee -a /sys/fs/cgroup/cgroup.subtree_control
-   ```
+
+If you get "Invalid argument" error when enable cpu subtree control, please follow the below step:
+> WARNING: cgroup2 doesn't yet support control of realtime processes and the cpu controller can only be enabled when all RT processes are in the root cgroup. Be aware that system management software may already have placed RT processes into nonroot cgroups during the system boot process, and these processes may need to be moved to the root cgroup before the cpu controller can be enabled.
 
 Since resource groups manually manage cgroup files, the above settings may become ineffective after a system reboot. Consider adding the following bash script for systemd so it runs automatically during system startup:
 
@@ -305,7 +306,7 @@ Since resource groups manually manage cgroup files, the above settings may becom
    ```
    sudo vim /etc/systemd/system/greenplum-cgroup-v2-config.service
    ```
-2. Write the following content into `greenplum-cgroup-v2-config.service`.
+2. Write the following content into `greenplum-cgroup-v2-config.service`, if the user is not `gpadmin`, please replace it to your own.
    ```
    [Unit]
    Description=Greenplum Cgroup v2 Configuration Service
@@ -318,10 +319,9 @@ Since resource groups manually manage cgroup files, the above settings may becom
    
    ExecStart=/bin/sh -c " \
                        mkdir -p /sys/fs/cgroup/gpdb; \
+                       echo '+cpuset +io +cpu +memory' | tee -a /sys/fs/cgroup/cgroup.subtree_control; \
                        chown -R gpadmin:gpadmin /sys/fs/cgroup/gpdb; \
-                       echo '+cpuset +io +cpu +memory' | sudo tee -a /sys/fs/cgroup/cgroup.subtree_control; \
-                       usermod -aG root gpadmin; \
-                       chmod g+w /sys/fs/cgroup/cgroup.procs;"
+                       chmod a+w /sys/fs/cgroup/cgroup.procs;"
    ExecStop=
    
    # Specifies the maximum file descriptor number that can be opened by this process
