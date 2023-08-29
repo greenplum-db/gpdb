@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 6X_STABLE
+      ## For testing, should be removed later.
       - 6x-abi-check
     paths:
       - 'src/*'
@@ -21,8 +22,6 @@ jobs:
     steps:
       - name: Fetch source
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 250
 
       - name: Get Greenplum version variables
         id: vars
@@ -39,6 +38,7 @@ jobs:
   abi-dump:
     needs: abi-dump-setup
     runs-on: ubuntu-latest
+    container: gcr.io/data-gpdb-public-images/gpdb6-rocky8-build@sha256:b6e4d46fb209677d2ff5e3d53b901a53b387f703e384f7b9760f4bff01a64ce3
     strategy:
       matrix:
         name:
@@ -53,57 +53,23 @@ jobs:
             ref: ${{ github.sha }}
 
     steps:
-      - name: Install abi-compliance-checker
-        run: |
-          sudo apt-get install abi-dumper
-
-      ## - name: Install universal-ctags
-      ##   run: |
-      ##     git clone https://github.com/universal-ctags/ctags.git
-      ##     cd ctags
-      ##     ./autogen.sh
-      ##     env CC=$(which clang) CXX=$(which clang++) ./configure
-      ##     make -j`nproc`
-      ##     sudo make install
-
       - name: Download Greenplum source code
         uses: actions/checkout@v3
         with:
           repository: ${{ matrix.repo }}
           ref: ${{ matrix.ref }}
-
-      ## - name: Download gp-xerces
-      ##   uses: actions/checkout@v3
-      ##   with:
-      ##     repository: greenplum-db/gp-xerces
-      ##     path: gp-xerces
-      ## 
-      ## - name: Build & Install gp-xerces
-      ##   run: |
-      ##     cd gp-xerces && mkdir build && cd build
-      ##     env CFLAGS="-g" CXXFLAGS="-g" CC=$(which clang) CXX=$(which clang++) ../configure --prefix=/usr/local
-      ##     make -j`nproc` && sudo make install
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get install libapr1-dev libxml2-dev libevent-dev libcurl4-openssl-dev python2 python2.7-dev lld
-          ## Greenplum 6 requires python points to python2
-          sudo update-alternatives --install /usr/bin/x86_64-linux-gnu-gcc x86_64-linux-gnu-gcc $(which clang) 1
-          sudo update-alternatives --install /usr/bin/python python $(which python2) 1
-          python -c "print 'hello'"
-
-      - name: Configure Greenplum
-        run: |
-          env CC=$(which clang) CXX=$(which clang++) CLANG=$(which clang) LD=$(which lld) CFLAGS='-g1 -Og -fuse-ld=lld' CXXFLAGS='-g1 -Og -fuse-ld=lld' \
-            ./configure --with-libxml --disable-orca --enable-cassert --enable-debug --prefix=$(pwd)/install
+          submodules: recursive
+          fetch-depth: 0 # Specify '0' to fetch all history for all branches and tags.
+          path: gpdb_src
 
       - name: Build Greenplum
         run: |
-          make -j`nproc` && make install
+          env SKIP_UNITTESTS=1 CONFIGURE_FLAGS='--enable-tap-tests --enable-debug-extensions' \
+            gpdb_src/concourse/scripts/compile_gpdb.bash
 
       - name: Dump ABI
         run: |
-          abi-dumper -lver ${{ matrix.ref }} -skip-cxx -public-headers $(pwd)/install/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o postgres-${{ matrix.ref }}.abi $(pwd)/install/bin/postgres
+          abi-dumper -lver ${{ matrix.ref }} -skip-cxx -public-headers /usr/local/greenplum-db-devel/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o postgres-${{ matrix.ref }}.abi /usr/local/greenplum-db-devel/bin/postgres
 
       - name: Upload ABI file
         uses: actions/upload-artifact@v3
@@ -116,6 +82,7 @@ jobs:
       - abi-dump-setup
       - abi-dump
     runs-on: ubuntu-latest
+    container: gcr.io/data-gpdb-public-images/gpdb6-rocky8-build@sha256:b6e4d46fb209677d2ff5e3d53b901a53b387f703e384f7b9760f4bff01a64ce3
     steps:
       - name: Download baseline
         uses: actions/download-artifact@v3
@@ -127,9 +94,6 @@ jobs:
         with:
           name: build-latest
           path: build-latest/
-
-      - name: Install abi-compliance-checker
-        run: sudo apt-get install abi-compliance-checker
 
       - name: Compare ABI
         run: |
