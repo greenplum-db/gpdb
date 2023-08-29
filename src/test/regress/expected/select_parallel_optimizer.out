@@ -143,26 +143,25 @@ create table part_pa_test_p2 partition of part_pa_test for values from (0) to (m
 explain (costs off)
 	select (select max((select pa1.b from part_pa_test pa1 where pa1.a = pa2.a)))
 	from part_pa_test pa2;
-                                  QUERY PLAN                                   
--------------------------------------------------------------------------------
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
  Finalize Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
-               ->  Append
-                     ->  Seq Scan on part_pa_test_p1 pa2
-                     ->  Seq Scan on part_pa_test_p2 pa2_1
+               ->  Dynamic Seq Scan on part_pa_test
+                     Number of partitions to scan: 2 (out of 2)
                SubPlan 1
                  ->  Result
-                       Filter: (pa1.a = pa2.a)
+                       Filter: (part_pa_test_1.a = part_pa_test.a)
                        ->  Materialize
                              ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                                   ->  Append
-                                         ->  Seq Scan on part_pa_test_p1 pa1
-                                         ->  Seq Scan on part_pa_test_p2 pa1_1
+                                   ->  Dynamic Seq Scan on part_pa_test part_pa_test_1
+                                         Number of partitions to scan: 2 (out of 2)
    SubPlan 2
      ->  Result
- Optimizer: Postgres query optimizer
-(17 rows)
+           ->  Result
+ Optimizer: GPORCA
+(16 rows)
 
 drop table part_pa_test;
 -- test with leader participation disabled

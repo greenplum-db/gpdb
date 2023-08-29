@@ -2131,4 +2131,37 @@ group by j, q1;
  2 | 1 |  2
 (1 row)
 
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink, and this SubLink is under aggregation. ORCA shouldn't fall back due
+-- to missing variable entry as a result of incorrect query normalization. ORCA
+-- should correctly process args of the aggregation during normalization.
+explain (verbose, costs off)
+select (select max((select t.i))) from t;
+                   QUERY PLAN                   
+------------------------------------------------
+ Finalize Aggregate
+   Output: (SubPlan 2)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL max((SubPlan 1)))
+         ->  Partial Aggregate
+               Output: PARTIAL max((SubPlan 1))
+               ->  Seq Scan on public.t
+                     Output: i
+               SubPlan 1
+                 ->  Result
+                       Output: t.i
+   SubPlan 2
+     ->  Result
+           Output: max((SubPlan 1))
+           ->  Result
+                 Output: true
+ Optimizer: GPORCA
+(17 rows)
+
+select (select max((select t.i))) from t;
+ max 
+-----
+   1
+(1 row)
+
 drop table t;
