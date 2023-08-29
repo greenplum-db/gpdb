@@ -287,6 +287,7 @@ You may choose a different method to recreate the Greenplum Database resource gr
 3. Create the directory `/sys/fs/cgroup/gpdb` and ensure `gpadmin` user has read and write permission on it.
     ```
     sudo mkdir -p /sys/fs/cgroup/gpdb
+    echo "+cpuset +io +cpu +memory" | sudo tee -a /sys/fs/cgroup/cgroup.subtree_control
     sudo chown -R gpadmin:gpadmin /sys/fs/cgroup/gpdb
     ```
 4. Ensure that `gpadmin` has write permission on `/sys/fs/cgroup/cgroup.procs`.
@@ -294,10 +295,6 @@ You may choose a different method to recreate the Greenplum Database resource gr
     sudo usermod -aG root gpadmin
     sudo chmod g+w /sys/fs/cgroup/cgroup.procs
     ```
-5. Add all controllers.
-   ```
-   echo "+cpuset +io +cpu +memory" | sudo tee -a /sys/fs/cgroup/cgroup.subtree_control
-   ```
 
 Since resource groups manually manage cgroup files, the above settings may become ineffective after a system reboot. Consider adding the following bash script for systemd so it runs automatically during system startup:
 
@@ -318,8 +315,8 @@ Since resource groups manually manage cgroup files, the above settings may becom
    
    ExecStart=/bin/sh -c " \
                        mkdir -p /sys/fs/cgroup/gpdb; \
-                       chown -R gpadmin:gpadmin /sys/fs/cgroup/gpdb; \
                        echo '+cpuset +io +cpu +memory' | sudo tee -a /sys/fs/cgroup/cgroup.subtree_control; \
+                       chown -R gpadmin:gpadmin /sys/fs/cgroup/gpdb; \
                        usermod -aG root gpadmin; \
                        chmod g+w /sys/fs/cgroup/cgroup.procs;"
    ExecStop=
