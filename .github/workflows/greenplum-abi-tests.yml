@@ -38,7 +38,7 @@ jobs:
   abi-dump:
     needs: abi-dump-setup
     runs-on: ubuntu-latest
-    container: gcr.io/data-gpdb-public-images/gpdb6-rocky8-build@sha256:b6e4d46fb209677d2ff5e3d53b901a53b387f703e384f7b9760f4bff01a64ce3
+    container: gcr.io/data-gpdb-public-images/gpdb6-rocky8-build
     strategy:
       matrix:
         name:
@@ -62,6 +62,11 @@ jobs:
           fetch-depth: 0 # Specify '0' to fetch all history for all branches and tags.
           path: gpdb_src
 
+      - name: Install abi-dumper
+        run: |
+          yum install -y epel-release
+          yum install -y abi-dumper
+
       - name: Build Greenplum
         run: |
           env SKIP_UNITTESTS=1 CONFIGURE_FLAGS='--enable-tap-tests --enable-debug-extensions' \
@@ -82,7 +87,7 @@ jobs:
       - abi-dump-setup
       - abi-dump
     runs-on: ubuntu-latest
-    container: gcr.io/data-gpdb-public-images/gpdb6-rocky8-build@sha256:b6e4d46fb209677d2ff5e3d53b901a53b387f703e384f7b9760f4bff01a64ce3
+    container: gcr.io/data-gpdb-public-images/gpdb6-rocky8-build
     steps:
       - name: Download baseline
         uses: actions/download-artifact@v3
@@ -94,6 +99,11 @@ jobs:
         with:
           name: build-latest
           path: build-latest/
+
+      - name: Install abi-compliance-checker
+        run: |
+          yum install -y epel-release
+          yum install -y abi-compliance-checker
 
       - name: Compare ABI
         run: |
