@@ -1515,10 +1515,16 @@ CDXLUtils::CreateMDNameFromCharArray(CMemoryPool *mp, const CHAR *c)
 {
 	GPOS_ASSERT(nullptr != c);
 
-	WCHAR w_str_buffer[MAX_NAME_LENGTH];
+	// Creaate character array buffer and pass into CWStringConst. This should take
+	// ownership of the character array buffer, but should NOT re-copy the buffer.
+	// The CMDName should also take ownership of the buffer. This ensures we minimize allocations
+	// and improves performance for this very hot codepath
+	WCHAR *w_str_buffer = GPOS_NEW_ARRAY(mp, WCHAR, MAX_NAME_LENGTH);
 	clib::Mbstowcs(w_str_buffer, c, MAX_NAME_LENGTH);
+	const CWStringConst *str =
+		GPOS_NEW(mp) CWStringConst(mp, w_str_buffer, false /* deep_copy */);
 
-	CMDName *mdname = GPOS_NEW(mp) CMDName(mp, w_str_buffer);
+	CMDName *mdname = GPOS_NEW(mp) CMDName(str, true /* owns_memory */);
 
 	return mdname;
 }

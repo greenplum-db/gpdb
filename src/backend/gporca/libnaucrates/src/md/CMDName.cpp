@@ -54,20 +54,6 @@ CMDName::CMDName(const CWStringConst *str, BOOL owns_memory)
 //		CMDName::CMDName
 //
 //	@doc:
-//		ctor
-//		Creates a deep copy of CHAR array
-//
-//---------------------------------------------------------------------------
-CMDName::CMDName(CMemoryPool *mp, WCHAR *c) : m_name(nullptr), m_deep_copy(true)
-{
-	m_name = GPOS_NEW(mp) CWStringConst(mp, c);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CMDName::CMDName
-//
-//	@doc:
 //		Shallow copy constructor
 //
 //---------------------------------------------------------------------------

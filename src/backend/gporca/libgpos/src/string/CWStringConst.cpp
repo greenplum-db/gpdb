@@ -43,10 +43,12 @@ CWStringConst::CWStringConst(const WCHAR *w_str_buffer)
 //
 //	@doc:
 //		Initializes a constant string by making a copy of the given character buffer.
-//		The string owns the memory.
+//		The string owns the memory. If deep_copy is false, the string still owns the memory,
+//		but takes ownership of the existing string and does not re-copy the buffer
 //
 //---------------------------------------------------------------------------
-CWStringConst::CWStringConst(CMemoryPool *mp, const WCHAR *w_str_buffer)
+CWStringConst::CWStringConst(CMemoryPool *mp, const WCHAR *w_str_buffer,
+							 bool deep_copy)
 	: CWStringBase(GPOS_WSZ_LENGTH(w_str_buffer),
 				   true	 // owns_memory
 				   ),
@@ -55,7 +57,11 @@ CWStringConst::CWStringConst(CMemoryPool *mp, const WCHAR *w_str_buffer)
 	GPOS_ASSERT(nullptr != mp);
 	GPOS_ASSERT(nullptr != w_str_buffer);
 
-	if (0 == m_length)
+	if (!deep_copy)
+	{
+		m_w_str_buffer = w_str_buffer;
+	}
+	else if (0 == m_length)
 	{
 		// string is empty
 		m_w_str_buffer = &m_empty_wcstr;
