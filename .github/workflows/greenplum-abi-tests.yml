@@ -65,7 +65,7 @@ jobs:
       - name: Install abi-dumper
         run: |
           yum install -y epel-release
-          yum install -y abi-dumper
+          yum install -y abi-dumper ctags
 
       - name: Build Greenplum
         run: |
