@@ -28,6 +28,7 @@ from os import path
 from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, MasterStop
 from gppylib.commands import gp, unix
+from gppylib.commands.unix import CMD_CACHE
 from gppylib.commands.pg import PgBaseBackup
 from gppylib.commands.unix import findCmdInPath, Scp
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
@@ -4200,3 +4201,67 @@ def impl(context):
             continue
         else:
             raise Exception("segment process not running in execute mode for DBID:{0}".format(dbid))
+
+
+@given('user creates a new executable rsync script which inserts data into table and runs checkpoint along with doing '
+       'rsync')
+def impl(context):
+
+    rsync_script = """
+cat >/usr/local/bin/rsync <<EOL
+#!/usr/bin/env bash
+arguments="\$@"
+# Insert data into table and run checkpoint just before syncing pg_control
+if [[ "\$arguments" == *"pg_xlog"* ]]
+then
+    ssh cdw "source /usr/local/greenplum-db-devel/greenplum_path.sh; psql -c 'INSERT INTO test_recoverseg SELECT generate_series(1, 1000)' -d postgres -p 5432 -h cdw"
+    # run checkpoint
+    ssh cdw "source /usr/local/greenplum-db-devel/greenplum_path.sh; psql -c "CHECKPOINT" -d postgres -p 5432 -h cdw"
+fi
+/usr/bin/rsync \$arguments
+EOL
+"""
+    clear_cmd_cache_script = """
+cat >/tmp/clear_cmd_cache.py <<EOL
+#!/usr/bin/env python
+# clear the cmd cache
+global CMD_CACHE
+CMD_CACHE = {}
+EOL
+"""
+
+    with closing(dbconn.connect(dbconn.DbURL(port=os.environ.get("PGPORT")), unsetSearchPath=False)) as conn:
+        query = "select distinct hostname from gp_segment_configuration where status='d';"
+        result = dbconn.execSQL(conn, query).fetchall()
+        host_list = [result[s][0] for s in range(len(result))]
+        context.hosts_with_rsync_bash = host_list
+
+    cmd = Command(name='create a file for new rsync script',
+                  cmdStr="sudo touch /usr/local/bin/rsync;sudo chmod 777 /usr/local/bin/rsync")
+    cmd.run(validateAfter=True)
+
+    cmd = Command(name='update rsync bash script', cmdStr=rsync_script)
+    cmd.run(validateAfter=True)
+
+    for host in host_list:
+        cmd = Command(name='create a file for new rsync script', cmdStr="sudo touch /usr/local/bin/rsync;sudo chmod 777 /usr/local/bin/rsync", remoteHost=host, ctxt=REMOTE)
+        cmd.run(validateAfter=True)
+
+        cmd = Command(name='update rsync bash script', cmdStr="scp /usr/local/bin/rsync {}:/usr/local/bin/rsync".format(host))
+        cmd.run(validateAfter=True)
+
+        cmd = Command(name='create script to clear cmd_cache', cmdStr=clear_cmd_cache_script,
+                      remoteHost=host, ctxt=REMOTE)
+        cmd.run(validateAfter=True)
+
+        cmd = Command(name='run script to clear cmd_cache', cmdStr="chmod +x /tmp/clear_cmd_cache.py;/tmp/clear_cmd_cache.py",
+                      remoteHost=host, ctxt=REMOTE)
+        cmd.run(validateAfter=True)
+
+
+@then('the row count of table {table} in "{dbname}" should be {count}')
+def impl(context, table, dbname, count):
+    current_row_count = _get_row_count_per_segment(table, dbname)
+    if int(count) != sum(current_row_count):
+        raise Exception(
+            "%s table in %s has %d rows, expected %d rows." % (table, dbname, sum(current_row_count), int(count)))

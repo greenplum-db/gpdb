@@ -34,7 +34,7 @@ curr_platform = platform.uname()[0].lower()
 GPHOME = os.environ.get('GPHOME', None)
 
 # ---------------command path--------------------
-CMDPATH = ['/usr/kerberos/bin', '/usr/sfw/bin', '/opt/sfw/bin', '/bin', '/usr/local/bin',
+CMDPATH = ['/usr/kerberos/bin', '/usr/sfw/bin', '/opt/sfw/bin', '/usr/local/bin', '/bin',
            '/usr/bin', '/sbin', '/usr/sbin', '/usr/ucb', '/sw/bin', '/opt/Navisphere/bin']
 
 if GPHOME:

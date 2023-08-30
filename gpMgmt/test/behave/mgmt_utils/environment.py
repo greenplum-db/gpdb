@@ -192,3 +192,9 @@ def after_scenario(context, scenario):
     if os.getenv('SUSPEND_PG_REWIND') is not None:
         del os.environ['SUSPEND_PG_REWIND']
 
+    if "remove_rsync_bash" in scenario.effective_tags:
+        for host in context.hosts_with_rsync_bash:
+            cmd = Command(name='remove /usr/local/bin/rsync', cmdStr="sudo rm /usr/local/bin/rsync", remoteHost=host,
+                          ctxt=REMOTE)
+            cmd.run(validateAfter=True)
+

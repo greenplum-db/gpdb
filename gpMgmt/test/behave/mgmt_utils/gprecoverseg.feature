@@ -1876,3 +1876,24 @@ Feature: gprecoverseg tests
     And the user runs "gprecoverseg -a -v"
     Then gprecoverseg should return a return code of 0
     And the cluster is rebalanced
+
+    @remove_rsync_bash
+    @concourse_cluster
+    Scenario: None of the accumulated wal (after running pg_start_backup and before copying the pg_control file) is lost during differential
+      Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+        And sql "DROP TABLE IF EXISTS test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,1000) AS a;" is executed in "postgres" db
+        And user immediately stops all mirror processes for content 0
+        And the user waits until mirror on content 0 is down
+        And user can start transactions
+        And user creates a new executable rsync script which inserts data into table and runs checkpoint along with doing rsync
+       When the user runs "gprecoverseg -av --differential"
+       Then gprecoverseg should return a return code of 0
+        And verify that mirror on content 0 is up
+       Then the row count of table test_recoverseg in "postgres" should be 2000
+      Given user immediately stops all primary processes for content 0
+        And user can start transactions
+       Then the row count of table test_recoverseg in "postgres" should be 2000
+       And the cluster is recovered in full and rebalanced
