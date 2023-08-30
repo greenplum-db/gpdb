@@ -1493,14 +1493,17 @@ cdbpath_motion_for_join(PlannerInfo *root,
 			CdbPathLocus_MakeReplicated(&large_rel->move_to,
 										CdbPathLocus_NumSegments(small_rel->locus));
 
-		/* Last resort: Move both rels to a single qExec. */
-		else
+		/* Last resort: Move both rels to a single qExec
+		 * only if there is no wts on either rels*/
+		else if (!outer.has_wts && !inner.has_wts)
 		{
 			int numsegments = CdbPathLocus_CommonSegments(outer.locus,
 														  inner.locus);
 			CdbPathLocus_MakeSingleQE(&outer.move_to, numsegments);
 			CdbPathLocus_MakeSingleQE(&inner.move_to, numsegments);
 		}
+		else
+			goto fail;
 	}							/* partitioned */
 
 	/*

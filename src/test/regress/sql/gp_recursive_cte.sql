@@ -432,3 +432,25 @@ with recursive the_cte_here(n) as (
   select n+1 from the_cte_here join t_rand_test_rcte
 	              on t_rand_test_rcte.c = the_cte_here.n)
 select * from the_cte_here;
+
+-- Test recursive CTE doesnt create a plan with motion on top of worktablescan
+CREATE TABLE t1 (a int, b int) DISTRIBUTED BY (a);
+SET enable_nestloop = off;
+SET enable_hashjoin = off;
+SET enable_mergejoin = on;
+
+explain (costs off) with recursive rcte as
+   (
+      ( select a, b, 1::integer recursion_level from t1 order by 1 )
+      union all
+
+      select parent_table.a, parent_table.b, rcte.recursion_level + 1
+      from
+      ( select a, b from t1 order by 1 ) parent_table
+      join rcte on rcte.b = parent_table.a
+   )
+select count(*) from rcte;
+
+RESET enable_nestloop;
+RESET enable_hashjoin;
+RESET enable_mergejoin;

@@ -620,3 +620,41 @@ select * from the_cte_here;
  4
 (4 rows)
 
+-- Test recursive CTE doesnt create a plan with motion on top of worktablescan
+CREATE TABLE t1 (a int, b int) DISTRIBUTED BY (a);
+SET enable_nestloop = off;
+SET enable_hashjoin = off;
+SET enable_mergejoin = on;
+explain (costs off) with recursive rcte as
+   (
+      ( select a, b, 1::integer recursion_level from t1 order by 1 )
+      union all
+      select parent_table.a, parent_table.b, rcte.recursion_level + 1
+      from
+      ( select a, b from t1 order by 1 ) parent_table
+      join rcte on rcte.b = parent_table.a
+   )
+select count(*) from rcte;
+                                   QUERY PLAN
+---------------------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Recursive Union
+                     ->  Sort
+                           Sort Key: t1.a
+                           ->  Seq Scan on t1
+                     ->  Nested Loop
+                           Join Filter: (t1_1.a = rcte.b)
+                           ->  WorkTable Scan on rcte
+                           ->  Materialize
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Sort
+                                             Sort Key: t1_1.a
+                                             ->  Seq Scan on t1 t1_1
+ Optimizer: Postgres-based planner
+(16 rows)
+
+RESET enable_nestloop;
+RESET enable_hashjoin;
+RESET enable_mergejoin;
