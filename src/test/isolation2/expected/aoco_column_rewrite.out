@@ -1568,31 +1568,6 @@ ALTER TABLE
 alter table atsetenc set access method heap, alter column c8 set encoding (compresstype=zlib,compresslevel=9);
 ERROR:  ALTER COLUMN SET ENCODING operation is only applicable to AOCO tables
 DETAIL:  New access method for "atsetenc" is not ao_column
--- reorganize, should rewrite
-execute capturerelfilenodebefore('set encoding - reorg', 'atsetenc');
-INSERT 0 4
-alter table atsetenc set with (reorganize=true), alter column c8 set encoding (compresstype=zlib,compresslevel=9);
-ALTER TABLE
-execute checkrelfilenodediff('set encoding - reorg', 'atsetenc');
- segid | casename             | relname  | rewritten 
--------+----------------------+----------+-----------
- 2     | set encoding - reorg | atsetenc | t         
- -1    | set encoding - reorg | atsetenc | t         
- 0     | set encoding - reorg | atsetenc | t         
- 1     | set encoding - reorg | atsetenc | t         
-(4 rows)
-execute attribute_encoding_check('atsetenc');
- relname  | attname                      | filenum | attoptions                                                  
-----------+------------------------------+---------+-------------------------------------------------------------
- atsetenc | c1                           | 1       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
- atsetenc | c2                           | 2       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=1'] 
- atsetenc | c4                           | 4       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
- atsetenc | c5                           | 5       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=1'] 
- atsetenc | c6                           | 6       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
- atsetenc | c7                           | 7       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
- atsetenc | c8                           | 8       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
- atsetenc | ........pg.dropped.3........ | 3       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
-(8 rows)
 
 -- 5. multiple SET ENCODING commands
 -- not rewrite
@@ -1611,13 +1586,13 @@ execute checkrelfilenodediff('set encoding - multiple', 'atsetenc');
 execute attribute_encoding_check('atsetenc');
  relname  | attname                      | filenum | attoptions                                                      
 ----------+------------------------------+---------+-----------------------------------------------------------------
- atsetenc | c1                           | 1       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9']     
+ atsetenc | c1                           | 1601    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9']     
  atsetenc | c2                           | 2       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=1']     
- atsetenc | c4                           | 4       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9']     
+ atsetenc | c4                           | 1604    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9']     
  atsetenc | c5                           | 5       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=1']     
- atsetenc | ........pg.dropped.3........ | 3       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9']     
  atsetenc | c6                           | 6       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0']     
- atsetenc | c7                           | 1607    | ['compresstype=rle_type', 'blocksize=32768', 'compresslevel=3'] 
+ atsetenc | c7                           | 7       | ['compresstype=rle_type', 'blocksize=32768', 'compresslevel=3'] 
+ atsetenc | ........pg.dropped.3........ | 1603    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9']     
  atsetenc | c8                           | 1608    | ['compresstype=rle_type', 'blocksize=32768', 'compresslevel=4'] 
 (8 rows)
 

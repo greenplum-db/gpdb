@@ -542,6 +542,9 @@ static void prepare_AlterTableStmt_for_dispatch(AlterTableStmt *stmt);
 static List *strip_gpdb_part_commands(List *cmds);
 static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions);
 
+static void checkATSetDistributedByStandalone(AlteredTableInfo *tab, Relation rel);
+
+
 /* ----------------------------------------------------------------
  *		DefineRelation
  *				Creates a new relation.
@@ -5794,6 +5797,7 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			ATExecGenericOptions(rel, (List *) cmd->def);
 			break;
 		case AT_SetDistributedBy:	/* SET DISTRIBUTED BY */
+			checkATSetDistributedByStandalone(tab, rel);
 			ATExecSetDistributedBy(rel, (Node *) cmd->def, cmd);
 			break;
 		case AT_ExpandTable:	/* EXPAND TABLE */
@@ -21868,4 +21872,36 @@ ATDetachCheckNoForeignKeyRefs(Relation partition)
 
 		table_close(rel, NoLock);
 	}
+}
+
+/*
+ * Check if AT SET DISTRIBUTED BY for this relation was specified in isolation.
+ * Currently, we don't allow AT SET DISTRIBUTED BY to be specified with other
+ * subcommands. This is due to the way that AT SET DISTRIBUTED BY is currently
+ * implemented: ATExecSetDistributedBy dispatches a CTAS, outside the regular
+ * AT dispatch workflow, which results in an inconsistent view of the catalog on
+ * the QEs.
+ */
+static void
+checkATSetDistributedByStandalone(AlteredTableInfo *tab, Relation rel)
+{
+	bool standalone = true;
+
+	for (int i = 0; i < AT_NUM_PASSES; ++i)
+	{
+		if (i != AT_PASS_MISC && list_length(tab->subcmds[i]) > 0)
+		{
+			standalone = false;
+			break;
+		}
+	}
+	if (list_length(tab->subcmds[AT_PASS_MISC]) > 1)
+		standalone = false;
+
+	if (!standalone)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("cannot alter distribution with other subcommands for relation \"%s\"",
+						   RelationGetRelationName(rel)),
+					errhint("consider separating into multiple statements")));
 }

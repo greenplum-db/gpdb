@@ -571,11 +571,6 @@ select c7 from atsetenc;
 alter table atsetenc add column c8 int default 8;
 -- changing to another AM, should complaint
 alter table atsetenc set access method heap, alter column c8 set encoding (compresstype=zlib,compresslevel=9);
--- reorganize, should rewrite
-execute capturerelfilenodebefore('set encoding - reorg', 'atsetenc');
-alter table atsetenc set with (reorganize=true), alter column c8 set encoding (compresstype=zlib,compresslevel=9);
-execute checkrelfilenodediff('set encoding - reorg', 'atsetenc');
-execute attribute_encoding_check('atsetenc');
 
 -- 5. multiple SET ENCODING commands
 -- not rewrite
