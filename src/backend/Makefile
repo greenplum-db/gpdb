@@ -86,14 +86,14 @@ SYMBOL_MAPPING_FLAGS =
 ifeq ($(PORTNAME), darwin)
 SYMBOL_MAP_FILE = hide_symbols.list
 $(SYMBOL_MAP_FILE): $(top_builddir)/src/interfaces/libpq/exports.txt
-	$(AWK) '/^[^\#]/ {printf "_%s\n",$$1}' $< | grep -v -E $(SAFELY_EXPORTED_SYMBOLS_PATTERN) >$@
+	$(AWK) '/^[^#]/ {printf "_%s\n",$$1}' $< | grep -v -E $(SAFELY_EXPORTED_SYMBOLS_PATTERN) >$@
 SYMBOL_MAPPING_FLAGS = -unexported_symbols_list $(SYMBOL_MAP_FILE)
 endif
 
 ifeq ($(PORTNAME), linux)
 SYMBOL_MAP_FILE = postgres_symbols.map
 $(SYMBOL_MAP_FILE): $(top_builddir)/src/interfaces/libpq/exports.txt
-	( echo '{ global: *; '; echo ' local:'; $(AWK) '/^[^\#]/ {printf "%s;\n",$$1}' $< | grep -v -E $(SAFELY_EXPORTED_SYMBOLS_PATTERN); echo '};' ) >$@
+	( echo '{ global: *; '; echo ' local:'; $(AWK) '/^[^#]/ {printf "%s;\n",$$1}' $< | grep -v -E $(SAFELY_EXPORTED_SYMBOLS_PATTERN); echo '};' ) >$@
 SYMBOL_MAPPING_FLAGS = -Wl,--version-script=$(SYMBOL_MAP_FILE)
 endif
 
