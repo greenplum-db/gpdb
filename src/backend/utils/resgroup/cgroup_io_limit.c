@@ -383,7 +383,6 @@ get_iostat(Oid groupid, List *io_limit)
 
 	char io_stat_path[PATH_MAX];
 	ListCell *cell;
-	List *lines = NIL;
 	StringInfo line = makeStringInfo();
 	FILE *f;
 
@@ -395,37 +394,15 @@ get_iostat(Oid groupid, List *io_limit)
 				(errcode(ERRCODE_IO_ERROR),
 				 errmsg("io limit: cannot read %s, details: %m.", io_stat_path)));
 
-	/*
-	 * read all lines at a time
-	 */
-	while (pg_get_line_buf(f, line))
+	while (pg_get_line_append(f, line))
 	{
-		lines = lappend(lines, line->data);
-		initStringInfo(line);
-	}
-	FreeFile(f);
-
-	/*
-	 * parse file content.
-	 * content example:
-	 * "8:16 rbytes=1459200 wbytes=314773504 rios=192 wios=353 ..."
-	 */
-	memset(&ctl, 0, sizeof(ctl));
-	ctl.keysize = sizeof(bdi_t);
-	ctl.entrysize = sizeof(IOStatHashEntry);
-	ctl.hcxt = CurrentMemoryContext;
-	io_stat_hash =
-		hash_create("hash table for bdi -> io stat", list_length(io_limit), &ctl,
-					HASH_ELEM | HASH_CONTEXT);
-	foreach (cell, lines)
-	{
-		uint64 maj, min;
+		uint32 maj, min;
 		bdi_t bdi;
 		IOStatHashEntry *entry;
 		char *t;
 
-		char *str = (char *) lfirst(cell);
-		int res = sscanf(str, "%lu:%lu", &maj, &min);
+		char *str = (char *) line->data;
+		int res = sscanf(str, "%u:%u", &maj, &min);
 		if (res == EOF)
 		{
 			ereport(ERROR,
@@ -444,7 +421,7 @@ get_iostat(Oid groupid, List *io_limit)
 			char key[64];
 			int i;
 
-			t = index(t, ' ');
+			t = strstr(t, " ");
 			if (t == NULL)
 				break;
 			t++;
@@ -460,9 +437,24 @@ get_iostat(Oid groupid, List *io_limit)
 				}
 			}
 		}
-	}
 
-	/* construct result list */
+		initStringInfo(line);
+	}
+	FreeFile(f);
+
+	/*
+	 * parse file content.
+	 * content example:
+	 * "8:16 rbytes=1459200 wbytes=314773504 rios=192 wios=353 ..."
+	 */
+	memset(&ctl, 0, sizeof(ctl));
+	ctl.keysize = sizeof(bdi_t);
+	ctl.entrysize = sizeof(IOStatHashEntry);
+	ctl.hcxt = CurrentMemoryContext;
+	io_stat_hash =
+		hash_create("hash table for bdi -> io stat", list_length(io_limit), &ctl,
+					HASH_ELEM | HASH_CONTEXT);
+
 	foreach (cell, io_limit)
 	{
 		ListCell *bdi_cell;
@@ -493,7 +485,6 @@ get_iostat(Oid groupid, List *io_limit)
 
 	hash_destroy(io_stat_hash);
 	io_limit_free(io_limit);
-	list_free_deep(lines);
 
 	return result;
 }
