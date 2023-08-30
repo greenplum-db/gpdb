@@ -1064,11 +1064,11 @@ View definition:
    FROM locations
   ORDER BY locations.locid, locations.country_code;
 
-select * from decode_view order by region, country_code;
+select * from decode_view order by region COLLATE "C", country_code;
       bus_name       | country_code |  region  
 ---------------------+--------------+----------
- Taing Consulting    | US           | Americas
  Test Solutions      | CN           | APJ
+ Taing Consulting    | US           | Americas
  Computers Unlimited | IL           | EMEA
  Parts Plus          | IT           | EMEA
  Kangaroos Inc.      | AU           | 
