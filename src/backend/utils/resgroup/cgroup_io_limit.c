@@ -394,6 +394,19 @@ get_iostat(Oid groupid, List *io_limit)
 				(errcode(ERRCODE_IO_ERROR),
 				 errmsg("io limit: cannot read %s, details: %m.", io_stat_path)));
 
+	/*
+	 * parse file content.
+	 * content example:
+	 * "8:16 rbytes=1459200 wbytes=314773504 rios=192 wios=353 ..."
+	 */
+	memset(&ctl, 0, sizeof(ctl));
+	ctl.keysize = sizeof(bdi_t);
+	ctl.entrysize = sizeof(IOStatHashEntry);
+	ctl.hcxt = CurrentMemoryContext;
+	io_stat_hash =
+		hash_create("hash table for bdi -> io stat", list_length(io_limit), &ctl,
+					HASH_ELEM | HASH_CONTEXT);
+
 	while (pg_get_line_append(f, line))
 	{
 		uint32 maj, min;
@@ -413,6 +426,7 @@ get_iostat(Oid groupid, List *io_limit)
 
 		bdi = make_bdi(maj, min);
 		entry = hash_search(io_stat_hash, (void *)&bdi, HASH_ENTER, NULL);
+		memset(entry, 0, sizeof(IOStatHashEntry));
 		entry->id = bdi;
 
 		t = str;
@@ -441,19 +455,6 @@ get_iostat(Oid groupid, List *io_limit)
 		initStringInfo(line);
 	}
 	FreeFile(f);
-
-	/*
-	 * parse file content.
-	 * content example:
-	 * "8:16 rbytes=1459200 wbytes=314773504 rios=192 wios=353 ..."
-	 */
-	memset(&ctl, 0, sizeof(ctl));
-	ctl.keysize = sizeof(bdi_t);
-	ctl.entrysize = sizeof(IOStatHashEntry);
-	ctl.hcxt = CurrentMemoryContext;
-	io_stat_hash =
-		hash_create("hash table for bdi -> io stat", list_length(io_limit), &ctl,
-					HASH_ELEM | HASH_CONTEXT);
 
 	foreach (cell, io_limit)
 	{
@@ -495,8 +496,8 @@ get_iostat(Oid groupid, List *io_limit)
 int
 compare_iostat(const void *x, const void *y)
 {
-	IOStat *a = (IOStat *) lfirst((ListCell *) x);
-	IOStat *b = (IOStat *) lfirst((ListCell *) y);
+	IOStat *a = (IOStat *) lfirst(*(ListCell **) x);
+	IOStat *b = (IOStat *) lfirst(*(ListCell **) y);
 	if (a->groupid != b->groupid)
 	{
 		if (a->groupid < b->groupid)

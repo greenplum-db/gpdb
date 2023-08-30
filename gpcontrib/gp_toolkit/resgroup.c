@@ -86,6 +86,9 @@ pg_resgroup_get_iostats(PG_FUNCTION_ARGS)
 			IOStat *newStat = (IOStat *) lfirst(newStatCell);
 			IOStat *stat = (IOStat *) lfirst(statCell);
 
+			if (stat->groupid != newStat->groupid || stat->tablespace != newStat->tablespace)
+				ereport(ERROR, (errmsg("get different result from io.stat after little interval")));
+
 			stat->items.rios = newStat->items.rios - stat->items.rios;
 			stat->items.wios = newStat->items.wios - stat->items.wios;
 
