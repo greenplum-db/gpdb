@@ -416,7 +416,7 @@ get_iostat(Oid groupid, List *io_limit)
 
 		char *str = (char *) line->data;
 		int res = sscanf(str, "%u:%u", &maj, &min);
-		if (res == EOF)
+		if (res != 2)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_IO_ERROR),
