@@ -442,7 +442,7 @@ resources:
 - name: gpdb7-[[ compile_platform ]]-build
   type: registry-image
   source:
-    tag: latest
+    tag: devv73
     repository: gcr.io/data-gpdb-public-images/gpdb7-[[ compile_platform ]]-build
 {% endif %}
 
