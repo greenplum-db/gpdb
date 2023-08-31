@@ -23,8 +23,8 @@ The external table clause to foreign table option mapping follows:
 | CREATE EXTERNAL TABLE | `is_writable 'false'` | Readable external tables are not writable. |
 | CREATE WRITABLE EXTERNAL TABLE | `is_writable 'true'` | Writable external tables are writable and alterable. |
 | `LOCATION ('<location>' [, ...])` | `location_uris '<location>'` |  The location of the external data. `gp_exttable_fdw` uses a pipe (`|`) character to separate locations when you provide more than one.  |
-| `FORMAT 'TEXT'` | `format 'text' |  The external data is text format. |
-| `FORMAT 'CSV'` | `format 'csv' |  The external data is comma-separated value format. |
+| `FORMAT 'TEXT'` | `format 'text'` |  The external data is text format. |
+| `FORMAT 'CSV'` | `format 'csv'` |  The external data is comma-separated value format. |
 | `FORMAT 'CUSTOM'` | `format 'custom' formatter '<name>'` |  The external data is of a custom format, and Greenplum uses the specified formatter to parse the data. |
 | formatting options | `delimiter <value>`</br> `escape <value>`</br> `"null" <value>`</br> `<option1> <value>`</br>`...` | Format-dependent formatting options. |
 | `OPTIONS <key> '<value>' [, ...]` | `<key> <value>`</br>`...` |  The data access protocol-specific options. |
