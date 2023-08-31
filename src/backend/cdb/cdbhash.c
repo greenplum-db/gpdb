@@ -128,6 +128,7 @@ makeCdbHash(int numsegs, int natts, Oid *hashfuncs)
 CdbHash *
 makeCdbHashForRelation(Relation rel)
 {
+	CdbHash    *h;
 	GpPolicy   *policy = rel->rd_cdbpolicy;
 	Oid		   *hashfuncs;
 	int			i;
@@ -146,7 +147,17 @@ makeCdbHashForRelation(Relation rel)
 		hashfuncs[i] = cdb_hashproc_in_opfamily(opfamily, typeoid);
 	}
 
-	return makeCdbHash(policy->numsegments, policy->nattrs, hashfuncs);
+	h = makeCdbHash(policy->numsegments, policy->nattrs, hashfuncs);
+
+	pfree(hashfuncs);
+	return h;
+}
+
+/* release all memory of CdbHash */
+void freeCdbHash(CdbHash *h)
+{
+	pfree(h->hashfuncs);
+	pfree(h);
 }
 
 /*
