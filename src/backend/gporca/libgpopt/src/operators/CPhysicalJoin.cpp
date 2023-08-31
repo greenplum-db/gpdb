@@ -419,9 +419,10 @@ CPhysicalJoin::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 
 	CDistributionSpec *pds;
 
-	if (CDistributionSpec::EdtStrictReplicated == pdsOuter->Edt() ||
+	if ((CDistributionSpec::EdtStrictReplicated == pdsOuter->Edt() ||
 		CDistributionSpec::EdtTaintedReplicated == pdsOuter->Edt() ||
-		CDistributionSpec::EdtUniversal == pdsOuter->Edt())
+		CDistributionSpec::EdtUniversal == pdsOuter->Edt()) &&
+		CDistributionSpec::EdtUniversal != pdsInner->Edt())
 	{
 		// if outer is replicated/universal, return inner distribution
 		pds = pdsInner;
