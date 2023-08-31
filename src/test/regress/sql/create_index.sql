@@ -182,12 +182,14 @@ EXPLAIN (COSTS OFF)
 SELECT count(*) FROM fast_emp4000 WHERE home_base IS NULL;
 SELECT count(*) FROM fast_emp4000 WHERE home_base IS NULL;
 
+ANALYZE polygon_tbl;
 EXPLAIN (COSTS OFF)
 SELECT * FROM polygon_tbl WHERE f1 ~ '((1,1),(2,2),(2,1))'::polygon
     ORDER BY (poly_center(f1))[0];
 SELECT * FROM polygon_tbl WHERE f1 ~ '((1,1),(2,2),(2,1))'::polygon
     ORDER BY (poly_center(f1))[0];
 
+ANALYZE circle_tbl;
 EXPLAIN (COSTS OFF)
 SELECT * FROM circle_tbl WHERE f1 && circle(point(1,-2), 1)
     ORDER BY area(f1);
