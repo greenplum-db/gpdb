@@ -154,10 +154,14 @@ makeCdbHashForRelation(Relation rel)
 }
 
 /* release all memory of CdbHash */
-void freeCdbHash(CdbHash *h)
+void freeCdbHash(CdbHash *hash)
 {
-	pfree(h->hashfuncs);
-	pfree(h);
+	if (hash)
+	{
+		if (hash->hashfuncs)
+			pfree(hash->hashfuncs);
+		pfree(hash);
+	}
 }
 
 /*

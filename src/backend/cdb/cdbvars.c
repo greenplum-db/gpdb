@@ -101,6 +101,8 @@ int         gp_segment_connect_timeout = 180;  /* Maximum time (in seconds) allo
 												* or a mirror to respond.
 												*/
 
+bool		gp_detect_data_correctness;		/* Detect if the current data distribution is correct */
+
 /*
  * Configurable timeout for snapshot add: exceptionally busy systems may take
  * longer than our old hard-coded version -- so here is a tuneable version.
