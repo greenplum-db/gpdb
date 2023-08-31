@@ -16,6 +16,7 @@
 
 #define GPOS_WSZ_LENGTH(x) gpos::clib::Wcslen(x)
 #define GPOS_WSZ_STR_LENGTH(x) GPOS_WSZ_LIT(x), GPOS_WSZ_LENGTH(GPOS_WSZ_LIT(x))
+#define GPOS_SZ_LENGTH(x) gpos::clib::Strlen(x)
 
 #define WCHAR_EOS GPOS_WSZ_LIT('\0')
 

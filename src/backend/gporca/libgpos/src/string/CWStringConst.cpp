@@ -43,12 +43,10 @@ CWStringConst::CWStringConst(const WCHAR *w_str_buffer)
 //
 //	@doc:
 //		Initializes a constant string by making a copy of the given character buffer.
-//		The string owns the memory. If deep_copy is false, the string still owns the memory,
-//		but takes ownership of the existing string and does not re-copy the buffer
+//		The string owns the memory.
 //
 //---------------------------------------------------------------------------
-CWStringConst::CWStringConst(CMemoryPool *mp, const WCHAR *w_str_buffer,
-							 bool deep_copy)
+CWStringConst::CWStringConst(CMemoryPool *mp, const WCHAR *w_str_buffer)
 	: CWStringBase(GPOS_WSZ_LENGTH(w_str_buffer),
 				   true	 // owns_memory
 				   ),
@@ -57,11 +55,7 @@ CWStringConst::CWStringConst(CMemoryPool *mp, const WCHAR *w_str_buffer,
 	GPOS_ASSERT(nullptr != mp);
 	GPOS_ASSERT(nullptr != w_str_buffer);
 
-	if (!deep_copy)
-	{
-		m_w_str_buffer = w_str_buffer;
-	}
-	else if (0 == m_length)
+	if (0 == m_length)
 	{
 		// string is empty
 		m_w_str_buffer = &m_empty_wcstr;
@@ -72,6 +66,39 @@ CWStringConst::CWStringConst(CMemoryPool *mp, const WCHAR *w_str_buffer,
 		WCHAR *w_str_temp_buffer = GPOS_NEW_ARRAY(mp, WCHAR, m_length + 1);
 		clib::WcStrNCpy(w_str_temp_buffer, w_str_buffer, m_length + 1);
 		m_w_str_buffer = w_str_temp_buffer;
+	}
+
+	GPOS_ASSERT(IsValid());
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CWStringConst::CWStringConst
+//
+//	@doc:
+//		Initializes a constant string by making a copy of the given character buffer.
+//		The string owns the memory.
+//
+//---------------------------------------------------------------------------
+CWStringConst::CWStringConst(CMemoryPool *mp, const CHAR *str_buffer)
+	: CWStringBase(GPOS_SZ_LENGTH(str_buffer),
+				   true	 // owns_memory
+				   ),
+	  m_w_str_buffer(nullptr)
+{
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != str_buffer);
+
+	if (0 == m_length)
+	{
+		// string is empty
+		m_w_str_buffer = &m_empty_wcstr;
+	}
+	else
+	{
+		WCHAR *w_str_buffer = GPOS_NEW_ARRAY(mp, WCHAR, m_length + 1);
+		clib::Mbstowcs(w_str_buffer, str_buffer, m_length + 1);
+		m_w_str_buffer = w_str_buffer;
 	}
 
 	GPOS_ASSERT(IsValid());
