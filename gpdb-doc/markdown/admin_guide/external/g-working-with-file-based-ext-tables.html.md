@@ -4,7 +4,7 @@ title: Working with External Data
 
 Both external and foreign tables provide access to data stored in data sources outside of Greenplum Database as if the data were stored in regular database tables. You can read data from and write data to external and foreign tables.
 
-> **Important** Greenplum 7 internally converts external tables to foreign tables, and internally operates on and represents the table using the foreign table data structures and catalog. Refer to [Understanding the External Table to Foreign Table Mapping](map_ext_to_foreign.html) for detailed information on this conversion, and its runtime implications.
+> **Important** Greenplum 7 internally converts external tables to foreign tables, and internally operates on and represents the table using the foreign table data structures and catalog. Refer to [Understanding the External Table to Foreign Table Mapping](map_ext_to_foreign.html) for detailed information about this conversion, and its runtime implications.
 
 **Parent topic:** [Greenplum Database Administrator Guide](../admin_guide.html)
 

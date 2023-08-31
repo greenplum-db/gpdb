@@ -6,7 +6,7 @@ External tables enable you to access external data as if it were a regular datab
 
 When you create an external table definition, you specify the structure and format of the data, the data access *protocol*, the location of the external data source, and other protocol-specific or format-specific options.
 
-> **Important** Greenplum 7 internally converts external tables to foreign tables, and internally operates on and represents the table using the foreign table data structures and catalog. Refer to [Understanding the External Table to Foreign Table Mapping](map_ext_to_foreign.html) for detailed information on this conversion, and its runtime implications.
+> **Important** Greenplum 7 internally converts external tables to foreign tables, and internally operates on and represents the table using the foreign table data structures and catalog. Refer to [Understanding the External Table to Foreign Table Mapping](map_ext_to_foreign.html) for detailed information about this conversion, and its runtime implications.
 
 **Parent topic:** [Working with External Data](../external/g-working-with-file-based-ext-tables.html)
 

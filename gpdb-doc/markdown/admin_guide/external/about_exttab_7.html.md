@@ -2,11 +2,9 @@
 title: About Changes to External Tables in Greenplum 7
 ---
 
-The external table implementation has changed in Greenplum 7. Greenplum 7 converts an external table that you define with the [CREATE EXTERNAL TABLE](../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) command into a foreign table, and internally operates on and represents the table using the foreign table data structures and catalog.
+This topic describes the external table implementation and changes in Greenplum 7, and is geared towards existing users of Greenplum 6. Greenplum 7 converts an external table that you define with the [CREATE EXTERNAL TABLE](../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) command into a foreign table, and internally operates on and represents the table using the foreign table data structures and catalog.
 
-This topic describes the external table implementation and changes in Greenplum 7, and is geared towards existing users of Greenplum 6.
-
-(Refer to [Understanding the External Table to Foreign Table Mapping](map_ext_to_foreign.html) for detailed information on the external table to foreign table conversion, and its runtime implications.)
+(See also [Understanding the External Table to Foreign Table Mapping](map_ext_to_foreign.html) for detailed information about the external table to foreign table conversion, and its runtime implications.)
 
 **Parent topic:** [Accessing External Data with External Tables](../external/g-external-tables.html)
 
@@ -41,43 +39,39 @@ Note the following differences in the Greenplum 7 external table implementation 
     - Certain command output and error, detail, and notice messages about external tables refer to the table as a foreign table.
     - External tables are included in the foreign table catalogs, for example [pg_foreign_table](../../ref_guide/system_catalogs/pg_foreign_table.html).
     - External tables are included when you list or examine foreign tables (for example, the `\det` `psql` meta-command).
-- External table-specific information displayed in `psql` `\dE+` output has changed; the relation `Type` of an external table is now `foreign table`.
+- External table-specific information displayed in `psql` `\dE+` output has changed; the relation `Type` of an external table is now `foreign table`. Example:
 
-    - Example:
+    ```
+    \dE
+                    List of relations
+     Schema |     Name     |     Type      |  Owner  
+    --------+--------------+---------------+---------
+     public | ext_expenses | foreign table | gpadmin
+    ```
 
-        ```
-        \dE
-                        List of relations
-         Schema |     Name     |     Type      |  Owner  
-        --------+--------------+---------------+---------
-         public | ext_expenses | foreign table | gpadmin
-        ```
+- External table-specific information displayed in `psql` `\d+ <external_table_name>` output has changed; it now displays in foreign table format. For this example `CREATE EXTERNAL TABLE` call:
 
-- External table-specific information displayed in `psql` `\d+ <external_table_name>` output has changed; it now displays in foreign table format:
+    ```
+    CREATE EXTERNAL TABLE ext_expenses ( name text, date date, amount float4, category text, desc1 varchar )
+      LOCATION ('gpfdist://etlhost-1:8081/*.txt', 'gpfdist://etlhost-2:8082/*.txt')
+    FORMAT 'TEXT' ( DELIMITER '|' NULL ' ' )
+    LOG ERRORS SEGMENT REJECT LIMIT 5;
+    ```
 
-    - For this example `CREATE EXTERNAL TABLE` call:
+    The example `\d+` output follows:
 
-        ```
-        CREATE EXTERNAL TABLE ext_expenses ( name text, date date, amount float4, category text, desc1 varchar )
-          LOCATION ('gpfdist://etlhost-1:8081/*.txt', 'gpfdist://etlhost-2:8082/*.txt')
-        FORMAT 'TEXT' ( DELIMITER '|' NULL ' ' )
-        LOG ERRORS SEGMENT REJECT LIMIT 5;
-        ```
-
-        The example `\d+` output follows:
-
-        ```
-        \d+ ext_expenses
-                                                 Foreign table "public.ext_expenses"
-          Column  |       Type        | Collation | Nullable | Default | FDW options | Storage  | Stats target | Description 
-        ----------+-------------------+-----------+----------+---------+-------------+----------+--------------+-------------
-         name     | text              |           |          |         |             | extended |              | 
-         date     | date              |           |          |         |             | plain    |              | 
-         amount   | real              |           |          |         |             | plain    |              | 
-         category | text              |           |          |         |             | extended |              | 
-         desc1    | character varying |           |          |         |             | extended |              | 
-        FDW options: (format 'text', delimiter '|', "null" ' ', escape E'\\', location_uris 'gpfdist://etlhost-1:8081/\*.txt|'gpfdist://etlhost-2:8082/\*.txt', execute_on 'ALL_SEGMENTS', reject_limit '5', reject_limit_type 'rows', log_errors 'enable', encoding 'UTF8', is_writable 'false')
-        ```
+    ```
+    \d+ ext_expenses
+                                             Foreign table "public.ext_expenses"
+      Column  |       Type        | Collation | Nullable | Default | FDW options | Storage  | Stats target | Description 
+    ----------+-------------------+-----------+----------+---------+-------------+----------+--------------+-------------
+     name     | text              |           |          |         |             | extended |              | 
+     date     | date              |           |          |         |             | plain    |              | 
+     amount   | real              |           |          |         |             | plain    |              | 
+     category | text              |           |          |         |             | extended |              | 
+     desc1    | character varying |           |          |         |             | extended |              | 
+    FDW options: (format 'text', delimiter '|', "null" ' ', escape E'\\', location_uris 'gpfdist://etlhost-1:8081/\*.txt|'gpfdist://etlhost-2:8082/\*.txt', execute_on 'ALL_SEGMENTS', reject_limit '5', reject_limit_type 'rows', log_errors 'enable', encoding 'UTF8', is_writable 'false')
+    ```
 - The `EXPLAIN` output for a query including an external table previously returned the text `External Scan`. `EXPLAIN` now returns `Foreign Scan` in this scenario.
 
 ## <a id="other"></a>Additional Considerations
