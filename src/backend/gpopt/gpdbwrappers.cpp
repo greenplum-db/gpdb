@@ -2699,4 +2699,23 @@ gpdb::GetIndexAmRoutineFromAmHandler(Oid am_handler)
 	GP_WRAP_END;
 }
 
+PartitionDesc
+gpdb::GPDBRelationRetrievePartitionDesc(Relation rel)
+{
+	GP_WRAP_START;
+	{
+		return RelationRetrievePartitionDesc(rel);
+	}
+	GP_WRAP_END;
+}
+
+PartitionKey
+gpdb::GPDBRelationRetrievePartitionKey(Relation rel)
+{
+	GP_WRAP_START;
+	{
+		return RelationRetrievePartitionKey(rel);
+	}
+	GP_WRAP_END;
+}
 // EOF

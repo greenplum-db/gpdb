@@ -268,7 +268,7 @@ has_partition_attrs(Relation rel, Bitmapset *attnums, bool *used_in_expr)
 	if (attnums == NULL || rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
 		return false;
 
-	key = RelationGetPartitionKey(rel);
+	key = RelationRetrievePartitionKey(rel);
 	partnatts = get_partition_natts(key);
 	partexprs = get_partition_exprs(key);
 

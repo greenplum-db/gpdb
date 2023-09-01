@@ -2568,7 +2568,7 @@ set_relation_partition_info(PlannerInfo *root, RelOptInfo *rel,
 static PartitionScheme
 find_partition_scheme(PlannerInfo *root, Relation relation)
 {
-	PartitionKey partkey = RelationGetPartitionKey(relation);
+	PartitionKey partkey = RelationRetrievePartitionKey(relation);
 	ListCell   *lc;
 	int			partnatts,
 				i;
@@ -2677,7 +2677,7 @@ static void
 set_baserel_partition_key_exprs(Relation relation,
 								RelOptInfo *rel)
 {
-	PartitionKey partkey = RelationGetPartitionKey(relation);
+	PartitionKey partkey = RelationRetrievePartitionKey(relation);
 	int			partnatts;
 	int			cnt;
 	List	  **partexprs;

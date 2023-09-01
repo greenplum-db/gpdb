@@ -1107,7 +1107,7 @@ ExecInitPartitionDispatchInfo(EState *estate,
 	pd = (PartitionDispatch) palloc(offsetof(PartitionDispatchData, indexes) +
 									partdesc->nparts * sizeof(int));
 	pd->reldesc = rel;
-	pd->key = RelationGetPartitionKey(rel);
+	pd->key = RelationRetrievePartitionKey(rel);
 	pd->keystate = NIL;
 	pd->partdesc = partdesc;
 	if (parent_pd != NULL)
@@ -1450,7 +1450,7 @@ ExecBuildSlotPartitionKeyDescription(Relation rel,
 									 int maxfieldlen)
 {
 	StringInfoData buf;
-	PartitionKey key = RelationGetPartitionKey(rel);
+	PartitionKey key = RelationRetrievePartitionKey(rel);
 	int			partnatts = get_partition_natts(key);
 	int			i;
 	Oid			relid = RelationGetRelid(rel);
@@ -1747,7 +1747,7 @@ ExecCreatePartitionPruneState(PlanState *planstate,
 			 * duration of this executor run.
 			 */
 			partrel = ExecGetRangeTableRelation(estate, pinfo->rtindex);
-			partkey = RelationGetPartitionKey(partrel);
+			partkey = RelationRetrievePartitionKey(partrel);
 			partdesc = PartitionDirectoryLookup(estate->es_partition_directory,
 												partrel);
 

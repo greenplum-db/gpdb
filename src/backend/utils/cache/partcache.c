@@ -38,6 +38,33 @@
 
 
 static List *generate_partition_qual(Relation rel);
+/*
+ * RelationRetrievePartitionKey -- get partition key, if relation is partitioned
+ *
+ * Note: partition keys are not allowed to change after the partitioned rel
+ * is created.  RelationClearRelation knows this and preserves rd_partkey
+ * across relcache rebuilds, as long as the relation is open.  Therefore,
+ * even though we hand back a direct pointer into the relcache entry, it's
+ * safe for callers to continue to use that pointer as long as they hold
+ * the relation open.
+ *
+ * GPDB FIXME: This is a one-to-one replacement of the macro RelationGetPartitionKey. That macro
+ * is kept to prevent ABI breakage during an ABI freeze, but when possible it should be removed,
+ * and this should be renamed to RelationGetPartitionKey to keep alignment with upstream.
+ * RelationBuildPartitionKey can also be redefined to static, as it should only ever be accessed
+ * through here.
+ */
+PartitionKey 
+RelationRetrievePartitionKey(Relation rel)
+{
+	if (rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+		return NULL;
+
+	if (unlikely(rel->rd_partkey == NULL))
+		RelationBuildPartitionKey(rel);
+
+	return rel->rd_partkey;
+}
 
 /*
  * RelationBuildPartitionKey
@@ -79,7 +106,8 @@ RelationBuildPartitionKey(Relation relation)
 	 * the pg_partitioned_table entry yet.
 	 */
 	if (!HeapTupleIsValid(tuple))
-		return;
+		elog(ERROR, "cache lookup failed for partition key of relation %u",
+			 RelationGetRelid(relation));
 
 	partkeycxt = AllocSetContextCreate(CurTransactionContext,
 									   "partition key",

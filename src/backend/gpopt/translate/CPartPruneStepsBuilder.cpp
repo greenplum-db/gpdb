@@ -70,13 +70,13 @@ CPartPruneStepsBuilder::CreatePartPruneInfoForOneLevel(CDXLNode *filterNode)
 {
 	PartitionedRelPruneInfo *pinfo = MakeNode(PartitionedRelPruneInfo);
 	pinfo->rtindex = m_rtindex;
-	pinfo->nparts = m_relation->rd_partdesc->nparts;
+	pinfo->nparts = gpdb::GPDBRelationRetrievePartitionDesc(m_relation)->nparts;
 
 	pinfo->subpart_map = (int *) palloc(sizeof(int) * pinfo->nparts);
 	pinfo->subplan_map = (int *) palloc(sizeof(int) * pinfo->nparts);
 	pinfo->relid_map = (Oid *) palloc(sizeof(int) * pinfo->nparts);
 
-	// m_part_indexes contains the indexes (into m_relation->rd_pardesc) of the
+	// m_part_indexes contains the indexes (into m_relation->rd_partdesc) of the
 	// partitions that survived static partition pruning; iterate over this list
 	// to populate pinfo->subplan_map, pinfo->relid_map & pinfo->present_parts
 	ULONG part_ptr = 0;
@@ -88,7 +88,8 @@ CPartPruneStepsBuilder::CreatePartPruneInfoForOneLevel(CDXLNode *filterNode)
 		{
 			// partition did survive pruning
 			pinfo->subplan_map[i] = part_ptr;
-			pinfo->relid_map[i] = m_relation->rd_partdesc->oids[i];
+			pinfo->relid_map[i] =
+				gpdb::GPDBRelationRetrievePartitionDesc(m_relation)->oids[i];
 			pinfo->present_parts = bms_add_member(pinfo->present_parts, i);
 			++part_ptr;
 		}
@@ -114,7 +115,8 @@ CPartPruneStepsBuilder::PartPruneStepFromScalarCmp(CDXLNode *node, int *step_id,
 	GPOS_ASSERT(nullptr != node);
 	CDXLScalarComp *dxlop = CDXLScalarComp::Cast(node->GetOperator());
 	Oid opno = CMDIdGPDB::CastMdid(dxlop->MDId())->Oid();
-	Oid opfamily = m_relation->rd_partkey->partopfamily[0 /* col */];
+	Oid opfamily = gpdb::GPDBRelationRetrievePartitionKey(m_relation)
+					   ->partopfamily[0 /* col */];
 
 	StrategyNumber strategy_num;
 	Oid righttype = InvalidOid;
@@ -143,7 +145,10 @@ CPartPruneStepsBuilder::PartPruneStepFromScalarCmp(CDXLNode *node, int *step_id,
 	// to be part of partitioning column opfamily above.
 	// ORCA doesn't support multi-key (a.k.a composite) partition keys. So these
 	// lists will be of size 1.
-	step->cmpfns = ListMake1Oid(m_relation->rd_partkey->partsupfunc[0].fn_oid);
+	step->cmpfns =
+		ListMake1Oid(gpdb::GPDBRelationRetrievePartitionKey(m_relation)
+						 ->partsupfunc[0]
+						 .fn_oid);
 	step->exprs = ListMake1(expr);
 
 	return gpdb::LAppend(steps_list, (PartitionPruneStep *) step);

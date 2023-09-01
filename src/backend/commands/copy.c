@@ -3152,8 +3152,8 @@ CopyTo(CopyState cstate)
 				 */
 				if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
 				{
-					for (int i = 0; i < rel->rd_partdesc->nparts; i++)
-						inhRelIds = lappend_oid(inhRelIds, rel->rd_partdesc->oids[i]);
+					for (int i = 0; i < RelationRetrievePartitionDesc(rel)->nparts; i++)
+						inhRelIds = lappend_oid(inhRelIds, RelationRetrievePartitionDesc(rel)->oids[i]);
 				}
 				else if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
 				{

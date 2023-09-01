@@ -317,7 +317,8 @@ CTranslatorRelcacheToDXL::RetrieveRelCheckConstraints(CMemoryPool *mp, OID oid)
 void
 CTranslatorRelcacheToDXL::CheckUnsupportedRelation(Relation rel)
 {
-	if (!rel->rd_partdesc && gpdb::HasSubclassSlow(rel->rd_id))
+	if (!gpdb::GPDBRelationRetrievePartitionDesc(rel) &&
+		gpdb::HasSubclassSlow(rel->rd_id))
 	{
 		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
 				   GPOS_WSZ_LIT("Inherited tables"));
@@ -476,14 +477,16 @@ static IMDRelation::Erelaoversion
 get_ao_version(gpdb::RelationWrapper &rel)
 {
 	// partitioned table - return lowest version of child partitions
-	if (rel->rd_partdesc)
+	if (gpdb::GPDBRelationRetrievePartitionDesc(rel.get()))
 	{
 		IMDRelation::Erelaoversion low_ao_version =
 			IMDRelation::MaxAORelationVersion;
-		for (int i = 0; i < rel->rd_partdesc->nparts; i++)
+		for (int i = 0;
+			 i < gpdb::GPDBRelationRetrievePartitionDesc(rel.get())->nparts;
+			 i++)
 		{
-			gpdb::RelationWrapper child_rel =
-				gpdb::GetRelation(rel->rd_partdesc->oids[i]);
+			gpdb::RelationWrapper child_rel = gpdb::GetRelation(
+				gpdb::GPDBRelationRetrievePartitionDesc(rel.get())->oids[i]);
 			IMDRelation::Erelaoversion child_low_version =
 				get_ao_version(child_rel);
 			if (child_low_version < low_ao_version &&
@@ -604,21 +607,25 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	// collect relation indexes
 	md_index_info_array = RetrieveRelIndexInfo(mp, rel.get());
 
-	is_partitioned = (nullptr != rel->rd_partdesc);
+	is_partitioned =
+		(nullptr != gpdb::GPDBRelationRetrievePartitionDesc(rel.get()));
 
 	// get number of leaf partitions
-	if (rel->rd_partdesc)
+	if (gpdb::GPDBRelationRetrievePartitionDesc(rel.get()))
 	{
 		RetrievePartKeysAndTypes(mp, rel.get(), oid, &part_keys, &part_types);
 
 		partition_oids = GPOS_NEW(mp) IMdIdArray(mp);
-		for (int i = 0; i < rel->rd_partdesc->nparts; ++i)
+		for (int i = 0;
+			 i < gpdb::GPDBRelationRetrievePartitionDesc(rel.get())->nparts;
+			 ++i)
 		{
-			Oid part_oid = rel->rd_partdesc->oids[i];
+			Oid part_oid =
+				gpdb::GPDBRelationRetrievePartitionDesc(rel.get())->oids[i];
 			partition_oids->Append(GPOS_NEW(mp)
 									   CMDIdGPDB(IMDId::EmdidRel, part_oid));
 			gpdb::RelationWrapper rel_part = gpdb::GetRelation(part_oid);
-			if (rel_part->rd_partdesc)
+			if (gpdb::GPDBRelationRetrievePartitionDesc(rel_part.get()))
 			{
 				// Multi-level partitioned tables are unsupported - fall back
 				GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
@@ -2562,7 +2569,7 @@ CTranslatorRelcacheToDXL::RetrievePartKeysAndTypes(CMemoryPool *mp,
 {
 	GPOS_ASSERT(nullptr != rel);
 
-	if (!rel->rd_partdesc)
+	if (!gpdb::GPDBRelationRetrievePartitionDesc(rel))
 	{
 		// not a partitioned table
 		*part_keys = nullptr;
@@ -2573,7 +2580,7 @@ CTranslatorRelcacheToDXL::RetrievePartKeysAndTypes(CMemoryPool *mp,
 	*part_keys = GPOS_NEW(mp) ULongPtrArray(mp);
 	*part_types = GPOS_NEW(mp) CharPtrArray(mp);
 
-	PartitionKeyData *partkey = rel->rd_partkey;
+	PartitionKeyData *partkey = gpdb::GPDBRelationRetrievePartitionKey(rel);
 
 	if (1 < partkey->partnatts)
 	{
@@ -3006,20 +3013,21 @@ CTranslatorRelcacheToDXL::RetrieveStorageTypeForPartitionedTable(Relation rel)
 {
 	IMDRelation::Erelstoragetype rel_storage_type =
 		IMDRelation::ErelstorageSentinel;
-	if (rel->rd_partdesc->nparts == 0)
+	if (gpdb::GPDBRelationRetrievePartitionDesc(rel)->nparts == 0)
 	{
 		return IMDRelation::ErelstorageHeap;
 	}
 
 	BOOL all_foreign = true;
-	for (int i = 0; i < rel->rd_partdesc->nparts; ++i)
+	for (int i = 0; i < gpdb::GPDBRelationRetrievePartitionDesc(rel)->nparts;
+		 ++i)
 	{
-		Oid oid = rel->rd_partdesc->oids[i];
+		Oid oid = gpdb::GPDBRelationRetrievePartitionDesc(rel)->oids[i];
 		gpdb::RelationWrapper child_rel = gpdb::GetRelation(oid);
 		IMDRelation::Erelstoragetype child_storage =
 			RetrieveRelStorageType(child_rel.get());
 		// Child rel with partdesc means it's not leaf partition, we don't care about it
-		if (child_rel->rd_partdesc)
+		if (gpdb::GPDBRelationRetrievePartitionDesc(child_rel.get()))
 		{
 			continue;
 		}

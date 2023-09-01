@@ -704,12 +704,20 @@ typedef struct ViewOptions
 /*
  * RelationGetPartitionKey
  *		Returns the PartitionKey of a relation
+ *
+ * GPDB: This should not be used anymore. It is superceded by
+ * RelationRetrievePartionKey, and is kept around only to prevent ABI 
+ * breakage. See comments on that function for more details.
  */
 #define RelationGetPartitionKey(relation) ((relation)->rd_partkey)
 
 /*
  * RelationGetPartitionDesc
  *		Returns partition descriptor for a relation.
+ *
+ * GPDB: This should not be used anymore. It is superceded by
+ * RelationRetrievePartionDesc, and is kept around only to prevent ABI 
+ * breakage. See comments on that function for more details.
  */
 #define RelationGetPartitionDesc(relation) ((relation)->rd_partdesc)
 
