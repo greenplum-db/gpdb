@@ -37,6 +37,10 @@ pg_resgroup_get_iostats(PG_FUNCTION_ARGS)
 		MemoryContext oldContext;
 		TupleDesc tupdesc;
 
+		struct timeval start_time;
+		struct timeval end_time;
+		float8 interval;
+
 		List *stats = NIL;
 		ListCell *statCell;
 		List *newStats = NIL;
@@ -65,10 +69,19 @@ pg_resgroup_get_iostats(PG_FUNCTION_ARGS)
 
 		/* collect stats */
 		rel_resgroup_caps = table_open(ResGroupCapabilityRelationId, AccessShareLock);
+
+		/* pg_usleep can be interrupted, so we use timestap as the interval */
+		gettimeofday(&start_time, NULL);
 		stats = getIOLimitStats(rel_resgroup_caps);
+
 		/* 1 second */
 		pg_usleep(1000000L);
+
+		gettimeofday(&end_time, NULL);
 		newStats = getIOLimitStats(rel_resgroup_caps);
+
+		interval = (start_time.tv_usec - end_time.tv_usec) / 1000.0 / 1000.0;
+
 		table_close(rel_resgroup_caps, AccessShareLock);
 
 		if (list_length(stats) != list_length(newStats))
@@ -89,11 +102,11 @@ pg_resgroup_get_iostats(PG_FUNCTION_ARGS)
 			if (stat->groupid != newStat->groupid || stat->tablespace != newStat->tablespace)
 				ereport(ERROR, (errmsg("get different result from io.stat after little interval")));
 
-			stat->items.rios = newStat->items.rios - stat->items.rios;
-			stat->items.wios = newStat->items.wios - stat->items.wios;
+			stat->items.rios = (newStat->items.rios - stat->items.rios) / interval;
+			stat->items.wios = (newStat->items.wios - stat->items.wios) / interval;
 
-			stat->items.rbytes = newStat->items.rbytes - stat->items.rbytes;
-			stat->items.wbytes = newStat->items.wbytes - stat->items.wbytes;
+			stat->items.rbytes = (newStat->items.rbytes - stat->items.rbytes) / interval;
+			stat->items.wbytes = (newStat->items.wbytes - stat->items.wbytes) / interval;
 		}
 
 		MemoryContextSwitchTo(oldContext);
