@@ -452,4 +452,13 @@ set enable_bitmapscan to off;
 explain (costs off) select max(c1) from pg_class left join t_5628 on true;
 select max(c1) from pg_class left join t_5628 on true;
 
+--
+-- Ensure valid plan with Gather Motion node is generated.
+--
+drop table if exists t;
+create table t (i int, j int) distributed replicated;
+insert into t values (1, 2);
+select j, (select j) AS "Correlated Field" from t;
+select j, (select 5) AS "Uncorrelated Field" from t;
+
 drop schema rpt_joins cascade;
