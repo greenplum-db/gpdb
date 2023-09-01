@@ -1958,23 +1958,3 @@ select * from x for update;
 (5 rows)
 
 set gp_cte_sharing to off;
--- Ensure that ORCA produce valid plans for the query with the
--- subquery in projection list.
-drop table if exists t;
-NOTICE:  table "t" does not exist, skipping
--- end_ignore
-create table t (i int, j int) distributed replicated;
-insert into t values (1, 2);
-select j, (select j) AS "Correlated Field" from t;
- j | Correlated Field 
----+------------------
- 2 |                2
-(1 row)
-
-select j, (select 5) AS "Uncorrelated Field" from t;
- j | Uncorrelated Field 
----+--------------------
- 2 |                  5
-(1 row)
-
-drop table t;

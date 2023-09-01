@@ -425,6 +425,7 @@ CPhysicalJoin::PdsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl) const
 		CDistributionSpec::EdtUniversal != pdsInner->Edt())
 	{
 		// if outer is replicated/universal, return inner distribution
+		// unless inner is universal.
 		pds = pdsInner;
 	}
 	else

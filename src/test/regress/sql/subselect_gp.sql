@@ -1335,3 +1335,13 @@ explain (costs off) select * from r where b in (select b from s where c=10 order
 select * from r where b in (select b from s where c=10 order by c);
 explain (costs off) select * from r where b in (select b from s where c=10 order by c limit 2);
 select * from r where b in (select b from s where c=10 order by c limit 2);
+
+-- Ensure valid plan with Gather Motion node is generated for the replicated table.
+drop table if exists t;
+create table t (i int, j int) distributed replicated;
+insert into t values (1, 2);
+explain (costs off) select j, (select j) AS "Correlated Field" from t;
+select j, (select j) AS "Correlated Field" from t;
+explain (costs off) select j, (select 5) AS "Uncorrelated Field" from t;
+select j, (select 5) AS "Uncorrelated Field" from t;
+drop table t;
