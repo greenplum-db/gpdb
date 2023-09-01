@@ -7110,6 +7110,8 @@ getSimplyUpdatableRel(Query *query)
 int
 plan_create_index_workers(Oid tableOid, Oid indexOid)
 {
+	/* parallel worker is disabled on gpdb */
+	return 0;
 	PlannerInfo *root;
 	Query	   *query;
 	PlannerGlobal *glob;
