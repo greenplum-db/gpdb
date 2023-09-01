@@ -37,8 +37,8 @@ pg_resgroup_get_iostats(PG_FUNCTION_ARGS)
 		MemoryContext oldContext;
 		TupleDesc tupdesc;
 
-		struct timeval start_time;
-		struct timeval end_time;
+		instr_time start_time;
+		instr_time end_time;
 		float8 interval;
 
 		List *stats = NIL;
@@ -71,16 +71,16 @@ pg_resgroup_get_iostats(PG_FUNCTION_ARGS)
 		rel_resgroup_caps = table_open(ResGroupCapabilityRelationId, AccessShareLock);
 
 		/* pg_usleep can be interrupted, so we use timestap as the interval */
-		gettimeofday(&start_time, NULL);
+		INSTR_TIME_SET_CURRENT(start_time);
 		stats = getIOLimitStats(rel_resgroup_caps);
 
 		/* 1 second */
 		pg_usleep(1000000L);
 
-		gettimeofday(&end_time, NULL);
+		INSTR_TIME_SET_CURRENT(end_time);
 		newStats = getIOLimitStats(rel_resgroup_caps);
 
-		interval = (start_time.tv_usec - end_time.tv_usec) / 1000.0 / 1000.0;
+		interval = (INSTR_TIME_GET_MILLISEC(end_time) - INSTR_TIME_GET_MILLISEC(start_time)) / 1000.0;
 
 		table_close(rel_resgroup_caps, AccessShareLock);
 
