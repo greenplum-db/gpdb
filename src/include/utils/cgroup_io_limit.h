@@ -108,5 +108,6 @@ extern void io_limit_validate(List *limit_list);
 extern List  *get_iostat(Oid groupid, List *io_limit);
 extern int  compare_iostat(const void *a, const void *b);
 extern char *io_limit_dump(List *limit_list);
+extern void clear_io_max(Oid groupid);
 
 #endif
