@@ -787,7 +787,7 @@ ResGroupCheckForRole(Oid groupId)
 	/* Load current resource group capabilities */
 	GetResGroupCapabilities(pg_resgroupcapability_rel, groupId, &caps);
 
-	if (cgroupOpsRoutine != NULL)
+	if (cgroupOpsRoutine != NULL && caps.io_limit != NIL)
 		cgroupOpsRoutine->freeio(caps.io_limit);
 
 	heap_close(pg_resgroupcapability_rel, AccessShareLock);
