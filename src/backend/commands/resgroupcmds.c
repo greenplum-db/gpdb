@@ -502,9 +502,10 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	}
 	else if (limitType == RESGROUP_LIMIT_TYPE_IO_LIMIT)
 	{
-		updateResgroupCapabilityEntry(pg_resgroupcapability_rel,
-									  groupid, RESGROUP_LIMIT_TYPE_IO_LIMIT,
-									  0, cgroupOpsRoutine->dumpio(caps.io_limit));
+		if (caps.io_limit != NIL)
+			updateResgroupCapabilityEntry(pg_resgroupcapability_rel,
+										  groupid, RESGROUP_LIMIT_TYPE_IO_LIMIT,
+										  0, cgroupOpsRoutine->dumpio(caps.io_limit));
 	}
 	else
 	{
