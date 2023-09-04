@@ -4278,6 +4278,16 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 #endif
 
+	{
+		{"gp_postmaster_address_family", PGC_SUSET, CUSTOM_OPTIONS,
+			gettext_noop("Force postmaster address family, 0 means unspecified, 4 means IPv4, 6 means IPv6"),
+			NULL, GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_postmaster_address_family,
+		0, 0, 6,
+		NULL, NULL, NULL
+	},	
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, 0, 0, 0, NULL, NULL

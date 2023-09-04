@@ -80,6 +80,7 @@
 		"gp_max_alloc_size",
 		"gp_max_packet_size",
 		"gp_motion_slice_noop",
+		"gp_postmaster_address_family",
 		"gp_quicklz_fallback",
 		"gp_resgroup_debug_wait_queue",
 		"gp_resgroup_memory_policy_auto_fixed_mem",
