@@ -1,0 +1,10 @@
+attrs==21.2.0
+wcwidth==0.2.5
+pathlib2==2.3.5
+atomicwrites==1.4.0
+funcsigs==1.0.2
+more_itertools==5.0.0
+packaging==20.9
+pluggy==0.13.1
+importlib-metadata==2.1.0
+pytest==4.6.
