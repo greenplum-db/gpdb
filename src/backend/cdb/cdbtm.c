@@ -1671,6 +1671,8 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 	bool		explicitBegin;
 	bool		haveDistributedSnapshot;
 	bool		isEntryDbSingleton = false;
+	bool		isReaderQE = false;
+	bool		isWriterQE = false;
 	bool		isSharedLocalSnapshotSlotPresent;
 
 	Assert(dtxContextInfo != NULL);
@@ -1705,7 +1707,7 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 		{
 			elog(DTM_DEBUG5,
 				 "setupQEDtxContext inputs (part 2a): distributedXid = "UINT64_FORMAT", "
-				 "distributedSnapshotData (xmin = "UINT64_FORMAT", xmax = "UINT64_FORMAT", xcnt = %u), distributedCommandId = %d",
+																					 "distributedSnapshotData (xmin = "UINT64_FORMAT", xmax = "UINT64_FORMAT", xcnt = %u), distributedCommandId = %d",
 				 dtxContextInfo->distributedXid,
 				 distributedSnapshot->xmin, distributedSnapshot->xmax,
 				 distributedSnapshot->count,
@@ -1718,7 +1720,7 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_SHARED);
 				elog(DTM_DEBUG5,
 					 "setupQEDtxContext inputs (part 2b):  shared local snapshot xid = " UINT64_FORMAT " "
-					 "(xmin: %u xmax: %u xcnt: %u) curcid: %d, QDxid = "UINT64_FORMAT"/%u",
+																									   "(xmin: %u xmax: %u xcnt: %u) curcid: %d, QDxid = "UINT64_FORMAT"/%u",
 					 U64FromFullTransactionId(SharedLocalSnapshotSlot->fullXid),
 					 SharedLocalSnapshotSlot->snapshot.xmin,
 					 SharedLocalSnapshotSlot->snapshot.xmax,
@@ -1735,7 +1737,9 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 	{
 		case GP_ROLE_EXECUTE:
 			if (IS_QUERY_DISPATCHER() && !Gp_is_writer)
+			{
 				isEntryDbSingleton = true;
+			}
 			else
 			{
 				/*
@@ -1746,7 +1750,20 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 				if (SharedLocalSnapshotSlot == NULL)
 				{
 					if (explicitBegin || haveDistributedSnapshot)
+					{
 						elog(ERROR, "setupQEDtxContext not expecting distributed begin or snapshot when no Snapshot slot exists");
+					}
+				}
+				else
+				{
+					if (Gp_is_writer)
+					{
+						isWriterQE = true;
+					}
+					else
+					{
+						isReaderQE = true;
+					}
 				}
 			}
 			break;
@@ -1761,39 +1778,35 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 	elog(DTM_DEBUG5,
 		 "setupQEDtxContext intermediate result: isEntryDbSingleton = %s, isWriterQE = %s, isReaderQE = %s.",
 		 (isEntryDbSingleton ? "true" : "false"),
-		 (Gp_is_writer ? "true" : "false"), (!Gp_is_writer ? "true" : "false"));
+		 (isWriterQE ? "true" : "false"), (isReaderQE ? "true" : "false"));
 
 	/*
-	 * Copy serialized distributed context info dispatched from QD
-	 * to our QE global variable, QEDtxContextInfo
+	 * Copy to our QE global variable.
 	 */
 	DtxContextInfo_Copy(&QEDtxContextInfo, dtxContextInfo);
 
 	switch (DistributedTransactionContext)
 	{
 		case DTX_CONTEXT_LOCAL_ONLY:
-			if (isEntryDbSingleton)
+			if (isEntryDbSingleton && haveDistributedSnapshot)
 			{
-				if (haveDistributedSnapshot)
-				{
-					/*
-					 * Later, in GetSnapshotData, we will adopt the QD's
-					 * transaction and snapshot information.
-					 */
-					setDistributedTransactionContext(DTX_CONTEXT_QE_ENTRY_DB_SINGLETON);
-				}
-				else
-					setDistributedTransactionContext(DTX_CONTEXT_LOCAL_ONLY);
+				/*
+				 * Later, in GetSnapshotData, we will adopt the QD's
+				 * transaction and snapshot information.
+				 */
+
+				setDistributedTransactionContext(DTX_CONTEXT_QE_ENTRY_DB_SINGLETON);
 			}
-			else if (!Gp_is_writer)
+			else if (isReaderQE && haveDistributedSnapshot)
 			{
 				/*
 				 * Later, in GetSnapshotData, we will adopt the QE Writer's
 				 * transaction and snapshot information.
 				 */
+
 				setDistributedTransactionContext(DTX_CONTEXT_QE_READER);
 			}
-			else if (Gp_is_writer && (explicitBegin || needDtx))
+			else if (isWriterQE && (explicitBegin || needDtx))
 			{
 				if (!haveDistributedSnapshot)
 				{
@@ -1853,11 +1866,16 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 			break;
 
 		case DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER:
+/*
+		elog(NOTICE, "We should have left this transition state '%s' at the end of the previous command...",
+			 DtxContextToString(DistributedTransactionContext));
+*/
 			Assert(IsTransactionOrTransactionBlock());
 
 			if (explicitBegin)
+			{
 				elog(ERROR, "Cannot have an explicit BEGIN statement...");
-
+			}
 			break;
 
 		case DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT:
@@ -1901,6 +1919,7 @@ setupQEDtxContext(DtxContextInfo *dtxContextInfo)
 			 getDistributedTransactionId(),
 			 DtxContextToString(DistributedTransactionContext));
 	}
+
 }
 
 void

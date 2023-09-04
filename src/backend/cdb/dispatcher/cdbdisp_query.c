@@ -39,6 +39,7 @@
 #include "utils/resource_manager.h"
 #include "utils/session_state.h"
 #include "utils/typcache.h"
+#include "utils/snapmgr.h"
 #include "miscadmin.h"
 #include "mb/pg_wchar.h"
 
@@ -307,7 +308,13 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 		 "CdbDispatchSetCommand for command = '%s'",
 		 strCommand);
 
-	pQueryParms = cdbdisp_buildCommandQueryParms(strCommand, DF_NONE);
+	if (FirstSnapshotSet)
+	{
+		PushActiveSnapshot(GetTransactionSnapshot());
+		pQueryParms = cdbdisp_buildCommandQueryParms(strCommand, DF_WITH_SNAPSHOT);
+	}
+	else
+		pQueryParms = cdbdisp_buildCommandQueryParms(strCommand, DF_NONE);
 
 	ds = cdbdisp_makeDispatcherState(false);
 
@@ -351,11 +358,13 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
 
 	if (qeError)
 	{
-
+		if (FirstSnapshotSet)
+			PopActiveSnapshot();
 		FlushErrorState();
 		ThrowErrorData(qeError);
 	}
-
+	if (FirstSnapshotSet)
+		PopActiveSnapshot();
 	cdbdisp_destroyDispatcherState(ds);
 }
 
