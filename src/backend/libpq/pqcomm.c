@@ -423,16 +423,15 @@ StreamServerPort(int family, char *hostName, unsigned short portNumber,
 	{
 		snprintf(portNumberStr, sizeof(portNumberStr), "%d", portNumber);
 		service = portNumberStr;
-		/* Greenplum specific code */
-		if (gp_postmaster_address_family == 4)
+		if (Gp_postmaster_address_family_type == POSTMASTER_ADDRESS_FAMILY_TYPE_IPV4)
 			hint.ai_family = AF_INET;
-		else if (gp_postmaster_address_family == 6)
+		else if (Gp_postmaster_address_family_type == POSTMASTER_ADDRESS_FAMILY_TYPE_IPV6)
 			hint.ai_family = AF_INET6;
-		else if (gp_postmaster_address_family)
+		else if (Gp_postmaster_address_family_type)
 		{
 			ereport(LOG,
 					(errmsg("Unknown gp_postmaster_address_family: %d",
-							gp_postmaster_address_family)));
+							Gp_postmaster_address_family_type)));
 			return STATUS_ERROR;
 		}
 	}
@@ -646,7 +645,7 @@ StreamServerPort(int family, char *hostName, unsigned short portNumber,
 		added++;
 
 		/* Forced address family, no more tries. */
-		if (!IS_AF_UNIX(addr->ai_family) && gp_postmaster_address_family)
+		if (!IS_AF_UNIX(addr->ai_family) && Gp_postmaster_address_family_type)
 			break;
 	}
 

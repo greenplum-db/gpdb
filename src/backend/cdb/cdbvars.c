@@ -220,6 +220,8 @@ bool		gp_interconnect_log_stats = false;	/* emit stats at log-level */
 
 bool		gp_interconnect_cache_future_packets = true;
 
+int			Gp_postmaster_address_family_type = POSTMASTER_ADDRESS_FAMILY_TYPE_AUTO;
+
 /*
  * format: dbid:content:address:port,dbid:content:address:port ...
  * example: 1:-1:10.0.0.1:2000 2:0:10.0.0.2:2000 3:1:10.0.0.2:2001

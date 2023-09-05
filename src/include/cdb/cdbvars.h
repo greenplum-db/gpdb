@@ -312,6 +312,15 @@ typedef enum GpVars_Interconnect_Address_Type
 
 extern int Gp_interconnect_address_type;
 
+typedef enum GpVars_Postmaster_Address_Family_Type
+{
+	POSTMASTER_ADDRESS_FAMILY_TYPE_AUTO = 0,
+	POSTMASTER_ADDRESS_FAMILY_TYPE_IPV4 = 1,
+	POSTMASTER_ADDRESS_FAMILY_TYPE_IPV6 = 2,
+} GpVars_Postmaster_Address_Family_Type;
+
+extern int Gp_postmaster_address_family_type;
+
 extern char *gp_interconnect_proxy_addresses;
 
 typedef enum GpVars_Interconnect_Method

@@ -203,6 +203,7 @@
 		"gp_max_slices",
 		"gp_motion_cost_per_row",
 		"gp_pause_on_restore_point_replay",
+		"gp_postmaster_inet_address_family",
 		"gp_print_create_gang_time",
 		"gp_qd_hostname",
 		"gp_qd_port",
