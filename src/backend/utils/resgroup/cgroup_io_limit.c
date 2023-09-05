@@ -557,17 +557,18 @@ clear_io_max(Oid groupid)
 {
 	FILE *f;
 	StringInfo line = makeStringInfo();
+	StringInfo result = makeStringInfo();
 	List *result_lines;
 	ListCell *cell;
 	char path[MAX_CGROUP_PATHLEN];
 	buildPath(groupid, BASEDIR_GPDB, CGROUP_COMPONENT_PLAIN, "io.max", path, MAX_CGROUP_PATHLEN);
 
 	f = AllocateFile(path, "r");
+	/* pg_get_line_buf will reset line each time */
 	while (pg_get_line_buf(f, line))
 	{
 		uint32 maj, min;
 		int i;
-		StringInfo result = makeStringInfo();
 		char *str = line->data;
 
 		sscanf(str, "%u:%u", &maj, &min);
@@ -576,13 +577,21 @@ clear_io_max(Oid groupid)
 		for (i = 0; i < lengthof(IOconfigFields); i++)
 			appendStringInfo(result, " %s=max", IOconfigFields[i]);
 
-		result_lines = lappend(result_lines, result->data);
+		result_lines = lappend(result_lines, (void *) pstrdup(result->data));
+
+		resetStringInfo(result);
 	}
 	FreeFile(f);
+	pfree(line->data);
+	pfree(result->data);
+	pfree(line);
+	pfree(result);
 
 	foreach(cell, result_lines)
 	{
 		char *str = (char *)lfirst(cell);
 		writeStr(groupid, BASEDIR_GPDB, CGROUP_COMPONENT_PLAIN, "io.max", str);
 	}
+
+	list_free_deep(result_lines);
 }
