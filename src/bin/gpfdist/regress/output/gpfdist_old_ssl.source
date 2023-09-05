@@ -1,3 +1,37 @@
+--
+-- GPFDISTS test cases
+--
+-- start_ignore
+drop external table if exists gpfdist_ssl_start;
+NOTICE:  table "gpfdist_ssl_start" does not exist, skipping
+drop external table if exists gpfdist_ssl_stop;
+NOTICE:  table "gpfdist_ssl_stop" does not exist, skipping
+-- end_ignore
+-- --------------------------------------
+-- 'gpfdists' protocol
+-- --------------------------------------
+CREATE EXTERNAL WEB TABLE gpfdist_ssl_start (x text)
+execute E'((@bindir@/gpfdist -p 7070 -d @abs_srcdir@/data --ssl @abs_srcdir@/data/gpfdist_ssl/certs_matching </dev/null >/dev/null 2>&1 &); for i in `seq 1 6`; do curl 127.0.0.1:7070 >/dev/null 2>&1 && break; sleep 1; done; ps -A -o pid,comm |grep [g]pfdist |grep -v postgres:) '
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+CREATE EXTERNAL WEB TABLE gpfdist_ssl_stop (x text)
+execute E'(ps -A -o pid,comm |grep [g]pfdist |grep -v postgres: |awk \'{print $1;}\' |xargs kill) > /dev/null 2>&1; echo "stopping..."'
+on SEGMENT 0
+FORMAT 'text' (delimiter '|');
+-- start_ignore
+select * from gpfdist_ssl_stop;
+      x      
+-------------
+ stopping...
+(1 row)
+
+select * from gpfdist_ssl_start;
+       x       
+---------------
+ 26034 gpfdist
+(1 row)
+
+-- end_ignore
 CREATE EXTERNAL WEB TABLE curl_with_tls10 (x text)
 execute E'
 curl --help | grep tls-max >/dev/null 2>&1;ret=$?;if [ $ret -eq 0 ];then max_tls="--tls-max 1.0";fi;
@@ -34,3 +68,11 @@ select * from curl_with_tls11;
 
 drop external table if exists curl_with_tls10;
 drop external table if exists curl_with_tls11;
+-- start_ignore
+select * from gpfdist_ssl_stop;
+      x      
+-------------
+ stopping...
+(1 row)
+
+-- end_ignore
