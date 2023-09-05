@@ -33,7 +33,7 @@ CREATE SERVER dist_pgserver
 OPTIONS (multi_hosts 'pghost1 pghost2', multi_ports '5432 5555', num_segments '2', mpp_execute 'all segments');
 ```
 
-## <a id="pushdown"></a>About Aggregate Pushdown Support
+## <a id="agg_pushdown"></a>About Aggregate Pushdown Support
 
 `postgres_fdw` supports partial aggregate pushdown for a *distributed* query under the following conditions:
 
@@ -44,6 +44,12 @@ OPTIONS (multi_hosts 'pghost1 pghost2', multi_ports '5432 5555', num_segments '2
 
 > **Note** `postgres_fdw` does not support partial aggregate pushdown when the Greenplum Query Optimizer (GPORCA) is enabled for a query.
 
+## <a id="limit_pushdown"></a>About Limit Pushdown Support
+
+`postgres_fdw` supports limit pushdown for a *distributed* query under the following conditions:
+
+- The query contains no `OFFSET` clause.
+- The query contains no aggregates.
 
 ## <a id="topic_gp_limit"></a>Distributed postgres_fdw Limitations 
 
