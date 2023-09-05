@@ -74,6 +74,9 @@ public:
 	// checks whether the string is byte-wise equal to another string
 	virtual BOOL Equals(const CWStringBase *str) const;
 
+	// checks whether the string is equal to a string literal
+	virtual BOOL Equals(const WCHAR *str) const;
+
 	// checks whether the string contains any characters
 	virtual BOOL IsEmpty() const;
 

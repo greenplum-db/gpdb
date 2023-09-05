@@ -95,6 +95,22 @@ CWStringBase::Equals(const CWStringBase *str) const
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CWStringBase::Equals
+//
+//	@doc:
+//		Checks whether the string is equal to a string literal
+//
+//---------------------------------------------------------------------------
+BOOL
+CWStringBase::Equals(const WCHAR *str) const
+{
+	GPOS_ASSERT(nullptr != str);
+	return Length() == GPOS_WSZ_LENGTH(str) &&
+		   0 == clib::Wcsncmp(GetBuffer(), str, Length());
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CWStringBase::IsEmpty
 //
 //	@doc:

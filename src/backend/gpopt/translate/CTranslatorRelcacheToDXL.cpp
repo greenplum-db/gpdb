@@ -2784,14 +2784,14 @@ CTranslatorRelcacheToDXL::IsIndexSupported(Relation index_rel)
 	CWStringDynamic *am_name_str = CDXLUtils::CreateDynamicStringFromCharArray(
 		mp, gpdb::GetRelAmName(index_rel->rd_rel->relam));
 
-	CWStringConst str_pgvector_am(GPOS_WSZ_LIT("ivfflat"));
-	if (am_name_str->Equals(&str_pgvector_am))
+	if (am_name_str->Equals(GPOS_WSZ_LIT("ivfflat")) ||
+		am_name_str->Equals(GPOS_WSZ_LIT("hnsw")))
 	{
 		GPOS_DELETE(am_name_str);
 		GPOS_RAISE(
 			gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
 			GPOS_WSZ_LIT(
-				"Queries on relations with pgvector indexes (ivfflat) are not supported"));
+				"Queries on relations with pgvector indexes (ivfflat) or pg_embedding indexes (hnsw) are not supported"));
 	}
 	GPOS_DELETE(am_name_str);
 	return false;

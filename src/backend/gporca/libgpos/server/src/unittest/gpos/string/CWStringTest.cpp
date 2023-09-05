@@ -376,6 +376,8 @@ CWStringTest::EresUnittest_Equals()
 	GPOS_ASSERT(str1->Equals(str2));
 	GPOS_ASSERT(!str1->Equals(str3));
 	GPOS_ASSERT(!str3->Equals(str1));
+	GPOS_ASSERT(str3->Equals(GPOS_WSZ_LIT("12")));
+	GPOS_ASSERT(!str3->Equals(GPOS_WSZ_LIT("123")));
 
 	// static strings
 	WCHAR buffer1[8];

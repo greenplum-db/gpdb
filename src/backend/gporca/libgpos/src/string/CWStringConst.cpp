@@ -143,7 +143,6 @@ BOOL
 CWStringConst::Equals(const CWStringBase *str) const
 {
 	GPOS_ASSERT(nullptr != str);
-	GPOS_ASSERT(nullptr != str);
 	return Length() == str->Length() &&
 		   0 == clib::Wcsncmp(GetBuffer(), str->GetBuffer(), Length());
 }
