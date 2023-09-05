@@ -216,6 +216,7 @@ extern void ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 extern Oid ResGroupGetGroupIdBySessionId(int sessionId);
 extern char *getCpuSetByRole(const char *cpuset);
 extern void checkCpuSetByRole(const char *cpuset);
+extern bool checkTablespaceInIOlimit(Oid tblspcid, bool errout);
 
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);

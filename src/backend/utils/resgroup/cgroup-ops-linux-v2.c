@@ -167,6 +167,7 @@ static void setio_v2(Oid group, List *limit_list);
 static void freeio_v2(List *limit_list);
 static List	*getiostat_v2(Oid group, List *io_limit);
 static char *dumpio_v2(List *limit_list);
+static void cleario_v2(Oid groupid);
 
 /*
  * Dump component dir to the log.
@@ -904,6 +905,12 @@ dumpio_v2(List *limit_list)
 	return io_limit_dump(limit_list);
 }
 
+static void
+cleario_v2(Oid groupid)
+{
+	clear_io_max(groupid);
+}
+
 static CGroupOpsRoutine cGroupOpsRoutineV2 = {
 		.getcgroupname = getcgroupname_v2,
 		.probecgroup = probecgroup_v2,
@@ -933,7 +940,8 @@ static CGroupOpsRoutine cGroupOpsRoutineV2 = {
 		.setio = setio_v2,
 		.freeio = freeio_v2,
 		.getiostat = getiostat_v2,
-		.dumpio = dumpio_v2
+		.dumpio = dumpio_v2,
+		.cleario = cleario_v2
 };
 
 CGroupOpsRoutine *get_group_routine_v2(void)

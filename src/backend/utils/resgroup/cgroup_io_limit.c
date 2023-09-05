@@ -19,6 +19,7 @@
 #include "port.h"
 #include "storage/fd.h"
 #include "utils/cgroup.h"
+#include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/hsearch.h"
 #include "utils/palloc.h"
@@ -26,6 +27,10 @@
 #include "utils/resgroup.h"
 #include "utils/cgroup_io_limit.h"
 #include <utils/cgroup.h>
+
+#ifndef __linux__
+#error  cgroup is only available on linux
+#endif
 
 #include <libgen.h>
 #include <limits.h>

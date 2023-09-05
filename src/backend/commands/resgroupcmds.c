@@ -629,9 +629,27 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 			case RESGROUP_LIMIT_TYPE_IO_LIMIT:
 				if (cgroupOpsRoutine != NULL)
 				{
+					int32 savedholdoffCount = InterruptHoldoffCount;
+
 					oldContext = CurrentMemoryContext;
 					MemoryContextSwitchTo(TopMemoryContext);
-					resgroupCaps->io_limit = cgroupOpsRoutine->parseio(value);
+					PG_TRY();
+					{
+						resgroupCaps->io_limit = cgroupOpsRoutine->parseio(value);
+					}
+					PG_CATCH();
+					{
+						resgroupCaps->io_limit = NIL;
+
+						InterruptHoldoffCount = savedholdoffCount;
+
+						if (elog_demote(WARNING))
+						{
+							EmitErrorReport();
+							FlushErrorState();
+						}
+					}
+					PG_END_TRY();
 					MemoryContextSwitchTo(oldContext);
 				}
 				else

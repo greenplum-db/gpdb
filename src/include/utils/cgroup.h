@@ -233,6 +233,7 @@ typedef void (*setio_function) (Oid group, List *limit_list);
 typedef void (*freeio_function) (List *limit_list);
 typedef List* (*getiostat_function) (Oid groupid, List *io_limit);
 typedef char* (*dumpio_function) (List *limit_list);
+typedef void  (*cleario_function) (Oid groupid);
 
 
 typedef struct CGroupOpsRoutine
@@ -272,6 +273,7 @@ typedef struct CGroupOpsRoutine
 	freeio_function			freeio;
 	getiostat_function		getiostat;
 	dumpio_function			dumpio;
+	cleario_function		cleario;
 } CGroupOpsRoutine;
 
 /* The global function handler. */

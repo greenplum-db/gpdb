@@ -176,6 +176,7 @@ static void setio_v1(Oid group, List *limit_list);
 static void freeio_v1(List *limit_list);
 static List* getiostat_v1(Oid group, List *io_limit);
 static char *dumpio_v1(List *limit_list);
+static void cleario_v1(Oid groupid);
 
 /*
  * Detect gpdb cgroup component dirs.
@@ -1155,6 +1156,14 @@ dumpio_v1(List *limit_list)
 	return DefaultIOLimit;
 }
 
+static void
+cleario_v1(Oid groupid)
+{
+	ereport(WARNING,
+			(errcode(ERRCODE_SYSTEM_ERROR),
+			 errmsg("resource group io limit only can be used in cgroup v2.")));
+}
+
 static CGroupOpsRoutine cGroupOpsRoutineV1 = {
 		.getcgroupname = getcgroupname_v1,
 		.probecgroup = probecgroup_v1,
@@ -1184,7 +1193,8 @@ static CGroupOpsRoutine cGroupOpsRoutineV1 = {
 		.setio = setio_v1,
 		.freeio = freeio_v1,
 		.getiostat = getiostat_v1,
-		.dumpio = dumpio_v1
+		.dumpio = dumpio_v1,
+		.cleario = cleario_v1
 };
 
 CGroupOpsRoutine *get_group_routine_v1(void)

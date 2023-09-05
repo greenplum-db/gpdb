@@ -7,11 +7,14 @@
 /* type for linux device id, use libc dev_t now.
  * bdi means backing device info.
  */
+#ifdef __linux__
 typedef dev_t bdi_t;
-
 #define make_bdi(major, minor) makedev(major, minor)
 #define bdi_major(bdi) major(bdi)
 #define bdi_minor(bdi) minor(bdi)
+#else
+typedef uint64 bdi_t;
+#endif
 
 
 #define IO_LIMIT_MAX  (0)

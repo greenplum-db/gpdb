@@ -252,6 +252,12 @@ dumpio_dummy(List *limit_list)
 	return DefaultIOLimit;
 }
 
+static void
+cleario_dummy(Oid groupid)
+{
+	unsupported_system();
+}
+
 static CGroupOpsRoutine cGroupOpsRoutineDummy = {
 		.getcgroupname = getcgroupname_dummy,
 
@@ -280,7 +286,9 @@ static CGroupOpsRoutine cGroupOpsRoutineDummy = {
 		.setio = setio_dummy,
 		.freeio = freeio_dummy,
 		.getiostat = getiostat_dummy,
-		.dumpio = dumpio_dummy
+		.dumpio = dumpio_dummy,
+		.cleario = cleario_dummy
+
 };
 
 CGroupOpsRoutine *get_cgroup_routine_dummy(void)
