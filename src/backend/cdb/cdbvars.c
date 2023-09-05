@@ -104,6 +104,8 @@ int			gp_reject_percent_threshold;	/* SREH reject % kicks off only
 bool		gp_select_invisible = false;	/* debug mode to allow select to
 											 * see "invisible" rows */
 
+bool 		gp_detect_data_correctness; /* Detect if the current data distribution is correct */
+
 /*
  * Configurable timeout for snapshot add: exceptionally busy systems may take
  * longer than our old hard-coded version -- so here is a tuneable version.

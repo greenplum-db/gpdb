@@ -183,6 +183,9 @@ extern int			gp_reject_percent_threshold;
  */
 extern bool           gp_select_invisible;
 
+/* Detect if the current partitioning of the table or data distribution is correct */
+extern bool			gp_detect_data_correctness;
+
 /*
  * Used to set the maximum length of the current query which is displayed
  * when the user queries pg_stat_activty table.

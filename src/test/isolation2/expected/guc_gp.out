@@ -1,0 +1,61 @@
+-- case 1: test gp_detect_data_correctness
+create table data_correctness_detect(a int, b int);
+CREATE
+create table data_correctness_detect_randomly(a int, b int) distributed randomly;
+CREATE
+create table data_correctness_detect_replicated(a int, b int) distributed replicated;
+CREATE
+
+set gp_detect_data_correctness = on;
+SET
+-- should no data insert
+insert into data_correctness_detect select i, i from generate_series(1, 100) i;
+INSERT 0
+select count(*) from data_correctness_detect;
+ count 
+-------
+ 0     
+(1 row)
+insert into data_correctness_detect_randomly select i, i from generate_series(1, 100) i;
+INSERT 0
+select count(*) from data_correctness_detect_randomly;
+ count 
+-------
+ 0     
+(1 row)
+insert into data_correctness_detect_replicated select i, i from generate_series(1, 100) i;
+INSERT 0
+select count(*) from data_correctness_detect_replicated;
+ count 
+-------
+ 0     
+(1 row)
+set gp_detect_data_correctness = off;
+SET
+
+-- insert some data that not belongs to it
+1U: insert into data_correctness_detect select i, i from generate_series(1, 100) i;
+INSERT 100
+1U: insert into data_correctness_detect_randomly select i, i from generate_series(1, 100) i;
+INSERT 100
+1U: insert into data_correctness_detect_replicated select i, i from generate_series(1, 100) i;
+INSERT 100
+set gp_detect_data_correctness = on;
+SET
+insert into data_correctness_detect select * from data_correctness_detect;
+ERROR:  trying to insert row into wrong segment  (seg1 127.0.1.1:6003 pid=3027104)
+insert into data_correctness_detect select * from data_correctness_detect_randomly;
+INSERT 0
+insert into data_correctness_detect select * from data_correctness_detect_replicated;
+INSERT 0
+
+-- clean up
+set gp_detect_data_correctness = off;
+SET
+drop table data_correctness_detect;
+DROP
+drop table data_correctness_detect_randomly;
+DROP
+drop table data_correctness_detect_replicated;
+DROP
+

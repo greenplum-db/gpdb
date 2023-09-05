@@ -315,6 +315,55 @@ ExecInsert(TupleTableSlot *parentslot,
 	rel_is_external = RelationIsExternal(resultRelationDesc);
 
 	/*
+	 * if we set the GUC gp_detect_data_correctness to true, we just verify the data belongs
+	 * to current partition and segment, we'll not insert the data really, so just return NULL.
+	 *
+	 * Above has already checked the partition correctness, so we just need check distribution
+	 * correctness.
+	 */
+	if (gp_detect_data_correctness)
+	{
+		/* Initialize hash function and structure */
+		CdbHash  *hash;
+		GpPolicy *policy = resultRelationDesc->rd_cdbpolicy;
+		MemTuple memTuple = ExecFetchSlotMemTuple(parentslot);
+
+		/* Skip randomly and replicated distributed relation */
+		if (!GpPolicyIsHashPartitioned(policy))
+			return NULL;
+
+		hash = makeCdbHashForRelation(resultRelationDesc);
+
+		cdbhashinit(hash);
+
+		/* Add every attribute in the distribution policy to the hash */
+		for (int i = 0; i < policy->nattrs; i++)
+		{
+			int			attnum = policy->attrs[i];
+			bool		isNull;
+			Datum		attr;
+
+			attr = memtuple_getattr(memTuple, parentslot->tts_mt_bind,
+									attnum, &isNull);
+
+			cdbhash(hash, i + 1, attr, isNull);
+		}
+
+		/* End check if one tuple is in the wrong segment */
+		if (cdbhashreduce(hash) != GpIdentity.segindex)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_CHECK_VIOLATION),
+							errmsg("trying to insert row into wrong segment")));
+		}
+
+		freeCdbHash(hash);
+
+		/* Do nothing */
+		return NULL;
+	}
+
+	/*
 	 * Prepare the right kind of "insert desc".
 	 */
 	if (rel_is_aorows)
