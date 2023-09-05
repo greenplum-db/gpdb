@@ -547,7 +547,7 @@ ExecInsert(ModifyTableState *mtstate,
 			GpPolicy *policy = rel->rd_cdbpolicy;
 
 			/* Skip randomly and replicated distributed relation */
-			if (GpPolicyIsRandomPartitioned(policy) || GpPolicyIsReplicated(policy))
+			if (!GpPolicyIsHashPartitioned(policy))
 				return NULL;
 
 			hash = makeCdbHashForRelation(rel);
