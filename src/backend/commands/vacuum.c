@@ -29,6 +29,7 @@
 #include "access/clog.h"
 #include "access/commit_ts.h"
 #include "access/genam.h"
+#include "access/hash.h"
 #include "access/heapam.h"
 #include "access/htup_details.h"
 #include "access/multixact.h"
@@ -2989,8 +2990,22 @@ vacuum_combine_stats(VacuumStatsContext *stats_context,
 					 CdbPgResults *cdb_pgresults,
 					 MemoryContext context)
 {
-	int			result_no;
-	MemoryContext old_context;
+	MemoryContext old_context = MemoryContextSwitchTo(context);
+	HTAB *vac_stats;
+	HASHCTL ctl;
+	HASH_SEQ_STATUS seq_status;
+	VPgClassStats *result;
+	VPgClassStatsEntry *entry;
+	int result_no;
+	int segid;
+	bool found;
+
+	memset(&ctl, 0, sizeof(ctl));
+	ctl.keysize = sizeof(Oid);
+	ctl.entrysize = sizeof(VPgClassStats);
+	ctl.hcxt = context;
+	vac_stats = hash_create("pgclass relstats hash", 32, &ctl,
+							HASH_ELEM | HASH_BLOBS | HASH_CONTEXT);
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
@@ -3009,6 +3024,23 @@ vacuum_combine_stats(VacuumStatsContext *stats_context,
 	 * For pg_class stats, we compute the sum of tuples, number of pages and
 	 * allvisible pages after processing the stats from each QE.
 	 *
+	 * We usually expect to receive one stats entry per relid from each QE.
+	 * However, if indexes are present, we might receive multiple stats
+	 * entries for the same relid and QE pair (for parent relations only)
+	 * when performing operations that reindex relations as a side effect,
+	 * such as VACUUM, CLUSTER etc. This is because index_update_relstats is
+	 * called for the parent relation from the reindex code. For instance, if
+	 * we are running a VACUUM on a parent relation bearing two indexes, we
+	 * can expect 3 relstats entries per QE for the parent relation (one for
+	 * the VACUUM and one for each reindex operation).
+	 *
+	 * Since relstats updates are sent out in sequence via vac_send_relstats_to_qd(),
+	 * we can expect that the last such relstats message for a parent relation
+	 * contains the most updated relstats for that relation. So, here we only
+	 * consider the latest message in the stream for each relation and QE pair
+	 * (by replacing older ones encountered). Finally for each relation, we
+	 * aggregate the relstats by summing up all the latest relstats messages
+	 * from the QEs.
 	 */
 	for(result_no = 0; result_no < cdb_pgresults->numResults; result_no++)
 	{		
@@ -3019,45 +3051,46 @@ vacuum_combine_stats(VacuumStatsContext *stats_context,
 
 		Assert(pgresult->extraslen > sizeof(int));
 
-		/*
-		 * Process the stats for pg_class. We simply compute the maximum
-		 * number of rel_tuples and rel_pages.
-		 */
-		VPgClassStatsCombo *pgclass_stats_combo = (VPgClassStatsCombo *) pgresult->extras;
-		ListCell *lc = NULL;
+		result = (VPgClassStats *) pgresult->extras;
+		segid = result->segid;
+		entry = (VPgClassStatsEntry *) hash_search(vac_stats, &result->relid, HASH_ENTER_NULL, &found);
 
-		foreach (lc, stats_context->updated_stats)
+		/* Initialize the relstats array for each new entry */
+		if (!found)
 		{
-			VPgClassStatsCombo *tmp_stats_combo = (VPgClassStatsCombo *) lfirst(lc);
-
-			if (tmp_stats_combo->relid == pgclass_stats_combo->relid)
-			{
-				tmp_stats_combo->rel_pages += pgclass_stats_combo->rel_pages;
-				tmp_stats_combo->rel_tuples += pgclass_stats_combo->rel_tuples;
-				tmp_stats_combo->relallvisible += pgclass_stats_combo->relallvisible;
-				/* 
-				 * Accumulate the number of QEs, assuming sending only once
-				 * per QE for each relid in the VACUUM scenario.
-				 */
-				tmp_stats_combo->count++;
-				break;
-			}
+			entry->relid = result->relid;
+			entry->count = 0;
+			entry->relstats = palloc0(sizeof(VPgClassStats) * stats_context->nsegs);
+		}
+		/* Set relid and increment count the first time we receive relstats from the QE */
+		if (entry->relstats[segid].relid == InvalidOid)
+		{
+			entry->relstats[segid].relid = result->relid;
+			entry->count++;
 		}
 
-		if (lc == NULL) /* get the first stats result of the current relid */
-		{
-			Assert(pgresult->extraslen == sizeof(VPgClassStats));
-
-			old_context = MemoryContextSwitchTo(context);
-			pgclass_stats_combo = palloc(sizeof(VPgClassStatsCombo));
-			memcpy(pgclass_stats_combo, pgresult->extras, pgresult->extraslen);
-			pgclass_stats_combo->count = 1;
-
-			stats_context->updated_stats =
-				lappend(stats_context->updated_stats, pgclass_stats_combo);
-			MemoryContextSwitchTo(old_context);
-		}
+		/* Populate the relstats from this QE. The latest relstats message overwrites previous entries */
+		entry->relstats[segid].rel_pages = result->rel_pages;
+		entry->relstats[segid].rel_tuples = result->rel_tuples;
+		entry->relstats[segid].relallvisible = result->relallvisible;
 	}
+
+	/* Aggregate the relstats for each relid by summing up the entries */
+	hash_seq_init(&seq_status, vac_stats);
+	while ((entry = (VPgClassStatsEntry *) hash_seq_search(&seq_status)) != NULL)
+	{
+		VPgClassStatsCombo *tmp_stats_combo = palloc0(sizeof(VPgClassStatsCombo));
+		tmp_stats_combo->relid = entry->relid;
+		for (int i = 0; i < entry->count; i++)
+		{
+			tmp_stats_combo->rel_pages += entry->relstats[i].rel_pages;
+			tmp_stats_combo->rel_tuples += entry->relstats[i].rel_tuples;
+			tmp_stats_combo->relallvisible += entry->relstats[i].relallvisible;
+			tmp_stats_combo->count++;
+		}
+		stats_context->updated_stats = lappend(stats_context->updated_stats, tmp_stats_combo);
+	}
+	MemoryContextSwitchTo(old_context);
 }
 
 /*
@@ -3079,6 +3112,12 @@ vac_update_relstats_from_list(VacuumStatsContext *stats_context)
 	{
 		VPgClassStatsCombo *stats = (VPgClassStatsCombo *) lfirst(lc);
 		Relation	rel;
+
+		/*
+		 * We should never receive more results for a relation than the
+		 * number of dispatched QEs.
+		 */
+		Assert(stats->count <= stats_context->nsegs);
 
 		rel = relation_open(stats->relid, AccessShareLock);
 
@@ -3168,6 +3207,7 @@ vac_send_relstats_to_qd(Oid relid,
 	stats.rel_pages = num_pages;
 	stats.rel_tuples = num_tuples;
 	stats.relallvisible = num_all_visible_pages;
+	stats.segid = GpIdentity.segindex;
 	pq_sendbyte(&buf, true); /* Mark the result ready when receive this message */
 	pq_sendint(&buf, PGExtraTypeVacuumStats, sizeof(PGExtraType));
 	pq_sendint(&buf, sizeof(VPgClassStats), sizeof(int));

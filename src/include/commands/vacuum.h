@@ -214,7 +214,16 @@ typedef struct VPgClassStats
 	BlockNumber rel_pages;
 	double		rel_tuples;
 	BlockNumber relallvisible;
+	int32		segid;
 } VPgClassStats;
+
+/* Hash entry for VPgClassStats */
+typedef struct VPgClassStatsEntry
+{
+	Oid	relid;
+	VPgClassStats	*relstats; /* array of relstats entries indexed by segid of size nseg */
+	int	count;	/* expect to equal to the number of dispatched segments */
+} VPgClassStatsEntry;
 
 typedef struct VPgClassStatsCombo
 {
