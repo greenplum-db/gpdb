@@ -3718,6 +3718,7 @@ checkTablespaceInIOlimit(Oid tblspcid, bool errout)
 	HeapTuple	tuple;
 	bool		contain = false;
 	bool		print_header = false;
+	StringInfo  log = makeStringInfo();
 
 	rel_resgroup_caps = table_open(ResGroupCapabilityRelationId, AccessShareLock);
 	/* get io limit string from catalog */
@@ -3767,10 +3768,10 @@ checkTablespaceInIOlimit(Oid tblspcid, bool errout)
 				if (!print_header)
 				{
 					print_header = true;
-					ereport(WARNING, (errmsg("io limit: following resource groups depend on tablespace %s", get_tablespace_name(tblspcid))));
+					appendStringInfo(log, "io limit: following resource groups depend on tablespace %s:", get_tablespace_name(tblspcid));
 				}
 
-				ereport(WARNING, (errmsg("%s", GetResGroupNameForId(id))));
+				appendStringInfo(log, " %s", GetResGroupNameForId(id));
 			}
 		}
 
@@ -3783,9 +3784,13 @@ checkTablespaceInIOlimit(Oid tblspcid, bool errout)
 
 	table_close(rel_resgroup_caps, AccessShareLock);
 
-	if (errout)
+	if (contain && errout)
 		ereport(ERROR, (errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
-						errmsg("you can remove those resource groups or remove tablespace %s from io_limit of those resource groups", get_tablespace_name(tblspcid))));
+						errmsg("%s", log->data),
+						errhint("you can remove those resource groups or remove tablespace %s from io_limit of those resource groups.", get_tablespace_name(tblspcid))));
+
+	pfree(log->data);
+	pfree(log);
 
 	return contain;
 }

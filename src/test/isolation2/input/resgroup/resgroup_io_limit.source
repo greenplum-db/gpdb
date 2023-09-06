@@ -44,9 +44,14 @@ CREATE RESOURCE GROUP rg_test_group5 WITH (concurrency=10, cpu_max_percent=10, i
 
 SELECT check_cgroup_io_max('rg_test_group5', 'rg_io_limit_ts_1', 'rbps=1048576000 wbps=1048576000 riops=1000 wiops=1000');
 
+-- try to drop test tablespace
+DROP TABLESPACE rg_io_limit_ts_1;
+
 ALTER RESOURCE GROUP rg_test_group5 SET io_limit 'rg_io_limit_ts_1:rbps=1000,wbps=1000';
 
 SELECT check_cgroup_io_max('rg_test_group5', 'rg_io_limit_ts_1', 'rbps=1048576000 wbps=1048576000 riops=max wiops=max');
+
+SELECT check_clear_io_max('rg_test_group5');
 
 -- fault injector
 SELECT gp_inject_fault('create_resource_group_fail', 'error', 1);

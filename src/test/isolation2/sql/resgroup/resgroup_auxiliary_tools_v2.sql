@@ -351,3 +351,22 @@ $$ LANGUAGE plpython3u;
     finally:
         os.close(f)
 $$ LANGUAGE plpython3u;
+
+0: CREATE OR REPLACE FUNCTION check_clear_io_max(groupname text) RETURNS BOOL AS $$
+    import ctypes
+    import os
+
+    postgres = ctypes.CDLL(None)
+    clear_io_max = postgres['clear_io_max']
+
+    # get group oid
+    sql = "select groupid from gp_toolkit.gp_resgroup_config where groupname = '%s'" % groupname
+    result = plpy.execute(sql)
+    groupid = result[0]['groupid']
+
+    clear_io_max(groupid)
+
+    cgroup_path = "/sys/fs/cgroup/gpdb/%d/io.max" % groupid
+
+    return os.stat(cgroup_path).st_size == 0
+$$ LANGUAGE plpython3u;

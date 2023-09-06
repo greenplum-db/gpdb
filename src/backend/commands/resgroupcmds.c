@@ -547,6 +547,8 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 
 /*
  * Get all the capabilities of one resource group in pg_resgroupcapability.
+ *
+ * Note: the io_limit in ResGroupCaps will be NIL if parse io_limit string failed.
  */
 void
 GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
@@ -629,6 +631,8 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 			case RESGROUP_LIMIT_TYPE_IO_LIMIT:
 				if (cgroupOpsRoutine != NULL)
 				{
+					/* if InterruptHoldoffCount doesn't restore in PG_CATCH,
+					 * the catch will failed. */
 					int32 savedholdoffCount = InterruptHoldoffCount;
 
 					oldContext = CurrentMemoryContext;

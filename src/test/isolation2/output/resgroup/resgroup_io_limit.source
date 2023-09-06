@@ -80,6 +80,11 @@ SELECT check_cgroup_io_max('rg_test_group5', 'rg_io_limit_ts_1', 'rbps=104857600
  t                   
 (1 row)
 
+-- try to drop test tablespace
+DROP TABLESPACE rg_io_limit_ts_1;
+ERROR:  io limit: following resource groups depend on tablespace rg_io_limit_ts_1: rg_test_group5
+HINT:  you can remove those resource groups or remove tablespace rg_io_limit_ts_1 from io_limit of those resource groups.
+
 ALTER RESOURCE GROUP rg_test_group5 SET io_limit 'rg_io_limit_ts_1:rbps=1000,wbps=1000';
 ALTER RESOURCE GROUP
 
@@ -87,6 +92,12 @@ SELECT check_cgroup_io_max('rg_test_group5', 'rg_io_limit_ts_1', 'rbps=104857600
  check_cgroup_io_max 
 ---------------------
  t                   
+(1 row)
+
+SELECT check_clear_io_max('rg_test_group5');
+ check_clear_io_max 
+--------------------
+ t                  
 (1 row)
 
 -- fault injector
