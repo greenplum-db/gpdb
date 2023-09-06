@@ -2007,7 +2007,6 @@ typedef enum AlterTableType
 	AT_SetDistributedBy,		/* SET DISTRIBUTED BY */
 	AT_ExpandTable,          /* EXPAND DISTRIBUTED */
 	AT_ExpandPartitionTablePrepare,	/* EXPAND PARTITION PREPARE */
-	AT_RepackTable,				/* REPACK TABLE */
 
 	/* GPDB: Legacy commands to manipulate partitions */
 	AT_PartAdd,					/* Add */
@@ -2017,7 +2016,10 @@ typedef enum AlterTableType
 	AT_PartRename,				/* Rename */
 	AT_PartSetTemplate,			/* Set Subpartition Template */
 	AT_PartSplit,				/* Split */
-	AT_PartTruncate				/* Truncate */
+	AT_PartTruncate,			/* Truncate */
+
+	/* kept at end for ABI hygiene */
+	AT_RepackTable				/* REPACK TABLE */
 } AlterTableType;
 
 typedef struct ReplicaIdentityStmt

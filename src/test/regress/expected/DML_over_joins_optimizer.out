@@ -992,8 +992,8 @@ END;
 $$ LANGUAGE plpgsql;
 --
 SELECT InsertManyIntoSales(20,'sales_par_CO');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  insertmanyintosales 
 ---------------------
  
@@ -1010,8 +1010,8 @@ delete from sales;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
 insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
 SELECT InsertManyIntoSales(40,'sales');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  insertmanyintosales 
 ---------------------
  
@@ -1135,8 +1135,8 @@ delete from sales_par;
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
 insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
 SELECT InsertManyIntoSales(20,'sales_par');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  insertmanyintosales 
 ---------------------
  
@@ -1214,13 +1214,13 @@ select s.* from s, r,sales_par where s.a = r.b and s.b = sales_par.id;
 delete from r;
 delete from s;
 delete from sales_par2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
 insert into r select generate_series(1, 10000), generate_series(1, 10000) * 3;
 insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
 SELECT InsertManyIntoSales(20,'sales_par2');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  insertmanyintosales 
 ---------------------
  
@@ -1228,8 +1228,8 @@ DETAIL:  Feature not supported: SIRV functions
 
 -- partition key
 select sales_par2.* from sales_par2,s,r where sales_par2.id = s.b and sales_par2.month = r.b+1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
  id | year | month | day |  region   
 ----+------+-------+-----+-----------
   3 | 2005 |     4 |   4 | australia
@@ -1240,11 +1240,11 @@ DETAIL:  Feature not supported: Multi-level partitioned tables
 (5 rows)
 
 update sales_par2 set month = month+1 from r,s where sales_par2.id = s.b and sales_par2.month = r.b+1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
 select sales_par2.* from sales_par2,s,r where sales_par2.id = s.b and sales_par2.month = r.b+2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
  id | year | month | day |  region   
 ----+------+-------+-----+-----------
   9 | 2004 |    11 |  10 | europe
@@ -1256,11 +1256,11 @@ DETAIL:  Feature not supported: Multi-level partitioned tables
 
 PREPARE plan0 as update sales_par2 set month = month+1 from r,s where sales_par2.id = s.b and sales_par2.month = r.b+2;
 EXECUTE plan0;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
 select sales_par2.* from sales_par2,s,r where sales_par2.id = s.b and sales_par2.month = r.b+3;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
  id | year | month | day |  region   
 ----+------+-------+-----+-----------
   9 | 2004 |    12 |  10 | europe
@@ -1271,8 +1271,8 @@ DETAIL:  Feature not supported: Multi-level partitioned tables
 (5 rows)
 
 select sales_par2.* from sales_par2 where id in (select s.b-1 from s,r where s.a = r.b);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
  id | year | month | day | region 
 ----+------+-------+-----+--------
  17 | 2005 |     6 |  18 | europe
@@ -1280,19 +1280,19 @@ DETAIL:  Feature not supported: Multi-level partitioned tables
 (2 rows)
 
 delete from sales_par2 where id in (select s.b-1 from s,r where s.a = r.b);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
 select sales_par2.* from sales_par2 where id in (select s.b-1 from s,r where s.a = r.b);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
  id | year | month | day | region 
 ----+------+-------+-----+--------
 (0 rows)
 
 -- heap table
 select s.* from s, r,sales_par2 where s.a = r.b and s.b = sales_par2.id;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
  a | b  
 ---+----
  3 |  9
@@ -1300,11 +1300,11 @@ DETAIL:  Feature not supported: Multi-level partitioned tables
 (2 rows)
 
 delete from s using r,sales_par2 where s.a = r.b and s.b = sales_par2.id;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
 select s.* from s, r,sales_par2 where s.a = r.b and s.b = sales_par2.id;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
  a | b 
 ---+---
 (0 rows)
@@ -1323,8 +1323,8 @@ create table s_ao (a int, b int) with (appendonly = true) distributed by (a);
 insert into s_ao select generate_series(1, 100), generate_series(1, 100) * 3;
 -- heap table: delete --
 select * from r where b in (select month-1 from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
  a | b 
 ---+---
  3 | 9
@@ -1333,27 +1333,27 @@ DETAIL:  Feature not supported: Multi-level partitioned tables
 (3 rows)
 
 delete from r where b in (select month-1 from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
 select * from r where b in (select month-1 from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
  a | b 
 ---+---
 (0 rows)
 
 -- hdeap table: update: duplicate distribution key -- 
 SELECT InsertManyIntoSales(20,'sales_par_CO');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  insertmanyintosales 
 ---------------------
  
 (1 row)
 
 select * from r where a in (select sales_par_CO.id from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
  a  | b  
 ----+----
   6 | 18
@@ -1364,11 +1364,11 @@ DETAIL:  Feature not supported: Multi-level partitioned tables
 (5 rows)
 
 update r set b = r.b + 1 where a in (select sales_par_CO.id from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
 select * from r where a in (select sales_par_CO.id from sales_par_CO, s_ao where sales_par_CO.id = s_ao.b);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
  a  | b  
 ----+----
  15 | 46
@@ -1380,8 +1380,8 @@ DETAIL:  Feature not supported: Multi-level partitioned tables
 
 -- heap table: delete:
 select * from r where a in (select month from sales_par_CO, s_ao, s where sales_par_CO.id = s_ao.b and s_ao.a = s.b);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
  a  | b  
 ----+----
   7 | 21
@@ -1389,11 +1389,11 @@ DETAIL:  Feature not supported: Multi-level partitioned tables
 (2 rows)
 
 delete from r where a in (select month from sales_par_CO, s_ao, s where sales_par_CO.id = s_ao.b and s_ao.a = s.b);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
 select * from r where a in (select month from sales_par_CO, s_ao, s where sales_par_CO.id = s_ao.b and s_ao.a = s.b);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
  a | b 
 ---+---
 (0 rows)
@@ -1409,8 +1409,8 @@ insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
 insert into s select generate_series(1, 10), generate_series(1, 10) * 4;
 insert into m select generate_series(1, 1000), generate_series(1, 1000) * 4;
 SELECT InsertManyIntoSales(20,'sales_par');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  insertmanyintosales 
 ---------------------
  
@@ -1507,8 +1507,8 @@ insert into s select generate_series(1, 100), generate_series(1, 100) * 3;
 insert into s select generate_series(1, 10), generate_series(1, 10) * 4;
 insert into m select generate_series(1, 1000), generate_series(1, 1000) * 4;
 SELECT InsertManyIntoSales(20,'sales_par');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  insertmanyintosales 
 ---------------------
  
@@ -1660,17 +1660,17 @@ analyze tab3;
 -- the `::regclass` way as it only matches the table in current search_path.
 set allow_system_table_mods=true;
 update pg_class set relpages = 10000 where oid='tab2'::regclass;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on coordinator-only tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Queries on coordinator-only tables
 update pg_class set reltuples = 100000000 where oid='tab2'::regclass;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on coordinator-only tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Queries on coordinator-only tables
 update pg_class set relpages = 100000000 where oid='tab3'::regclass;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on coordinator-only tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Queries on coordinator-only tables
 update pg_class set reltuples = 100000 where oid='tab3'::regclass;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Queries on coordinator-only tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Queries on coordinator-only tables
 -- Planner: there is redistribute motion above tab1, however, we can also
 -- remove the explicit redistribute motion here because the final join
 -- co-locate with the result relation tab1.

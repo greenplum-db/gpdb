@@ -565,19 +565,6 @@ typedef struct TableAmRoutine
 											  double *tups_vacuumed,
 											  double *tups_recently_dead);
 
-	/* See table_relation_copy_for_repack() */
-	void		(*relation_copy_for_repack) (Relation origTable,
-											 Relation newTable,
-											 int nkeys,
-											 AttrNumber *attNums,
-											 Oid *sortOperators,
-											 Oid *sortCollations,
-											 bool *nullsFirstFlags, 
-											 TransactionId *xid_cutoff,
-											 MultiXactId *multi_cutoff,
-											 TransactionId OldestXmin,
-											 double *num_tuples);
-									 
 	/*
 	 * React to VACUUM command on the relation. The VACUUM can be
 	 * triggered by a user or by autovacuum. The specific actions
@@ -816,6 +803,24 @@ typedef struct TableAmRoutine
 										   struct SampleScanState *scanstate,
 										   TupleTableSlot *slot);
 
+	/* 
+	 * See table_relation_copy_for_repack()
+	 *
+	 * This is kept at the bottom of the struct to avoid ABI breakage within 
+	 * a major version.
+	 */
+	void		(*relation_copy_for_repack) (Relation origTable,
+											 Relation newTable,
+											 int nkeys,
+											 AttrNumber *attNums,
+											 Oid *sortOperators,
+											 Oid *sortCollations,
+											 bool *nullsFirstFlags, 
+											 TransactionId *xid_cutoff,
+											 MultiXactId *multi_cutoff,
+											 TransactionId OldestXmin,
+											 double *num_tuples);
+									 
 } TableAmRoutine;
 
 

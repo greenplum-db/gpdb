@@ -13,6 +13,7 @@ The following Greenplum Database and PostgreSQL `contrib` modules are installed;
 -   [dblink](dblink.html) - Provides connections to other Greenplum databases.
 -   [diskquota.md\#](diskquota.html) - Allows administrators to set disk usage quotas for Greenplum Database roles and schemas.
 -   [fuzzystrmatch](fuzzystrmatch.html) - Determines similarities and differences between strings.
+-   [gp\_exttable\_fdw](gp_exttable_fdw.html) - Built-in foreign-data wrapper that internally converts an external table to a foreign table.
 -   [gp\_legacy\_string\_agg](gp_legacy_string_agg.html) - Implements a legacy, single-argument `string_agg()` aggregate function that was present in Greenplum Database 5.
 -   [gp\_sparse\_vector](gp_sparse_vector.html) - Implements a Greenplum Database data type that uses compressed storage of zeros to make vector computations on floating point numbers faster.
 -   [greenplum_fdw](greenplum_fdw.html) - Provides a foreign data wrapper (FDW) for accessing data stored in one or more external Greenplum Database clusters.

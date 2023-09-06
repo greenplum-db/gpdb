@@ -222,9 +222,15 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenScalarSortColList, GPOS_WSZ_LIT("SortingColumnList")},
 		{EdxltokenScalarGroupingColList, GPOS_WSZ_LIT("GroupingColumns")},
 		{EdxltokenScalarSortGroupClause, GPOS_WSZ_LIT("SortGroupClause")},
-
 		{EdxltokenScalarBitmapAnd, GPOS_WSZ_LIT("BitmapAnd")},
 		{EdxltokenScalarBitmapOr, GPOS_WSZ_LIT("BitmapOr")},
+
+		{EdxltokenScalarFieldSelect, GPOS_WSZ_LIT("FIELDSELECT")},
+		{EdxltokenScalarFieldSelectFieldType, GPOS_WSZ_LIT("FieldType")},
+		{EdxltokenScalarFieldSelectFieldCollation,
+		 GPOS_WSZ_LIT("FieldCollation")},
+		{EdxltokenScalarFieldSelectFieldNumber, GPOS_WSZ_LIT("FieldNumber")},
+		{EdxltokenScalarFieldSelectTypeModifier, GPOS_WSZ_LIT("TypeModifier")},
 
 		{EdxltokenScalarArray, GPOS_WSZ_LIT("Array")},
 		{EdxltokenScalarArrayRef, GPOS_WSZ_LIT("ArrayRef")},
@@ -570,7 +576,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenMetadataColumn, GPOS_WSZ_LIT("MetadataColumn")},
 
 		{EdxltokenColumnNullable, GPOS_WSZ_LIT("Nullable")},
-		{EdxltokenColumnDefaultValue, GPOS_WSZ_LIT("DefaultValue")},
 
 		{EdxltokenIndex, GPOS_WSZ_LIT("Index")},
 
@@ -579,7 +584,9 @@ CDXLTokens::Init(CMemoryPool *mp)
 
 		{EdxltokenIndexKeyCols, GPOS_WSZ_LIT("KeyColumns")},
 		{EdxltokenIndexIncludedCols, GPOS_WSZ_LIT("IncludedColumns")},
+		{EdxltokenIndexReturnableCols, GPOS_WSZ_LIT("ReturnableColumns")},
 		{EdxltokenIndexClustered, GPOS_WSZ_LIT("IsClustered")},
+		{EdxltokenIndexAmCanOrder, GPOS_WSZ_LIT("AmCanOrder")},
 		{EdxltokenIndexPartial, GPOS_WSZ_LIT("IsPartial")},
 		{EdxltokenIndexType, GPOS_WSZ_LIT("IndexType")},
 		{EdxltokenIndexTypeBtree, GPOS_WSZ_LIT("B-tree")},
@@ -589,6 +596,12 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenIndexTypeBrin, GPOS_WSZ_LIT("Brin")},
 		{EdxltokenIndexTypeHash, GPOS_WSZ_LIT("Hash")},
 		{EdxltokenIndexItemType, GPOS_WSZ_LIT("IndexItemType")},
+		{EdxltokenIndexKeysSortDirection, GPOS_WSZ_LIT("SortDirection")},
+		{EdxltokenIndexKeysNullsDirection, GPOS_WSZ_LIT("NullsDirection")},
+		{EdxltokenIndexKeySortASC, GPOS_WSZ_LIT("ASC")},
+		{EdxltokenIndexKeySortDESC, GPOS_WSZ_LIT("DESC")},
+		{EdxltokenIndexKeyNullsFirst, GPOS_WSZ_LIT("FIRST")},
+		{EdxltokenIndexKeyNullsLast, GPOS_WSZ_LIT("LAST")},
 
 		{EdxltokenOpfamily, GPOS_WSZ_LIT("Opfamily")},
 		{EdxltokenOpfamilies, GPOS_WSZ_LIT("Opfamilies")},

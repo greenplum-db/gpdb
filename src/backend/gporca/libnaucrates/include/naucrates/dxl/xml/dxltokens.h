@@ -268,6 +268,13 @@ enum Edxltoken
 	EdxltokenWindowrefStageRowKey,
 	EdxltokenWindowrefWinSpecPos,
 
+	// FIELDSELECT
+	EdxltokenScalarFieldSelect,
+	EdxltokenScalarFieldSelectFieldType,
+	EdxltokenScalarFieldSelectFieldCollation,
+	EdxltokenScalarFieldSelectFieldNumber,
+	EdxltokenScalarFieldSelectTypeModifier,
+
 	EdxltokenValue,
 	EdxltokenTypeId,
 	EdxltokenTypeIds,
@@ -505,14 +512,15 @@ enum Edxltoken
 	EdxltokenMetadataColumns,
 	EdxltokenMetadataColumn,
 	EdxltokenColumnNullable,
-	EdxltokenColumnDefaultValue,
 
 	EdxltokenKeys,
 	EdxltokenDistrColumns,
 
 	EdxltokenIndexKeyCols,
 	EdxltokenIndexIncludedCols,
+	EdxltokenIndexReturnableCols,
 	EdxltokenIndexClustered,
+	EdxltokenIndexAmCanOrder,
 	EdxltokenIndexPartial,
 	EdxltokenIndexType,
 	EdxltokenIndexTypeBtree,
@@ -521,6 +529,12 @@ enum Edxltoken
 	EdxltokenIndexTypeGist,
 	EdxltokenIndexTypeGin,
 	EdxltokenIndexItemType,
+	EdxltokenIndexKeysSortDirection,
+	EdxltokenIndexKeysNullsDirection,
+	EdxltokenIndexKeySortASC,
+	EdxltokenIndexKeySortDESC,
+	EdxltokenIndexKeyNullsFirst,
+	EdxltokenIndexKeyNullsLast,
 
 	EdxltokenOpfamily,
 	EdxltokenOpfamilies,

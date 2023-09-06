@@ -11,6 +11,7 @@ from steps.gpconfig_mgmt_utils import GpConfigContext
 from steps.gpssh_exkeys_mgmt_utils import GpsshExkeysMgmtContext
 from steps.mgmt_utils import backup_bashrc, restore_bashrc
 from gppylib.db import dbconn
+from gppylib.commands.base import Command, REMOTE
 
 def before_all(context):
     if list(map(int, behave.__version__.split('.'))) < [1,2,6]:
@@ -183,3 +184,10 @@ def after_scenario(context, scenario):
 
     if os.getenv('SUSPEND_PG_REWIND') is not None:
         del os.environ['SUSPEND_PG_REWIND']
+
+    if "remove_rsync_bash" in scenario.effective_tags:
+        for host in context.hosts_with_rsync_bash:
+            cmd = Command(name='remove /usr/local/bin/rsync', cmdStr="sudo rm /usr/local/bin/rsync", remoteHost=host,
+                          ctxt=REMOTE)
+            cmd.run(validateAfter=True)
+

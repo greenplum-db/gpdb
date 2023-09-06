@@ -52,40 +52,28 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2) FROM foo;
       <dxl:Relation Mdid="6.24576.1.0" Name="foo" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="a1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a2" Attno="2" Mdid="0.701.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a3" Attno="3" Mdid="0.1186.1.0" Nullable="true" ColWidth="16">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a4" Attno="4" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a5" Attno="5" Mdid="0.1184.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-2" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-3" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-4" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-5" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-6" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -394,7 +382,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2) FROM foo;
     <dxl:Plan Id="0" SpaceSize="130">
       <dxl:Sequence>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1324463.294809" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1324463.295172" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="12" Alias="percentile_cont">
@@ -403,7 +391,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2) FROM foo;
         </dxl:ProjList>
         <dxl:CTEProducer CTEId="0" Columns="14,15">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000103" Rows="1.000000" Width="1"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000193" Rows="1.000000" Width="1"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="14" Alias="a2">
@@ -415,7 +403,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2) FROM foo;
           </dxl:ProjList>
           <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000102" Rows="1.000000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000192" Rows="1.000000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="14" Alias="a2">
@@ -429,7 +417,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2) FROM foo;
             <dxl:SortingColumnList/>
             <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000042" Rows="1.000000" Width="16"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000133" Rows="1.000000" Width="16"/>
               </dxl:Properties>
               <dxl:GroupingColumns>
                 <dxl:GroupingColumn ColId="14"/>
@@ -452,7 +440,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2) FROM foo;
               <dxl:Filter/>
               <dxl:Sort SortDiscardDuplicates="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000031" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000122" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="14" Alias="a2">
@@ -512,7 +500,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2) FROM foo;
         </dxl:CTEProducer>
         <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1324032.294698" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="1324032.294970" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:GroupingColumns/>
           <dxl:ProjList>
@@ -533,7 +521,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2) FROM foo;
           <dxl:Filter/>
           <dxl:Limit>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1324032.294690" Rows="1.000000" Width="24"/>
+              <dxl:Cost StartupCost="0" TotalCost="1324032.294962" Rows="1.000000" Width="24"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="a2">
@@ -548,7 +536,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2) FROM foo;
             </dxl:ProjList>
             <dxl:Sort SortDiscardDuplicates="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1324032.294666" Rows="1.000000" Width="24"/>
+                <dxl:Cost StartupCost="0" TotalCost="1324032.294938" Rows="1.000000" Width="24"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="a2">
@@ -615,7 +603,7 @@ EXPLAIN SELECT percentile_cont(0.5) WITHIN GROUP(ORDER BY a2) FROM foo;
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="52" Alias="ColRef_0052">
-                        <dxl:FuncExpr FuncId="0.1779.1.0" FuncRetSet="false" TypeMdid="0.20.1.0">
+                        <dxl:FuncExpr FuncId="0.1779.1.0" FuncRetSet="false" TypeMdid="0.20.1.0" FuncVariadic="false">
                           <dxl:Ident ColId="51" ColName="ColRef_0051" TypeMdid="0.1700.1.0"/>
                         </dxl:FuncExpr>
                       </dxl:ProjElem>

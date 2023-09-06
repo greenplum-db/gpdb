@@ -50,6 +50,7 @@ typedef struct CdbHash
  */
 extern CdbHash *makeCdbHash(int numsegs, int natts, Oid *typeoids);
 extern CdbHash *makeCdbHashForRelation(Relation rel);
+extern void freeCdbHash(CdbHash *h);
 
 /*
  * Initialize CdbHash for hashing the next tuple values.

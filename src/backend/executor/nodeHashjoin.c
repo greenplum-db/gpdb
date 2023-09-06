@@ -163,6 +163,8 @@ static void SpillCurrentBatch(HashJoinState *node);
 static bool ExecHashJoinReloadHashTable(HashJoinState *hjstate);
 static void ExecEagerFreeHashJoin(HashJoinState *node);
 
+static inline void SaveWorkFileSetStatsInfo(HashJoinTable hashtable);
+
 /* ----------------------------------------------------------------
  *		ExecHashJoinImpl
  *
@@ -351,6 +353,9 @@ ExecHashJoinImpl(PlanState *pstate, bool parallel)
 #ifdef HJDEBUG
 				elog(gp_workfile_caching_loglevel, "HashJoin built table with %.1f tuples by executing subplan for batch 0", hashtable->totalTuples);
 #endif
+
+				/* Save stats info of work file set to hash table */
+				SaveWorkFileSetStatsInfo(hashtable);
 
 				/**
 				 * If LASJ_NOTIN and a null was found on the inner side, then clean out.
@@ -2062,4 +2067,17 @@ ExecHashJoinInitializeWorker(HashJoinState *state,
 	hashNode->parallel_state = pstate;
 
 	ExecSetExecProcNode(&state->js.ps, ExecParallelHashJoin);
+}
+
+static inline void SaveWorkFileSetStatsInfo(HashJoinTable hashtable)
+{
+	workfile_set *work_set = hashtable->work_set;
+	if (work_set)
+	{
+		hashtable->workset_num_files = work_set->num_files;
+		hashtable->workset_num_files_compressed = work_set->num_files_compressed;
+		hashtable->workset_max_file_size = work_set->max_file_size;
+		hashtable->workset_min_file_size = work_set->min_file_size;
+		hashtable->workset_compression_buf_total = work_set->compression_buf_total;
+	}
 }

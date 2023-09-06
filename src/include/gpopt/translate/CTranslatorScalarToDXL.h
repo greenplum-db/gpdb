@@ -117,6 +117,10 @@ private:
 	CDXLNode *TranslateScalarArrayOpExprToDXL(
 		const Expr *expr, const CMappingVarColId *var_colid_mapping);
 
+	// create a DXL node for a fieldselect node from gpdb expression
+	CDXLNode *TranslateFieldSelectToDXL(
+		const Expr *expr, const CMappingVarColId *var_colid_mapping);
+
 	// create a DXL scalar array comparison node from a GPDB expression
 	CDXLNode *CreateScalarArrayCompFromExpr(
 		const Expr *expr, const CMappingVarColId *var_colid_mapping);

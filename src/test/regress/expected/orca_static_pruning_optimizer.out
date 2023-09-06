@@ -160,8 +160,8 @@ WHERE b = 42
 $query$ AS qry \gset
 EXPLAIN (COSTS OFF, VERBOSE)
 :qry ;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: hash partitioning
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: hash partitioning
                 QUERY PLAN                 
 -------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -174,8 +174,8 @@ DETAIL:  Feature not supported: hash partitioning
 (7 rows)
 
 :qry ;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: hash partitioning
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: hash partitioning
  a | b  
 ---+----
  0 | 42

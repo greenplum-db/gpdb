@@ -402,8 +402,8 @@ set optimizer_enable_tablescan = FALSE;
 set optimizer_trace_fallback = TRUE;
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
             owner            | property 
 -----------------------------+----------
  A. Gent                     | 
@@ -413,10 +413,10 @@ DETAIL:  No plan has been computed for required properties
 (4 rows)
 
 SELECT count_index_scans('EXPLAIN SELECT owner, property FROM GistTable1 WHERE property IS NULL ORDER BY id;');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  count_index_scans 
 -------------------
                  1
@@ -428,7 +428,7 @@ SELECT owner, property FROM GistTable1
  WHERE property IS NULL
  ORDER BY id
  ;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=701.28..701.28 rows=2 width=51)
@@ -447,8 +447,8 @@ SELECT id, property FROM GistTable1
  WHERE property IS NULL 
  ORDER BY id
  ;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  id | property 
 ----+----------
   8 | 
@@ -458,10 +458,10 @@ DETAIL:  No plan has been computed for required properties
 (4 rows)
 
 SELECT count_index_scans('EXPLAIN SELECT id, property FROM GistTable1 WHERE property IS NULL ORDER BY id;');
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  count_index_scans 
 -------------------
                  1
@@ -473,7 +473,7 @@ SELECT id, property FROM GistTable1
  WHERE property IS NULL 
  ORDER BY id
  ;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=701.28..701.28 rows=2 width=36)

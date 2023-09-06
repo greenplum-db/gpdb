@@ -1,4 +1,5 @@
-MODULES = gp_inject_fault
+MODULE_big = gp_inject_fault
+OBJS = gp_inject_fault.o
 
 EXTENSION = gp_inject_fault
 DATA = gp_inject_fault--1.0.sql
@@ -6,6 +7,7 @@ DATA = gp_inject_fault--1.0.sql
 REGRESS = inject_fault_test
 
 PG_CPPFLAGS = -I$(libpq_srcdir)
+SHLIB_LINK_INTERNAL = $(libpq)
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

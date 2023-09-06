@@ -62,6 +62,7 @@
 #include "catalog/aocatalog.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbappendonlyam.h"
+#include "cdb/cdbhash.h"
 #include "cdb/cdbvars.h"
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
@@ -529,6 +530,55 @@ ExecInsert(ModifyTableState *mtstate,
 			 (resultRelInfo->ri_TrigDesc &&
 			  resultRelInfo->ri_TrigDesc->trig_insert_before_row)))
 			ExecPartitionCheck(resultRelInfo, slot, estate, true);
+
+		/*
+		 * Everything has been checked, if we set the GUC gp_detect_data_correctness to true,
+		 * we just verify the data belongs to current partition and segment, we'll not insert
+		 * the data really, so just return NULL.
+		 *
+		 * Above ExecPartitionCheck has already checked the partition correctness, so we just
+		 * need check distribution correctness.
+		 */
+		if (gp_detect_data_correctness)
+		{
+			/* Initialize hash function and structure */
+			CdbHash  *hash;
+			Relation rel = resultRelInfo->ri_RelationDesc;
+			GpPolicy *policy = rel->rd_cdbpolicy;
+
+			/* Skip randomly and replicated distributed relation */
+			if (!GpPolicyIsHashPartitioned(policy))
+				return NULL;
+
+			hash = makeCdbHashForRelation(rel);
+
+			cdbhashinit(hash);
+
+			/* Add every attribute in the distribution policy to the hash */
+			for (int i = 0; i < policy->nattrs; i++)
+			{
+				int			attnum = policy->attrs[i];
+				bool		isNull;
+				Datum		attr;
+
+				attr = slot_getattr(slot, attnum, &isNull);
+
+				cdbhash(hash, i + 1, attr, isNull);
+			}
+
+			/* End check if one tuple is in the wrong segment */
+			if (cdbhashreduce(hash) != GpIdentity.segindex)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_CHECK_VIOLATION),
+								errmsg("trying to insert row into wrong segment")));
+			}
+
+			freeCdbHash(hash);
+
+			/* Do nothing */
+			return NULL;
+		}
 
 		if (onconflict != ONCONFLICT_NONE && resultRelInfo->ri_NumIndices > 0)
 		{

@@ -92,13 +92,10 @@
     <dxl:Relation Mdid="6.1234.1.1" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="C" Attno="3" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -107,7 +104,7 @@
       </dxl:IndexInfoList>
       <dxl:CheckConstraints/>
     </dxl:Relation>
-    <dxl:Index Mdid="0.2345.2.1" Name="T_a" IsClustered="false" KeyColumns="1" IncludedColumns="">
+    <dxl:Index Mdid="0.2345.2.1" Name="T_a" IsClustered="false" KeyColumns="1" IncludedColumns="" ReturnableColumns="1">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.1978.1.0"/>
       </dxl:Opfamilies>
@@ -116,7 +113,7 @@
         <dxl:Partition Mdid="6.2351.2.1"/>
       </dxl:Partitions>
     </dxl:Index>
-    <dxl:Index Mdid="0.2347.1.1" Name="T_a" IsClustered="false" KeyColumns="0" IncludedColumns="">
+    <dxl:Index Mdid="0.2347.1.1" Name="T_a" IsClustered="false" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
@@ -128,34 +125,24 @@
     <dxl:Relation Mdid="6.1607123.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="true" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="oid" Attno="-2" Mdid="0.26.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -164,34 +151,24 @@
     <dxl:Relation Mdid="6.10311.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="true" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="oid" Attno="-2" Mdid="0.26.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -208,13 +185,10 @@
     <dxl:Relation Mdid="6.1607168.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="d" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="e" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -223,34 +197,24 @@
     <dxl:Relation Mdid="6.100219.1.1" Name="rr" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="true" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="oid" Attno="-2" Mdid="0.26.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -265,10 +229,8 @@
     <dxl:Relation Mdid="6.35085.1.1" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -308,13 +270,10 @@
     <dxl:Relation Mdid="6.1607169.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="d" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="e" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -323,10 +282,8 @@
     <dxl:Relation Mdid="6.1607326.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -335,10 +292,8 @@
     <dxl:Relation Mdid="6.1607349.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="d" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -347,10 +302,8 @@
     <dxl:Relation Mdid="6.1607666.1.1" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -359,10 +312,8 @@
     <dxl:Relation Mdid="6.1607711.1.1" Name="t2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -371,10 +322,8 @@
     <dxl:Relation Mdid="6.1607756.1.1" Name="t3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -383,13 +332,10 @@
     <dxl:Relation Mdid="6.1612313.1.1" Name="p_1_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -398,13 +344,10 @@
     <dxl:Relation Mdid="6.1612290.1.1" Name="p_1_prt_extra" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -413,13 +356,10 @@
     <dxl:Relation Mdid="6.1612337.1.1" Name="p_1_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -428,10 +368,8 @@
     <dxl:Relation Mdid="6.1607213.1.1" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -440,10 +378,8 @@
     <dxl:Relation Mdid="6.1607214.1.1" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="c2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -452,10 +388,8 @@
     <dxl:Relation Mdid="6.1607264.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="y" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -464,34 +398,24 @@
     <dxl:Relation Mdid="6.1607030.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="true" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="oid" Attno="-2" Mdid="0.26.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -500,34 +424,24 @@
     <dxl:Relation Mdid="6.1607053.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="d" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="true" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="oid" Attno="-2" Mdid="0.26.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -536,34 +450,24 @@
     <dxl:Relation Mdid="6.1607076.1.1" Name="r1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="true" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="oid" Attno="-2" Mdid="0.26.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -572,19 +476,14 @@
     <dxl:Relation Mdid="6.1607099.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="d" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="e" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -594,10 +493,8 @@
     <dxl:Relation Mdid="6.17818.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -606,10 +503,8 @@
     <dxl:Relation Mdid="6.17841.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="d" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -618,10 +513,8 @@
     <dxl:Relation Mdid="6.17864.1.1" Name="r1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -630,19 +523,14 @@
     <dxl:Relation Mdid="6.17887.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="d" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="e" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -653,10 +541,8 @@
     <dxl:Relation Mdid="6.17140.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -665,13 +551,10 @@
     <dxl:Relation Mdid="6.17185.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="d" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="e" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -680,13 +563,10 @@
     <dxl:Relation Mdid="6.17186.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="d" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="e" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -695,10 +575,8 @@
     <dxl:Relation Mdid="6.17366.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="d" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -707,10 +585,8 @@
     <dxl:Relation Mdid="6.17343.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -719,10 +595,8 @@
     <dxl:Relation Mdid="6.17683.1.1" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -731,10 +605,8 @@
     <dxl:Relation Mdid="6.17728.1.1" Name="t2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -743,10 +615,8 @@
     <dxl:Relation Mdid="6.17773.1.1" Name="t3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -755,13 +625,10 @@
     <dxl:Relation Mdid="6.18064.1.1" Name="p_1_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -770,13 +637,10 @@
     <dxl:Relation Mdid="6.18017.1.1" Name="p_1_prt_extra" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -785,13 +649,10 @@
     <dxl:Relation Mdid="6.18040.1.1" Name="p_1_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -800,10 +661,8 @@
     <dxl:Relation Mdid="6.17281.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="y" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -812,10 +671,8 @@
     <dxl:Relation Mdid="6.17230.1.1" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="x" Attno="1" Mdid="0.25.1.0" Nullable="true">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="y" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -825,7 +682,6 @@
     <dxl:Relation Mdid="6.1234.1.2" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -837,7 +693,6 @@
     <dxl:Relation Mdid="6.1234.1.3" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -849,7 +704,6 @@
     <dxl:Relation Mdid="6.1234.1.4" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -861,7 +715,6 @@
     <dxl:Relation Mdid="6.1234.1.5" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -873,7 +726,6 @@
     <dxl:Relation Mdid="6.1234.1.6" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -885,7 +737,6 @@
     <dxl:Relation Mdid="6.1234.1.7" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -897,7 +748,6 @@
     <dxl:Relation Mdid="6.1234.1.8" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -909,7 +759,6 @@
     <dxl:Relation Mdid="6.1234.1.9" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -921,7 +770,6 @@
     <dxl:Relation Mdid="6.1234.1.10" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -933,7 +781,6 @@
     <dxl:Relation Mdid="6.1234.12.1" Name="T12" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="0" PartitionTypes="r">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -949,7 +796,6 @@
     <dxl:Relation Mdid="6.1234001.12.1" Name="T12_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -976,7 +822,6 @@
     <dxl:Relation Mdid="6.1234002.12.1" Name="T12_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -1003,31 +848,22 @@
     <dxl:Relation Mdid="6.25064.1.0" Name="pp" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="0" PartitionTypes="r">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1040,31 +876,22 @@
     <dxl:Relation Mdid="6.25064001.1.0" Name="pp_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1088,31 +915,22 @@
     <dxl:Relation Mdid="6.25064002.1.0" Name="pp_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1136,13 +954,10 @@
     <dxl:Relation Mdid="6.5678.1.0" Name="P" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="0" PartitionTypes="r">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="C" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1155,13 +970,10 @@
     <dxl:Relation Mdid="6.5678001.1.0" Name="P_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="C" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1185,13 +997,10 @@
     <dxl:Relation Mdid="6.5678002.1.0" Name="P_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="C" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1215,13 +1024,10 @@
     <dxl:Relation Mdid="6.5678.1.1" Name="P" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="0" PartitionTypes="r">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="C" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1234,13 +1040,10 @@
     <dxl:Relation Mdid="6.5678001.1.1" Name="P_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="C" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1264,13 +1067,10 @@
     <dxl:Relation Mdid="6.5678002.1.1" Name="P_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="C" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1294,12 +1094,8 @@
     <dxl:Relation Mdid="6.1258.5.1" Name="S" IsTemporary="true" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1">
       <dxl:Columns>
         <dxl:Column Name="A" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue>
-            <dxl:FuncExpr FuncId="0.1598.1.0" FuncRetSet="false" TypeMdid="0.701.1.0"/>
-          </dxl:DefaultValue>
         </dxl:Column>
         <dxl:Column Name="B" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -1310,10 +1106,8 @@
     <dxl:Relation Mdid="6.5369655.1.0" Name="p1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="0" PartitionTypes="r">
       <dxl:Columns>
         <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -1329,10 +1123,8 @@
     <dxl:Relation Mdid="6.5369655001.1.0" Name="p1_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -1359,10 +1151,8 @@
     <dxl:Relation Mdid="6.5369655002.1.0" Name="p1_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -1386,7 +1176,7 @@
         </dxl:And>
       </dxl:PartConstraint>
     </dxl:Relation>
-    <dxl:Index Mdid="0.13144342.1.0" Name="idx_p1_j_1_prt_p11" IsClustered="false" KeyColumns="1" IncludedColumns="">
+    <dxl:Index Mdid="0.13144342.1.0" Name="idx_p1_j_1_prt_p11" IsClustered="false" KeyColumns="1" IncludedColumns="" ReturnableColumns="1">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
@@ -1395,7 +1185,7 @@
         <dxl:Partition Mdid="6.13144344.1.0"/>
       </dxl:Partitions>
     </dxl:Index>
-    <dxl:Index Mdid="0.13144285.1.0" Name="idx_p1_i_1_prt_p11" IsClustered="false" KeyColumns="0" IncludedColumns="">
+    <dxl:Index Mdid="0.13144285.1.0" Name="idx_p1_i_1_prt_p11" IsClustered="false" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
@@ -1407,10 +1197,8 @@
     <dxl:Relation Mdid="6.17005.1.1" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1419,10 +1207,8 @@
     <dxl:Relation Mdid="6.18452.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1431,10 +1217,8 @@
     <dxl:Relation Mdid="6.17091.1.1" Name="s" IsTemporary="true" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="d" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1443,10 +1227,8 @@
     <dxl:Relation Mdid="6.17136.1.1" Name="t" IsTemporary="true" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="e" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="f" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1455,10 +1237,8 @@
     <dxl:Relation Mdid="6.1139398.1.1" Name="d" IsTemporary="true" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.1043.1.0" Nullable="false">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1467,10 +1247,8 @@
     <dxl:Relation Mdid="6.17221.1.1" Name="T" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1692,10 +1470,8 @@
     <dxl:Relation Mdid="6.48716.1.0" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1782,52 +1558,36 @@
     <dxl:Relation Mdid="6.18983.1.0" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="l_partkey" Attno="2" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="l_suppkey" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="l_linenumber" Attno="4" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="l_quantity" Attno="5" Mdid="0.1700.1.0" Nullable="false">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="l_extendedprice" Attno="6" Mdid="0.1700.1.0" Nullable="false">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="l_discount" Attno="7" Mdid="0.1700.1.0" Nullable="false">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="l_tax" Attno="8" Mdid="0.1700.1.0" Nullable="false">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="l_returnflag" Attno="9" Mdid="0.1042.1.0" Nullable="false">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="l_linestatus" Attno="10" Mdid="0.1042.1.0" Nullable="false">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="l_shipdate" Attno="11" Mdid="0.1082.1.0" Nullable="false">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="l_commitdate" Attno="12" Mdid="0.1082.1.0" Nullable="false">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="l_receiptdate" Attno="13" Mdid="0.1082.1.0" Nullable="false">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="l_shipinstruct" Attno="14" Mdid="0.1042.1.0" Nullable="false">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="l_shipmode" Attno="15" Mdid="0.1042.1.0" Nullable="false">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="l_comment" Attno="16" Mdid="0.1043.1.0" Nullable="false">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1837,13 +1597,10 @@
     <dxl:Relation Mdid="6.11111.1.1" Name="Rel1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1853,13 +1610,10 @@
     <dxl:Relation Mdid="6.22222.1.1" Name="Rel2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1869,13 +1623,10 @@
     <dxl:Relation Mdid="6.33333.1.1" Name="Rel3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1885,13 +1636,10 @@
     <dxl:Relation Mdid="6.44444.1.1" Name="Rel4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1901,13 +1649,10 @@
     <dxl:Relation Mdid="6.55555.1.1" Name="Rel5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1917,13 +1662,10 @@
     <dxl:Relation Mdid="6.66666.1.1" Name="Rel6" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1933,13 +1675,10 @@
     <dxl:Relation Mdid="6.77777.1.1" Name="Rel7" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1949,13 +1688,10 @@
     <dxl:Relation Mdid="6.88888.1.1" Name="Rel8" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1965,13 +1701,10 @@
     <dxl:Relation Mdid="6.99999.1.1" Name="Rel9" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1981,13 +1714,10 @@
     <dxl:Relation Mdid="6.10000.1.1" Name="Rel10" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -1997,13 +1727,10 @@
     <dxl:Relation Mdid="6.10111.1.1" Name="Rel11" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2013,13 +1740,10 @@
     <dxl:Relation Mdid="6.10222.1.1" Name="Rel12" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2029,13 +1753,10 @@
     <dxl:Relation Mdid="6.10333.1.1" Name="Rel13" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2045,13 +1766,10 @@
     <dxl:Relation Mdid="6.10444.1.1" Name="Rel14" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2061,13 +1779,10 @@
     <dxl:Relation Mdid="6.10555.1.1" Name="Rel15" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2077,13 +1792,10 @@
     <dxl:Relation Mdid="6.10666.1.1" Name="Rel16" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2093,13 +1805,10 @@
     <dxl:Relation Mdid="6.10777.1.1" Name="Rel17" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2109,13 +1818,10 @@
     <dxl:Relation Mdid="6.10888.1.1" Name="Rel18" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2125,13 +1831,10 @@
     <dxl:Relation Mdid="6.10999.1.1" Name="Rel19" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2141,13 +1844,10 @@
     <dxl:Relation Mdid="6.10200.1.1" Name="Rel20" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2268,10 +1968,8 @@
     <dxl:Relation Mdid="6.57808.1.0" Name="m" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2284,13 +1982,10 @@
     <dxl:Relation Mdid="6.58045.1.0" Name="basetable" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="0;0,1">
       <dxl:Columns>
         <dxl:Column Name="column_0000" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0001" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="column_0002" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2414,10 +2109,8 @@
     <dxl:Relation Mdid="6.35039.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2426,10 +2119,8 @@
     <dxl:Relation Mdid="6.35062.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1">
       <dxl:Columns>
         <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="d" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2438,13 +2129,10 @@
     <dxl:Relation Mdid="6.158021.1.0" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2453,13 +2141,10 @@
     <dxl:Relation Mdid="6.158044.1.0" Name="t2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2468,10 +2153,8 @@
     <dxl:Relation Mdid="6.280643.1.0" Name="p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="1" PartitionTypes="r">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2484,10 +2167,8 @@
     <dxl:Relation Mdid="6.280643001.1.0" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2511,10 +2192,8 @@
     <dxl:Relation Mdid="6.280643002.1.0" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2538,10 +2217,8 @@
     <dxl:Relation Mdid="6.280643.1.1" Name="p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="1" PartitionTypes="r">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2554,10 +2231,8 @@
     <dxl:Relation Mdid="6.280643001.1.1" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2581,10 +2256,8 @@
     <dxl:Relation Mdid="6.280643002.1.1" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2608,31 +2281,22 @@
     <dxl:Relation Mdid="6.2806435.1.1" Name="pp" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2641,34 +2305,24 @@
     <dxl:Relation Mdid="6.16071689.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="d" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="e" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2677,34 +2331,24 @@
     <dxl:Relation Mdid="6.899640.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="r1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="r2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="r3" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2713,34 +2357,24 @@
     <dxl:Relation Mdid="6.899663.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="s1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="s2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="s3" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2749,34 +2383,24 @@
     <dxl:Relation Mdid="6.899686.1.1" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="t1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="t2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="t3" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2785,34 +2409,24 @@
     <dxl:Relation Mdid="6.1846705.1.1" Name="rm" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="r1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="r2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="r3" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2821,34 +2435,24 @@
     <dxl:Relation Mdid="6.1846728.1.1" Name="sm" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="s1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="s2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="s3" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -2857,34 +2461,24 @@
     <dxl:Relation Mdid="6.1846751.1.1" Name="tm" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
       <dxl:Columns>
         <dxl:Column Name="t1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="t2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="t3" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3046,19 +2640,14 @@
     <dxl:Relation Mdid="6.197339.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="d" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="e" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -3099,13 +2688,13 @@
       <dxl:SumAgg Mdid="0.0.0.0"/>
       <dxl:CountAgg Mdid="0.2147.1.0"/>
     </dxl:Type>
-    <dxl:Index Mdid="0.197454.1.1" Name="foo_ab" IsClustered="false" KeyColumns="0,1" IncludedColumns="">
+    <dxl:Index Mdid="0.197454.1.1" Name="foo_ab" IsClustered="false" KeyColumns="0,1" IncludedColumns="" ReturnableColumns="0,1">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
     </dxl:Index>
-    <dxl:Index Mdid="0.197514.1.1" Name="foo_bitmap_c" IsClustered="false" KeyColumns="2" IncludedColumns="">
+    <dxl:Index Mdid="0.197514.1.1" Name="foo_bitmap_c" IsClustered="false" KeyColumns="2" IncludedColumns="" ReturnableColumns="2">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
@@ -3113,34 +2702,24 @@
     <dxl:Relation Mdid="6.17026.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3149,31 +2728,22 @@
     <dxl:Relation Mdid="6.17539.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3182,34 +2752,24 @@
     <dxl:Relation Mdid="6.17562.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="d" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="e" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3225,34 +2785,24 @@
     <dxl:Relation Mdid="6.18872.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3267,31 +2817,22 @@
     <dxl:Relation Mdid="6.239963.1.1" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.20.1.0" Nullable="true">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.20.1.0" Nullable="true">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3300,31 +2841,22 @@
     <dxl:Relation Mdid="6.17614.1.1" Name="a1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="1" PartitionTypes="r">
       <dxl:Columns>
         <dxl:Column Name="user_id" Attno="1" Mdid="0.20.1.0" Nullable="true">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="is_new_user" Attno="2" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3337,31 +2869,22 @@
     <dxl:Relation Mdid="6.17614001.1.1" Name="a1_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="user_id" Attno="1" Mdid="0.20.1.0" Nullable="true">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="is_new_user" Attno="2" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3381,31 +2904,22 @@
     <dxl:Relation Mdid="6.17614002.1.1" Name="a1_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="user_id" Attno="1" Mdid="0.20.1.0" Nullable="true">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="is_new_user" Attno="2" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3425,34 +2939,24 @@
     <dxl:Relation Mdid="6.25647.1.0" Name="foo1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="1" PartitionTypes="r">
       <dxl:Columns>
         <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="k" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3465,34 +2969,24 @@
     <dxl:Relation Mdid="6.25647001.1.0" Name="foo1_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="k" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3516,34 +3010,24 @@
     <dxl:Relation Mdid="6.25647002.1.0" Name="foo1_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="k" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3567,34 +3051,24 @@
     <dxl:Relation Mdid="6.26031.1.0" Name="foo2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="k" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3606,28 +3080,20 @@
     <dxl:Relation Mdid="6.307041.1.1" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3636,34 +3102,24 @@
     <dxl:Relation Mdid="6.26054.1.0" Name="foo3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="k" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3866,34 +3322,24 @@
     <dxl:Relation Mdid="6.330308.1.1" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0">
       <dxl:Columns>
         <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cname" Attno="2" Mdid="0.25.1.0" Nullable="false">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cloc" Attno="3" Mdid="0.25.1.0" Nullable="true">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -3904,31 +3350,22 @@
     <dxl:Relation Mdid="6.331309.1.1" Name="t1_join" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="name" Attno="1" Mdid="0.25.1.0" Nullable="true">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="n" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3937,31 +3374,22 @@
     <dxl:Relation Mdid="6.331334.1.1" Name="t2_join" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="name" Attno="1" Mdid="0.25.1.0" Nullable="true">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="n" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -3970,31 +3398,22 @@
     <dxl:Relation Mdid="6.331359.1.1" Name="t3_join" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
       <dxl:Columns>
         <dxl:Column Name="name" Attno="1" Mdid="0.25.1.0" Nullable="true">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="n" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -4024,31 +3443,22 @@
     <dxl:Relation Mdid="6.74764.1.1" Name="pt" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="0" PartitionTypes="r">
       <dxl:Columns>
         <dxl:Column Name="pk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="x" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -4061,31 +3471,22 @@
     <dxl:Relation Mdid="6.74764001.1.1" Name="pt_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="pk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="x" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -4109,31 +3510,22 @@
     <dxl:Relation Mdid="6.74764002.1.1" Name="pt_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="pk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="x" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>
@@ -4187,31 +3579,22 @@
     <dxl:Relation Mdid="6.27118.1.0" Name="p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" PartitionColumns="1" PartitionTypes="r">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -4226,31 +3609,22 @@
     <dxl:Relation Mdid="6.27118001.1.0" Name="p_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -4276,31 +3650,22 @@
     <dxl:Relation Mdid="6.27118002.1.0" Name="p_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" NumberLeafPartitions="0">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList>
@@ -4323,7 +3688,7 @@
         </dxl:And>
       </dxl:PartConstraint>
     </dxl:Relation>
-    <dxl:Index Mdid="0.27324.1.0" Name="p_ind" IsClustered="false" KeyColumns="1" IncludedColumns="">
+    <dxl:Index Mdid="0.27324.1.0" Name="p_ind" IsClustered="false" KeyColumns="1" IncludedColumns="" ReturnableColumns="1">
       <dxl:Opfamilies>
         <dxl:Opfamily Mdid="0.434.1.0"/>
       </dxl:Opfamilies>
@@ -4342,31 +3707,22 @@
     <dxl:Relation Mdid="6.17272.1.0" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
       <dxl:Columns>
         <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="........pg.dropped.2........" Attno="2" Mdid="0.0.0.0" Nullable="true" IsDropped="true">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
         <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-          <dxl:DefaultValue/>
         </dxl:Column>
       </dxl:Columns>
       <dxl:IndexInfoList/>

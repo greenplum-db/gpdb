@@ -124,8 +124,8 @@ BOOL
 CWStringConst::Equals(const CWStringConst *string1,
 					  const CWStringConst *string2)
 {
-	ULONG length = GPOS_WSZ_LENGTH(string1->GetBuffer());
-	return length == GPOS_WSZ_LENGTH(string2->GetBuffer()) &&
+	ULONG length = string1->Length();
+	return length == string2->Length() &&
 		   0 == clib::Wcsncmp(string1->GetBuffer(), string2->GetBuffer(),
 							  length);
 }
@@ -134,9 +134,8 @@ CWStringConst::Equals(const CWStringConst *string1,
 ULONG
 CWStringConst::HashValue(const CWStringConst *string)
 {
-	return gpos::HashByteArray(
-		(BYTE *) string->GetBuffer(),
-		GPOS_WSZ_LENGTH(string->GetBuffer()) * GPOS_SIZEOF(WCHAR));
+	return gpos::HashByteArray((BYTE *) string->GetBuffer(),
+							   string->Length() * GPOS_SIZEOF(WCHAR));
 }
 
 // checks whether the string is byte-wise equal to another string
@@ -144,6 +143,8 @@ BOOL
 CWStringConst::Equals(const CWStringBase *str) const
 {
 	GPOS_ASSERT(nullptr != str);
-	return CWStringBase::Equals(str->GetBuffer());
+	GPOS_ASSERT(nullptr != str);
+	return Length() == str->Length() &&
+		   0 == clib::Wcsncmp(GetBuffer(), str->GetBuffer(), Length());
 }
 // EOF

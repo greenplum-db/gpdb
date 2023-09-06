@@ -1,6 +1,7 @@
 MODULE_big = gp_exttable_fdw
 OBJS = gp_exttable_fdw.o extaccess.o option.o
 
+SHLIB_LINK_INTERNAL = $(libpq)
 #SHLIB_LINK += -lcurl
 
 EXTENSION = gp_exttable_fdw

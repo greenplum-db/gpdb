@@ -1,20 +1,20 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2011 Greenplum, Inc.
+//	Copyright (C) 2023 VMware, Inc. or its affiliates. All Rights Reserved.
 //
 //	@filename:
-//		CParseHandlerDefaultValueExpr.h
+//		CParseHandlerScalarFieldSelect.h
 //
 //	@doc:
-//		SAX parse handler class for parsing the default column value expression in
-//		a column's metadata info.
+//		SAX parse handler class for parsing scalar FieldSelect operator nodes
 //---------------------------------------------------------------------------
 
-#ifndef GPDXL_CParseHandlerDefaultValueExpr_H
-#define GPDXL_CParseHandlerDefaultValueExpr_H
+#ifndef GPDXL_CParseHandlerScalarFieldSelect_H
+#define GPDXL_CParseHandlerScalarFieldSelect_H
 
 #include "gpos/base.h"
 
+#include "naucrates/dxl/operators/CDXLScalarFieldSelect.h"
 #include "naucrates/dxl/parser/CParseHandlerScalarOp.h"
 
 namespace gpdxl
@@ -25,18 +25,15 @@ XERCES_CPP_NAMESPACE_USE
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CParseHandlerDefaultValueExpr
+//		CParseHandlerScalarFieldSelect
 //
 //	@doc:
-//		Parse handler for parsing a default value expression in column metadata info
+//		Parse handler class for parsing scalar FieldSelect
 //
 //---------------------------------------------------------------------------
-class CParseHandlerDefaultValueExpr : public CParseHandlerScalarOp
+class CParseHandlerScalarFieldSelect : public CParseHandlerScalarOp
 {
 private:
-	// has an opening tag for a default value been seen already
-	BOOL is_default_val_started;
-
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
@@ -53,16 +50,17 @@ private:
 		) override;
 
 public:
-	CParseHandlerDefaultValueExpr(const CParseHandlerDefaultValueExpr &) =
+	CParseHandlerScalarFieldSelect(const CParseHandlerScalarFieldSelect &) =
 		delete;
 
 	// ctor/dtor
-	CParseHandlerDefaultValueExpr(CMemoryPool *mp,
-								  CParseHandlerManager *parse_handler_mgr,
-								  CParseHandlerBase *parse_handler_root);
+	CParseHandlerScalarFieldSelect(CMemoryPool *mp,
+								   CParseHandlerManager *parse_handler_mgr,
+								   CParseHandlerBase *parse_handler_root);
+	~CParseHandlerScalarFieldSelect() override = default;
 };
 }  // namespace gpdxl
 
-#endif	// !GPDXL_CParseHandlerDefaultValueExpr_H
+#endif	// !GPDXL_CParseHandlerScalarFieldSelect_H
 
 // EOF

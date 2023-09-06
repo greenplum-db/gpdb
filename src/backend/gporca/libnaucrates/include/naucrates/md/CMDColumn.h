@@ -60,16 +60,12 @@ private:
 	// length of the column
 	ULONG m_length;
 
-	// default value expression
-	gpdxl::CDXLNode *m_dxl_default_val;
-
 public:
 	CMDColumn(const CMDColumn &) = delete;
 
 	// ctor
 	CMDColumn(CMDName *mdname, INT attrnum, IMDId *mdid_type, INT type_modifier,
 			  BOOL is_nullable, BOOL is_dropped,
-			  gpdxl::CDXLNode *dxl_dafault_value,
 			  ULONG length = gpos::ulong_max);
 
 	// dtor

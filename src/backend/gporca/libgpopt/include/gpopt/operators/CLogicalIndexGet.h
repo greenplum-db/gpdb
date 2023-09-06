@@ -59,6 +59,9 @@ private:
 	// distribution columns (empty for coordinator only tables)
 	CColRefSet *m_pcrsDist;
 
+	// index scan direction
+	EIndexScanDirection m_scan_direction;
+
 public:
 	CLogicalIndexGet(const CLogicalIndexGet &) = delete;
 
@@ -67,7 +70,8 @@ public:
 
 	CLogicalIndexGet(CMemoryPool *mp, const IMDIndex *pmdindex,
 					 CTableDescriptor *ptabdesc, ULONG ulOriginOpId,
-					 const CName *pnameAlias, CColRefArray *pdrgpcrOutput);
+					 const CName *pnameAlias, CColRefArray *pdrgpcrOutput,
+					 EIndexScanDirection scan_direction);
 
 	// dtor
 	~CLogicalIndexGet() override;
@@ -140,6 +144,13 @@ public:
 	Pos() const
 	{
 		return m_pos;
+	}
+
+	// index scan direction is only used for B-tree indices.
+	EIndexScanDirection
+	ScanDirection() const
+	{
+		return m_scan_direction;
 	}
 
 	// operator specific hash function

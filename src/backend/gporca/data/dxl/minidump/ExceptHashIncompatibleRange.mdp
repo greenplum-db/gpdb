@@ -157,7 +157,7 @@
     <dxl:Plan Id="0" SpaceSize="12">
       <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="441344.325391" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="441344.325481" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:GroupingColumns>
           <dxl:GroupingColumn ColId="1"/>
@@ -170,7 +170,7 @@
         <dxl:Filter/>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="441344.325378" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="441344.325469" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="cashrange">

@@ -68,34 +68,24 @@
             <dxl:Relation DistributionColumns="0" DistributionPolicy="Hash" IsTemporary="false" StorageType="Heap" Keys="9,3" Mdid="6.16385.1.0" Name="foo">
                 <dxl:Columns>
                     <dxl:Column Attno="1" ColWidth="4" Mdid="0.23.1.0" Name="j1" Nullable="true">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="2" ColWidth="4" Mdid="0.23.1.0" Name="g1" Nullable="true">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="3" ColWidth="4" Mdid="0.23.1.0" Name="s1" Nullable="true">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-1" ColWidth="6" Mdid="0.27.1.0" Name="ctid" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-3" ColWidth="4" Mdid="0.28.1.0" Name="xmin" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-4" ColWidth="4" Mdid="0.29.1.0" Name="cmin" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-5" ColWidth="4" Mdid="0.28.1.0" Name="xmax" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-6" ColWidth="4" Mdid="0.29.1.0" Name="cmax" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-7" ColWidth="4" Mdid="0.26.1.0" Name="tableoid" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-8" ColWidth="4" Mdid="0.23.1.0" Name="gp_segment_id" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                 </dxl:Columns>
                 <dxl:IndexInfoList/>
@@ -105,34 +95,24 @@
             <dxl:Relation DistributionColumns="0" DistributionPolicy="Hash" IsTemporary="false" StorageType="Heap" Keys="9,3" Mdid="6.16388.1.0" Name="bar">
                 <dxl:Columns>
                     <dxl:Column Attno="1" ColWidth="4" Mdid="0.23.1.0" Name="j2" Nullable="true">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="2" ColWidth="4" Mdid="0.23.1.0" Name="g2" Nullable="true">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="3" ColWidth="4" Mdid="0.23.1.0" Name="s2" Nullable="true">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-1" ColWidth="6" Mdid="0.27.1.0" Name="ctid" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-3" ColWidth="4" Mdid="0.28.1.0" Name="xmin" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-4" ColWidth="4" Mdid="0.29.1.0" Name="cmin" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-5" ColWidth="4" Mdid="0.28.1.0" Name="xmax" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-6" ColWidth="4" Mdid="0.29.1.0" Name="cmax" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-7" ColWidth="4" Mdid="0.26.1.0" Name="tableoid" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-8" ColWidth="4" Mdid="0.23.1.0" Name="gp_segment_id" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                 </dxl:Columns>
                 <dxl:IndexInfoList/>
@@ -2535,34 +2515,24 @@
             <dxl:Relation DistributionPolicy="Random" IsTemporary="false" StorageType="Heap" Keys="9,3" Mdid="6.16408.1.0" Name="jazz">
                 <dxl:Columns>
                     <dxl:Column Attno="1" ColWidth="4" Mdid="0.23.1.0" Name="j2" Nullable="true">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="2" ColWidth="4" Mdid="0.23.1.0" Name="g2" Nullable="true">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="3" ColWidth="4" Mdid="0.23.1.0" Name="s2" Nullable="true">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-1" ColWidth="6" Mdid="0.27.1.0" Name="ctid" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-3" ColWidth="4" Mdid="0.28.1.0" Name="xmin" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-4" ColWidth="4" Mdid="0.29.1.0" Name="cmin" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-5" ColWidth="4" Mdid="0.28.1.0" Name="xmax" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-6" ColWidth="4" Mdid="0.29.1.0" Name="cmax" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-7" ColWidth="4" Mdid="0.26.1.0" Name="tableoid" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                     <dxl:Column Attno="-8" ColWidth="4" Mdid="0.23.1.0" Name="gp_segment_id" Nullable="false">
-                        <dxl:DefaultValue/>
                     </dxl:Column>
                 </dxl:Columns>
                 <dxl:IndexInfoList/>

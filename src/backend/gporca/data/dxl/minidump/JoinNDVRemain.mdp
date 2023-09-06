@@ -890,7 +890,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:MDCast Mdid="3.25.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.25.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0"/>
-      <dxl:Index Mdid="0.525049.1.0" Name="store_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.525049.1.0" Name="store_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -1089,112 +1089,76 @@ select * from customer_address, store where customer_address.ca_county::text = s
       <dxl:Relation Mdid="6.516672.1.0" Name="store" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
         <dxl:Columns>
           <dxl:Column Name="s_store_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_store_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_rec_start_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_rec_end_date" Attno="4" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_closed_date_sk" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_store_name" Attno="6" Mdid="0.1043.1.0" Nullable="true" ColWidth="50">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_number_employees" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_floor_space" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_hours" Attno="9" Mdid="0.1042.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_manager" Attno="10" Mdid="0.1043.1.0" Nullable="true" ColWidth="40">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_market_id" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_geography_class" Attno="12" Mdid="0.1043.1.0" Nullable="true" ColWidth="100">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_market_desc" Attno="13" Mdid="0.1043.1.0" Nullable="true" ColWidth="100">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_market_manager" Attno="14" Mdid="0.1043.1.0" Nullable="true" ColWidth="40">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_division_id" Attno="15" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_division_name" Attno="16" Mdid="0.1043.1.0" Nullable="true" ColWidth="50">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_company_id" Attno="17" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_company_name" Attno="18" Mdid="0.1043.1.0" Nullable="true" ColWidth="50">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_street_number" Attno="19" Mdid="0.1043.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_street_name" Attno="20" Mdid="0.1043.1.0" Nullable="true" ColWidth="60">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_street_type" Attno="21" Mdid="0.1042.1.0" Nullable="true" ColWidth="15">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_suite_number" Attno="22" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_city" Attno="23" Mdid="0.1043.1.0" Nullable="true" ColWidth="60">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_county" Attno="24" Mdid="0.1043.1.0" Nullable="true" ColWidth="30">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_state" Attno="25" Mdid="0.1042.1.0" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_zip" Attno="26" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_country" Attno="27" Mdid="0.1043.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_gmt_offset" Attno="28" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_tax_precentage" Attno="29" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -1205,112 +1169,76 @@ select * from customer_address, store where customer_address.ca_county::text = s
       <dxl:Relation Mdid="6.516672.1.1" Name="store" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
         <dxl:Columns>
           <dxl:Column Name="s_store_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_store_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_rec_start_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_rec_end_date" Attno="4" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_closed_date_sk" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_store_name" Attno="6" Mdid="0.1043.1.0" Nullable="true" ColWidth="50">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_number_employees" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_floor_space" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_hours" Attno="9" Mdid="0.1042.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_manager" Attno="10" Mdid="0.1043.1.0" Nullable="true" ColWidth="40">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_market_id" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_geography_class" Attno="12" Mdid="0.1043.1.0" Nullable="true" ColWidth="100">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_market_desc" Attno="13" Mdid="0.1043.1.0" Nullable="true" ColWidth="100">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_market_manager" Attno="14" Mdid="0.1043.1.0" Nullable="true" ColWidth="40">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_division_id" Attno="15" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_division_name" Attno="16" Mdid="0.1043.1.0" Nullable="true" ColWidth="50">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_company_id" Attno="17" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_company_name" Attno="18" Mdid="0.1043.1.0" Nullable="true" ColWidth="50">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_street_number" Attno="19" Mdid="0.1043.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_street_name" Attno="20" Mdid="0.1043.1.0" Nullable="true" ColWidth="60">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_street_type" Attno="21" Mdid="0.1042.1.0" Nullable="true" ColWidth="15">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_suite_number" Attno="22" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_city" Attno="23" Mdid="0.1043.1.0" Nullable="true" ColWidth="60">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_county" Attno="24" Mdid="0.1043.1.0" Nullable="true" ColWidth="30">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_state" Attno="25" Mdid="0.1042.1.0" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_zip" Attno="26" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_country" Attno="27" Mdid="0.1043.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_gmt_offset" Attno="28" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_tax_precentage" Attno="29" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -1752,7 +1680,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
           <dxl:UpperBound Closed="true" TypeMdid="0.1042.1.0" Value="AAAADjk5OSAgICAgICA=" LintValue="825230246"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.518353.1.0" Name="customer_address_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.518353.1.0" Name="customer_address_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1978.1.0"/>
         </dxl:Opfamilies>
@@ -2633,64 +2561,44 @@ select * from customer_address, store where customer_address.ca_county::text = s
       <dxl:Relation Mdid="6.508415.1.0" Name="customer_address" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;19,13">
         <dxl:Columns>
           <dxl:Column Name="ca_address_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_address_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_street_number" Attno="3" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_street_name" Attno="4" Mdid="0.1043.1.0" Nullable="true" ColWidth="60">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_street_type" Attno="5" Mdid="0.1042.1.0" Nullable="true" ColWidth="15">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_suite_number" Attno="6" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_city" Attno="7" Mdid="0.1043.1.0" Nullable="true" ColWidth="60">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_county" Attno="8" Mdid="0.1043.1.0" Nullable="true" ColWidth="30">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_state" Attno="9" Mdid="0.1042.1.0" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_zip" Attno="10" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_country" Attno="11" Mdid="0.1043.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_gmt_offset" Attno="12" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_location_type" Attno="13" Mdid="0.1042.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -2701,64 +2609,44 @@ select * from customer_address, store where customer_address.ca_county::text = s
       <dxl:Relation Mdid="6.508415.1.1" Name="customer_address" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;19,13">
         <dxl:Columns>
           <dxl:Column Name="ca_address_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_address_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_street_number" Attno="3" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_street_name" Attno="4" Mdid="0.1043.1.0" Nullable="true" ColWidth="60">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_street_type" Attno="5" Mdid="0.1042.1.0" Nullable="true" ColWidth="15">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_suite_number" Attno="6" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_city" Attno="7" Mdid="0.1043.1.0" Nullable="true" ColWidth="60">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_county" Attno="8" Mdid="0.1043.1.0" Nullable="true" ColWidth="30">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_state" Attno="9" Mdid="0.1042.1.0" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_zip" Attno="10" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_country" Attno="11" Mdid="0.1043.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_gmt_offset" Attno="12" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ca_location_type" Attno="13" Mdid="0.1042.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>

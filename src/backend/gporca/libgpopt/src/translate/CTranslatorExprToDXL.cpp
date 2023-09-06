@@ -80,6 +80,7 @@
 #include "gpopt/operators/CScalarCoalesce.h"
 #include "gpopt/operators/CScalarCoerceToDomain.h"
 #include "gpopt/operators/CScalarCoerceViaIO.h"
+#include "gpopt/operators/CScalarFieldSelect.h"
 #include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarIf.h"
 #include "gpopt/operators/CScalarIsDistinctFrom.h"
@@ -145,6 +146,7 @@
 #include "naucrates/dxl/operators/CDXLScalarComp.h"
 #include "naucrates/dxl/operators/CDXLScalarDMLAction.h"
 #include "naucrates/dxl/operators/CDXLScalarDistinctComp.h"
+#include "naucrates/dxl/operators/CDXLScalarFieldSelect.h"
 #include "naucrates/dxl/operators/CDXLScalarFuncExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarHashCondList.h"
 #include "naucrates/dxl/operators/CDXLScalarHashExpr.h"
@@ -645,6 +647,8 @@ CTranslatorExprToDXL::PdxlnScalar(CExpression *pexpr)
 			return CTranslatorExprToDXL::PdxlnArrayCmp(pexpr);
 		case COperator::EopScalarArrayRef:
 			return CTranslatorExprToDXL::PdxlnArrayRef(pexpr);
+		case COperator::EopScalarFieldSelect:
+			return CTranslatorExprToDXL::PdxlnFieldSelect(pexpr);
 		case COperator::EopScalarArrayRefIndexList:
 			return CTranslatorExprToDXL::PdxlnArrayRefIndexList(pexpr);
 		case COperator::EopScalarAssertConstraintList:
@@ -811,10 +815,13 @@ CTranslatorExprToDXL::PdxlnIndexScan(CExpression *pexprIndexScan,
 	CDXLIndexDescr *dxl_index_descr =
 		GPOS_NEW(m_mp) CDXLIndexDescr(pmdidIndex, pmdnameIndex);
 
-	// TODO: vrgahavan; we assume that the index are always forward access.
+	// get scan direction from PhysicalIndexScan operator
+	EdxlIndexScanDirection scan_direction =
+		(popIs->IndexScanDirection() == EForwardScan) ? EdxlisdForward
+													  : EdxlisdBackward;
 	// create the physical index scan operator
 	CDXLPhysicalIndexScan *dxl_op = GPOS_NEW(m_mp) CDXLPhysicalIndexScan(
-		m_mp, table_descr, dxl_index_descr, EdxlisdForward);
+		m_mp, table_descr, dxl_index_descr, scan_direction);
 	CDXLNode *pdxlnIndexScan = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 
 	// set properties
@@ -915,11 +922,14 @@ CTranslatorExprToDXL::PdxlnIndexOnlyScan(CExpression *pexprIndexOnlyScan,
 	CDXLIndexDescr *dxl_index_descr =
 		GPOS_NEW(m_mp) CDXLIndexDescr(pmdidIndex, pmdnameIndex);
 
-	// TODO: vrgahavan; we assume that the index are always forward access.
+	// get scan direction from PhysicalIndexOnlyScan operator
+	EdxlIndexScanDirection scan_direction =
+		(popIs->IndexScanDirection() == EForwardScan) ? EdxlisdForward
+													  : EdxlisdBackward;
 	// create the physical index scan operator
 	CDXLPhysicalIndexOnlyScan *dxl_op =
 		GPOS_NEW(m_mp) CDXLPhysicalIndexOnlyScan(
-			m_mp, table_descr, dxl_index_descr, EdxlisdForward);
+			m_mp, table_descr, dxl_index_descr, scan_direction);
 	CDXLNode *pdxlnIndexOnlyScan = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 
 	// set properties
@@ -1592,8 +1602,10 @@ CTranslatorExprToDXL::PdxlnDynamicIndexScan(
 		}
 	}
 
-	// TODO: we assume that the index are always forward access.
-
+	// TODO: we assume that the index are always forward access for partition
+	// tables as ORCA currently doesn't support backward scans on partition
+	// tables.
+	// Related Github Issue: https://github.com/greenplum-db/gpdb/issues/16237
 	CDXLNode *pdxlnDIS = nullptr;
 	if (indexOnly)
 	{
@@ -6537,6 +6549,36 @@ CTranslatorExprToDXL::PdxlnArrayRef(CExpression *pexpr)
 	TranslateScalarChildren(pexpr, pdxlnArrayref);
 
 	return pdxlnArrayref;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorExprToDXL::PdxlnFieldSelect
+//
+//	@doc:
+//		Create a DXL FieldSelect node from an optimizer FieldSelect expression
+//
+//---------------------------------------------------------------------------
+CDXLNode *
+CTranslatorExprToDXL::PdxlnFieldSelect(CExpression *pexpr)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+	CScalarFieldSelect *pop = CScalarFieldSelect::PopConvert(pexpr->Pop());
+
+	IMDId *field_type = pop->MdidType();
+	field_type->AddRef();
+	IMDId *field_collation = pop->FieldCollation();
+	field_collation->AddRef();
+	INT type_modifier = pop->TypeModifier();
+	SINT field_number = pop->FieldNumber();
+
+	CDXLNode *pdxlnFieldSelect = GPOS_NEW(m_mp) CDXLNode(
+		m_mp,
+		GPOS_NEW(m_mp) CDXLScalarFieldSelect(m_mp, field_type, field_collation,
+											 type_modifier, field_number));
+	TranslateScalarChildren(pexpr, pdxlnFieldSelect);
+
+	return pdxlnFieldSelect;
 }
 
 //---------------------------------------------------------------------------

@@ -16,7 +16,6 @@
 
 #include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
 #include "naucrates/dxl/xml/dxltokens.h"
-#include "naucrates/md/CMDPartConstraintGPDB.h"
 #include "naucrates/md/CMDRelationGPDB.h"
 
 namespace gpdxl

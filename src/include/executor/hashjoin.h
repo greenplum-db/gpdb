@@ -405,6 +405,13 @@ typedef struct HashJoinTableData
 	ParallelHashJoinState *parallel_state;
 	ParallelHashJoinBatchAccessor *batches;
 	dsa_pointer current_chunk_shared;
+
+	/* Statistic info of work file set, copied from work_set */
+	uint32		workset_num_files;
+	uint32		workset_num_files_compressed;
+	uint64		workset_max_file_size;
+	uint64		workset_min_file_size;
+	uint64		workset_compression_buf_total;
 }			HashJoinTableData;
 
 #endif							/* HASHJOIN_H */

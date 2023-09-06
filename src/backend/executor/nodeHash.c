@@ -96,6 +96,7 @@ static bool ExecParallelHashTuplePrealloc(HashJoinTable hashtable,
 static void ExecParallelHashMergeCounters(HashJoinTable hashtable);
 static void ExecParallelHashCloseBatchAccessors(HashJoinTable hashtable);
 
+static inline void ResetWorkFileSetStatsInfo(HashJoinTable hashtable);
 
 /* ----------------------------------------------------------------
  *		ExecHash
@@ -557,6 +558,8 @@ ExecHashTableCreate(HashState *state, HashJoinState *hjstate,
 	hashtable->parallel_state = state->parallel_state;
 	hashtable->area = state->ps.state->es_query_dsa;
 	hashtable->batches = NULL;
+
+	ResetWorkFileSetStatsInfo(hashtable);
 
 #ifdef HJDEBUG
 	printf("Hashjoin %p: initial nbatch = %d, nbuckets = %d\n",
@@ -2522,6 +2525,17 @@ ExecHashTableExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 				hashtable->nbatch_outstart,
 				hashtable->nbatch,
 				"Secondary Overflow");
+
+		appendStringInfo(buf,
+						 "Work file set: %u files (%u compressed), "
+						 "max file size %lu, min file size %lu, "
+						 "compression buffer size %lu bytes \n",
+						 hashtable->workset_num_files,
+						 hashtable->workset_num_files_compressed,
+						 hashtable->workset_max_file_size,
+						 hashtable->workset_min_file_size,
+						 hashtable->workset_compression_buf_total);
+		ResetWorkFileSetStatsInfo(hashtable);
     }
 
     /* Report hash chain statistics. */
@@ -3918,4 +3932,13 @@ ExecParallelHashTuplePrealloc(HashJoinTable hashtable, int batchno, size_t size)
 	LWLockRelease(&pstate->lock);
 
 	return true;
+}
+
+static inline void ResetWorkFileSetStatsInfo(HashJoinTable hashtable)
+{
+	hashtable->workset_num_files = 0;
+	hashtable->workset_num_files_compressed = 0;
+	hashtable->workset_max_file_size = 0;
+	hashtable->workset_min_file_size = 0;
+	hashtable->workset_compression_buf_total = 0;
 }

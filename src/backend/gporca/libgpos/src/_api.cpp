@@ -53,34 +53,14 @@ const ULONG expected_dxl_fallback[] = {
 	gpdxl::
 		ExmiQuery2DXLUnsupportedFeature,  // unsupported feature during algebrization
 	gpdxl::
-		ExmiPlStmt2DXLConversion,  // unsupported feature during plan freezing
-	gpdxl::
 		ExmiDXL2PlStmtConversion,  // unsupported feature during planned statement translation
 	gpdxl::ExmiDXL2ExprAttributeNotFound,
-	gpdxl::ExmiOptimizerError,
 	gpdxl::ExmiDXLMissingAttribute,
 	gpdxl::ExmiDXLUnrecognizedOperator,
 	gpdxl::ExmiDXLUnrecognizedCompOperator,
 	gpdxl::ExmiDXLIncorrectNumberOfChildren,
-	gpdxl::ExmiQuery2DXLMissingValue,
-	gpdxl::ExmiQuery2DXLDuplicateRTE,
 	gpdxl::ExmiMDCacheEntryNotFound,
-	gpdxl::ExmiQuery2DXLError,
-	gpdxl::ExmiInvalidComparisonTypeCode};
-
-// array of DXL minor exception types that error out and NOT fallback to the planner
-const ULONG expected_dxl_errors[] = {
-	gpdxl::ExmiDXL2PlStmtForeignScanError,	// foreign table error
-	gpdxl::ExmiQuery2DXLNotNullViolation,	// not null violation
-};
-
-BOOL
-ShouldErrorOut(gpos::CException &exc)
-{
-	return gpdxl::ExmaDXL == exc.Major() &&
-		   FoundException(exc, expected_dxl_errors,
-						  GPOS_ARRAY_SIZE(expected_dxl_errors));
-}
+	gpdxl::ExmiQuery2DXLError};
 
 gpos::BOOL
 FoundException(gpos::CException &exc, const gpos::ULONG *exceptions,

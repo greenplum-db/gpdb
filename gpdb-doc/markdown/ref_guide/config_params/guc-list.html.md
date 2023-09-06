@@ -2368,6 +2368,20 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 |-----------|-------|-------------------|
 |Boolean|true|coordinator, session, reload|
 
+## <a id="optimizer_enable_dynamicindexonlyscan"></a>optimizer\_enable\_dynamicindexonlyscan
+
+When GPORCA is enabled \(the default\), the `optimizer_enable_dynamicindexonlyscan` parameter controls generation of dynamic index-only scan plan types.
+
+The default value is `on`, GPORCA may generate a dynamic index only scan alternative when planning a query on a partitioned table that does not include single row volatile (SIRV) functions.
+
+When set to `off`, GPORCA does not generate dynamic index-only scan plan alternatives.
+
+The parameter can be set for a database system, an individual database, or a session or query.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|on|coordinator, session, reload|
+
 ## <a id="optimizer_enable_foreign_table"></a>optimizer\_enable\_foreign\_table
 
 When GPORCA is enabled \(the default\) and this configuration parameter is `true` \(the default\), GPORCA generates plans for queries that involve foreign tables. When `false`, queries that include foreign tables fall back to the Postgres Planner.

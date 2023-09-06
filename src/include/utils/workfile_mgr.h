@@ -87,6 +87,18 @@ typedef struct workfile_set
 
 	/* Used to track workfile_set created in current process */
 	dlist_node	local_node;
+
+	/* Max work file size */
+	uint64		max_file_size;
+
+	/* Min work file size */
+	uint64		min_file_size;
+
+	/* Total memory usage by compression buffer */
+	uint64		compression_buf_total;
+
+	/* Number of compressed work files */
+	uint32		num_files_compressed;
 } workfile_set;
 
 /* Workfile Set operations */

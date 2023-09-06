@@ -698,7 +698,9 @@ CCostModelGPDB::CostSort(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(COperator::EopPhysicalSort == exprhdl.Pop()->Eopid());
 
 	// log operation below
-	const CDouble rows = CDouble(std::max(1.0, pci->Rows()));
+	// Minimim value of of 2 is used for rows.
+	// With 1 as min rows, costLocal is 0, which results in sort expression being used redundantly.
+	const CDouble rows = CDouble(std::max(2.0, pci->Rows()));
 	const CDouble num_rebinds = CDouble(pci->NumRebinds());
 	const CDouble width = CDouble(pci->Width());
 

@@ -126,7 +126,9 @@ ExecVacuum(ParseState *pstate, VacuumStmt *vacstmt, bool isTopLevel, bool auto_s
 	bool		disable_page_skipping = false;
 	bool		rootonly = false;
 	bool		fullscan = false;
-	int		ao_phase = 0;
+	int			ao_phase = 0;
+	bool		skip_database_stats = false;
+	bool		only_database_stats = false;
 	ListCell   *lc;
 
 	/* Set default value */
@@ -173,6 +175,10 @@ ExecVacuum(ParseState *pstate, VacuumStmt *vacstmt, bool isTopLevel, bool auto_s
 			ao_phase = defGetInt32(opt);
 			Assert((ao_phase & VACUUM_AO_PHASE_MASK) == ao_phase);
 		}
+		else if (strcmp(opt->defname, "skip_database_stats") == 0)
+			skip_database_stats = defGetBoolean(opt);
+		else if (strcmp(opt->defname, "only_database_stats") == 0)
+			only_database_stats = defGetBoolean(opt);
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
@@ -189,13 +195,16 @@ ExecVacuum(ParseState *pstate, VacuumStmt *vacstmt, bool isTopLevel, bool auto_s
 		(freeze ? VACOPT_FREEZE : 0) |
 		(full ? VACOPT_FULL : 0) |
 		(ao_aux_only ? VACOPT_AO_AUX_ONLY : 0) |
-		(disable_page_skipping ? VACOPT_DISABLE_PAGE_SKIPPING : 0);
+		(disable_page_skipping ? VACOPT_DISABLE_PAGE_SKIPPING : 0) |
+		(skip_database_stats ? VACOPT_SKIP_DATABASE_STATS : 0) |
+		(only_database_stats ? VACOPT_ONLY_DATABASE_STATS : 0);
 
 	if (rootonly)
 		params.options |= VACOPT_ROOTONLY;
 	if (fullscan)
 		params.options |= VACOPT_FULLSCAN;
 	params.options |= ao_phase;
+
 
 	/* sanity checks on options */
 	Assert(params.options & (VACOPT_VACUUM | VACOPT_ANALYZE));
@@ -344,6 +353,23 @@ vacuum(List *relations, VacuumParams *params,
 	if ((params->options & VACOPT_VACUUM) && !IsAutoVacuumWorkerProcess())
 		pgstat_vacuum_stat();
 
+	/* sanity check for ONLY_DATABASE_STATS */
+	if (params->options & VACOPT_ONLY_DATABASE_STATS)
+	{
+		Assert(params->options & VACOPT_VACUUM);
+		if (relations != NIL)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("ONLY_DATABASE_STATS cannot be specified with a list of tables")));
+
+		if (params->options & ~(VACOPT_VACUUM |
+								VACOPT_VERBOSE |
+								VACOPT_ONLY_DATABASE_STATS))
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("ONLY_DATABASE_STATS cannot be specified with other VACUUM options")));
+	}
+
 	/*
 	 * Create special memory context for cross-transaction storage.
 	 *
@@ -371,7 +397,12 @@ vacuum(List *relations, VacuumParams *params,
 	 * Build list of relation(s) to process, putting any new data in
 	 * vac_context for safekeeping.
 	 */
-	if (relations != NIL)
+	if (params->options & VACOPT_ONLY_DATABASE_STATS)
+	{
+		/* We don't process any tables in this case */
+		Assert(relations == NIL);
+	}
+	else if (relations != NIL)
 	{
 		List		*newrels = NIL;
 		ListCell  *lc;
@@ -573,7 +604,8 @@ vacuum(List *relations, VacuumParams *params,
 		ClearOidAssignmentsOnCommit();
 	}
 
-	if ((params->options & VACOPT_VACUUM) && !IsAutoVacuumWorkerProcess())
+	if ((params->options & VACOPT_VACUUM) &&
+		!(params->options & VACOPT_SKIP_DATABASE_STATS))
 	{
 		/*
 		 * GPDB vacuums an Append-Optimized table in multiple sub phases, update
@@ -589,7 +621,6 @@ vacuum(List *relations, VacuumParams *params,
 		{
 			/*
 			 * Update pg_database.datfrozenxid, and truncate pg_xact if possible.
-			 * (autovacuum.c does this for itself.)
 			 */
 			vac_update_datfrozenxid();
 		}
@@ -1027,7 +1058,7 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 		 * If current table is skipped, no need to merge stats for it's parent
 		 * since current table's stats is not get updated.
 		 */
-		if (optimizer_analyze_root_partition && !skip_this)
+		if ((options & VACOPT_ANALYZE) && optimizer_analyze_root_partition && !skip_this)
 		{
 			Oid			child_relid = relid;
 
@@ -1037,6 +1068,7 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 				int			elevel = ((options & VACOPT_VERBOSE) ? LOG : DEBUG2);
 
 				parent_relid = get_partition_parent(child_relid);
+				ispartition = get_rel_relispartition(parent_relid);
 
 				/*
 				 * Only ANALYZE the parent if the stats can be updated by merging
@@ -1045,14 +1077,20 @@ expand_vacuum_rel(VacuumRelation *vrel, int options)
 				if (!leaf_parts_analyzed(parent_relid, child_relid, vrel->va_cols, elevel))
 					break;
 
-				oldcontext = MemoryContextSwitchTo(vac_context);
-				vacrels = lappend(vacrels, makeVacuumRelation(vrel->relation,
-															  parent_relid,
-															  vrel->va_cols));
-				MemoryContextSwitchTo(oldcontext);
+				/*
+				 * Do not add midlevel partition unless optimizer_analyze_midlevel_partition
+				 * is enabled. But always add root table.
+				 * ispartition is set with relispartition flag of the parent_relid.
+				 */
+				if(!ispartition || optimizer_analyze_midlevel_partition)
+				{
+					oldcontext = MemoryContextSwitchTo(vac_context);
+					vacrels = lappend(vacrels, makeVacuumRelation(vrel->relation,
+											  parent_relid,
+											  vrel->va_cols));
+					MemoryContextSwitchTo(oldcontext);
+				}
 
-				/* If the parent is also a partition, update its parent too. */
-				ispartition = get_rel_relispartition(parent_relid);
 				child_relid = parent_relid;
 			}
 		}
@@ -2879,7 +2917,16 @@ vacuum_params_to_options_list(VacuumParams *params)
 		options = lappend(options, makeDefElem("disable_page_skipping", (Node *) makeInteger(1), -1));
 		optmask &= ~VACOPT_DISABLE_PAGE_SKIPPING;
 	}
-
+	if (optmask & VACOPT_SKIP_DATABASE_STATS)
+	{
+		options = lappend(options, makeDefElem("skip_database_stats", (Node *) makeInteger(1), -1));
+		optmask &= ~VACOPT_SKIP_DATABASE_STATS;
+	}
+	if (optmask & VACOPT_ONLY_DATABASE_STATS)
+	{
+		options = lappend(options, makeDefElem("only_database_stats", (Node *) makeInteger(1), -1));
+		optmask &= ~VACOPT_ONLY_DATABASE_STATS;
+	}
 	if (optmask & VACUUM_AO_PHASE_MASK)
 	{
 		options = lappend(options, makeDefElem("ao_phase",

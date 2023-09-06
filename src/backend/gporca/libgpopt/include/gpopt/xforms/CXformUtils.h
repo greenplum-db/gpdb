@@ -66,13 +66,6 @@ using CExpressionArrays = CDynamicPtrArray<CExpressionArray, CleanupRelease>;
 class CXformUtils
 {
 private:
-	// enum marking the index column types
-	enum EIndexCols
-	{
-		EicKey,
-		EicKeyAndIncluded
-	};
-
 	// create a logical assert for the not nullable columns of the given table
 	// on top of the given child expression
 	static CExpression *PexprAssertNotNull(CMemoryPool *mp,
@@ -95,16 +88,21 @@ private:
 	static CColRefSet *PcrsIndexColumns(CMemoryPool *mp,
 										CColRefArray *colref_array,
 										const IMDIndex *pmdindex,
-										const IMDRelation *pmdrel,
-										EIndexCols eic);
+										const IMDRelation *pmdrel);
+
+	// return the set of columns from the given array of columns which are
+	// returnable through the index (to determine index-only scan capable)
+	static CColRefSet *PcrsIndexReturnableColumns(CMemoryPool *mp,
+												  CColRefArray *colref_array,
+												  const IMDIndex *pmdindex,
+												  const IMDRelation *pmdrel);
 
 	// return the ordered array of columns from the given array of columns which appear
 	// in the index included / key columns
 	static CColRefArray *PdrgpcrIndexColumns(CMemoryPool *mp,
 											 CColRefArray *colref_array,
 											 const IMDIndex *pmdindex,
-											 const IMDRelation *pmdrel,
-											 EIndexCols eic);
+											 const IMDRelation *pmdrel);
 
 	// lookup join keys in scalar child group
 	static void LookupJoinKeys(CMemoryPool *mp, CExpression *pexpr,
@@ -186,7 +184,7 @@ private:
 		ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
 		CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
 		const IMDIndex *pmdindex, const IMDRelation *pmdrel,
-		BOOL indexForOrderBy = false);
+		EIndexScanDirection indexScanDirection, BOOL indexForOrderBy);
 
 	// create a dynamic operator for a btree index plan
 	static CLogical *
@@ -208,10 +206,12 @@ private:
 	PopStaticBtreeIndexOpConstructor(CMemoryPool *mp, const IMDIndex *pmdindex,
 									 CTableDescriptor *ptabdesc,
 									 ULONG ulOriginOpId, CName *pname,
-									 CColRefArray *pdrgpcrOutput)
+									 CColRefArray *pdrgpcrOutput,
+									 EIndexScanDirection indexScanDirection)
 	{
-		return GPOS_NEW(mp) CLogicalIndexGet(
-			mp, pmdindex, ptabdesc, ulOriginOpId, pname, pdrgpcrOutput);
+		return GPOS_NEW(mp)
+			CLogicalIndexGet(mp, pmdindex, ptabdesc, ulOriginOpId, pname,
+							 pdrgpcrOutput, indexScanDirection);
 	}
 
 	//	produce an expression representing a new btree index path
@@ -382,13 +382,6 @@ public:
 										  const IMDRelation *pmdrel);
 
 	// return the set of key columns from the given array of columns which appear
-	// in the index key and included columns
-	static CColRefSet *PcrsIndexKeysAndIncludes(CMemoryPool *mp,
-												CColRefArray *colref_array,
-												const IMDIndex *pmdindex,
-												const IMDRelation *pmdrel);
-
-	// return the set of key columns from the given array of columns which appear
 	// in the index key columns
 	static CColRefSet *PcrsIndexKeys(CMemoryPool *mp,
 									 CColRefArray *colref_array,
@@ -446,11 +439,13 @@ public:
 						 CExpressionArray *pdrgpexprConds,
 						 CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
 						 const IMDIndex *pmdindex, const IMDRelation *pmdrel,
-						 BOOL indexForOrderBy = false)
+						 BOOL indexForOrderBy,
+						 EIndexScanDirection indexScanDirection)
 	{
-		return PexprBuildBtreeIndexPlan(
-			mp, md_accessor, pexprGet, ulOriginOpId, pdrgpexprConds,
-			pcrsScalarExpr, outer_refs, pmdindex, pmdrel, indexForOrderBy);
+		return PexprBuildBtreeIndexPlan(mp, md_accessor, pexprGet, ulOriginOpId,
+										pdrgpexprConds, pcrsScalarExpr,
+										outer_refs, pmdindex, pmdrel,
+										indexScanDirection, indexForOrderBy);
 	}
 
 	// helper for creating bitmap bool op expressions

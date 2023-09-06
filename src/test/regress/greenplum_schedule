@@ -357,4 +357,7 @@ test: quicklz_fallback
 # run this at the end of the schedule for more chance to catch abnormalities
 test: gp_check_files
 
+# run pg_hba raleted testing
+test: hba_conf
+
 # end of tests

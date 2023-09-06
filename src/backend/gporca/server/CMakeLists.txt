@@ -106,7 +106,10 @@ BTreeIndex-Against-InList BTreeIndex-Against-InListLarge BTreeIndex-Against-Scal
 IndexScan-AOTable IndexScan-DroppedColumns IndexScan-BoolTrue IndexScan-BoolFalse
 IndexScan-Relabel IndexGet-OuterRefs LogicalIndexGetDroppedCols
 IndexScan-ORPredsNonPart IndexScan-ORPredsAOPart IndexScan-AndedIn SubqInIndexPred Hash-IndexScan
-IndexScan-OrderBy-on-Single-IndexCol IndexScan-OrderBy-on-Multiple-IndexCols IndexScan-OrderBy-on-NonIndexCol;
+IndexScan-OrderBy-on-Single-IndexCol IndexScan-OrderBy-on-Multiple-IndexCols IndexScan-OrderBy-on-NonIndexCol
+Forward-IndexScan-OrderBy-on-SingleCol-Index Backward-IndexScan-OrderBy-on-SingleCol-Index
+Forward-IndexScan-OrderBy-on-MultiCol-Index Backward-IndexScan-OrderBy-on-MultiCol-Index
+IndexScan-OrderBy-on-MultiCol-NonIndex;
 
 CBitmapScanTest:
 IndexedNLJBitmap BitmapIndex-ChooseHashJoin BitmapTableScan-AO-Btree-PickOnlyHighNDV
@@ -380,7 +383,10 @@ IndexOnlyScan-NoDistKeyInIndex IndexConstraintsMDidCache IndexOnlyScan-CTE Allow
 AllowIndexOnlyScanOnMixedAppendOnlyPartitionedTable AllowIndexOnlyScanOnMixedPartitionedTable
 PreventIndexOnlyScanOnMixedAppendOnlyPartitionedTableContainingAppendOnlyVersion6Child
 PreventIndexOnlyScanOnMixedPartitionedTableContainingAppendOnlyVersion6Child
-PreventIndexOnlyScanOnAppendOnlyVersion6UpgradedTable;
+PreventIndexOnlyScanOnAppendOnlyVersion6UpgradedTable
+IndexOnlyScan-NoDistKeyInIndex IndexConstraintsMDidCache IndexOnlyScan-CTE
+Forward-IndexOnlyScan-OrderBy-on-MultiCol-Index Backward-IndexOnlyScan-OrderBy-on-MultiCol-Index
+IndexOnlyScan-OrderBy-on-MultiCol-NonIndex;
 
 CRightJoinTest:
 RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinNoDPSNonDistKey RightJoinTVF
@@ -392,14 +398,18 @@ SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf CompositeT
 CScalarFuncPushDownTest:
 ScalarFuncPushedBelowGather ConstScalarFuncNotPushedBelowGather;
 
+CScalarTest:
+FieldSelect;
+
 COrderedAggTest:
 CTAS_OrderedAgg_multiple_cols OrderedAgg_multiple_diffcol OrderedAgg_with_groupby OrderedAgg_computed_col
 OrderedAggUsingGroupColumnInDirectArg OrderedAgg_multiple_samecol OrderedAgg_with_nonOrderedAgg OrderedAgg_single
 OrderedAgg_array_fraction OrderedAgg_multiple_samecol_difforderespec OrderedAgg_with_nonconst_fraction
 OrderedAgg_skewed_data;
 
-CoverintIndexTest:
-CoveringIndex-1 CoveringIndex-2 CoveringIndex-3 CoveringIndex-Cost-1 CoveringIndex-Cost-2;
+CoveringIndexTest:
+CoveringIndex-1 CoveringIndex-2 CoveringIndex-3 CoveringIndex-Cost-1 CoveringIndex-Cost-2
+CoveringIndex-DoesSupport-Gist CoveringIndex-DoesNotSupport-Gin;
 
 CForeignPartTest:
 ForeignPartUniform PartForeignMixed PartForeignDifferentServer PartForeignDifferentExecLocation PartForeignMixedDPE PartForeignMixedSPE PartForeignUniformSPE ForeignScanExecLocAnySimpleScan ForeignScanExecLocAnyJoin ForeignPartOneTimeFilterDPE

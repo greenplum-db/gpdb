@@ -563,38 +563,71 @@ For detailed information about SSH configuration options, refer to the SSH docum
 
 ## <a id="topic_qst_s5t_wy"></a>Synchronizing System Clocks 
 
-You should use NTP \(Network Time Protocol\) to synchronize the system clocks on all hosts that comprise your Greenplum Database system. See [www.ntp.org](http://www.ntp.org) for more information about NTP.
+You must use NTP (Network Time Protocol) to synchronize the system clocks on all hosts that comprise your Greenplum Database system. Accurate time keeping is essential to ensure reliable operations on the database and data integrity.
 
-NTP on the segment hosts should be configured to use the coordinator host as the primary time source, and the standby coordinator as the secondary time source. On the coordinator and standby coordinator hosts, configure NTP to point to your preferred time server.
+There are many different architectures you may choose from to implement NTP. We recommend you use one of the following:
 
-### <a id="ji162603"></a>To configure NTP 
+- Configure coordinator as the NTP primary source and the other hosts in the cluster connect to it.
+- Configure an external NTP primary source and all hosts in the cluster connect to it.
 
-1.  On the coordinator host, log in as root and edit the `/etc/ntp.conf` file. Set the `server` parameter to point to your data center's NTP time server. For example \(if `10.6.220.20` was the IP address of your data center's NTP server\):
+Depending on your operating system version, the NTP protocol may be implemented by the `ntpd` daemon, the `chronyd` daemon, or other. Refer to your preferred NTP protocol documentation for more details.
+
+### <a id="ji162603"></a>Option 1: Configure System Clocks with the Coordinator as the Primary Source
+
+1.  On the coordinator host, log in as root and edit your NTP daemon configuration file. Set the `server` parameter to point to your data center's NTP time server. For example \(if `10.6.220.20` was the IP address of your data center's NTP server\):
 
     ```
     server 10.6.220.20
     ```
 
-2.  On each segment host, log in as root and edit the `/etc/ntp.conf` file. Set the first `server` parameter to point to the coordinator host, and the second server parameter to point to the standby coordinator host. For example:
+2.  On each segment host, log in as root and edit your NTP daemon configuration file. Set the first `server` parameter to point to the coordinator host, and the second server parameter to point to the standby coordinator host. For example:
 
     ```
     server cdw prefer
     server scdw
     ```
 
-3.  On the standby coordinator host, log in as root and edit the `/etc/ntp.conf` file. Set the first `server` parameter to point to the primary coordinator host, and the second server parameter to point to your data center's NTP time server. For example:
+3.  On the standby coordinator host, log in as root and edit your NTP daemon configuration file. Set the first `server` parameter to point to the primary coordinator host, and the second server parameter to point to your data center's NTP time server. For example:
 
     ```
     server cdw prefer
     server 10.6.220.20
     ```
 
-4.  On the coordinator host, use the NTP daemon synchronize the system clocks on all Greenplum hosts. For example, using [gpssh](../utility_guide/ref/gpssh.html):
+4.  Synchronize the system clocks on all Greenplum hosts as root.
+
+    If you are using the `ntpd` daemon:
 
     ```
-    # gpssh -f hostfile_gpssh_allhosts -v -e 'ntpd'
+    systemctl restart ntp
     ```
 
+    If you are using the `chronyd` daemon:
+
+    ```
+    systemctl restart chronyd
+    ``` 
+
+### <a id="ji162603"></a>Option 2: Configure System Clocks with an External Primary Source
+
+1.  On each host, including coordinator, standby coordinator, and segments, log in as root and edit your NTP daemon configuration file. Set the first `server` parameter to point to your data center's NTP time server. For example (if `10.6.220.20` was the IP address of your data center's NTP server):
+    
+    ```
+    server 10.6.220.20
+    ```
+
+1.  On the coordinator host, use your NTP daemon to synchronize the system clocks on all Greenplum hosts. For example, using [gpssh](../utility_guide/ref/gpssh.html):
+
+    If you are using the `ntpd` daemon:
+
+    ```
+    gpssh -f hostfile_gpssh_allhosts -v -e 'ntpd'
+    ```
+
+    If you are using the `chronyd` daemon:
+ 
+    ```
+    gpssh -f hostfile_gpssh_allhosts -v -e 'chronyd'
 
 ## <a id="topic23"></a>Creating the Greenplum Administrative User 
 

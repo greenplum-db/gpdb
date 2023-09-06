@@ -310,6 +310,29 @@ typedef struct AggStatePerHashData
 	AttrNumber *hashGrpColIdxInput; /* hash col indices in input slot */
 	AttrNumber *hashGrpColIdxHash;	/* indices in hashtbl tuples */
 	Agg		   *aggnode;		/* original Agg node, for numGroups etc. */
+
+	/*
+	 * Some statistic info of hash table, used for EXPLAIN ANALYZE.
+	 * Note that they are accumulated info and will not be reset even
+	 * after the hash table is reset.
+	 */
+
+	/* number of groups/entries output by the iterator */
+	uint64		num_output_groups;
+	/* number of spilled partitions */
+	uint64		num_spill_parts;
+	/* number of hash table expansions */
+	uint32		num_expansions;
+	/* total number of buckets */
+	uint64      bucket_total;
+	/* number of used buckets */
+	uint64      bucket_used;
+	/* number of all chains */
+	uint64      chain_count;
+	/* total length of all chains */
+	uint64      chain_length_total;
+	/* max chain length */
+	uint32      chain_length_max;
 }			AggStatePerHashData;
 
 

@@ -32,9 +32,6 @@ gpos::BOOL FoundException(gpos::CException &exc, const gpos::ULONG *exceptions,
 // produce a plan
 gpos::BOOL IsLoggableFailure(gpos::CException &exc);
 
-// check if given exception should error out
-gpos::BOOL ShouldErrorOut(gpos::CException &exc);
-
 
 extern "C" {
 #include <stddef.h>

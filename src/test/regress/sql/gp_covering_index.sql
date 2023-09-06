@@ -357,16 +357,24 @@ CREATE INDEX i_test_index_types ON test_index_types USING GIST (a) INCLUDE (b);
 VACUUM ANALYZE test_index_types;
 
 -- KEYS: [a]    INCLUDED: [b]
--- ORCA_FEATURE_NOT_SUPPORTED: support index-only-scan on GIST indexes
+-- Check support index-only-scan on GIST indexes
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_index_types WHERE a<@ box '(0,0,3,3)';
 
--- ORCA_FEATURE_NOT_SUPPORTED: support dynamic-index-only-scan on GIST indexes
-ALTER TABLE test_cover_index_on_pt ADD COLUMN a_box box;
-CREATE INDEX i_pt_a_box ON test_cover_index_on_pt USING GIST (a_box);
-VACUUM ANALYZE test_cover_index_on_pt;
+-- KEYS: [a]    INCLUDED: [b]
+-- Check support dynamic-index-only-scan on GIST indexes
+CREATE TABLE test_partition_table_with_gist_index(a int, b_box box)
+DISTRIBUTED BY (a)
+PARTITION BY RANGE (a)
+(
+    START (0) END (4) EVERY (1)
+);
+CREATE INDEX gist_index_on_column_a_box ON test_partition_table_with_gist_index USING GIST (b_box) INCLUDE (a);
+INSERT INTO test_partition_table_with_gist_index VALUES (2, '(2.0,2.0,0.0,0.0)');
+INSERT INTO test_partition_table_with_gist_index VALUES (3, '(1.0,1.0,3.0,3.0)');
+VACUUM ANALYZE test_partition_table_with_gist_index;
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
-SELECT a_box FROM test_cover_index_on_pt WHERE a_box<@ box '(0,0,3,3)';
+SELECT a, b_box FROM test_partition_table_with_gist_index WHERE b_box<@ box '(0,0,3,3)';
 
 
 -- 8) Test partial indexes

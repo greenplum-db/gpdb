@@ -55,6 +55,7 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLScalarCoerceToDomain.h"
 #include "naucrates/dxl/operators/CDXLScalarCoerceViaIO.h"
 #include "naucrates/dxl/operators/CDXLScalarDistinctComp.h"
+#include "naucrates/dxl/operators/CDXLScalarFieldSelect.h"
 #include "naucrates/dxl/operators/CDXLScalarFilter.h"
 #include "naucrates/dxl/operators/CDXLScalarFuncExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarIdent.h"
@@ -419,6 +420,11 @@ CTranslatorScalarToDXL::TranslateScalarToDXL(
 			return CTranslatorScalarToDXL::TranslateSortGroupClauseToDXL(
 				expr, var_colid_mapping);
 		}
+		case T_FieldSelect:
+		{
+			return CTranslatorScalarToDXL::TranslateFieldSelectToDXL(
+				expr, var_colid_mapping);
+		}
 	}
 }
 
@@ -769,14 +775,14 @@ CTranslatorScalarToDXL::TranslateBoolExprToDXL(
 	if ((NOT_EXPR != bool_expr->boolop) && (2 > count))
 	{
 		GPOS_RAISE(
-			gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 			GPOS_WSZ_LIT(
 				"Boolean Expression (OR / AND): Incorrect Number of Children "));
 	}
 	else if ((NOT_EXPR == bool_expr->boolop) && (1 != count))
 	{
 		GPOS_RAISE(
-			gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 			GPOS_WSZ_LIT(
 				"Boolean Expression (NOT): Incorrect Number of Children "));
 	}
@@ -988,8 +994,8 @@ CTranslatorScalarToDXL::TranslateCaseExprToDXL(
 
 	if (nullptr == case_expr->args)
 	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
-				   GPOS_WSZ_LIT("Do not support SIMPLE CASE STATEMENT"));
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				   GPOS_WSZ_LIT("Case statement with no arguments"));
 		return nullptr;
 	}
 
@@ -1299,6 +1305,39 @@ CTranslatorScalarToDXL::TranslateArrayCoerceExprToDXL(
 	return dxlnode;
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorScalarToDXL::TranslateFieldSelectToDXL
+//
+//	@doc:
+//		Create a DXL node for a scalar FieldSelect from a GPDB FieldSelect
+//---------------------------------------------------------------------------
+CDXLNode *
+CTranslatorScalarToDXL::TranslateFieldSelectToDXL(
+	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+{
+	GPOS_ASSERT(IsA(expr, FieldSelect));
+
+	const FieldSelect *fieldselect = (FieldSelect *) expr;
+	GPOS_ASSERT(nullptr != fieldselect->arg);
+
+	CDXLNode *child_node =
+		TranslateScalarToDXL(fieldselect->arg, var_colid_mapping);
+	GPOS_ASSERT(nullptr != child_node);
+
+	// create the DXL node holding the scalar boolean operator
+	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(
+		m_mp, GPOS_NEW(m_mp) CDXLScalarFieldSelect(
+				  m_mp,
+				  GPOS_NEW(m_mp)
+					  CMDIdGPDB(IMDId::EmdidGeneral, fieldselect->resulttype),
+				  GPOS_NEW(m_mp)
+					  CMDIdGPDB(IMDId::EmdidGeneral, fieldselect->resultcollid),
+				  fieldselect->resulttypmod, fieldselect->fieldnum));
+
+	dxlnode->AddChild(child_node);
+	return dxlnode;
+}
 
 
 //---------------------------------------------------------------------------
@@ -1591,7 +1630,7 @@ CTranslatorScalarToDXL::TranslateWindowFrameToDXL(
 	}
 	else
 	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("Unrecognized window frame option"));
 	}
 

@@ -241,31 +241,22 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
       <dxl:Relation Mdid="6.98668.1.0" Name="b" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -275,31 +266,22 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
       <dxl:Relation Mdid="6.98671.1.0" Name="c" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -439,7 +421,7 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
     <dxl:Plan Id="0" SpaceSize="0">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.000951" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.001042" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="i">
@@ -450,7 +432,7 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
         <dxl:OneTimeFilter/>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000951" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.001042" Rows="1.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="i">
@@ -468,7 +450,7 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
           <dxl:LimitOffset/>
           <dxl:HashJoin JoinType="In">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000951" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000997" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="i">
@@ -542,7 +524,7 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
             </dxl:GatherMotion>
             <dxl:Window PartitionColumns="">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000077" Rows="1.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000122" Rows="1.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="18" Alias="avg">
@@ -557,7 +539,7 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
               <dxl:Filter/>
               <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000073" Rows="1.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000118" Rows="1.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="9" Alias="i">
@@ -570,7 +552,7 @@ explain select C.i from C where C.i in (select avg(i) over (partition by i) from
                 </dxl:SortingColumnList>
                 <dxl:Sort SortDiscardDuplicates="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000028" Rows="1.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000074" Rows="1.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="9" Alias="i">

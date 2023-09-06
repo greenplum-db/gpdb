@@ -3,6 +3,7 @@
 
 %code top {
 	#include "postgres.h"
+	#include <limits.h>
 	#include "commands/tablespace.h"
 	#include "catalog/pg_tablespace.h"
 	#include "catalog/pg_tablespace_d.h"
@@ -36,7 +37,7 @@
 
 %token IOLIMIT_CONFIG_DELIM TABLESPACE_IO_CONFIG_START STAR IOCONFIG_DELIM VALUE_MAX
 %token <str> ID IO_KEY
-%token <integer> VALUE
+%token <integer> NUMBER
 
 %type <str> tablespace_name
 %type <integer> io_value
@@ -104,6 +105,26 @@ tablespace_io_config: tablespace_name TABLESPACE_IO_CONFIG_START ioconfigs
 
 							$$ = tblspciolimit;
 					  }
+					| NUMBER TABLESPACE_IO_CONFIG_START ioconfigs
+					  {
+							TblSpcIOLimit *tblspciolimit = (TblSpcIOLimit *)palloc0(sizeof(TblSpcIOLimit));
+
+							if (context->star_tablespace_cnt > 0)
+								ereport(ERROR,
+										(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+										errmsg("io limit: tablespace '*' cannot be used with other tablespaces")));
+							if ($1 <= 0 || $1 > UINT_MAX)
+								ereport(ERROR,
+										(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+										errmsg("io limit: tablespace oid exceeds the limit")));
+
+							tblspciolimit->tablespace_oid = $1;
+							context->normal_tablespce_cnt++;
+
+							tblspciolimit->ioconfig = $3;
+
+							$$ = tblspciolimit;
+					  }
 
 ioconfigs: ioconfig
 		   {
@@ -136,7 +157,7 @@ ioconfig: IO_KEY '=' io_value
 			$$ = item;
 		  }
 
-io_value: VALUE { $$ = $1; }
+io_value: NUMBER { $$ = $1; }
 		| VALUE_MAX { $$ = 0; }
 
 %%

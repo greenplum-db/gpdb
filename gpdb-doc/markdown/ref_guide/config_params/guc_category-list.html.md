@@ -115,6 +115,7 @@ These parameters control the usage of GPORCA by Greenplum Database. For informat
 - [optimizer_discard_redistribute_hashjoin](guc-list.html#optimizer_discard_redistribute_hashjoin)
 - [optimizer_enable_associativity](guc-list.html#optimizer_enable_associativity)
 - [optimizer_enable_dml](guc-list.html#optimizer_enable_dml)
+- [optimizer_enable_dynamicindexonlyscan](guc-list.html#optimizer_enable_dynamicindexonlyscan)
 - [optimizer_enable_foreign_table](guc-list.html#optimizer_enable_foreign_table)
 - [optimizer_enable_indexonlyscan](guc-list.html#optimizer_enable_indexonlyscan)
 - [optimizer_enable_coordinator_only_queries](guc-list.html#optimizer_enable_coordinator_only_queries)

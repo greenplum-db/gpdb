@@ -34,7 +34,6 @@ extern "C" {
 #include "naucrates/md/CMDAggregateGPDB.h"
 #include "naucrates/md/CMDCheckConstraintGPDB.h"
 #include "naucrates/md/CMDFunctionGPDB.h"
-#include "naucrates/md/CMDPartConstraintGPDB.h"
 #include "naucrates/md/CMDRelationGPDB.h"
 #include "naucrates/md/CMDScalarOpGPDB.h"
 #include "naucrates/md/IMDExtStats.h"
@@ -226,12 +225,6 @@ private:
 											  CMDAccessor *md_accessor,
 											  Relation rel);
 
-	// return the dxl representation of the column's default value
-	static CDXLNode *GetDefaultColumnValue(CMemoryPool *mp,
-										   CMDAccessor *md_accessor,
-										   TupleDesc rd_att, AttrNumber attrno);
-
-
 	// get the distribution columns
 	static ULongPtrArray *RetrieveRelDistributionCols(
 		CMemoryPool *mp, GpPolicy *gp_policy, CMDColumnArray *mdcol_array,
@@ -245,26 +238,11 @@ private:
 	// check if index is supported
 	static BOOL IsIndexSupported(Relation index_rel);
 
-	// is given level included in the default partitions
-	static BOOL LevelHasDefaultPartition(List *default_levels, ULONG level);
-
-	// retrieve part constraint for index
-	static CMDPartConstraintGPDB *RetrievePartConstraintForIndex(
-		CMemoryPool *mp, CMDAccessor *md_accessor, const IMDRelation *md_rel,
-		Node *part_constraint, ULongPtrArray *level_with_default_part_array,
-		BOOL is_unbounded);
-
 	// retrieve part constraint for relation
 	static CDXLNode *RetrievePartConstraintForRel(CMemoryPool *mp,
 												  CMDAccessor *md_accessor,
 												  Relation rel,
 												  CMDColumnArray *mdcol_array);
-
-	// retrieve part constraint from a GPDB node
-	static CMDPartConstraintGPDB *RetrievePartConstraintFromNode(
-		CMemoryPool *mp, CMDAccessor *md_accessor,
-		CDXLColDescrArray *dxl_col_descr_array, Node *part_constraint,
-		ULongPtrArray *level_with_default_part_array, BOOL is_unbounded);
 
 	// return relation name
 	static CMDName *GetRelName(CMemoryPool *mp, Relation rel);

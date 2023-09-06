@@ -187,54 +187,24 @@
       <dxl:Relation Mdid="6.795132.1.0" Name="insert_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="x" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue>
-              <dxl:FuncExpr FuncId="0.480.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
-                <dxl:FuncExpr FuncId="0.1574.1.0" FuncRetSet="false" TypeMdid="0.20.1.0">
-                  <dxl:ConstValue TypeMdid="0.2205.1.0" Value="7yEMAA=="/>
-                </dxl:FuncExpr>
-              </dxl:FuncExpr>
-            </dxl:DefaultValue>
           </dxl:Column>
           <dxl:Column Name="y" Attno="2" Mdid="0.25.1.0" Nullable="true">
-            <dxl:DefaultValue>
-              <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACi1OVUxMLQ==" LintValue="462267174"/>
-            </dxl:DefaultValue>
           </dxl:Column>
           <dxl:Column Name="z" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue>
-              <dxl:FuncExpr FuncId="0.480.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
-                <dxl:OpExpr OperatorName="*" OperatorMdid="0.694.1.0" OperatorType="0.20.1.0">
-                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="-1"/>
-                  <dxl:OpExpr OperatorName="-" OperatorMdid="0.689.1.0" OperatorType="0.20.1.0">
-                    <dxl:FuncExpr FuncId="0.1574.1.0" FuncRetSet="false" TypeMdid="0.20.1.0">
-                      <dxl:ConstValue TypeMdid="0.2205.1.0" Value="7yEMAA=="/>
-                    </dxl:FuncExpr>
-                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-                  </dxl:OpExpr>
-                </dxl:OpExpr>
-              </dxl:FuncExpr>
-            </dxl:DefaultValue>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -299,54 +269,24 @@
       <dxl:Relation Mdid="6.795132.1.1" Name="insert_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="x" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue>
-              <dxl:FuncExpr FuncId="0.480.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
-                <dxl:FuncExpr FuncId="0.1574.1.0" FuncRetSet="false" TypeMdid="0.20.1.0">
-                  <dxl:ConstValue TypeMdid="0.2205.1.0" Value="7yEMAA=="/>
-                </dxl:FuncExpr>
-              </dxl:FuncExpr>
-            </dxl:DefaultValue>
           </dxl:Column>
           <dxl:Column Name="y" Attno="2" Mdid="0.25.1.0" Nullable="true">
-            <dxl:DefaultValue>
-              <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAACi1OVUxMLQ==" LintValue="462267174"/>
-            </dxl:DefaultValue>
           </dxl:Column>
           <dxl:Column Name="z" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue>
-              <dxl:FuncExpr FuncId="0.480.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
-                <dxl:OpExpr OperatorName="*" OperatorMdid="0.694.1.0" OperatorType="0.20.1.0">
-                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="-1"/>
-                  <dxl:OpExpr OperatorName="-" OperatorMdid="0.689.1.0" OperatorType="0.20.1.0">
-                    <dxl:FuncExpr FuncId="0.1574.1.0" FuncRetSet="false" TypeMdid="0.20.1.0">
-                      <dxl:ConstValue TypeMdid="0.2205.1.0" Value="7yEMAA=="/>
-                    </dxl:FuncExpr>
-                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-                  </dxl:OpExpr>
-                </dxl:OpExpr>
-              </dxl:FuncExpr>
-            </dxl:DefaultValue>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>

@@ -10,8 +10,8 @@ SELECT count(*) from gp_opt_version();
 
 -- Mask out Log & timestamp for orca message that has feature not supported.
 -- start_matchsubs
--- m/^LOG.*\"Feature/
--- s/^LOG.*\"Feature/\"Feature/
+-- m/^LOG.*\"Falling/
+-- s/^LOG.*\"Falling/\"Falling/
 -- end_matchsubs
 -- fix the number of segments for Orca
 set optimizer_segments = 3;
@@ -39,8 +39,8 @@ set optimizer_enable_indexjoin=on;
 set optimizer_trace_fallback = on;
 -- expected fall back to the planner
 select sum(distinct a), count(distinct b) from orca.r;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  sum | count 
 -----+-------
  210 |     7
@@ -6811,7 +6811,7 @@ select * from orca.r where a in (select count(*)+1 as v from orca.foo full join 
 (1 row)
 
 select * from orca.r where r.a in (select d+r.b+1 as v from orca.foo full join orca.bar on (foo.d = bar.a) group by d+r.b) order by r.a, r.b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Query-to-DXL Translation: No attribute entry found due to incorrect normalization of query
  a  | b 
 ----+---
@@ -8202,11 +8202,11 @@ partition bb start(100) end(200) every (50) );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into orca.multilevel_p values (1,1), (100,200);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
 select * from orca.multilevel_p;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
   a  |  b  
 -----+-----
    1 |   1
@@ -8826,8 +8826,8 @@ select foo.b+1, sum((with cte as (select * from jazz) select 1 from cte where ct
 
 -- ctes inside aggs
 select foo.b+1, sum((with cte as (select * from jazz) select 1 from cte cte1, cte cte2 where cte1.h = foo.b)) as t FROM foo GROUP BY foo.b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  ?column? | t 
 ----------+---
         3 | 1
@@ -9052,8 +9052,8 @@ CREATE FUNCTION sum_sfunc(anyelement,anyelement) returns anyelement AS 'select $
 CREATE FUNCTION sum_combinefunc(anyelement,anyelement) returns anyelement AS 'select $1+$2' LANGUAGE SQL STRICT;
 CREATE AGGREGATE myagg1(anyelement) (SFUNC = sum_sfunc, COMBINEFUNC = sum_combinefunc, STYPE = anyelement, INITCOND = '0');
 SELECT myagg1(i) FROM orca.tab1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "sum_sfunc" during startup
  myagg1 
 --------
@@ -9063,8 +9063,8 @@ CONTEXT:  SQL function "sum_sfunc" during startup
 CREATE FUNCTION sum_sfunc2(anyelement,anyelement,anyelement) returns anyelement AS 'select $1+$2+$3' LANGUAGE SQL STRICT;
 CREATE AGGREGATE myagg2(anyelement,anyelement) (SFUNC = sum_sfunc2, STYPE = anyelement, INITCOND = '0');
 SELECT myagg2(i,j) FROM orca.tab1;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "sum_sfunc2" during startup
  myagg2 
 --------
@@ -9086,10 +9086,10 @@ INSERT INTO array_table values(6,array[222],'c');
 INSERT INTO array_table values(7,array[3],'a');
 INSERT INTO array_table values(8,array[3],'b');
 SELECT f3, myagg3(f1) from (select * from array_table order by f1 limit 10) as foo GROUP BY f3 ORDER BY f3;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
  f3 | myagg3  
 ----+---------
  a  | {4,1,7}
@@ -9698,8 +9698,8 @@ create table orca.arrtest (
 insert into orca.arrtest (a[1:5], b[1:1][1:2][1:2], c, d)
 values ('{1,2,3,4,5}', '{{{0,0},{1,2}}}', '{}', '{}');
 select a[1:3], b[1][2][1], c[1], d[1][1] FROM orca.arrtest order by 1,2,3,4;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-default collation
     a    | b | c | d 
 ---------+---+---+---
  {1,2,3} | 1 |   | 
@@ -10014,8 +10014,8 @@ set optimizer_enable_bitmapscan=on;
 set optimizer_enable_dynamictablescan = off;
 -- gather on 1 segment because of direct dispatch
 explain select * from orca.bm_dyn_test_onepart where i=2 and t='2';
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                                          QUERY PLAN                                         
 --------------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..6.85 rows=22 width=10)
@@ -10036,8 +10036,8 @@ DETAIL:  No plan has been computed for required properties
 (15 rows)
 
 select * from orca.bm_dyn_test_onepart where i=2 and t='2';
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  i | j | t 
 ---+---+---
  2 | 2 | 2
@@ -10067,14 +10067,14 @@ distributed by (id) partition by range (year)
       default subpartition other_regions )
   ( start (2018) end (2020) every (1) );
 insert into orca.bm_dyn_test_multilvl_part select i, 2018 + (i%2), i%2 + 1, 'usa' from generate_series(1,100)i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
 create index bm_multi_test_idx_part on orca.bm_dyn_test_multilvl_part using bitmap(year);
 analyze orca.bm_dyn_test_multilvl_part;
 -- print name of parent index
 explain select * from orca.bm_dyn_test_multilvl_part where year = 2019;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
                                                         QUERY PLAN                                                        
 --------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..7.95 rows=53 width=18)
@@ -10091,8 +10091,8 @@ DETAIL:  Feature not supported: Multi-level partitioned tables
 (11 rows)
 
 select count(*) from orca.bm_dyn_test_multilvl_part where year = 2019;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multi-level partitioned tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multi-level partitioned tables
  count 
 -------
     50
@@ -10317,26 +10317,24 @@ WHERE tq.sym = tt.symbol AND
       tt.event_ts <  tq.end_ts
 GROUP BY 1
 ORDER BY 1 asc ;
-                                                                                                          QUERY PLAN                                                                                                          
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Sort  (cost=0.00..862.00 rows=1 width=16)
-   Sort Key: ((((my_tt_agg_opt.event_ts / 100000) / 5) * 5))
-   ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=16)
-         Group Key: ((((my_tt_agg_opt.event_ts / 100000) / 5) * 5))
-         ->  Sort  (cost=0.00..862.00 rows=1 width=8)
-               Sort Key: ((((my_tt_agg_opt.event_ts / 100000) / 5) * 5))
-               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
-                     ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
-                           Hash Cond: ((my_tq_agg_opt_part.sym)::bpchar = my_tt_agg_opt.symbol)
-                           Join Filter: ((plusone(my_tq_agg_opt_part.bid_price) < my_tt_agg_opt.trade_price) AND (my_tt_agg_opt.event_ts >= my_tq_agg_opt_part.ets) AND (my_tt_agg_opt.event_ts < my_tq_agg_opt_part.end_ts))
-                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=32)
-                                 Hash Key: my_tq_agg_opt_part.sym
-                                 ->  Dynamic Seq Scan on my_tq_agg_opt_part  (cost=0.00..431.00 rows=1 width=32)
-                                       Number of partitions to scan: 2 (out of 2)
-                           ->  Hash  (cost=431.00..431.00 rows=1 width=24)
-                                 ->  Seq Scan on my_tt_agg_opt  (cost=0.00..431.00 rows=1 width=24)
+                                                                                                       QUERY PLAN                                                                                                       
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ GroupAggregate  (cost=0.00..862.00 rows=1 width=16)
+   Group Key: ((((my_tt_agg_opt.event_ts / 100000) / 5) * 5))
+   ->  Sort  (cost=0.00..862.00 rows=1 width=8)
+         Sort Key: ((((my_tt_agg_opt.event_ts / 100000) / 5) * 5))
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+               ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
+                     Hash Cond: ((my_tq_agg_opt_part.sym)::bpchar = my_tt_agg_opt.symbol)
+                     Join Filter: ((plusone(my_tq_agg_opt_part.bid_price) < my_tt_agg_opt.trade_price) AND (my_tt_agg_opt.event_ts >= my_tq_agg_opt_part.ets) AND (my_tt_agg_opt.event_ts < my_tq_agg_opt_part.end_ts))
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=32)
+                           Hash Key: my_tq_agg_opt_part.sym
+                           ->  Dynamic Seq Scan on my_tq_agg_opt_part  (cost=0.00..431.00 rows=1 width=32)
+                                 Number of partitions to scan: 2 (out of 2)
+                     ->  Hash  (cost=431.00..431.00 rows=1 width=24)
+                           ->  Seq Scan on my_tt_agg_opt  (cost=0.00..431.00 rows=1 width=24)
  Optimizer: Pivotal Optimizer (GPORCA)
-(17 rows)
+(15 rows)
 
 -- MPP-25661: IndexScan crashing for qual with reference to outer tuple
 drop table if exists idxscan_outer;
@@ -10740,8 +10738,8 @@ CREATE TYPE rainbow AS ENUM('red','yellow','blue');
 CREATE FUNCTION func_enum_element(ANYENUM, ANYELEMENT) RETURNS TABLE(a ANYENUM, b ANYARRAY)
 AS $$ SELECT $1, ARRAY[$2] $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_enum_element('red'::rainbow, 'blue'::rainbow::anyelement);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_enum_element" during startup
   a  |   b    
 -----+--------
@@ -10753,8 +10751,8 @@ DROP FUNCTION IF EXISTS func_enum_element(ANYENUM, ANYELEMENT);
 CREATE FUNCTION func_element_array(ANYELEMENT, ANYARRAY) RETURNS TABLE(a ANYELEMENT, b ANYENUM)
 AS $$ SELECT $1, $2[1]$$ LANGUAGE SQL STABLE;
 SELECT * FROM func_element_array('red'::rainbow, ARRAY['blue'::rainbow]);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_element_array" during startup
   a  |  b   
 -----+------
@@ -10766,8 +10764,8 @@ DROP FUNCTION IF EXISTS func_element_array(ANYELEMENT, ANYARRAY);
 CREATE FUNCTION func_element_array(ANYARRAY, ANYENUM) RETURNS TABLE(a ANYELEMENT, b ANYELEMENT)
 AS $$ SELECT $1[1], $2 $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_element_array(ARRAY['blue'::rainbow], 'blue'::rainbow);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_element_array" during startup
   a   |  b   
 ------+------
@@ -10779,8 +10777,8 @@ DROP FUNCTION IF EXISTS func_element_array(ANYARRAY, ANYENUM);
 CREATE FUNCTION func_array(ANYARRAY) RETURNS TABLE(a ANYELEMENT, b ANYENUM)
 AS $$ SELECT $1[1], $1[2] $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_array(ARRAY['blue'::rainbow, 'yellow'::rainbow]);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_array" during startup
   a   |   b    
 ------+--------
@@ -10792,8 +10790,8 @@ DROP FUNCTION IF EXISTS func_array(ANYARRAY);
 CREATE FUNCTION func_element_variadic(ANYELEMENT, VARIADIC ANYARRAY) RETURNS TABLE(a ANYARRAY)
 AS $$ SELECT array_prepend($1, $2); $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_element_variadic(1.1, 1.1, 2.2, 3.3);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_element_variadic" during startup
          a         
 -------------------
@@ -10805,8 +10803,8 @@ DROP FUNCTION IF EXISTS func_element_variadic(ANYELEMENT, VARIADIC ANYARRAY);
 CREATE FUNCTION func_nonarray(ANYNONARRAY) RETURNS TABLE(a ANYNONARRAY)
 AS $$ SELECT $1; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_nonarray(5);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_nonarray" during startup
  a 
 ---
@@ -10818,8 +10816,8 @@ DROP FUNCTION IF EXISTS func_nonarray(ANYNONARRAY);
 CREATE FUNCTION func_nonarray_enum(ANYNONARRAY, ANYENUM) RETURNS TABLE(a ANYARRAY)
 AS $$ SELECT ARRAY[$1, $2]; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_nonarray_enum('blue'::rainbow, 'red'::rainbow);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_nonarray_enum" during startup
      a      
 ------------
@@ -10831,8 +10829,8 @@ DROP FUNCTION IF EXISTS func_nonarray_enum(ANYNONARRAY, ANYENUM);
 CREATE FUNCTION func_array_nonarray_enum(ANYARRAY, ANYNONARRAY, ANYENUM) RETURNS TABLE(a ANYNONARRAY)
 AS $$ SELECT $1[1]; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_array_nonarray_enum(ARRAY['blue'::rainbow, 'red'::rainbow], 'red'::rainbow, 'yellow'::rainbow);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "func_array_nonarray_enum" during startup
   a   
 ------
@@ -10844,8 +10842,8 @@ DROP FUNCTION IF EXISTS func_array_nonarray_enum(ANYARRAY, ANYNONARRAY, ANYENUM)
 CREATE FUNCTION return_enum_as_array(ANYENUM, ANYELEMENT, ANYELEMENT) RETURNS TABLE (ae ANYENUM, aa ANYARRAY)
 AS $$ SELECT $1, array[$2, $3] $$ LANGUAGE SQL STABLE;
 SELECT * FROM return_enum_as_array('red'::rainbow, 'yellow'::rainbow, 'blue'::rainbow);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Query Parameter
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
 CONTEXT:  SQL function "return_enum_as_array" during startup
  ae  |      aa       
 -----+---------------
@@ -10877,9 +10875,9 @@ set log_statement='none';
 set log_min_duration_statement=-1;
 set client_min_messages='log';
 create table foo_ctas(a) as (select generate_series(1,10)) distributed by (a);
-LOG:  2017-05-31 14:43:22:338568 PDT,THD000,NOTICE,"Feature not supported: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA",
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA
+LOG:  2023-08-17 15:11:09:454388 PDT,THD000,NOTICE,"Falling back to Postgres-based planner because GPORCA does not support the following feature: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA",
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA
 reset client_min_messages;
 reset log_min_duration_statement;
 reset log_statement;
@@ -10902,24 +10900,19 @@ explain (costs off) select count(*), t2.c from input_tab1 t1 left join input_tab
                                       QUERY PLAN                                      
 --------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Finalize GroupAggregate
+   ->  GroupAggregate
          Group Key: input_tab2.c
          ->  Sort
                Sort Key: input_tab2.c
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: input_tab2.c
-                     ->  Partial GroupAggregate
-                           Group Key: input_tab2.c
-                           ->  Sort
-                                 Sort Key: input_tab2.c
-                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                       ->  Hash Left Join
-                                             Hash Cond: (input_tab1.a = input_tab2.c)
-                                             ->  Seq Scan on input_tab1
-                                             ->  Hash
-                                                   ->  Seq Scan on input_tab2
+                     ->  Hash Left Join
+                           Hash Cond: (input_tab1.a = input_tab2.c)
+                           ->  Seq Scan on input_tab1
+                           ->  Hash
+                                 ->  Seq Scan on input_tab2
  Optimizer: Pivotal Optimizer (GPORCA)
-(18 rows)
+(13 rows)
 
 select count(*), t2.c from input_tab1 t1 left join input_tab2 t2 on t1.a = t2.c group by t2.c;
  count | c 
@@ -11680,7 +11673,7 @@ update gp_distribution_policy set numsegments = numsegments-1 where localoid = '
 reset allow_system_table_mods;
 -- populate the tables on this smaller cluster
 explain insert into gpexp_hash select i, i from generate_series(1,50) i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                                          QUERY PLAN                                         
 --------------------------------------------------------------------------------------------
@@ -11692,13 +11685,13 @@ DETAIL:  Unknown error: Partially Distributed Data
 (5 rows)
 
 insert into gpexp_hash select i, i from generate_series(1,50) i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 insert into gpexp_rand select i, i from generate_series(1,50) i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 insert into gpexp_repl select i, i from generate_series(1,50) i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 analyze gpexp_hash;
 analyze gpexp_rand;
@@ -11706,7 +11699,7 @@ analyze gpexp_repl;
 -- the segment ids in the unmodified table should have one extra number
 select max(noexp_hash.gp_segment_id) - max(gpexp_hash.gp_segment_id) as expect_one
 from noexp_hash, gpexp_hash;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  expect_one 
 ------------
@@ -11715,7 +11708,7 @@ DETAIL:  Unknown error: Partially Distributed Data
 
 -- join should have a redistribute motion for gpexp_hash
 explain select count(*) from noexp_hash n join gpexp_hash x on n.a=x.a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
@@ -11733,7 +11726,7 @@ DETAIL:  Unknown error: Partially Distributed Data
 (11 rows)
 
 select count(*) from noexp_hash n join gpexp_hash x on n.a=x.a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  count 
 -------
@@ -11741,10 +11734,10 @@ DETAIL:  Unknown error: Partially Distributed Data
 (1 row)
 
 delete from gpexp_hash where b between 21 and 50;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 select count(*) from gpexp_hash;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  count 
 -------
@@ -11752,10 +11745,10 @@ DETAIL:  Unknown error: Partially Distributed Data
 (1 row)
 
 update gpexp_hash set b=-1 where b between 11 and 100;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 select b, count(*) from gpexp_hash group by b order by b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  b  | count 
 ----+-------
@@ -11773,7 +11766,7 @@ DETAIL:  Unknown error: Partially Distributed Data
 (11 rows)
 
 explain update gpexp_rand set b=(select b from gpexp_hash where gpexp_rand.a = gpexp_hash.a);
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                                                 QUERY PLAN                                                
 ----------------------------------------------------------------------------------------------------------
@@ -11789,10 +11782,10 @@ DETAIL:  Unknown error: Partially Distributed Data
 (9 rows)
 
 update gpexp_rand set b=(select b from gpexp_hash where gpexp_rand.a = gpexp_hash.a);
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 select b, count(*) from gpexp_rand group by b order by b;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  b  | count 
 ----+-------
@@ -11811,10 +11804,10 @@ DETAIL:  Unknown error: Partially Distributed Data
 (12 rows)
 
 delete from gpexp_repl where b >= 20;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 explain insert into gpexp_repl values (20, 20);
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                        QUERY PLAN                       
 --------------------------------------------------------
@@ -11824,10 +11817,10 @@ DETAIL:  Unknown error: Partially Distributed Data
 (3 rows)
 
 insert into gpexp_repl values (20, 20);
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
 explain select count(*) from gpexp_hash h join gpexp_repl r on h.a=r.a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                                         QUERY PLAN                                         
 -------------------------------------------------------------------------------------------
@@ -11843,7 +11836,7 @@ DETAIL:  Unknown error: Partially Distributed Data
 (9 rows)
 
 select count(*) as expect_20 from gpexp_hash h join gpexp_repl r on h.a=r.a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  expect_20 
 -----------
@@ -11851,7 +11844,7 @@ DETAIL:  Unknown error: Partially Distributed Data
 (1 row)
 
 explain select count(*) as expect_20 from noexp_hash h join gpexp_repl r on h.a=r.a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
                                                 QUERY PLAN                                                 
 -----------------------------------------------------------------------------------------------------------
@@ -11869,7 +11862,7 @@ DETAIL:  Unknown error: Partially Distributed Data
 (11 rows)
 
 select count(*) as expect_20 from noexp_hash h join gpexp_repl r on h.a=r.a;
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Unknown error: Partially Distributed Data
  expect_20 
 -----------
@@ -12194,37 +12187,34 @@ SELECT DISTINCT L1.c, L1.lid
 FROM t55 L1 CROSS JOIN META
 WHERE L1.lid = int4in(textout(meta.load_id));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
-                                                     QUERY PLAN                                                     
---------------------------------------------------------------------------------------------------------------------
- Result  (cost=0.00..431.10 rows=1 width=8)
+                                                                            QUERY PLAN                                                                             
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..431.22 rows=1 width=8)
    Output: c, lid
-   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.08 rows=1 width=8)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.20 rows=1 width=8)
          Output: c, lid
-         ->  GroupAggregate  (cost=0.00..431.08 rows=1 width=8)
+         ->  HashAggregate  (cost=0.00..431.20 rows=1 width=8)
                Output: c, lid
                Group Key: t55.c, t55.lid
-               ->  Sort  (cost=0.00..431.08 rows=1 width=8)
+               ->  Hash Join  (cost=0.00..431.20 rows=1 width=8)
                      Output: c, lid
-                     Sort Key: t55.c, t55.lid
-                     ->  Hash Join  (cost=0.00..431.08 rows=1 width=8)
+                     Hash Cond: (t55.lid = int4in(textout(('99'::text))))
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.02 rows=334 width=8)
                            Output: c, lid
-                           Hash Cond: (t55.lid = int4in(textout(('99'::text))))
-                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.02 rows=334 width=8)
+                           Hash Key: lid
+                           ->  Seq Scan on orca.t55  (cost=0.00..431.01 rows=334 width=8)
                                  Output: c, lid
-                                 Hash Key: lid
-                                 ->  Seq Scan on orca.t55  (cost=0.00..431.01 rows=334 width=8)
-                                       Output: c, lid
-                           ->  Hash  (cost=0.00..0.00 rows=1 width=8)
+                     ->  Hash  (cost=0.00..0.00 rows=1 width=8)
+                           Output: ('99'::text)
+                           ->  Result  (cost=0.00..0.00 rows=1 width=8)
                                  Output: ('99'::text)
                                  ->  Result  (cost=0.00..0.00 rows=1 width=8)
-                                       Output: ('99'::text)
-                                       ->  Result  (cost=0.00..0.00 rows=1 width=8)
-                                             Output: ('99'::text), int4in(textout(('99'::text)))
-                                             ->  Result  (cost=0.00..0.00 rows=1 width=1)
-                                                   Output: '99'::text
+                                       Output: ('99'::text), int4in(textout(('99'::text)))
+                                       ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                                             Output: '99'::text
  Optimizer: Pivotal Optimizer (GPORCA)
- Settings: optimizer=on, optimizer_join_order=query
-(28 rows)
+ Settings: optimizer_enable_coordinator_only_queries = 'on', optimizer_enable_master_only_queries = 'on', optimizer_join_order = 'query', optimizer_segments = '3'
+(25 rows)
 
 CREATE TABLE TP AS
 WITH META AS (SELECT '2020-01-01' AS VALID_DT, '99' AS LOAD_ID)
@@ -12528,12 +12518,12 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
- Result  (cost=0.00..1356692176.26 rows=1 width=8)
+ Result  (cost=0.00..1356692223.82 rows=1 width=8)
    Filter: (SubPlan 1)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
          ->  Seq Scan on tcorr1  (cost=0.00..431.00 rows=1 width=8)
    SubPlan 1
-     ->  Nested Loop Left Join  (cost=0.00..1324032.70 rows=3 width=8)
+     ->  Nested Loop Left Join  (cost=0.00..1324032.75 rows=3 width=8)
            Join Filter: (tcorr1_1.a = tcorr2.a)
            ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
                  ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
@@ -12568,8 +12558,8 @@ select *
 from tcorr1 out
 where out.b in (select coalesce(tcorr2.a, 99)
                 from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  a | b  
 ---+----
  1 | 99
@@ -12652,12 +12642,12 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
- Result  (cost=0.00..1356692176.26 rows=1 width=8)
+ Result  (cost=0.00..1356692223.82 rows=1 width=8)
    Filter: (SubPlan 1)
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
          ->  Seq Scan on tcorr1  (cost=0.00..431.00 rows=1 width=8)
    SubPlan 1
-     ->  Nested Loop Left Join  (cost=0.00..1324032.70 rows=3 width=8)
+     ->  Nested Loop Left Join  (cost=0.00..1324032.75 rows=3 width=8)
            Join Filter: (tcorr1_1.a = tcorr2.a)
            ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
                  ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
@@ -12692,8 +12682,8 @@ select *
 from tcorr1 out
 where out.b in (select coalesce(tcorr2.a, 99)
                 from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
  a | b  
 ---+----
  1 | 99
@@ -13721,23 +13711,17 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code
-   ->  Sort
-         Sort Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code
-         ->  Finalize GroupAggregate
-               Group Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code
-               ->  Sort
-                     Sort Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                           Hash Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code
-                           ->  Partial GroupAggregate
-                                 Group Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code
-                                 ->  Sort
-                                       Sort Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code, order_id
-                                       ->  Dynamic Seq Scan on order_lineitems
-                                             Number of partitions to scan: 3 (out of 12)
-                                             Filter: ((order_datetime >= 'Thu Apr 01 00:00:00 2010'::timestamp without time zone) AND (order_datetime <= '06-30-2010'::date))
+   ->  GroupAggregate
+         Group Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code
+         ->  Sort
+               Sort Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: (to_char(order_datetime, 'YYYY-Q'::text)), item_shipment_status_code
+                     ->  Dynamic Seq Scan on order_lineitems
+                           Number of partitions to scan: 3 (out of 12)
+                           Filter: ((order_datetime >= 'Thu Apr 01 00:00:00 2010'::timestamp without time zone) AND (order_datetime <= '06-30-2010'::date))
  Optimizer: Pivotal Optimizer (GPORCA)
-(18 rows)
+(12 rows)
 
 -- test partioned table with no partitions
 create table no_part (a int, b int) partition by list (a) distributed by (b);
@@ -14449,21 +14433,17 @@ explain select c2 from quad_func_cast();
 (2 rows)
 
 explain select (c1).r from quad_func_cast();
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: FIELDSELECT
                             QUERY PLAN                             
 -------------------------------------------------------------------
- Function Scan on quad_func_cast  (cost=0.00..0.01 rows=1 width=8)
- Optimizer: Postgres query optimizer
+ Function Scan on quad_func_cast  (cost=0.00..0.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (2 rows)
 
 explain select (c2).i from quad_func_cast();
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: FIELDSELECT
                             QUERY PLAN                             
 -------------------------------------------------------------------
- Function Scan on quad_func_cast  (cost=0.00..0.01 rows=1 width=8)
- Optimizer: Postgres query optimizer
+ Function Scan on quad_func_cast  (cost=0.00..0.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
 (2 rows)
 
 select c1 from quad_func_cast();
@@ -14479,16 +14459,12 @@ select c2 from quad_func_cast();
 (1 row)
 
 select (c1).r from quad_func_cast();
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: FIELDSELECT
   r  
 -----
  1.1
 (1 row)
 
 select (c2).i from quad_func_cast();
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: FIELDSELECT
  i 
 ---
   
@@ -14535,6 +14511,205 @@ select c from mix_func_cast();
  t
 (1 row)
 
+----------------------------------
+-- Test ORCA support for FIELDSELECT
+----------------------------------
+create type comp_type as ( a text, b numeric, c int, d float, e int);
+create table comp_table(id int, item comp_type) distributed by (id);
+create table comp_part (id int, item comp_type) distributed by (id) partition by range(id) (start(1) end(4) every(1));
+insert into comp_table values (1, ROW('GP', 10.5, 10, 10.5, 20)), (2, ROW('VM',20.5, 20, 10.5, 20)), (3, ROW('DB',10.5, 10, 10.5, 10));
+insert into comp_part values (1, ROW('GP', 10.5, 10, 10.5, 20)), (2, ROW('VM',20.5, 20, 10.5, 20)), (3, ROW('DB',10.5, 10, 10.5, 10));
+analyze comp_table;
+analyze comp_part;
+select sum((item).b) from comp_table where (item).c=20;
+ sum  
+------
+ 20.5
+(1 row)
+
+explain (costs off) select sum((item).b) from comp_table where (item).c=20;
+                   QUERY PLAN                   
+------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on comp_table
+                     Filter: ((item).c = 20)
+ Optimizer: GPORCA
+(6 rows)
+
+select distinct (item).b from comp_table where (item).c=20;
+  b   
+------
+ 20.5
+(1 row)
+
+explain (costs off) select distinct (item).b from comp_table where (item).c=20;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
+         Group Key: ((item).b)
+         ->  Sort
+               Sort Key: ((item).b)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: ((item).b)
+                     ->  Seq Scan on comp_table
+                           Filter: ((item).c = 20)
+ Optimizer: GPORCA
+(10 rows)
+
+-- verify the query output using predicate with the same composite type
+select (item).a from comp_table where (item).c=20 and (item).e >10;
+ a  
+----
+ VM
+(1 row)
+
+explain (costs off) select (item).a from comp_table where (item).c=20 and (item).e >10;
+                      QUERY PLAN                       
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on comp_table
+         Filter: (((item).c = 20) AND ((item).e > 10))
+ Optimizer: GPORCA
+(4 rows)
+
+-- verify the query output using predicate with the different composite type
+select * from comp_table where (item).c>(item).d;
+ id |         item         
+----+----------------------
+  2 | (VM,20.5,20,10.5,20)
+(1 row)
+
+explain (costs off) select * from comp_table where (item).c>(item).d ;
+                        QUERY PLAN                         
+-----------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on comp_table
+         Filter: (((item).c)::double precision > (item).d)
+ Optimizer: GPORCA
+(4 rows)
+
+-- verify the query output by using a composite type in a join query
+select (x.item).a from comp_table x join comp_table y on (x.item).c=(y.item).c;
+ a  
+----
+ DB
+ DB
+ GP
+ GP
+ VM
+(5 rows)
+
+explain (costs off) select (x.item).a from comp_table x join comp_table y on (x.item).c=(y.item).c;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: ((comp_table.item).c = (comp_table_1.item).c)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: (comp_table.item).c
+               ->  Seq Scan on comp_table
+         ->  Hash
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                     Hash Key: (comp_table_1.item).c
+                     ->  Seq Scan on comp_table comp_table_1
+ Optimizer: GPORCA
+(11 rows)
+
+-- verify the query output by using a composite type in a TVF query
+select (x.item).a, (select count(*) from generate_series(1, (x.item).c)) from comp_table x;
+ a  | count 
+----+-------
+ GP |    10
+ VM |    20
+ DB |    10
+(3 rows)
+
+explain (costs off) select (x.item).a, (select count(*) from generate_series(1, (x.item).c)) from comp_table x;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on comp_table
+         SubPlan 1
+           ->  Aggregate
+                 ->  Function Scan on generate_series
+ Optimizer: GPORCA
+(6 rows)
+
+-- verify the query output by using a composite type in a cte query
+with cte1 as (select * from comp_table where (item).c>10) select id, (item).a, (item).b, (item).c, (item).e from cte1;
+ id | a  |  b   | c  | e  
+----+----+------+----+----
+  2 | VM | 20.5 | 20 | 20
+(1 row)
+
+explain (costs off) with cte1 as (select * from comp_table where (item).c>10) select id, (item).a, (item).b, (item).c, (item).e from cte1;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on comp_table
+         Filter: ((item).c > 10)
+ Optimizer: GPORCA
+(4 rows)
+
+-- verify the query output by using a composite type in a  subquery
+select (item).a from comp_table where (item).c=10 and (item).e IN (SELECT (item).e FROM comp_table WHERE (item).c = 10);
+ a  
+----
+ DB
+ GP
+(2 rows)
+
+explain (costs off) select (item).a from comp_table where (item).c=10 and (item).e IN (SELECT (item).e FROM comp_table WHERE (item).c = 10);
+                             QUERY PLAN                             
+--------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Semi Join
+         Hash Cond: ((comp_table.item).e = ((comp_table_1.item).e))
+         ->  Seq Scan on comp_table
+               Filter: ((item).c = 10)
+         ->  Hash
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     ->  Seq Scan on comp_table comp_table_1
+                           Filter: ((item).c = 10)
+ Optimizer: GPORCA
+(10 rows)
+
+-- verify the query output by using a composite type in a partition table query
+select (x.item).a from comp_part x join comp_part y on (X.item).c=(Y.item).c;
+ a  
+----
+ GP
+ GP
+ VM
+ DB
+ DB
+(5 rows)
+
+explain (costs off) select (x.item).a from comp_part x join comp_part y on (X.item).c=(Y.item).c;
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: ((comp_part.item).c = (comp_part_1.item).c)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: (comp_part.item).c
+               ->  Dynamic Seq Scan on comp_part
+                     Number of partitions to scan: 3 (out of 3)
+         ->  Hash
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                     Hash Key: (comp_part_1.item).c
+                     ->  Dynamic Seq Scan on comp_part comp_part_1
+                           Number of partitions to scan: 3 (out of 3)
+ Optimizer: GPORCA
+(13 rows)
+
+-- clean up
+drop table comp_table;
+drop table comp_part;
+drop type comp_type;
 -- the query with empty CTE producer target list should fall back to Postgres
 -- optimizer without any error on build without asserts
 drop table if exists empty_cte_tl_test;
@@ -14548,8 +14723,8 @@ with cte as (
 select * 
 from empty_cte_tl_test
 where id in(select id from cte);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Empty target list
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Empty target list
  id 
 ----
 (0 rows)
@@ -14621,3 +14796,66 @@ explain select * from baz where baz.a::bpchar='b' or baz.a='c';
 (4 rows)
 
 drop table baz;
+-- While retrieving the columns width in partitioned tables, inherited stats i.e.
+-- stats that cover all the child tables should be used
+-- start_ignore
+create language plpython3u;
+-- end_ignore
+create or replace function check_col_width(query text, operator text, width text) returns int as
+$$
+rv = plpy.execute('EXPLAIN '+ query)
+search_text_1 = operator
+search_text_2 = width
+result = 0
+for i in range(len(rv)):
+    cur_line = rv[i]['QUERY PLAN']
+    if search_text_1 in cur_line and search_text_2 in cur_line:
+        result = result+1
+return result
+$$
+language plpython3u;
+create table testPartWidth (a numeric(7,2), b numeric(7,2)) distributed by (a)
+partition by range(a) (start(0.0) end(4.0) every(2.0));
+insert into testPartWidth values (0.001,0.001),(2.123,2.123);
+analyze testPartWidth;
+--------------------------------------------------------------------------------
+-- The below query shows the column width of 'a' and 'b'
+-- select attname,avg_width from pg_stats where tablename='testPartWidth';
+-- attname | avg_width
+-- ---------+-----------
+--  a       |         5
+--  b       |         5
+--------------------------------------------------------------------------------
+select check_col_width('select a from testPartWidth;','Dynamic Seq Scan','width=5') = 1;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
+ ?column? 
+----------
+ t
+(1 row)
+
+select check_col_width('select b from testPartWidth;','Dynamic Seq Scan','width=5') = 1;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
+ ?column? 
+----------
+ t
+(1 row)
+
+select check_col_width('select a from testPartWidth;','Append','width=5') = 1;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
+ ?column? 
+----------
+ f
+(1 row)
+
+select check_col_width('select a from testPartWidth;','Append','width=5') = 1;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
+ ?column? 
+----------
+ f
+(1 row)
+
+drop function check_col_width(query text, operator text, width text);

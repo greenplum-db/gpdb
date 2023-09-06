@@ -1767,6 +1767,52 @@ CDXLUtils::Read(CMemoryPool *mp, const CHAR *filename)
 	return read_buffer.RgtReset();
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CDXLUtils::SerializeBooleanArray
+//
+//	@doc:
+//		Serialize a boolean array by mapping 1 to true_value
+//		and 0 to false_value
+//
+//---------------------------------------------------------------------------
+CWStringDynamic *
+CDXLUtils::SerializeBooleanArray(CMemoryPool *mp,
+								 ULongPtrArray *dynamic_ptr_array,
+								 const CWStringConst *true_value,
+								 const CWStringConst *false_value)
+{
+	CAutoP<CWStringDynamic> string_var(GPOS_NEW(mp) CWStringDynamic(mp));
+
+	if (nullptr == dynamic_ptr_array)
+	{
+		return string_var.Reset();
+	}
+
+	ULONG length = dynamic_ptr_array->Size();
+	for (ULONG ul = 0; ul < length; ul++)
+	{
+		ULONG value = *((*dynamic_ptr_array)[ul]);
+		GPOS_ASSERT(value == 0 || value == 1);
+		const CWStringConst *string_repr;
+		string_repr = (value == 1) ? true_value : false_value;
+
+		if (ul == length - 1)
+		{
+			// last element: do not print a comma
+			string_var->AppendFormat(string_repr->GetBuffer());
+		}
+		else
+		{
+			string_var->AppendFormat(
+				GPOS_WSZ_LIT("%ls%ls"), string_repr->GetBuffer(),
+				CDXLTokens::GetDXLTokenStr(EdxltokenComma)->GetBuffer());
+		}
+	}
+
+	return string_var.Reset();
+}
+
 #ifdef GPOS_DEBUG
 //---------------------------------------------------------------------------
 //	@function:

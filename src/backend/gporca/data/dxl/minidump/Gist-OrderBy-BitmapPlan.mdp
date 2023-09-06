@@ -201,34 +201,24 @@ Result  (cost=0.00..0.00 rows=1 width=36)
       <dxl:Relation Mdid="6.573456.1.0" Name="gist_tbl2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="p" Attno="2" Mdid="0.604.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c" Attno="3" Mdid="0.718.1.0" Nullable="true" ColWidth="24">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -251,7 +241,7 @@ Result  (cost=0.00..0.00 rows=1 width=36)
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Index Mdid="0.573475.1.0" Name="poly" IsClustered="false" IndexType="Gist" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="0.573475.1.0" Name="poly" IsClustered="false" IndexType="Gist" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.2594.1.0"/>
         </dxl:Opfamilies>
@@ -317,7 +307,7 @@ Result  (cost=0.00..0.00 rows=1 width=36)
     <dxl:Plan Id="0" SpaceSize="9">
       <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.000347" Rows="1.000000" Width="36"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.000755" Rows="1.000000" Width="36"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -334,7 +324,7 @@ Result  (cost=0.00..0.00 rows=1 width=36)
         <dxl:OneTimeFilter/>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.000347" Rows="1.000000" Width="36"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.000755" Rows="1.000000" Width="36"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -372,7 +362,7 @@ Result  (cost=0.00..0.00 rows=1 width=36)
               </dxl:ProjElem>
               <dxl:ProjElem ColId="10" Alias="?column?">
                 <dxl:OpExpr OperatorName="&lt;-&gt;" OperatorMdid="0.712.1.0" OperatorType="0.701.1.0">
-                  <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAWAMAAAAAAAAAAMBVQAAAAAAAwFVAAAAAAABAVUAAAAAAAEBVQAAAAAAA&#10;gFVAAAAAAACAVUAAAAAAAEBVQAAAAAAAwFVAAAAAAADAVUAAAAAAAEBVQA=="/>
+                  <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAWAMAAAAAAAAAAMBVQAAAAAAAwFVAAAAAAABAVUAAAAAAAEBVQAAAAAAA&#xA;gFVAAAAAAACAVUAAAAAAAEBVQAAAAAAAwFVAAAAAAADAVUAAAAAAAEBVQA=="/>
                   <dxl:Ident ColId="1" ColName="p" TypeMdid="0.604.1.0"/>
                 </dxl:OpExpr>
               </dxl:ProjElem>
@@ -414,16 +404,16 @@ Result  (cost=0.00..0.00 rows=1 width=36)
                 <dxl:Filter>
                   <dxl:Comparison ComparisonOperator="&lt;@" OperatorMdid="0.489.1.0">
                     <dxl:Ident ColId="1" ColName="p" TypeMdid="0.604.1.0"/>
-                    <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAWAMAAAAAAAAAAMBVQAAAAAAAwFVAAAAAAABAVUAAAAAAAEBVQAAAAAAA&#10;gFVAAAAAAACAVUAAAAAAAEBVQAAAAAAAwFVAAAAAAADAVUAAAAAAAEBVQA=="/>
+                    <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAWAMAAAAAAAAAAMBVQAAAAAAAwFVAAAAAAABAVUAAAAAAAEBVQAAAAAAA&#xA;gFVAAAAAAACAVUAAAAAAAEBVQAAAAAAAwFVAAAAAAADAVUAAAAAAAEBVQA=="/>
                   </dxl:Comparison>
                 </dxl:Filter>
                 <dxl:IndexCondList>
                   <dxl:Comparison ComparisonOperator="&lt;@" OperatorMdid="0.489.1.0">
                     <dxl:Ident ColId="1" ColName="p" TypeMdid="0.604.1.0"/>
-                    <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAWAMAAAAAAAAAAMBVQAAAAAAAwFVAAAAAAABAVUAAAAAAAEBVQAAAAAAA&#10;gFVAAAAAAACAVUAAAAAAAEBVQAAAAAAAwFVAAAAAAADAVUAAAAAAAEBVQA=="/>
+                    <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAWAMAAAAAAAAAAMBVQAAAAAAAwFVAAAAAAABAVUAAAAAAAEBVQAAAAAAA&#xA;gFVAAAAAAACAVUAAAAAAAEBVQAAAAAAAwFVAAAAAAADAVUAAAAAAAEBVQA=="/>
                   </dxl:Comparison>
                 </dxl:IndexCondList>
-		<dxl:Partitions/>
+                <dxl:Partitions/>
                 <dxl:IndexDescriptor Mdid="0.573475.1.0" IndexName="poly"/>
                 <dxl:TableDescriptor Mdid="6.573456.1.0" TableName="gist_tbl2">
                   <dxl:Columns>

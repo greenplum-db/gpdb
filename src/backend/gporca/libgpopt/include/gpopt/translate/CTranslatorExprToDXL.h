@@ -511,6 +511,9 @@ private:
 	// translate an arrayref
 	CDXLNode *PdxlnArrayRef(CExpression *pexpr);
 
+	// translate a FieldSelect expr
+	CDXLNode *PdxlnFieldSelect(CExpression *pexpr);
+
 	// translate an arrayref index list
 	CDXLNode *PdxlnArrayRefIndexList(CExpression *pexpr);
 

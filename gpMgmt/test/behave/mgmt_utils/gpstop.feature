@@ -167,14 +167,13 @@ Feature: gpstop behave tests
         Given the database is running
         And the user asynchronously runs "psql postgres" and the process is saved
         When the user runs gpstop -a, selects s and interrupt the process
-        And the user runs command "pkill postgres"
-        Then verify if the gpstop.lock directory is present in coordinator_data_directory
+        Then all postgres processes are killed on "current" hosts
+        And verify if the gpstop.lock directory is present in coordinator_data_directory
         And the user runs "gpstart -a"
         And gpstart -a should return a return code of 0
         # proceeding graceful shutdown of the database.
         And the user runs gpstop -a and selects f
         And gpstop should return a return code of 0
-
 
     @concourse_cluster
     @demo_cluster

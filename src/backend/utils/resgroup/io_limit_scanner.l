@@ -38,7 +38,7 @@ max          {
 
 [[:digit:]]+ {
                 yylval->integer = strtoull(yytext, NULL, 10);
-                return VALUE;
+                return NUMBER;
              }
 
 {wildcard}   {

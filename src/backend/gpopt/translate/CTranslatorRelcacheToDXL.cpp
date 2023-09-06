@@ -63,7 +63,6 @@ extern "C" {
 #include "naucrates/md/CMDIdRelStats.h"
 #include "naucrates/md/CMDIdScCmp.h"
 #include "naucrates/md/CMDIndexGPDB.h"
-#include "naucrates/md/CMDPartConstraintGPDB.h"
 #include "naucrates/md/CMDScCmpGPDB.h"
 #include "naucrates/md/CMDTypeBoolGPDB.h"
 #include "naucrates/md/CMDTypeGenericGPDB.h"
@@ -691,15 +690,6 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 		CMDName *md_colname =
 			CDXLUtils::CreateMDNameFromCharArray(mp, NameStr(att->attname));
 
-		// translate the default column value
-		CDXLNode *dxl_default_col_val = nullptr;
-
-		if (!att->attisdropped && !att->attgenerated)
-		{
-			dxl_default_col_val = GetDefaultColumnValue(
-				mp, md_accessor, rel->rd_att, att->attnum);
-		}
-
 		ULONG col_len = gpos::ulong_max;
 		CMDIdGPDB *mdid_col =
 			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, att->atttypid);
@@ -713,16 +703,21 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 		else
 		{
 			// This is expensive, but luckily we don't need it for most types
-			int32 avg_width = gpdb::GetAttAvgWidth(rel->rd_id, ul + 1);
+			HeapTuple stats_tup = gpdb::GetAttStats(rel->rd_id, ul + 1);
 
 			// Column width priority for non-fixed width:
 			// 1. If there is average width kept in the stats for that column, pick that value.
 			// 2. If not, if it is a fixed length text type, pick the size of it. E.g if it is
 			//    varchar(10), assign 10 as the column length.
 			// 3. Otherwise, assign it to default column width which is 8.
-			if (avg_width > 0)
+			if (HeapTupleIsValid(stats_tup))
 			{
-				col_len = avg_width;
+				Form_pg_statistic form_pg_stats =
+					(Form_pg_statistic) GETSTRUCT(stats_tup);
+
+				// column width
+				col_len = form_pg_stats->stawidth;
+				gpdb::FreeHeapTuple(stats_tup);
 			}
 			else if ((mdid_col->Equals(&CMDIdGPDB::m_mdid_bpchar) ||
 					  mdid_col->Equals(&CMDIdGPDB::m_mdid_varchar)) &&
@@ -741,8 +736,7 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 
 		CMDColumn *md_col = GPOS_NEW(mp)
 			CMDColumn(md_colname, att->attnum, mdid_col, att->atttypmod,
-					  !att->attnotnull, att->attisdropped,
-					  dxl_default_col_val /* default value */, col_len);
+					  !att->attnotnull, att->attisdropped, col_len);
 
 		mdcol_array->Append(md_col);
 	}
@@ -754,61 +748,6 @@ CTranslatorRelcacheToDXL::RetrieveRelColumns(CMemoryPool *mp,
 	}
 
 	return mdcol_array;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorRelcacheToDXL::GetDefaultColumnValue
-//
-//	@doc:
-//		Return the dxl representation of column's default value
-//
-//---------------------------------------------------------------------------
-CDXLNode *
-CTranslatorRelcacheToDXL::GetDefaultColumnValue(CMemoryPool *mp,
-												CMDAccessor *md_accessor,
-												TupleDesc rd_att,
-												AttrNumber attno)
-{
-	GPOS_ASSERT(attno > 0);
-
-	Node *node = nullptr;
-
-	// Scan to see if relation has a default for this column
-	if (nullptr != rd_att->constr && 0 < rd_att->constr->num_defval)
-	{
-		AttrDefault *defval = rd_att->constr->defval;
-		INT num_def = rd_att->constr->num_defval;
-
-		GPOS_ASSERT(nullptr != defval);
-		for (ULONG ul = 0; ul < (ULONG) num_def; ul++)
-		{
-			if (attno == defval[ul].adnum)
-			{
-				// found it, convert string representation to node tree.
-				node = gpdb::StringToNode(defval[ul].adbin);
-				break;
-			}
-		}
-	}
-
-	if (nullptr == node)
-	{
-		// get the default value for the type
-		Form_pg_attribute att_tup = &rd_att->attrs[attno - 1];
-		node = gpdb::GetTypeDefault(att_tup->atttypid);
-	}
-
-	if (nullptr == node)
-	{
-		return nullptr;
-	}
-
-	// translate the default value expression
-	return CTranslatorScalarToDXL::TranslateStandaloneExprToDXL(
-		mp, md_accessor,
-		nullptr, /* var_colid_mapping --- subquery or external variable are not supported in default expression */
-		(Expr *) node);
 }
 
 //---------------------------------------------------------------------------
@@ -988,9 +927,8 @@ CTranslatorRelcacheToDXL::AddSystemColumns(CMemoryPool *mp,
 			md_colname, attno,
 			GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidGeneral, att_tup->atttypid),
 			default_type_modifier,
-			false,	  // is_nullable
-			false,	  // is_dropped
-			nullptr,  // default value
+			false,	// is_nullable
+			false,	// is_dropped
 			att_tup->attlen);
 
 		mdcol_array->Append(md_col);
@@ -1029,6 +967,9 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 	bool index_partitioned = false;
 	ULongPtrArray *index_key_cols_array = nullptr;
 	ULONG *attno_mapping = nullptr;
+	ULongPtrArray *sort_direction = nullptr;
+	ULongPtrArray *nulls_direction = nullptr;
+	bool index_amcanorder = false;
 
 	if (!IsIndexSupported(index_rel.get()))
 	{
@@ -1087,6 +1028,7 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 	// extract the position of the key columns
 	index_key_cols_array = GPOS_NEW(mp) ULongPtrArray(mp);
 	ULongPtrArray *included_cols = GPOS_NEW(mp) ULongPtrArray(mp);
+	ULongPtrArray *returnable_cols = GPOS_NEW(mp) ULongPtrArray(mp);
 
 	for (int i = 0; i < form_pg_index->indnatts; i++)
 	{
@@ -1104,6 +1046,53 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 		{
 			included_cols->Append(
 				GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+		}
+
+		// check if index can return column for index-only scans
+		if (gpdb::IndexCanReturn(index_rel.get(), attno))
+		{
+			returnable_cols->Append(
+				GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+		}
+	}
+
+	// extract sort and nulls direction of the key columns
+	sort_direction = GPOS_NEW(mp) ULongPtrArray(mp);
+	nulls_direction = GPOS_NEW(mp) ULongPtrArray(mp);
+
+	// Get IndexAmRoutine Struct
+	IndexAmRoutine *am_routine =
+		gpdb::GetIndexAmRoutineFromAmHandler(index_rel->rd_amhandler);
+	index_amcanorder = am_routine->amcanorder;
+	// Check if index can order
+	// If amcanorder is true, index AM must support INDOPTION_DESC,
+	// INDOPTION_NULLS_FIRST options and have provided Sort, Nulls directions
+	if (index_amcanorder)
+	{
+		for (int i = 0; i < form_pg_index->indnkeyatts; i++)
+		{
+			// indoption value represents sort and nulls direction using 2 bits
+			ULONG rel_indoption = index_rel->rd_indoption[i];
+			// Check if the Sort direction is DESC
+			if (rel_indoption & INDOPTION_DESC)
+			{
+				sort_direction->Append(GPOS_NEW(mp) ULONG(SORT_DESC));
+			}
+			else
+			{
+				sort_direction->Append(GPOS_NEW(mp) ULONG(SORT_ASC));
+			}
+			// Check if the Nulls direction is FIRST
+			if (rel_indoption & INDOPTION_NULLS_FIRST)
+			{
+				nulls_direction->Append(GPOS_NEW(mp)
+											ULONG(COrderSpec::EntFirst));
+			}
+			else
+			{
+				nulls_direction->Append(GPOS_NEW(mp)
+											ULONG(COrderSpec::EntLast));
+			}
 		}
 	}
 	mdid_rel->Release();
@@ -1123,10 +1112,11 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 		child_index_oids = GPOS_NEW(mp) IMdIdArray(mp);
 	}
 
-	CMDIndexGPDB *index = GPOS_NEW(mp)
-		CMDIndexGPDB(mp, mdid_index, mdname, index_clustered, index_partitioned,
-					 index_type, mdid_item_type, index_key_cols_array,
-					 included_cols, op_families_mdids, child_index_oids);
+	CMDIndexGPDB *index = GPOS_NEW(mp) CMDIndexGPDB(
+		mp, mdid_index, mdname, index_clustered, index_partitioned,
+		index_amcanorder, index_type, mdid_item_type, index_key_cols_array,
+		included_cols, returnable_cols, op_families_mdids, child_index_oids,
+		sort_direction, nulls_direction);
 
 	GPOS_DELETE_ARRAY(attno_mapping);
 	return index;
@@ -2809,50 +2799,6 @@ CTranslatorRelcacheToDXL::IsIndexSupported(Relation index_rel)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorRelcacheToDXL::RetrievePartConstraintForIndex
-//
-//	@doc:
-//		Retrieve part constraint for index
-//
-//---------------------------------------------------------------------------
-CMDPartConstraintGPDB *
-CTranslatorRelcacheToDXL::RetrievePartConstraintForIndex(
-	CMemoryPool *mp, CMDAccessor *md_accessor, const IMDRelation *md_rel,
-	Node *part_constraint, ULongPtrArray *level_with_default_part_array,
-	BOOL is_unbounded)
-{
-	CDXLColDescrArray *dxl_col_descr_array = GPOS_NEW(mp) CDXLColDescrArray(mp);
-	const ULONG num_columns = md_rel->ColumnCount();
-
-	for (ULONG ul = 0; ul < num_columns; ul++)
-	{
-		const IMDColumn *md_col = md_rel->GetMdCol(ul);
-		CMDName *md_colname =
-			GPOS_NEW(mp) CMDName(mp, md_col->Mdname().GetMDName());
-		CMDIdGPDB *mdid_col_type = CMDIdGPDB::CastMdid(md_col->MdidType());
-		mdid_col_type->AddRef();
-
-		// create a column descriptor for the column
-		CDXLColDescr *dxl_col_descr = GPOS_NEW(mp) CDXLColDescr(
-			md_colname,
-			ul + 1,	 // colid
-			md_col->AttrNum(), mdid_col_type, md_col->TypeModifier(),
-			false  // fColDropped
-		);
-		dxl_col_descr_array->Append(dxl_col_descr);
-	}
-
-	CMDPartConstraintGPDB *mdpart_constraint = RetrievePartConstraintFromNode(
-		mp, md_accessor, dxl_col_descr_array, part_constraint,
-		level_with_default_part_array, is_unbounded);
-
-	dxl_col_descr_array->Release();
-
-	return mdpart_constraint;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CTranslatorRelcacheToDXL::RetrievePartConstraintForRel
 //
 //	@doc:
@@ -2909,45 +2855,6 @@ CTranslatorRelcacheToDXL::RetrievePartConstraintForRel(
 			mp, md_accessor, &var_colid_mapping, (Expr *) node);
 
 	return scalar_dxlnode;
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorRelcacheToDXL::RetrievePartConstraintFromNode
-//
-//	@doc:
-//		Retrieve part constraint from GPDB node
-//
-//---------------------------------------------------------------------------
-CMDPartConstraintGPDB *
-CTranslatorRelcacheToDXL::RetrievePartConstraintFromNode(
-	CMemoryPool *mp, CMDAccessor *md_accessor,
-	CDXLColDescrArray *dxl_col_descr_array, Node *part_constraints,
-	ULongPtrArray *level_with_default_part_array, BOOL is_unbounded)
-{
-	if (nullptr == part_constraints)
-	{
-		return nullptr;
-	}
-
-	// generate a mock mapping between var to column information
-	CMappingVarColId *var_colid_mapping = GPOS_NEW(mp) CMappingVarColId(mp);
-
-	var_colid_mapping->LoadColumns(0 /*query_level */, 1 /* rteIndex */,
-								   dxl_col_descr_array);
-
-	// translate the check constraint expression
-	CDXLNode *scalar_dxlnode =
-		CTranslatorScalarToDXL::TranslateStandaloneExprToDXL(
-			mp, md_accessor, var_colid_mapping, (Expr *) part_constraints);
-
-	// cleanup
-	GPOS_DELETE(var_colid_mapping);
-
-	level_with_default_part_array->AddRef();
-	return GPOS_NEW(mp) CMDPartConstraintGPDB(mp, level_with_default_part_array,
-											  is_unbounded, scalar_dxlnode);
 }
 
 //---------------------------------------------------------------------------

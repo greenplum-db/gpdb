@@ -14,6 +14,7 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/operators/CLogical.h"
 #include "gpopt/xforms/CXformExploration.h"
 namespace gpopt
 {
@@ -30,12 +31,14 @@ using namespace gpos;
 class CXformLimit2IndexGet : public CXformExploration
 {
 private:
-	// helper function to validate if index is applicable, given OrderSpec
-	// and index columns. This function checks if ORDER BY columns are prefix of
-	// the index columns.
-	static BOOL FIndexApplicableForOrderBy(COrderSpec *pos,
-										   CColRefArray *pdrgpcrIndexColumns,
-										   const IMDIndex *pmdindex);
+	// helper function to validate if index is applicable and determine Index Scan
+	// direction, given OrderSpec and index columns. This function checks if
+	// 1. ORDER BY columns are prefix of the index columns
+	// 2. Sort and Nulls Direction of ORDER BY columns is either equal or
+	//    reversed to the index columns
+	static EIndexScanDirection GetScanDirection(
+		COrderSpec *pos, CColRefArray *pdrgpcrIndexColumns,
+		const IMDIndex *pmdindex);
 
 public:
 	CXformLimit2IndexGet(const CXformLimit2IndexGet &) = delete;

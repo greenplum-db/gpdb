@@ -8,6 +8,8 @@ Greenplum Database prevents unauthorized modification and deletion of audit reco
 
 Greenplum provides an administrative schema called `gp_toolkit` that you can use to query log files, as well as system catalogs and operating environment for system status information. For more information, including usage, refer to *The gp\_tookit Administrative Schema* appendix in the *Greenplum Database Reference Guide*.
 
+Greenplum Database includes the PostgreSQL Audit Extension, or [pgaudit](../../ref_guide/modules/pgaudit.html), which provides detailed session and object audit logging via the standard logging facility provided by PostgreSQL. The goal of PostgreSQL Audit is to provide the tools needed to produce audit logs required to pass certain government, financial, or ISO certification audits.
+
 ## <a id="viewing"></a>Viewing the Database Server Log Files 
 
 Every database instance in Greenplum Database \(coordinator and segments\) is a running PostgreSQL database server with its own server log file. Daily log files are created in the `log` directory of the coordinator and each segment data directory.

@@ -112,6 +112,7 @@ OBJS        = CDXLColDescr.o \
               CDXLScalarConstValue.o \
               CDXLScalarDMLAction.o \
               CDXLScalarDistinctComp.o \
+	      CDXLScalarFieldSelect.o \
               CDXLScalarFilter.o \
               CDXLScalarFuncExpr.o \
               CDXLScalarHashCondList.o \

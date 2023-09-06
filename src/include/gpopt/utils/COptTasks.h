@@ -88,10 +88,6 @@ struct SOptContext
 	// did the optimizer fail unexpectedly?
 	BOOL m_is_unexpected_failure{false};
 
-	// should the error be propagated to user, instead of falling back to the
-	// Postres planner?
-	BOOL m_should_error_out{false};
-
 	// buffer for optimizer error messages
 	CHAR *m_error_msg{nullptr};
 

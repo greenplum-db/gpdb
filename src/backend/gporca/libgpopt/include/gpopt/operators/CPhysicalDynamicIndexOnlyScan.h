@@ -60,6 +60,12 @@ public:
 		return "CPhysicalDynamicIndexOnlyScan";
 	}
 
+	BOOL
+	Matches(COperator *pop) const override
+	{
+		return CUtils::FMatchDynamicIndex(this, pop);
+	}
+
 	//-------------------------------------------------------------------------------------
 	// Enforced Properties
 	//-------------------------------------------------------------------------------------

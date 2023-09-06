@@ -40,7 +40,7 @@ typedef struct GpExttableFdwMustOption
 static const GpExttableFdwMustOption gp_exttable_fdw_must_options[] = {
 	{"location_uris", ForeignTableRelationId},
 	{"command", ForeignTableRelationId},
-	{"format_type", ForeignTableRelationId},
+	{"format", ForeignTableRelationId},
 	{NULL, InvalidOid}
 };
 
@@ -64,27 +64,27 @@ Datum
 gp_exttable_permission_check(PG_FUNCTION_ARGS)
 {
 	List		*options_list = untransformRelOptions(PG_GETARG_DATUM(0));
-	Oid		catalog = PG_GETARG_OID(1);
+	Oid			catalog = PG_GETARG_OID(1);
 	ListCell	*cell;
 	bool		is_writable = false;
 	bool		is_superuser = superuser();
 	List		*location_list = NIL;
-	/* default reject_limit_type is r(ROW)*/
-	char		*reject_limit_type = "r";
-	int32		reject_limit = -1;
-	bool		formattype_found = false;
+	/* default reject_limit_type is rows */
+	char		*reject_limit_type = "rows";
+	int			reject_limit = -1;
+	bool		format_found = false;
 	bool		locationuris_found = false;
 	bool		command_found = false;
 	bool		rejectlimit_found = false;
-	
+
 	/*
 	 * Check that only options supported by gp_exttable_fdw, and allowed for the
 	 * current object type, are given.
 	 */
 	foreach(cell, options_list)
 	{
-		DefElem    *def = (DefElem *) lfirst(cell);
-		
+		DefElem *def = (DefElem *)lfirst(cell);
+
 		/*
 		 * Validate option value, when we can do so without any context.
 		 */
@@ -92,75 +92,94 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
 		{
 			/* these accept only boolean values */
 			is_writable = defGetBoolean(def);
+			continue;
 		}
-		else if(pg_strcasecmp(def->defname, "command") == 0)
+
+		if (pg_strcasecmp(def->defname, "command") == 0)
 		{
-			command_found = true;
 			/* Never allow EXECUTE if not superuser. */
-			if(!is_superuser)
+			if (!is_superuser)
 				ereport(ERROR,
-				        (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				         errmsg("must be superuser to create an EXECUTE external web table")));
+						(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+						 errmsg("must be superuser to create an EXECUTE external web table")));
+			command_found = true;
+			continue;
 		}
-		else if(pg_strcasecmp(def->defname, "location_uris") == 0)
+
+		if (pg_strcasecmp(def->defname, "location_uris") == 0)
 		{
 			location_list = TokenizeLocationUris(defGetString(def));
 			locationuris_found = true;
+			continue;
 		}
-		else if(pg_strcasecmp(def->defname, "format_type") == 0)
+
+		if (pg_strcasecmp(def->defname, "format") == 0)
 		{
-			char *format = (char *) defGetString(def);
-			if(pg_strcasecmp(format, "t") != 0 && pg_strcasecmp(format, "c") != 0 
-			   && pg_strcasecmp(format, "b") != 0)
+			char *format = (char *)defGetString(def);
+			if (pg_strcasecmp(format, "text") != 0 && pg_strcasecmp(format, "csv") != 0 && pg_strcasecmp(format, "custom") != 0)
 			{
 				ereport(ERROR,
-				        (errcode(ERRCODE_FDW_INVALID_ATTRIBUTE_VALUE),
-				         errmsg("format_type must be [t | c | b], t(text), c(csv), b(custom)")));
-			} 
+						(errcode(ERRCODE_FDW_INVALID_ATTRIBUTE_VALUE),
+						 errmsg("format must be [text | csv | custom]")));
+			}
 
-			formattype_found = true;   
+			format_found = true;
+			continue;
 		}
-		else if(pg_strcasecmp(def->defname, "reject_limit_type") == 0)
+
+		if (pg_strcasecmp(def->defname, "reject_limit_type") == 0)
 		{
-			reject_limit_type = (char *) defGetString(def);
-			if (pg_strcasecmp(reject_limit_type, "r") != 0 && pg_strcasecmp( reject_limit_type, "p") != 0)
+			reject_limit_type = (char *)defGetString(def);
+			/*
+			 * rows and percentage are more precise, but external table
+			 * syntax uses row and percent, be tolerant of them.
+			 */
+			if (pg_strcasecmp(reject_limit_type, "rows") != 0 &&
+				pg_strcasecmp(reject_limit_type, "percentage") != 0 &&
+				pg_strcasecmp(reject_limit_type, "row") != 0 &&
+				pg_strcasecmp(reject_limit_type, "percent") != 0)
 				ereport(ERROR,
-				        (errcode(ERRCODE_FDW_INVALID_ATTRIBUTE_VALUE),
-				         errmsg("reject_limit_type must be [r | p], r(ROW) or p(PERCENT)")));
+						(errcode(ERRCODE_FDW_INVALID_ATTRIBUTE_VALUE),
+						 errmsg("reject_limit_type must be \'rows\' or \'percentage\'")));
+			continue;
 		}
-		else if(pg_strcasecmp(def->defname, "reject_limit") == 0)
+
+		if (pg_strcasecmp(def->defname, "reject_limit") == 0)
 		{
-			reject_limit = atoi((char *) defGetString(def));
+			reject_limit = atoi((char *)defGetString(def));
 			rejectlimit_found = true;
+			continue;
 		}
-		else if(pg_strcasecmp(def->defname, "encoding") == 0)
+
+		if (pg_strcasecmp(def->defname, "encoding") == 0)
 		{
-			char	*encoding = (char *) defGetString(def);
-			if (!PG_VALID_ENCODING(atoi(encoding)))
+			char *encoding = (char *)defGetString(def);
+			if (pg_valid_client_encoding(encoding) < 0)
 				ereport(ERROR,
-				        (errcode(ERRCODE_FDW_INVALID_ATTRIBUTE_VALUE),
-				         errmsg("%s is not a valid encoding code", encoding)));
+						(errcode(ERRCODE_UNDEFINED_OBJECT),
+						 errmsg("%s is not a valid encoding name", encoding)));
+			continue;
 		}
 	}
 
-	if(!formattype_found && is_must_option("format_type", catalog))
+	if (!format_found && is_must_option("format", catalog))
 	{
 		ereport(ERROR,
-		        (errcode(ERRCODE_UNDEFINED_OBJECT),
-		         errmsg("must specify format_type option([t | c | b], t(text), c(csv), b(custom))")));
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("must specify format option([text | csv | custom])")));
 	}
 
-	if(locationuris_found && command_found)
+	if (locationuris_found && command_found)
 		ereport(ERROR,
-		        (errcode(ERRCODE_SYNTAX_ERROR),
-		         errmsg("location_uris and command options conflict with each other")));
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("location_uris and command options conflict with each other")));
 
-	if(is_must_option("location_uris", catalog) && !locationuris_found && !command_found)
+	if (is_must_option("location_uris", catalog) && !locationuris_found && !command_found)
 		ereport(ERROR,
-		        (errcode(ERRCODE_SYNTAX_ERROR),
-		         errmsg("must specify one of location_uris and command option")));
+				(errcode(ERRCODE_SYNTAX_ERROR),
+				 errmsg("must specify one of location_uris and command option")));
 
-	if(!is_superuser && Gp_role == GP_ROLE_DISPATCH)
+	if (!is_superuser && Gp_role == GP_ROLE_DISPATCH)
 	{
 		/*----------
 		 * check permissions to create this external table.
@@ -173,12 +192,12 @@ gp_exttable_permission_check(PG_FUNCTION_ARGS)
 		is_valid_locationuris(location_list, is_writable);
 	}
 
-	if(rejectlimit_found)
+	if (rejectlimit_found)
 	{
-		if(is_writable)
+		if (is_writable)
 			ereport(ERROR,
-			        (errcode(ERRCODE_SYNTAX_ERROR),
-			         errmsg("single row error handling may not be used with a writable external table")));
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("single row error handling may not be used with a writable external table")));
 		is_valid_rejectlimit(reject_limit_type, reject_limit);
 	}
 
@@ -310,31 +329,33 @@ is_valid_locationuris(List *location_list, bool is_writable)
 	pfree(uri_str);
 }
 
+/* Don't reuse VerifyRejectLimit() because here it can't Assert() */
 static void is_valid_rejectlimit(const char *reject_limit_type, const int32 reject_limit)
 {
-	if (pg_strcasecmp(reject_limit_type, "r") == 0)
+	/*
+	 * rows and percentage are more precise, but external table syntax uses
+	 * row and percent, be tolerant of them.
+	 */
+	if (pg_strcasecmp(reject_limit_type, "rows") == 0 || pg_strcasecmp(reject_limit_type, "row") == 0)
 	{
-		/* ROWS */
 		if (reject_limit < 2)
 			ereport(ERROR,
-			        (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-			         errmsg("segment reject limit in ROWS must be 2 or larger (got %d)",
-			                reject_limit)));
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					 errmsg("segment reject limit in ROWS must be 2 or larger (got %d)",
+							reject_limit)));
 	}
-	else if(pg_strcasecmp(reject_limit_type, "p") == 0)
+	else if (pg_strcasecmp(reject_limit_type, "percentage") == 0 || pg_strcasecmp(reject_limit_type, "percent") == 0)
 	{
-		/* PERCENT */
 		if (reject_limit < 1 || reject_limit > 100)
 			ereport(ERROR,
-			        (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-			         errmsg("segment reject limit in PERCENT must be between 1 and 100 (got %d)",
-			                reject_limit)));
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					 errmsg("segment reject limit in PERCENTAGE must be between 1 and 100 (got %d)",
+							reject_limit)));
 	}
 	else
 	{
-		/* invalid reject_limit_type */
 		ereport(ERROR,
-		        (errcode(ERRCODE_FDW_INVALID_ATTRIBUTE_VALUE),
-		         errmsg("reject_limit_type must be [r | p], r(ROW) or p(PERCENT)")));
+				(errcode(ERRCODE_FDW_INVALID_ATTRIBUTE_VALUE),
+				 errmsg("reject_limit_type must be \'rows\' or \'percentage\'")));
 	}
 }

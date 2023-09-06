@@ -379,11 +379,6 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 	tcList->serialized_data_length = 0;
 	tcList->max_chunk_length = Gp_max_tuple_chunk_size;
 
-	/*
-	 * GPDB_12_MERGE_FIXME: This used to support serializing memtuples directly.
-	 * That got removed with MinimalTuples in the merge. Resurrect the MemtUple
-	 * support if there's a performance benefit.
-	 */
 	/* Check if the slot has external attribute */
 	for (int i = 0; i < natts; i++)
 	{

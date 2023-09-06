@@ -414,7 +414,7 @@ initCgroup(void)
 
 	bool probe_result = cgroupOpsRoutine->probecgroup();
 	if (!probe_result)
-		elog(ERROR, "The control group is not well configured, please check your"
+		elog(ERROR, "The control group is not well configured, please check your "
 					"system configuration.");
 
 	cgroupOpsRoutine->checkcgroup();
@@ -495,8 +495,11 @@ InitResGroups(void)
 
 		cgroupOpsRoutine->createcgroup(groupId);
 
-		if (caps.io_limit != NULL)
-			cgroupOpsRoutine->setio(groupId, cgroupOpsRoutine->parseio(caps.io_limit));
+		if (caps.io_limit != NIL)
+		{
+			cgroupOpsRoutine->setio(groupId, caps.io_limit);
+			cgroupOpsRoutine->freeio(caps.io_limit);
+		}
 
 		if (CpusetIsEmpty(caps.cpuset))
 		{
@@ -802,7 +805,7 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		}
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_IO_LIMIT)
 		{
-			cgroupOpsRoutine->setio(callbackCtx->groupid, callbackCtx->ioLimit);
+			cgroupOpsRoutine->setio(callbackCtx->groupid, callbackCtx->caps.io_limit);
 		}
 
 		/* reset default group if cpuset has changed */
@@ -974,7 +977,7 @@ createGroup(Oid groupId, const ResGroupCaps *caps)
 	group->caps = *caps;
 
 	/* remove local pointers */
-	group->caps.io_limit = NULL;
+	group->caps.io_limit = NIL;
 
 	group->nRunning = 0;
 	group->nRunningBypassed = 0;

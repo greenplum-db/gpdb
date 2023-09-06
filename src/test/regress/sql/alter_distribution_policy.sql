@@ -616,3 +616,9 @@ select check_redistributed('insert into t_distbya select * from t_reorganize', '
 
 reset optimizer;
 reset gp_force_random_redistribution;
+
+-- Check that AT SET DISTRIBUTED BY cannot be combined with other subcommands
+-- on the same table
+CREATE TABLE atsdby_multiple(i int, j int);
+ALTER TABLE atsdby_multiple SET DISTRIBUTED BY(j), ADD COLUMN k int;
+ALTER TABLE atsdby_multiple SET WITH (reorganize=true), ADD COLUMN k int;

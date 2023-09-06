@@ -87,6 +87,7 @@
 #define SH_ALLOCATE SH_MAKE_NAME(allocate)
 #define SH_FREE SH_MAKE_NAME(free)
 #define SH_STAT SH_MAKE_NAME(stat)
+#define SH_COLL_STAT SH_MAKE_NAME(coll_stat)
 
 /* internal helper functions (no externally visible prototypes) */
 #define SH_COMPUTE_PARAMETERS SH_MAKE_NAME(compute_parameters)
@@ -130,6 +131,14 @@ typedef struct SH_TYPE
 
 	/* user defined data, useful for callbacks */
 	void	   *private_data;
+
+	/*
+	 * number of times hash table is expanded
+	 *
+	 * Since the max size of hash table is UINT32_MAX, uint32 is good
+	 * enough for the number of expanded times.
+	 */
+	uint32 num_expansions;
 }			SH_TYPE;
 
 typedef enum SH_STATUS
@@ -166,6 +175,12 @@ SH_SCOPE void SH_START_ITERATE(SH_TYPE * tb, SH_ITERATOR * iter);
 SH_SCOPE void SH_START_ITERATE_AT(SH_TYPE * tb, SH_ITERATOR * iter, uint32 at);
 SH_SCOPE	SH_ELEMENT_TYPE *SH_ITERATE(SH_TYPE * tb, SH_ITERATOR * iter);
 SH_SCOPE void SH_STAT(SH_TYPE * tb);
+
+SH_SCOPE void
+SH_COLL_STAT(SH_TYPE * tb,
+			 uint32 * max_chain_length,
+			 uint32 * total_chain_length,
+			 uint32 * chain_count);
 
 #endif							/* SH_DECLARE */
 
@@ -393,6 +408,7 @@ SH_CREATE(MemoryContext ctx, uint32 nelements, void *private_data)
 	SH_COMPUTE_PARAMETERS(tb, size);
 
 	tb->data = SH_ALLOCATE(tb, sizeof(SH_ELEMENT_TYPE) * tb->size);
+	tb->num_expansions = 0;
 
 	return tb;
 }
@@ -411,6 +427,7 @@ SH_RESET(SH_TYPE * tb)
 {
 	memset(tb->data, 0, sizeof(SH_ELEMENT_TYPE) * tb->size);
 	tb->members = 0;
+	tb->num_expansions = 0;
 }
 
 /*
@@ -523,6 +540,7 @@ SH_GROW(SH_TYPE * tb, uint64 newsize)
 		}
 	}
 
+	(tb->num_expansions)++;
 	SH_FREE(tb, olddata);
 }
 
@@ -1008,6 +1026,69 @@ SH_STAT(SH_TYPE * tb)
 	sh_log("size: " UINT64_FORMAT ", members: %u, filled: %f, total chain: %u, max chain: %u, avg chain: %f, total_collisions: %u, max_collisions: %i, avg_collisions: %f",
 		 tb->size, tb->members, fillfactor, total_chain_length, max_chain_length, avg_chain_length,
 		 total_collisions, max_collisions, avg_collisions);
+}
+
+/*
+ * Greenplum specific
+ *
+ * Collect some statistics about the state of the hashtable. Major code was
+ * copied from SH_STAT() with some modifications to keep consistent with GPDB6.
+ */
+SH_SCOPE void
+SH_COLL_STAT(SH_TYPE * tb,
+			 uint32 * max_chain_length,
+			 uint32 * total_chain_length,
+			 uint32 * chain_count)
+{
+	*total_chain_length = 0;
+	*chain_count = 0;
+	uint32 last_dist = 0;
+
+	for (int i = 0; i < tb->size; i++)
+	{
+		uint32		hash;
+		uint32		optimal;
+		uint32		dist;
+		SH_ELEMENT_TYPE *elem;
+
+		elem = &tb->data[i];
+
+		if (elem->status != SH_STATUS_IN_USE)
+			continue;
+
+		hash = SH_ENTRY_HASH(tb, elem);
+		optimal = SH_INITIAL_BUCKET(tb, hash);
+		dist = SH_DISTANCE_FROM_OPTIMAL(tb, optimal, i);
+
+		/*
+		 * Different from SH_STAT(), always calculate chain length from 1 but
+		 * not 0, e.g. when there is only one element in bucket, the length
+		 * is 1.
+		 */
+		dist++;
+
+		/*
+		 * In same chain, dist must be always increasing. If dist < last_dist,
+		 * we must hit a new chain; take the length of old chain into account.
+		 */
+		if (dist < last_dist)
+		{
+			if (last_dist > *max_chain_length)
+				*max_chain_length = last_dist;
+			*total_chain_length += last_dist;
+			(*chain_count)++;
+		}
+		last_dist = dist;
+	}
+
+	/* Count the last chain. */
+	if (last_dist != 0)
+	{
+		if (last_dist > *max_chain_length)
+			*max_chain_length = last_dist;
+		*total_chain_length += last_dist;
+		(*chain_count)++;
+	}
 }
 
 #endif							/* SH_DEFINE */

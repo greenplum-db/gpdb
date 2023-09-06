@@ -293,7 +293,6 @@ CTranslatorQueryToDXL::CheckUnsupportedNodeTypes(Query *query)
 	static const SUnsupportedFeature unsupported_features[] = {
 		{T_RowExpr, GPOS_WSZ_LIT("ROW EXPRESSION")},
 		{T_RowCompareExpr, GPOS_WSZ_LIT("ROW COMPARE")},
-		{T_FieldSelect, GPOS_WSZ_LIT("FIELDSELECT")},
 		{T_FieldStore, GPOS_WSZ_LIT("FIELDSTORE")},
 		{T_CoerceToDomainValue, GPOS_WSZ_LIT("COERCETODOMAINVALUE")},
 		{T_GroupId, GPOS_WSZ_LIT("GROUPID")},

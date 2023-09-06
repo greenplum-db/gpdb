@@ -67,8 +67,10 @@ CLogicalDynamicIndexGet::CLogicalDynamicIndexGet(
 	// create the index descriptor
 	m_pindexdesc = CIndexDescriptor::Pindexdesc(mp, ptabdesc, pmdindex);
 
-	// compute the order spec
-	m_pos = PosFromIndex(m_mp, pmdindex, m_pdrgpcrOutput, ptabdesc);
+	// Assumes scan direction always Forward as Backwards Scan isn't supported
+	// for partition tables yet.
+	m_pos = PosFromIndex(m_mp, pmdindex, m_pdrgpcrOutput, ptabdesc,
+						 EForwardScan /*scan direction*/);
 }
 
 //---------------------------------------------------------------------------

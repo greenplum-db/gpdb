@@ -2,7 +2,7 @@
 title: file:// Protocol 
 ---
 
-The `file://` protocol is used in a URI that specifies the location of an operating system file.
+The `file://` protocol is used in a URI that specifies the location of an operating system file. External tables that you create that specify the `file://` protocol are read-only tables.
 
 The URI includes the host name, port, and path to the file. Each file must reside on a segment host in a location accessible by the Greenplum Database superuser \(`gpadmin`\). The host name used in the URI must match a segment host name registered in the `gp_segment_configuration` system catalog table.
 

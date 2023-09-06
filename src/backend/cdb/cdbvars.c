@@ -101,6 +101,8 @@ int         gp_segment_connect_timeout = 180;  /* Maximum time (in seconds) allo
 												* or a mirror to respond.
 												*/
 
+bool		gp_detect_data_correctness;		/* Detect if the current data distribution is correct */
+
 /*
  * Configurable timeout for snapshot add: exceptionally busy systems may take
  * longer than our old hard-coded version -- so here is a tuneable version.
@@ -298,6 +300,12 @@ int			gp_workfile_limit_per_query = 0;
 
 /* Maximum number of workfiles to be created by a query */
 int			gp_workfile_limit_files_per_query = 0;
+
+/*
+ * The overhead memory (kB) used by all compressed workfiles of a single
+ * workfile_set
+ */
+int			gp_workfile_compression_overhead_limit = 0;
 
 /* Enable single-slice single-row inserts ?*/
 bool		gp_enable_fast_sri = true;

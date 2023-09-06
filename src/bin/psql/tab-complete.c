@@ -3545,8 +3545,9 @@ psql_completion(const char *text, int start, int end)
 		if (ends_with(prev_wd, '(') || ends_with(prev_wd, ','))
 			COMPLETE_WITH("FULL", "FREEZE", "ANALYZE", "VERBOSE",
 						  "DISABLE_PAGE_SKIPPING", "SKIP_LOCKED",
-						  "INDEX_CLEANUP", "TRUNCATE");
-		else if (TailMatches("FULL|FREEZE|ANALYZE|VERBOSE|DISABLE_PAGE_SKIPPING|SKIP_LOCKED|INDEX_CLEANUP|TRUNCATE"))
+						  "INDEX_CLEANUP", "TRUNCATE", "PARALLEL", "SKIP_DATABASE_STATS",
+						  "ONLY_DATABASE_STATS");
+		else if (TailMatches("FULL|FREEZE|ANALYZE|VERBOSE|DISABLE_PAGE_SKIPPING|SKIP_LOCKED|TRUNCATE|SKIP_DATABASE_STATS|ONLY_DATABASE_STATS"))
 			COMPLETE_WITH("ON", "OFF");
 	}
 	else if (HeadMatches("VACUUM") && TailMatches("("))

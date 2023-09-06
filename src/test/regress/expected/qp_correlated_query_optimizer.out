@@ -1830,20 +1830,20 @@ select (select avg(x) from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = any (select 
 
 -- Planner should fail due to skip-level correlation not supported. Query should not cause segfault like in issue #12054.
 select A.j, (select array_agg(a_B) from (select B.j, (select array_agg(a_C) from (select C.j from C where C.i = A.i) a_C) from B where B.i = A.i order by A.j) a_B) from A;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Whole-row variable
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Whole-row variable
 ERROR:  correlated subquery with skip-level correlations is not supported
 -- Planner should fail due to skip-level correlation not supported. Query should not return wrong results like in issue #12054.
 select A.j, (select array_agg(a_B) from (select B.j, (select sum(a_C.j) from (select C.j from C where C.i = A.i) a_C) from B where B.i = A.i order by A.j) a_B) from A;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Whole-row variable
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Whole-row variable
 ERROR:  correlated subquery with skip-level correlations is not supported
 -- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ with multiple columns (Heap)
 -- ----------------------------------------------------------------------
 select A.i, B.i from A, B where (A.i,A.j) = (select min(B.i),min(B.j) from B where B.i = A.i) order by A.i, B.i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-Scalar Subquery
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-Scalar Subquery
  i | i  
 ---+----
  1 | -1
@@ -1861,8 +1861,8 @@ DETAIL:  Feature not supported: Non-Scalar Subquery
 (12 rows)
 
 select A.i, B.i from A, B where (A.i,A.j) = all(select B.i,B.j from B where B.i = A.i) order by A.i, B.i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-Scalar Subquery
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-Scalar Subquery
  i  | i  
 ----+----
  19 | -1
@@ -1909,8 +1909,8 @@ select A.i, B.i from A, B where not exists (select B.i,B.j from B where B.i = A.
 (18 rows)
 
 select A.i, B.i from A, B where (A.i,A.j) in (select B.i,B.j from B where B.i = A.i) order by A.i, B.i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-Scalar Subquery
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-Scalar Subquery
  i | i  
 ---+----
  1 | -1
@@ -1928,8 +1928,8 @@ DETAIL:  Feature not supported: Non-Scalar Subquery
 (12 rows)
 
 select A.i, B.i,C.i from A, B, C where (A.i,B.i) = any (select A.i, B.i from A,B where A.i = C.i and B.i = C.i) order by A.i, B.i, C.i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-Scalar Subquery
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-Scalar Subquery
  i | i | i 
 ---+---+---
  1 | 1 | 1
@@ -2184,8 +2184,8 @@ select A.i, B.i,C.i from A, B, C where not exists (select A.i, B.i from A,B wher
 (240 rows)
 
 select A.i, B.i,C.i from A, B, C where (A.i,B.i) in (select A.i, B.i from A,B where A.i = C.i and B.i = C.i) order by A.i, B.i, C.i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-Scalar Subquery
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-Scalar Subquery
  i | i | i 
 ---+---+---
  1 | 1 | 1
@@ -2195,8 +2195,8 @@ DETAIL:  Feature not supported: Non-Scalar Subquery
 (4 rows)
 
 select * from A,B,C where (A.i,B.i) = any (select A.i, B.i from A,B where A.i < C.i and B.i = C.i and C.i not in (select A.i from A where A.j = 1 and A.j = B.j)) order by 1,2,3,4,5,6;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-Scalar Subquery
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-Scalar Subquery
  i  | j | i  | j | i  | j  
 ----+---+----+---+----+----
   1 | 1 |  2 | 7 |  2 |  7
@@ -2210,8 +2210,8 @@ DETAIL:  Feature not supported: Non-Scalar Subquery
 (8 rows)
 
 select A.i as A_i, B.i as B_i,C.i as C_i from A, B, C where (A.i,B.i) = (select min(A.i), min(B.i) from A,B where A.i = C.i and B.i = C.i) order by A_i, B_i, C_i;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-Scalar Subquery
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-Scalar Subquery
  a_i | b_i | c_i 
 -----+-----+-----
    1 |   1 |   1
@@ -2340,8 +2340,8 @@ SELECT id, first_name FROM employee WHERE id IN
 SELECT id, first_name, salary from employee
     where (id, salary) IN
         (SELECT id, MIN(salary) FROM employee GROUP BY id) order by id;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-Scalar Subquery
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-Scalar Subquery
  id | first_name | salary  
 ----+------------+---------
  01 | Jason      | 1234.56
@@ -4013,8 +4013,8 @@ WHERE EXISTS (
         FROM skip_correlated_t2
     )
 );
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
 ERROR:  correlated subquery with skip-level correlations is not supported
 EXPLAIN (COSTS OFF)
 SELECT *
@@ -4030,8 +4030,8 @@ WHERE EXISTS (
         )
         )
 );
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
 ERROR:  correlated subquery with skip-level correlations is not supported
 EXPLAIN (COSTS OFF)
 SELECT *
@@ -4047,8 +4047,8 @@ WHERE EXISTS (
         )
         )
 );
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
 ERROR:  correlated subquery with skip-level correlations is not supported
 --------------------------------------------------------------------------------
 -- Query should not cause segfault on ORCA. Will fallback to planner as no plan
@@ -4065,8 +4065,8 @@ WHERE EXISTS (
         FROM skip_correlated_t2
     )
 );
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  No plan has been computed for required properties
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
                                            QUERY PLAN                                            
 -------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)

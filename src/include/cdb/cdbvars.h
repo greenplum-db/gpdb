@@ -122,6 +122,9 @@ extern int			gp_reject_percent_threshold;
  */
 extern bool           gp_select_invisible;
 
+/* Detect if the current partitioning of the table or data distribution is correct */
+extern bool			gp_detect_data_correctness;
+
 /*
  * Used to set the maximum length of the current query which is displayed
  * when the user queries pg_stat_activty table.
@@ -649,6 +652,7 @@ extern bool dml_ignore_target_partition_check;
 extern int gp_workfile_limit_per_segment;
 extern int gp_workfile_limit_per_query;
 extern int gp_workfile_limit_files_per_query;
+extern int gp_workfile_compression_overhead_limit;
 extern int gp_workfile_caching_loglevel;
 extern int gp_sessionstate_loglevel;
 extern int gp_workfile_bytes_to_checksum;

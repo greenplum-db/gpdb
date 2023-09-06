@@ -43,10 +43,13 @@ class COrderSpec : public CPropSpec
 public:
 	enum ENullTreatment
 	{
+		// Note: Do not change the order of keys in this enum, they are used
+		// as ints for determining index scan direction for queries with
+		// order by clause
+		EntLast,
+		EntFirst,
 		EntAuto,  // default behavior, as implemented by operator
 
-		EntFirst,
-		EntLast,
 
 		EntSentinel
 	};

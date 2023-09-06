@@ -18,7 +18,7 @@ typedef dev_t bdi_t;
 
 /*
  * IOconfig represents the io.max of cgroup v2 io controller.
- * Fiels: each field correspond to cgroup v2 io.max file.
+ * Fields: each field correspond to cgroup v2 io.max file.
  *	rbps: read bytes per second
  *	wbps: write bytes per second
  *	riops: read iops
@@ -35,6 +35,8 @@ typedef struct IOconifg
 
 /* the order must be same as struct IOconfig */
 const extern char	*IOconfigFields[4];
+/* the order must be same as struct IOconfigFields */
+const extern char	*IOStatFields[4];
 
 typedef struct IOconfigItem
 {
@@ -71,6 +73,27 @@ typedef struct IOLimitScannerState
 	void *scanner;
 } IOLimitScannerState;
 
+typedef struct IOStatItems
+{
+	uint64 rbytes;
+	uint64 wbytes;
+	uint64 rios;
+	uint64 wios;
+} IOStatItems;
+
+typedef struct IOStat
+{
+	Oid groupid;
+	Oid tablespace;
+	IOStatItems items;
+} IOStat;
+
+typedef struct IOStatHashEntry
+{
+	bdi_t id;
+	IOStatItems items;
+} IOStatHashEntry;
+
 extern void io_limit_scanner_begin(IOLimitScannerState *state, const char *limit_str);
 extern void io_limit_scanner_finish(IOLimitScannerState *state);
 
@@ -79,7 +102,11 @@ extern bdi_t get_bdi_of_path(const char *ori_path);
 extern int fill_bdi_list(TblSpcIOLimit *io_limit);
 
 extern List *io_limit_parse(const char *limit_str);
+extern void io_limit_free(List *limit_list);
 extern void io_limit_validate(List *limit_list);
 
+extern List  *get_iostat(Oid groupid, List *io_limit);
+extern int  compare_iostat(const void *a, const void *b);
+extern char *io_limit_dump(List *limit_list);
 
 #endif

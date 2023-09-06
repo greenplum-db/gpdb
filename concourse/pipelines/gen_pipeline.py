@@ -276,13 +276,13 @@ def main():
         action='store',
         dest='test_sections',
         choices=[
-            'ICW',
-            'CLI',
-            'Release',
+            'icw',
+            'cli',
+            'release',
         ],
         default=[],
         nargs='+',
-        help='Select tests sections to run, Release section should be specified with ICW and CLI, and will be ignored if os_type is not ' + default_os_type
+        help='Select tests sections to run, release section should be specified with icw and cli, and will be ignored if os_type is not ' + default_os_type
     )
 
     parser.add_argument(
@@ -337,9 +337,9 @@ def main():
 
     if args.pipeline_target == 'prod' and not args.directed_release and args.os_type not in ["rocky9", "oel9", "rhel9"]:
         args.test_sections = [
-            'ICW',
-            'CLI',
-            'Release'
+            'icw',
+            'cli',
+            'release'
         ]
 
     # use_ICW_workers adds tags to the specified concourse definitions which
