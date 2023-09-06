@@ -373,10 +373,14 @@ CdbDispatchCommand(const char *strCommand,
 				   int flags,
 				   CdbPgResults *cdb_pgresults)
 {
-	return CdbDispatchCommandToSegments(strCommand,
-										flags,
-										cdbcomponent_getCdbComponentsList(),
-										cdb_pgresults);
+	List *segments = NIL;
+
+	segments = cdbcomponent_getCdbComponentsList();
+	CdbDispatchCommandToSegments(strCommand,
+								 flags,
+								 segments,
+								 cdb_pgresults);
+	list_free(segments);
 }
 
 /*
