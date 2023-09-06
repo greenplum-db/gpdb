@@ -346,12 +346,12 @@ class PgBaseBackup(Command):
         cmd_tokens.append(source_host)
         cmd_tokens.append('-p')
         cmd_tokens.append(source_port)
+        cmd_tokens.extend(self._xlog_arguments(replication_slot_name))
 
         # In case of differential recovery, this flag is used to only write recovery.conf
         # and internal.auto.conf files to target data directory.
         if writeconffilesonly:
             cmd_tokens.append('--write-conf-files-only')
-            cmd_tokens.extend(self._xlog_arguments(replication_slot_name))
         else:
 
             # if there is already slot present and create-slot arg is true it will give error,
@@ -367,8 +367,6 @@ class PgBaseBackup(Command):
                         cmd_tokens.append('--create-slot')
                 else:
                     cmd_tokens.append('--create-slot')
-
-            cmd_tokens.extend(self._xlog_arguments(replication_slot_name))
 
             # GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: avoid checking checksum
             # for heap tables till we code logic to skip/verify checksum

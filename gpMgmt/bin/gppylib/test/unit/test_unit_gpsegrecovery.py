@@ -484,8 +484,12 @@ class DifferentialRecoveryClsTestCase(GpTestCase):
                          self.mock_logger.debug.call_args_list)
 
     @patch('gppylib.db.catalog.RemoteQueryCommand.get_results',
-           return_value=[['/data/mytblspace1'], ['/data/mytblspace2']])
-    def test_sync_tablespaces_outside_data_dir(self, mock):
+           return_value=[['1111','/data/mytblspace1'], ['2222','/data/mytblspace2']])
+    @patch('gpsegrecovery.get_remote_link_path',
+           return_value='/data/mytblspace1/2')
+    @patch('os.listdir')
+    @patch('os.symlink')
+    def test_sync_tablespaces_outside_data_dir(self, mock1,mock2,mock3,mock4):
         self.diff_recovery_cmd.sync_tablespaces()
         self.assertEqual(2, self.mock_rsync_init.call_count)
         self.assertEqual(2, self.mock_rsync_run.call_count)
@@ -494,8 +498,10 @@ class DifferentialRecoveryClsTestCase(GpTestCase):
                          self.mock_logger.debug.call_args_list)
 
     @patch('gppylib.db.catalog.RemoteQueryCommand.get_results',
-           return_value=[['/data/mirror0']])
-    def test_sync_tablespaces_within_data_dir(self, mock):
+           return_value=[['1234','/data/primary0']])
+    @patch('os.listdir')
+    @patch('os.symlink')
+    def test_sync_tablespaces_within_data_dir(self, mock, mock2,mock3):
         self.diff_recovery_cmd.sync_tablespaces()
         self.assertEqual(0, self.mock_rsync_init.call_count)
         self.assertEqual(0, self.mock_rsync_run.call_count)
@@ -503,8 +509,12 @@ class DifferentialRecoveryClsTestCase(GpTestCase):
                          self.mock_logger.debug.call_args_list)
 
     @patch('gppylib.db.catalog.RemoteQueryCommand.get_results',
-           return_value=[['/data/mirror0'], ['/data/mytblspace1']])
-    def test_sync_tablespaces_mix_data_dir(self, mock):
+           return_value=[['1111','/data/primary0'], ['2222','/data/mytblspace1']])
+    @patch('gpsegrecovery.get_remote_link_path',
+           return_value='/data/mytblspace1/2')
+    @patch('os.listdir')
+    @patch('os.symlink')
+    def test_sync_tablespaces_mix_data_dir(self, mock1, mock2, mock3,mock4):
         self.diff_recovery_cmd.sync_tablespaces()
         self.assertEqual(1, self.mock_rsync_init.call_count)
         self.assertEqual(1, self.mock_rsync_run.call_count)
@@ -635,10 +645,10 @@ class DifferentialRecoveryRunTestCase(GpTestCase):
         expected_exclude_list = {'/log', 'pgsql_tmp',
                                  'postgresql.auto.conf.tmp',
                                  'current_logfiles.tmp', 'postmaster.pid',
-                                 'postmaster.opts', 'pg_dynshmem',
+                                 'postmaster.opts', 'pg_dynshmem','tablespace_map',
                                  'pg_notify/*', 'pg_replslot/*', 'pg_serial/*',
                                  'pg_stat_tmp/*', 'pg_snapshots/*',
-                                 'pg_subtrans/*', 'backups/*', '/db_dumps',
+                                 'pg_subtrans/*', 'pg_tblspc/*', 'backups/*', '/db_dumps',
                                  '/promote', '/some_log'}
         self.assertEqual(expected_exclude_list, self.mock_rsync_init.call_args_list[0][1]['exclude_list'])
 
@@ -655,10 +665,10 @@ class DifferentialRecoveryRunTestCase(GpTestCase):
         expected_exclude_list = {'/log', 'pgsql_tmp',
                                  'postgresql.auto.conf.tmp',
                                  'current_logfiles.tmp', 'postmaster.pid',
-                                 'postmaster.opts', 'pg_dynshmem',
+                                 'postmaster.opts', 'pg_dynshmem', 'tablespace_map',
                                  'pg_notify/*', 'pg_replslot/*', 'pg_serial/*',
                                  'pg_stat_tmp/*', 'pg_snapshots/*',
-                                 'pg_subtrans/*', 'backups/*', '/db_dumps',
+                                 'pg_subtrans/*', 'pg_tblspc/*', 'backups/*', '/db_dumps',
                                  '/promote'}
         self.assertEqual(expected_exclude_list, self.mock_rsync_init.call_args_list[0][1]['exclude_list'])
 

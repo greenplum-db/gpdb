@@ -15,8 +15,9 @@ from gppylib.commands.gp import ModifyConfSetting
 from gppylib.db import dbconn
 from gppylib.db.catalog import RemoteQueryCommand
 from gppylib.operations.get_segments_in_recovery import is_seg_in_backup_mode
-from gppylib.operations.segment_tablespace_locations import get_segment_tablespace_locations
+from gppylib.operations.segment_tablespace_locations import get_segment_tablespace_oid_locations
 from gppylib.commands.unix import terminate_proc_tree
+from gppylib.commands.unix import get_remote_link_path
 
 
 class FullRecovery(Command):
@@ -176,15 +177,17 @@ class DifferentialRecovery(Command):
             "postmaster.pid",
             "postmaster.opts",
             "pg_dynshmem",
+            "tablespace_map", # this files getting generated on call of pg_start_backup
             "pg_notify/*",
             "pg_replslot/*",
             "pg_serial/*",
             "pg_stat_tmp/*",
             "pg_snapshots/*",
             "pg_subtrans/*",
+            "pg_tblspc/*",  # excluding as the tablespace is handled in sync_tablespaces()
             "backups/*",
             "/db_dumps",  # as we exclude during pg_basebackup
-            "/promote",  # Need to check why do we exclude it during pg_basebackup
+            "/promote",  # as we exclude during pg_basebackup
         }
 
         log_directory_sql = """
@@ -289,29 +292,52 @@ class DifferentialRecovery(Command):
                     srcHost=self.recovery_info.source_hostname, progress_file=self.recovery_info.progress_file)
         cmd.run(validateAfter=True)
 
+
     def sync_tablespaces(self):
         self.logger.debug(
             "Syncing tablespaces of dbid {} which are outside of data_dir".format(
                 self.recovery_info.target_segment_dbid))
 
-        # get the tablespace locations
-        tablespaces = get_segment_tablespace_locations(self.recovery_info.source_hostname,
+        # get the oid and tablespace locations
+        tablespaces = get_segment_tablespace_oid_locations(self.recovery_info.source_hostname,
                                                        self.recovery_info.source_port)
 
-        for tablespace_location in tablespaces:
-            if tablespace_location[0].startswith(self.recovery_info.target_datadir):
-                continue
-            # os.path.join(dir, "") will append a '/' at the end of dir. When using "/" at the end of source,
-            # rsync will copy the content of the last directory. When not using "/" at the end of source, rsync
-            # will copy the last directory and the content of the directory.
-            cmd = Rsync(name="Sync tablespace",
-                        srcFile=os.path.join(tablespace_location[0], ""),
-                        dstFile=tablespace_location[0],
-                        srcHost=self.recovery_info.source_hostname,
-                        progress=True,
-                        checksum=True,
-                        progress_file=self.recovery_info.progress_file)
-            cmd.run(validateAfter=True)
+        # clear all tablespace symlink for target.
+        for file in os.listdir(os.path.join(self.recovery_info.target_datadir,"pg_tblspc")):
+            file_path = os.path.join(self.recovery_info.target_datadir,"pg_tblspc",file)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+            except Exception as e:
+                raise Exception("Failed to remove link {} for dbid {} : {}".
+                                format(file_path,self.recovery_info.target_segment_dbid, str(e)))
+
+        for oid, tablespace_location in tablespaces:
+            # tablespace_location is the link path who's symlink is created at $DATADIR/pg_tblspc/{oid}
+            # tablespace_location is the base path in which datafiles are stored in respective dbid directory.
+            targetOidPath = os.path.join(self.recovery_info.target_datadir, "pg_tblspc", str(oid))
+            targetPath = os.path.join(tablespace_location, str(self.recovery_info.target_segment_dbid))
+
+            #if tablespace is not inside the datadir do rsync for copy, if it is inside datadirectory
+            #files would have been copied while doing rsync for data dir.
+            if not tablespace_location.startswith(self.recovery_info.source_datadir):
+                srcOidPath = os.path.join(self.recovery_info.source_datadir, "pg_tblspc", str(oid))
+                srcPath = get_remote_link_path(srcOidPath,self.recovery_info.source_hostname)
+
+                # os.path.join(dir, "") will append a '/' at the end of dir. When using "/" at the end of source,
+                # rsync will copy the content of the last directory. When not using "/" at the end of source, rsync
+                # will copy the last directory and the content of the directory.
+                cmd = Rsync(name="Sync tablespace",
+                            srcFile=os.path.join(srcPath, ""),
+                            dstFile=targetPath,
+                            srcHost=self.recovery_info.source_hostname,
+                            progress=True,
+                            checksum=True,
+                            progress_file=self.recovery_info.progress_file)
+                cmd.run(validateAfter=True)
+
+            # create tablespace symlink for target data directory.
+            os.symlink(targetPath, targetOidPath)
 
 
 def start_segment(recovery_info, logger, era):
