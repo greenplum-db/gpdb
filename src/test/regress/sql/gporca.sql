@@ -3599,6 +3599,16 @@ select check_col_width('select a from testPartWidth;','Append','width=5') = 1;
 select check_col_width('select a from testPartWidth;','Append','width=5') = 1;
 drop function check_col_width(query text, operator text, width text);
 
+---------------------------------------------------------------------------------
+-- Test cast from INT[] to TEXT[]
+CREATE TABLE array_coerceviaio(a INT[]) distributed randomly;
+INSERT INTO array_coerceviaio values(ARRAY[1, 2, 3]);
+
+EXPLAIN SELECT CAST(a AS TEXT[]) FROM array_coerceviaio;
+SELECT CAST(a AS TEXT[]) FROM array_coerceviaio;
+DROP TABLE array_coerceviaio;
+---------------------------------------------------------------------------------
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

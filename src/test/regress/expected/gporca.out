@@ -14761,3 +14761,23 @@ select check_col_width('select a from testPartWidth;','Append','width=5') = 1;
 (1 row)
 
 drop function check_col_width(query text, operator text, width text);
+---------------------------------------------------------------------------------
+-- Test cast from INT[] to TEXT[]
+CREATE TABLE array_coerceviaio(a INT[]) distributed randomly;
+INSERT INTO array_coerceviaio values(ARRAY[1, 2, 3]);
+EXPLAIN SELECT CAST(a AS TEXT[]) FROM array_coerceviaio;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1882.00 rows=52800 width=32)
+   ->  Seq Scan on array_coerceviaio  (cost=0.00..1178.00 rows=17600 width=32)
+ Optimizer: Postgres-based planner
+(3 rows)
+
+SELECT CAST(a AS TEXT[]) FROM array_coerceviaio;
+    a    
+---------
+ {1,2,3}
+(1 row)
+
+DROP TABLE array_coerceviaio;
+---------------------------------------------------------------------------------
