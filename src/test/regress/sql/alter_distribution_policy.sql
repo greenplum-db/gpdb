@@ -539,3 +539,9 @@ SELECT gp_segment_id,count(*) from t_reorganize_false GROUP BY 1;
 ALTER TABLE t_reorganize_false SET WITH (REORGANIZE=false) DISTRIBUTED RANDOMLY;
 SELECT gp_segment_id,count(*) from t_reorganize_false GROUP BY 1;
 DROP TABLE t_reorganize_false;
+
+-- Check that AT SET DISTRIBUTED BY cannot be combined with other subcommands
+-- on the same table
+CREATE TABLE atsdby_multiple(i int, j int);
+ALTER TABLE atsdby_multiple SET DISTRIBUTED BY(j), ADD COLUMN k int;
+ALTER TABLE atsdby_multiple SET WITH (reorganize=true), ADD COLUMN k int;
