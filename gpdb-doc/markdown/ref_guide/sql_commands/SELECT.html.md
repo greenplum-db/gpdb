@@ -155,7 +155,7 @@ TABLESAMPLE sampling_method ( argument [, ...] ) [ REPEATABLE ( seed ) ]
 :   The optional `REPEATABLE` clause specifies a seed number or expression to use for generating random numbers within the sampling method. The seed value can be any non-null floating-point value. Two queries that specify the same seed and argument values will select the same sample of the table, if the table has not been changed meanwhile. But different seed values usually produce different samples. If `REPEATABLE` is not specified, then Greenplum Database selects a new random sample for each query, based upon a system-generated seed. Note that some add-on sampling methods do not accept `REPEATABLE`, and will always produce new samples on each use.
 
 select
-:   A sub-`SELECT` can appear in the `FROM` clause. This acts as though its output were created as a temporary table for the duration of this single `SELECT` command. Note that the sub-`SELECT` must be surrounded by parentheses, and an alias *must* be provided for it. A [VALUES](VALUES.html) command can also be used here. See "Non-standard Clauses" in the [Compatibility](#section19) section for limitations of using correlated sub-selects in Greenplum Database.
+:   A sub-`SELECT` can appear in the `FROM` clause. This acts as though its output were created as a temporary table for the duration of this single `SELECT` command. Note that the sub-`SELECT` must be surrounded by parentheses, and an alias *must* be provided for it. A [VALUES](VALUES.html) command can also be used here. See "Non-standard Clauses" in the [Compatibility](#compatibility) section for limitations of using correlated sub-selects in Greenplum Database.
 
 with_query_name
 :   A `WITH` query is referenced in the `FROM` clause by specifying its name, just as though the name were a table name. You can provide an alias in the same way as for a table.
@@ -792,7 +792,7 @@ SELECT m.name AS mname, pname
   FROM manufacturers m LEFT JOIN LATERAL get_product_names(m.id) pname ON true;
 ```
 
-## <a id="section19"></a>Compatibility 
+## <a id="compatibility"></a>Compatibility 
 
 The `SELECT` statement is compatible with the SQL standard, but there are some extensions and some missing features.
 
