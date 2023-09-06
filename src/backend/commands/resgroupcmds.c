@@ -637,6 +637,11 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 
 					oldContext = CurrentMemoryContext;
 					MemoryContextSwitchTo(TopMemoryContext);
+					/*
+					 * This function will be called in InitResGroups and AlterResourceGroup which
+					 * shoud not be abort. In some circumstances, for example, the directory of a
+					 * tablespace in io_limit be removed, then parseio will throw error. If
+					 * InitResGroups be aborted, the cluster cannot launched. */
 					PG_TRY();
 					{
 						resgroupCaps->io_limit = cgroupOpsRoutine->parseio(value);
