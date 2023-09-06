@@ -1,45 +1,39 @@
-# GPDB_91_MERGE_FIXME: GPDB acquires ExclusiveLock for update and delete SQL
-# statements.  This invalidates most of the isolation tests from upstream below.
-# E.g. an UPDATE step executed by isolationtester never returns because another
-# session run in the same permutation holds ExclusiveLock that blocks the step.
-# GPDB_94_MERGE_FIXME: Since the introduction of Global Deadlock Detector, an
-# UPDATE/DELETE no longer acquires ExclusiveLock. So we could perhaps enable
-# some of these now. 
-# A GUC gp_enable_global_deadlock_detector is introduced to control GDD.
-# When GDD is enabled, update|delete on heap tables will lock the table in
-# RowExclusiveLock mode. Otherwise, it locks the whole table in ExlusiveLock mode.
-# By default, GDD is set distabled and most the cases are tested under this
-# condition.
-# Greenplum's logic for Select-Statement with locking clause (for update|no key update|share|key share)
-# is different from upstream:
-#   - For all kinds of select-statement with locking clause, Greenplum locks the entire table in ExclusiveLock
-#   mode, and does not generate LockRows plannode in the plan.
-#   - For very simple cases (defined below), Greenplum behaves just like Postgres:
-#     1. Hold RowShareLock on the table
-#     2. Generate LockRows plannode in the plan
-#     3. Lock tuples during executing
-
-# Simple cases should meet all the following conditions:
-#   1. GDD(global deadlock detector) is enabled
-#   2. Top level select statements with locking clause
-#   3. FromList in the parse tree contains and only contains one rangeVar
-#   4. No sublink and no subquery
-#   5. No set operations (union, intersect, …)
-
-# Additionally, skip-locked-4 uses pg_advisory_lock() which only takes the lock
-# on QD, but it needs to take it on QE segments as well.
-# insert-conflict-do-update-3 related to issue https://github.com/greenplum-db/gpdb/issues/15635
-
-#
-# GPDB_12_MERGE_FRATURE_NOT_SUPPORTED: disable test predicate-lock-hot-tuple, update-conflict-out
-# because Greenplum does not support serializable transactions.
-#
 #############################################################
 #
 # IMPORTANT: Isolation tests are run with gp_role=utility
 # currently in GPDB. Refer isolation_init()
 #
+# Global deadlock detector (gp_enable_global_deadlock_detector)
+# is default to OFF currently. Enable it when we enable these
+# tests in non-utility mode.
+#
 #############################################################
+
+# GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: disabled these tests because Greenplum
+# does not enforce foreign key constraints:
+# fk-contention, fk-partitioned-1, fk-partitioned-2, propagate-lock-delete
+#
+# GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: disabled these tests because Greenplum
+# does not support statement trigger:
+# alter-table-3, create-trigger
+#
+# GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: disabled these tests because Greenplum
+# does not support CREATE INDEX CONCURRENTLY or REINDEX CONCURRENTLY:
+# reindex-concurrently, multiple-cic
+#
+# GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: disabled these tests because Greenplum
+# does not support serializable transactions:
+# read-only-anomaly-2, read-only-anomaly-3, read-write-unique, read-write-unique-2,
+# read-write-unique-3, read-write-unique-4, simple-write-skew, receipt-report, 
+# temporal-range-integrity, project-manager, classroom-scheduling, total-cash, 
+# referential-integrity, ri-trigger, partial-index, two-ids, multiple-row-versions,
+# index-only-scan, predicate-lock-hot-tuple, update-conflict-out, predicate-hash,
+# predicate-gist, predicate-gin, serializable-parallel, serializable-parallel-2,
+# prepared-transactions
+#
+# XXX: these tests are failed due to unknown reasons: eval-plan-qual, tuplelock-update,
+# tuplelock-partition, alter-table-4
+#
 
 test: read-only-anomaly
 #test: read-only-anomaly-2
@@ -65,12 +59,12 @@ test: deadlock-hard
 test: deadlock-soft
 test: deadlock-soft-2
 #test: fk-contention
-#test: fk-deadlock
-#test: fk-deadlock2
+test: fk-deadlock
+test: fk-deadlock2
 #test: fk-partitioned-1
 #test: fk-partitioned-2
 #test: eval-plan-qual
-#test: eval-plan-qual-trigger
+test: eval-plan-qual-trigger
 test: lock-update-delete
 test: lock-update-traversal
 test: inherit-temp
@@ -79,6 +73,7 @@ test: insert-conflict-do-nothing
 test: insert-conflict-do-nothing-2
 test: insert-conflict-do-update
 test: insert-conflict-do-update-2
+# insert-conflict-do-update-3 is disabled related to issue https://github.com/greenplum-db/gpdb/issues/15635
 #test: insert-conflict-do-update-3
 test: insert-conflict-toast
 test: insert-conflict-specconflict
