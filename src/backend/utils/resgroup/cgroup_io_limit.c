@@ -544,7 +544,7 @@ io_limit_dump(List *limit_list)
 
 		for(i = 0; i < fields_length; i++)
 		{
-			if (*(value + i) != 0)
+			if (*(value + i) != IO_LIMIT_MAX)
 				appendStringInfo(result, "%s=%lu", IOconfigFields[i], *(value + i));
 			else
 				appendStringInfo(result, "%s=max", IOconfigFields[i]);
@@ -564,11 +564,11 @@ void
 clear_io_max(Oid groupid)
 {
 	FILE *f;
-	StringInfo line = makeStringInfo();
-	StringInfo result = makeStringInfo();
-	List *result_lines = NIL;
-	ListCell *cell;
-	char path[MAX_CGROUP_PATHLEN];
+	StringInfo line			 = makeStringInfo();
+	StringInfo result		 = makeStringInfo();
+	List	   *result_lines = NIL;
+	ListCell   *cell;
+	char	   path[MAX_CGROUP_PATHLEN];
 	buildPath(groupid, BASEDIR_GPDB, CGROUP_COMPONENT_PLAIN, "io.max", path, MAX_CGROUP_PATHLEN);
 
 	f = AllocateFile(path, "r");
