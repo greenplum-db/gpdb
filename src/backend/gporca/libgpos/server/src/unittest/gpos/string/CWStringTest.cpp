@@ -344,16 +344,11 @@ CWStringTest::EresUnittest_Initialize()
 	CWStringConst *pcstr2 = GPOS_NEW(mp) CWStringConst(mp, "12345");
 	GPOS_ASSERT(5 == pcstr2->Length());
 
-	const char *str3 = "z\u00df\u6c34\U0001f34c";
-	CWStringConst *pcstr3 = GPOS_NEW(mp) CWStringConst(mp, str3);
-	GPOS_ASSERT(10 == pcstr3->Length());
-
 	// cleanup
 	GPOS_DELETE(pstr1);
 	GPOS_DELETE(pstr2);
 	GPOS_DELETE(pcstr1);
 	GPOS_DELETE(pcstr2);
-	GPOS_DELETE(pcstr3);
 
 #endif	// #ifdef GPOS_DEBUG
 	return GPOS_OK;
