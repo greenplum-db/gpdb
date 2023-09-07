@@ -138,7 +138,7 @@ CREATE FUNCTION
 
 0: CREATE OR REPLACE FUNCTION mkdir(dirname text) RETURNS BOOL AS $$ import os 
 if os.path.exists(dirname): return True 
-try: os.makedirs(dirname) except Exception as e: plpy.error("cannot create dir {}".format(e)) else: return True $$ LANGUAGE plpython3u;
+try: os.makedirs(dirname) except FileExistsError: return True except Exception as e: plpy.error("cannot create dir {}".format(e)) else: return True $$ LANGUAGE plpython3u;
 CREATE FUNCTION
 
 0: CREATE OR REPLACE FUNCTION rmdir(dirname text) RETURNS BOOL AS $$ import shutil import fcntl import os 
