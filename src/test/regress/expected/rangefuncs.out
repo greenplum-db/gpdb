@@ -1736,7 +1736,6 @@ create function rngfunc1(n integer, out a text, out b text)
   language sql
   as $$ select 'foo ' || i, 'bar ' || i from generate_series(1,$1) i $$;
 set work_mem='64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 select t.a, t, t.a from rngfunc1(10000) t limit 1;
    a   |         t         |   a   
 -------+-------------------+-------
@@ -1744,7 +1743,6 @@ select t.a, t, t.a from rngfunc1(10000) t limit 1;
 (1 row)
 
 reset work_mem;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 select t.a, t, t.a from rngfunc1(10000) t limit 1;
    a   |         t         |   a   
 -------+-------------------+-------

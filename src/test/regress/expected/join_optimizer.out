@@ -2577,7 +2577,6 @@ reset enable_nestloop;
 -- regression test for bug #13908 (hash join with skew tuples & nbatch increase)
 --
 set work_mem to '64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set enable_mergejoin to off;
 explain (costs off)
 select count(*) from tenk1 a, tenk1 b
@@ -2608,7 +2607,6 @@ select count(*) from tenk1 a, tenk1 b
 (1 row)
 
 reset work_mem;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 reset enable_mergejoin;
 --
 -- regression test for 8.2 bug with improper re-ordering of left joins

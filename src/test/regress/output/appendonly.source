@@ -1665,7 +1665,6 @@ insert into bms_ao_bug select 1, 1, a.c1::char(100) from generate_series(1, 2000
 create index bms_ao_bug_ix1 on bms_ao_bug (c2);
 set enable_seqscan=off;
 set work_mem=256;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 select
 a.c1,
 count(*) row_cnt

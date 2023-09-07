@@ -25,7 +25,6 @@ set enable_indexscan=false;
 set enable_seqscan=false;
 -- Lower work_mem to trigger use of lossy bitmaps
 set work_mem = 64;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 -- Test bitmap-and.
 SELECT count(*) FROM bmscantest WHERE a = 1 AND b = 1;
  count 

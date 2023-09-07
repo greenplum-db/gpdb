@@ -127,10 +127,7 @@ BEGIN
     COMMIT;
 END;
 $$;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 CALL transaction_test5();
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 ERROR:  invalid transaction termination
 CONTEXT:  PL/pgSQL function transaction_test5() line 3 at COMMIT
 -- SECURITY DEFINER currently disallow transaction statements
