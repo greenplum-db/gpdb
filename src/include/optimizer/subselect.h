@@ -18,10 +18,7 @@
 #include "nodes/pathnodes.h"
 #include "nodes/plannodes.h"
 
-#if 0
-/* Not used in GPDB */
 extern void SS_process_ctes(PlannerInfo *root);
-#endif
 extern Node *convert_testexpr(PlannerInfo *root,
 				 Node *testexpr,
 				 List *subst_nodes);
@@ -54,6 +51,5 @@ extern void check_multi_subquery_correlated(PlannerInfo *root, Var *var);
 extern List *generate_subquery_vars(PlannerInfo *root, List *tlist,
 					   Index varno);
 extern bool QueryHasDistributedRelation(Query *q, bool recursive);
-extern bool contain_outer_selfref(Node *node);
 
 #endif							/* SUBSELECT_H */

@@ -94,11 +94,9 @@ static bool subpath_is_hashable(PlannerInfo *root, Path *path);
 static bool testexpr_is_hashable(Node *testexpr, List *param_ids);
 static bool test_opexpr_is_hashable(OpExpr *testexpr, List *param_ids);
 static bool hash_ok_operator(OpExpr *expr);
-#if 0
+
 /*
  * The following several functions are used by SS_process_ctes.
- * But SS_process_ctes is commentted of because gpdb does not
- * use it.
  */
 static bool contain_dml(Node *node);
 static bool contain_dml_walker(Node *node, void *context);
@@ -106,7 +104,7 @@ static bool contain_outer_selfref(Node *node);
 static bool contain_outer_selfref_walker(Node *node, Index *depth);
 static void inline_cte(PlannerInfo *root, CommonTableExpr *cte);
 static bool inline_cte_walker(Node *node, inline_cte_walker_context *context);
-#endif
+
 static bool simplify_EXISTS_query(PlannerInfo *root, Query *query);
 static Query *convert_EXISTS_to_ANY(PlannerInfo *root, Query *subselect,
 									Node **testexpr, List **paramIds);
@@ -122,7 +120,6 @@ static bool finalize_primnode(Node *node, finalize_primnode_context *context);
 static bool finalize_agg_primnode(Node *node, finalize_primnode_context *context);
 
 extern	double global_work_mem(PlannerInfo *root);
-static bool contain_outer_selfref_walker(Node *node, Index *depth);
 
 /*
  * Get the datatype/typmod/collation of the first column of the plan's output.
@@ -1108,11 +1105,9 @@ hash_ok_operator(OpExpr *expr)
 }
 
 
-#if 0
 /*
- * GPDB doesn't use initplan + CteScan, so running SS_process_ctes will only
- * generate unused initplans. Keep commented out to avoid merge conflicts with
- * upstream.
+ * GPDB doesn't use initplan + CteScan, so running SS_process_ctes may only
+ * generate unused initplans. 
  */
 
 /*
@@ -1235,7 +1230,9 @@ SS_process_ctes(PlannerInfo *root)
 		final_rel = fetch_upper_rel(subroot, UPPERREL_FINAL, NULL);
 		best_path = final_rel->cheapest_total_path;
 
-		plan = create_plan(subroot, best_path);
+		subroot->curSlice = palloc0(sizeof(PlanSlice));
+		subroot->curSlice->gangType = GANGTYPE_UNALLOCATED;
+		plan = create_plan(subroot, best_path, subroot->curSlice);
 
 		/*
 		 * Make a SubPlan node for it.  This is just enough unlike
@@ -1251,6 +1248,15 @@ SS_process_ctes(PlannerInfo *root)
 						   &splan->firstColCollation);
 		splan->useHashTable = false;
 		splan->unknownEqFalse = false;
+
+		splan->is_initplan = true;
+		/*
+		 * InitPlans are dispatched separately, before the main plan,
+		 * and the result is brought to the QD.
+		 */
+		Flow	   *topFlow = makeFlow(FLOW_SINGLETON, getgpsegmentCount());
+		topFlow->segindex = -1;
+		plan->flow = topFlow;
 
 		/*
 		 * CTE scans are not considered for parallelism (cf
@@ -1327,11 +1333,11 @@ contain_dml_walker(Node *node, void *context)
 	}
 	return expression_tree_walker(node, contain_dml_walker, context);
 }
-#endif
+
 /*
  * contain_outer_selfref: is there an external recursive self-reference?
  */
-bool
+static bool
 contain_outer_selfref(Node *node)
 {
 	Index		depth = 0;
@@ -1382,7 +1388,7 @@ contain_outer_selfref_walker(Node *node, Index *depth)
 	return expression_tree_walker(node, contain_outer_selfref_walker,
 								  (void *) depth);
 }
-#if 0
+
 /*
  * inline_cte: convert RTE_CTE references to given CTE into RTE_SUBQUERYs
  */
@@ -1466,7 +1472,6 @@ inline_cte_walker(Node *node, inline_cte_walker_context *context)
 
 	return expression_tree_walker(node, inline_cte_walker, context);
 }
-#endif
 
 /*
  * convert_ANY_sublink_to_join: try to convert an ANY SubLink to a join
