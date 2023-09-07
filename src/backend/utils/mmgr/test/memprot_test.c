@@ -96,9 +96,9 @@ static size_t CalculateReallocSize(size_t original_size, float ratio)
 	size_t new_size = ((float)original_size) * ratio;
 
 	/* Overflow or exceeding the max allowed allocation size */
-	if ((ratio > 1.0 && new_size < original_size) || (new_size > MAX_REQUESTABLE_SIZE))
+	if ((ratio > 1.0 && new_size < original_size) || (new_size > gp_max_alloc_size_mb * 1024L * 1024L))
 	{
-		return MAX_REQUESTABLE_SIZE;
+		return gp_max_alloc_size_mb * 1024L * 1024L;
 	}
 
 	return new_size;
@@ -117,7 +117,7 @@ static void* AllocateWithCheck(size_t size)
 	size_t chosen_vmem_size = CalculateVmemSizeFromUserSize(size);
 
 	/* Too big allocation should fail assert checking */
-	if (is_assert_checking && chosen_vmem_size > MAX_REQUESTABLE_SIZE)
+	if (is_assert_checking && chosen_vmem_size > gp_max_alloc_size_mb * 1024L * 1024L)
 	{
 		EXPECT_EXCEPTION();
 	}
@@ -133,7 +133,7 @@ static void* AllocateWithCheck(size_t size)
 		void *ptr = gp_malloc(size);
 
 		/* size limit is only checked in assert build */
-		if (is_assert_checking && chosen_vmem_size > MAX_REQUESTABLE_SIZE)
+		if (is_assert_checking && chosen_vmem_size > gp_max_alloc_size_mb * 1024L * 1024L)
 		{
 			assert_true(false);
 		}
@@ -334,7 +334,7 @@ test__gp_malloc_calls_vmem_tracker_when_mp_init_true(void **state)
 static void
 test__gp_malloc_and_free__basic_tests(void **state)
 {
-	size_t sizes[] = {50, 1024, MAX_REQUESTABLE_SIZE - sizeof(VmemHeader) - FOOTER_CHECKSUM_SIZE,
+	size_t sizes[] = {50, 1024, gp_max_alloc_size_mb * 1024L * 1024L - sizeof(VmemHeader) - FOOTER_CHECKSUM_SIZE,
 			1024L * 1024L * 1024L * 2L, 1024L * 1024L * 1024L * 5L};
 
 	for (int idx = 0; idx < sizeof(sizes)/sizeof(sizes[0]); idx++)
@@ -351,7 +351,7 @@ test__gp_malloc_and_free__basic_tests(void **state)
 static void
 test__gp_realloc__basic_tests(void **state)
 {
-	size_t sizes[] = {50, 1024, MAX_REQUESTABLE_SIZE - sizeof(VmemHeader) - FOOTER_CHECKSUM_SIZE};
+	size_t sizes[] = {50, 1024, gp_max_alloc_size_mb * 1024L * 1024L - sizeof(VmemHeader) - FOOTER_CHECKSUM_SIZE};
 	/* Ratio of new size to original size for realloc calls */
 	float fractions[] = {0, 0.1, 0.5, 1, 1.5, 2};
 
