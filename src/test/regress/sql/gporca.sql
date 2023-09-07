@@ -3606,7 +3606,6 @@ INSERT INTO array_coerceviaio values(ARRAY[1, 2, 3]);
 
 EXPLAIN SELECT CAST(a AS TEXT[]) FROM array_coerceviaio;
 SELECT CAST(a AS TEXT[]) FROM array_coerceviaio;
-DROP TABLE array_coerceviaio;
 ---------------------------------------------------------------------------------
 
 -- start_ignore

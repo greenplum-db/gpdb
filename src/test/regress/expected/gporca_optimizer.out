@@ -14877,5 +14877,4 @@ SELECT CAST(a AS TEXT[]) FROM array_coerceviaio;
  {1,2,3}
 (1 row)
 
-DROP TABLE array_coerceviaio;
 ---------------------------------------------------------------------------------
