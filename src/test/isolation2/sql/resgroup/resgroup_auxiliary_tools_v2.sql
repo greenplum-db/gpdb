@@ -320,6 +320,8 @@ $$ LANGUAGE plpython3u;
 
     try:
         os.makedirs(dirname)
+    except FileExistsError:
+        return True
     except Exception as e:
         plpy.error("cannot create dir {}".format(e))
     else:
