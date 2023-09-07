@@ -2776,9 +2776,15 @@ CTranslatorRelcacheToDXL::IsIndexSupported(Relation index_rel)
 		return true;
 	}
 
-	// Fall back if query is on a relation with a pgvector index (ivfflat)
-	// Orca currently does not generate index scan alternatives here
-	// Fall back to ensure users can get better performing index plans using planner
+	// Fall back if query is on a relation with a pgvector index (ivfflat) or
+	// pg_embedding index (hnsw). Orca currently does not generate index scan
+	// alternatives here. Fall back to ensure users can get better performing
+	// index plans using planner.
+	//
+	// An alternative approach was considered to fall back for any unsupported
+	// index. However, the downside of that is that it will lead to many more
+	// fall backs when a table has an unsupported index. That could severely
+	// limit ORCA's ability to operate on that table.
 	CAutoMemoryPool amp;
 	CMemoryPool *mp = amp.Pmp();
 	CWStringDynamic *am_name_str = CDXLUtils::CreateDynamicStringFromCharArray(
