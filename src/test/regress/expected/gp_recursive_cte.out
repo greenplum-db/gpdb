@@ -635,25 +635,27 @@ explain (costs off) with recursive rcte as
       join rcte on rcte.b = parent_table.a
    )
 select count(*) from rcte;
-                                   QUERY PLAN
----------------------------------------------------------------------------------
- Finalize Aggregate
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Partial Aggregate
-               ->  Recursive Union
-                     ->  Sort
-                           Sort Key: t1.a
-                           ->  Seq Scan on t1
-                     ->  Nested Loop
-                           Join Filter: (t1_1.a = rcte.b)
-                           ->  WorkTable Scan on rcte
-                           ->  Materialize
-                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                                       ->  Sort
-                                             Sort Key: t1_1.a
-                                             ->  Seq Scan on t1 t1_1
- Optimizer: Postgres-based planner
-(16 rows)
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice2; segments: 3)
+         ->  Aggregate
+               ->  Subquery Scan on rcte
+                     ->  Recursive Union
+                           ->  Subquery Scan on "*SELECT* 1"
+                                 ->  Sort
+                                       Sort Key: t1.a
+                                       ->  Seq Scan on t1
+                           ->  Nested Loop
+                                 Join Filter: (t1_1.a = rcte_1.b)
+                                 ->  WorkTable Scan on rcte rcte_1
+                                 ->  Materialize
+                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                             ->  Sort
+                                                   Sort Key: t1_1.a
+                                                   ->  Seq Scan on t1 t1_1
+ Optimizer: Postgres query optimizer
+(18 rows)
 
 RESET enable_nestloop;
 RESET enable_hashjoin;
