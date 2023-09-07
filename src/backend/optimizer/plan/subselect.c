@@ -1140,6 +1140,13 @@ SS_process_ctes(PlannerInfo *root)
 		SubPlan    *splan;
 		int			paramid;
 
+		/* Greenplum specific code:
+		 * Only process CTEs without references in RTEs here, others 
+		 * will be processed in set_cte_pathlist().
+		 */
+		if (cte->cterefcount > 0)
+			continue;
+
 		/*
 		 * Ignore SELECT CTEs that are not actually referenced anywhere.
 		 */
