@@ -48,4 +48,7 @@ extern bool CreateAOAuxiliaryTable(Relation rel,
 extern bool IsAppendonlyMetadataRelkind(const char relkind);
 
 extern void NewRelationCreateAOAuxTables(Oid relOid, bool createBlkDir);
+
+extern Snapshot DetermineAOAuxSnapshot(const char relkind, Snapshot in_snapshot);
+
 #endif   /* AOCATALOG_H */

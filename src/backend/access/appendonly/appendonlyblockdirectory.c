@@ -206,7 +206,8 @@ AppendOnlyBlockDirectory_Init_forSearch(
 	blockDirectory->segmentFileInfo = segmentFileInfo;
 	blockDirectory->totalSegfiles = totalSegfiles;
 	blockDirectory->aoRel = aoRel;
-	blockDirectory->appendOnlyMetaDataSnapshot = appendOnlyMetaDataSnapshot;
+	blockDirectory->appendOnlyMetaDataSnapshot = DetermineAOAuxSnapshot(RELKIND_AOBLOCKDIR,
+																		appendOnlyMetaDataSnapshot);
 	blockDirectory->numColumnGroups = numColumnGroups;
 	blockDirectory->isAOCol = isAOCol;
 	blockDirectory->proj = proj;
@@ -300,7 +301,8 @@ AppendOnlyBlockDirectory_Init_forUniqueChecks(
  * Note: These lookups will be purely restricted to the block directory relation
  * itself and will not involve the physical AO relation.
  * 
- * Note: the input snapshot should be an MVCC snapshot.
+ * Note: for RR transactions, should use SnapshotSelf;
+ * for RC tranactions, should use MVCC snapshot.
  */
 void
 AppendOnlyBlockDirectory_Init_forIndexOnlyScan(
@@ -313,8 +315,6 @@ AppendOnlyBlockDirectory_Init_forIndexOnlyScan(
 	Oid blkdiridxid;
 
 	Assert(RelationIsValid(aoRel));
-
-	Assert(IsMVCCSnapshot(snapshot));
 
 	GetAppendOnlyEntryAuxOids(aoRel,
 							  NULL, &blkdirrelid, NULL);
@@ -329,9 +329,8 @@ AppendOnlyBlockDirectory_Init_forIndexOnlyScan(
 	blockDirectory->segmentFileInfo = NULL;
 	blockDirectory->totalSegfiles = -1;
 	blockDirectory->currentSegmentFileNum = -1;
-
-	blockDirectory->appendOnlyMetaDataSnapshot = snapshot;
-
+	blockDirectory->appendOnlyMetaDataSnapshot = DetermineAOAuxSnapshot(RELKIND_AOBLOCKDIR,
+																		snapshot);
 	blockDirectory->numColumnGroups = numColumnGroups;
 	blockDirectory->proj = NULL;
 

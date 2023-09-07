@@ -33,3 +33,83 @@ insert into test_ao select generate_series(1,100);
 -- For the repeatable read isolation level row still there.
 2: explain (costs off) select i from test_ao where i = 100;
 2: select i from test_ao where i = 100;
+
+-- Test 3
+-- Start RR transaction before AO tuple update,
+-- create block directory (by create index) before AO tuple update,
+-- expect dead tuple visible in indexonlyscan.
+1q:
+2q:
+1: drop table if exists test_ao;
+1: create table test_ao(i bigint) using @amname@ distributed by (i);
+1: insert into test_ao select generate_series(1,10);
+
+-- create block directory here
+2: create index test_ao_idx on test_ao(i);
+2: set enable_seqscan=off;
+2: explain (costs off) select i from test_ao where i = 1;
+2: select i from test_ao where i = 1;
+
+1: drop index test_ao_idx;
+
+2: explain select i from test_ao where i = 1;
+2: select i from test_ao where i = 1;
+2: begin isolation level repeatable read;
+2: select 1;
+
+-- update row selected above and create a new index
+1: update test_ao set i = 2 where i = 1;
+1: create index test_ao_idx on test_ao(i);
+
+-- for the repeatable read isolation level row still there,
+-- because blkdir.tuple.xmin < RR transaction xid, blkdir
+-- scan in RR transaction should be able to see the entry
+-- containing the corresponding dead tuple
+2: explain (costs off) select i from test_ao where i = 1;
+2: select i from test_ao where i = 1;
+-- compare with seqscan, expect indexonlyscan result to be same as seqscan
+2: set enable_indexonlyscan to off;
+2: set enable_bitmapscan to off;
+2: reset enable_seqscan;
+2: explain (costs off) select i from test_ao where i = 1;
+2: select i from test_ao where i = 1;
+2: end;
+
+-- Test 4
+-- Start RR transaction before AO tuple update,
+-- create block directory after AO tuple update,
+-- expect dead tuple visible in indexonlyscan.
+1q:
+2q:
+1: drop table if exists test_ao;
+1: create table test_ao(i bigint) using @amname@ distributed by (i);
+1: insert into test_ao select generate_series(1,10);
+
+2: set enable_seqscan=off;
+2: explain (costs off) select i from test_ao where i = 1;
+2: select i from test_ao where i = 1;
+2: begin isolation level repeatable read;
+2: select 1;
+
+-- update row selected above and create new index
+1: update test_ao set i = 2 where i = 1;
+-- create block directory after update,
+-- so blkdir.tuple.xmin > RR transaction xid
+1: create index test_ao_idx on test_ao(i);
+
+-- for the repeatable read isolation level row still there,
+-- because blkdir scan in RR transaction should use SnapshotSelf
+-- to make the dead tuple visibile
+2: explain (costs off) select i from test_ao where i = 1;
+2: select i from test_ao where i = 1;
+-- compare with seqscan, expect indexonlyscan result to be same as seqscan
+2: set enable_indexonlyscan to off;
+2: set enable_bitmapscan to off;
+2: reset enable_seqscan;
+2: explain (costs off) select i from test_ao where i = 1;
+2: select i from test_ao where i = 1;
+2: end;
+
+1: drop table test_ao;
+1q:
+2q:

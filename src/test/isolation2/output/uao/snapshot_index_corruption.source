@@ -31,6 +31,7 @@ SET
  Gather Motion 1:1  (slice1; segments: 1)           
    ->  Index Only Scan using test_ao_idx on test_ao 
          Index Cond: (i = 101)                      
+ Optimizer: Postgres query optimizer                
 (4 rows)
 2: select i from test_ao where i = 101;
  i   
@@ -69,9 +70,200 @@ CREATE INDEX
  Gather Motion 1:1  (slice1; segments: 1)           
    ->  Index Only Scan using test_ao_idx on test_ao 
          Index Cond: (i = 100)                      
+ Optimizer: Postgres query optimizer                
 (4 rows)
 2: select i from test_ao where i = 100;
  i   
 -----
  100 
 (1 row)
+
+-- Test 3
+-- Start RR transaction before AO tuple update,
+-- create block directory (by create index) before AO tuple update,
+-- expect dead tuple visible in indexonlyscan.
+1q: ... <quitting>
+2q: ... <quitting>
+1: drop table if exists test_ao;
+DROP
+1: create table test_ao(i bigint) using @amname@ distributed by (i);
+CREATE
+1: insert into test_ao select generate_series(1,10);
+INSERT 10
+
+-- create block directory here
+2: create index test_ao_idx on test_ao(i);
+CREATE
+2: set enable_seqscan=off;
+SET
+2: explain (costs off) select i from test_ao where i = 1;
+ QUERY PLAN                                         
+----------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)           
+   ->  Index Only Scan using test_ao_idx on test_ao 
+         Index Cond: (i = 1)                        
+ Optimizer: Postgres query optimizer                
+(4 rows)
+2: select i from test_ao where i = 1;
+ i 
+---
+ 1 
+(1 row)
+
+1: drop index test_ao_idx;
+DROP
+
+2: explain select i from test_ao where i = 1;
+ QUERY PLAN                                                                                      
+-------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=10000000000.00..10000000393.90 rows=86 width=8) 
+   ->  Seq Scan on test_ao  (cost=10000000000.00..10000000392.75 rows=29 width=8)                
+         Filter: (i = 1)                                                                         
+ Optimizer: Postgres query optimizer                                                             
+(4 rows)
+2: select i from test_ao where i = 1;
+ i 
+---
+ 1 
+(1 row)
+2: begin isolation level repeatable read;
+BEGIN
+2: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+
+-- update row selected above and create a new index
+1: update test_ao set i = 2 where i = 1;
+UPDATE 1
+1: create index test_ao_idx on test_ao(i);
+CREATE
+
+-- for the repeatable read isolation level row still there,
+-- because blkdir.tuple.xmin < RR transaction xid, blkdir
+-- scan in RR transaction should be able to see the entry
+-- containing the corresponding dead tuple
+2: explain (costs off) select i from test_ao where i = 1;
+ QUERY PLAN                                         
+----------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)           
+   ->  Index Only Scan using test_ao_idx on test_ao 
+         Index Cond: (i = 1)                        
+ Optimizer: Postgres query optimizer                
+(4 rows)
+2: select i from test_ao where i = 1;
+ i 
+---
+ 1 
+(1 row)
+-- compare with seqscan, expect indexonlyscan result to be same as seqscan
+2: set enable_indexonlyscan to off;
+SET
+2: set enable_bitmapscan to off;
+SET
+2: reset enable_seqscan;
+RESET
+2: explain (costs off) select i from test_ao where i = 1;
+ QUERY PLAN                               
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1) 
+   ->  Seq Scan on test_ao                
+         Filter: (i = 1)                  
+ Optimizer: Postgres query optimizer      
+(4 rows)
+2: select i from test_ao where i = 1;
+ i 
+---
+ 1 
+(1 row)
+2: end;
+END
+
+-- Test 4
+-- Start RR transaction before AO tuple update,
+-- create block directory after AO tuple update,
+-- expect dead tuple visible in indexonlyscan.
+1q: ... <quitting>
+2q: ... <quitting>
+1: drop table if exists test_ao;
+DROP
+1: create table test_ao(i bigint) using @amname@ distributed by (i);
+CREATE
+1: insert into test_ao select generate_series(1,10);
+INSERT 10
+
+2: set enable_seqscan=off;
+SET
+2: explain (costs off) select i from test_ao where i = 1;
+ QUERY PLAN                               
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1) 
+   ->  Seq Scan on test_ao                
+         Filter: (i = 1)                  
+ Optimizer: Postgres query optimizer      
+(4 rows)
+2: select i from test_ao where i = 1;
+ i 
+---
+ 1 
+(1 row)
+2: begin isolation level repeatable read;
+BEGIN
+2: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+
+-- update row selected above and create new index
+1: update test_ao set i = 2 where i = 1;
+UPDATE 1
+-- create block directory after update,
+-- so blkdir.tuple.xmin > RR transaction xid
+1: create index test_ao_idx on test_ao(i);
+CREATE
+
+-- for the repeatable read isolation level row still there,
+-- because blkdir scan in RR transaction should use SnapshotSelf
+-- to make the dead tuple visibile
+2: explain (costs off) select i from test_ao where i = 1;
+ QUERY PLAN                                         
+----------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)           
+   ->  Index Only Scan using test_ao_idx on test_ao 
+         Index Cond: (i = 1)                        
+ Optimizer: Postgres query optimizer                
+(4 rows)
+2: select i from test_ao where i = 1;
+ i 
+---
+ 1 
+(1 row)
+-- compare with seqscan, expect indexonlyscan result to be same as seqscan
+2: set enable_indexonlyscan to off;
+SET
+2: set enable_bitmapscan to off;
+SET
+2: reset enable_seqscan;
+RESET
+2: explain (costs off) select i from test_ao where i = 1;
+ QUERY PLAN                               
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1) 
+   ->  Seq Scan on test_ao                
+         Filter: (i = 1)                  
+ Optimizer: Postgres query optimizer      
+(4 rows)
+2: select i from test_ao where i = 1;
+ i 
+---
+ 1 
+(1 row)
+2: end;
+END
+
+1: drop table test_ao;
+DROP
+1q: ... <quitting>
+2q: ... <quitting>
