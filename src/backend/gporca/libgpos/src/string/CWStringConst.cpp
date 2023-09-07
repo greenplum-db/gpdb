@@ -99,6 +99,7 @@ CWStringConst::CWStringConst(CMemoryPool *mp, const CHAR *str_buffer)
 		WCHAR *w_str_buffer = GPOS_NEW_ARRAY(mp, WCHAR, m_length + 1);
 		clib::Mbstowcs(w_str_buffer, str_buffer, m_length + 1);
 		m_w_str_buffer = w_str_buffer;
+		m_length = GPOS_WSZ_LENGTH(w_str_buffer);
 	}
 
 	GPOS_ASSERT(IsValid());
