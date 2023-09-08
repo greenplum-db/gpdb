@@ -855,22 +855,22 @@ setio_v2(Oid group, List *limit_list)
 	{
 		TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(tblspc_cell);
 
-		if (limit->ioconfig->rbps == IO_LIMIT_MAX )
+		if (limit->ioconfig->rbps == IO_LIMIT_MAX || limit->ioconfig->rbps == IO_LIMIT_EMPTY)
 			sprintf(rbps_str, "rbps=max");
 		else
 			sprintf(rbps_str, "rbps=%lu", limit->ioconfig->rbps * 1024 * 1024);
 
-		if (limit->ioconfig->wbps == IO_LIMIT_MAX)
+		if (limit->ioconfig->wbps == IO_LIMIT_MAX || limit->ioconfig->wbps == IO_LIMIT_EMPTY)
 			sprintf(wbps_str, "wbps=max");
 		else
 			sprintf(wbps_str, "wbps=%lu", limit->ioconfig->wbps * 1024 * 1024);
 
-		if (limit->ioconfig->riops == IO_LIMIT_MAX)
+		if (limit->ioconfig->riops == IO_LIMIT_MAX || limit->ioconfig->riops == IO_LIMIT_EMPTY)
 			sprintf(riops_str, "riops=max");
 		else
 			sprintf(riops_str, "riops=%u", (uint32)limit->ioconfig->riops);
 
-		if (limit->ioconfig->wiops == IO_LIMIT_MAX)
+		if (limit->ioconfig->wiops == IO_LIMIT_MAX || limit->ioconfig->wiops == IO_LIMIT_EMPTY)
 			sprintf(wiops_str, "wiops=max");
 		else
 			sprintf(wiops_str, "wiops=%u", (uint32)limit->ioconfig->wiops);

@@ -14,8 +14,6 @@
 
 	extern int io_limit_yycolumn;
 	static char *line;
-
-	const static uint64 ULMAX = ULLONG_MAX / 1024 / 1024;
 }
 
 %code requires {
@@ -139,7 +137,7 @@ ioconfigs: ioconfig
 		   {
 				uint64 *config_var = (uint64 *)$1;
 
-				if (*(config_var + $3->offset) != 0)
+				if (*(config_var + $3->offset) != IO_LIMIT_EMPTY)
 					yyerror(NULL, NULL, psprintf("duplicated IO_KEY: %s", IOconfigFields[$3->offset]));
 
 				*(config_var + $3->offset) = $3->value;
@@ -149,7 +147,9 @@ ioconfigs: ioconfig
 
 ioconfig: IO_KEY '=' io_value
 		  {
-			IOconfigItem *item = (IOconfigItem *)palloc0(sizeof(IOconfigItem));
+			uint64 max;
+			IOconfigItem *item = (IOconfigItem *)palloc(sizeof(IOconfigItem));
+			item->value = IO_LIMIT_MAX;
 
 			if (item == NULL)
 				yyerror(NULL, NULL, "cannot allocate memory");
@@ -157,7 +157,12 @@ ioconfig: IO_KEY '=' io_value
 			item->value = $3;
 			for (int i = 0; i < lengthof(IOconfigFields); ++i)
 				if (strcmp($1, IOconfigFields[i]) == 0)
+				{
 					item->offset = i;
+					if (!io_limit_value_validate(IOconfigFields[i], item->value, &max))
+						yyerror(NULL, NULL,
+								psprintf("value of '%s' must in range [2, %lu] or equal 'max'", IOconfigFields[i], max));
+				}
 
 			$$ = item;
 		  }
@@ -166,12 +171,8 @@ ioconfig: IO_KEY '=' io_value
 io_value: NUMBER
 		{
 			$$ = $1;
-
-			if (!io_limit_value_validate($1))
-				yyerror(NULL, NULL,
-						psprintf("value must in range [2, %lu] or equal 'max'", ULMAX));
 		}
-		| VALUE_MAX { $$ = 0; }
+		| VALUE_MAX { $$ = IO_LIMIT_MAX; }
 ;
 
 %%
