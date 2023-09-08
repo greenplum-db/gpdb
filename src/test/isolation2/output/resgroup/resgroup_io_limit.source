@@ -43,23 +43,31 @@ SELECT check_cgroup_io_max('rg_test_group4', 'pg_default', 'rbps=1048576000 wbps
 -- negative: io limit with incorrect syntax
 -- * must be unique tablespace
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000;*:wbps=1000');
-ERROR:  io limit: tablespace '*' cannot be used with other tablespaces  (seg0 127.0.0.2:6000 pid=62791)
+ERROR:  io limit: tablespace '*' cannot be used with other tablespaces
+HINT:   pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000;*:wbps=1000
+                                                                    ^
 
 -- tail ;
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000;');
-ERROR:  syntax error  (seg0 127.0.0.2:6000 pid=62791)
+ERROR:  io limit: syntax error, unexpected end of file, expecting STAR or ID or NUMBER
+HINT:   pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000;
+                                                            ^
 
 -- tail ,
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000,wbps=1000,riops=1000,');
-ERROR:  syntax error  (seg1 127.0.0.2:6001 pid=62792)
+ERROR:  io limit: syntax error, unexpected end of file, expecting IO_KEY
+HINT:   pg_default:rbps=1000,wbps=1000,riops=1000,
+                                                 ^
 
 -- wrong key
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rrbps=1000');
-ERROR:  syntax error  (seg0 127.0.0.2:6000 pid=62791)
+ERROR:  io limit: syntax error, unexpected ID, expecting IO_KEY
+HINT:   pg_default:rrbps=1000
+                   ^
 
 -- wrong tablespace name
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pgdefault:rbps=1000,wbps=1000,riops=1000');
-ERROR:  tablespace "pgdefault" does not exist  (seg0 127.0.0.2:6000 pid=62791)
+ERROR:  tablespace "pgdefault" does not exist
 
 -- use another tablespace
 select mkdir('@testtablespace@/rg_io_limit_ts_1') from gp_dist_random('gp_id') intersect select mkdir('@testtablespace@/rg_io_limit_ts_1') from gp_id;
