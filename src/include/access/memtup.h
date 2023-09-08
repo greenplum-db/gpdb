@@ -27,18 +27,24 @@ typedef enum MemTupleBindFlag
 
 typedef struct MemTupleAttrBinding
 {
+#define FIELDNO_MEMTUPLEATTRBINDING_OFFSET 0
 	int offset; 		/* offset of attr in memtuple */
+#define FIELDNO_MEMTUPLEATTRBINDING_LEN 1
 	int len;				/* attribute length */
 	int len_aligned;		/* attribute length, padded for aligning the physically following attribute */
 	MemTupleBindFlag flag;	/* binding flag */
+#define FIELDNO_MEMTUPLEATTRBINDING_NULLBYTE 4
 	int null_byte;		/* which byte holds the null flag for the attr */
+#define FIELDNO_MEMTUPLEATTRBINDING_NULLMASK 5
 	unsigned char null_mask;		/* null bit mask */
 } MemTupleAttrBinding;
 
 typedef struct MemTupleBindingCols
 {
 	uint32 var_start; 	/* varlen fields start */
+#define FIELDNO_MEMTUPLEBINDINGCOLS_BINDINGS 1
 	MemTupleAttrBinding *bindings; /* bindings for attrs (cols) */
+#define FIELDNO_MEMTUPLEBINDINGCOLS_NULLSAVES 2
 	short *null_saves;		/* saved space from each attribute when null - uses aligned length */
 } MemTupleBindingCols;
 
@@ -46,16 +52,21 @@ typedef struct MemTupleBinding
 {
 	TupleDesc tupdesc;
 	int column_align;
+#define FIELDNO_MEMTUPLEBINDING_NULLBITMAPSIZE 2
 	int null_bitmap_extra_size;  /* extra bytes required by null bitmap */
+#define FIELDNO_MEMTUPLEBINDING_NATTS 3
 	int natts; 			/* number of attributes in memtuple (note: it could be smaller than tupdesc->natts) */
-
+#define FIELDNO_MEMTUPLEBINDING_COLBIND 4
 	MemTupleBindingCols bind;  	/* 2 bytes offsets */
+#define FIELDNO_MEMTUPLEBINDING_LCOLBIND 5
 	MemTupleBindingCols large_bind; /* large tup, 4 bytes offsets */
 } MemTupleBinding;
 
 typedef struct MemTupleData
 {
+#define FIELDNO_MEMTUPLEDATA_HEADER 0
 	uint32 PRIVATE_mt_len;
+#define FIELDNO_MEMTUPLEDATA_DATA 1
 	unsigned char PRIVATE_mt_bits[1]; 	/* varlen */
 } MemTupleData;
 

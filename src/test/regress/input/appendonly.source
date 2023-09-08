@@ -880,3 +880,23 @@ insert into fix_ao_truncate_last_sequence select 1, 1 from generate_series(1, 5)
 select count(*) from fix_ao_truncate_last_sequence;
 abort;
 
+-- test for AO tuple deform in JIT
+SET jit = on;
+SET jit_above_cost = 0;
+create table ao_tuple_deform (c1 int, c2 int) with (appendonly = true);
+insert into ao_tuple_deform values (1, 1);
+select * from ao_tuple_deform where c1 = 1;
+
+-- AO tuple with missing attributes deform in JIT
+alter table ao_tuple_deform add column c3 text;
+select * from ao_tuple_deform where c1 = 1;
+
+-- AO tuple with null values deform in JIT
+insert into ao_tuple_deform values (2, 2, null), (2, null, null);
+select * from ao_tuple_deform where c1 = 2;
+
+-- test for AO tuple with byref attributes deform in JIT
+insert into ao_tuple_deform values (3, 3, 'hello'), (3, 3, 'world');
+select * from ao_tuple_deform where c1 = 3;
+RESET jit;
+RESET jit_above_cost;

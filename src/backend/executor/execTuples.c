@@ -907,9 +907,11 @@ tts_ao_copy_minimal_tuple(TupleTableSlot *slot)
 {
     AOTupleTableSlot *aoslot = (AOTupleTableSlot *) slot;
     Assert(!TTS_EMPTY(slot));
-
-    memtuple_deform(aoslot->tuple, aoslot->mt_bind, slot->tts_values, slot->tts_isnull);
-    slot->tts_nvalid = slot->tts_tupleDescriptor->natts;
+    if (slot->tts_nvalid < slot->tts_tupleDescriptor->natts)
+    {
+        memtuple_deform(aoslot->tuple, aoslot->mt_bind, slot->tts_values, slot->tts_isnull);
+        slot->tts_nvalid = slot->tts_tupleDescriptor->natts;
+    }
 
     return heap_form_minimal_tuple(slot->tts_tupleDescriptor,
                                    slot->tts_values,

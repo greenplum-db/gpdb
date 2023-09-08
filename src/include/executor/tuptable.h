@@ -290,7 +290,9 @@ typedef struct AOTupleTableSlot
 {
     TupleTableSlot base;
     char *data;
+#define FIELDNO_AOTUPLETABLESLOT_TUPLE 2
     MemTuple tuple;
+#define FIELDNO_AOTUPLETABLESLOT_BINDING 3
     MemTupleBinding *mt_bind;
 } AOTupleTableSlot;
 
