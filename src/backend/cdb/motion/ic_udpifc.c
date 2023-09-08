@@ -635,6 +635,9 @@ typedef struct ICStatistics
 /* Statistics for UDP interconnect. */
 static ICStatistics ic_statistics;
 
+static struct addrinfo udp_dummy_packet_addrinfo;
+static struct sockaddr udp_dummy_packet_sockaddr;
+
 /*=========================================================================
  * STATIC FUNCTIONS declarations
  */
@@ -659,7 +662,8 @@ static void SendDummyPacket(void);
 static void getSockAddr(struct sockaddr_storage *peer, socklen_t *peer_len, const char *listenerAddr, int listenerPort);
 static void setXmitSocketOptions(int txfd);
 static uint32 setSocketBufferSize(int fd, int type, int expectedSize, int leastSize);
-static void setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily);
+static void setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort,
+							int *txFamily, struct addrinfo *listenerAddrinfo, struct sockaddr *listenerSockaddr);
 static ChunkTransportStateEntry *startOutgoingUDPConnections(ChunkTransportState *transportStates,
 							Slice *sendSlice,
 							int *pOutgoingCount);
@@ -1155,7 +1159,7 @@ resetRxThreadError()
  * 		Setup udp listening socket.
  */
 static void
-setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily)
+setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily, struct addrinfo *listenerAddrinfo, struct sockaddr *listenerSockaddr)
 {
 	int			errnoSave;
 	int			fd = -1;
@@ -1300,6 +1304,16 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 		goto error;
 	}
 
+	/*
+	 * cache the successful addrinfo and sockaddr of the listening socket, so
+	 * we can use this information to connect to the listening socket.
+	 */
+	if (listenerAddrinfo != NULL && listenerSockaddr != NULL )
+	{
+		memcpy(listenerAddrinfo, rp, sizeof(udp_dummy_packet_addrinfo));
+		memcpy(listenerSockaddr, rp->ai_addr, sizeof(udp_dummy_packet_sockaddr));
+	}
+
 	freeaddrinfo(addrs);		/* No longer needed */
 
 	/*
@@ -1438,8 +1452,9 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 	/*
 	 * setup listening socket and sending socket for Interconnect.
 	 */
-	setupUDPListeningSocket(listenerSocketFd, listenerPort, &txFamily);
-	setupUDPListeningSocket(&ICSenderSocket, &ICSenderPort, &ICSenderFamily);
+	setupUDPListeningSocket(listenerSocketFd, listenerPort, &txFamily,
+			&udp_dummy_packet_addrinfo, &udp_dummy_packet_sockaddr);
+	setupUDPListeningSocket(&ICSenderSocket, &ICSenderPort, &ICSenderFamily, NULL, NULL);
 
 	/* Initialize receive control data. */
 	resetMainThreadWaiting(&rx_control_info.mainWaitingState);
@@ -1539,6 +1554,9 @@ CleanupMotionUDPIFC(void)
 	ICSenderSocket = -1;
 	ICSenderPort = 0;
 	ICSenderFamily = 0;
+
+	memset(&udp_dummy_packet_addrinfo, 0, sizeof(udp_dummy_packet_addrinfo));
+	memset(&udp_dummy_packet_sockaddr, 0, sizeof(udp_dummy_packet_sockaddr));
 
 #ifdef USE_ASSERT_CHECKING
 
@@ -6875,74 +6893,37 @@ WaitInterconnectQuitUDPIFC(void)
 static void
 SendDummyPacket(void)
 {
-	int			sockfd = -1;
 	int			ret;
 	struct addrinfo *addrs = NULL;
-	struct addrinfo *rp;
-	struct addrinfo hint;
-	uint16		udp_listener;
-	char		port_str[32] = {0};
+	uint16		udp_listener_port;
 	char	   *dummy_pkt = "stop it";
 	int			counter;
+	struct sockaddr_in	*addr_in = NULL;
+	struct sockaddr_in	dest_addr;
+
 
 	/*
 	 * Get address info from interconnect udp listener port
 	 */
-	udp_listener = (Gp_listener_port >> 16) & 0x0ffff;
-	snprintf(port_str, sizeof(port_str), "%d", udp_listener);
+	udp_listener_port = (Gp_listener_port >> 16) & 0x0ffff;
 
-	MemSet(&hint, 0, sizeof(hint));
-	hint.ai_socktype = SOCK_DGRAM;
-	hint.ai_family = AF_UNSPEC; /* Allow for IPv4 or IPv6  */
-
-	/* Never do name resolution */
-#ifdef AI_NUMERICSERV
-	hint.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
-#else
-	hint.ai_flags = AI_NUMERICHOST;
-#endif
-
-	ret = pg_getaddrinfo_all(interconnect_address, port_str, &hint, &addrs);
-	if (ret || !addrs)
-	{
-		elog(LOG, "send dummy packet failed, pg_getaddrinfo_all(): %m");
-		goto send_error;
-	}
-
-	for (rp = addrs; rp != NULL; rp = rp->ai_next)
-	{
-		/* Create socket according to pg_getaddrinfo_all() */
-		sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		if (sockfd < 0)
-			continue;
-
-		if (!pg_set_noblock(sockfd))
-		{
-			if (sockfd >= 0)
-			{
-				closesocket(sockfd);
-				sockfd = -1;
-			}
-			continue;
-		}
-		break;
-	}
-
-	if (rp == NULL)
-	{
-		elog(LOG, "send dummy packet failed, create socket failed: %m");
-		goto send_error;
-	}
+	addr_in = (struct sockaddr_in *) &udp_dummy_packet_sockaddr;
+	memset(&dest_addr, 0, sizeof(dest_addr));
+	dest_addr.sin_family = addr_in->sin_family;
+	dest_addr.sin_port = htons(udp_listener_port);
+	dest_addr.sin_addr.s_addr = addr_in->sin_addr.s_addr;
 
 	/*
-	 * Send a dummy package to the interconnect listener, try 10 times
+	 * Send a dummy package to the interconnect listener, try 10 times.
+	 * We don't want to close the socket at the end of this function, since
+	 * the socket will eventually close during the motion layer cleanup.
 	 */
 
 	counter = 0;
 	while (counter < 10)
 	{
 		counter++;
-		ret = sendto(sockfd, dummy_pkt, strlen(dummy_pkt), 0, rp->ai_addr, rp->ai_addrlen);
+		ret = sendto(ICSenderSocket, dummy_pkt, strlen(dummy_pkt), 0, (struct sockaddr *) &dest_addr, sizeof(dest_addr));
 		if (ret < 0)
 		{
 			if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
@@ -6950,7 +6931,7 @@ SendDummyPacket(void)
 			else
 			{
 				elog(LOG, "send dummy packet failed, sendto failed: %m");
-				goto send_error;
+				return;
 			}
 		}
 		break;
@@ -6958,21 +6939,8 @@ SendDummyPacket(void)
 
 	if (counter >= 10)
 	{
-		elog(LOG, "send dummy packet failed, sendto failed: %m");
-		goto send_error;
+		elog(LOG, "send dummy packet failed, sendto failed with 10 times: %m");
 	}
-
-	pg_freeaddrinfo_all(hint.ai_family, addrs);
-	closesocket(sockfd);
-	return;
-
-send_error:
-
-	if (addrs)
-		pg_freeaddrinfo_all(hint.ai_family, addrs);
-	if (sockfd != -1)
-		closesocket(sockfd);
-	return;
 }
 
 uint32
