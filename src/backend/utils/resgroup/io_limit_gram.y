@@ -136,6 +136,10 @@ ioconfigs: ioconfig
 		 | ioconfigs ',' ioconfig
 		   {
 				uint64 *config_var = (uint64 *)$1;
+
+				if (*(config_var + $3->offset) != 0)
+					yyerror(NULL, NULL, psprintf("duplicated IO_KEY: %s", IOconfigFields[$3->offset]));
+
 				*(config_var + $3->offset) = $3->value;
 				$$ = $1;
 		   }
