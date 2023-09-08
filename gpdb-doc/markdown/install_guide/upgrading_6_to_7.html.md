@@ -7,10 +7,10 @@ This topic walks you through upgrading from Greenplum 6 to Greenplum 7. The upgr
 >**WARNING**
 >There are a substantial number of changes between Greenplum 6 and Greenplum 7 that could potentially affect your existing application when you move to Greenplum 7. Before going any further, familiarize yourself with all of these changes [Important Changes between Greenplum 6 and Greenplum 7](./changes-6-7-landing-page.html).
 
-After reading through [Preparing to Upgrade](#preparing-to-upgrade), choose one of these two paths:
+After reading through [Preparing to Upgrade](#preparing), choose one of these two paths:
 
-[Upgrading to Greenplum 7 on the Same Hardware](#upgrading-to-greenplum-7-on-the-same-hardware)<br>
-[Upgrading to Greenplum 7 While Moving to New Hardware](#upgrading-to-greenplum-7-while-moving-to-new-hardware)
+[Upgrading to Greenplum 7 on the Same Hardware](#same_hardware)<br>
+[Upgrading to Greenplum 7 While Moving to New Hardware](#new_hardware)
 
 ## <a id="preparing"></a>Preparing to Upgrade
 
@@ -18,7 +18,7 @@ To prepare for upgrading from Greenplum 6 to Greenplum 7:
 
 - Read carefully through [Important Changes between Greenplum 6 and Greenplum 7](./changes-6-7-landing-page.html) to identify changes you may need to make in your application before upgrading to Greenplum 7.
 
-- Before using `gpbackup`/`gprestore` to move your data, read carefully through [Backup and Restore Caveats](#backup-and-restore-caveats) to avert problems that can arise.  
+- Before using `gpbackup`/`gprestore` to move your data, read carefully through [Backup and Restore Caveats](#br-caveats) to avert problems that can arise.  
 
 >**Note**
 You must use `gpbackup`/`gprestore` if upgrading on the same hardware. You may choose between `gpbackup`/`gprestore` and `gpcopy` when upgrading while moving to new hardware.
