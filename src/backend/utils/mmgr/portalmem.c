@@ -1476,9 +1476,9 @@ ForgetPortalSnapshots(void)
 List *
 GetAllParallelRetrieveCursorPortals(void)
 {
-	List		   *portals;
-	PortalHashEnt  *hentry;
-	HASH_SEQ_STATUS status;
+	List			*portals;
+	PortalHashEnt	*hentry;
+	HASH_SEQ_STATUS	status;
 
 	if (PortalHashTable == NULL)
 		return NULL;

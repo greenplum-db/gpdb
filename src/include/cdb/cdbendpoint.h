@@ -137,7 +137,6 @@ extern enum EndPointExecPosition GetParallelCursorEndpointPosition(PlannedStmt *
 extern void WaitEndpointsReady(EState *estate);
 extern void AtAbort_EndpointExecState(void);
 extern void allocEndpointExecState(void);
-extern void disable_parallel_retrieve_cursor_timeout(void);
 extern void enable_parallel_retrieve_cursor_timeout(void);
 extern bool gp_check_parallel_retrieve_cursor_error(void);
 

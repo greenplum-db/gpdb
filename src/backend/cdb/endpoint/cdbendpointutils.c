@@ -97,21 +97,22 @@ endpoint_name_equals(const char *name1, const char *name2)
 /*
  * gp_check_parallel_retrieve_cursor
  *
- * Check every parallel retrieve cursor status and return true if has error.
+ * Check every parallel retrieve cursor status and cancel other QEs if has error.
+ * return true if has error.
  */
 bool
 gp_check_parallel_retrieve_cursor_error(void)
 {
-	List	   *portals;
-	ListCell   *lc;
+	List		*portals;
+	ListCell	*lc;
 	bool		has_error = false;
-	EState	   *estate = NULL;
+	EState		*estate = NULL;
 
 	portals = GetAllParallelRetrieveCursorPortals();
 
 	foreach(lc, portals)
 	{
-		Portal portal = (Portal )lfirst(lc);
+		Portal portal = (Portal)lfirst(lc);
 
 		estate = portal->queryDesc->estate;
 
@@ -198,7 +199,8 @@ check_parallel_retrieve_cursor_errors(EState *estate)
 
 /*
  * check_parallel_retrieve_cursor_has_error - Check the PARALLEL RETRIEVE CURSOR
- * execution status. If get error, return true.
+ * execution status, If has error, cancel the other QEs which are still running.
+ * If get error, return true.
  */
 static bool
 check_parallel_retrieve_cursor_has_error(EState *estate)
@@ -604,20 +606,7 @@ generate_endpoint_name(char *name, const char *cursorName)
 	name[len] = '\0';
 }
 
-/* 
- * Disable the timeout of parallel_retrieve_cursor check
- */
-void
-disable_parallel_retrieve_cursor_timeout(void)
-{
-	if (Gp_role == GP_ROLE_DISPATCH &&
-		get_timeout_active(GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT))
-	{
-		disable_timeout(GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT, false);
-	}
-}
-
-/* 
+/*
  * Enable the timeout of parallel_retrieve_cursor check
  */
 void

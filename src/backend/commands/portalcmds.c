@@ -43,7 +43,6 @@
 #include "cdb/cdbvars.h"
 #include "postmaster/backoff.h"
 #include "utils/resscheduler.h"
-#include "utils/timeout.h"
 
 extern volatile uint32 *parallelCursorCount;
 extern int gp_max_parallel_cursors;
