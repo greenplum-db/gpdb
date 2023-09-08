@@ -47,7 +47,7 @@
 %type <integer> io_value
 %type <ioconfig> ioconfigs
 %type <tblspciolimit> tablespace_io_config
-%type <list> iolimit_config_string start
+%type <list> iolimit_config_string
 %type <ioconfigitem> ioconfig
 
 %destructor { pfree($$); } <str> <ioconfig> <ioconfigitem>
