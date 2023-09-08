@@ -69,7 +69,7 @@ public:
 	// accessor for global singleton
 	static CMessageRepository *GetMessageRepository();
 
-	void Shutdown();
+	static void Shutdown();
 
 };	// class CMessageRepository
 }  // namespace gpos

@@ -60,12 +60,11 @@ CCacheFactory::Pmp() const
 void
 CCacheFactory::Init()
 {
-	GPOS_ASSERT(nullptr == GetFactory() &&
+	GPOS_ASSERT(nullptr == m_factory &&
 				"Cache factory was already initialized");
 
 	// create cache factory memory pool
-	CMemoryPool *mp =
-		CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
+	CMemoryPool *mp = CMemoryPoolManager::CreateMemoryPool();
 
 	// create cache factory instance
 	m_factory = GPOS_NEW(mp) CCacheFactory(mp);
@@ -83,17 +82,17 @@ CCacheFactory::Init()
 void
 CCacheFactory::Shutdown()
 {
-	CCacheFactory *factory = CCacheFactory::GetFactory();
+	CCacheFactory *factory = m_factory;
 
 	GPOS_ASSERT(nullptr != factory && "Cache factory has not been initialized");
 
 	CMemoryPool *mp = factory->m_mp;
 
 	// destroy cache factory
-	CCacheFactory::m_factory = nullptr;
+	m_factory = nullptr;
 	GPOS_DELETE(factory);
 
 	// release allocated memory pool
-	CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
+	CMemoryPoolManager::Destroy(mp);
 }
 // EOF

@@ -69,7 +69,7 @@ public:
 		// check if a memory pool was created but insertion failed
 		if (nullptr != m_mp && !m_inserted)
 		{
-			CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(m_mp);
+			CMemoryPoolManager::Destroy(m_mp);
 		}
 
 		// release entry if one was created
@@ -150,7 +150,7 @@ public:
 		GPOS_ASSERT(nullptr == m_mp);
 
 		// construct a memory pool for cache entry
-		m_mp = CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
+		m_mp = CMemoryPoolManager::CreateMemoryPool();
 
 		return m_mp;
 	}

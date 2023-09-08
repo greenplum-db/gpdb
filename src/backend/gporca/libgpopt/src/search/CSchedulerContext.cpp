@@ -52,7 +52,7 @@ CSchedulerContext::~CSchedulerContext()
 	// release local memory pool
 	if (FInit())
 	{
-		CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(PmpLocal());
+		CMemoryPoolManager::Destroy(PmpLocal());
 	}
 }
 
@@ -76,7 +76,7 @@ CSchedulerContext::Init(CMemoryPool *pmpGlobal, CJobFactory *pjf,
 
 	GPOS_ASSERT(!FInit() && "Scheduling context is already initialized");
 
-	m_pmpLocal = CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
+	m_pmpLocal = CMemoryPoolManager::CreateMemoryPool();
 
 	m_pmpGlobal = pmpGlobal;
 	m_pjf = pjf;

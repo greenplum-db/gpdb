@@ -39,8 +39,7 @@ struct DbgPrintMixin
 	void
 	DbgPrint() const
 	{
-		CMemoryPool *mp =
-			CMemoryPoolManager::GetMemoryPoolMgr()->GetGlobalMemoryPool();
+		CMemoryPool *mp = CMemoryPoolManager::GetGlobalMemoryPool();
 		CAutoTrace at(mp);
 		static_cast<const T *>(this)->OsPrint(at.Os());
 	}

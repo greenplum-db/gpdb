@@ -67,7 +67,7 @@ CMemoryPoolManager::Setup()
 void
 CMemoryPoolManager::Init()
 {
-	if (nullptr == CMemoryPoolManager::m_memory_pool_mgr)
+	if (nullptr == m_memory_pool_mgr)
 	{
 		SetupGlobalMemoryPoolManager<CMemoryPoolManager, CMemoryPoolTracker>();
 	}
@@ -77,14 +77,15 @@ CMemoryPoolManager::Init()
 CMemoryPool *
 CMemoryPoolManager::CreateMemoryPool()
 {
-	CMemoryPool *mp = NewMemoryPool();
+	GPOS_ASSERT(nullptr != m_memory_pool_mgr);
+	CMemoryPool *mp = m_memory_pool_mgr->NewMemoryPool();
 
 	// accessor scope
 	{
 		// HERE BE DRAGONS
 		// See comment in CCache::InsertEntry
 		const ULONG_PTR hashKey = mp->GetHashKey();
-		MemoryPoolKeyAccessor acc(*m_ht_all_pools, hashKey);
+		MemoryPoolKeyAccessor acc(*m_memory_pool_mgr->m_ht_all_pools, hashKey);
 		acc.Insert(mp);
 	}
 
@@ -104,6 +105,7 @@ CMemoryPoolManager::NewMemoryPool()
 void
 CMemoryPoolManager::Destroy(CMemoryPool *mp)
 {
+	GPOS_ASSERT(nullptr != m_memory_pool_mgr);
 	GPOS_ASSERT(nullptr != mp);
 
 	// accessor scope
@@ -111,7 +113,7 @@ CMemoryPoolManager::Destroy(CMemoryPool *mp)
 		// HERE BE DRAGONS
 		// See comment in CCache::InsertEntry
 		const ULONG_PTR hashKey = mp->GetHashKey();
-		MemoryPoolKeyAccessor acc(*m_ht_all_pools, hashKey);
+		MemoryPoolKeyAccessor acc(*m_memory_pool_mgr->m_ht_all_pools, hashKey);
 		acc.Remove(mp);
 	}
 
@@ -231,22 +233,24 @@ CMemoryPoolManager::DestroyMemoryPoolAtShutdown(CMemoryPool *mp)
 void
 CMemoryPoolManager::Cleanup()
 {
+	GPOS_ASSERT(nullptr != m_memory_pool_mgr);
+	GPOS_ASSERT(nullptr != m_memory_pool_mgr->m_global_memory_pool);
 #ifdef GPOS_DEBUG
-	if (0 < m_global_memory_pool->TotalAllocatedSize())
+	if (0 < m_memory_pool_mgr->m_global_memory_pool->TotalAllocatedSize())
 	{
 		// allocations made by calling global new operator are not deleted
 		gpos::oswcerr << "Memory leaks detected" << std::endl
-					  << *m_global_memory_pool << std::endl;
+					  << *m_memory_pool_mgr->m_global_memory_pool << std::endl;
 	}
 #endif	// GPOS_DEBUG
 
-	GPOS_ASSERT(nullptr != m_global_memory_pool);
-	Destroy(m_global_memory_pool);
+	Destroy(m_memory_pool_mgr->m_global_memory_pool);
 
 	// cleanup left-over memory pools;
 	// any such pool means that we have a leak
-	m_ht_all_pools->DestroyEntries(DestroyMemoryPoolAtShutdown);
-	GPOS_DELETE(m_ht_all_pools);
+	m_memory_pool_mgr->m_ht_all_pools->DestroyEntries(
+		DestroyMemoryPoolAtShutdown);
+	GPOS_DELETE(m_memory_pool_mgr->m_ht_all_pools);
 }
 
 
@@ -254,14 +258,15 @@ CMemoryPoolManager::Cleanup()
 void
 CMemoryPoolManager::Shutdown()
 {
+	GPOS_ASSERT(nullptr != m_memory_pool_mgr);
 	// cleanup remaining memory pools
 	Cleanup();
 
 	// save off pointers for explicit deletion
-	CMemoryPool *internal = m_internal_memory_pool;
+	CMemoryPool *internal = m_memory_pool_mgr->m_internal_memory_pool;
 
 	::delete CMemoryPoolManager::m_memory_pool_mgr;
-	CMemoryPoolManager::m_memory_pool_mgr = nullptr;
+	m_memory_pool_mgr = nullptr;
 
 #ifdef GPOS_DEBUG
 	internal->AssertEmpty(oswcerr);

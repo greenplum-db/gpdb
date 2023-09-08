@@ -121,10 +121,10 @@ void
 gpdxl_init()
 {
 	// create memory pool for Xerces global allocations
-	pmpXerces = CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
+	pmpXerces = CMemoryPoolManager::CreateMemoryPool();
 
 	// create memory pool for DXL global allocations
-	pmpDXL = CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
+	pmpDXL = CMemoryPoolManager::CreateMemoryPool();
 
 	// add standard exception messages
 	EresExceptionInit(pmpDXL);
@@ -147,13 +147,13 @@ gpdxl_terminate()
 
 	if (nullptr != pmpDXL)
 	{
-		(CMemoryPoolManager::GetMemoryPoolMgr())->Destroy(pmpDXL);
+		CMemoryPoolManager::Destroy(pmpDXL);
 		pmpDXL = nullptr;
 	}
 
 	if (nullptr != pmpXerces)
 	{
-		(CMemoryPoolManager::GetMemoryPoolMgr())->Destroy(pmpXerces);
+		CMemoryPoolManager::Destroy(pmpXerces);
 		pmpXerces = nullptr;
 	}
 #endif	// GPOS_DEBUG

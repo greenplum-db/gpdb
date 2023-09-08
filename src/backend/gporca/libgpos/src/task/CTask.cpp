@@ -75,7 +75,7 @@ CTask::~CTask()
 	GPOS_DELETE(m_task_ctxt);
 	GPOS_DELETE(m_err_ctxt);
 
-	CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(m_mp);
+	CMemoryPoolManager::Destroy(m_mp);
 }
 
 

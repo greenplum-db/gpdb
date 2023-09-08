@@ -83,10 +83,10 @@ public:
 				typename CCache<T, K>::HashFuncPtr hash_func,
 				typename CCache<T, K>::EqualFuncPtr equal_func)
 	{
-		GPOS_ASSERT(nullptr != GetFactory() &&
+		GPOS_ASSERT(nullptr != m_factory &&
 					"Cache factory has not been initialized");
 
-		CMemoryPool *mp = GetFactory()->Pmp();
+		CMemoryPool *mp = m_factory->Pmp();
 		CCache<T, K> *cache = GPOS_NEW(mp)
 			CCache<T, K>(mp, unique, cache_quota, CCACHE_GCLOCK_INIT_COUNTER,
 						 hash_func, equal_func);

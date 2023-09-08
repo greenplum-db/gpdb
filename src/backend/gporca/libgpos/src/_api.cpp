@@ -238,10 +238,10 @@ gpos_terminate()
 	CDebugCounter::Shutdown();
 #endif
 #ifdef GPOS_DEBUG
-	CMessageRepository::GetMessageRepository()->Shutdown();
+	CMessageRepository::Shutdown();
 	CWorkerPoolManager::Shutdown();
 	CCacheFactory::Shutdown();
-	CMemoryPoolManager::GetMemoryPoolMgr()->Shutdown();
+	CMemoryPoolManager::Shutdown();
 #endif	// GPOS_DEBUG
 }
 

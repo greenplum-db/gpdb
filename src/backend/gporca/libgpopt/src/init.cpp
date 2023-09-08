@@ -40,7 +40,7 @@ static CMemoryPool *mp = nullptr;
 void
 gpopt_init()
 {
-	mp = CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
+	mp = CMemoryPoolManager::CreateMemoryPool();
 
 	gpopt::EresExceptionInit(mp);
 
@@ -61,7 +61,7 @@ gpopt_terminate()
 #ifdef GPOS_DEBUG
 	CMDCache::Shutdown();
 
-	CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
+	CMemoryPoolManager::Destroy(mp);
 
 	CXformFactory::Shutdown();
 #endif	// GPOS_DEBUG
