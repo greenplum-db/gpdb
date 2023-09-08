@@ -306,7 +306,7 @@ get_bdi_of_path(const char *ori_path)
 bool
 io_limit_value_validate(const char *field, const uint64 value, uint64 *max)
 {
-	const static uint64 ULMAX = ULLONG_MAX / 1024 / 1024;
+	const uint64 ULMAX = ULLONG_MAX / 1024 / 1024;
 	const uint32 UMAX = UINT_MAX;
 
 	*max = 0;
@@ -316,9 +316,9 @@ io_limit_value_validate(const char *field, const uint64 value, uint64 *max)
 		*max = ULMAX;
 		return value == IO_LIMIT_MAX || !(value > ULMAX || value < 2);
 	}
-	else if (strcmp(field, "riops") == 0 || strcmp(field, "wiops"))
+	else if (strcmp(field, "riops") == 0 || strcmp(field, "wiops") == 0)
 	{
-		*max = UMAX;
+		*max = (uint64) UMAX;
 		return value == IO_LIMIT_MAX || !(value > UMAX || value < 2);
 	}
 
@@ -537,7 +537,7 @@ io_limit_dump(List *limit_list)
 
 		for(i = 0; i < fields_length; i++)
 		{
-			if ((*(value + i) != IO_LIMIT_MAX) || (*(value + i) != IO_LIMIT_EMPTY))
+			if ((*(value + i) != IO_LIMIT_MAX) && (*(value + i) != IO_LIMIT_EMPTY))
 				appendStringInfo(result, "%s=%lu", IOconfigFields[i], *(value + i));
 			else
 				appendStringInfo(result, "%s=max", IOconfigFields[i]);
