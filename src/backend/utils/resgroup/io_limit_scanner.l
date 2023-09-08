@@ -3,6 +3,11 @@
 #include "io_limit_gram.h"
 
 #define YYSTYPE IO_LIMIT_YYSTYPE
+
+#define SAVE_COLUMN io_limit_yycolumn = next_col; next_col += strlen(yytext)
+
+static int next_col = 1;
+int io_limit_yycolumn = 1;
 %}
 
 %option noinput nounput noyywrap
@@ -16,41 +21,40 @@ wildcard \*
 
 %%
 [wr](b|io)ps {
+                SAVE_COLUMN;
                 yylval->str = pstrdup(yytext);
                 return IO_KEY;
              }
 
 max          {
+                SAVE_COLUMN;
                 yylval->str = pstrdup("max");
                 return VALUE_MAX;
              }
 
 {id}         {
+                SAVE_COLUMN;
                 yylval->str = pstrdup(yytext);
                 return ID;
              }
 
-\;           { return IOLIMIT_CONFIG_DELIM; }
-
-:            { return TABLESPACE_IO_CONFIG_START; };
-
-,            { return IOCONFIG_DELIM; }
-
 [[:digit:]]+ {
+                SAVE_COLUMN;
                 yylval->integer = strtoull(yytext, NULL, 10);
                 return NUMBER;
              }
 
 {wildcard}   {
+                SAVE_COLUMN;
                 return STAR;
              }
 
-[[:space:]]  ;
+[[:space:]]  {  SAVE_COLUMN;  }
 
 .           {
+                SAVE_COLUMN;
                 return *yytext;
             }
-
 %%
 
 
@@ -90,6 +94,9 @@ io_limit_scanner_begin(IOLimitScannerState *state, const char *limit_str)
 {
     yyscan_t scanner;
     yylex_init(&scanner);
+
+    next_col = 1;
+    io_limit_yycolumn = 1;
 
     state->state = (void *)yy_scan_string(limit_str, scanner);
     state->scanner = scanner;

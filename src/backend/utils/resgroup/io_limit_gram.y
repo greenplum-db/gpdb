@@ -1,5 +1,6 @@
 %define api.pure true
 %define api.prefix {io_limit_yy}
+%error-verbose
 
 %code top {
 	#include "postgres.h"
@@ -10,6 +11,9 @@
 
 	#define YYMALLOC palloc
 	#define YYFREE	 pfree
+
+	extern int io_limit_yycolumn;
+	static char *line;
 }
 
 %code requires {
@@ -35,7 +39,7 @@
 	void io_limit_yyerror(IOLimitParserContext *parser_context, void *scanner, const char *message);
 }
 
-%token IOLIMIT_CONFIG_DELIM TABLESPACE_IO_CONFIG_START STAR IOCONFIG_DELIM VALUE_MAX
+%token STAR VALUE_MAX
 %token <str> ID IO_KEY
 %token <integer> NUMBER
 
@@ -55,34 +59,31 @@
 
 %%
 
-start: iolimit_config_string
-	   {
-			context->result = $$ = $1;
-			return 0;
-	   }
-
 iolimit_config_string: tablespace_io_config
 					   {
 							List *l = NIL;
 
 							$$ = lappend(l, $1);
+
+							context->result = $$;
 					   }
-					 | iolimit_config_string IOLIMIT_CONFIG_DELIM tablespace_io_config
+					 | iolimit_config_string ';' tablespace_io_config
 					   {
 							$$ = lappend($1, $3);
+
+							context->result = $$;
 					   }
+;
 
-tablespace_name: ID  { $$ = $1; }
+tablespace_name: ID  { $$ = $1; } ;
 
-tablespace_io_config: tablespace_name TABLESPACE_IO_CONFIG_START ioconfigs
+tablespace_io_config: tablespace_name ':' ioconfigs
 					  {
 
 							TblSpcIOLimit *tblspciolimit = (TblSpcIOLimit *)palloc0(sizeof(TblSpcIOLimit));
 
 							if (context->star_tablespace_cnt > 0)
-								ereport(ERROR,
-										(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-										errmsg("io limit: tablespace '*' cannot be used with other tablespaces")));
+								yyerror(NULL, NULL, "tablespace '*' cannot be used with other tablespaces");
 							tblspciolimit->tablespace_oid = get_tablespace_oid($1, false);
 							context->normal_tablespce_cnt++;
 
@@ -90,14 +91,13 @@ tablespace_io_config: tablespace_name TABLESPACE_IO_CONFIG_START ioconfigs
 
 							$$ = tblspciolimit;
 					  }
-					| STAR TABLESPACE_IO_CONFIG_START ioconfigs
+					| STAR ':' ioconfigs
 					  {
 							TblSpcIOLimit *tblspciolimit = (TblSpcIOLimit *)palloc0(sizeof(TblSpcIOLimit));
 
 							if (context->normal_tablespce_cnt > 0 || context->star_tablespace_cnt > 0)
-								ereport(ERROR,
-										(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-										errmsg("io limit: tablespace '*' cannot be used with other tablespaces")));
+								yyerror(NULL, NULL, "tablespace '*' cannot be used with other tablespaces");
+
 							tblspciolimit->tablespace_oid = InvalidOid;
 							context->star_tablespace_cnt++;
 
@@ -105,18 +105,14 @@ tablespace_io_config: tablespace_name TABLESPACE_IO_CONFIG_START ioconfigs
 
 							$$ = tblspciolimit;
 					  }
-					| NUMBER TABLESPACE_IO_CONFIG_START ioconfigs
+					| NUMBER ':' ioconfigs
 					  {
 							TblSpcIOLimit *tblspciolimit = (TblSpcIOLimit *)palloc0(sizeof(TblSpcIOLimit));
 
 							if (context->star_tablespace_cnt > 0)
-								ereport(ERROR,
-										(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-										errmsg("io limit: tablespace '*' cannot be used with other tablespaces")));
+								yyerror(NULL, NULL, "tablespace '*' cannot be used with other tablespaces");
 							if ($1 <= 0 || $1 > UINT_MAX)
-								ereport(ERROR,
-										(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-										errmsg("io limit: tablespace oid exceeds the limit")));
+								yyerror(NULL, NULL, "tablespace oid exceeds the limit");
 
 							tblspciolimit->tablespace_oid = $1;
 							context->normal_tablespce_cnt++;
@@ -125,29 +121,32 @@ tablespace_io_config: tablespace_name TABLESPACE_IO_CONFIG_START ioconfigs
 
 							$$ = tblspciolimit;
 					  }
+;
 
 ioconfigs: ioconfig
 		   {
 				IOconfig *config = (IOconfig *)palloc0(sizeof(IOconfig));
 				uint64 *config_var = (uint64 *)config;
 				if (config == NULL)
-					io_limit_yyerror(NULL, NULL, "io limit: cannot allocate memory");
+					yyerror(NULL, NULL, "cannot allocate memory");
 
 				*(config_var + $1->offset) = $1->value;
 				$$ = config;
 		   }
-		 | ioconfigs IOCONFIG_DELIM ioconfig
+		 | ioconfigs ',' ioconfig
 		   {
 				uint64 *config_var = (uint64 *)$1;
 				*(config_var + $3->offset) = $3->value;
 				$$ = $1;
 		   }
+;
 
 ioconfig: IO_KEY '=' io_value
 		  {
 			IOconfigItem *item = (IOconfigItem *)palloc0(sizeof(IOconfigItem));
+
 			if (item == NULL)
-				io_limit_yyerror(NULL, NULL, "io limit: cannot allocate memory");
+				yyerror(NULL, NULL, "cannot allocate memory");
 
 			item->value = $3;
 			for (int i = 0;i < lengthof(IOconfigFields); ++i)
@@ -156,18 +155,21 @@ ioconfig: IO_KEY '=' io_value
 
 			$$ = item;
 		  }
+;
 
 io_value: NUMBER { $$ = $1; }
 		| VALUE_MAX { $$ = 0; }
+;
 
 %%
 
 void
 io_limit_yyerror(IOLimitParserContext *parser_context, void *scanner, const char *message)
 {
-	ereport(ERROR, \
-		(errcode(ERRCODE_SYNTAX_ERROR), \
-		errmsg("%s", message))); \
+	ereport(ERROR,
+		(errcode(ERRCODE_SYNTAX_ERROR),
+		errmsg("io limit: %s", message),
+		errhint(" %s\n        %*c", line, io_limit_yycolumn, '^')));
 }
 
 /*
@@ -180,12 +182,14 @@ io_limit_parse(const char *limit_str)
 	IOLimitParserContext context;
 	IOLimitScannerState state;
 
+	line = (char *) limit_str;
+
 	context.result = NIL;
 	context.normal_tablespce_cnt = 0;
 	context.star_tablespace_cnt = 0;
 	io_limit_scanner_begin(&state, limit_str);
 	if (yyparse(&context, state.scanner) != 0)
-		yyerror(&context, state.scanner, "io limit: parse error");
+		yyerror(&context, state.scanner, "parse error");
 
 	io_limit_scanner_finish(&state);
 
