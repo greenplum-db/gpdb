@@ -44,9 +44,6 @@ To upgrade while staying on the same hardware:
 >**Note**
 >- When restoring language-based user-defined functions, the shared object file must be in the location specified in the `CREATE FUNCTION` SQL command and must have been recompiled on the Greenplum 7 system. This applies to user-defined functions, user-defined types, and any other objects that use custom functions, such as aggregates created with the `CREATE AGGREGATE` command.
 
->**Note** 
->`gprestore` only supports restoring data to a cluster that has an identical number of hosts and an identical number of segments per host, with each segment having the same `content_id` as the segment in the original cluster. 
-
 ## <a id="new_hardware"></a>Upgrading to Greenplum 7 While Moving to New Hardware
 
 Follow the steps below to upgrade to Greenplum 7 while moving to new hardware. 
