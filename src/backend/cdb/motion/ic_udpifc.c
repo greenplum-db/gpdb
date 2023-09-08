@@ -635,6 +635,9 @@ typedef struct ICStatistics
 /* Statistics for UDP interconnect. */
 static ICStatistics ic_statistics;
 
+/* Cached sockaddr of the listening udp socket */
+static struct sockaddr_storage udp_dummy_packet_sockaddr;
+
 /*=========================================================================
  * STATIC FUNCTIONS declarations
  */
@@ -656,10 +659,16 @@ static void setRxThreadError(int eno);
 static void resetRxThreadError(void);
 static void SendDummyPacket(void);
 
+static void ConvertToIPv4MappedAddr(struct sockaddr_storage *sockaddr, socklen_t *o_len);
+#if defined(__darwin__)
+#define	s6_addr32 __u6_addr.__u6_addr32
+static void ConvertIPv6WildcardToLoopback(struct sockaddr_storage* dest);
+#endif
 static void getSockAddr(struct sockaddr_storage *peer, socklen_t *peer_len, const char *listenerAddr, int listenerPort);
 static void setXmitSocketOptions(int txfd);
 static uint32 setSocketBufferSize(int fd, int type, int expectedSize, int leastSize);
-static void setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily);
+static void setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort,
+							int *txFamily, struct sockaddr_storage *listenerSockaddr);
 static ChunkTransportStateEntry *startOutgoingUDPConnections(ChunkTransportState *transportStates,
 							Slice *sendSlice,
 							int *pOutgoingCount);
@@ -1155,7 +1164,7 @@ resetRxThreadError()
  * 		Setup udp listening socket.
  */
 static void
-setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily)
+setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily, struct sockaddr_storage *listenerSockaddr)
 {
 	int			errnoSave;
 	int			fd = -1;
@@ -1322,6 +1331,13 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 	else
 		*listenerPort = ntohs(((struct sockaddr_in *) &our_addr)->sin_port);
 
+	/*
+	 * cache the successful sockaddr of the listening socket, so
+	 * we can use this information to connect to the listening socket.
+	 */
+	if (listenerSockaddr != NULL)
+		memcpy(listenerSockaddr, &our_addr, sizeof(struct sockaddr_storage));
+
 	setXmitSocketOptions(fd);
 
 	return;
@@ -1438,8 +1454,8 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 	/*
 	 * setup listening socket and sending socket for Interconnect.
 	 */
-	setupUDPListeningSocket(listenerSocketFd, listenerPort, &txFamily);
-	setupUDPListeningSocket(&ICSenderSocket, &ICSenderPort, &ICSenderFamily);
+	setupUDPListeningSocket(listenerSocketFd, listenerPort, &txFamily, &udp_dummy_packet_sockaddr);
+	setupUDPListeningSocket(&ICSenderSocket, &ICSenderPort, &ICSenderFamily, NULL);
 
 	/* Initialize receive control data. */
 	resetMainThreadWaiting(&rx_control_info.mainWaitingState);
@@ -1539,6 +1555,8 @@ CleanupMotionUDPIFC(void)
 	ICSenderSocket = -1;
 	ICSenderPort = 0;
 	ICSenderFamily = 0;
+
+	memset(&udp_dummy_packet_sockaddr, 0, sizeof(udp_dummy_packet_sockaddr));
 
 #ifdef USE_ASSERT_CHECKING
 
@@ -2849,30 +2867,8 @@ setupOutgoingUDPConnection(ChunkTransportState *transportStates, ChunkTransportS
 			 */
 			if (pEntry->txfd_family == AF_INET6)
 			{
-				struct sockaddr_storage temp;
-				const struct sockaddr_in *in = (const struct sockaddr_in *) &conn->peer;
-				struct sockaddr_in6 *in6_new = (struct sockaddr_in6 *) &temp;
-
-				memset(&temp, 0, sizeof(temp));
-
 				elog(DEBUG1, "We are inet6, remote is inet.  Converting to v4 mapped address.");
-
-				/* Construct a V4-to-6 mapped address.  */
-				temp.ss_family = AF_INET6;
-				in6_new->sin6_family = AF_INET6;
-				in6_new->sin6_port = in->sin_port;
-				in6_new->sin6_flowinfo = 0;
-
-				memset(&in6_new->sin6_addr, '\0', sizeof(in6_new->sin6_addr));
-				/* in6_new->sin6_addr.s6_addr16[5] = 0xffff; */
-				((uint16 *) &in6_new->sin6_addr)[5] = 0xffff;
-				/* in6_new->sin6_addr.s6_addr32[3] = in->sin_addr.s_addr; */
-				memcpy(((char *) &in6_new->sin6_addr) + 12, &(in->sin_addr), 4);
-				in6_new->sin6_scope_id = 0;
-
-				/* copy it back */
-				memcpy(&conn->peer, &temp, sizeof(struct sockaddr_in6));
-				conn->peer_len = sizeof(struct sockaddr_in6);
+				ConvertToIPv4MappedAddr(&conn->peer, &conn->peer_len);
 			}
 			else
 			{
@@ -6870,109 +6866,122 @@ WaitInterconnectQuitUDPIFC(void)
 }
 
 /*
+ * If the socket was created AF_INET6, but the address we want to
+ * send to is IPv4 (AF_INET), we need to change the address
+ * format. On Linux, this is not necessary: glibc automatically
+ * handles this. But on MAC OSX and Solaris, we need to convert
+ * the IPv4 address to IPv4-mapped IPv6 address in AF_INET6 format.
+ *
+ * The comment above relies on getaddrinfo() via function getSockAddr to get
+ * the correct V4-mapped address. We need to be careful here as we need to
+ * ensure that the platform we are using is POSIX 1003-2001 compliant.
+ * Just to be on the safeside, we'll be keeping this function for
+ * now to be used for all platforms and not rely on POSIX.
+ *
+ * Since this can be called in a signal handler, we avoid the use of
+ * async-signal unsafe functions such as memset/memcpy
+ */
+static void
+ConvertToIPv4MappedAddr(struct sockaddr_storage *sockaddr, socklen_t *o_len)
+{
+	const struct sockaddr_in *in = (const struct sockaddr_in *) sockaddr;
+	struct sockaddr_storage temp = {0};
+	struct sockaddr_in6 *in6_new = (struct sockaddr_in6 *) &temp;
+
+	/* Construct a IPv4-to-IPv6 mapped address.  */
+	temp.ss_family = AF_INET6;
+	in6_new->sin6_family = AF_INET6;
+	in6_new->sin6_port = in->sin_port;
+	in6_new->sin6_flowinfo = 0;
+
+	((uint16 *) &in6_new->sin6_addr)[5] = 0xffff;
+
+	in6_new->sin6_addr.s6_addr32[3] = in->sin_addr.s_addr;
+	in6_new->sin6_scope_id = 0;
+
+	/* copy it back */
+	*sockaddr = temp;
+	*o_len = sizeof(struct sockaddr_in6);
+}
+
+#if defined(__darwin__)
+/* macos does not accept :: as the destination, we will need to covert this to the IPv6 loopback */
+static void
+ConvertIPv6WildcardToLoopback(struct sockaddr_storage* dest)
+{
+	char address[INET6_ADDRSTRLEN];
+	/* we want to terminate our own process, so this should be local */
+	const struct sockaddr_in6 *in6 = (const struct sockaddr_in6 *) &udp_dummy_packet_sockaddr;
+	inet_ntop(AF_INET6, &in6->sin6_addr, address, sizeof(address));
+	if (strcmp("::", address) == 0)
+		((struct sockaddr_in6 *)dest)->sin6_addr = in6addr_loopback;
+}
+#endif
+
+/*
  * Send a dummy packet to interconnect thread to exit poll() immediately
  */
 static void
 SendDummyPacket(void)
 {
-	int			sockfd = -1;
-	int			ret;
-	struct addrinfo *addrs = NULL;
-	struct addrinfo *rp;
-	struct addrinfo hint;
-	uint16		udp_listener;
-	char		port_str[32] = {0};
-	char	   *dummy_pkt = "stop it";
-	int			counter;
+	int					ret;
+	char				*dummy_pkt = "stop it";
+	int					counter;
+	struct sockaddr_storage dest;
+	socklen_t	dest_len;
 
-	/*
-	 * Get address info from interconnect udp listener port
-	 */
-	udp_listener = (Gp_listener_port >> 16) & 0x0ffff;
-	snprintf(port_str, sizeof(port_str), "%d", udp_listener);
+	Assert(udp_dummy_packet_sockaddr.ss_family == AF_INET || udp_dummy_packet_sockaddr.ss_family == AF_INET6);
+	Assert(ICSenderFamily == AF_INET || ICSenderFamily == AF_INET6);
 
-	MemSet(&hint, 0, sizeof(hint));
-	hint.ai_socktype = SOCK_DGRAM;
-	hint.ai_family = AF_UNSPEC; /* Allow for IPv4 or IPv6  */
+	dest = udp_dummy_packet_sockaddr;
+	dest_len = (ICSenderFamily == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6);
 
-	/* Never do name resolution */
-#ifdef AI_NUMERICSERV
-	hint.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
-#else
-	hint.ai_flags = AI_NUMERICHOST;
+#if defined(__darwin__)
+	if (ICSenderFamily == AF_INET6)
+	{
+#if defined(__darwin__)
+		if (udp_dummy_packet_sockaddr.ss_family == AF_INET6)
+			ConvertIPv6WildcardToLoopback(&dest);
+#endif
+		if (udp_dummy_packet_sockaddr.ss_family == AF_INET)
+			ConvertToIPv4MappedAddr(&dest, &dest_len);
+	}
 #endif
 
-	ret = pg_getaddrinfo_all(interconnect_address, port_str, &hint, &addrs);
-	if (ret || !addrs)
+	if (ICSenderFamily == AF_INET && udp_dummy_packet_sockaddr.ss_family == AF_INET6)
 	{
-		elog(LOG, "send dummy packet failed, pg_getaddrinfo_all(): %m");
-		goto send_error;
-	}
-
-	for (rp = addrs; rp != NULL; rp = rp->ai_next)
-	{
-		/* Create socket according to pg_getaddrinfo_all() */
-		sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		if (sockfd < 0)
-			continue;
-
-		if (!pg_set_noblock(sockfd))
-		{
-			if (sockfd >= 0)
-			{
-				closesocket(sockfd);
-				sockfd = -1;
-			}
-			continue;
-		}
-		break;
-	}
-
-	if (rp == NULL)
-	{
-		elog(LOG, "send dummy packet failed, create socket failed: %m");
-		goto send_error;
+		/* the size of AF_INET6 is bigger than the side of IPv4, so
+		 * converting from IPv6 to IPv4 may potentially not work. */
+		ereport(LOG, (errmsg("sending dummy packet failed: cannot send from AF_INET to receiving on AF_INET6")));
+		return;
 	}
 
 	/*
-	 * Send a dummy package to the interconnect listener, try 10 times
+	 * Send a dummy package to the interconnect listener, try 10 times.
+	 * We don't want to close the socket at the end of this function, since
+	 * the socket will eventually close during the motion layer cleanup.
 	 */
-
 	counter = 0;
 	while (counter < 10)
 	{
 		counter++;
-		ret = sendto(sockfd, dummy_pkt, strlen(dummy_pkt), 0, rp->ai_addr, rp->ai_addrlen);
+		ret = sendto(ICSenderSocket, dummy_pkt, strlen(dummy_pkt), 0, (struct sockaddr *) &dest, dest_len);
 		if (ret < 0)
 		{
 			if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
 				continue;
 			else
 			{
-				elog(LOG, "send dummy packet failed, sendto failed: %m");
-				goto send_error;
+				ereport(LOG, (errmsg("send dummy packet failed, sendto failed: %m")));
+				return;
 			}
 		}
 		break;
 	}
 
 	if (counter >= 10)
-	{
-		elog(LOG, "send dummy packet failed, sendto failed: %m");
-		goto send_error;
-	}
+		ereport(LOG, (errmsg("send dummy packet failed, sendto failed with 10 times: %m")));
 
-	pg_freeaddrinfo_all(hint.ai_family, addrs);
-	closesocket(sockfd);
-	return;
-
-send_error:
-
-	if (addrs)
-		pg_freeaddrinfo_all(hint.ai_family, addrs);
-	if (sockfd != -1)
-		closesocket(sockfd);
-	return;
 }
 
 uint32
