@@ -44,13 +44,13 @@ The following features have been removed in Greenplum 7:
 
 - The `gp_percentil_agg` extension.
 
-- The `checkpoint_segments` parameter in the `postgresql.conf` file.  Use the server configuration parameters `min_wal_size` and ` max_wal_size`, instead.
-
 - The `createlang` and `droplang` utilties. Instead, use `CREATE EXTENSION` and `DROP EXTENSION` directly.
 
 ## <a id="behavior"></a>Changes in Feature Behavior
 
 The following feature behaviors have changed in Greenplum 7:
+
+- - The `checkpoint_segments` parameter in the `postgresql.conf` file.  Use the server configuration parameters `min_wal_size` and ` max_wal_size`, instead.
 
 - Autovacuum is now enabled by default for all databases. 
 
@@ -62,7 +62,9 @@ The following feature behaviors have changed in Greenplum 7:
 
 - Greenplum 7 now prevents the `to_number()` function from consuming characters when the template separator does not match​. For example, `SELECT to_number(‘1234’, ‘9,999’)` used to return `134`. It will now return `1234`, instead. L and TH now only consume characters that are not digits, positive/negative signs, decimal points, or commas.​
 
-- The `fix to_date()`, `to_number()`, and `to_timestamp()` functions previously skipped one byte for each byte of template character, resulting in strange behavior if either string contained multibyte characters.​ Adjust the handling of backslashes inside double-quotes in template strings for to_char(), to_number(), and to_timestamp().​ Such a backslash now escapes the character after it, particularly a double-quote or another backslash. ??????
+- The `fix to_date()`, `to_number()`, and `to_timestamp()` functions previously skipped one byte for each byte of template character, resulting in strange behavior if either string contained multibyte characters.​ Adjust the handling of backslashes inside double-quotes in template strings for to_char(), to_number(), and to_timestamp().​ Such a backslash now escapes the character after it, particularly a double-quote or another backslash.
+
+-
 
 
 ## <a id="linked"></a>Other Important Changes in Greenplum 7
@@ -82,4 +84,8 @@ Greenplum 7 also:
 - Makes changes to system views and system tables. See [Changes to System Views and Tables](../ref_guide/system-changes-6to7.html).
 
 
+
+## <a id="linked"></a>Postgres Changes for Versions 10, 11, and 12
+
+CREATE NEW TOPIC, DROP IN CONTENT FROM INTERNAL BLOG (https://hackmd.io/a_ri7wKwQOWk4NWM_fp2HA)
 

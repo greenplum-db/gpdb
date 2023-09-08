@@ -20,6 +20,7 @@ The following changes pertain to both system views and system table:
 
 
 
+
 ## <a id="views"></a>System View Changes
 
 This section describes changes to existing system views. 
@@ -35,3 +36,5 @@ This section describes changes to existing system tables.
 - The `pg_appendonly` table non longer records append-only storage options. They are now listed in `pg_class` table's `reloptions` column instead.
 
 - The `OID` column is no longer???
+
+- To identify the storage type of a table, search `pg_class_relam` your table. Previously, used the `relstorage` column in `pg_class`. 
