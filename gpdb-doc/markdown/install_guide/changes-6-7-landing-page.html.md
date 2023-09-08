@@ -48,11 +48,11 @@ The following features have been removed in Greenplum 7:
 
 - The `createlang` and `droplang` utilties. Instead, use `CREATE EXTENSION` and `DROP EXTENSION` directly.
 
-- 
-
 ## <a id="behavior"></a>Changes in Feature Behavior
 
 The following feature behaviors have changed in Greenplum 7:
+
+- Autovacuum is now enabled by default for all databases. 
 
 - Pattern matching behavior of the `substring()` function has changed. In cases where the pattern can be matched in more than one way, the initial subpattern is now treated as matching the least possible amount of text rather than the greatest; for example, a pattern such as `%#“aa*#”%` now selects the first group of `a`’s from the input, rather than the last group.
 
@@ -60,12 +60,9 @@ The following feature behaviors have changed in Greenplum 7:
 
 - When `x` is a table name or composite column, PostgreSQL has traditionally considered the syntactic forms `f(x)` and `x.f` to be equivalent, allowing tricks such as writing a function and then using it as though it were a computed-on-demand column. However, if both interpretations are feasible, the column interpretation was always chosen. Now, if there is ambiguity, the interpretation that matches the syntactic form is chosen.
 
-Greenplum 7 now prevents the `to_number()` function from consuming characters when the template separator does not match​. For example, `SELECT to_number(‘1234’, ‘9,999’)` used to return `134`. It will now return `1234`, instead. L and TH now only consume characters that are not digits, positive/negative signs, decimal points, or commas.​
+- Greenplum 7 now prevents the `to_number()` function from consuming characters when the template separator does not match​. For example, `SELECT to_number(‘1234’, ‘9,999’)` used to return `134`. It will now return `1234`, instead. L and TH now only consume characters that are not digits, positive/negative signs, decimal points, or commas.​
 
-Fix to_date(), to_number(), and to_timestamp() to skip a character for each template character​
-Previously, they skipped one byte for each byte of template character, resulting in strange behavior if either string contained multibyte characters.​
-Adjust the handling of backslashes inside double-quotes in template strings for to_char(), to_number(), and to_timestamp().​
-Such a backslash now escapes the character after it, particularly a double-quote or another backslash.
+- The `fix to_date()`, `to_number()`, and `to_timestamp()` functions previously skipped one byte for each byte of template character, resulting in strange behavior if either string contained multibyte characters.​ Adjust the handling of backslashes inside double-quotes in template strings for to_char(), to_number(), and to_timestamp().​ Such a backslash now escapes the character after it, particularly a double-quote or another backslash. ??????
 
 
 ## <a id="linked"></a>Other Important Changes in Greenplum 7
