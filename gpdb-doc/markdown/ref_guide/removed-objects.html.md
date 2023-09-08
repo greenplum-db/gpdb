@@ -5,7 +5,8 @@ title: Objects Removed in Greenplum 7
 Greenplum Database 7 removes several database objects. These changes can potentially affect successfully upgrading from one major version to another. Review this list of objects before upgrading from Greenplum 6 to Greenplum 7. 
 
 
-**THIS CONTENT IS FROM THE 6 DOCS. IT IS HERE FOR MOCK-UP PURPOSES ONLLY**
+
+**THIS CONTENT IS FROM THE 6 DOCS. IT IS JUST A PLACEHOLDER**
 
 
 -   [Removed Relations](#rem_relations)

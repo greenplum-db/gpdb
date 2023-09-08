@@ -1,0 +1,37 @@
+---
+title: System Catalog Changes 
+---
+
+This topic documents changes to existing system views and system catalogs.
+
+## <a id="both"></a>Changes to Both System Views and System Tables
+
+The following changes pertain to both system views and system table:
+
+- The `OID` column is no longer???
+
+- The `Unknown` datatype is no longer supported.
+
+- The datatypes `abstime`, `reltime`, and `tinterval`. Use SQL-standard types such as `timestamp`, instead.
+
+- Sequence for `SERIAL` columns now generate positive 32-bit wide values instead of 64-bit.
+
+- The `gp_toolkit` schema is now an extension. 
+
+
+
+## <a id="views"></a>System View Changes
+
+This section describes changes to existing system views. 
+
+
+
+
+
+## <a id="tables"></a>System Table Changes
+
+This section describes changes to existing system tables. 
+
+- The `pg_appendonly` table non longer records append-only storage options. They are now listed in `pg_class` table's `reloptions` column instead.
+
+- The `OID` column is no longer???

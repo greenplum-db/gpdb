@@ -1,5 +1,5 @@
 ---
-title: Server Configuration Parameter Changes from Greenplum 6 to 7
+title: Server Configuration Parameter Changes from Greenplum 6 to Greenplum 7
 ---
 
 Greenplum 7 includes new server configuration parameters, and removes or updates the default values of certain server configuration parameters as described below.
@@ -71,3 +71,4 @@ These server configuration parameters are changed in Greenplum 7:
 - The `wal_keep_segments` server configuration parameter has been replaced by the `wal_keep_size` parameter.
 - The `autovacuum` server configuration parameter is now enabled for all databases by default, rather than just for the `template0` and `template1` databases.
 - The `gp_autostats_mode` server configuration parameter default value has been changed to `none`.
+- The `gp_default_storage_options` parameter no longer supports the `appendonly` and `appendoptimized` keywords. Use the `default_table_access_method` parameter instead.
