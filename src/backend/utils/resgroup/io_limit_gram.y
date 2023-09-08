@@ -14,6 +14,8 @@
 
 	extern int io_limit_yycolumn;
 	static char *line;
+
+	const static uint64 ULMAX = ULLONG_MAX / 1024 / 1024;
 }
 
 %code requires {
@@ -153,7 +155,7 @@ ioconfig: IO_KEY '=' io_value
 				yyerror(NULL, NULL, "cannot allocate memory");
 
 			item->value = $3;
-			for (int i = 0;i < lengthof(IOconfigFields); ++i)
+			for (int i = 0; i < lengthof(IOconfigFields); ++i)
 				if (strcmp($1, IOconfigFields[i]) == 0)
 					item->offset = i;
 
@@ -161,7 +163,14 @@ ioconfig: IO_KEY '=' io_value
 		  }
 ;
 
-io_value: NUMBER { $$ = $1; }
+io_value: NUMBER
+		{
+			$$ = $1;
+
+			if (!io_limit_value_validate($1))
+				yyerror(NULL, NULL,
+						psprintf("value must in range [2, %lu] or equal 'max'", ULMAX));
+		}
 		| VALUE_MAX { $$ = 0; }
 ;
 

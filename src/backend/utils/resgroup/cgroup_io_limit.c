@@ -45,7 +45,6 @@ const char *IOconfigFields[4] = {"rbps", "wbps", "riops", "wiops"};
 const char	*IOStatFields[4] = {"rbytes", "wbytes", "rios", "wios"};
 
 static int bdi_cmp(const void *a, const void *b);
-static void ioconfig_validate(IOconfig *config);
 
 typedef struct BDICmp
 {
@@ -102,8 +101,6 @@ io_limit_validate(List *limit_list)
 	{
 		TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(limit_cell);
 		ListCell	  *bdi_cell;
-
-		ioconfig_validate(limit->ioconfig);
 
 		foreach (bdi_cell, limit->bdi_list)
 		{
@@ -305,31 +302,13 @@ get_bdi_of_path(const char *ori_path)
 	return make_bdi(parent_maj, parent_min);
 }
 
-static void
-ioconfig_validate(IOconfig *config)
+
+bool
+io_limit_value_validate(const uint64 value)
 {
-	const uint64 ULMAX = ULLONG_MAX / 1024 / 1024;
-	const uint32 UMAX = UINT_MAX;
+	const static uint64 ULMAX = ULLONG_MAX / 1024 / 1024;
 
-	if (config->rbps != IO_LIMIT_MAX && (config->rbps > ULMAX || config->rbps < 2))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("io limit: rbps must in range [2, %lu] or equal 0", ULMAX)));
-
-	if (config->wbps != IO_LIMIT_MAX && (config->wbps > ULMAX || config->wbps < 2))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("io limit: wbps must in range [2, %lu] or equal 0", ULMAX)));
-
-	if (config->wiops != IO_LIMIT_MAX && (config->wiops > UMAX || config->wiops < 2))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("io limit: wiops must in range [2, %u] or equal 0", UMAX)));
-
-	if (config->riops != IO_LIMIT_MAX && (config->riops > UMAX || config->riops < 2))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("io limit: riops must in range [2, %u] or equal 0", UMAX)));
+	return !(value > ULMAX || value < 2);
 }
 
 char *

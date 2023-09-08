@@ -107,6 +107,7 @@ extern int fill_bdi_list(TblSpcIOLimit *io_limit);
 extern List *io_limit_parse(const char *limit_str);
 extern void io_limit_free(List *limit_list);
 extern void io_limit_validate(List *limit_list);
+bool io_limit_value_validate(const uint64 value);
 
 extern List  *get_iostat(Oid groupid, List *io_limit);
 extern int  compare_iostat(const void *a, const void *b);
