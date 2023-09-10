@@ -1,5 +1,5 @@
-import os, mmap
-from test.behave_utils.utils import drop_database_if_exists, drop_table_if_exists
+import os, mmap, re
+from test.behave_utils.utils import *
 
 @given('database "{dbname}" does not exist')
 def impl(context, dbname):
@@ -18,7 +18,7 @@ def impl(context, file_name, sql_query):
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
     with open(file_name, 'w') as query_f:
-            query_f.writelines(sql_query)
+        query_f.writelines(sql_query)
 
 @given('the table "{rel_name}" does not exist in database "{db_name}"')
 def impl(context, rel_name, db_name):
@@ -41,8 +41,8 @@ def impl(context, output_file):
 def impl(context, output_file, str_before, str_after):
     with open(output_file, 'r') as output_f:
         s = mmap.mmap(output_f.fileno(), 0, access=mmap.ACCESS_READ)
-        pos_before = s.find(str_before)
-        pos_after = s.find(str_after)
+        pos_before = s.find(str_before.encode())
+        pos_after = s.find(str_after.encode())
         if pos_before == -1:
             raise Exception('%s not found.' % str_before)
         if pos_after == -1:
@@ -54,14 +54,14 @@ def impl(context, output_file, str_before, str_after):
 def impl(context, output_file, search_str):
     with open(output_file, 'r') as output_f:
         s = mmap.mmap(output_f.fileno(), 0, access=mmap.ACCESS_READ)
-        if s.find(search_str) == -1:
+        if s.find(search_str.encode()) == -1:
             raise Exception('%s not found.' % search_str)
 
 @then('the output file "{output_file}" should not contain "{search_str}"')
 def impl(context, output_file, search_str):
     with open(output_file, 'r') as output_f:
         s = mmap.mmap(output_f.fileno(), 0, access=mmap.ACCESS_READ)
-        if s.find(search_str) != -1:
+        if s.find(search_str.encode()) != -1:
             raise Exception('%s should not exist.' % search_str)
 
 @then('the output file "{output_file}" should be loaded to database "{db_name}" without error')
