@@ -1,0 +1,8 @@
+2023-09-10 21:17:22|INFO|gpload session started 2023-09-10 21:17:22
+2023-09-10 21:17:22|INFO|setting schema 'public' for table 'csvtable'
+2023-09-10 21:17:22|INFO|started gpfdist -p 8081 -P 8082 -f "/home/v/x/gh/gpdb7/gpMgmt/bin/gpload_test/gpload2/data_file.csv" -t 30
+2023-09-10 21:17:22|INFO|running time: 0.15 seconds
+2023-09-10 21:17:22|INFO|rows Inserted          = 2
+2023-09-10 21:17:22|INFO|rows Updated           = 0
+2023-09-10 21:17:22|INFO|data formatting errors = 0
+2023-09-10 21:17:22|INFO|gpload succeeded

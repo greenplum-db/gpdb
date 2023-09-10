@@ -907,3 +907,13 @@ def test_547_gpload_insert_staging_without_DK():
     f = open(TestBase.mkpath('query547.sql'), 'a')
     f.write("\\! psql -d reuse_gptest -c '\\d staging_gpload_reusable_*'")
     f.close()
+
+@TestBase.prepare_before_test(num=548, times=1)
+def test_548_gpload_ext_staging_table_with_externalschema():
+    "548 gpload reuse ext_staging_table if it is configured with externalschema"
+    setup_file = TestBase.mkpath('setup.sql')
+    TestBase.runfile(setup_file)
+    with open(TestBase.mkpath('query26.sql'),'a') as f:
+        f.write("\\! psql -d reuse_gptest -c 'select count(*) from csvtable;'")
+    TestBase.copy_data('external_file_13.csv','data_file.csv')
+    TestBase.write_config_file(reuse_tables=True, format='csv', file='data_file.csv', table='csvtable', delimiter="','",log_errors=True,error_limit=10, staging_table='staging_table',externalSchema='spiegelungssätze')

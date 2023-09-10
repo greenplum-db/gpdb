@@ -265,3 +265,15 @@ Feature: Dump minimum database objects that is related to the query
       And the output file "/tmp/out.sql" should contain "Table: t3, Attribute: f"
       And the output file "/tmp/out.sql" should be loaded to database "minidb_tmp" without error
       And the file "/tmp/in.sql" should be executed in database "minidb_tmp" without error
+
+    @minirepro_core
+    Scenario: Dump database objects related with select query on table with specially encoded charaters
+      Given the file "/tmp/in.sql" exists and contains "select * from spiegelungssätze;"
+      And the file "/tmp/out.sql" does not exist
+      When the user runs "minirepro minireprodb -q /tmp/in.sql -f /tmp/out.sql"
+      Then the output file "/tmp/out.sql" should exist
+      And the output file "/tmp/out.sql" should not contain "CREATE TABLE public.spiegelungssätze"
+      And the output file "/tmp/out.sql" should contain "Table: spiegelungssätze, Attribute: col_ä"
+      And the output file "/tmp/out.sql" should contain "Table: spiegelungssätze, Attribute: 列2"
+      And the output file "/tmp/out.sql" should be loaded to database "minidb_tmp" without error
+      And the file "/tmp/in.sql" should be executed in database "minidb_tmp" without error
