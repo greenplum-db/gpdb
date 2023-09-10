@@ -210,7 +210,7 @@ Feature: Dump minimum database objects that is related to the query
       Then the output file "/tmp/out.sql" should exist
       And the output file "/tmp/out.sql" should contain "CREATE TABLE public.t2" before "CREATE TABLE public.t3"
       And the output file "/tmp/out.sql" should contain "CREATE TABLE public.t3" before "CREATE VIEW public.v2"
-      And the output file "/tmp/out.sql" should not contain "CREATE TABLE t1"
+      And the output file "/tmp/out.sql" should not contain "CREATE TABLE public.t1"
       And the output file "/tmp/out.sql" should contain "WHERE relname = 't2'"
       And the output file "/tmp/out.sql" should contain "WHERE relname = 't3'"
       And the output file "/tmp/out.sql" should contain "Table: t2, Attribute: c"
