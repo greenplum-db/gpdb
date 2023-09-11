@@ -394,9 +394,9 @@ frame_clause
 
 :   **BETWEEN** — The `BETWEEN` clause defines the first and last row of the window, using the current row as a reference point. First and last rows are expressed in terms of the number of rows preceding and following the current row, respectively. For example, `BETWEEN 3 PRECEDING AND 5 FOLLOWING` sets the window to start with the third row preceding the current row, and end with the fifth row following the current row. Use `BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING` to set the first and last rows in the window to be the first and last row in the partition, respectively. This is equivalent to the default behavior if no `ROWs`, `RANGE` or `GROUPS` clause is specified.
 
-:   XXX **FOLLOWING** — The `FOLLOWING` clause defines the last row of the window using the current row as a reference point. The last row is expressed in terms of the number of rows following the current row. For example, in the case of `ROWS` framing, `5 FOLLOWING` sets the window to end with the fifth row following the current row. In the case of `RANGE` framing, it sets the window to end with the last row whose ordering column value follows that of the current row by 5 in the given order. If the specified order is ascending by date, this will be the last row within 5 days after the current row. Use `UNBOUNDED FOLLOWING` to set the last row in the window to be the last row in the partition.
+:   **FOLLOWING** — The `FOLLOWING` clause defines the last row of the window using the current row as a reference point. The last row is expressed in terms of the number of rows following the current row. For example, in the case of `ROWS` framing, `5 FOLLOWING` sets the window to end with the fifth row following the current row. In the case of `RANGE` framing, it sets the window to end with the last row whose ordering column value follows that of the current row by 5 in the given order. If the specified order is ascending by date, this will be the last row within 5 days after the current row. Use `UNBOUNDED FOLLOWING` to set the last row in the window to be the last row in the partition.
 
-:   XXX If you do not specify a `ROWS`, a `RANGE` or a `GROUPS` clause, the window bound starts with the first row in the partition (`UNBOUNDED PRECEDING`) and ends with the current row (`CURRENT ROW`) if `ORDER BY` is used. If an `ORDER BY` is not specified, the window starts with the first row in the partition (`UNBOUNDED PRECEDING`) and ends with last row in the partition (`UNBOUNDED FOLLOWING`).
+:   If you do not specify a `ROWS`, a `RANGE` or a `GROUPS` clause, the window bound starts with the first row in the partition (`UNBOUNDED PRECEDING`) and ends with the current row (`CURRENT ROW`) if `ORDER BY` is used. If an `ORDER BY` is not specified, the window starts with the first row in the partition (`UNBOUNDED PRECEDING`) and ends with last row in the partition (`UNBOUNDED FOLLOWING`).
 
 :   The purpose of a `WINDOW` clause is to specify the behavior of window functions appearing in the query's [SELECT List](#selectlist) or [ORDER BY Clause](#orderbyclause). These functions can reference the `WINDOW` clause entries by name in their `OVER` clauses. A `WINDOW` clause entry does not have to be referenced anywhere, however; if it is not used in the query it is simply ignored. It is possible to use window functions without any `WINDOW` clause at all, since a window function call can specify its window definition directly in its `OVER` clause. However, the `WINDOW` clause saves typing when the same window definition is needed for more than one window function.
 
@@ -409,7 +409,7 @@ See [Window Expressions](../../admin_guide/query/topics/defining-queries.html#to
 
 The `SELECT` list (between the key words `SELECT` and `FROM`) specifies expressions that form the output rows of the `SELECT` statement. The expressions can (and usually do) refer to columns computed in the `FROM` clause.
 
-XXX An expression in the `SELECT` list can be a constant value, a column reference, an operator invocation, a function call, an aggregate expression, a window expression, a scalar subquery, and so on. A number of constructs can be classified as an expression but do not follow any general syntax rules. These generally have the semantics of a function or operator. For information about SQL value expressions and function calls, see "Querying Data" in the *Greenplum Database Administrator Guide*.
+An expression in the `SELECT` list can be a constant value, a column reference, an operator invocation, a function call, an aggregate expression, a window expression, a scalar subquery, and so on. A number of constructs can be classified as an expression but do not follow any general syntax rules. These generally have the semantics of a function or operator. For information about SQL value expressions and function calls, see [Querying Data](../../admin_guide/query/topics/query.html) in the *Greenplum Database Administrator Guide*.
 
 Just as in a table, every output column of a `SELECT` has a name. In a simple `SELECT` this name is just used to label the column for display, but when the `SELECT` is a sub-query of a larger query, the name is seen by the larger query as the column name of the virtual table produced by the sub-query. To specify the name to use for an output column, write `AS <output_name>` after the column's expression. (You can omit `AS`, but only if the desired output name does not match any SQL keyword. For protection against possible future keyword additions, you can always either write `AS` or double-quote the output name.) If you do not specify a column name, Greenplum Database chooses a name automatically. If the column's expression is a simple column reference then the chosen name is the same as that column's name. In more complex cases, a function or type name may be used, or the system may fall back on a generated name such as `?column?` XXX or `columnN` XXX.
 
@@ -559,7 +559,7 @@ It is even possible for repeated executions of the same `LIMIT` query to return 
 
 ### <a id="lockingclause"></a>The Locking Clause
 
-`FOR UPDATE`, `FOR NO KEY UPDATE`, `FOR SHARE`, and `FOR KEY SHARE` are *locking clauses*; they affect how `SELECT` locks rows as they are obtained from the table. XXX The Global Deadlock Detector affects the locking used by `SELECT` queries that contain a locking clause (`FOR <lock_strength>`). The Global Deadlock Detector is enabled by setting the [gp_enable_global_deadlock_detector](../config_params/guc-list.html) configuration parameter to `on`. See [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd) in the *Greenplum Database Administrator Guide* for information about the Global Deadlock Detector. XXX
+`FOR UPDATE`, `FOR NO KEY UPDATE`, `FOR SHARE`, and `FOR KEY SHARE` are *locking clauses*; they affect how `SELECT` locks rows as they are obtained from the table. The Global Deadlock Detector affects the locking used by `SELECT` queries that contain a locking clause (`FOR <lock_strength>`). The Global Deadlock Detector is enabled by setting the [gp_enable_global_deadlock_detector](../config_params/guc-list.html) configuration parameter to `on`. See [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd) in the *Greenplum Database Administrator Guide* for information about the Global Deadlock Detector.
 
 The locking clause has the general form:
 
@@ -656,8 +656,6 @@ SELECT kind, sum(length) AS total FROM films GROUP BY kind
   HAVING sum(length) < interval '5 hours';
 ```
 
-XXX start
-
 Calculate the subtotals and grand totals of all sales for movie `kind` and `distributor`.
 
 ```
@@ -674,8 +672,6 @@ SELECT distributor, sum(prc*qty),
 FROM sales
 GROUP BY distributor ORDER BY 2 DESC;
 ```
-
-XXX end
 
 The following two examples are identical ways of sorting the individual results according to the contents of the second column (`name`):
 
@@ -727,8 +723,6 @@ UNION ALL
 SELECT * FROM test; 
 ```
 
-XXX start
-
 This example uses the `WITH` clause to display per-product sales totals in only the top sales regions.
 
 ```
@@ -750,8 +744,6 @@ GROUP BY region, product;
 ```
 
 The example could have been written without the `WITH` clause but would have required two levels of nested sub-`SELECT` statements.
-
-XXX end
 
 This example uses the `WITH RECURSIVE` clause to find all subordinates \(direct or indirect\) of the employee Mary, and their level of indirectness, from a table that shows only direct subordinates:
 
@@ -870,13 +862,9 @@ The clause `DISTINCT ON` is not defined in the SQL standard.
 
 The `MATERIALIZED` and `NOT MATERIALIZED` options of `WITH` are extensions of the SQL standard.
 
-XXX start
-
 **Limited Use of STABLE and VOLATILE Functions**
 
 To prevent data from becoming out-of-sync across the segments in Greenplum Database, any function classified as `STABLE` or `VOLATILE` cannot be run at the segment database level if it contains SQL or modifies the database in any way. See [CREATE FUNCTION](CREATE_FUNCTION.html) for more information.
-
-XXX end
 
 ## <a id="section25"></a>See Also 
 
