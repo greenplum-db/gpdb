@@ -8,11 +8,13 @@ Feature: gpstart behave tests
           And a mirror has crashed
           And the database is not running
          When the user runs "gpstart -a"
+	  And pgpassfile is exists
          Then gpstart should return a return code of 0
           And gpstart should print "Skipping startup of segment marked down in configuration" to stdout
           And gpstart should print "Skipped segment starts \(segments are marked down in configuration\) += 1" to stdout
           And gpstart should print "Successfully started [0-9]+ of [0-9]+ segment instances, skipped 1 other segments" to stdout
           And gpstart should print "Number of segments not attempted to start: 1" to stdout
+	  And gpstart should print "permissions should be" to stdout
 
     Scenario: gpstart starts even if the standby host is unreachable
         Given the database is running

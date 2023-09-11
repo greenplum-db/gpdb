@@ -91,6 +91,24 @@ def impl(context, cmd):
     context.stdout_message, context.stderr_message = p.communicate()
     context.ret_code = p.returncode
 
+@when('pgpassfile is exists')
+def impl(context)
+    """
+    Create a pgpassfile
+    """
+    user_dir = os.path.expanduser("~")
+    file_name = '.pgpass'
+    file_path = os.path.join(user_dir, file_name)
+    if not os.path.exists(file_path):
+        try:
+            with open(file_path, "w") as file:
+                os.chmod(file_path, 0o600)
+        except Exception as e:
+            print("create pgpass file error")
+
+
+
+
 @given('the host for the {seg_type} on content {content} is made unreachable')
 def impl(context, seg_type, content):
     if seg_type == "primary":
