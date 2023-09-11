@@ -1781,3 +1781,18 @@ Feature: Incrementally analyze the database
         And the user executes "CREATE TEMP TABLE spiegelungssätze (c1 int) DISTRIBUTED BY (c1)" with named connection "default"
         When the user runs "analyzedb -a -d special_encoding_db"
         Then analyzedb should return a return code of 0
+
+    Scenario: analyzedb finds materialized views
+        Given  a materialized view "public.mv_test_view" exists on table "pg_class"
+        When the user runs "analyzedb -a -d incr_analyze"
+        Then analyzedb should print "-public.mv_test_view" to stdout
+
+    Scenario: analyzedb finds materialized views when schema is passed
+        Given  a materialized view "public.mv_test_view" exists on table "pg_class"
+        When the user runs "analyzedb -a -s public -d incr_analyze"
+        Then analyzedb should print "-public.mv_test_view" to stdout
+
+    Scenario: analyzedb finds materialized views when materialized view name is passed
+        Given  a materialized view "public.mv_test_view" exists on table "pg_class"
+        When the user runs "analyzedb -a -t public.mv_test_view -d incr_analyze"
+        Then analyzedb should print "-public.mv_test_view" to stdout
