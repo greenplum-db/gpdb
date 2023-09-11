@@ -28,8 +28,6 @@ using namespace gpmd;
 CMDIdRelStats::CMDIdRelStats(CMDIdGPDB *rel_mdid)
 	: m_rel_mdid(rel_mdid), m_str(m_mdid_array, GPOS_ARRAY_SIZE(m_mdid_array))
 {
-	// serialize mdid into static string
-	Serialize();
 }
 
 //---------------------------------------------------------------------------
@@ -54,8 +52,14 @@ CMDIdRelStats::~CMDIdRelStats()
 //
 //---------------------------------------------------------------------------
 void
-CMDIdRelStats::Serialize()
+CMDIdRelStats::Serialize() const
 {
+	if (m_str.Length() > 0)
+	{
+		return;
+	}
+
+	m_str.Reset();
 	// serialize mdid as SystemType.Oid.Major.Minor
 	m_str.AppendFormat(GPOS_WSZ_LIT("%d.%d.%d.%d"), MdidType(),
 					   m_rel_mdid->Oid(), m_rel_mdid->VersionMajor(),
@@ -73,6 +77,7 @@ CMDIdRelStats::Serialize()
 const WCHAR *
 CMDIdRelStats::GetBuffer() const
 {
+	Serialize();
 	return m_str.GetBuffer();
 }
 
@@ -123,6 +128,7 @@ void
 CMDIdRelStats::Serialize(CXMLSerializer *xml_serializer,
 						 const CWStringConst *attribute_str) const
 {
+	Serialize();
 	xml_serializer->AddAttribute(attribute_str, &m_str);
 }
 
@@ -137,7 +143,7 @@ CMDIdRelStats::Serialize(CXMLSerializer *xml_serializer,
 IOstream &
 CMDIdRelStats::OsPrint(IOstream &os) const
 {
-	os << "(" << m_str.GetBuffer() << ")";
+	os << "(" << GetBuffer() << ")";
 	return os;
 }
 

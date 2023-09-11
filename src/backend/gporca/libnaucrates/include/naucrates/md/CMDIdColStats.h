@@ -48,10 +48,10 @@ private:
 	WCHAR m_mdid_buffer[GPDXL_MDID_LENGTH];
 
 	// string representation of the mdid
-	CWStringStatic m_str;
+	mutable CWStringStatic m_str;
 
 	// serialize mdid
-	void Serialize();
+	void Serialize() const;
 
 public:
 	CMDIdColStats(const CMDIdColStats &) = delete;
