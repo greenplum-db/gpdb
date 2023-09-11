@@ -166,8 +166,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 
 		{EdxltokenDuplicateSensitive, GPOS_WSZ_LIT("DuplicateSensitive")},
 
-		{EdxltokenPartIndexId, GPOS_WSZ_LIT("PartIndexId")},
-		{EdxltokenPartIndexIdPrintable, GPOS_WSZ_LIT("PrintablePartIndexId")},
 		{EdxltokenSegmentIdCol, GPOS_WSZ_LIT("SegmentIdCol")},
 
 		{EdxltokenScalar, GPOS_WSZ_LIT("Scalar")},

@@ -397,21 +397,7 @@ CDXLOperatorFactory::MakeDXLAppend(CDXLMemoryManager *dxl_memory_manager,
 												   EdxltokenAppendIsZapped,
 												   EdxltokenPhysicalAppend);
 
-	ULONG scan_id = ExtractConvertAttrValueToUlong(
-		dxl_memory_manager, attrs, EdxltokenPartIndexId,
-		EdxltokenPhysicalAppend, true /* is_optional */,
-		gpos::ulong_max /* default_value */);
-
-	ULongPtrArray *selector_ids = nullptr;
-	if (scan_id != gpos::ulong_max)
-	{
-		selector_ids = ExtractConvertValuesToArray(dxl_memory_manager, attrs,
-												   EdxltokenSelectorIds,
-												   EdxltokenPhysicalAppend);
-	}
-
-	return GPOS_NEW(mp) CDXLPhysicalAppend(mp, is_target, is_zapped, scan_id,
-										   nullptr, selector_ids);
+	return GPOS_NEW(mp) CDXLPhysicalAppend(mp, is_target, is_zapped);
 }
 
 //---------------------------------------------------------------------------

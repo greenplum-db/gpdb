@@ -3949,31 +3949,6 @@ CTranslatorDXLToPlStmt::TranslateDXLAppend(
 	GPOS_ASSERT(EdxlappendIndexFirstChild < arity);
 	append->appendplans = NIL;
 
-	// translate table descriptor into a range table entry
-	CDXLPhysicalAppend *phy_append_dxlop =
-		CDXLPhysicalAppend::Cast(append_dxlnode->GetOperator());
-
-	// If this append was create from a DynamicTableScan node in ORCA, it will
-	// contain the table descriptor of the root partitioned table. Add that to
-	// the range table in the PlStmt.
-	if (phy_append_dxlop->GetScanId() != gpos::ulong_max)
-	{
-		GPOS_ASSERT(nullptr != phy_append_dxlop->GetDXLTableDesc());
-
-		// translation context for column mappings in the base relation
-		CDXLTranslateContextBaseTable base_table_context(m_mp);
-
-		(void) ProcessDXLTblDescr(phy_append_dxlop->GetDXLTableDesc(),
-								  &base_table_context);
-
-		OID oid_type =
-			CMDIdGPDB::CastMdid(m_md_accessor->PtMDType<IMDTypeInt4>()->MDId())
-				->Oid();
-		append->join_prune_paramids =
-			TranslateJoinPruneParamids(phy_append_dxlop->GetSelectorIds(),
-									   oid_type, m_dxl_to_plstmt_context);
-	}
-
 	// translate children
 	CDXLTranslateContext child_context(m_mp, false,
 									   output_context->GetColIdToParamIdMap());
