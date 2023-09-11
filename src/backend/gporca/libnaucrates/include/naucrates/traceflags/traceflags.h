@@ -250,6 +250,10 @@ enum EOptTraceFlag
 
 	// Use experimental cost model
 	EopttraceExperimentalCostModel = 104009,
+
+	// Calculating scale factor based on histogram for dynamic sequential scan
+	EopttraceDPEHistogramScaleFactor = 104010,
+
 	///////////////////////////////////////////////////////
 	/////////// constant expression evaluator flags ///////
 	///////////////////////////////////////////////////////

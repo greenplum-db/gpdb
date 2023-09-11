@@ -353,6 +353,7 @@ double		optimizer_damping_factor_join;
 double		optimizer_damping_factor_groupby;
 bool		optimizer_dpe_stats;
 bool		optimizer_enable_derive_stats_all_groups;
+bool		optimizer_dpe_histogram_scale_factor;
 
 /* Costing related GUCs used by the Optimizer */
 int			optimizer_segments;
@@ -2024,6 +2025,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_dpe_stats,
+		true,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_dpe_histogram_scale_factor", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Enable calculating scale factor based on histogram for dynamic sequential scan."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_dpe_histogram_scale_factor,
 		true,
 		NULL, NULL, NULL
 	},

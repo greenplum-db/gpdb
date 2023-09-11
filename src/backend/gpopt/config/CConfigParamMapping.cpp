@@ -172,6 +172,11 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] = {
 	 GPOS_WSZ_LIT(
 		 "Enable stats derivation of partitioned tables with dynamic partition elimination.")},
 
+	{EopttraceDPEHistogramScaleFactor, &optimizer_dpe_histogram_scale_factor,
+	 false,	 // m_negate_param
+	 GPOS_WSZ_LIT(
+		 "Enable calculating scale factor based on histogram for dynamic sequential scan.")},
+
 	{EopttraceEnumeratePlans, &optimizer_enumerate_plans,
 	 false,	 // m_negate_param
 	 GPOS_WSZ_LIT("Enable plan enumeration.")},

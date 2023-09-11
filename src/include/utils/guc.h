@@ -530,6 +530,7 @@ extern double optimizer_damping_factor_join;
 extern double optimizer_damping_factor_groupby;
 extern bool optimizer_dpe_stats;
 extern bool optimizer_enable_derive_stats_all_groups;
+extern bool optimizer_dpe_histogram_scale_factor;
 
 /* Costing or tuning related GUCs used by the Optimizer */
 extern int optimizer_segments;

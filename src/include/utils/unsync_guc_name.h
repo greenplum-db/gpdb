@@ -339,6 +339,7 @@
 		"optimizer_damping_factor_groupby",
 		"optimizer_damping_factor_join",
 		"optimizer_discard_redistribute_hashjoin",
+		"optimizer_dpe_histogram_scale_factor",
 		"optimizer_dpe_stats",
 		"optimizer_enable_assert_maxonerow",
 		"optimizer_enable_associativity",

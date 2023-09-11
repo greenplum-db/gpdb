@@ -1113,6 +1113,16 @@ CStatisticsUtils::DeriveStatsForDynamicScan(CMemoryPool *mp,
 	IStatistics *left_semi_join_stats = base_table_stats->CalcLSJoinStats(
 		mp, part_selector_stats, join_preds_stats);
 
+	if (GPOS_FTRACE(EopttraceDPEHistogramScaleFactor) &&
+		left_semi_join_stats->Rows() == base_table_stats->Rows())
+	{
+		left_semi_join_stats->Release();
+		CJoinStatsProcessor::SetComputeScaleFactorFromHistogramBuckets(true);
+		left_semi_join_stats = base_table_stats->CalcLSJoinStats(
+			mp, part_selector_stats, join_preds_stats);
+		CJoinStatsProcessor::SetComputeScaleFactorFromHistogramBuckets(false);
+	}
+
 	if (nullptr != unsupported_pred_stats)
 	{
 		// apply the unsupported join filters as a filter on top of the join results.
