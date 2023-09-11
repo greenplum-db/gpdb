@@ -316,21 +316,7 @@ Currently, `FOR NO KEY UPDATE`, `FOR UPDATE`, `FOR SHARE`, and `FOR KEY SHARE` c
 
 ### <a id="windowclause"></a>The WINDOW Clause
 
-XXX start
-
-The optional `WINDOW` clause specifies the behavior of window functions appearing in the query's `SELECT` list or `ORDER BY` clause. These functions can reference the `WINDOW` clause entries by name in their `OVER` clauses. A `WINDOW` clause entry does not have to be referenced anywhere, however; if it is not used in the query it is simply ignored. It is possible to use window functions without any `WINDOW` clause at all, since a window function call can specify its window definition directly in its `OVER` clause. However, the `WINDOW` clause saves typing when the same window definition is needed for more than one window function.
-
-For example:
-
-```
-SELECT vendor, rank() OVER (mywindow) FROM sale
-GROUP BY vendor
-WINDOW mywindow AS (ORDER BY sum(prc*qty));
-```
-
-XXX end
-
-The optional `WINDOW` clause has the general form:
+The optional `WINDOW` clause specifies the behavior of window functions appearing in the query's `SELECT` list or `ORDER BY` clause. The `WINDOW` clause has the general form:
 
 ```
 WINDOW <window_name> AS ( <window_definition> ) [, ...]
@@ -343,6 +329,16 @@ where `<window_name>` is a name that can be referenced from `OVER` clauses or su
 [PARTITION BY <expression> [, ...]]
 [ORDER BY <expression> [ASC | DESC | USING <operator>] [NULLS {FIRST | LAST}] [, ...] ]
 [<frame_clause>] 
+```
+
+A `WINDOW` clause entry does not have to be referenced anywhere, however; if it is not used in the query it is simply ignored. It is possible to use window functions without any `WINDOW` clause at all, since a window function call can specify its window definition directly in its `OVER` clause. However, the `WINDOW` clause saves typing when the same window definition is needed for more than one window function.
+
+For example:
+
+```
+SELECT vendor, rank() OVER (mywindow) FROM sale
+GROUP BY vendor
+WINDOW mywindow AS (ORDER BY sum(prc*qty));
 ```
 
 existing_window_name
