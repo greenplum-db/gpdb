@@ -17,7 +17,7 @@ typedef uint64 bdi_t;
 #endif
 
 
-#define IO_LIMIT_MAX  (-1)
+#define IO_LIMIT_MAX  (PG_UINT64_MAX)
 #define IO_LIMIT_EMPTY (0)
 
 /*

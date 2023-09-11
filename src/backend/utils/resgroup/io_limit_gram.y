@@ -111,7 +111,7 @@ tablespace_io_config: tablespace_name ':' ioconfigs
 
 							if (context->star_tablespace_cnt > 0)
 								yyerror(NULL, NULL, "tablespace '*' cannot be used with other tablespaces");
-							if ($1 <= 0 || $1 > UINT_MAX)
+							if (!OidIsValid($1))
 								yyerror(NULL, NULL, "tablespace oid exceeds the limit");
 
 							tblspciolimit->tablespace_oid = $1;
