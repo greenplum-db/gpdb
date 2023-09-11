@@ -73,7 +73,7 @@ typedef struct IOLimitParserContext
 
 typedef struct IOLimitScannerState
 {
-	void *state;
+	void *buffer;
 	void *scanner;
 } IOLimitScannerState;
 

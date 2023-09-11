@@ -19,17 +19,31 @@ int io_limit_yycolumn = 1;
 id  [a-zA-Z_][a-zA-Z0-9_]*
 wildcard \*
 
-%%
-[wr](b|io)ps {
-                SAVE_COLUMN;
-                yylval->str = pstrdup(yytext);
-                return IO_KEY;
-             }
+%s ts_param
 
-max          {
+%%
+:           {
+                SAVE_COLUMN;
+                BEGIN ts_param;
+                return ':';
+            }
+
+<ts_param>[wr](b|io)ps {
+                            SAVE_COLUMN;
+                            yylval->str = pstrdup(yytext);
+                            return IO_KEY;
+                       }
+
+<ts_param>max {
                 SAVE_COLUMN;
                 yylval->str = pstrdup("max");
                 return VALUE_MAX;
+              }
+
+<ts_param>;  {
+                SAVE_COLUMN;
+                BEGIN INITIAL;
+                return ';';
              }
 
 {id}         {
@@ -49,7 +63,7 @@ max          {
                 return STAR;
              }
 
-[[:space:]]  {  SAVE_COLUMN;  }
+[[:space:]]  {  SAVE_COLUMN; }
 
 .           {
                 SAVE_COLUMN;
@@ -98,7 +112,7 @@ io_limit_scanner_begin(IOLimitScannerState *state, const char *limit_str)
     next_col = 1;
     io_limit_yycolumn = 1;
 
-    state->state = (void *)yy_scan_string(limit_str, scanner);
+    state->buffer = (void *)yy_scan_string(limit_str, scanner);
     state->scanner = scanner;
 }
 
@@ -106,5 +120,5 @@ io_limit_scanner_begin(IOLimitScannerState *state, const char *limit_str)
 void
 io_limit_scanner_finish(IOLimitScannerState *state)
 {
-    yy_delete_buffer((YY_BUFFER_STATE)state->state, (yyscan_t)state->scanner);
+    yy_delete_buffer(state->buffer, state->scanner);
 }
