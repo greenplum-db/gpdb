@@ -106,9 +106,6 @@ def impl(context)
         except Exception as e:
             print("create pgpass file error")
 
-
-
-
 @given('the host for the {seg_type} on content {content} is made unreachable')
 def impl(context, seg_type, content):
     if seg_type == "primary":
