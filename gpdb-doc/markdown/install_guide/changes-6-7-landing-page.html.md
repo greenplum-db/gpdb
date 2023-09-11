@@ -50,7 +50,7 @@ The following features have been removed in Greenplum 7:
 
 The following feature behaviors have changed in Greenplum 7:
 
-- - The `checkpoint_segments` parameter in the `postgresql.conf` file.  Use the server configuration parameters `min_wal_size` and ` max_wal_size`, instead.
+- The `checkpoint_segments` parameter in the `postgresql.conf` file has been removed.  Use the server configuration parameters `min_wal_size` and ` max_wal_size`, instead.
 
 - Autovacuum is now enabled by default for all databases. 
 
