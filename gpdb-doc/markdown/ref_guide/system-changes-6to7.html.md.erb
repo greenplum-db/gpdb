@@ -6,7 +6,7 @@ This topic documents changes to existing system views and system catalogs.
 
 ## <a id="both"></a>Changes to Both System Views and System Tables
 
-The following changes pertain to both system views and system table:
+The following changes pertain to both system views and system tables:
 
 - The `Unknown` datatype is no longer supported.
 
@@ -14,7 +14,7 @@ The following changes pertain to both system views and system table:
 
 - Sequence for `SERIAL` columns now generate positive 32-bit wide values instead of 64-bit.
 
-- Prior to Greenplum 7, sequence metadata was stored in separate sequence relation table; each sequence created had its own table. In Greenplum 7. the new `pg_sequence` system table contains all sequence-related metadata.
+- Prior to Greenplum 7, sequence metadata was stored in separate sequence relation table; each sequence created had its own table. In Greenplum 7, the new `pg_sequence` system table contains all sequence-related metadata.
 
 - The `gp_toolkit` schema is now an extension. 
 

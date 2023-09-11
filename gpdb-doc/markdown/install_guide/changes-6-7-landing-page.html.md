@@ -64,9 +64,6 @@ The following feature behaviors have changed in Greenplum 7:
 
 - The `fix to_date()`, `to_number()`, and `to_timestamp()` functions previously skipped one byte for each byte of template character, resulting in strange behavior if either string contained multibyte characters.​ Adjust the handling of backslashes inside double-quotes in template strings for to_char(), to_number(), and to_timestamp().​ Such a backslash now escapes the character after it, particularly a double-quote or another backslash.
 
-- 
-
-
 ## <a id="linked"></a>Other Important Changes in Greenplum 7
 
 Greenplum 7 also:
@@ -82,10 +79,3 @@ Greenplum 7 also:
 - Makes changes to resource groups. See [Changes to Resource Groups](../admin_guide/about-resgroups-changes.html).
 
 - Makes changes to system views and system tables. See [Changes to System Views and Tables](../ref_guide/system-changes-6to7.html).
-
-
-
-## <a id="linked"></a>Postgres Changes for Versions 10, 11, and 12
-
-CREATE NEW TOPIC, DROP IN CONTENT FROM INTERNAL BLOG (https://hackmd.io/a_ri7wKwQOWk4NWM_fp2HA)
-
