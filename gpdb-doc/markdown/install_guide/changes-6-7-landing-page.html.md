@@ -64,7 +64,7 @@ The following feature behaviors have changed in Greenplum 7:
 
 - The `fix to_date()`, `to_number()`, and `to_timestamp()` functions previously skipped one byte for each byte of template character, resulting in strange behavior if either string contained multibyte characters.​ Adjust the handling of backslashes inside double-quotes in template strings for to_char(), to_number(), and to_timestamp().​ Such a backslash now escapes the character after it, particularly a double-quote or another backslash.
 
--
+- 
 
 
 ## <a id="linked"></a>Other Important Changes in Greenplum 7

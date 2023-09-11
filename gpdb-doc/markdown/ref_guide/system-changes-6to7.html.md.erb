@@ -8,33 +8,42 @@ This topic documents changes to existing system views and system catalogs.
 
 The following changes pertain to both system views and system table:
 
-- The `OID` column is no longer???
-
 - The `Unknown` datatype is no longer supported.
 
-- The datatypes `abstime`, `reltime`, and `tinterval`. Use SQL-standard types such as `timestamp`, instead.
+- The datatypes `abstime`, `reltime`, and `tinterval` are no longer supported. Use SQL-standard types such as `timestamp`, instead.
 
 - Sequence for `SERIAL` columns now generate positive 32-bit wide values instead of 64-bit.
 
+- Prior to Greenplum 7, sequence metadata was stored in separate sequence relation table; each sequence created had its own table. In Greenplum 7. the new `pg_sequence` system table contains all sequence-related metadata.
+
 - The `gp_toolkit` schema is now an extension. 
-
-
 
 
 ## <a id="views"></a>System View Changes
 
 This section describes changes to existing system views. 
 
-
-
+- Three columns have been removed from the `pg_stat_activity` view: `waiting`, `waiting_reason`, and `rsgqueueduration​`.
 
 
 ## <a id="tables"></a>System Table Changes
 
 This section describes changes to existing system tables. 
 
-- The `pg_appendonly` table non longer records append-only storage options. They are now listed in `pg_class` table's `reloptions` column instead.
-
-- The `OID` column is no longer???
+- The `pg_appendonly` table no longer records append-only storage options. They are now listed in `pg_class` table's `reloptions` column instead. In addition, the following columns have been removed from the `pg_appendonly` table: `blocksize`,​ `safefswritesize`, ​​`compresslevel`, ​​`checksum`, `compresstype`, `columnstore`, ​​`blkdiridxid​​`, and `visimapidxid​`.
 
 - To identify the storage type of a table, search `pg_class_relam` your table. Previously, used the `relstorage` column in `pg_class`. 
+
+- In the `gp_configuration_history` table, the `desc` column has been renamed to `description`.
+
+- Three columns have been removed from the `pg_class` table: `relstorage`, `relhasoids`, and `relhaspkey`.
+
+- Three columns have been removed from the `pg_proc` table: `protransform​`​, `proisagg`​​, and `proiswindow`.
+
+- The `pg_am` table now stores possible table access methods. 
+
+- The `relam` column of the `pg_class` table now stores per-table access method information.
+
+- To indicate that a table is of type external, set the `relkind` column in the `pg_class` table to `f`.
+
+- The `adsrc​` column has been removed from the `pg_attdref` table.
