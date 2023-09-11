@@ -25,6 +25,8 @@ SET statement_mem TO '200MB';
 
 ## <a id="topic_cyz_p2l_z4"></a>Setting Parameters 
 
+> **Note** Greenplum Database does not support using the `ALTER SYSTEM` command to set server configuration parameters.
+
 Many of the configuration parameters have limitations on who can change them and where or when they can be set. For example, to change certain parameters, you must be a Greenplum Database superuser. Other parameters require a restart of the system for the changes to take effect. A parameter that is classified as *session* can be set at the system level \(in the `postgresql.conf` file\), at the database-level \(using `ALTER DATABASE`\), at the role-level \(using `ALTER ROLE`\), at the database- and role-level \(`ALTER ROLE...IN DATABASE...SET`, or at the session-level \(using `SET`\). System parameters can only be set in the `postgresql.conf` file.
 
 In Greenplum Database, the coordinator and each segment instance has its own `postgresql.conf` file \(located in their respective data directories\). Some parameters are considered *local* parameters, meaning that each segment instance looks to its own `postgresql.conf` file to get the value of that parameter. You must set local parameters on every instance in the system \(coordinator and segments\). Others parameters are considered *coordinator* parameters. Coordinator parameters need only be set at the coordinator instance.
