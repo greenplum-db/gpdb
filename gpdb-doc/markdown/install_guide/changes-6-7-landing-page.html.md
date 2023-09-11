@@ -68,9 +68,9 @@ The following feature behaviors have changed in Greenplum 7:
 
 Greenplum 7 also:
 
-- Removes some objects that were in Greeplum 6. See [Removed Objects](../ref_guide/removed-objects.html).
+- Removes some objects that were in Greeplum 6. See [Objects Removed in Greenplum 7](../ref_guide/removed-objects.html).
 
-- Changes some server configuration parameters. See [Changed Server Configuration Parameters](../ref_guide/guc-changes-6to7.html).
+- Changes some server configuration parameters. See [Server Configuration Parameter Changes from Greenplum 6 to Greenplum 7](../ref_guide/guc-changes-6to7.html).
 
 - Makes changes to how partitioning works. See [Changes in Partitioning](../admin_guide/ddl/about-part-changes.html).
 
@@ -78,4 +78,4 @@ Greenplum 7 also:
 
 - Makes changes to resource groups. See [Changes to Resource Groups](../admin_guide/about-resgroups-changes.html).
 
-- Makes changes to system views and system tables. See [Changes to System Views and Tables](../ref_guide/system-changes-6to7.html).
+- Makes changes to system views and system tables. See [System Catalog Changes between Greenplum 6 and Greenplum 7](../ref_guide/system-changes-6to7.html).
