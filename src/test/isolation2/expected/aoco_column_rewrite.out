@@ -110,13 +110,12 @@ SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco') ORDER BY segment_id, co
 (4 rows)
 DROP TABLE alter_type_aoco;
 DROP TABLE
-CHECKPOINT;
-CHECKPOINT
 -- check if all files are dropped correctly
-SELECT * FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_type_aoco');
- gp_segment_id | tablespace | filename 
----------------+------------+----------
-(0 rows)
+SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_type_aoco');
+ count 
+-------
+ 0     
+(1 row)
 
 --------------------------------------------------------------------------------
 -- Test if column rewrite handles deleted rows in blockdirectory correctly for
@@ -685,13 +684,12 @@ SELECT * FROM part_alter_col;
 (1 row)
 DROP TABLE part_alter_col;
 DROP TABLE
-CHECKPOINT;
-CHECKPOINT
 -- check if all files are dropped correctly
-SELECT * FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'part_alter_col');
- gp_segment_id | tablespace | filename 
----------------+------------+----------
-(0 rows)
+SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'part_alter_col');
+ count 
+-------
+ 0     
+(1 row)
 --------------------------------------------------------------------------------
 -- Test if column rewrite works when AT ALTER COLUMN TYPE for a column
 -- and then alter it back to the original type
@@ -794,13 +792,12 @@ SELECT * FROM alter_column_back;
 (2 rows)
 DROP TABLE alter_column_back;
 DROP TABLE
-CHECKPOINT;
-CHECKPOINT
 -- check if all files are dropped correctly
-SELECT * FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_back');
- gp_segment_id | tablespace | filename 
----------------+------------+----------
-(0 rows)
+SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_back');
+ count 
+-------
+ 0     
+(1 row)
 
 --------------------------------------------------------------------------------
 -- Test if ALTER COLUMN TYPE and SET ACCESS METHOD can be done in the same command
@@ -1055,6 +1052,8 @@ ALTER TABLE
 INSERT 0 10
 1: COMMIT;
 COMMIT
+-- gp_toolkit.gp_check_orphaned_files later requires that there's no concurrent sessions
+1q: ... <quitting>
 INSERT INTO alter_column_seg0 SELECT 1,i,i FROM generate_series(1,10)i;
 INSERT 0 10
 ALTER TABLE alter_column_seg0 ALTER COLUMN b TYPE text;
@@ -1076,12 +1075,11 @@ SELECT * FROM gp_toolkit.__gp_aocsseg('alter_column_seg0');
 (6 rows)
 DROP TABLE alter_column_seg0;
 DROP TABLE
-CHECKPOINT;
-CHECKPOINT
-SELECT * FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_seg0');
- gp_segment_id | tablespace | filename 
----------------+------------+----------
-(0 rows)
+SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_seg0');
+ count 
+-------
+ 0     
+(1 row)
 
 --------------------------------------------------------------------------------
 -- Test if ALTER COLUMN TYPE works correctly multiple segfiles are created
@@ -1102,6 +1100,8 @@ INSERT 0 10
 COMMIT
 2: COMMIT;
 COMMIT
+1q: ... <quitting>
+2q: ... <quitting>
 ALTER TABLE alter_column_multiple_concurrency ALTER COLUMN b TYPE text;
 ALTER TABLE
 SELECT count(*) FROM alter_column_multiple_concurrency;
@@ -1119,12 +1119,11 @@ SELECT * FROM gp_toolkit.__gp_aocsseg('alter_column_multiple_concurrency');
 (4 rows)
 DROP TABLE alter_column_multiple_concurrency;
 DROP TABLE
-CHECKPOINT;
-CHECKPOINT
-SELECT * FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_multiple_concurrency');
- gp_segment_id | tablespace | filename 
----------------+------------+----------
-(0 rows)
+SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_multiple_concurrency');
+ count 
+-------
+ 0     
+(1 row)
 
 --------------------------------------------------------------------------------
 -- Test if ALTER COLUMN TYPE works correctly when a segfile is in AWAITING_DROP state
@@ -1144,6 +1143,8 @@ INSERT 0 10
 COMMIT
 2: COMMIT;
 COMMIT
+1q: ... <quitting>
+2q: ... <quitting>
 DELETE FROM alter_column_awaiting_drop WHERE b > 10;
 DELETE 10
 VACUUM alter_column_awaiting_drop;
@@ -1177,12 +1178,17 @@ SELECT * FROM gp_toolkit.__gp_aocsseg('alter_column_awaiting_drop');
 (6 rows)
 DROP TABLE alter_column_awaiting_drop;
 DROP TABLE
-CHECKPOINT;
-CHECKPOINT
-SELECT * FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_awaiting_drop');
- gp_segment_id | tablespace | filename 
----------------+------------+----------
-(0 rows)
+-- VACUUM seems to incur some left-over session, wait a little while for that to go away to placate gp_check_orphaned_files
+SELECT pg_sleep(3);
+ pg_sleep 
+----------
+          
+(1 row)
+SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_awaiting_drop');
+ count 
+-------
+ 0     
+(1 row)
 
 --------------------------------------------------------------------------------
 -- Test if ALTER COLUMN TYPE works correctly for 0 inserted rows
@@ -1201,6 +1207,8 @@ INSERT 0 10
 ROLLBACK
 2: ABORT;
 ROLLBACK
+1q: ... <quitting>
+2q: ... <quitting>
 ALTER TABLE alter_column_zero_tupcount ALTER COLUMN b TYPE text;
 ALTER TABLE
 SELECT count(*) FROM alter_column_zero_tupcount;
@@ -1218,12 +1226,11 @@ SELECT * FROM gp_toolkit.__gp_aocsseg('alter_column_zero_tupcount');
 (4 rows)
 DROP TABLE alter_column_zero_tupcount;
 DROP TABLE
-CHECKPOINT;
-CHECKPOINT
-SELECT * FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_zero_tupcount');
- gp_segment_id | tablespace | filename 
----------------+------------+----------
-(0 rows)
+SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_zero_tupcount');
+ count 
+-------
+ 0     
+(1 row)
 
 --------------------------------------------------------------------------------
 -- Test if ALTER COLUMN TYPE works correctly for generated columns.
@@ -1301,6 +1308,8 @@ ALTER TABLE
 COMMIT
 2<:  <... completed>
 INSERT 0 10
+1q: ... <quitting>
+2q: ... <quitting>
 -- should see 30 rows
 SELECT count(*) FROM aoco_concurrent_inserts;
  count 
