@@ -14,7 +14,7 @@ Feature: gpstart behave tests
           And gpstart should print "Skipped segment starts \(segments are marked down in configuration\) += 1" to stdout
           And gpstart should print "Successfully started [0-9]+ of [0-9]+ segment instances, skipped 1 other segments" to stdout
           And gpstart should print "Number of segments not attempted to start: 1" to stdout
-	  And gpstart should print not "permissions should be" to stdout
+	  And gpstart should not print "permissions should be" to stdout
 
     Scenario: gpstart starts even if the standby host is unreachable
         Given the database is running
