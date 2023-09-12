@@ -408,6 +408,61 @@ testdb=# SELECT now()::timestamp9;
 (1 row)
 ```
 
+## <a id="topic_gucs"></a>Support For Date/Time Functions
+
+The `timestamp9` module defines two server configuration parameters that you set to enable date/time functions defined in the `pg_catalog` schema on `timestamp` types. Visit the [PostgreSQL Documentation](https://www.postgresql.org/docs/12/functions-datetime.html#:~:text=Table%C2%A09.31.%C2%A0Date/Time%20Functions) for a list of the supported date/time functions. The parameters are:
+
+- `timestamp9.enable_implicit_cast_timestamp9_ltz_to_timestamptz`: when enabled, casting a `timestamp9_ltz` value to `timestamp with time zone` becomes implicit.
+- `timestamp9.enable_implicit_cast_timestamp9_ntz_to_timestamp`: when enabled, casting a `timestamp9_ntz` value to `timestamp without time zone` becomes implicit.
+
+The default value for both configuration parameters is `off`. For example, if you try use the `date` function with `timestamp9` and `timestamp9.enable_implicit_cast_timestamp9_ltz_to_timestamptz` is set to `off`:
+
+```
+postgres=# SELECT date('2022-01-01'::timestamp9_ltz); 
+ERROR:  implicitly cast timestamp9_ltz to timestamptz is not allowed 
+HINT:  either set 'timestamp9.enable_implicit_cast_timestamp9_ltz_to_timestamptz' to 'on' or do it explicitly 
+```
+Enable the configuration parameter in order to use the `date` function:
+
+```
+postgres=# SET timestamp9.enable_implicit_cast_timestamp9_ltz_to_timestamptz TO 'ON'; 
+SET 
+postgres=# SELECT date('2022-01-01'::timestamp9_ltz); 
+    date 
+------------ 
+ 01-01-2022 
+(1 row) 
+```
+
+Note that enabling these configuration parameters will also result in multiple casting paths from `timestamp9` types and built-in `timestamp` types. You may encounter error messages such as:
+
+```
+postgres=# select '2019-09-19'::timestamp9_ltz <= '2019-09-20'::timestamptz; 
+ERROR:  operator is not unique: timestamp9_ltz <= timestamp with time zone 
+LINE 1: select '2019-09-19'::timestamp9_ltz <= '2019-09-20'::timesta... 
+HINT:  Could not choose a best candidate operator. You might need to add explicit type casts. 
+```
+
+In this situation, cast the type explicitly:
+
+```
+postgres=# select '2019-09-19'::timestamp9_ntz <= '2019-09-20'::timestamptz::timestamp9_ntz; 
+?column? 
+---------- 
+ t 
+(1 row) 
+```
+
+Alternatively, cast the `timestamp9_ntz` value to the `timestamptz` value:
+
+```
+postgres=# select '2019-09-19'::timestamp9_ntz::timestamptz <= '2019-09-20'::timestamptz; 
+?column? 
+---------- 
+ t 
+(1 row) 
+```
+
 ## <a id="examples"></a>Examples
 
 ### `TIMESTAMP9_LTZ` Examples

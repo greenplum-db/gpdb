@@ -20,6 +20,7 @@ class RecoveryBase(object):
         self.seg_recovery_info_list = None
         self.options = None
         self.pool = None
+        self.termination_requested = False
         try:
             self.parseargs()
         except Exception as e:
@@ -101,6 +102,9 @@ class RecoveryBase(object):
                 errors.append(error_obj)
         if not errors:
             sys.exit(0)
+
+        if self.termination_requested:
+            logger.warning("Recieved termination signal, stopping gpsegrecovery")
 
         str_error = recoveryinfo.serialize_list(errors)
         print(str_error, file=sys.stderr)

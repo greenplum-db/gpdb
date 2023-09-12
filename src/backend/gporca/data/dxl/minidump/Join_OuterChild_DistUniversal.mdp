@@ -262,7 +262,7 @@
         </dxl:LogicalSelect>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="229">
+    <dxl:Plan Id="0" SpaceSize="223">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="862.000327" Rows="3.000000" Width="4"/>

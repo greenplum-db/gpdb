@@ -76,6 +76,7 @@
 		"gp_log_resqueue_memory",
 		"gp_log_stack_trace_lines",
 		"gp_log_suboverflow_statement",
+		"gp_max_alloc_size",
 		"gp_max_packet_size",
 		"gp_motion_slice_noop",
 		"gp_quicklz_fallback",

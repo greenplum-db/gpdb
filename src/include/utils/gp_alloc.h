@@ -30,6 +30,9 @@ typedef int64 FooterChecksumType;
 
 #define FOOTER_CHECKSUM_SIZE (sizeof(FooterChecksumType))
 
+#define GP_MAX_ALLOC_SIZE_MB_DEFAULT 	(2048)
+extern int gp_max_alloc_size_mb;
+
 #else
 
 #define FOOTER_CHECKSUM_SIZE 0

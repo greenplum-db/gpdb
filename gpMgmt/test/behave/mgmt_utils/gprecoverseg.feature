@@ -601,7 +601,7 @@ Feature: gprecoverseg tests
     Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
     And the user waits until saved async process is completed
     And recovery_progress.file should not exist in gpAdminLogs
-    And verify that mirror on content 0,1,2 is up
+    And the user waits until mirror on content 0,1,2 is up
     And user can start transactions
     And all files in gpAdminLogs directory are deleted on all hosts in the cluster
     And a sample recovery_progress.file is created from saved lines
@@ -713,7 +713,7 @@ Feature: gprecoverseg tests
     And the user reset the walsender on the primary on content 0
     And the user waits until saved async process is completed
     And recovery_progress.file should not exist in gpAdminLogs
-    And verify that mirror on content 0,1,2 is up
+    And the user waits until mirror on content 0,1,2 is up
     And the old data directories are cleaned up for content 0
     And user can start transactions
     And check segment conf: postgresql.conf

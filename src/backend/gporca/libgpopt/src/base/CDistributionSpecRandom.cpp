@@ -123,7 +123,8 @@ CDistributionSpecRandom::FSatisfies(const CDistributionSpec *pds) const
 		return true;
 	}
 
-	return EdtAny == pds->Edt() || EdtNonSingleton == pds->Edt();
+	return EdtAny == pds->Edt() || EdtNonSingleton == pds->Edt() ||
+		   EdtNonReplicated == pds->Edt();
 }
 
 //---------------------------------------------------------------------------

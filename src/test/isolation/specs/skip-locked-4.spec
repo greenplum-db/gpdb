@@ -1,4 +1,6 @@
 # Test SKIP LOCKED with an updated tuple chain.
+# GPDB: have to run sessions that have SELECT ... FOR ... w/ planner because 
+# ORCA would upgrade lock to ExclusiveLock.
 
 setup
 {
@@ -15,7 +17,7 @@ teardown
 }
 
 session s1
-setup		{ BEGIN; }
+setup		{ SET optimizer=off; BEGIN; }
 step s1a	{ SELECT * FROM foo WHERE pg_advisory_lock(0) IS NOT NULL ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED; }
 step s1b	{ COMMIT; }
 

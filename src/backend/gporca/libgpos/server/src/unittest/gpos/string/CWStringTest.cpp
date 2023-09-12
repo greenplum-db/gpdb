@@ -341,10 +341,14 @@ CWStringTest::EresUnittest_Initialize()
 	CWStringConst *pcstr1 = GPOS_NEW(mp) CWStringConst(GPOS_WSZ_LIT("123"));
 	GPOS_ASSERT(pcstr1->Equals(&cstr1));
 
+	CWStringConst *pcstr2 = GPOS_NEW(mp) CWStringConst(mp, "12345");
+	GPOS_ASSERT(5 == pcstr2->Length());
+
 	// cleanup
 	GPOS_DELETE(pstr1);
 	GPOS_DELETE(pstr2);
 	GPOS_DELETE(pcstr1);
+	GPOS_DELETE(pcstr2);
 
 #endif	// #ifdef GPOS_DEBUG
 	return GPOS_OK;
@@ -376,6 +380,8 @@ CWStringTest::EresUnittest_Equals()
 	GPOS_ASSERT(str1->Equals(str2));
 	GPOS_ASSERT(!str1->Equals(str3));
 	GPOS_ASSERT(!str3->Equals(str1));
+	GPOS_ASSERT(str3->Equals(GPOS_WSZ_LIT("12")));
+	GPOS_ASSERT(!str3->Equals(GPOS_WSZ_LIT("123")));
 
 	// static strings
 	WCHAR buffer1[8];

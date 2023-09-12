@@ -2262,26 +2262,30 @@ explain (costs off)
 select * from int8_tbl i1 left join (int8_tbl i2 join
   (select 123 as x) ss on i2.q1 = x) on i1.q2 = i2.q2
 order by 1, 2;
-                            QUERY PLAN                            
-------------------------------------------------------------------
- Sort
-   Sort Key: int8_tbl.q1, int8_tbl.q2
-   ->  Hash Left Join
-         Hash Cond: (int8_tbl.q2 = int8_tbl_1.q2)
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               ->  Seq Scan on int8_tbl
-         ->  Hash
-               ->  Hash Join
-                     Hash Cond: (int8_tbl_1.q1 = ((123))::bigint)
-                     ->  Gather Motion 3:1  (slice2; segments: 3)
-                           ->  Seq Scan on int8_tbl int8_tbl_1
-                                 Filter: (q1 = 123)
-                     ->  Hash
-                           ->  Result
-                                 Filter: ((123) = 123)
-                                 ->  Result
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: int8_tbl.q1, int8_tbl.q2
+   ->  Sort
+         Sort Key: int8_tbl.q1, int8_tbl.q2
+         ->  Hash Left Join
+               Hash Cond: (int8_tbl.q2 = int8_tbl_1.q2)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: int8_tbl.q2
+                     ->  Seq Scan on int8_tbl
+               ->  Hash
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                           Hash Key: int8_tbl_1.q2
+                           ->  Hash Join
+                                 Hash Cond: (int8_tbl_1.q1 = ((123))::bigint)
+                                 ->  Seq Scan on int8_tbl int8_tbl_1
+                                       Filter: (q1 = 123)
+                                 ->  Hash
+                                       ->  Result
+                                             Filter: ((123) = 123)
+                                             ->  Result
  Optimizer: Pivotal Optimizer (GPORCA)
-(17 rows)
+(21 rows)
 
 select * from int8_tbl i1 left join (int8_tbl i2 join
   (select 123 as x) ss on i2.q1 = x) on i1.q2 = i2.q2
@@ -2577,7 +2581,6 @@ reset enable_nestloop;
 -- regression test for bug #13908 (hash join with skew tuples & nbatch increase)
 --
 set work_mem to '64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set enable_mergejoin to off;
 explain (costs off)
 select count(*) from tenk1 a, tenk1 b
@@ -2608,7 +2611,6 @@ select count(*) from tenk1 a, tenk1 b
 (1 row)
 
 reset work_mem;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 reset enable_mergejoin;
 --
 -- regression test for 8.2 bug with improper re-ordering of left joins

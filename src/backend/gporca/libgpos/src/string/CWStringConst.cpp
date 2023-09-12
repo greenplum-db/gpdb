@@ -76,6 +76,40 @@ CWStringConst::CWStringConst(CMemoryPool *mp, const WCHAR *w_str_buffer)
 //		CWStringConst::CWStringConst
 //
 //	@doc:
+//		Initializes a constant string by making a copy of the given character buffer.
+//		The string owns the memory.
+//
+//---------------------------------------------------------------------------
+CWStringConst::CWStringConst(CMemoryPool *mp, const CHAR *str_buffer)
+	: CWStringBase(GPOS_SZ_LENGTH(str_buffer),
+				   true	 // owns_memory
+				   ),
+	  m_w_str_buffer(nullptr)
+{
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != str_buffer);
+
+	if (0 == m_length)
+	{
+		// string is empty
+		m_w_str_buffer = &m_empty_wcstr;
+	}
+	else
+	{
+		WCHAR *w_str_buffer = GPOS_NEW_ARRAY(mp, WCHAR, m_length + 1);
+		clib::Mbstowcs(w_str_buffer, str_buffer, m_length + 1);
+		m_w_str_buffer = w_str_buffer;
+		m_length = GPOS_WSZ_LENGTH(w_str_buffer);
+	}
+
+	GPOS_ASSERT(IsValid());
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CWStringConst::CWStringConst
+//
+//	@doc:
 //		Shallow copy constructor.
 //
 //---------------------------------------------------------------------------
@@ -142,7 +176,6 @@ CWStringConst::HashValue(const CWStringConst *string)
 BOOL
 CWStringConst::Equals(const CWStringBase *str) const
 {
-	GPOS_ASSERT(nullptr != str);
 	GPOS_ASSERT(nullptr != str);
 	return Length() == str->Length() &&
 		   0 == clib::Wcsncmp(GetBuffer(), str->GetBuffer(), Length());

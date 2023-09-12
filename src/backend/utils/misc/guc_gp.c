@@ -46,6 +46,7 @@
 #include "storage/proc.h"
 #include "utils/builtins.h"
 #include "utils/gdd.h"
+#include "utils/gp_alloc.h"
 #include "utils/guc_tables.h"
 #include "utils/inval.h"
 #include "utils/resscheduler.h"
@@ -4242,6 +4243,19 @@ struct config_int ConfigureNamesInt_gp[] =
 		-1, -1, 1024,
 		NULL, NULL, NULL
 	},
+
+#ifdef GP_ALLOC_DEBUG
+	{
+		{"gp_max_alloc_size", PGC_USERSET, DEVELOPER_OPTIONS,
+		 gettext_noop("Sets the max size of a memory allocation request in the backend."),
+		 NULL,
+		 GUC_UNIT_MB
+		},
+		&gp_max_alloc_size_mb,
+		GP_MAX_ALLOC_SIZE_MB_DEFAULT, 1, MAX_KILOBYTES,
+		NULL, NULL, NULL
+	},
+#endif
 
 	/* End-of-list marker */
 	{

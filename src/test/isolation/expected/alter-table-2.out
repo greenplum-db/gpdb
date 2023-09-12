@@ -2,6 +2,7 @@ Parsed test spec with 2 sessions
 
 starting permutation: s1a s1b s1c s2a s2b s2c s2d s2e s2f
 step s1a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 step s2a: BEGIN;
@@ -23,6 +24,7 @@ step s2f: COMMIT;
 
 starting permutation: s1a s1b s2a s1c s2b s2c s2d s2e s2f
 step s1a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2a: BEGIN;
 step s1c: COMMIT;
@@ -44,6 +46,7 @@ step s2f: COMMIT;
 
 starting permutation: s1a s1b s2a s2b s1c s2c s2d s2e s2f
 step s1a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2a: BEGIN;
 step s2b: SELECT * FROM a WHERE i = 1 LIMIT 1 FOR UPDATE;
@@ -65,6 +68,7 @@ step s2f: COMMIT;
 
 starting permutation: s1a s1b s2a s2b s2c s1c s2d s2e s2f
 step s1a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2a: BEGIN;
 step s2b: SELECT * FROM a WHERE i = 1 LIMIT 1 FOR UPDATE;
@@ -86,6 +90,7 @@ step s2f: COMMIT;
 
 starting permutation: s1a s1b s2a s2b s2c s2d s1c s2e s2f
 step s1a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2a: BEGIN;
 step s2b: SELECT * FROM a WHERE i = 1 LIMIT 1 FOR UPDATE;
@@ -109,6 +114,7 @@ step s2f: COMMIT;
 starting permutation: s1a s2a s1b s1c s2b s2c s2d s2e s2f
 step s1a: BEGIN;
 step s2a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 step s2b: SELECT * FROM a WHERE i = 1 LIMIT 1 FOR UPDATE;
@@ -130,6 +136,7 @@ step s2f: COMMIT;
 starting permutation: s1a s2a s1b s2b s1c s2c s2d s2e s2f
 step s1a: BEGIN;
 step s2a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2b: SELECT * FROM a WHERE i = 1 LIMIT 1 FOR UPDATE;
 i
@@ -151,6 +158,7 @@ step s2f: COMMIT;
 starting permutation: s1a s2a s1b s2b s2c s1c s2d s2e s2f
 step s1a: BEGIN;
 step s2a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2b: SELECT * FROM a WHERE i = 1 LIMIT 1 FOR UPDATE;
 i
@@ -172,6 +180,7 @@ step s2f: COMMIT;
 starting permutation: s1a s2a s1b s2b s2c s2d s1c s2e s2f
 step s1a: BEGIN;
 step s2a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2b: SELECT * FROM a WHERE i = 1 LIMIT 1 FOR UPDATE;
 i
@@ -200,6 +209,7 @@ i
 1
 (1 row)
 
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 step s2c: SELECT * FROM b WHERE a_id = 3 LIMIT 1 FOR UPDATE;
@@ -221,6 +231,7 @@ i
 1
 (1 row)
 
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2c: SELECT * FROM b WHERE a_id = 3 LIMIT 1 FOR UPDATE;
 a_id
@@ -242,6 +253,7 @@ i
 1
 (1 row)
 
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2c: SELECT * FROM b WHERE a_id = 3 LIMIT 1 FOR UPDATE;
 a_id
@@ -270,6 +282,7 @@ a_id
    3
 (1 row)
 
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 step s2d: INSERT INTO b VALUES (0);
@@ -291,6 +304,7 @@ a_id
    3
 (1 row)
 
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2d: INSERT INTO b VALUES (0); <waiting ...>
 step s1c: COMMIT;
@@ -317,6 +331,7 @@ step s2d: INSERT INTO b VALUES (0);
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID; <waiting ...>
 step s2e: INSERT INTO a VALUES (4);
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: <... completed>
 step s1c: COMMIT;
 
@@ -339,6 +354,7 @@ step s2d: INSERT INTO b VALUES (0);
 step s2e: INSERT INTO a VALUES (4);
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID; <waiting ...>
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: <... completed>
 step s1c: COMMIT;
 
@@ -360,12 +376,14 @@ a_id
 step s2d: INSERT INTO b VALUES (0);
 step s2e: INSERT INTO a VALUES (4);
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 
 starting permutation: s2a s1a s1b s1c s2b s2c s2d s2e s2f
 step s2a: BEGIN;
 step s1a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 step s2b: SELECT * FROM a WHERE i = 1 LIMIT 1 FOR UPDATE;
@@ -387,6 +405,7 @@ step s2f: COMMIT;
 starting permutation: s2a s1a s1b s2b s1c s2c s2d s2e s2f
 step s2a: BEGIN;
 step s1a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2b: SELECT * FROM a WHERE i = 1 LIMIT 1 FOR UPDATE;
 i
@@ -408,6 +427,7 @@ step s2f: COMMIT;
 starting permutation: s2a s1a s1b s2b s2c s1c s2d s2e s2f
 step s2a: BEGIN;
 step s1a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2b: SELECT * FROM a WHERE i = 1 LIMIT 1 FOR UPDATE;
 i
@@ -429,6 +449,7 @@ step s2f: COMMIT;
 starting permutation: s2a s1a s1b s2b s2c s2d s1c s2e s2f
 step s2a: BEGIN;
 step s1a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2b: SELECT * FROM a WHERE i = 1 LIMIT 1 FOR UPDATE;
 i
@@ -457,6 +478,7 @@ i
 1
 (1 row)
 
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 step s2c: SELECT * FROM b WHERE a_id = 3 LIMIT 1 FOR UPDATE;
@@ -478,6 +500,7 @@ i
 1
 (1 row)
 
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2c: SELECT * FROM b WHERE a_id = 3 LIMIT 1 FOR UPDATE;
 a_id
@@ -499,6 +522,7 @@ i
 1
 (1 row)
 
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2c: SELECT * FROM b WHERE a_id = 3 LIMIT 1 FOR UPDATE;
 a_id
@@ -527,6 +551,7 @@ a_id
    3
 (1 row)
 
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 step s2d: INSERT INTO b VALUES (0);
@@ -548,6 +573,7 @@ a_id
    3
 (1 row)
 
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2d: INSERT INTO b VALUES (0); <waiting ...>
 step s1c: COMMIT;
@@ -574,6 +600,7 @@ step s2d: INSERT INTO b VALUES (0);
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID; <waiting ...>
 step s2e: INSERT INTO a VALUES (4);
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: <... completed>
 step s1c: COMMIT;
 
@@ -596,6 +623,7 @@ step s2d: INSERT INTO b VALUES (0);
 step s2e: INSERT INTO a VALUES (4);
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID; <waiting ...>
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: <... completed>
 step s1c: COMMIT;
 
@@ -617,6 +645,7 @@ a_id
 step s2d: INSERT INTO b VALUES (0);
 step s2e: INSERT INTO a VALUES (4);
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 
@@ -629,6 +658,7 @@ i
 (1 row)
 
 step s1a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 step s2c: SELECT * FROM b WHERE a_id = 3 LIMIT 1 FOR UPDATE;
@@ -650,6 +680,7 @@ i
 (1 row)
 
 step s1a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2c: SELECT * FROM b WHERE a_id = 3 LIMIT 1 FOR UPDATE;
 a_id
@@ -671,6 +702,7 @@ i
 (1 row)
 
 step s1a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2c: SELECT * FROM b WHERE a_id = 3 LIMIT 1 FOR UPDATE;
 a_id
@@ -699,6 +731,7 @@ a_id
    3
 (1 row)
 
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 step s2d: INSERT INTO b VALUES (0);
@@ -720,6 +753,7 @@ a_id
    3
 (1 row)
 
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2d: INSERT INTO b VALUES (0); <waiting ...>
 step s1c: COMMIT;
@@ -746,6 +780,7 @@ step s2d: INSERT INTO b VALUES (0);
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID; <waiting ...>
 step s2e: INSERT INTO a VALUES (4);
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: <... completed>
 step s1c: COMMIT;
 
@@ -768,6 +803,7 @@ step s2d: INSERT INTO b VALUES (0);
 step s2e: INSERT INTO a VALUES (4);
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID; <waiting ...>
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: <... completed>
 step s1c: COMMIT;
 
@@ -789,6 +825,7 @@ a_id
 step s2d: INSERT INTO b VALUES (0);
 step s2e: INSERT INTO a VALUES (4);
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 
@@ -807,6 +844,7 @@ a_id
 (1 row)
 
 step s1a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 step s2d: INSERT INTO b VALUES (0);
@@ -828,6 +866,7 @@ a_id
 (1 row)
 
 step s1a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s2d: INSERT INTO b VALUES (0); <waiting ...>
 step s1c: COMMIT;
@@ -854,6 +893,7 @@ step s2d: INSERT INTO b VALUES (0);
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID; <waiting ...>
 step s2e: INSERT INTO a VALUES (4);
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: <... completed>
 step s1c: COMMIT;
 
@@ -876,6 +916,7 @@ step s2d: INSERT INTO b VALUES (0);
 step s2e: INSERT INTO a VALUES (4);
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID; <waiting ...>
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: <... completed>
 step s1c: COMMIT;
 
@@ -897,6 +938,7 @@ step s1a: BEGIN;
 step s2d: INSERT INTO b VALUES (0);
 step s2e: INSERT INTO a VALUES (4);
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 
@@ -919,6 +961,7 @@ step s1a: BEGIN;
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID; <waiting ...>
 step s2e: INSERT INTO a VALUES (4);
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: <... completed>
 step s1c: COMMIT;
 
@@ -941,6 +984,7 @@ step s1a: BEGIN;
 step s2e: INSERT INTO a VALUES (4);
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID; <waiting ...>
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: <... completed>
 step s1c: COMMIT;
 
@@ -962,6 +1006,7 @@ step s2d: INSERT INTO b VALUES (0);
 step s1a: BEGIN;
 step s2e: INSERT INTO a VALUES (4);
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 
@@ -984,6 +1029,7 @@ step s2e: INSERT INTO a VALUES (4);
 step s1a: BEGIN;
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID; <waiting ...>
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: <... completed>
 step s1c: COMMIT;
 
@@ -1005,6 +1051,7 @@ step s2d: INSERT INTO b VALUES (0);
 step s2e: INSERT INTO a VALUES (4);
 step s1a: BEGIN;
 step s2f: COMMIT;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;
 
@@ -1026,5 +1073,6 @@ step s2d: INSERT INTO b VALUES (0);
 step s2e: INSERT INTO a VALUES (4);
 step s2f: COMMIT;
 step s1a: BEGIN;
+s1: WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 step s1b: ALTER TABLE b ADD CONSTRAINT bfk FOREIGN KEY (a_id) REFERENCES a (i) NOT VALID;
 step s1c: COMMIT;

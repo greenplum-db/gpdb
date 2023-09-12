@@ -3643,7 +3643,7 @@ checkCanOptSelectLockingClause(SelectStmt *stmt)
 	if (!IS_QUERY_DISPATCHER())
 		return false;
 
-	if (!gp_enable_global_deadlock_detector)
+	if (!gp_enable_global_deadlock_detector && Gp_role != GP_ROLE_UTILITY)
 		return false;
 
 	/*

@@ -94,7 +94,6 @@ ANALYZE wide;
 savepoint settings;
 set local max_parallel_workers_per_gather = 0;
 set local work_mem = '4MB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 explain (costs off)
   select count(*) from simple r join simple s using (id);
                      QUERY PLAN                     
@@ -131,7 +130,6 @@ rollback to settings;
 savepoint settings;
 set local max_parallel_workers_per_gather = 2;
 set local work_mem = '4MB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set local enable_parallel_hash = off;
 explain (costs off)
   select count(*) from simple r join simple s using (id);
@@ -169,7 +167,6 @@ rollback to settings;
 savepoint settings;
 set local max_parallel_workers_per_gather = 2;
 set local work_mem = '4MB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set local enable_parallel_hash = on;
 explain (costs off)
   select count(*) from simple r join simple s using (id);
@@ -210,7 +207,6 @@ rollback to settings;
 savepoint settings;
 set local max_parallel_workers_per_gather = 0;
 set local work_mem = '128kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set local statement_mem = '1000kB'; -- GPDB uses statement_mem instead of work_mem
 explain (costs off)
   select count(*) from simple r join simple s using (id);
@@ -248,7 +244,6 @@ rollback to settings;
 savepoint settings;
 set local max_parallel_workers_per_gather = 2;
 set local work_mem = '128kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set local statement_mem = '1000kB'; -- GPDB uses statement_mem instead of work_mem
 set local enable_parallel_hash = off;
 explain (costs off)
@@ -287,7 +282,6 @@ rollback to settings;
 savepoint settings;
 set local max_parallel_workers_per_gather = 2;
 set local work_mem = '192kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set local statement_mem = '1000kB'; -- GPDB uses statement_mem instead of work_mem
 set local enable_parallel_hash = on;
 explain (costs off)
@@ -330,7 +324,6 @@ rollback to settings;
 savepoint settings;
 set local max_parallel_workers_per_gather = 0;
 set local work_mem = '128kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set local statement_mem = '1000kB'; -- GPDB uses statement_mem instead of work_mem
 explain (costs off)
   select count(*) FROM simple r JOIN bigger_than_it_looks s USING (id);
@@ -368,7 +361,6 @@ rollback to settings;
 savepoint settings;
 set local max_parallel_workers_per_gather = 2;
 set local work_mem = '128kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set local statement_mem = '1000kB'; -- GPDB uses statement_mem instead of work_mem
 set local enable_parallel_hash = off;
 explain (costs off)
@@ -407,7 +399,6 @@ rollback to settings;
 savepoint settings;
 set local max_parallel_workers_per_gather = 1;
 set local work_mem = '192kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set local statement_mem = '1000kB'; -- GPDB uses statement_mem instead of work_mem
 set local enable_parallel_hash = on;
 explain (costs off)
@@ -451,7 +442,6 @@ rollback to settings;
 savepoint settings;
 set local max_parallel_workers_per_gather = 0;
 set local work_mem = '128kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set local statement_mem = '1000kB'; -- GPDB uses statement_mem instead of work_mem
 explain (costs off)
   select count(*) from simple r join extremely_skewed s using (id);
@@ -488,7 +478,6 @@ rollback to settings;
 savepoint settings;
 set local max_parallel_workers_per_gather = 2;
 set local work_mem = '128kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set local statement_mem = '1000kB'; -- GPDB uses statement_mem instead of work_mem
 set local enable_parallel_hash = off;
 explain (costs off)
@@ -526,7 +515,6 @@ rollback to settings;
 savepoint settings;
 set local max_parallel_workers_per_gather = 1;
 set local work_mem = '128kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set local statement_mem = '1000kB'; -- GPDB uses statement_mem instead of work_mem
 set local enable_parallel_hash = on;
 explain (costs off)
@@ -565,7 +553,6 @@ rollback to settings;
 savepoint settings;
 set local max_parallel_workers_per_gather = 2;
 set local work_mem = '4MB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set local parallel_leader_participation = off;
 select * from hash_join_batches(
 $$
@@ -596,7 +583,6 @@ set max_parallel_workers_per_gather = 2;
 set enable_material = off;
 set enable_mergejoin = off;
 set work_mem = '64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set local statement_mem = '1000kB'; -- GPDB uses statement_mem instead of work_mem
 explain (costs off)
   select count(*) from join_foo
@@ -652,7 +638,6 @@ set max_parallel_workers_per_gather = 2;
 set enable_material = off;
 set enable_mergejoin = off;
 set work_mem = '4MB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 explain (costs off)
   select count(*) from join_foo
     left join (select b1.id, b1.t from join_bar b1 join join_bar b2 using (id)) ss
@@ -707,7 +692,6 @@ set max_parallel_workers_per_gather = 2;
 set enable_material = off;
 set enable_mergejoin = off;
 set work_mem = '64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set local statement_mem = '1000kB'; -- GPDB uses statement_mem instead of work_mem
 explain (costs off)
   select count(*) from join_foo
@@ -763,7 +747,6 @@ set max_parallel_workers_per_gather = 2;
 set enable_material = off;
 set enable_mergejoin = off;
 set work_mem = '4MB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 explain (costs off)
   select count(*) from join_foo
     left join (select b1.id, b1.t from join_bar b1 join join_bar b2 using (id)) ss
@@ -928,7 +911,6 @@ savepoint settings;
 set max_parallel_workers_per_gather = 2;
 set enable_parallel_hash = on;
 set work_mem = '128kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 insert into wide select generate_series(3, 100) as id, rpad('', 320000, 'x') as t;
 explain (costs off)
   select length(max(s.t))

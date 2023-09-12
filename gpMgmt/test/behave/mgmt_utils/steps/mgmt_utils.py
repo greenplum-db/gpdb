@@ -4095,11 +4095,14 @@ def impl(context, command, input, delay):
     context.error_message = stderr.decode()
 
 
-@when('the user would run "{command}" and terminate the process with SIGTERM')
-def impl(context, command):
+@when('the user would run "{command}" and terminate the process for host "{hostname}" with SIGTERM')
+def impl(context, command, hostname):
     p = Popen(command.split(), stdout=PIPE, stdin=PIPE, stderr=PIPE)
 
-    context.execute_steps('''Then the user just waits until recovery_progress.file is created in gpAdminLogs''')
+    context.execute_steps('''
+        Then the user just waits until recovery_progress.file is created in gpAdminLogs
+        Then verify that pg_basebackup is running for host {}
+        '''.format(hostname))
     p.send_signal(signal.SIGTERM)
 
     stdout, stderr = p.communicate()

@@ -371,12 +371,18 @@ class SegRecovery(object):
         recovery_base = RecoveryBase(__file__)
 
         def signal_handler(sig, frame):
-            recovery_base.logger.warning("Recieved termination signal, stopping gpsegrecovery")
+            recovery_base.termination_requested = True
 
             while not recovery_base.pool.isDone():
 
+                # Ignore the signal once the signal handler is invoked to
+                # prevent multiple triggers of the signal handler.
+                signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
                 # gpsegrecovery will be the parent for all the child processes (pg_basebackup/pg_rewind/rsync)
-                terminate_proc_tree(pid=os.getpid(), include_parent=False)
+                # NOTE: Since we are ignoring the SIGTERM above, the child will also inherit the same behaviour,
+                # hence use a different signal to terminate.
+                terminate_proc_tree(pid=os.getpid(), sig=signal.SIGINT, timeout=60, include_parent=False)
 
         signal.signal(signal.SIGTERM, signal_handler)
 

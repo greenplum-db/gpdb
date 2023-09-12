@@ -1899,36 +1899,36 @@ SELECT * FROM dedup_test1 INNER JOIN dedup_test2 ON dedup_test1.a= dedup_test2.e
 EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND dedup_test3.b IN (SELECT b FROM dedup_test1);
                                     QUERY PLAN                                    
 ----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882688.09 rows=1 width=20)
-   ->  Nested Loop  (cost=0.00..882688.09 rows=1 width=20)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882688.08 rows=1 width=20)
+   ->  Nested Loop  (cost=0.00..882688.08 rows=1 width=20)
          Join Filter: true
-         ->  Seq Scan on dedup_test1  (cost=0.00..431.00 rows=2 width=8)
          ->  Result  (cost=0.00..0.00 rows=0 width=12)
                One-Time Filter: false
+         ->  Seq Scan on dedup_test1  (cost=0.00..431.00 rows=2 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
 EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND dedup_test3.b IN (SELECT a FROM dedup_test1);
                                     QUERY PLAN                                    
 ----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882688.09 rows=1 width=20)
-   ->  Nested Loop  (cost=0.00..882688.09 rows=1 width=20)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882688.08 rows=1 width=20)
+   ->  Nested Loop  (cost=0.00..882688.08 rows=1 width=20)
          Join Filter: true
-         ->  Seq Scan on dedup_test1  (cost=0.00..431.00 rows=2 width=8)
          ->  Result  (cost=0.00..0.00 rows=0 width=12)
                One-Time Filter: false
+         ->  Seq Scan on dedup_test1  (cost=0.00..431.00 rows=2 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
 EXPLAIN SELECT * FROM dedup_test3, dedup_test1 WHERE c = 7 AND EXISTS (SELECT b FROM dedup_test1) AND dedup_test3.b IN (SELECT b FROM dedup_test1);
                                     QUERY PLAN                                    
 ----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882688.09 rows=1 width=20)
-   ->  Nested Loop  (cost=0.00..882688.09 rows=1 width=20)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882688.08 rows=1 width=20)
+   ->  Nested Loop  (cost=0.00..882688.08 rows=1 width=20)
          Join Filter: true
-         ->  Seq Scan on dedup_test1  (cost=0.00..431.00 rows=2 width=8)
          ->  Result  (cost=0.00..0.00 rows=0 width=12)
                One-Time Filter: false
+         ->  Seq Scan on dedup_test1  (cost=0.00..431.00 rows=2 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
@@ -2083,16 +2083,22 @@ create function dedup_func_volatile() RETURNS int AS $$
 $$ LANGUAGE SQL VOLATILE;
 explain (costs off)
 select * from dedup_func() r(a) where r.a in (select t.a/10 from dedup_tab t);
-                      QUERY PLAN                      
-------------------------------------------------------
- Hash Semi Join
-   Hash Cond: ((5) = ((a / 10)))
-   ->  Result
-   ->  Hash
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               ->  Seq Scan on dedup_tab
- Optimizer: Pivotal Optimizer (GPORCA) version 3.94.0
-(7 rows)
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (((a / 10)) = (5))
+         ->  GroupAggregate
+               Group Key: ((a / 10))
+               ->  Sort
+                     Sort Key: ((a / 10))
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: ((a / 10))
+                           ->  Seq Scan on dedup_tab
+         ->  Hash
+               ->  Result
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
 
 select * from dedup_func() r(a) where r.a in (select t.a/10 from dedup_tab t);
  a 
@@ -2102,16 +2108,22 @@ select * from dedup_func() r(a) where r.a in (select t.a/10 from dedup_tab t);
 
 explain (costs off)
 select * from dedup_func_stable() r(a) where r.a in (select t.a/10 from dedup_tab t);
-                      QUERY PLAN                      
-------------------------------------------------------
- Hash Semi Join
-   Hash Cond: ((5) = ((a / 10)))
-   ->  Result
-   ->  Hash
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               ->  Seq Scan on dedup_tab
- Optimizer: Pivotal Optimizer (GPORCA) version 3.94.0
-(7 rows)
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (((a / 10)) = (5))
+         ->  GroupAggregate
+               Group Key: ((a / 10))
+               ->  Sort
+                     Sort Key: ((a / 10))
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: ((a / 10))
+                           ->  Seq Scan on dedup_tab
+         ->  Hash
+               ->  Result
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
 
 select * from dedup_func_stable() r(a) where r.a in (select t.a/10 from dedup_tab t);
  a 
@@ -2121,16 +2133,22 @@ select * from dedup_func_stable() r(a) where r.a in (select t.a/10 from dedup_ta
 
 explain (costs off)
 select * from dedup_func_volatile() r(a) where r.a in (select t.a/10 from dedup_tab t);
-                      QUERY PLAN                      
-------------------------------------------------------
- Hash Semi Join
-   Hash Cond: ((5) = ((a / 10)))
-   ->  Result
-   ->  Hash
-         ->  Gather Motion 3:1  (slice1; segments: 3)
-               ->  Seq Scan on dedup_tab
- Optimizer: Pivotal Optimizer (GPORCA) version 3.94.0
-(7 rows)
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (((a / 10)) = (5))
+         ->  GroupAggregate
+               Group Key: ((a / 10))
+               ->  Sort
+                     Sort Key: ((a / 10))
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: ((a / 10))
+                           ->  Seq Scan on dedup_tab
+         ->  Hash
+               ->  Result
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
 
 select * from dedup_func_volatile() r(a) where r.a in (select t.a/10 from dedup_tab t);
  a 

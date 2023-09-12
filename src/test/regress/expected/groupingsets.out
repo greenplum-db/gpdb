@@ -1861,7 +1861,6 @@ select array(select row(v.a,s1.*) from (select two,four, count(*) from onek grou
 -- test the knapsack
 set enable_indexscan = false;
 set work_mem = '64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 explain (costs off)
   select unique1,
          count(two), count(four), count(ten),
@@ -1911,7 +1910,6 @@ explain (costs off)
 (12 rows)
 
 set work_mem = '384kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 explain (costs off)
   select unique1,
          count(two), count(four), count(ten),
@@ -2017,7 +2015,6 @@ UPDATE pg_class SET reltuples = 10 WHERE relname='bug_16784';
 SET allow_system_table_mods=false;
 INSERT INTO bug_16784 SELECT g/10, g FROM generate_series(1,40) g;
 SET work_mem='64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 explain (costs off) select * from
   (values (1),(2)) v(a),
   lateral (select v.a, i, j, count(*) from
@@ -2229,7 +2226,6 @@ select * from
 --
 SET enable_groupingsets_hash_disk = true;
 SET work_mem='64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 -- Produce results with sorting.
 set enable_hashagg = false;
 set jit_above_cost = 0;
@@ -2276,7 +2272,6 @@ group by grouping sets (g100,g10) distributed by (g100);
 set enable_hashagg = true;
 set enable_sort = false;
 set work_mem='64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set jit_above_cost = 0;
 explain (costs off)
 select g1000, g100, g10, sum(g::numeric), count(*), max(g::text) from
@@ -2315,7 +2310,6 @@ select g100, g10, array_agg(g) as a, count(*) as c, max(g::text) as m from
 group by grouping sets (g100,g10) distributed by (g100);
 set enable_sort = true;
 set work_mem to default;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 -- Compare results of ORCA plan that relies on "IS NOT DISTINCT FROM" HASH Join
 (select * from gs_hash_1 except select * from gs_group_1)
   union all

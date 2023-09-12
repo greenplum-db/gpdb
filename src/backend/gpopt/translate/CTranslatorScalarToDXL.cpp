@@ -1282,14 +1282,6 @@ CTranslatorScalarToDXL::TranslateArrayCoerceExprToDXL(
 	GPOS_ASSERT(nullptr != child_node);
 	GPOS_ASSERT(nullptr != elemexpr_node);
 
-	if (!(IsA(array_coerce_expr->elemexpr, FuncExpr) ||
-		  IsA(array_coerce_expr->elemexpr, RelabelType)))
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				   GPOS_WSZ_LIT("ArrayCoerceExpr with elemexpr that is neither "
-								"FuncExpr or RelabelType"));
-	}
-
 	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(
 		m_mp, GPOS_NEW(m_mp) CDXLScalarArrayCoerceExpr(
 				  m_mp,

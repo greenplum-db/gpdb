@@ -165,7 +165,6 @@ SELECT count(*) FROM
 -- aggregation. Force spilling in both cases by setting work_mem low.
 --
 SET work_mem='64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 -- Produce results with sorting.
 SET enable_hashagg=FALSE;
 SET optimizer_enable_hashagg=FALSE;
@@ -207,7 +206,6 @@ CREATE TABLE distinct_hash_2 AS
 SELECT DISTINCT (g%1000)::text FROM generate_series(0,9999) g;
 SET enable_sort=TRUE;
 SET work_mem TO DEFAULT;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 -- Compare results
 (SELECT * FROM distinct_hash_1 EXCEPT SELECT * FROM distinct_group_1)
   UNION ALL

@@ -12189,29 +12189,25 @@ WHERE L1.lid = int4in(textout(meta.load_id));
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
                                                                             QUERY PLAN                                                                             
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Result  (cost=0.00..431.22 rows=1 width=8)
+ Result  (cost=0.00..431.09 rows=1 width=8)
    Output: c, lid
-   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.20 rows=1 width=8)
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.07 rows=1 width=8)
          Output: c, lid
-         ->  HashAggregate  (cost=0.00..431.20 rows=1 width=8)
+         ->  GroupAggregate  (cost=0.00..431.07 rows=1 width=8)
                Output: c, lid
                Group Key: t55.c, t55.lid
-               ->  Hash Join  (cost=0.00..431.20 rows=1 width=8)
+               ->  Sort  (cost=0.00..431.07 rows=1 width=8)
                      Output: c, lid
-                     Hash Cond: (t55.lid = int4in(textout(('99'::text))))
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.02 rows=334 width=8)
+                     Sort Key: t55.c, t55.lid
+                     ->  Hash Join  (cost=0.00..431.07 rows=1 width=8)
                            Output: c, lid
-                           Hash Key: lid
+                           Hash Cond: (t55.lid = int4in(textout(('99'::text))))
                            ->  Seq Scan on orca.t55  (cost=0.00..431.01 rows=334 width=8)
                                  Output: c, lid
-                     ->  Hash  (cost=0.00..0.00 rows=1 width=8)
-                           Output: ('99'::text)
-                           ->  Result  (cost=0.00..0.00 rows=1 width=8)
-                                 Output: ('99'::text)
-                                 ->  Result  (cost=0.00..0.00 rows=1 width=8)
-                                       Output: ('99'::text), int4in(textout(('99'::text)))
-                                       ->  Result  (cost=0.00..0.00 rows=1 width=1)
-                                             Output: '99'::text
+                           ->  Hash  (cost=0.00..0.00 rows=1 width=8)
+                                 Output: ('2020-01-01'::text), ('99'::text)
+                                 ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                                       Output: '2020-01-01'::text, '99'::text
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: optimizer_enable_coordinator_only_queries = 'on', optimizer_enable_master_only_queries = 'on', optimizer_join_order = 'query', optimizer_segments = '3'
 (25 rows)
@@ -14859,3 +14855,22 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 (1 row)
 
 drop function check_col_width(query text, operator text, width text);
+---------------------------------------------------------------------------------
+-- Test cast from INT[] to TEXT[]
+CREATE TABLE array_coerceviaio(a INT[]) distributed randomly;
+INSERT INTO array_coerceviaio values(ARRAY[1, 2, 3]);
+EXPLAIN SELECT CAST(a AS TEXT[]) FROM array_coerceviaio;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+   ->  Seq Scan on array_coerceviaio  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: GPORCA
+(3 rows)
+
+SELECT CAST(a AS TEXT[]) FROM array_coerceviaio;
+    a    
+---------
+ {1,2,3}
+(1 row)
+
+---------------------------------------------------------------------------------
