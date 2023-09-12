@@ -716,7 +716,7 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
               </dxl:PartFilterExpr>
             </dxl:PartitionSelector>
-            <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="1">
+            <dxl:DynamicIndexScan IndexScanDirection="Forward">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="60.009658" Rows="1.000000" Width="82"/>
               </dxl:Properties>

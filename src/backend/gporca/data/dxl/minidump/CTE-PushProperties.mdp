@@ -1717,7 +1717,7 @@
                   </dxl:OpExpr>
                 </dxl:HashExpr>
               </dxl:HashExprList>
-              <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+              <dxl:DynamicTableScan SelectorIds="">
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="431.007883" Rows="1000.000000" Width="13"/>
                 </dxl:Properties>

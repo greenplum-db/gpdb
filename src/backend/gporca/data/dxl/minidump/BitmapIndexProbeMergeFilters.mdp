@@ -748,7 +748,7 @@ EXPLAIN SELECT * FROM table_with_two_indices_ao WHERE b = 15 AND c BETWEEN 10000
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
-        <dxl:DynamicBitmapTableScan PartIndexId="0" PrintablePartIndexId="1" SelectorIds="">
+        <dxl:DynamicBitmapTableScan SelectorIds="">
           <dxl:Properties>
             <dxl:Cost StartupCost="0" TotalCost="431.061218" Rows="1.766098" Width="12"/>
           </dxl:Properties>

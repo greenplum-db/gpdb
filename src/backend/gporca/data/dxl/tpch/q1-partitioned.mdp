@@ -889,7 +889,7 @@
                       </dxl:TableValuedFunction>
                     </dxl:Result>
                   </dxl:Result>
-                  <dxl:DynamicTableScan PartIndexId="0">
+                  <dxl:DynamicTableScan>
                     <dxl:Properties>
                       <dxl:Cost StartupCost="0" TotalCost="0.179688" Rows="1.000000" Width="56"/>
                     </dxl:Properties>

@@ -474,7 +474,7 @@
                 <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
               </dxl:HashExpr>
             </dxl:HashExprList>
-            <dxl:DynamicTableScan PartIndexId="2" SelectorIds="">
+            <dxl:DynamicTableScan SelectorIds="">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="16"/>
               </dxl:Properties>
@@ -509,7 +509,7 @@
               </dxl:TableDescriptor>
             </dxl:DynamicTableScan>
           </dxl:RedistributeMotion>
-          <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+          <dxl:DynamicTableScan SelectorIds="">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="12"/>
             </dxl:Properties>

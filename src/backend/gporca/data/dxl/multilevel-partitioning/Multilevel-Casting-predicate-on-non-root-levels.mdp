@@ -445,7 +445,7 @@ explain select * from TestPartitionFilterCasting where p2 = '2015-01-01' and p3 
               </dxl:And>
             </dxl:PartFilterExpr>
           </dxl:PartitionSelector>
-          <dxl:DynamicTableScan PartIndexId="1">
+          <dxl:DynamicTableScan>
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000042" Rows="1.000000" Width="18"/>
             </dxl:Properties>

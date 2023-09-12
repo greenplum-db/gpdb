@@ -578,7 +578,7 @@
               <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
             </dxl:Comparison>
           </dxl:HashCondList>
-          <dxl:DynamicTableScan PartIndexId="0">
+          <dxl:DynamicTableScan>
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="1000" Width="16"/>
             </dxl:Properties>

@@ -353,7 +353,7 @@ WHERE b in (1,2);
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
-        <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+        <dxl:DynamicTableScan SelectorIds="">
           <dxl:Properties>
             <dxl:Cost StartupCost="0" TotalCost="431.000051" Rows="1.000000" Width="24"/>
           </dxl:Properties>

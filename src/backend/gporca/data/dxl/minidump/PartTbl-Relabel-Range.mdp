@@ -371,7 +371,7 @@
               </dxl:And>
             </dxl:PartFilterExpr>
           </dxl:PartitionSelector>
-          <dxl:DynamicTableScan PartIndexId="1">
+          <dxl:DynamicTableScan>
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000054" Rows="1.000000" Width="24"/>
             </dxl:Properties>

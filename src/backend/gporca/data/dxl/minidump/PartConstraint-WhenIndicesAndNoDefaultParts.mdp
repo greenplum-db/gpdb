@@ -2339,7 +2339,7 @@ EXPLAIN SELECT * FROM date_parts WHERE year BETWEEN 2002 AND 2003;
               </dxl:And>
             </dxl:PartFilterExpr>
           </dxl:PartitionSelector>
-          <dxl:DynamicBitmapTableScan PartIndexId="1">
+          <dxl:DynamicBitmapTableScan>
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="397.982520" Rows="10.000000" Width="16"/>
             </dxl:Properties>

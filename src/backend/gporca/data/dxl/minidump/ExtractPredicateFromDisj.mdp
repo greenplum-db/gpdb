@@ -15689,7 +15689,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                         <dxl:Ident ColId="55" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
                       </dxl:Comparison>
                     </dxl:HashCondList>
-                    <dxl:DynamicTableScan PartIndexId="1" SelectorIds="0">
+                    <dxl:DynamicTableScan SelectorIds="0">
                       <dxl:Properties>
                         <dxl:Cost StartupCost="0" TotalCost="561.720656" Rows="2880896.000000" Width="22"/>
                       </dxl:Properties>
@@ -15771,7 +15771,7 @@ WHERE ((sale_type = 's'::text AND dyear = 2001 AND year_total &gt; 0::numeric) O
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:SortingColumnList/>
-                        <dxl:DynamicTableScan PartIndexId="2" SelectorIds="">
+                        <dxl:DynamicTableScan SelectorIds="">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="436.227274" Rows="6437.375227" Width="12"/>
                           </dxl:Properties>

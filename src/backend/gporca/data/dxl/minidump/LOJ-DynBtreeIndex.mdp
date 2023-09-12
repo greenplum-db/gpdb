@@ -479,7 +479,7 @@
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:TableScan>
-          <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="0" PrintablePartIndexId="1" SelectorIds="">
+          <dxl:DynamicIndexScan IndexScanDirection="Forward" SelectorIds="">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="60.003041" Rows="0.100000" Width="8"/>
             </dxl:Properties>

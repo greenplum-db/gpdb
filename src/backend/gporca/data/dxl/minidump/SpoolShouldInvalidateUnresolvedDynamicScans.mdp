@@ -841,7 +841,7 @@ And instead have a plan like
                   <dxl:Ident ColId="19" ColName="d" TypeMdid="0.23.1.0"/>
                 </dxl:Comparison>
               </dxl:HashCondList>
-              <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+              <dxl:DynamicTableScan SelectorIds="">
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="431.000223" Rows="32.000000" Width="8"/>
                 </dxl:Properties>

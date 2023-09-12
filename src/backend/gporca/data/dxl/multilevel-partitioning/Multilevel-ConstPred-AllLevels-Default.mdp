@@ -360,7 +360,7 @@ select * from PT where j < 5 and k = 4;
               </dxl:And>
             </dxl:PartFilterExpr>
           </dxl:PartitionSelector>
-          <dxl:DynamicTableScan PartIndexId="1">
+          <dxl:DynamicTableScan>
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000067" Rows="1.000000" Width="24"/>
             </dxl:Properties>

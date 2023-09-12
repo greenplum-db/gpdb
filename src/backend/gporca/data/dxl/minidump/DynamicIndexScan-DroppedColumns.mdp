@@ -924,7 +924,7 @@
               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
             </dxl:PartFilterExpr>
           </dxl:PartitionSelector>
-          <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="1">
+          <dxl:DynamicIndexScan IndexScanDirection="Forward">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="6.000181" Rows="1.000000" Width="27"/>
             </dxl:Properties>

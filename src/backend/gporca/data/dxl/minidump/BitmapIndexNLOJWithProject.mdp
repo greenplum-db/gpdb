@@ -1927,7 +1927,7 @@
             </dxl:ProjList>
             <dxl:Filter/>
             <dxl:OneTimeFilter/>
-            <dxl:DynamicBitmapTableScan PartIndexId="0" PrintablePartIndexId="1" SelectorIds="">
+            <dxl:DynamicBitmapTableScan SelectorIds="">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="437.284732" Rows="1.000000" Width="16"/>
               </dxl:Properties>

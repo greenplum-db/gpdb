@@ -421,7 +421,7 @@
                   <dxl:Ident ColId="10" ColName="column2" TypeMdid="0.23.1.0"/>
                 </dxl:Comparison>
               </dxl:JoinFilter>
-              <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+              <dxl:DynamicTableScan SelectorIds="">
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="8"/>
                 </dxl:Properties>

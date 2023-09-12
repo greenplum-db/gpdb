@@ -4472,7 +4472,7 @@
                       <dxl:Ident ColId="31" ColName="l_partkey" TypeMdid="0.23.1.0"/>
                     </dxl:HashExpr>
                   </dxl:HashExprList>
-                  <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+                  <dxl:DynamicTableScan SelectorIds="">
                     <dxl:Properties>
                       <dxl:Cost StartupCost="0" TotalCost="71396.512218" Rows="1536050048.000000" Width="138"/>
                     </dxl:Properties>

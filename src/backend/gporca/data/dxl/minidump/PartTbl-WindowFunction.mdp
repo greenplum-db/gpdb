@@ -942,7 +942,7 @@
               </dxl:SortingColumnList>
               <dxl:LimitCount/>
               <dxl:LimitOffset/>
-              <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+              <dxl:DynamicTableScan SelectorIds="">
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="432.045094" Rows="100009.000000" Width="8"/>
                 </dxl:Properties>

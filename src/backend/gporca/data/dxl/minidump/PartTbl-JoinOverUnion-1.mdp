@@ -1718,7 +1718,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:DynamicTableScan PartIndexId="1" SelectorIds="0">
+            <dxl:DynamicTableScan SelectorIds="0">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="431.104500" Rows="10000.000000" Width="8"/>
               </dxl:Properties>
@@ -1752,7 +1752,7 @@ select * from (select * from p1 union all select * from p2) as p, tt where p.b=t
                 </dxl:Columns>
               </dxl:TableDescriptor>
             </dxl:DynamicTableScan>
-            <dxl:DynamicTableScan PartIndexId="2" SelectorIds="1">
+            <dxl:DynamicTableScan SelectorIds="1">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="431.104500" Rows="10000.000000" Width="8"/>
               </dxl:Properties>

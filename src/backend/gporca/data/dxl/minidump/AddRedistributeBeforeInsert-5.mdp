@@ -332,7 +332,7 @@
             </dxl:ProjList>
             <dxl:Filter/>
             <dxl:OneTimeFilter/>
-            <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+            <dxl:DynamicTableScan SelectorIds="">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="431.000007" Rows="1.000000" Width="8"/>
               </dxl:Properties>

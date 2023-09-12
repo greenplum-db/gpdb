@@ -5320,7 +5320,7 @@
               </dxl:Comparison>
             </dxl:Or>
           </dxl:JoinFilter>
-          <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+          <dxl:DynamicTableScan SelectorIds="">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="433.846277" Rows="60175.000000" Width="14"/>
             </dxl:Properties>

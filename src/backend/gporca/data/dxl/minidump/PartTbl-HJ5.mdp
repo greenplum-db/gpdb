@@ -602,7 +602,7 @@ select * from s,t where s.b=t.a and t.b=35;
               <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
             </dxl:Comparison>
           </dxl:HashCondList>
-          <dxl:DynamicTableScan PartIndexId="1" SelectorIds="0">
+          <dxl:DynamicTableScan SelectorIds="0">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000010" Rows="1.000000" Width="16"/>
             </dxl:Properties>
@@ -668,7 +668,7 @@ select * from s,t where s.b=t.a and t.b=35;
               </dxl:ProjList>
               <dxl:Filter/>
               <dxl:SortingColumnList/>
-              <dxl:DynamicTableScan PartIndexId="2" SelectorIds="">
+              <dxl:DynamicTableScan SelectorIds="">
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="431.000084" Rows="1.000000" Width="16"/>
                 </dxl:Properties>

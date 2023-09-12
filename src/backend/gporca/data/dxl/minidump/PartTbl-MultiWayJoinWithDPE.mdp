@@ -5000,7 +5000,7 @@
                   <dxl:Ident ColId="52" ColName="hd_demo_sk" TypeMdid="0.23.1.0"/>
                 </dxl:Comparison>
               </dxl:HashCondList>
-              <dxl:DynamicTableScan PartIndexId="1" SelectorIds="0">
+              <dxl:DynamicTableScan SelectorIds="0">
                 <dxl:Properties>
                   <dxl:Cost StartupCost="0" TotalCost="213404.135560" Rows="3367164198.571393" Width="200"/>
                 </dxl:Properties>
@@ -5419,7 +5419,7 @@
                 </dxl:ProjList>
                 <dxl:Filter/>
                 <dxl:SortingColumnList/>
-                <dxl:DynamicTableScan PartIndexId="3" SelectorIds="">
+                <dxl:DynamicTableScan SelectorIds="">
                   <dxl:Properties>
                     <dxl:Cost StartupCost="0" TotalCost="431.067902" Rows="419.245726" Width="107"/>
                   </dxl:Properties>
@@ -5582,7 +5582,7 @@
           </dxl:ProjList>
           <dxl:Filter/>
           <dxl:SortingColumnList/>
-          <dxl:DynamicTableScan PartIndexId="2" SelectorIds="">
+          <dxl:DynamicTableScan SelectorIds="">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="579.521120" Rows="11740800.000000" Width="16"/>
             </dxl:Properties>

@@ -22052,7 +22052,7 @@ select  i_item_id
                             <dxl:Ident ColId="40" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
                           </dxl:Comparison>
                         </dxl:HashCondList>
-                        <dxl:DynamicTableScan PartIndexId="1">
+                        <dxl:DynamicTableScan>
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="432.807725" Rows="1059928.350347" Width="12"/>
                           </dxl:Properties>
@@ -22177,7 +22177,7 @@ select  i_item_id
                                     <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
                                   </dxl:PartFilterExpr>
                                 </dxl:PartitionSelector>
-                                <dxl:DynamicTableScan PartIndexId="2">
+                                <dxl:DynamicTableScan>
                                   <dxl:Properties>
                                     <dxl:Cost StartupCost="0" TotalCost="431.099780" Rows="57.241643" Width="8"/>
                                   </dxl:Properties>
@@ -22337,7 +22337,7 @@ select  i_item_id
                               <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
                             </dxl:PartFilterExpr>
                           </dxl:PartitionSelector>
-                          <dxl:DynamicTableScan PartIndexId="3">
+                          <dxl:DynamicTableScan>
                             <dxl:Properties>
                               <dxl:Cost StartupCost="0" TotalCost="19945.218662" Rows="14745100288.000000" Width="4"/>
                             </dxl:Properties>

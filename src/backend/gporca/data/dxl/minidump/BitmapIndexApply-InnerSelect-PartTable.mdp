@@ -754,7 +754,7 @@ select * from x, y where x.i > y.j and y.k = 10;
               </dxl:TableDescriptor>
             </dxl:TableScan>
           </dxl:BroadcastMotion>
-          <dxl:DynamicBitmapTableScan PartIndexId="0" PrintablePartIndexId="1" SelectorIds="">
+          <dxl:DynamicBitmapTableScan SelectorIds="">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="391.295690" Rows="1.000000" Width="24"/>
             </dxl:Properties>

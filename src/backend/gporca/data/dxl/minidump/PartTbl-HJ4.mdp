@@ -671,7 +671,7 @@
               <dxl:Ident ColId="8" ColName="a" TypeMdid="0.23.1.0"/>
             </dxl:Comparison>
           </dxl:HashCondList>
-          <dxl:DynamicTableScan PartIndexId="1" SelectorIds="0">
+          <dxl:DynamicTableScan SelectorIds="0">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="8"/>
             </dxl:Properties>
@@ -716,7 +716,7 @@
                 <dxl:Ident ColId="8" ColName="a" TypeMdid="0.23.1.0"/>
               </dxl:Comparison>
             </dxl:PartFilterExpr>
-            <dxl:DynamicTableScan PartIndexId="2" SelectorIds="">
+            <dxl:DynamicTableScan SelectorIds="">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="8"/>
               </dxl:Properties>

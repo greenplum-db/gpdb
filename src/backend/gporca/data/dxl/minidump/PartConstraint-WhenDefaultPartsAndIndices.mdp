@@ -3384,7 +3384,7 @@ EXPLAIN SELECT * FROM date_parts WHERE month BETWEEN 1 AND 4;
               </dxl:And>
             </dxl:PartFilterExpr>
           </dxl:PartitionSelector>
-          <dxl:DynamicBitmapTableScan PartIndexId="1">
+          <dxl:DynamicBitmapTableScan>
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="430.960341" Rows="1201.003300" Width="16"/>
             </dxl:Properties>

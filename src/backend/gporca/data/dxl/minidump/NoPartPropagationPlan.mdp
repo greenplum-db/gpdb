@@ -992,7 +992,7 @@
               <dxl:Ident ColId="0" ColName="i" TypeMdid="0.23.1.0"/>
             </dxl:Comparison>
           </dxl:HashCondList>
-          <dxl:DynamicTableScan PartIndexId="0">
+          <dxl:DynamicTableScan>
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="39.843750" Rows="10200.000000" Width="8"/>
             </dxl:Properties>

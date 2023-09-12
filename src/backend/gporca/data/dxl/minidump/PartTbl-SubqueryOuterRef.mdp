@@ -790,7 +790,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
           <dxl:JoinFilter>
             <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
           </dxl:JoinFilter>
-          <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+          <dxl:DynamicTableScan SelectorIds="">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.003902" Rows="1.000000" Width="8"/>
             </dxl:Properties>

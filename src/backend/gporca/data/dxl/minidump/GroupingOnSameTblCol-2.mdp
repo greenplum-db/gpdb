@@ -4160,7 +4160,7 @@
                     <dxl:Ident ColId="27" ColName="date" TypeMdid="0.1114.1.0"/>
                   </dxl:Comparison>
                 </dxl:HashCondList>
-                <dxl:DynamicTableScan PartIndexId="1">
+                <dxl:DynamicTableScan>
                   <dxl:Properties>
                     <dxl:Cost StartupCost="0" TotalCost="100962.368230" Rows="17210680.000000" Width="79"/>
                   </dxl:Properties>

@@ -4451,7 +4451,7 @@ explain select *  from oip oip  join ria a on ip=cidr and oip.oid=194073;
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
               </dxl:PartFilterExpr>
             </dxl:PartitionSelector>
-            <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="1">
+            <dxl:DynamicIndexScan IndexScanDirection="Forward">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="10.434215" Rows="9908.370184" Width="107"/>
               </dxl:Properties>

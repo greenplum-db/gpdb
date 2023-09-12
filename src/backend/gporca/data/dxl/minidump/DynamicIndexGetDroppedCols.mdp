@@ -2429,7 +2429,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
               </dxl:And>
             </dxl:PartFilterExpr>
           </dxl:PartitionSelector>
-          <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="1">
+          <dxl:DynamicIndexScan IndexScanDirection="Forward">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="6.000841" Rows="1.774224" Width="88"/>
             </dxl:Properties>

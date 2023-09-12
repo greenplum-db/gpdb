@@ -372,7 +372,7 @@ explain select * from TestPartitionFilterCasting where p3 = 1.0;
               </dxl:Comparison>
             </dxl:PartFilterExpr>
           </dxl:PartitionSelector>
-          <dxl:DynamicTableScan PartIndexId="1">
+          <dxl:DynamicTableScan>
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000031" Rows="1.000000" Width="18"/>
             </dxl:Properties>

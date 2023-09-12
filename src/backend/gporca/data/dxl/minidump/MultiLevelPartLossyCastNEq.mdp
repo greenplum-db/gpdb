@@ -333,7 +333,7 @@ default subpartition other2
               </dxl:Comparison>
             </dxl:PartFilterExpr>
           </dxl:PartitionSelector>
-          <dxl:DynamicTableScan PartIndexId="1">
+          <dxl:DynamicTableScan>
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="431.000143" Rows="1.000000" Width="24"/>
             </dxl:Properties>

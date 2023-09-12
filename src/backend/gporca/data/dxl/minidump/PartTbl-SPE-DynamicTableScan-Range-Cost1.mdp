@@ -1694,7 +1694,7 @@
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
-        <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+        <dxl:DynamicTableScan SelectorIds="">
           <dxl:Properties>
             <dxl:Cost StartupCost="0" TotalCost="616.198758" Rows="1.000000" Width="10011"/>
           </dxl:Properties>

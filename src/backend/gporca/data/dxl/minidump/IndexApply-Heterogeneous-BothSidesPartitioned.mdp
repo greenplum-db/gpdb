@@ -861,7 +861,7 @@ select * from x, y where (x.i > y.j);
             </dxl:ProjList>
             <dxl:Filter/>
             <dxl:SortingColumnList/>
-            <dxl:DynamicTableScan PartIndexId="1" SelectorIds="">
+            <dxl:DynamicTableScan SelectorIds="">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="431.000025" Rows="1.000000" Width="20"/>
               </dxl:Properties>
@@ -901,7 +901,7 @@ select * from x, y where (x.i > y.j);
               </dxl:TableDescriptor>
             </dxl:DynamicTableScan>
           </dxl:BroadcastMotion>
-          <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="0" PrintablePartIndexId="2" SelectorIds="">
+          <dxl:DynamicIndexScan IndexScanDirection="Forward" SelectorIds="">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="6.000111" Rows="1.000000" Width="24"/>
             </dxl:Properties>
