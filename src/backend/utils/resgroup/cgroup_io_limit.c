@@ -256,6 +256,10 @@ get_bdi_of_path(const char *ori_path)
 				 errmsg("cannot find disk of %s, details: %m", path),
 				 errhint("mount point of %s is: %s", path, match_mnt.mnt_fsname)));
 	}
+	pfree(match_mnt.mnt_fsname);
+	pfree(match_mnt.mnt_dir);
+	pfree(match_mnt.mnt_type);
+	pfree(match_mnt.mnt_opts);
 
 	maj = major(sb.st_rdev);
 	min = minor(sb.st_rdev);

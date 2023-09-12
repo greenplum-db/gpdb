@@ -29,9 +29,9 @@ wildcard \*
             }
 
 <ts_param>[wr](b|io)ps {
-                            SAVE_COLUMN;
-                            yylval->str = pstrdup(yytext);
-                            return IO_KEY;
+                          SAVE_COLUMN;
+                          yylval->str = pstrdup(yytext);
+                          return IO_KEY;
                        }
 
 <ts_param>max {
