@@ -1341,7 +1341,7 @@ explain (costs off) select * from rep_tab;
 set optimizer_enable_replicated_table=off;
 set optimizer_trace_fallback=on;
 explain (costs off) select * from rep_tab;
-                QUERY PLAN
+                QUERY PLAN                
 ------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Seq Scan on rep_tab
@@ -1350,6 +1350,43 @@ explain (costs off) select * from rep_tab;
 
 reset optimizer_trace_fallback;
 reset optimizer_enable_replicated_table;
+-- Ensure plan with Gather Motion node is generated.
+drop table if exists t;
+NOTICE:  table "t" does not exist, skipping
+create table t (i int, j int) distributed replicated;
+insert into t values (1, 2);
+explain (costs off) select j, (select j) AS "Correlated Field" from t;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Seq Scan on t
+         SubPlan 1  (slice1; segments: 1)
+           ->  Result
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+select j, (select j) AS "Correlated Field" from t;
+ j | Correlated Field 
+---+------------------
+ 2 |                2
+(1 row)
+
+explain (costs off) select j, (select 5) AS "Uncorrelated Field" from t;
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Seq Scan on t
+         InitPlan 1 (returns $0)  (slice2)
+           ->  Result
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+select j, (select 5) AS "Uncorrelated Field" from t;
+ j | Uncorrelated Field 
+---+--------------------
+ 2 |                  5
+(1 row)
+
 -- start_ignore
 drop schema rpt cascade;
 NOTICE:  drop cascades to 13 other objects
