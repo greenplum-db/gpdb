@@ -3012,6 +3012,12 @@ CTranslatorRelcacheToDXL::RetrieveStorageTypeForPartitionedTable(Relation rel)
 		gpdb::RelationWrapper child_rel = gpdb::GetRelation(oid);
 		IMDRelation::Erelstoragetype child_storage =
 			RetrieveRelStorageType(child_rel.get());
+		// Child rel with partdesc means it's not leaf partition, we don't care about it
+		if (child_rel->rd_partdesc)
+		{
+			continue;
+		}
+
 		if (child_storage == IMDRelation::ErelstorageForeign)
 		{
 			// for partitioned tables with foreign partitions, we want to ignore the foreign partitions

@@ -323,6 +323,49 @@ explain (costs false) update t1 set b = b + 1 where b in (select a from gp_all w
 explain (costs false) update t1 set b = b + 1 where b in (select a from gp_any where gp_any.a > 10);
 explain (costs false) update t1 set b = b + 1 where b in (select a from gp_coord where gp_coord.a > 10);
 
+---
+--- Test for #16376 of multi-level partition table with foreign table
+---
+CREATE TABLE sub_part (
+                          a int,
+                          b int,
+                          c int)
+    DISTRIBUTED BY (a)
+partition by range(b) subpartition by list(c) 
+ SUBPARTITION TEMPLATE 
+  (
+   SUBPARTITION one values (1),
+   SUBPARTITION two values (2)
+  )
+(
+   START (0) INCLUSIVE END (5) EXCLUSIVE EVERY (1)
+);
+
+-- Create foreign tables
+CREATE FOREIGN TABLE sub_part_1_prt_1_2_prt_one_foreign (
+    a int,
+    b int,
+    c int)
+SERVER loopback;
+
+CREATE FOREIGN TABLE sub_part_1_prt_1_2_prt_two_foreign (
+    a int,
+    b int,
+    c int)
+SERVER loopback;
+
+-- change a sub partition's all leaf table to foreign table
+ALTER TABLE sub_part_1_prt_1 EXCHANGE PARTITION for(1) WITH TABLE sub_part_1_prt_1_2_prt_one_foreign;
+ALTER TABLE sub_part_1_prt_1 EXCHANGE PARTITION for(2) WITH TABLE sub_part_1_prt_1_2_prt_two_foreign;
+
+-- explain with ORCA should fall back to planner, rather than raise ERROR
+explain select * from sub_part;
+
+--- Clean up
+DROP TABLE sub_part;
+DROP TABLE sub_part_1_prt_1_2_prt_one_foreign;
+DROP TABLE sub_part_1_prt_1_2_prt_two_foreign;
+
 -- GPDB #16219: validate scram-sha-256 in postgres_fdw
 alter system set password_encryption = 'scram-sha-256';
 -- add created user to pg_hba.conf
