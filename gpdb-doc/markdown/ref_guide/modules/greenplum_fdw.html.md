@@ -186,9 +186,9 @@ Do not override this behavior by changing the session-level settings of these pa
 
 ## <a id="resgroups"></a>About Using Resource Groups to Limit Concurrency
 
-You can create dedicated users and resource groups to manage `greenplum_fdw` concurrency on both the local and remote Greenplum clusters. In the following example, cluster 2 (initiating) reads data from cluster 1 (remote).
+You can create a dedicated user and resource group to manage `greenplum_fdw` concurrency on the remote Greenplum clusters. In the following example scenario, local cluster 2 reads data from remote cluster 1.
 
-(Remote) cluster 1 configuration:
+Remote cluster (1) configuration:
 
 1. Create a dedicated Greenplum Database user/role to represent the `greenplum_fdw` users on cluster 2 that initiate queries. For example, to create a role named `gpcluster2_users`:
 
@@ -203,35 +203,27 @@ You can create dedicated users and resource groups to manage `greenplum_fdw` con
     ALTER ROLE gpcluster2_users RESOURCE GROUP rg_gpcluster2_users;
     ```
 
-    When cluster 2 is configured as described below, this resource group manages the local resources on cluster 1 used by all queries that are initiated by cluster 2 `greenplum_fdw` users.
+    When you configure the remote cluster as described below, the `rg_gpcluster2_users` resource group manages the resources used by all queries that are initiated by `gpcluster2_users`.
 
-(Initiating) cluster 2 configuration:
+Local cluster (2) configuration:
 
-1. Create a dedicated resource group for local `greenplum_fdw` users, and assign this resource group to those roles that will initiate `greenplum_fdw` queries. For example:
-
-    ```
-    CREATE RESOURCE GROUP rg_greenplum_fdw with (concurrency=4, cpu_max_percent=30);
-    ALTER ROLE greenplum_fdw_user1 RESOURCE GROUP rg_greenplum_fdw;
-    ALTER ROLE greenplum_fdw_user2 RESOURCE GROUP rg_greenplum_fdw;
-    ```
-
-    This resource group manages the local resources on cluster 2 used by all queries that are initiated by local `greenplum_fdw` users.
-
-1. Create a `greenplum_fdw` foreign server to access cluster 1. For example, to create a server named `gpc1_testdb` that accesses the `testdb` database:
+1. Create a `greenplum_fdw` foreign server to access the remote cluster. For example, to create a server named `gpc1_testdb` that accesses the `testdb` database:
 
     ```
     CREATE SERVER gpc1_testdb FOREIGN DATA WRAPPER greenplum_fdw
         OPTIONS (host 'gpc1_coordinator', port '5432', dbname 'testdb', mpp_execute 'all segments', );
     ```
 
-1. Map all local users of the `greenplum_fdw` foreign server to the remote role. For example, to map users of the `gpc1_testdb` server on cluster 1 to the `gpcluster2_users` role on cluster 2:
+1. Map local users of the `greenplum_fdw` foreign server to the remote role. For example, to map specific users of the `gpc1_testdb` server on the local cluster to the `gpcluster2_users` role on the remote cluster:
 
     ```
-    CREATE USER MAPPING FOR CURRENT_USER SERVER gpc1_testdb
+    CREATE USER MAPPING FOR greenplum_fdw_user1 SERVER gpc1_testdb
+        OPTIONS (user ‘gpcluster2_users’, password ‘changeme’);
+    CREATE USER MAPPING FOR greenplum_fdw_user2 SERVER gpc1_testdb
         OPTIONS (user ‘gpcluster2_users’, password ‘changeme’);
     ```
 
-1.  Create a foreign table referencing cluster 1. For example to create a foreign table that references a table named `t1` on cluster 1:
+1.  Create a foreign table referencing a table on the remote cluster. For example to create a foreign table that references table `t1` on the remote cluster:
 
     ```
     CREATE FOREIGN TABLE table_on_cluster1 ( tc1 int )
@@ -239,7 +231,7 @@ You can create dedicated users and resource groups to manage `greenplum_fdw` con
       OPTIONS (schema_name 'public', table_name 't1', mpp_execute 'all segments');
     ```
 
-All queries on foreign table `table_on_cluster1` are bounded both on the initiating cluster by the `rg_greenplum_fdw` resource group limits, and on the remote cluster by the `rg_gpcluster2_users` resource group limits.
+All local queries on foreign table `table_on_cluster1` are bounded on the remote cluster by the `rg_gpcluster2_users` resource group limits.
 
 ## <a id="topic_limits"></a>Known Issues and Limitations 
 
