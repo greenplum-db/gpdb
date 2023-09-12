@@ -92,7 +92,7 @@ def impl(context, cmd):
     context.ret_code = p.returncode
 
 @when('pgpassfile is exists')
-def impl(context)
+def impl(context):
     """
     Create a pgpassfile
     """
