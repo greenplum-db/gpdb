@@ -849,8 +849,8 @@ resources:
   type: time
   source:
     location: America/Los_Angeles
-    start: ((reduced-frequency-trigger-start-[[ os_type ]]))
-    stop: ((reduced-frequency-trigger-stop-[[ os_type ]]))
+    start: (("reduced-frequency-trigger-start-[[ os_type ]]"))
+    stop: (("reduced-frequency-trigger-stop-[[ os_type ]]"))
     {% if os_type != "centos7" %}
     days: [Monday]
     {% else %}
