@@ -2317,7 +2317,7 @@ You can set this parameter only in the `postgresql.conf` file or on the server c
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|2 - `MAX_KILOBYTES` (integer) |320|coordinator, system, restart|
+|2 - `MAX_KILOBYTES` (integer) |320|local, system, reload|
 
 ## <a id="optimizer"></a>optimizer 
 
