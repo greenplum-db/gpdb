@@ -1023,12 +1023,18 @@ AppendOnlyBlockDirectory_GetEntryForPartialScan(AppendOnlyBlockDirectory *blockD
  * in which this tid resides.
  *
  * Currently used by index fetches to perform unique constraint validation and
- * for index only scans. A sysscan of the block directory relation is performed
- * to determine the result. (see blkdir_entry_exists())
+ * for index only scans.
  *
- * Performing a sysscan also has the distinct advantage of setting the xmin/xmax
- * of the snapshot used to scan, which is a requirement when SNAPSHOT_DIRTY is
- * used (in unique checks). See _bt_check_unique() and SNAPSHOT_DIRTY for details.
+ * The check can be satisfied either by looking at the currently cached minipage
+ * or by performing a sysscan of the block directory relation
+ * (see blkdir_entry_exists()).
+ *
+ * For a unique index check, we cannot consult the cache and a fresh per-tuple
+ * sysscan must be performed. The sysscan populates the xmin/xmax of the
+ * snapshot used to scan, which is a requirement when SNAPSHOT_DIRTY is used
+ * (in unique checks). See _bt_check_unique() and SNAPSHOT_DIRTY for details.
+ * Similarly, if the snapshot is of type SELF or of type ANY, we would want to
+ * bypass the cache in order to see any updated rows.
  *
  * Note about AOCO tables:
  * For AOCO tables, there are multiple block directory entries for each tid.
@@ -1074,6 +1080,12 @@ AppendOnlyBlockDirectory_CoversTuple(
 /*
  * Does a visible block directory entry exist for a given aotid and column no?
  * Currently used to satisfy unique constraint checks and index only scans.
+ *
+ * The snapshot type dictates whether cached minipages in the 'blockDirectory'
+ * structure can be consulted - a dirty blkdir snapshot demands a fresh sysscan
+ * every time, so that the snapshot's fields are populated as a side effect.
+ * SNAPSHOT_SELF or SNAPSHOT_ANY also would mean that we shouldn't consult the
+ * cache, in order to see the latest updates.
  */
 static bool
 blkdir_entry_exists(AppendOnlyBlockDirectory *blockDirectory,
@@ -1097,6 +1109,33 @@ blkdir_entry_exists(AppendOnlyBlockDirectory *blockDirectory,
 					  "(columnGroupNo, segmentFileNum, rowNum) = "
 					  "(%d, %d, " INT64_FORMAT ")",
 				  0, segmentFileNum, rowNum)));
+
+	/*
+	 * Check the cached minipage first to see if the row number exists. If not,
+	 * proceed to perform a sysscan of the block directory.
+	 */
+	if (IsMVCCSnapshot(blockDirectory->appendOnlyMetaDataSnapshot) &&
+		blockDirectory->currentSegmentFileNum == segmentFileNum)
+	{
+		MinipagePerColumnGroup *minipageInfo =
+			&blockDirectory->minipages[columnGroupNo];
+
+		if (minipageInfo && minipageInfo->minipage)
+		{
+			int entry_no = find_minipage_entry(minipageInfo->minipage,
+											   minipageInfo->numMinipageEntries,
+											   rowNum);
+			if (entry_no != InvalidEntryNum)
+			{
+				ereportif(Debug_appendonly_print_blockdirectory, LOG,
+						  (errmsg("Append-only block directory covers tuple check cache hit: "
+								  "(columnGroupNo, segmentFileNum, rowNum) = "
+								  "(%d, %d, " INT64_FORMAT ")",
+							  0, segmentFileNum, rowNum)));
+				return true;
+			}
+		}
+	}
 
 	blkdirTupleDesc = RelationGetDescr(blkdirRel);
 
@@ -1160,7 +1199,6 @@ blkdir_entry_exists(AppendOnlyBlockDirectory *blockDirectory,
 			   (unsigned long) HeapTupleHeaderGetRawXmax(tuple->t_data),
 			   blockDirectory->appendOnlyMetaDataSnapshot->snapshot_type);
 
-		/* Set this so that we don't blow up in the assert in extract_minipage */
 		blockDirectory->currentSegmentFileNum = segmentFileNum;
 		extract_minipage(blockDirectory,
 						 tuple,

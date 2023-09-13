@@ -298,7 +298,8 @@ So to perform the visibility check, we rely on the block directory to see if the
 is covered by a block directory entry. If no, the tid is not visible to the index only
 scan. If yes, we check if the tid is deleted in the visimap and if it isn't we declare
 that the tid is visible to the index only scan. This mechanism is very similar to unique
-index checks, except that we use a regular MVCC snapshot (and not SNAPSHOT_DIRTY).
+index checks, except that we use a regular MVCC snapshot (and not SNAPSHOT_DIRTY), and
+the fact that we can rely on the last cached minipage.
 
 A note about upgrades:
 given the commit of removing aoblkdir hole filling mechanism was introduced from GP7,
