@@ -191,7 +191,7 @@ You can set this parameter only in the `postgresql.conf` file or on the server c
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|30 - 86400 (integer) |300|coordinator, system, restart|
+|30 - 86400 (integer) |300|local, system, reload|
 
 ## <a id="checkpoint_warning"></a>checkpoint\_warning
 
