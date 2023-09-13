@@ -205,7 +205,7 @@ You can set this parameter only in the `postgresql.conf` file or on the server c
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - `INT_MAX` (integer) |30|coordinator, system, restart|
+|0 - `INT_MAX` (integer) |30|local, system, reload|
 
 ## <a id="client_connection_check_interval"></a>client\_connection\_check\_interval 
 
