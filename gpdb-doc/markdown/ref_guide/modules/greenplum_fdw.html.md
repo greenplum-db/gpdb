@@ -203,7 +203,7 @@ Remote cluster (1) configuration:
     ALTER ROLE gpcluster2_users RESOURCE GROUP rg_gpcluster2_users;
     ```
 
-    When you configure the remote cluster as described below, the `rg_gpcluster2_users` resource group manages the resources used by all queries that are initiated by `gpcluster2_users`.
+    When you configure the remote cluster as described above, the `rg_gpcluster2_users` resource group manages the resources used by all queries that are initiated by `gpcluster2_users`.
 
 Local cluster (2) configuration:
 
