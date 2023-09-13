@@ -84,7 +84,7 @@ QUERY PLAN
 Limit  (cost=0.00..431.00 rows=1 width=4) (actual time=1.103..1.107 rows=10 loops=1)
   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.013..0.014 rows=10 loops=1)
         ->  Seq Scan on jit_explain_output  (cost=0.00..431.00 rows=1 width=4) (actual time=0.025..0.030 rows=38 loops=1)
-Optimizer: Pivotal Optimizer (GPORCA)
+Optimizer: GPORCA
 Planning Time: 5.824 ms
   (slice0)    Executor memory: 37K bytes.
   (slice1)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).

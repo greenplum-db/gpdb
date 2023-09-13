@@ -132,7 +132,7 @@ The *sequential scan* operation had only one segment \(*seg0*\) that returned ro
 
 #### <a id="topic_idt_2ll_gr"></a>Determining the Query Optimizer 
 
-You can view EXPLAIN output to determine if GPORCA is enabled for the query plan and whether GPORCA or the Postgres Planner generated the explain plan. The information appears at the end of the EXPLAIN output. The `Settings` line displays the setting of the server configuration parameter `OPTIMIZER`. The `Optimizer status` line displays whether GPORCA or the Postgres Planner generated the explain plan.
+You can view EXPLAIN output to determine if GPORCA is enabled for the query plan and whether GPORCA or the Postgres Planner generated the explain plan. The information appears at the end of the EXPLAIN output. The `Settings` line displays the setting of the server configuration parameter `OPTIMIZER`. The `Optimizer:` line displays whether GPORCA or the Postgres Planner generated the explain plan.
 
 For these two example query plans, GPORCA is enabled, the server configuration parameter `OPTIMIZER` is `on`. For the first plan, GPORCA generated the EXPLAIN plan. For the second plan, Greenplum Database fell back to the Postgres Planner to generate the query plan.
 
@@ -144,7 +144,7 @@ For these two example query plans, GPORCA is enabled, the server configuration p
          ->  Aggregate  (cost=0.00..294.10 rows=1 width=8)
                ->  Seq Scan on part  (cost=0.00..97.69 rows=100040 width=1)
  Settings:  optimizer=on
- Optimizer status: Pivotal Optimizer (GPORCA) version 1.584
+ Optimizer: GPORCA
 (5 rows)
 ```
 
@@ -158,7 +158,7 @@ explain select count(*) from part;
          ->  Aggregate  (cost=3518.99..3519.00 rows=1 width=8)
                ->  Seq Scan on part  (cost=0.00..3018.79 rows=100040 width=1)
  Settings:  optimizer=on
- Optimizer status: Postgres-based planner
+ Optimizer: Postgres-based planner
 (5 rows)
 ```
 
@@ -174,7 +174,7 @@ explain select count(*) from part;
          ->  Aggregate  (cost=3518.99..3519.00 rows=1 width=8)
                ->  Seq Scan on part  (cost=0.00..3018.79 rows=100040 width=1)
  Settings: optimizer=off
- Optimizer status: Postgres-based planner
+ Optimizer: Postgres-based planner
 (5 rows)
 ```
 

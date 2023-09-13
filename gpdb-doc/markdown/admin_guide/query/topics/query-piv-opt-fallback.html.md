@@ -9,7 +9,7 @@ You can examine the `EXPLAIN` query plan for the query to determine which query 
 -   The optimizer is listed at the end of the query plan. For example, when GPORCA generates the query plan, the query plan ends with:
 
     ```
-     Optimizer: Pivotal Optimizer (GPORCA)
+     Optimizer: GPORCA
     ```
 
     When Greenplum Database falls back to the Postgres Planner to generate the plan, the query plan ends with:

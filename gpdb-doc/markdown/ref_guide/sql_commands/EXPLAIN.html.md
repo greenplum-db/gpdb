@@ -110,7 +110,7 @@ EXPLAIN SELECT * FROM names WHERE name = 'Joelle';
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.27 rows=1 width=58)
    ->  Seq Scan on names  (cost=0.00..431.27 rows=1 width=58)
          Filter: (name = 'Joelle'::text)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
+ Optimizer: GPORCA
 (4 rows)
 ```
 
@@ -129,7 +129,7 @@ EXPLAIN (COSTS FALSE) SELECT * FROM names WHERE name = 'Joelle';
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Seq Scan on names
          Filter: (name = 'Joelle'::text)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.23.0
+ Optimizer: GPORCA
 (4 rows)
 ```
 

@@ -49,7 +49,7 @@ gpadmin=# EXPLAIN SELECT gp_segment_id, count(*)
                                  ->  Sort  (cost=0.00..431.00 rows=7 width=4)
                                        Sort Key: gp_segment_id
                                        ->  Seq Scan on table1  (cost=0.00..431.00 rows=7 width=4)
- Optimizer status: Pivotal Optimizer (GPORCA) version 2.56.0
+ Optimizer: GPORCA
 (14 rows)
 ```
 
