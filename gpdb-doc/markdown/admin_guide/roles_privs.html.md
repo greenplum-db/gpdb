@@ -32,7 +32,7 @@ A user-level role is considered to be a database role that can log in to the dat
 
 ```
 
-A database role may have a number of attributes that define what sort of tasks that role can perform in the database. You can set these attributes when you create the role, or later using the `ALTER ROLE` command. See [Table 1](#iq139556) for a description of the role attributes you can set.
+A database role may have a number of attributes that define what sort of tasks that role can perform in the database. You can set these attributes when you create the role, or later using the `ALTER ROLE` command.
 
 ### <a id="topic4"></a>Altering Role Attributes 
 
@@ -88,7 +88,7 @@ Once the group role exists, you can add and remove members \(user roles\) using 
 
 ```
 
-For managing object privileges, you would then grant the appropriate permissions to the group-level role only \(see [Table 2](#iq139925)\). The member user roles then inherit the object privileges of the group role. For example:
+For managing object privileges, you would then grant the appropriate permissions to the group-level role only \(see [Managing Object Privileges](#topic6)\). The member user roles then inherit the object privileges of the group role. For example:
 
 ```
 =# GRANT ALL ON TABLE mytable TO admin;
