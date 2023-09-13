@@ -101,6 +101,7 @@
 #include "utils/spccache.h"
 #include "utils/tuplesort.h"
 
+#include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 
@@ -296,6 +297,12 @@ adjust_reloptinfo(RelOptInfoPerSegment *basescan, RelOptInfo *baserel_orig,
 	ParamPathInfoPerSegment *param_info = adjust_reloptinfo(&baserel_adjusted, baserel_orig, \
 															&param_info_adjusted, param_info_orig)
 
+
+static void cost_indexonlyscan_cpu_ao(RelOptInfoPerSegment *baserel,
+									  PlannerInfo *root,
+									  double *num_blkdir_tuples,
+									  Cost *blkdir_cost_per_tuple,
+									  Cost *visimap_cost_per_tuple);
 
 /*
  * cost_seqscan
@@ -603,6 +610,13 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	BlockNumber orig_idx_pages;
 	double 		orig_idx_tuples;
 
+	/* GPDB: Components for index only scans on append-optimized tables */
+	double 		num_blkdir_tuples = 0.0;
+	Cost 		blkdir_cost_per_tuple = 0.0;
+	Cost 		max_blkdir_cost = 0.0;
+	Cost 		min_blkdir_cost = 0.0;
+	Cost 		visimap_cost_per_tuple = 0.0;
+
 	/* Should only be applied to base relations */
 	Assert(IsA(baserel_orig, RelOptInfo) &&
 		   IsA(index_orig, IndexOptInfo));
@@ -704,6 +718,31 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	 */
 	AssertImply(IsAccessMethodAO(baserel_orig->relam), baserel->allvisfrac == 1);
 
+	/* GPDB: Special costing is required for Index Only Scans on AO/CO tables */
+	if (IsAccessMethodAO(baserel_orig->relam) && indexonly)
+	{
+		double 		num_blkdir_pages;
+
+		cost_indexonlyscan_cpu_ao(baserel, root, &num_blkdir_tuples,
+								  &blkdir_cost_per_tuple, &visimap_cost_per_tuple);
+
+		/* Approx. 7 blkdir tuples fit into a full blkdir rel page */
+		num_blkdir_pages = ceil(num_blkdir_tuples / 7.0);
+
+		/*
+		 * Disk costs: The max_IO_cost represents the perfectly un-correlated,
+		 * case whereas the min_IO_cost represents the perfectly correlated case.
+		 */
+		max_IO_cost = spc_seq_page_cost * index_pages;
+		max_IO_cost += spc_random_page_cost * Min(num_blkdir_pages, tuples_fetched);
+		/* Count only meta-page for visimap idx */
+		max_IO_cost += spc_random_page_cost * 1;
+
+		min_IO_cost = spc_seq_page_cost * index_pages * indexSelectivity;
+		min_IO_cost += spc_seq_page_cost * Min(indexSelectivity * num_blkdir_pages,
+											  tuples_fetched);
+	}
+
 	/*----------
 	 * Estimate number of main-table pages fetched, and compute I/O cost.
 	 *
@@ -733,7 +772,7 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	 * has to be scanned. So we ensure that allvisfrac = 1.
 	 *----------
 	 */
-	if (loop_count > 1)
+	else if (loop_count > 1)
 	{
 		/*
 		 * For repeated indexscans, the appropriate estimate for the
@@ -884,6 +923,24 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	/* tlist eval costs are paid per output row, not per tuple scanned */
 	startup_cost += path->path.pathtarget->cost.startup;
 	cpu_run_cost += path->path.pathtarget->cost.per_tuple * path->path.rows;
+
+	if (IsAccessMethodAO(baserel_orig->relam) && indexonly)
+	{
+		/*
+		 * GPDB: Additional charges for Index Only Scans on AO/CO tables
+		 *
+		 * 1. Blkdir cost: interpolated between the zero correlated case (where
+		 * we charge the cost per scanned tuple) and the perfectly correlated
+		 * case (where we charge the cost per selected blkdir tuple).
+		 *
+		 * 2. Visimap cost: constant charge per tuple.
+		 */
+		max_blkdir_cost = blkdir_cost_per_tuple * tuples_fetched;
+		min_blkdir_cost = blkdir_cost_per_tuple * (indexSelectivity * num_blkdir_tuples);
+		run_cost += max_blkdir_cost + csquared * (min_blkdir_cost - max_blkdir_cost);
+
+		run_cost += visimap_cost_per_tuple * tuples_fetched;
+	}
 
 	/* Adjust costing for parallelism, if used. */
 	if (path->path.parallel_workers > 0)
@@ -6297,4 +6354,60 @@ compute_bitmap_pages(PlannerInfo *root, RelOptInfo *baserel_orig, Path *bitmapqu
 		*tuple = tuples_fetched;
 
 	return pages_fetched;
+}
+
+/*
+ * Calculates and returns the CPU costs for sys-scanning the block directory
+ * and visimap during an Index Only Scan on an append-optimized table.
+ *
+ * FIXME: We currently only consider the cost of scanning an empty AO visimap.
+ */
+static void
+cost_indexonlyscan_cpu_ao(RelOptInfoPerSegment *baserel,
+						  PlannerInfo *root,
+						  double *num_blkdir_tuples,
+						  Cost *blkdir_cost_per_tuple,
+						  Cost *visimap_cost_per_tuple)
+{
+	Oid			baserel_oid = planner_rt_fetch(baserel->orig->relid, root)->relid;
+
+	double		tuple_width = 0.0;
+	double		uncompressed_size_baserel = 0.0;
+	double 		num_var_blocks = 0.0;
+	double 		per_tuple_meta_overhead = 20; /* in bytes */
+	int 		blkdir_idx_qual_count = 3;
+	int 		blkdir_idx_tree_height;
+	double		blkdir_idx_leaf_pages;
+	Cost 		blkdir_descent_cost;
+	Cost		blkdir_idx_qual_op_cost;
+	Cost 		blkdir_minipage_cost = 12 * cpu_tuple_cost;
+
+	Cost 		sysscan_setup_finish_cost = 2 * cpu_operator_cost;
+
+	int 		visimap_idx_qual_count = 2;
+	Cost 		visimap_idx_qual_cost = 0.0;
+
+	/*
+	 * FIXME: Fetch the actual sizes of the blkdir, instead of estimating
+	 * their reltuples and relpages, as we do below.
+	 */
+	tuple_width = get_relation_data_width(baserel_oid, NULL);
+	tuple_width += per_tuple_meta_overhead;
+	uncompressed_size_baserel = tuple_width * baserel->tuples;
+	num_var_blocks = uncompressed_size_baserel / DEFAULT_APPENDONLY_BLOCK_SIZE;
+	*num_blkdir_tuples = num_var_blocks / NUM_MINIPAGE_ENTRIES;
+
+	blkdir_descent_cost = ceil(log(*num_blkdir_tuples) / log(2.0)) * cpu_operator_cost;
+	/* Approx. 1052 tuples fit in a 90% full blkdir idx leaf page */
+	blkdir_idx_leaf_pages = ceil(*num_blkdir_tuples / 1052);
+	blkdir_idx_tree_height = ceil(log(blkdir_idx_leaf_pages) / log(2.0));
+	blkdir_descent_cost += (blkdir_idx_tree_height + 1) * 50.0 * cpu_operator_cost;
+	blkdir_idx_qual_op_cost = cpu_operator_cost * blkdir_idx_qual_count;
+
+	*blkdir_cost_per_tuple = blkdir_descent_cost + blkdir_minipage_cost +
+		blkdir_idx_qual_op_cost + cpu_tuple_cost + cpu_index_tuple_cost +
+		(2 * sysscan_setup_finish_cost);
+
+	visimap_idx_qual_cost = cpu_operator_cost * visimap_idx_qual_count;
+	*visimap_cost_per_tuple = visimap_idx_qual_cost + (2 * sysscan_setup_finish_cost);
 }

@@ -1860,8 +1860,9 @@ CREATE TABLE test_ao_table(a int, b int, c float, d text, e numeric) WITH (appen
 CREATE INDEX ao_index_eda on test_ao_table using btree(e desc nulls last, d,a desc);
 INSERT INTO test_ao_table SELECT i, i+3, i/4.2, concat('sample_text ',i), i/5 from generate_series(1,100) i;
 -- Expected to choose IndexOnlyScan Forward
-explain(costs off) select e,d,a from test_ao_table order by e desc nulls last, d, a desc limit 3;
-                              QUERY PLAN
+set enable_sort to off; -- help planner generate IndexOnlyScan
+explain (costs off) select e,d,a from test_ao_table order by e desc nulls last, d, a desc limit 3;
+                              QUERY PLAN                               
 -----------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
@@ -1899,6 +1900,7 @@ select e,d,a from test_ao_table order by e nulls first, d desc, a limit 3;
  0 | sample_text 2 | 2
 (3 rows)
 
+reset enable_sort;
 -- Expected to choose SeqScan with a Sort as IndexOnlyScan doesn't support, since it selects all columns
 explain(costs off) select * from test_ao_table order by e desc nulls last, d, a desc limit 3;
                          QUERY PLAN

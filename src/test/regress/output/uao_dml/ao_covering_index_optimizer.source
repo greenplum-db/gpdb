@@ -153,15 +153,15 @@ EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF) SELECT decimaltype, boxtyp
 --
 -- Alter (add/drop) columns to check that the correct data is read from the
 -- physical scan.
-CREATE TABLE test_add_drop_columns_@amname@(a int, aa int, b int, bb int, c int, d int) USING @amname@;
+CREATE TABLE test_add_drop_columns_@amname@(a bigint, aa bigint, b bigint, bb bigint, c bigint, d bigint) USING @amname@;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ALTER TABLE test_add_drop_columns_@amname@ DROP COLUMN aa;
-INSERT INTO test_add_drop_columns_@amname@ SELECT i, i+i, i*i, i*i*i, i+i+i FROM generate_series(1, 100)i;
+INSERT INTO test_add_drop_columns_@amname@ SELECT i, 2 * i, 3 * i, 4 * i, 5 * i FROM generate_series(1, 100000)i;
 ALTER TABLE test_add_drop_columns_@amname@ DROP COLUMN bb;
-ALTER TABLE test_add_drop_columns_@amname@ ADD COLUMN e int;
+ALTER TABLE test_add_drop_columns_@amname@ ADD COLUMN e bigint;
 CREATE INDEX i_test_add_drop_columns_@amname@ ON test_add_drop_columns_@amname@(a, b) INCLUDE (c);
-ALTER TABLE test_add_drop_columns_@amname@ ADD COLUMN f int;
+ALTER TABLE test_add_drop_columns_@amname@ ADD COLUMN f bigint;
 VACUUM ANALYZE test_add_drop_columns_@amname@;
 -- KEYS: [a, b] INCLUDED: [c]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
@@ -194,11 +194,13 @@ SELECT a, b, c, d, e FROM test_add_drop_columns_@amname@ WHERE a<42 AND b>42 AND
                                QUERY PLAN                               
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=20 loops=1)
-   ->  Seq Scan on test_add_drop_columns_@amname@ (actual rows=8 loops=1)
-         Filter: ((a < 42) AND (b > 42) AND (c > 42) AND (e IS NULL))
-         Rows Removed by Filter: 30
- Optimizer: Pivotal Optimizer (GPORCA)
-(5 rows)
+   ->  Bitmap Heap Scan on test_add_drop_columns_@amname@ (actual rows=8 loops=1)
+         Recheck Cond: ((a < 42) AND (b > 42))
+         Filter: ((e IS NULL) AND (c > 42))
+         ->  Bitmap Index Scan on i_test_add_drop_columns_@amname@ (actual rows=8 loops=1)
+               Index Cond: ((a < 42) AND (b > 42))
+ Optimizer: GPORCA
+(7 rows)
 
 -- Test various table types (e.g. AO/AOCO/replicated)
 --
@@ -414,15 +416,15 @@ SELECT a, b, c FROM test_cover_index_on_pt_@amname@ WHERE b<10;
 CREATE TABLE leaf_part_@amname@(a int, b int, c int) USING @amname@ DISTRIBUTED BY (a);
 -- without explicit index declared on leaf_part_@amname@
 ALTER TABLE test_cover_index_on_pt_@amname@ EXCHANGE PARTITION FOR(2) WITH TABLE leaf_part_@amname@;
-INSERT INTO test_cover_index_on_pt_@amname@ VALUES (2, 2, 2);
+INSERT INTO test_cover_index_on_pt_@amname@ SELECT i, 2, 2 FROM generate_series(1, 10000) i;
 VACUUM ANALYZE test_cover_index_on_pt_@amname@;
 -- KEYS: [a]    INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_cover_index_on_pt_@amname@ WHERE a<10;
-                                                                 QUERY PLAN                                                                  
----------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3) (actual rows=4 loops=1)
-   ->  Dynamic Index Only Scan on i_test_cover_index_scan_on_partition_table_@amname@ on test_cover_index_on_pt_@amname@ (actual rows=3 loops=1)
+                                                                    QUERY PLAN                                                                     
+---------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=12 loops=1)
+   ->  Dynamic Index Only Scan on i_test_cover_index_scan_on_partition_table_@amname@ on test_cover_index_on_pt_@amname@ (actual rows=7 loops=1)
          Index Cond: (a < 10)
          Heap Fetches: 0
          Number of partitions to scan: 4 (out of 4)
@@ -437,10 +439,10 @@ VACUUM ANALYZE test_cover_index_on_pt_@amname@;
 -- ORCA_FEATURE_NOT_SUPPORTED: partial dynamic index scan
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_cover_index_on_pt_@amname@ WHERE a<10;
-                                   QUERY PLAN                                    
----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3) (actual rows=4 loops=1)
-   ->  Dynamic Seq Scan on test_cover_index_on_pt_@amname@ (actual rows=3 loops=1)
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=12 loops=1)
+   ->  Dynamic Seq Scan on test_cover_index_on_pt_@amname@ (actual rows=7 loops=1)
          Number of partitions to scan: 4 (out of 4)
          Filter: (a < 10)
          Partitions scanned:  Avg 4.0 x 3 workers.  Max 4 parts (seg0).
@@ -451,24 +453,22 @@ SELECT a, b FROM test_cover_index_on_pt_@amname@ WHERE a<10;
 --
 -- Check that different index types can be used with cover indexes.
 -- Note: brin, hash, and spgist do not suport included columns.
-CREATE TABLE test_index_types_@amname@(a box, b int, c int) USING @amname@ DISTRIBUTED BY (b);
-INSERT INTO test_index_types_@amname@ VALUES ('(2.0,2.0,0.0,0.0)', 2, 2);
-INSERT INTO test_index_types_@amname@ VALUES ('(1.0,1.0,3.0,3.0)', 3, 3);
+CREATE TABLE test_index_types_@amname@(a box, b bigint, c bigint) USING @amname@ DISTRIBUTED BY (b);
+INSERT INTO test_index_types_@amname@ SELECT '(2.0,2.0,0.0,0.0)', 2, 2 FROM generate_series(1, 20000);
+INSERT INTO test_index_types_@amname@ SELECT '(1.0,1.0,3.0,3.0)', 3, 3 FROM generate_series(1, 20000);
 CREATE INDEX i_test_index_types_@amname@ ON test_index_types_@amname@ USING GIST (a) INCLUDE (b);
 VACUUM ANALYZE test_index_types_@amname@;
 -- KEYS: [a]    INCLUDED: [b]
 -- ORCA_FEATURE_NOT_SUPPORTED: support index-only-scan on GIST indexes
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_index_types_@amname@ WHERE a<@ box '(0,0,3,3)';
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3) (actual rows=2 loops=1)
-   ->  Bitmap Heap Scan on test_index_types_@amname@ (actual rows=2 loops=1)
-         Recheck Cond: (a <@ '(3,3),(0,0)'::box)
-         ->  Bitmap Index Scan on i_test_index_types_@amname@ (actual rows=2 loops=1)
-               Index Cond: (a <@ '(3,3),(0,0)'::box)
- Optimizer: Pivotal Optimizer (GPORCA)
-(6 rows)
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=40000 loops=1)
+   ->  Seq Scan on test_index_types_@amname@ (actual rows=40000 loops=1)
+         Filter: (a <@ '(3,3),(0,0)'::box)
+ Optimizer: GPORCA
+(4 rows)
 
 -- 8) Test partial indexes
 --

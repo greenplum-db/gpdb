@@ -91,15 +91,14 @@ EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF) SELECT decimaltype, boxtyp
 --
 -- Alter (add/drop) columns to check that the correct data is read from the
 -- physical scan.
-CREATE TABLE test_add_drop_columns_@amname@(a int, aa int, b int, bb int, c int, d int) USING @amname@;
+CREATE TABLE test_add_drop_columns_@amname@(a bigint, aa bigint, b bigint, bb bigint, c bigint, d bigint) USING @amname@;
 ALTER TABLE test_add_drop_columns_@amname@ DROP COLUMN aa;
-INSERT INTO test_add_drop_columns_@amname@ SELECT i, i+i, i*i, i*i*i, i+i+i FROM generate_series(1, 100)i;
+INSERT INTO test_add_drop_columns_@amname@ SELECT i, 2 * i, 3 * i, 4 * i, 5 * i FROM generate_series(1, 100000)i;
 ALTER TABLE test_add_drop_columns_@amname@ DROP COLUMN bb;
-ALTER TABLE test_add_drop_columns_@amname@ ADD COLUMN e int;
+ALTER TABLE test_add_drop_columns_@amname@ ADD COLUMN e bigint;
 CREATE INDEX i_test_add_drop_columns_@amname@ ON test_add_drop_columns_@amname@(a, b) INCLUDE (c);
-ALTER TABLE test_add_drop_columns_@amname@ ADD COLUMN f int;
+ALTER TABLE test_add_drop_columns_@amname@ ADD COLUMN f bigint;
 VACUUM ANALYZE test_add_drop_columns_@amname@;
-
 -- KEYS: [a, b] INCLUDED: [c]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_add_drop_columns_@amname@ WHERE a<42 AND b>42;
@@ -230,10 +229,11 @@ SELECT a, b, c FROM test_cover_index_on_pt_@amname@ WHERE b<10;
 CREATE TABLE leaf_part_@amname@(a int, b int, c int) USING @amname@ DISTRIBUTED BY (a);
 -- without explicit index declared on leaf_part_@amname@
 ALTER TABLE test_cover_index_on_pt_@amname@ EXCHANGE PARTITION FOR(2) WITH TABLE leaf_part_@amname@;
-INSERT INTO test_cover_index_on_pt_@amname@ VALUES (2, 2, 2);
+INSERT INTO test_cover_index_on_pt_@amname@ SELECT i, 2, 2 FROM generate_series(1, 10000) i;
 VACUUM ANALYZE test_cover_index_on_pt_@amname@;
 
 -- KEYS: [a]    INCLUDED: [b]
+
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_cover_index_on_pt_@amname@ WHERE a<10;
 
@@ -250,9 +250,9 @@ SELECT a, b FROM test_cover_index_on_pt_@amname@ WHERE a<10;
 --
 -- Check that different index types can be used with cover indexes.
 -- Note: brin, hash, and spgist do not suport included columns.
-CREATE TABLE test_index_types_@amname@(a box, b int, c int) USING @amname@ DISTRIBUTED BY (b);
-INSERT INTO test_index_types_@amname@ VALUES ('(2.0,2.0,0.0,0.0)', 2, 2);
-INSERT INTO test_index_types_@amname@ VALUES ('(1.0,1.0,3.0,3.0)', 3, 3);
+CREATE TABLE test_index_types_@amname@(a box, b bigint, c bigint) USING @amname@ DISTRIBUTED BY (b);
+INSERT INTO test_index_types_@amname@ SELECT '(2.0,2.0,0.0,0.0)', 2, 2 FROM generate_series(1, 20000);
+INSERT INTO test_index_types_@amname@ SELECT '(1.0,1.0,3.0,3.0)', 3, 3 FROM generate_series(1, 20000);
 CREATE INDEX i_test_index_types_@amname@ ON test_index_types_@amname@ USING GIST (a) INCLUDE (b);
 VACUUM ANALYZE test_index_types_@amname@;
 
@@ -260,7 +260,6 @@ VACUUM ANALYZE test_index_types_@amname@;
 -- ORCA_FEATURE_NOT_SUPPORTED: support index-only-scan on GIST indexes
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_index_types_@amname@ WHERE a<@ box '(0,0,3,3)';
-
 -- 8) Test partial indexes
 --
 -- Check that partial cover indexes may be used

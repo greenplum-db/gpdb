@@ -1304,6 +1304,7 @@ select count(*) from bfv_index_only_aocs where a < 1000;
 -- scan in enabled for AO tables in ORCA. To prevent retain
 -- the bitmap scan alternative, turn off index only scan.
 set optimizer_enable_indexonlyscan=off;
+set enable_indexonlyscan=off;
 -- Test AO table
 -- Index scan is disabled in AO table, so bitmap scan is the
 -- most performant

@@ -14,9 +14,9 @@ INSERT INTO uao_index_only_scan_@amname@ SELECT i, 0 FROM generate_series(1, 3)i
 1: SET enable_seqscan TO off;
 1: SET optimizer TO off;
 1: BEGIN ISOLATION LEVEL REPEATABLE READ;
-1: EXPLAIN SELECT i FROM uao_index_only_scan_@amname@;
+1: EXPLAIN SELECT i FROM uao_index_only_scan_@amname@ ORDER BY i;
 -- We should see the rows from Set 1.
-1: SELECT i FROM uao_index_only_scan_@amname@;
+1: SELECT i FROM uao_index_only_scan_@amname@ ORDER BY i;
 
 -- Set 2: Insert and then delete some rows
 INSERT INTO uao_index_only_scan_@amname@ SELECT i, 0 FROM generate_series(4, 6)i;
