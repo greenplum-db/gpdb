@@ -177,7 +177,7 @@ You can set this parameter only in the `postgresql.conf` file or on the server c
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0 - 256 (integer)|32|coordinator, system, restart|
+|0 - 256 (integer)|32|local, system, reload|
 
 ## <a id="checkpoint_timeout"></a>checkpoint\_timeout
 
