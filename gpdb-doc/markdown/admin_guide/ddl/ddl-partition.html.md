@@ -395,29 +395,6 @@ SELECT pg_get_expr(template, relid) FROM gp_partition_template
   WHERE relid = '<table_name>'::regclass;
 ```
 
-### <a id="topic76classic"></a>Constructing a pg_partitions-Equivalent Query
-
-You can obtain most of the information available via the (removed) Greenplum 6 `pg_partitions` view with the following query:
-
-``` sql
-SELECT
-  n.nspname,
-  c.relname,
-  pg_partition_root(c.oid) AS rootname,
-  inh.inhparent::regclass::text AS parentname,
-  pt.partstrat,
-  pt.partnatts,
-  pt.partattrs AS partkeycol,
-  pg_get_expr(pt.partexprs, pt.partrelid) AS partkeyexpr,
-  (SELECT level FROM pg_partition_tree(pg_partition_root(c.oid)) WHERE relid = c.oid::regclass) AS level,
-  pg_get_expr(c.relpartbound, c.oid) AS partbound
-FROM pg_class c
- LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
- LEFT JOIN pg_inherits inh ON inh.inhrelid = c.oid
- LEFT JOIN pg_partitioned_table pt ON (inh.inhparent = pt.partrelid)
-WHERE c.relispartition = 't'; 
-```
-
 ## <a id="prune"></a>About Partition Pruning
 
 *Partition pruning* is a query optimization technique that improves performance for declaratively partitioned tables.
