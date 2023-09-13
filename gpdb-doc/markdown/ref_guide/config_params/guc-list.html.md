@@ -851,7 +851,7 @@ Enables plans that can dynamically eliminate the scanning of partitions.
 
 Activates or deactivates two-phase aggregation for the Postgres-based planner.
 
-The default value is `off`; the Planner chooses the best aggregate path for a query based on the cost. When set to `on`, the Planner adds a disable cost to each of the first stage aggregate paths, which in turn forces the Planner to generate and choose a multi-stage aggregate path.
+The default value is `off`; the Postgres-based planner chooses the best aggregate path for a query based on the cost. When set to `on`, the Postgres-based planner adds a disable cost to each of the first stage aggregate paths, which in turn forces the PlaPostgres-based plannerner to generate and choose a multi-stage aggregate path.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1631,9 +1631,9 @@ Set to on to deactivate writes to the database. Any in progress transactions mus
 
 This parameter directs the Postgres-based planner on where to obtain statistics when it plans a query on a partitioned table.
 
-The default value is `off`, the Postgres-based planner uses the statistics of the root partitioned table, if it has any, when it plans a query. If the root partitioned table has no statistics, the Planner attempts to use the statistics from the largest child partition.
+The default value is `off`, the Postgres-based planner uses the statistics of the root partitioned table, if it has any, when it plans a query. If the root partitioned table has no statistics, the Postgres-based planner attempts to use the statistics from the largest child partition.
 
-When set to `on`, the Planner attempts to use the statistics from the largest child partition when it plans a query on a partitioned table.
+When set to `on`, the Postgres-based planner attempts to use the statistics from the largest child partition when it plans a query on a partitioned table.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
