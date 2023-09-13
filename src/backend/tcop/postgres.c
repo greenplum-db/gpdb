@@ -681,29 +681,6 @@ ProcessClientReadInterrupt(bool blocked)
 		/* Process notify interrupts, if any */
 		if (notifyInterruptPending)
 			ProcessNotifyInterrupt();
-		/*
-		 * issue: https://github.com/greenplum-db/gpdb/issues/15143
-		 * handle errors in parallel retrieve cursor
-		 */
-		if (GpParallelRetrieveCursorCheckPending)
-		{
-			int num;
-			GpParallelRetrieveCursorCheckPending = false;
-
-			Assert(Gp_role == GP_ROLE_DISPATCH);
-
-			/* Invoke cdbdisp_checkForCancel and do not raise any error */
-			gp_check_parallel_retrieve_cursor_error();
-
-			num = GetNumOfParallelRetrieveCursors();
-
-			/* Reset the alarm to check after some seconds */
-			if (num > 0)
-			{
-				elog(DEBUG1, "There are still %d parallel retrieve cursors alive", num);
-				enable_parallel_retrieve_cursor_timeout();
-			}
-		}
 	}
 	else if (ProcDiePending)
 	{
@@ -4089,6 +4066,32 @@ ProcessInterrupts(const char* filename, int lineno)
 			DisconnectAndDestroyUnusedQEs();
 
 		IdleGangTimeoutPending = false;
+	}
+
+	/*
+	 * issue: https://github.com/greenplum-db/gpdb/issues/15143
+	 * handle errors in parallel retrieve cursor
+	 * We process parallel cursor timeout When DoingCommandRead is true,
+	 * to prevent nest call of CheckDispatchResult.
+	 */
+	if (DoingCommandRead && GpParallelRetrieveCursorCheckPending)
+	{
+		int num;
+		GpParallelRetrieveCursorCheckPending = false;
+
+		Assert(Gp_role == GP_ROLE_DISPATCH);
+
+		/* Invoke cdbdisp_checkForCancel and do not raise any error */
+		gp_check_parallel_retrieve_cursor_error();
+
+		num = GetNumOfParallelRetrieveCursors();
+
+		/* Reset the alarm to check after some seconds */
+		if (num > 0)
+		{
+			elog(DEBUG1, "There are still %d parallel retrieve cursors alive", num);
+			enable_parallel_retrieve_cursor_timeout();
+		}
 	}
 
 	if (ParallelMessagePending)
