@@ -266,7 +266,7 @@ EXPLAIN (COSTS OFF) SELECT a, b FROM atab, btab WHERE a = b;
                ->  Redistribute Motion 4:4  (slice2; segments: 4)
                      Hash Key: btab.b
                      ->  Seq Scan on btab
- Optimizer: Postgres query optimizer
+ Optimizer: Postgres-based planner
 (11 rows)
 ```
 
@@ -282,7 +282,7 @@ EXPLAIN (COSTS OFF) SELECT a, b FROM atab, btab WHERE a |=| b;
          ->  Seq Scan on atab
          ->  Hash
                ->  Seq Scan on btab
- Optimizer: Postgres query optimizer
+ Optimizer: Postgres-based planner
 (7 rows)
 ```
 

@@ -158,7 +158,7 @@ explain select count(*) from part;
          ->  Aggregate  (cost=3518.99..3519.00 rows=1 width=8)
                ->  Seq Scan on part  (cost=0.00..3018.79 rows=100040 width=1)
  Settings:  optimizer=on
- Optimizer status: Postgres query optimizer
+ Optimizer status: Postgres-based planner
 (5 rows)
 ```
 
@@ -174,7 +174,7 @@ explain select count(*) from part;
          ->  Aggregate  (cost=3518.99..3519.00 rows=1 width=8)
                ->  Seq Scan on part  (cost=0.00..3018.79 rows=100040 width=1)
  Settings: optimizer=off
- Optimizer status: Postgres query optimizer
+ Optimizer status: Postgres-based planner
 (5 rows)
 ```
 

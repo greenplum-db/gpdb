@@ -105,7 +105,7 @@ Limit  (cost=35.50..35.67 rows=10 width=4) (actual time=13.199..13.310 rows=10 l
   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=35.50..36.01 rows=30 width=4) (actual time=11.848..11.890 rows=10 loops=1)
         ->  Limit  (cost=35.50..35.61 rows=10 width=4) (actual time=0.861..0.971 rows=10 loops=1)
               ->  Seq Scan on jit_explain_output  (cost=0.00..355.00 rows=32100 width=4) (actual time=0.029..0.070 rows=10 loops=1)
-Optimizer: Postgres query optimizer
+Optimizer: Postgres-based planner
 Planning Time: 0.158 ms
   (slice0)    Executor memory: 37K bytes.
   (slice1)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).

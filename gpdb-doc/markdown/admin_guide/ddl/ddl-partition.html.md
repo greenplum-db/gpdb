@@ -352,7 +352,7 @@ The following example shows the relevant portion of the query plan.
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..228.52 rows=1 width=54)
    ->  Seq Scan on msales_2021_usa  (cost=0.00..228.50 rows=1 width=54)
          Filter: ((year = 2021) AND (region = 'usa'::text))
- Optimizer: Postgres query optimizer
+ Optimizer: Postgres-based planner
 (4 rows)
 ```
 
