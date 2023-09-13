@@ -235,7 +235,7 @@ Controls which message levels are sent to the client. Each level includes all th
 
 ## <a id="cpu_index_tuple_cost"></a>cpu\_index\_tuple\_cost 
 
-For the Postgres Planner, sets the estimate of the cost of processing each index row during an index scan. This is measured as a fraction of the cost of a sequential page fetch.
+For the Postgres-based planner, sets the estimate of the cost of processing each index row during an index scan. This is measured as a fraction of the cost of a sequential page fetch.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -243,7 +243,7 @@ For the Postgres Planner, sets the estimate of the cost of processing each index
 
 ## <a id="cpu_operator_cost"></a>cpu\_operator\_cost 
 
-For the Postgres Planner, sets the estimate of the cost of processing each operator in a WHERE clause. This is measured as a fraction of the cost of a sequential page fetch.
+For the Postgres-based planner, sets the estimate of the cost of processing each operator in a WHERE clause. This is measured as a fraction of the cost of a sequential page fetch.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -251,7 +251,7 @@ For the Postgres Planner, sets the estimate of the cost of processing each opera
 
 ## <a id="cpu_tuple_cost"></a>cpu\_tuple\_cost 
 
-For the Postgres Planner, Sets the estimate of the cost of processing each row during a query. This is measured as a fraction of the cost of a sequential page fetch.
+For the Postgres-based planner, Sets the estimate of the cost of processing each row during a query. This is measured as a fraction of the cost of a sequential page fetch.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -259,7 +259,7 @@ For the Postgres Planner, Sets the estimate of the cost of processing each row d
 
 ## <a id="cursor_tuple_fraction"></a>cursor\_tuple\_fraction 
 
-Tells the Postgres Planner how many rows are expected to be fetched in a cursor query, thereby allowing the Postgres Planner to use this information to optimize the query plan. The default of 1 means all rows will be fetched.
+Tells the Postgres-based planner how many rows are expected to be fetched in a cursor query, thereby allowing the Postgres-based planner to use this information to optimize the query plan. The default of 1 means all rows will be fetched.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -361,9 +361,9 @@ For each query run, prints the Greenplum query slice plan. *client\_min\_message
 
 ## <a id="default_statistics_target"></a>default\_statistics\_target 
 
-Sets the default statistics sampling target \(the number of values that are stored in the list of common values\) for table columns that have not had a column-specific target set via `ALTER TABLE SET STATISTICS`. Larger values may improve the quality of the Postgres Planner estimates, particularly for columns with irregular data distributions, at the expense of consuming more space in `pg_statistic` and slightly more time to compute the estimates. Conversely, a lower limit might be sufficient for columns with simple data distributions. The default is 100.
+Sets the default statistics sampling target \(the number of values that are stored in the list of common values\) for table columns that have not had a column-specific target set via `ALTER TABLE SET STATISTICS`. Larger values may improve the quality of the Postgres-based planner estimates, particularly for columns with irregular data distributions, at the expense of consuming more space in `pg_statistic` and slightly more time to compute the estimates. Conversely, a lower limit might be sufficient for columns with simple data distributions. The default is 100.
 
-For more information on the use of statistics by the Postgres Planner, refer to [Statistics Used by the Planner](https://www.postgresql.org/docs/12/planner-stats.html) in the PostgreSQL documentation.
+For more information on the use of statistics by the Postgres-based planner, refer to [Statistics Used by the Planner](https://www.postgresql.org/docs/12/planner-stats.html) in the PostgreSQL documentation.
 
 
 |Value Range|Default|Set Classifications|
@@ -432,7 +432,7 @@ If a dynamically loadable module needs to be opened and the file name specified 
 
 ## <a id="effective_cache_size"></a>effective\_cache\_size 
 
-Sets the assumption about the effective size of the disk cache that is available to a single query for the Postgres Planner. This is factored into estimates of the cost of using an index; a higher value makes it more likely index scans will be used, a lower value makes it more likely sequential scans will be used. When setting this parameter, you should consider both Greenplum Database's shared buffers and the portion of the kernel's disk cache that will be used for data files \(though some data might exist in both places\). Take also into account the expected number of concurrent queries on different tables, since they will have to share the available space. This parameter has no effect on the size of shared memory allocated by a Greenplum server instance, nor does it reserve kernel disk cache; it is used only for estimation purposes.
+Sets the assumption about the effective size of the disk cache that is available to a single query for the Postgres-based planner. This is factored into estimates of the cost of using an index; a higher value makes it more likely index scans will be used, a lower value makes it more likely sequential scans will be used. When setting this parameter, you should consider both Greenplum Database's shared buffers and the portion of the kernel's disk cache that will be used for data files \(though some data might exist in both places\). Take also into account the expected number of concurrent queries on different tables, since they will have to share the available space. This parameter has no effect on the size of shared memory allocated by a Greenplum server instance, nor does it reserve kernel disk cache; it is used only for estimation purposes.
 
 Set this parameter to a number of [block\_size](#backslash_quote) blocks \(default 32K\) with no units; for example, `262144` for 8GB. You can also directly specify the size of the effective cache; for example, `'1GB'` specifies a size of 32768 blocks. The `gpconfig` utility and `SHOW` command display the effective cache size value in units such as 'GB', 'MB', or 'kB'.
 
@@ -442,7 +442,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 ## <a id="enable_bitmapscan"></a>enable\_bitmapscan 
 
- Activates or deactivates  the use of bitmap-scan plan types by the Postgres Planner. Note that this is different than a Bitmap Index Scan. A Bitmap Scan means that indexes will be dynamically converted to bitmaps in memory when appropriate, giving faster index performance on complex queries against very large tables. It is used when there are multiple predicates on different indexed columns. Each bitmap per column can be compared to create a final list of selected tuples.
+ Activates or deactivates  the use of bitmap-scan plan types by the Postgres-based planner. Note that this is different than a Bitmap Index Scan. A Bitmap Scan means that indexes will be dynamically converted to bitmaps in memory when appropriate, giving faster index performance on complex queries against very large tables. It is used when there are multiple predicates on different indexed columns. Each bitmap per column can be compared to create a final list of selected tuples.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -450,7 +450,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 ## <a id="enable_groupagg"></a>enable\_groupagg 
 
- Activates or deactivates  the use of group aggregation plan types by the Postgres Planner.
+ Activates or deactivates  the use of group aggregation plan types by the Postgres-based planner.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -458,7 +458,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 ## <a id="enable_hashagg"></a>enable\_hashagg 
 
- Activates or deactivates  the use of hash aggregation plan types by the Postgres Planner.
+ Activates or deactivates  the use of hash aggregation plan types by the Postgres-based planner.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -466,7 +466,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 ## <a id="enable_hashjoin"></a>enable\_hashjoin 
 
- Activates or deactivates  the use of hash-join plan types by the Postgres Planner.
+ Activates or deactivates  the use of hash-join plan types by the Postgres-based planner.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -474,7 +474,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 ## <a id="enable_indexscan"></a>enable\_indexscan 
 
- Activates or deactivates  the use of index-scan plan types by the Postgres Planner.
+ Activates or deactivates  the use of index-scan plan types by the Postgres-based planner.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -482,7 +482,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 ## <a id="enable_mergejoin"></a>enable\_mergejoin 
 
- Activates or deactivates  the use of merge-join plan types by the Postgres Planner. Merge join is based on the idea of sorting the left- and right-hand tables into order and then scanning them in parallel. So, both data types must be capable of being fully ordered, and the join operator must be one that can only succeed for pairs of values that fall at the 'same place' in the sort order. In practice this means that the join operator must behave like equality.
+ Activates or deactivates  the use of merge-join plan types by the Postgres-based planner. Merge join is based on the idea of sorting the left- and right-hand tables into order and then scanning them in parallel. So, both data types must be capable of being fully ordered, and the join operator must be one that can only succeed for pairs of values that fall at the 'same place' in the sort order. In practice this means that the join operator must behave like equality.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -490,7 +490,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 ## <a id="enable_nestloop"></a>enable\_nestloop 
 
- Activates or deactivates  the use of nested-loop join plans by the Postgres Planner. It's not possible to suppress nested-loop joins entirely, but turning this variable off discourages the Postgres Planner from using one if there are other methods available.
+ Activates or deactivates  the use of nested-loop join plans by the Postgres-based planner. It's not possible to suppress nested-loop joins entirely, but turning this variable off discourages the Postgres-based planner from using one if there are other methods available.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -507,7 +507,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 ## <a id="enable_seqscan"></a>enable\_seqscan 
 
- Activates or deactivates  the use of sequential scan plan types by the Postgres Planner. It's not possible to suppress sequential scans entirely, but turning this variable off discourages the Postgres Planner from using one if there are other methods available.
+ Activates or deactivates  the use of sequential scan plan types by the Postgres-based planner. It's not possible to suppress sequential scans entirely, but turning this variable off discourages the Postgres-based planner from using one if there are other methods available.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -515,7 +515,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 ## <a id="enable_sort"></a>enable\_sort 
 
- Activates or deactivates  the use of explicit sort steps by the Postgres Planner. It's not possible to suppress explicit sorts entirely, but turning this variable off discourages the Postgres Planner from using one if there are other methods available.
+ Activates or deactivates  the use of explicit sort steps by the Postgres-based planner. It's not possible to suppress explicit sorts entirely, but turning this variable off discourages the Postgres-based planner from using one if there are other methods available.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -523,7 +523,7 @@ Set this parameter to a number of [block\_size](#backslash_quote) blocks \(defau
 
 ## <a id="enable_tidscan"></a>enable\_tidscan 
 
- Activates or deactivates  the use of tuple identifier \(TID\) scan plan types by the Postgres Planner.
+ Activates or deactivates  the use of tuple identifier \(TID\) scan plan types by the Postgres-based planner.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -555,7 +555,7 @@ Adjusts the number of digits displayed for floating-point values, including floa
 
 ## <a id="from_collapse_limit"></a>from\_collapse\_limit 
 
-The Postgres Planner will merge sub-queries into upper queries if the resulting FROM list would have no more than this many items. Smaller values reduce planning time but may yield inferior query plans.
+The Postgres-based planner will merge sub-queries into upper queries if the resulting FROM list would have no more than this many items. Smaller values reduce planning time but may yield inferior query plans.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -734,11 +734,11 @@ If the value of the parameter is set to `on`, Greenplum Database follows these r
 
 For a CREATE TABLE AS command that does not contain a distribution clause:
 
--   If the Postgres Planner creates the table, and the value of the parameter is `off`, the table distribution policy is determined based on the command.
--   If the Postgres Planner creates the table, and the value of the parameter is `on`, the table distribution policy is random.
+-   If the Postgres-based planner creates the table, and the value of the parameter is `off`, the table distribution policy is determined based on the command.
+-   If the Postgres-based planner creates the table, and the value of the parameter is `on`, the table distribution policy is random.
 -   If GPORCA creates the table, the table distribution policy is random. The parameter value has no affect.
 
-For information about the Postgres Planner and GPORCA, see "Querying Data" in the *Greenplum Database Administrator Guide*.
+For information about the Postgres-based planner and GPORCA, see "Querying Data" in the *Greenplum Database Administrator Guide*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -849,7 +849,7 @@ Enables plans that can dynamically eliminate the scanning of partitions.
 
 ## <a id="gp_eager_two_phase_agg"></a>gp\_eager\_two\_phase\_agg
 
-Activates or deactivates two-phase aggregation for the Postgres Planner.
+Activates or deactivates two-phase aggregation for the Postgres-based planner.
 
 The default value is `off`; the Planner chooses the best aggregate path for a query based on the cost. When set to `on`, the Planner adds a disable cost to each of the first stage aggregate paths, which in turn forces the Planner to generate and choose a multi-stage aggregate path.
 
@@ -883,7 +883,7 @@ The default value is `off`; the Planner chooses the best aggregate path for a qu
 
 ## <a id="gp_enable_fast_sri"></a>gp\_enable\_fast\_sri 
 
-When set to `on`, the Postgres Planner plans single row inserts so that they are sent directly to the correct segment instance \(no motion operation required\). This significantly improves performance of single-row-insert statements.
+When set to `on`, the Postgres-based planner plans single row inserts so that they are sent directly to the correct segment instance \(no motion operation required\). This significantly improves performance of single-row-insert statements.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -903,7 +903,7 @@ If the Global Deadlock Detector is enabled, concurrent updates are permitted and
 
 ## <a id="gp_enable_groupext_distinct_gather"></a>gp\_enable\_groupext\_distinct\_gather 
 
- Activates or deactivates  gathering data to a single node to compute distinct-qualified aggregates on grouping extension queries. When this parameter and `gp_enable_groupext_distinct_pruning` are both enabled, the Postgres Planner uses the cheaper plan.
+ Activates or deactivates  gathering data to a single node to compute distinct-qualified aggregates on grouping extension queries. When this parameter and `gp_enable_groupext_distinct_pruning` are both enabled, the Postgres-based planner uses the cheaper plan.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -911,7 +911,7 @@ If the Global Deadlock Detector is enabled, concurrent updates are permitted and
 
 ## <a id="gp_enable_groupext_distinct_pruning"></a>gp\_enable\_groupext\_distinct\_pruning 
 
- Activates or deactivates  three-phase aggregation and join to compute distinct-qualified aggregates on grouping extension queries. Usually, enabling this parameter generates a cheaper query plan that the Postgres Planner will use in preference to existing plan.
+ Activates or deactivates  three-phase aggregation and join to compute distinct-qualified aggregates on grouping extension queries. Usually, enabling this parameter generates a cheaper query plan that the Postgres-based planner will use in preference to existing plan.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -919,7 +919,7 @@ If the Global Deadlock Detector is enabled, concurrent updates are permitted and
 
 ## <a id="gp_enable_multiphase_agg"></a>gp\_enable\_multiphase\_agg 
 
- Activates or deactivates  the use of two or three-stage parallel aggregation plans Postgres Planner. This approach applies to any subquery with aggregation. If `gp_enable_multiphase_agg` is off, then`gp_enable_agg_distinct` and `gp_enable_agg_distinct_pruning` are deactivated.
+ Activates or deactivates  the use of two or three-stage parallel aggregation plans Postgres-based planner. This approach applies to any subquery with aggregation. If `gp_enable_multiphase_agg` is off, then`gp_enable_agg_distinct` and `gp_enable_agg_distinct_pruning` are deactivated.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -927,7 +927,7 @@ If the Global Deadlock Detector is enabled, concurrent updates are permitted and
 
 ## <a id="gp_enable_predicate_propagation"></a>gp\_enable\_predicate\_propagation 
 
-When enabled, the Postgres Planner applies query predicates to both table expressions in cases where the tables are joined on their distribution key column\(s\). Filtering both tables prior to doing the join \(when possible\) is more efficient.
+When enabled, the Postgres-based planner applies query predicates to both table expressions in cases where the tables are joined on their distribution key column\(s\). Filtering both tables prior to doing the join \(when possible\) is more efficient.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -957,7 +957,7 @@ The Greenplum Database metrics collection extension, when enabled, sends the col
 
 ## <a id="gp_enable_relsize_collection"></a>gp\_enable\_relsize\_collection 
 
-Enables GPORCA and the Postgres Planner to use the estimated size of a table \(`pg_relation_size` function\) if there are no statistics for the table. By default, GPORCA and the planner use a default value to estimate the number of rows if statistics are not available. The default behavior improves query optimization time and reduces resource queue usage in heavy workloads, but can lead to suboptimal plans.
+Enables GPORCA and the Postgres-based planner to use the estimated size of a table \(`pg_relation_size` function\) if there are no statistics for the table. By default, GPORCA and the planner use a default value to estimate the number of rows if statistics are not available. The default behavior improves query optimization time and reduces resource queue usage in heavy workloads, but can lead to suboptimal plans.
 
 This parameter is ignored for a root partitioned table. When GPORCA is enabled and the root partition does not have statistics, GPORCA always uses the default value. You can use `ANALZYE ROOTPARTITION` to collect statistics on the root partition. See [ANALYZE](../sql_commands/ANALYZE.html).
 
@@ -1330,7 +1330,7 @@ In Greenplum Database, replication slots exist internally by default for primary
 
 ## <a id="gp_motion_cost_per_row"></a>gp\_motion\_cost\_per\_row 
 
-Sets the Postgres Planner cost estimate for a Motion operator to transfer a row from one segment to another, measured as a fraction of the cost of a sequential page fetch. If 0, then the value used is two times the value of *cpu\_tuple\_cost*.
+Sets the Postgres-based planner cost estimate for a Motion operator to transfer a row from one segment to another, measured as a fraction of the cost of a sequential page fetch. If 0, then the value used is two times the value of *cpu\_tuple\_cost*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1581,7 +1581,7 @@ Time that the Greenplum interconnect will try to connect to a segment instance o
 
 ## <a id="gp_segments_for_planner"></a>gp\_segments\_for\_planner 
 
-Sets the number of primary segment instances for the Postgres Planner to assume in its cost and size estimates. If 0, then the value used is the actual number of primary segments. This variable affects the Postgres Planner's estimates of the number of rows handled by each sending and receiving process in Motion operators.
+Sets the number of primary segment instances for the Postgres-based planner to assume in its cost and size estimates. If 0, then the value used is the actual number of primary segments. This variable affects the Postgres-based planner's estimates of the number of rows handled by each sending and receiving process in Motion operators.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1629,9 +1629,9 @@ Set to on to deactivate writes to the database. Any in progress transactions mus
 
 ## <a id="gp_statistics_pullup_from_child_partition"></a>gp\_statistics\_pullup\_from\_child\_partition 
 
-This parameter directs the Postgres Planner on where to obtain statistics when it plans a query on a partitioned table.
+This parameter directs the Postgres-based planner on where to obtain statistics when it plans a query on a partitioned table.
 
-The default value is `off`, the Postgres Planner uses the statistics of the root partitioned table, if it has any, when it plans a query. If the root partitioned table has no statistics, the Planner attempts to use the statistics from the largest child partition.
+The default value is `off`, the Postgres-based planner uses the statistics of the root partitioned table, if it has any, when it plans a query. If the root partitioned table has no statistics, the Planner attempts to use the statistics from the largest child partition.
 
 When set to `on`, the Planner attempts to use the statistics from the largest child partition when it plans a query on a partitioned table.
 
@@ -1641,7 +1641,7 @@ When set to `on`, the Planner attempts to use the statistics from the largest ch
 
 ## <a id="gp_statistics_use_fkeys"></a>gp\_statistics\_use\_fkeys 
 
-When enabled, the Postgres Planner will use the statistics of the referenced column in the parent table when a column is foreign key reference to another table instead of the statistics of the column itself.
+When enabled, the Postgres-based planner will use the statistics of the referenced column in the parent table when a column is foreign key reference to another table instead of the statistics of the column itself.
 
 > **Note** This parameter is deprecated and will be removed in a future Greenplum Database release.
 
@@ -1817,7 +1817,7 @@ The value *iso\_8601* will produce output matching the time interval *format wit
 
 ## <a id="jit"></a>jit
 
-Determines whether JIT compilation may be used by Greenplum Database. It enables or disables JIT for both GPORCA and Postgres Planner.
+Determines whether JIT compilation may be used by Greenplum Database. It enables or disables JIT for both GPORCA and Postgres-based planner.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1825,7 +1825,7 @@ Determines whether JIT compilation may be used by Greenplum Database. It enables
 
 ## <a id="jit_above_cost"></a>jit\_above\_cost
 
-When using Postgres Planner, sets the query cost above which JIT compilation is activated when JIT is enabled. Performing JIT compilation costs planning time but can accelerate query execution. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables JIT compilation.
+When using Postgres-based planner, sets the query cost above which JIT compilation is activated when JIT is enabled. Performing JIT compilation costs planning time but can accelerate query execution. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables JIT compilation.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1857,7 +1857,7 @@ Allows JIT compilation of expressions, when JIT compilation is activated.
 
 ## <a id="jit_inline_above_cost"></a>jit_inline_above_cost
 
-When using Postgres Planner, sets the query cost above which JIT compilation attempts to inline functions and operators. Inlining adds planning time, but can improve execution speed. It is not meaningful to set this to less than `jit_above_cost`. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables inlining.
+When using Postgres-based planner, sets the query cost above which JIT compilation attempts to inline functions and operators. Inlining adds planning time, but can improve execution speed. It is not meaningful to set this to less than `jit_above_cost`. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables inlining.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1865,7 +1865,7 @@ When using Postgres Planner, sets the query cost above which JIT compilation att
 
 ## <a id="jit_optimize_above_cost"></a>jit_optimize_above_cost
 
-When using Postgres Planner, sets the query cost above which JIT compilation applies expensive optimizations. Such optimization adds planning time, but can improve execution speed. It is not meaningful to set this to less than `jit_above_cost`, and it is unlikely to be beneficial to set it to more than `jit_inline_above_cost`. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables expensive optimizations.
+When using Postgres-based planner, sets the query cost above which JIT compilation applies expensive optimizations. Such optimization adds planning time, but can improve execution speed. It is not meaningful to set this to less than `jit_above_cost`, and it is unlikely to be beneficial to set it to more than `jit_inline_above_cost`. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting it to a negative value disables expensive optimizations.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -1897,7 +1897,7 @@ Allows JIT compilation of tuple deforming, when JIT compilation is activated.
 
 ## <a id="join_collapse_limit"></a>join\_collapse\_limit 
 
-The Postgres Planner will rewrite explicit inner `JOIN` constructs into lists of `FROM` items whenever a list of no more than this many items in total would result. By default, this variable is set the same as *from\_collapse\_limit*, which is appropriate for most uses. Setting it to 1 prevents any reordering of inner JOINs. Setting this variable to a value between 1 and *from\_collapse\_limit* might be useful to trade off planning time against the quality of the chosen plan \(higher values produce better plans\).
+The Postgres-based planner will rewrite explicit inner `JOIN` constructs into lists of `FROM` items whenever a list of no more than this many items in total would result. By default, this variable is set the same as *from\_collapse\_limit*, which is appropriate for most uses. Setting it to 1 prevents any reordering of inner JOINs. Setting this variable to a value between 1 and *from\_collapse\_limit* might be useful to trade off planning time against the quality of the chosen plan \(higher values produce better plans\).
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2105,7 +2105,7 @@ For each query, write performance statistics of the query parser to the server l
 
 ## <a id="log_planner_stats"></a>log\_planner\_stats 
 
-For each query, write performance statistics of the Postgres Planner to the server log. This is a crude profiling instrument. Cannot be enabled together with *log\_statement\_stats*.
+For each query, write performance statistics of the Postgres-based planner to the server log. This is a crude profiling instrument. Cannot be enabled together with *log\_statement\_stats*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2321,13 +2321,13 @@ You can set this parameter only in the `postgresql.conf` file or on the server c
 
 ## <a id="optimizer"></a>optimizer 
 
- Activates or deactivates  GPORCA when running SQL queries. The default is `on`. If you deactivate GPORCA, Greenplum Database uses only the Postgres Planner.
+ Activates or deactivates  GPORCA when running SQL queries. The default is `on`. If you deactivate GPORCA, Greenplum Database uses only the Postgres-based planner.
 
-GPORCA co-exists with the Postgres Planner. With GPORCA enabled, Greenplum Database uses GPORCA to generate an execution plan for a query when possible. If GPORCA cannot be used, then the Postgres Planner is used.
+GPORCA co-exists with the Postgres-based planner. With GPORCA enabled, Greenplum Database uses GPORCA to generate an execution plan for a query when possible. If GPORCA cannot be used, then the Postgres-based planner is used.
 
 The optimizer parameter can be set for a database system, an individual database, or a session or query.
 
-For information about the Postgres Planner and GPORCA, see [Querying Data](../../admin_guide/query/topics/query.html) in the *Greenplum Database Administrator Guide*.
+For information about the Postgres-based planner and GPORCA, see [Querying Data](../../admin_guide/query/topics/query.html) in the *Greenplum Database Administrator Guide*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2335,13 +2335,13 @@ For information about the Postgres Planner and GPORCA, see [Querying Data](../..
 
 ## <a id="optimizer_analyze_root_partition"></a>optimizer\_analyze\_root\_partition 
 
-For a partitioned table, controls whether the `ROOTPARTITION` keyword is required to collect root partition statistics when the `ANALYZE` command is run on the table. GPORCA uses the root partition statistics when generating a query plan. The Postgres Planner does not use these statistics.
+For a partitioned table, controls whether the `ROOTPARTITION` keyword is required to collect root partition statistics when the `ANALYZE` command is run on the table. GPORCA uses the root partition statistics when generating a query plan. The Postgres-based planner does not use these statistics.
 
 The default setting for the parameter is `on`, the `ANALYZE` command can collect root partition statistics without the `ROOTPARTITION` keyword. Root partition statistics are collected when you run `ANALYZE` on the root partition, or when you run `ANALYZE` on a leaf partition of the partitioned table and the other leaf partitions have statistics. When the value is `off`, you must run `ANALZYE ROOTPARTITION` to collect root partition statistics.
 
 When the value of the server configuration parameter [optimizer](#optimizer) is `on` \(the default\), the value of this parameter should also be `on`. For information about collecting table statistics on partitioned tables, see [ANALYZE](../sql_commands/ANALYZE.html).
 
-For information about the Postgres Planner and GPORCA, see [Querying Data](../../admin_guide/query/topics/query.html) in the *Greenplum Database Administrator Guide*.
+For information about the Postgres-based planner and GPORCA, see [Querying Data](../../admin_guide/query/topics/query.html) in the *Greenplum Database Administrator Guide*.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2432,9 +2432,9 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 ## <a id="optimizer_enable_dml"></a>optimizer\_enable\_dml 
 
-When GPORCA is enabled \(the default\) and this parameter is `true` \(the default\), GPORCA attempts to run DML commands such as `INSERT`, `UPDATE`, and `DELETE`. If GPORCA cannot run the command, Greenplum Database falls back to the Postgres Planner.
+When GPORCA is enabled \(the default\) and this parameter is `true` \(the default\), GPORCA attempts to run DML commands such as `INSERT`, `UPDATE`, and `DELETE`. If GPORCA cannot run the command, Greenplum Database falls back to the Postgres-based planner.
 
-When set to `false`, Greenplum Database always falls back to the Postgres Planner when performing DML commands.
+When set to `false`, Greenplum Database always falls back to the Postgres-based planner when performing DML commands.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
@@ -2460,7 +2460,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 ## <a id="optimizer_enable_foreign_table"></a>optimizer\_enable\_foreign\_table
 
-When GPORCA is enabled \(the default\) and this configuration parameter is `true` \(the default\), GPORCA generates plans for queries that involve foreign tables. When `false`, queries that include foreign tables fall back to the Postgres Planner.
+When GPORCA is enabled \(the default\) and this configuration parameter is `true` \(the default\), GPORCA generates plans for queries that involve foreign tables. When `false`, queries that include foreign tables fall back to the Postgres-based planner.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -2482,7 +2482,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 ## <a id="optimizer_enable_coordinator_only_queries"></a>optimizer\_enable\_coordinator\_only\_queries 
 
-When GPORCA is enabled \(the default\), this parameter allows GPORCA to run catalog queries that run only on the Greenplum Database coordinator. For the default value `off`, only the Postgres Planner can run catalog queries that run only on the Greenplum Database coordinator.
+When GPORCA is enabled \(the default\), this parameter allows GPORCA to run catalog queries that run only on the Greenplum Database coordinator. For the default value `off`, only the Postgres-based planner can run catalog queries that run only on the Greenplum Database coordinator.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
@@ -2496,7 +2496,7 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 
 ## <a id="optimizer_enable_multiple_distinct_aggs"></a>optimizer\_enable\_multiple\_distinct\_aggs 
 
-When GPORCA is enabled \(the default\), this parameter allows GPORCA to support Multiple Distinct Qualified Aggregates, such as `SELECT count(DISTINCT a),sum(DISTINCT b) FROM foo`. This parameter is deactivated by default because its plan is generally suboptimal in comparison to the plan generated by the Postgres planner.
+When GPORCA is enabled \(the default\), this parameter allows GPORCA to support Multiple Distinct Qualified Aggregates, such as `SELECT count(DISTINCT a),sum(DISTINCT b) FROM foo`. This parameter is deactivated by default because its plan is generally suboptimal in comparison to the plan generated by the Postgres-based planner.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
@@ -2526,7 +2526,7 @@ The `optimizer_enable_push_join_below_union_all` parameter can be set for a data
 
 When GPORCA is enabled \(the default\), this parameter controls GPORCA's behavior when it encounters DML operations on a replicated table.
 
-The default value is `on`, GPORCA attempts to plan and execute operations on replicated tables. When `off`, GPORCA immediately falls back to the Postgres Planner when it detects replicated table operations.
+The default value is `on`, GPORCA attempts to plan and execute operations on replicated tables. When `off`, GPORCA immediately falls back to the Postgres-based planner when it detects replicated table operations.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
@@ -2905,7 +2905,7 @@ Ensures that all identifiers are quoted, even if they are not keywords, when the
 
 ## <a id="random_page_cost"></a>random\_page\_cost 
 
-Sets the estimate of the cost of a nonsequentially fetched disk page for the Postgres Planner. This is measured as a multiple of the cost of a sequential page fetch. A higher value makes it more likely a sequential scan will be used, a lower value makes it more likely an index scan will be used.
+Sets the estimate of the cost of a nonsequentially fetched disk page for the Postgres-based planner. This is measured as a multiple of the cost of a sequential page fetch. A higher value makes it more likely a sequential scan will be used, a lower value makes it more likely an index scan will be used.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -3027,7 +3027,7 @@ Specifies the order in which schemas are searched when an object is referenced b
 
 ## <a id="seq_page_cost"></a>seq\_page\_cost 
 
-For the Postgres Planner, sets the estimate of the cost of a disk page fetch that is part of a series of sequential fetches.
+For the Postgres-based planner, sets the estimate of the cost of a disk page fetch that is part of a series of sequential fetches.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|

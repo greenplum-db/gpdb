@@ -211,7 +211,7 @@ DROP COLUMN [ IF EXISTS ]
 SET DATA TYPE
 :   This form changes the data type of a column of a table. Note that you cannot alter column data types that are being used as distribution or partitioning keys. Indexes and simple table constraints involving the column will be automatically converted to use the new column type by reparsing the originally supplied expression. The optional `COLLATE` clause specifies a collation for the new column; if omitted, the collation is the default for the new column type. The optional `USING` clause specifies how to compute the new column value from the old. If omitted, the default conversion is the same as an assignment cast from old data type to new. A `USING` clause must be provided if there is no implicit or assignment cast from old to new type.
 
-:   > **Note** The Greenplum Query Optimizer (GPORCA) supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres Planner.
+:   > **Note** The Greenplum Query Optimizer (GPORCA) supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres-based planner.
 
 :   Changing a column data type may or may not require a table rewrite. For information about table rewrites performed by `ALTER TABLE`, see [Notes](#section5).
 

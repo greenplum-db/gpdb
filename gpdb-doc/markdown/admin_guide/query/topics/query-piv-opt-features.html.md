@@ -127,7 +127,7 @@ GPORCA generates more efficient plans for the following types of subqueries:
     );
     ```
 
-    > **Note** Nested CSQ with skip level correlations are not supported by the Postgres Planner.
+    > **Note** Nested CSQ with skip level correlations are not supported by the Postgres-based planner.
 
 -   CSQ with aggregate and inequality. This example contains a CSQ with an inequality.
 

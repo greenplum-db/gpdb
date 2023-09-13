@@ -127,7 +127,7 @@ One of the values estimated by `ANALYZE` is the number of distinct values that a
 
 When Greenplum Database performs an `ANALYZE` operation to collect statistics for a table and detects that all the sampled table data pages are empty \(do not contain valid data\), Greenplum Database displays a message that a `VACUUM FULL` operation should be performed. If the sampled pages are empty, the table statistics will be inaccurate. Pages become empty after a large number of changes to the table, for example deleting a large number of rows. A `VACUUM FULL` operation removes the empty pages and allows an `ANALYZE` operation to collect accurate statistics.
 
-If there are no statistics for the table, the server configuration parameter [gp\_enable\_relsize\_collection](../config_params/guc-list.html) controls whether the Postgres Planner uses a default statistics file or estimates the size of a table using the `pg_relation_size` function. By default, the Postgres Planner uses the default statistics file to estimate the number of rows if statistics are not available.
+If there are no statistics for the table, the server configuration parameter [gp\_enable\_relsize\_collection](../config_params/guc-list.html) controls whether the Postgres-based planner uses a default statistics file or estimates the size of a table using the `pg_relation_size` function. By default, the Postgres-based planner uses the default statistics file to estimate the number of rows if statistics are not available.
 
 ## <a id="section6"></a>Examples 
 

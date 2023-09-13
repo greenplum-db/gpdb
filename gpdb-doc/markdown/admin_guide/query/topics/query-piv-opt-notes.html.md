@@ -26,7 +26,7 @@ These server configuration parameters affect GPORCA query processing.
 -   `optimizer_nestloop_factor` controls nested loop join cost factor to apply to during query optimization.
 -   `optimizer_parallel_union` controls the amount of parallelization that occurs for queries that contain a `UNION` or `UNION ALL` clause. When the value is `on`, GPORCA can generate a query plan of the child operations of a `UNION` or `UNION ALL` operation run in parallel on segment instances.
 -   `optimizer_sort_factor` controls the cost factor that GPORCA applies to sorting operations during query optimization. The cost factor can be adjusted for queries when data skew is present.
--   `gp_enable_relsize_collection` controls how GPORCA \(and the Postgres Planner\) handle a table without statistics. By default, GPORCA uses a default value to estimate the number of rows if statistics are not available. When this value is `on`, GPORCA uses the estimated size of a table if there are no statistics for the table.
+-   `gp_enable_relsize_collection` controls how GPORCA \(and the Postgres-based planner\) handle a table without statistics. By default, GPORCA uses a default value to estimate the number of rows if statistics are not available. When this value is `on`, GPORCA uses the estimated size of a table if there are no statistics for the table.
 
     This parameter is ignored for a root partitioned table. If the root partition does not have statistics, GPORCA always uses the default value. You can use `ANALZYE ROOTPARTITION` to collect statistics on the root partition. See [ANALYZE](../../../ref_guide/sql_commands/ANALYZE.html).
 

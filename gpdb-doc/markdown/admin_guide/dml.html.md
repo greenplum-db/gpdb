@@ -103,7 +103,7 @@ UPDATE products SET price = 10 WHERE price = 5;
 
 Using `UPDATE` in Greenplum Database has the following restrictions:
 
--   While GPORCA supports updates to Greenplum distribution key columns, the Postgres Planner does not.
+-   While GPORCA supports updates to Greenplum distribution key columns, the Postgres-based planner does not.
 -   If mirrors are enabled, you cannot use `STABLE` or `VOLATILE` functions in an `UPDATE` statement.
 -   Greenplum Database partitioning columns cannot be updated.
 
@@ -204,7 +204,7 @@ If the Global Deadlock Detector determines that deadlock exists, it breaks the d
 When the Global Deadlock Detector determines a deadlock exists for the following types of transactions, only one of the transactions will succeed. The other transactions will fail with an error indicating that concurrent updates to the same row is not allowed.
 
 -   Concurrent transactions on the same row of a heap table where the first transaction is an update operation and a later transaction runs an update or delete and the query plan contains a motion operator.
--   Concurrent update transactions on the same distribution key of a heap table that are run by the Postgres Planner.
+-   Concurrent update transactions on the same distribution key of a heap table that are run by the Postgres-based planner.
 -   Concurrent update transactions on the same row of a hash table that are run by the GPORCA optimizer.
 
 > **Note** Greenplum Database uses the interval specified in the [deadlock\_timeout](../ref_guide/config_params/guc-list.html) server configuration parameter for local deadlock detection. Because the local and global deadlock detection algorithms differ, the cancelled process\(es\) may differ depending upon which detector \(local or global\) Greenplum Database triggers first.
@@ -250,7 +250,7 @@ ERROR:  canceling statement due to user request: "cancelled by global deadlock d
 
 The Global Deadlock Detector can manage concurrent updates for these types of `UPDATE` and `DELETE` commands on heap tables:
 
--   Simple `UPDATE` of a single table. Update a non-distribution key with the Postgres Planner. The command does not contain a `FROM` clause, or a sub-query in the `WHERE` clause.
+-   Simple `UPDATE` of a single table. Update a non-distribution key with the Postgres-based planner. The command does not contain a `FROM` clause, or a sub-query in the `WHERE` clause.
 
     ```
     UPDATE t SET c2 = c2 + 1 WHERE c1 > 10;
@@ -262,7 +262,7 @@ The Global Deadlock Detector can manage concurrent updates for these types of `U
     DELETE FROM t WHERE c1 > 10;
     ```
 
--   Split `UPDATE`. For the Postgres Planner, the `UPDATE` command updates a distribution key.
+-   Split `UPDATE`. For the Postgres-based planner, the `UPDATE` command updates a distribution key.
 
     ```
     UPDATE t SET c = c + 1; -- c is a distribution key

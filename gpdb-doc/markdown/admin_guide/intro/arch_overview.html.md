@@ -12,7 +12,7 @@ Greenplum Database can use the append-optimized \(AO\) storage format for bulk l
 
 The main differences between Greenplum Database and PostgreSQL are as follows:
 
--   GPORCA is leveraged for query planning, in addition to the Postgres Planner.
+-   GPORCA is leveraged for query planning, in addition to the Postgres-based planner.
 -   Greenplum Database can use append-optimized storage.
 -   Greenplum Database has the option to use column storage, data that is logically organized as a table, using rows and columns that are physically stored in a column-oriented format, rather than as rows. Column storage can only be used with append-optimized tables. Column storage is compressible. It also can provide performance improvements as you only need to return the columns of interest to you. All compression algorithms can be used with either row or column-oriented tables, but Run-Length Encoded \(RLE\) compression can only be used with column-oriented tables. Greenplum Database provides compression on all Append-Optimized tables that use column storage.
 

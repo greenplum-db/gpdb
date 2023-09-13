@@ -76,7 +76,7 @@ PARTITION BY LIST (color)
   DEFAULT PARTITION other );
 ```
 
-> **Note** While the Postgres Planner allows list partitions with multi-column (composite) partition keys, the Greenplum Query Optimizer does not support this.
+> **Note** While the Postgres-based planner allows list partitions with multi-column (composite) partition keys, the Greenplum Query Optimizer does not support this.
 
 ### <a id="topic70c"></a>Defining Multi-level Partitions 
 

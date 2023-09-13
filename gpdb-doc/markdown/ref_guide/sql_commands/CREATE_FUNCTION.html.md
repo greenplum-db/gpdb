@@ -274,7 +274,7 @@ These are limitations for functions defined with the `EXECUTE ON COORDINATOR` or
 -   The function must be a set-returning function.
 -   The function cannot be in the `FROM` clause of a query.
 -   The function cannot be in the `SELECT` list of a query with a `FROM` clause.
--   A query that includes the function falls back from GPORCA to the Postgres Planner.
+-   A query that includes the function falls back from GPORCA to the Postgres-based planner.
 
 The attribute `EXECUTE ON INITPLAN` indicates that the function contains an SQL command that dispatches queries to the segment instances and requires special processing on the coordinator instance by Greenplum Database. When possible, Greenplum Database handles the function on the coordinator instance in the following manner.
 

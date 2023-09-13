@@ -202,7 +202,7 @@ CREATE OPERATOR CLASS abs_int_hash_ops FOR TYPE int4
   FUNCTION 1 abshashfunc(int);
 ```
 
-Also, create less than and greater than operators, and a btree operator class for them. We don't need them for our queries, but the Postgres Planner will not consider co-location of joins without them.
+Also, create less than and greater than operators, and a btree operator class for them. We don't need them for our queries, but the Postgres-based planner will not consider co-location of joins without them.
 
 ```
 CREATE FUNCTION abslt(int, int) RETURNS BOOL AS

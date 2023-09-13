@@ -145,9 +145,9 @@ These parameters control the usage of GPORCA by Greenplum Database. For informat
 
 These parameters control aspects of SQL query processing such as query operators and operator settings and statistics sampling.
 
-### <a id="topic22"></a>Postgres Planner Control Parameters 
+### <a id="topic22"></a>Postgres-based planner Control Parameters 
 
-The following parameters control the types of plan operations the Postgres Planner can use. Enable or deactivate plan operations to force the Postgres Planner to choose a different plan. This is useful for testing and comparing query performance using different plan types.
+The following parameters control the types of plan operations the Postgres-based planner can use. Enable or deactivate plan operations to force the Postgres-based planner to choose a different plan. This is useful for testing and comparing query performance using different plan types.
 
 - [enable_bitmapscan](guc-list.html#enable_bitmapscan)
 - [enable_groupagg](guc-list.html#enable_groupagg)
@@ -173,7 +173,7 @@ The following parameters control the types of plan operations the Postgres Plann
 - [gp_enable_relsize_collection](guc-list.html#gp_enable_relsize_collection)
 - [gp_enable_sort_limit](guc-list.html#gp_enable_sort_limit)
 
-### <a id="topic23"></a>Postgres Planner Costing Parameters 
+### <a id="topic23"></a>Postgres-based planner Costing Parameters 
 
 > **Caution** Do not adjust these query costing parameters. They are tuned to reflect Greenplum Database hardware configurations and typical workloads. All of these parameters are related. Changing one without changing the others can have adverse affects on performance.
 
@@ -214,7 +214,7 @@ These parameters adjust the amount of data sampled by an `ANALYZE` operation. Ad
 - [gp_hashjoin_tuples_per_bucket](guc-list.html#gp_hashjoin_tuples_per_bucket)
 - [gp_workfile_compression](guc-list.html#gp_workfile_compression)
 
-### <a id="topic28"></a>Other Postgres Planner Configuration Parameters 
+### <a id="topic28"></a>Other Postgres-based planner Configuration Parameters 
 
 - [from_collapse_limit](guc-list.html#from_collapse_limit)
 - [gp_enable_predicate_propagation](guc-list.html#gp_enable_predicate_propagation)

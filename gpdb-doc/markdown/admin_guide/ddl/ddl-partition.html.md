@@ -422,7 +422,7 @@ WHERE c.relispartition = 't';
 
 *Partition pruning* is a query optimization technique that improves performance for declaratively partitioned tables.
 
-You can enable or disable partition pruning for the Postgres Planner by setting the [enable_partition_pruning](../../ref_guide/config_params/guc-list.html#enable_partition_pruning) server configuration parameter.
+You can enable or disable partition pruning for the Postgres-based planner by setting the [enable_partition_pruning](../../ref_guide/config_params/guc-list.html#enable_partition_pruning) server configuration parameter.
 
 As an example:
 
@@ -433,7 +433,7 @@ SELECT count(*) FROM measurement WHERE logdate >= DATE '2021-01-01';
 
 Without partition pruning, the above query would scan each of the partitions of the `measurement` table. With partition pruning enabled, the planner or query optimizer examines the definition of each partition to prove that the partition need not be scanned because it could not contain any rows meeting the query's `WHERE` clause. When the planner or query optimizer can prove this, it excludes (prunes) the partition from the query plan.
 
-Using the `EXPLAIN` command and the `enable_partition_pruning` configuration parameter, it's possible to show the difference between a plan for which partitions have been pruned and one for which they have not. A typical unoptimized plan from the Postgres Planner for this type of table setup is:
+Using the `EXPLAIN` command and the `enable_partition_pruning` configuration parameter, it's possible to show the difference between a plan for which partitions have been pruned and one for which they have not. A typical unoptimized plan from the Postgres-based planner for this type of table setup is:
 
 ```
 SET enable_partition_pruning = off;
@@ -654,7 +654,7 @@ Take note of the following Greenplum Database partitioned table limitations:
 
 - A partitioned table can have a maximum of 32,767 partitions at each level.
 - Greenplum does not support partitioning replicated tables (tables created with the `DISTRIBUTED REPLICATED` distribution policy).
-- The Greenplum Query Optimizer (GPORCA) does not support uniform multi-level partitioned tables. If GPORCA is enabled (the default) and the partitioned table is multi-level, Greenplum Database runs queries against the table with the Postgres Planner.
+- The Greenplum Query Optimizer (GPORCA) does not support uniform multi-level partitioned tables. If GPORCA is enabled (the default) and the partitioned table is multi-level, Greenplum Database runs queries against the table with the Postgres-based planner.
 - The Greenplum Database `gpbackup` utility does not back up data from a leaf partition of a partitioned table when the leaf partition is an external or foreign table.
 - To create a unique or primary key constraint on a partitioned table, the partition keys must not include any expressions or function calls and the constraint's columns must include all of the partition key columns. This limitation exists because the individual indexes making up the constraint can only directly enforce uniqueness within their own partitions; the partition structure itself must guarantee that there are not duplicates in different partitions.
 - There is no way to create an exclusion constraint spanning the whole partitioned table. You can put such a constraint only on each leaf partition individually. This limitation stems from not being able to enforce cross-partition restrictions.

@@ -208,7 +208,7 @@ histogram\_bounds
 :   An array of values that divide the column values into groups of approximately the same size. A histogram can be defined only if there is a `max()` aggregate function for the column. The number of groups in the histogram is the same as the `most_common_vals` array size.
 
 correlation
-:   Greenplum Database computes correlation statistics for both heap and AO/AOCO tables, but the Postgres Planner uses these statistics only for heap tables.
+:   Greenplum Database computes correlation statistics for both heap and AO/AOCO tables, but the Postgres-based planner uses these statistics only for heap tables.
 
 most\_common\_elems
 :   An array that contains the most common element values.
@@ -245,7 +245,7 @@ When the `ANALYZE` command is run on a partitioned table, it analyzes each leaf 
 
 The `analyzedb` command-line utility skips unchanged partitions automatically. It also runs concurrent sessions so it can analyze several partitions concurrently. It runs five sessions by default, but the number of sessions can be set from 1 to 10 with the `-p` command-line option. Each time `analyzedb` runs, it saves state information for append-optimized tables and partitions in the `db_analyze` directory in the coordinator data directory. The next time it runs, `analyzedb` compares the current state of each table with the saved state and skips analyzing a table or partition if it is unchanged. Heap tables are always analyzed.
 
-If GPORCA is enabled \(the default\), you also need to run `ANALYZE` or `ANALYZE ROOTPARTITION` on the root partitioned table \(not a leaf partition\) to refresh the root partition statistics. GPORCA requires statistics at the root level for partitioned tables. The Postgres Planner does not use these statistics.
+If GPORCA is enabled \(the default\), you also need to run `ANALYZE` or `ANALYZE ROOTPARTITION` on the root partitioned table \(not a leaf partition\) to refresh the root partition statistics. GPORCA requires statistics at the root level for partitioned tables. The Postgres-based planner does not use these statistics.
 
 The time to analyze a partitioned table is similar to the time to analyze a non-partitioned table with the same data. When all the leaf partitions have statistics, performing `ANALYZE ROOTPARTITION` to generate root partition statistics should be quick \(a few seconds depending on the number of partitions and table columns\). If some of the leaf partitions do not have statistics, then all the table data is sampled to generate root partition statistics. Sampling table data takes longer and results in lower quality root partition statistics.
 
@@ -259,7 +259,7 @@ There are several options for configuring Greenplum Database statistics collecti
 
 ### <a id="stattarg"></a>Statistics Target 
 
-The statistics target is the size of the `most_common_vals`, `most_common_freqs`, and `histogram_bounds` arrays for an individual column. By default, the target is 25. The default target can be changed by setting a server configuration parameter and the target can be set for any column using the `ALTER TABLE` command. Larger values increase the time needed to do `ANALYZE`, but may improve the quality of the Postgres Planner estimates.
+The statistics target is the size of the `most_common_vals`, `most_common_freqs`, and `histogram_bounds` arrays for an individual column. By default, the target is 25. The default target can be changed by setting a server configuration parameter and the target can be set for any column using the `ALTER TABLE` command. Larger values increase the time needed to do `ANALYZE`, but may improve the quality of the Postgres-based planner estimates.
 
 Set the system default statistics target to a different value by setting the `default_statistics_target` server configuration parameter. The default value is usually sufficient, and you should only raise or lower it if your tests demonstrate that query plans improve with the new target. For example, to raise the default statistics target from 100 to 150 you can use the `gpconfig` utility:
 
