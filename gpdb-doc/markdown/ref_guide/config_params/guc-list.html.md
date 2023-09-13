@@ -165,7 +165,7 @@ You can set this parameter only in the `postgresql.conf` file or on the server c
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|0.0 - 1.0 (floating point) |0.5|coordinator, system, restart|
+|0.0 - 1.0 (floating point) |0.5|local, system, reload|
 
 ## <a id="checkpoint_flush_after"></a>checkpoint\_flush\_after
 
