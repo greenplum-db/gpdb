@@ -16,7 +16,7 @@ This section describes the limitations.
 Certain query features are not supported with the default GPORCA optimizer. When an unsupported query is run, Greenplum logs this notice along with the query text:
 
 ```
-Feature not supported by the Greenplum Query Optimizer: UTILITY command
+Falling back to Postgres-based planner because GPORCA does not support the following feature: UTILITY command
 ```
 
 These features are unsupported when GPORCA is enabled \(the default\):

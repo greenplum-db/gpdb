@@ -81,6 +81,6 @@ explain select * from pg_class;
 A message is added to the log file. The message contains this `NOTICE` information that indicates the reason GPORCA did not run the query:
 
 ```
-NOTICE,""Feature not supported: Queries on coordinator-only tables"
+NOTICE,""Falling back to Postgres-based planner because GPORCA does not support the following feature: Queries on coordinator-only tables"
 ```
 
