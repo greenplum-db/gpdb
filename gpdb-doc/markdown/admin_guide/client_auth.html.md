@@ -135,7 +135,7 @@ The following table describes meaning of each field.
             <tr class="row">
               <td class="entry" headers="topic2__ip141709__entry__1">authentication-method</td>
               <td class="entry" headers="topic2__ip141709__entry__2">Specifies the authentication method to use when connecting.
-                Greenplum supports the <a class="xref" href="https://www.postgresql.org/docs/12/auth-methods.html" target="_blank" rel="external noopener">authentication methods</a> supported by PostgreSQL 9.4.</td>
+                Greenplum supports the <a class="xref" href="https://www.postgresql.org/docs/12/auth-methods.html" target="_blank" rel="external noopener">authentication methods</a> supported by PostgreSQL 12.</td>
             </tr>
           </tbody></table>
 
