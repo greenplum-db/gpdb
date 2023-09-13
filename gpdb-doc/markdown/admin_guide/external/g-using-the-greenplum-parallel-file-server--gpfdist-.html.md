@@ -70,7 +70,7 @@ $ gpfdist -d /var/load_files -p 8081 -l /home/`gpadmin`/log &
 
 ```
 
-For multiple gpfdist instances on the same ETL host \(see [Figure 1](#du165872)\), use a different base directory and port for each instance. For example:
+For multiple gpfdist instances on the same ETL host, use a different base directory and port for each instance. For example:
 
 ```
 $ gpfdist -d /var/load_files1 -p 8081 -l /home/`gpadmin`/log1 &

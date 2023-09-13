@@ -262,7 +262,7 @@ SELECT 'hpt_p1' AS partition, count(*) AS row_count FROM hpt_p1
 
 You can create a multi-level partition hierarchy by sub-partitioning partitions.
 
-The following modern syntax commands create a two-level partition design similar to that shown in the [Figure](#im207241) at the beginning of this topic.
+The following modern syntax commands create a two-level partition design similar to that shown in the figure at the beginning of this topic.
 
 Create a table named `msales` that is partitioned by year:
 
@@ -332,7 +332,7 @@ A best practice for loading data into partitioned tables is to create an interme
 
 When a table is partitioned based on the query predicate, you can use [EXPLAIN](../../ref_guide/sql_commands/EXPLAIN.html) to verify that the query optimizer scans only the relevant data to examine the query plan.
 
-For example, suppose a table named `msales` is year-range partitioned and sub-partitioned by `region` as shown in [Figure 1](#im207241). For the following query:
+For example, suppose a table named `msales` is year-range partitioned and sub-partitioned by `region`. For the following query:
 
 ```
 EXPLAIN SELECT * FROM msales WHERE year='2021' AND region='usa';
