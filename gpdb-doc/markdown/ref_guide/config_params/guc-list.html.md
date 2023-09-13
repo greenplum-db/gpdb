@@ -2909,7 +2909,7 @@ The contents of the WAL buffers are written out to disk at every transaction com
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|-1 - (INT_MAX / XLOG_BLCKSZ) (integer) | -1 |coordinator, system, restart|
+|-1 - (INT_MAX / XLOG_BLCKSZ) (integer) | -1 |local, system, restart|
 
 ## <a id="wal_compression"></a>wal_compression
 
