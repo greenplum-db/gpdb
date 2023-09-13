@@ -52,6 +52,7 @@
 -   [pg\_resqueue](pg_resqueue.html)
 -   [pg\_resqueuecapability](pg_resqueuecapability.html)
 -   [pg\_rewrite](pg_rewrite.html)
+-   [pg_sequence](pg_sequence.html)
 -   [pg\_shdepend](pg_shdepend.html)
 -   [pg\_shdescription](pg_shdescription.html)
 -   [pg\_stat\_last\_operation](pg_stat_last_operation.html)
