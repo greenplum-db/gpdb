@@ -129,7 +129,7 @@ CMessageRepository::GetMessageRepository()
 void
 CMessageRepository::Shutdown()
 {
-	GPOS_ASSERT(NULL != m_repository);
+	GPOS_ASSERT(nullptr != m_repository);
 	CMemoryPoolManager::Destroy(m_repository->m_mp);
 	m_repository = nullptr;
 }
