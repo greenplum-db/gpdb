@@ -246,7 +246,8 @@ select paramsegment,paramname from gp_toolkit.gp_param_settings() where paramnam
 
 -- Expected to have no results
 -- However it will show there is a difference if segment guc is different
-select * from gp_toolkit.gp_param_settings_seg_value_diffs;
+-- primary_conninfo can be different due to failovers in isolation2 tests
+select * from gp_toolkit.gp_param_settings_seg_value_diffs where psdname != 'primary_conninfo';
 
 
 -- gp_locks_on_relation

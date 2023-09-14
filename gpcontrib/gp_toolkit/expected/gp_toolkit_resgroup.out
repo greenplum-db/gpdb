@@ -1,4 +1,5 @@
 -- Tests for the functions and views in gp_toolkit
+-- gp_resource_manager=none need to be set for this test to run as expected.
 -- Create an empty database to test in, because some of the gp_toolkit views
 -- are really slow, when there are a lot of objects in the database.
 create database toolkit_testdb;
@@ -417,7 +418,8 @@ select paramsegment,paramname from gp_toolkit.gp_param_settings() where paramnam
 
 -- Expected to have no results
 -- However it will show there is a difference if segment guc is different
-select * from gp_toolkit.gp_param_settings_seg_value_diffs;
+-- primary_conninfo can be different due to failovers in isolation2 tests
+select * from gp_toolkit.gp_param_settings_seg_value_diffs where psdname != 'primary_conninfo';
  psdname | psdvalue | psdcount 
 ---------+----------+----------
 (0 rows)
@@ -666,9 +668,3 @@ reset session authorization;
 drop database toolkit_testdb;
 drop role toolkit_user1;
 drop role toolkit_admin;
--- Enable resource queue for the next test gp_toolkit_resqueue.
--- Have to do it here because the required server restart would kill existing test connections. But kill completed ones is OK.
-\! echo $?
-0
-\! echo $?
-0

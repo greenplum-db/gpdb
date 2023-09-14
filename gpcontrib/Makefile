@@ -73,3 +73,4 @@ installcheck:
 	if [ "$(with_zstd)" = "yes" ]; then $(MAKE) -C zstd installcheck; fi
 	$(MAKE) -C gp_sparse_vector installcheck
 	$(MAKE) -C gp_exttable_fdw installcheck
+	$(MAKE) -C gp_toolkit installcheck

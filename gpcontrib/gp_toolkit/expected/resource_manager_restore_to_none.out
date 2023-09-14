@@ -1,0 +1,36 @@
+-- start_ignore
+\! gpconfig -c gp_resource_manager -v none
+20230110:23:11:33:399571 gpconfig:ubuntu:gpadmin-[INFO]:-completed successfully with parameters '-c gp_resource_manager -v none'
+-- end_ignore
+\! echo $?
+0
+-- start_ignore
+\! gpstop -rai
+20230110:23:11:33:400128 gpstop:ubuntu:gpadmin-[INFO]:-Starting gpstop with args: -rai
+20230110:23:11:33:400128 gpstop:ubuntu:gpadmin-[INFO]:-Gathering information and validating the environment...
+20230110:23:11:33:400128 gpstop:ubuntu:gpadmin-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20230110:23:11:33:400128 gpstop:ubuntu:gpadmin-[INFO]:-Obtaining Segment details from coordinator...
+20230110:23:11:33:400128 gpstop:ubuntu:gpadmin-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.16142.g1f3e5a0825 build dev'
+20230110:23:11:33:400128 gpstop:ubuntu:gpadmin-[INFO]:-Commencing Coordinator instance shutdown with mode='immediate'
+20230110:23:11:33:400128 gpstop:ubuntu:gpadmin-[INFO]:-Coordinator segment instance directory=/home/gpadmin/zxj/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20230110:23:11:33:400128 gpstop:ubuntu:gpadmin-[INFO]:-Attempting forceful termination of any leftover coordinator process
+20230110:23:11:33:400128 gpstop:ubuntu:gpadmin-[INFO]:-Terminating processes for segment /home/gpadmin/zxj/workspace/gpdb/gpAux/gpdemo/datadirs/qddir/demoDataDir-1
+20230110:23:11:34:400128 gpstop:ubuntu:gpadmin-[INFO]:-Stopping coordinator standby host ubuntu mode=immediate
+20230110:23:11:35:400128 gpstop:ubuntu:gpadmin-[INFO]:-Successfully shutdown standby process on ubuntu
+20230110:23:11:35:400128 gpstop:ubuntu:gpadmin-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
+20230110:23:11:35:400128 gpstop:ubuntu:gpadmin-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
+20230110:23:11:35:400128 gpstop:ubuntu:gpadmin-[INFO]:-0.00% of jobs completed
+20230110:23:11:35:400128 gpstop:ubuntu:gpadmin-[INFO]:-100.00% of jobs completed
+20230110:23:11:35:400128 gpstop:ubuntu:gpadmin-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
+20230110:23:11:35:400128 gpstop:ubuntu:gpadmin-[INFO]:-0.00% of jobs completed
+20230110:23:11:36:400128 gpstop:ubuntu:gpadmin-[INFO]:-100.00% of jobs completed
+20230110:23:11:36:400128 gpstop:ubuntu:gpadmin-[INFO]:-----------------------------------------------------
+20230110:23:11:36:400128 gpstop:ubuntu:gpadmin-[INFO]:-   Segments stopped successfully      = 6
+20230110:23:11:36:400128 gpstop:ubuntu:gpadmin-[INFO]:-   Segments with errors during stop   = 0
+20230110:23:11:36:400128 gpstop:ubuntu:gpadmin-[INFO]:-----------------------------------------------------
+20230110:23:11:36:400128 gpstop:ubuntu:gpadmin-[INFO]:-Successfully shutdown 6 of 6 segment instances 
+20230110:23:11:36:400128 gpstop:ubuntu:gpadmin-[INFO]:-Database successfully shutdown with no errors reported
+20230110:23:11:36:400128 gpstop:ubuntu:gpadmin-[INFO]:-Restarting System...
+-- end_ignore
+\! echo $?
+0
