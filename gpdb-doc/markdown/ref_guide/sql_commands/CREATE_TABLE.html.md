@@ -249,7 +249,7 @@ data\_type
 COLLATE collation
 :   The `COLLATE` clause assigns a collation to the column (which must be of a collatable data type). If not specified, the column data type's default collation is used.
 
-    > **Note** The Greenplum Query Optimizer (GPORCA) supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres-based planner.
+    > **Note** The Greenplum query optimizer (GPORCA) supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres-based planner.
 
 ENCODING ( storage\_directive [, ...] )
 :   For a column, the optional `ENCODING` clause specifies the type of compression and block size for the column data. Valid column storage\_directives are `compresstype`, `compresslevel`, and `blocksize`.
@@ -698,7 +698,7 @@ For append-optimized tables, `UPDATE` and `DELETE` are not allowed in a repeatab
 
 `CLUSTER` on append-optimized tables is only supported over B-tree indexes.
 
-The Greenplum Query Optimizer does not support list partitions with multi-column (composite) partition keys.
+GPORCA does not support list partitions with multi-column (composite) partition keys.
 
 ## <a id="section6"></a>Examples
 

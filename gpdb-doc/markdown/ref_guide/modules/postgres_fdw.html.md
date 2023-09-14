@@ -21,7 +21,7 @@ Before you [create a foreign table](../sql_commands/CREATE_FOREIGN_TABLE.html) u
 | multi_hosts | Space-separated list of remote PostgreSQL server host names. | You must specify exactly `num_segments` number of hosts in the list. |
 | multi_ports | Space-separated list of port numbers for the PostgreSQL servers. | You must specify exactly one port number for each host specified in `multi_hosts`, in order. |
 
-<sup>1</sup> The Greenplum Query Optimizer (GPORCA) can plan and optimize queries only when `num_segments` is equal to the number of segments in the local Greenplum cluster. When `num_segments` is any other value, a query always falls back to the Postgres-based planner.
+<sup>1</sup> The Greenplum query optimizer (GPORCA) can plan and optimize queries only when `num_segments` is equal to the number of segments in the local Greenplum cluster. When `num_segments` is any other value, a query always falls back to the Postgres-based planner.
 
 Setting these options instructs `postgres_fdw` to treat a foreign table that you create that specifes this `SERVER` as a *distributed* foreign table. That is, a foreign table whose underlying data is stored on multiple remote PostgreSQL servers. `postgres_fdw` directs a query on such a foreign table to each PostgreSQL server specified in `multi_hosts`.
 
@@ -42,7 +42,7 @@ OPTIONS (multi_hosts 'pghost1 pghost2', multi_ports '5432 5555', num_segments '2
 - The aggregate function is not `array_agg()`.
 - The query contains no `LIMIT` or `JOIN` clauses.
 
-> **Note** `postgres_fdw` does not support partial aggregate pushdown when the Greenplum Query Optimizer (GPORCA) is enabled for a query.
+> **Note** `postgres_fdw` does not support partial aggregate pushdown when the Greenplum query optimizer (GPORCA) is enabled for a query.
 
 ## <a id="limit_pushdown"></a>About Limit Pushdown Support
 

@@ -654,7 +654,7 @@ Take note of the following Greenplum Database partitioned table limitations:
 
 - A partitioned table can have a maximum of 32,767 partitions at each level.
 - Greenplum does not support partitioning replicated tables (tables created with the `DISTRIBUTED REPLICATED` distribution policy).
-- The Greenplum Query Optimizer (GPORCA) does not support uniform multi-level partitioned tables. If GPORCA is enabled (the default) and the partitioned table is multi-level, Greenplum Database runs queries against the table with the Postgres-based planner.
+- The Greenplum query optimizer (GPORCA) does not support uniform multi-level partitioned tables. If GPORCA is enabled (the default) and the partitioned table is multi-level, Greenplum Database runs queries against the table with the Postgres-based planner.
 - The Greenplum Database `gpbackup` utility does not back up data from a leaf partition of a partitioned table when the leaf partition is an external or foreign table.
 - To create a unique or primary key constraint on a partitioned table, the partition keys must not include any expressions or function calls and the constraint's columns must include all of the partition key columns. This limitation exists because the individual indexes making up the constraint can only directly enforce uniqueness within their own partitions; the partition structure itself must guarantee that there are not duplicates in different partitions.
 - There is no way to create an exclusion constraint spanning the whole partitioned table. You can put such a constraint only on each leaf partition individually. This limitation stems from not being able to enforce cross-partition restrictions.

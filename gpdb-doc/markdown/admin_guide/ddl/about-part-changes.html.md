@@ -102,7 +102,7 @@ The following items describe the Greenplum 7 *changes* to classic partitioning s
     - The partitions created from a `SPLIT PARTITION` inherit the properties of the split child.
     - An attached partition maintains its original properties.
 
-> **Note** GPORCA (Greenplum Query Optimizer) does not support multi-level partitioned tables.
+> **Note** The Greenplum query optimizer (GPORCA) does not support multi-level partitioned tables.
 
 ## <a id="other"></a>Additional Considerations
 
