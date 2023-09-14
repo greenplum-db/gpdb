@@ -354,3 +354,13 @@ vacuum freeze pg_stat_last_shoperation;
 select count_unfrozen_rows('pg_stat_last_operation');
 select count_unfrozen_rows('pg_stat_last_shoperation');
 
+-- Multiple VACUUM commands run on a table should not distort the values of reltuples.
+CREATE TABLE vac_reltuple_distortion(a int) DISTRIBUTED BY (a);
+INSERT INTO vac_reltuple_distortion SELECT generate_series(1, 1000000);
+ANALYZE vac_reltuple_distortion;
+SELECT reltuples, relname FROM pg_class WHERE oid='vac_reltuple_distortion'::regclass;
+VACUUM vac_reltuple_distortion;
+VACUUM vac_reltuple_distortion; -- 2nd call to VACUUM after ANALYZE
+SELECT reltuples, relname FROM pg_class WHERE oid='vac_reltuple_distortion'::regclass;
+VACUUM vac_reltuple_distortion;
+SELECT reltuples, relname FROM pg_class WHERE oid='vac_reltuple_distortion'::regclass;
