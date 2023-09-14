@@ -47,17 +47,48 @@ typedef struct PartitionDirectoryEntry
 	PartitionDesc pd;
 } PartitionDirectoryEntry;
 
+static void RelationBuildPartitionDesc(Relation rel);
+
+
+/*
+ * RelationGetPartitionDesc -- get partition descriptor, if relation is partitioned
+ *
+ * Note: we arrange for partition descriptors to not get freed until the
+ * relcache entry's refcount goes to zero (see hacks in RelationClose,
+ * RelationClearRelation, and RelationBuildPartitionDesc).  Therefore, even
+ * though we hand back a direct pointer into the relcache entry, it's safe
+ * for callers to continue to use that pointer as long as (a) they hold the
+ * relation open, and (b) they hold a relation lock strong enough to ensure
+ * that the data doesn't become stale.
+ */
+PartitionDesc
+RelationGetPartitionDesc(Relation rel)
+{
+	if (rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+		return NULL;
+
+	if (unlikely(rel->rd_partdesc == NULL))
+		RelationBuildPartitionDesc(rel);
+
+	return rel->rd_partdesc;
+}
+
 /*
  * RelationBuildPartitionDesc
  *		Form rel's partition descriptor, and store in relcache entry
  *
- * Note: the descriptor won't be flushed from the cache by
- * RelationClearRelation() unless it's changed because of
- * addition or removal of a partition.  Hence, code holding a lock
- * that's sufficient to prevent that can assume that rd_partdesc
- * won't change underneath it.
+ * Partition descriptor is a complex structure; to avoid complicated logic to
+ * free individual elements whenever the relcache entry is flushed, we give it
+ * its own memory context, a child of CacheMemoryContext, which can easily be
+ * deleted on its own.  To avoid leaking memory in that context in case of an
+ * error partway through this function, the context is initially created as a
+ * child of CurTransactionContext and only re-parented to CacheMemoryContext
+ * at the end, when no further errors are possible.  Also, we don't make this
+ * context the current context except in very brief code sections, out of fear
+ * that some of our callees allocate memory on their own which would be leaked
+ * permanently.
  */
-void
+static void
 RelationBuildPartitionDesc(Relation rel)
 {
 	PartitionDesc partdesc;
@@ -65,10 +96,12 @@ RelationBuildPartitionDesc(Relation rel)
 	List	   *inhoids;
 	PartitionBoundSpec **boundspecs = NULL;
 	Oid		   *oids = NULL;
+	bool	   *is_leaf = NULL;
 	ListCell   *cell;
 	int			i,
 				nparts;
 	PartitionKey key = RelationGetPartitionKey(rel);
+	MemoryContext new_pdcxt;
 	MemoryContext oldcxt;
 	MemoryContext rbcontext;
 	int		   *mapping;
@@ -103,10 +136,11 @@ RelationBuildPartitionDesc(Relation rel)
 	inhoids = find_inheritance_children(RelationGetRelid(rel), NoLock);
 	nparts = list_length(inhoids);
 
-	/* Allocate arrays for OIDs and boundspecs. */
+	/* Allocate working arrays for OIDs, leaf flags, and boundspecs. */
 	if (nparts > 0)
 	{
-		oids = palloc(nparts * sizeof(Oid));
+		oids = (Oid *) palloc(nparts * sizeof(Oid));
+		is_leaf = (bool *) palloc(nparts * sizeof(bool));
 		boundspecs = palloc(nparts * sizeof(PartitionBoundSpec *));
 	}
 
@@ -196,44 +230,43 @@ RelationBuildPartitionDesc(Relation rel)
 
 		/* Save results. */
 		oids[i] = inhrelid;
+		is_leaf[i] = (get_rel_relkind(inhrelid) != RELKIND_PARTITIONED_TABLE);
 		boundspecs[i] = boundspec;
 		++i;
 	}
 
-	/* Assert we aren't about to leak any old data structure */
-	Assert(rel->rd_pdcxt == NULL);
-	Assert(rel->rd_partdesc == NULL);
-
 	/*
-	 * Now build the actual relcache partition descriptor.  Note that the
-	 * order of operations here is fairly critical.  If we fail partway
-	 * through this code, we won't have leaked memory because the rd_pdcxt is
-	 * attached to the relcache entry immediately, so it'll be freed whenever
-	 * the entry is rebuilt or destroyed.  However, we don't assign to
-	 * rd_partdesc until the cached data structure is fully complete and
-	 * valid, so that no other code might try to use it.
+	 * Create PartitionBoundInfo and mapping, working in the caller's context.
+	 * This could fail, but we haven't done any damage if so.
 	 */
-	rel->rd_pdcxt = AllocSetContextCreate(CacheMemoryContext,
-										  "partition descriptor",
-										  ALLOCSET_SMALL_SIZES);
-	MemoryContextCopyAndSetIdentifier(rel->rd_pdcxt,
+	if (nparts > 0)
+		boundinfo = partition_bounds_create(boundspecs, nparts, key, &mapping);
+
+        /*
+         * Now build the actual relcache partition descriptor, copying all the
+         * data into a new, small context.  As per above comment, we don't make
+         * this a long-lived context until it's finished.
+         *
+         * GPDB: we tweak the upstream code slightly, and place this context
+         * within our current short-lived context, to keep this from having
+         * memory usage issues.  See comment above.
+         */
+        new_pdcxt = AllocSetContextCreate(rbcontext,
+									  "partition descriptor",
+									  ALLOCSET_SMALL_SIZES);
+	MemoryContextCopyAndSetIdentifier(new_pdcxt,
 									  RelationGetRelationName(rel));
 
 	partdesc = (PartitionDescData *)
-		MemoryContextAllocZero(rel->rd_pdcxt, sizeof(PartitionDescData));
+		MemoryContextAllocZero(new_pdcxt, sizeof(PartitionDescData));
 	partdesc->nparts = nparts;
 	/* If there are no partitions, the rest of the partdesc can stay zero */
 	if (nparts > 0)
 	{
-		/* Create PartitionBoundInfo, using the temporary context. */
-		boundinfo = partition_bounds_create(boundspecs, nparts, key, &mapping);
-
-		/* Now copy all info into relcache's partdesc. */
-		MemoryContextSwitchTo(rel->rd_pdcxt);
+		MemoryContextSwitchTo(new_pdcxt);
 		partdesc->boundinfo = partition_bounds_copy(boundinfo, key);
 		partdesc->oids = (Oid *) palloc(nparts * sizeof(Oid));
 		partdesc->is_leaf = (bool *) palloc(nparts * sizeof(bool));
-		MemoryContextSwitchTo(oldcxt);
 
 		/*
 		 * Assign OIDs from the original array into mapped indexes of the
@@ -251,11 +284,26 @@ RelationBuildPartitionDesc(Relation rel)
 			int			index = mapping[i];
 
 			partdesc->oids[index] = oids[i];
-			partdesc->is_leaf[index] =
-				(get_rel_relkind(oids[i]) != RELKIND_PARTITIONED_TABLE);
+			partdesc->is_leaf[index] = is_leaf[i];
 		}
 	}
 
+	/*
+	 * We have a fully valid partdesc ready to store into the relcache.
+	 * Reparent it so it has the right lifespan.
+	 */
+	MemoryContextSetParent(new_pdcxt, CacheMemoryContext);
+
+	/*
+	 * But first, a kluge: if there's an old rd_pdcxt, it contains an old
+	 * partition descriptor that may still be referenced somewhere.  Preserve
+	 * it, while not leaking it, by reattaching it as a child context of the
+	 * new rd_pdcxt.  Eventually it will get dropped by either RelationClose
+	 * or RelationClearRelation.
+	 */
+	if (rel->rd_pdcxt != NULL)
+		MemoryContextSetParent(rel->rd_pdcxt, new_pdcxt);
+	rel->rd_pdcxt = new_pdcxt;
 	rel->rd_partdesc = partdesc;
 	/* Return to caller's context, and blow away the temporary context. */
 	MemoryContextSwitchTo(oldcxt);
