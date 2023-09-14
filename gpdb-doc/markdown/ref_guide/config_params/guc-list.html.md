@@ -851,7 +851,7 @@ Enables plans that can dynamically eliminate the scanning of partitions.
 
 Activates or deactivates two-phase aggregation for the Postgres-based planner.
 
-The default value is `off`; the Postgres-based planner chooses the best aggregate path for a query based on the cost. When set to `on`, the Postgres-based planner adds a disable cost to each of the first stage aggregate paths, which in turn forces the PlaPostgres-based plannerner to generate and choose a multi-stage aggregate path.
+The default value is `off`; the Postgres-based planner chooses the best aggregate path for a query based on the cost. When set to `on`, the Postgres-based planner adds a disable cost to each of the first stage aggregate paths, which in turn forces the Postgres-based planner to generate and choose a multi-stage aggregate path.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
