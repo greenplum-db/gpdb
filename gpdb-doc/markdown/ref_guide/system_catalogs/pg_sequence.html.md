@@ -1,6 +1,6 @@
 # pg_sequence 
 
-The system catalog table `pg_sequence` contains information about sequences. Some information about sequences, such as the name and the schema, is stored in the [pg_class](pg_class) system table.
+The system catalog table `pg_sequence` contains information about sequences. Some information about sequences, such as the name and the schema, is stored in the [pg_class](pg_class.html) system table.
 
 |column|type|references|description|
 |------|----|----------|-----------|
