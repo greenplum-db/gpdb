@@ -25,11 +25,6 @@ The following features have been deprecated in Greenplum 7:
 
 - The `gpreload` utility. Instead, use `ALTER TABLE...REPACK BY`.
 
-## <a id="removed"></a>Removed Features
-
-
-
-
 ## <a id="behavior"></a>Changes in Feature Behavior
 
 The following feature behaviors have changed in Greenplum 7:
@@ -52,7 +47,7 @@ The following feature behaviors have changed in Greenplum 7:
 
 Greenplum 7 also:
 
-- Removes some features and objects that were in Greeplum 6. See [Features and Objects Removed in Greenplum 7](../ref_guide/removed-objects.html).
+- Removes some features and objects that were in Greeplum 6. See [Features and Objects Removed in Greenplum 7](../ref_guide/removed-features-objects.html).
 
 - Changes some server configuration parameters. See [Server Configuration Parameter Changes from Greenplum 6 to Greenplum 7](../ref_guide/guc-changes-6to7.html).
 
