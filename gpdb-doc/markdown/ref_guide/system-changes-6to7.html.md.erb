@@ -8,23 +8,13 @@ This topic documents changes to existing system views and system catalogs betwee
 
 The following changes pertain to both system views and system tables:
 
-- The `Unknown` datatype is no longer supported.
-
-- The datatypes `abstime`, `reltime`, and `tinterval` are no longer supported. Use SQL-standard types such as `timestamp`, instead.
+- The `Unknown` datatype has been changed from a base type to a pseudo type.
 
 - Sequence for `SERIAL` columns now generate positive 32-bit wide values instead of 64-bit.
 
 - Prior to Greenplum 7, sequence metadata was stored in separate sequence relation table; each sequence created had its own table. In Greenplum 7, the new `pg_sequence` system table contains all sequence-related metadata.
 
 - The `gp_toolkit` schema is now an extension. 
-
-
-## <a id="views"></a>System View Changes
-
-This section describes changes to existing system views. 
-
-- Three columns have been removed from the `pg_stat_activity` view: `waiting`, `waiting_reason`, and `rsgqueueduration​`.
-
 
 ## <a id="tables"></a>System Table Changes
 
@@ -36,9 +26,9 @@ This section describes changes to existing system tables.
 
 - In the `gp_configuration_history` table, the `desc` column has been renamed to `description`.
 
-- Three columns have been removed from the `pg_class` table: `relstorage`, `relhasoids`, and `relhaspkey`.
+- A new colum, `pg_proc.prokind`,  column replaces `pg_proc.proisagg` and `pg_proc.proiswindow`.
 
-- Three columns have been removed from the `pg_proc` table: `protransform​`​, `proisagg`​​, and `proiswindow`.
+- `pg_proc.protransform` has been renamed to `pg_proc.prosupport`.
 
 - The `pg_am` table now stores possible table access methods. 
 

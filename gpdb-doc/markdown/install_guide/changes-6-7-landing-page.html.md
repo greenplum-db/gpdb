@@ -4,7 +4,6 @@ title: Important Changes Between Greenplum 6 and Greenplum 7
 
 There are a substantial number of changes between Greenplum 6 and Greenplum 7 that could potentially affect your existing 6 application when you move to 7. This topic provides information about these changes. 
 
-
 ## <a id="naming_changes"></a>Naming Changes
 
 The following table summarizes naming changes in Greenplum 7:
@@ -28,23 +27,8 @@ The following features have been deprecated in Greenplum 7:
 
 ## <a id="removed"></a>Removed Features
 
-The following features have been removed in Greenplum 7:
 
-- Support for Quicklz compression. To avoid breaking applications that use Quicklz, set the `gp_quicklz_fallback` server configuration parameter to `true`.
 
-- The `--skip_root_stats` option  of the `analyzedb` utility.
-
-- The Greenplum R Client.
-
-- Greenplum MapReduce.
-
-- The `ARRAY_NAME` variable.
-
-- The PL/Container 3.0 Beta extension.
-
-- The `gp_percentil_agg` extension.
-
-- The `createlang` and `droplang` utilties. Instead, use `CREATE EXTENSION` and `DROP EXTENSION` directly.
 
 ## <a id="behavior"></a>Changes in Feature Behavior
 
@@ -68,7 +52,7 @@ The following feature behaviors have changed in Greenplum 7:
 
 Greenplum 7 also:
 
-- Removes some objects that were in Greeplum 6. See [Objects Removed in Greenplum 7](../ref_guide/removed-objects.html).
+- Removes some features and objects that were in Greeplum 6. See [Features and Objects Removed in Greenplum 7](../ref_guide/removed-objects.html).
 
 - Changes some server configuration parameters. See [Server Configuration Parameter Changes from Greenplum 6 to Greenplum 7](../ref_guide/guc-changes-6to7.html).
 
