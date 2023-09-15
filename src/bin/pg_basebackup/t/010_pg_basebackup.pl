@@ -230,7 +230,7 @@ ok(compare($primary_wal_file_path, $mirror_wal_file_path) eq 0, "wal file compar
 my $total_bytes_cmd = 'pg_controldata ' . $node_wal_compare_standby_datadir .  ' | grep "Bytes per WAL segment:" |  awk \'{print $5}\'';
 my $total_allocated_bytes = `$total_bytes_cmd`;
 
-my $current_lsn_cmd = 'pg_waldump -f ' . $primary_wal_file_path . ' | grep "SWITCH" | awk \'{print $10}\' | sed "s/,//"';
+my $current_lsn_cmd = 'pg_waldump ' . $primary_wal_file_path . ' | grep "SWITCH" | awk \'{print $10}\' | sed "s/,//"';
 my $current_lsn = `$current_lsn_cmd`;
 chomp($current_lsn);
 my $current_byte_offset = $node_wal_compare_primary->safe_psql('postgres', "SELECT file_offset FROM pg_walfile_name_offset('$current_lsn');");
