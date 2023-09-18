@@ -15,7 +15,7 @@ The following table summarizes naming changes in Greenplum 7:
 |pg_xlog|pg_wal|
 |pg_clog|pg_xact|
 |xlog (includes SQL functions, tools and options)|wal|
-|pg_xloadump|pg_waldump|
+|pg_xlogdump|pg_waldump|
 |pg_resetxlog|pg_resetwal|
 
 

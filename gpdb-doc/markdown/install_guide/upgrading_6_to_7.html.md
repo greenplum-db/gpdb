@@ -12,6 +12,9 @@ After reading through [Preparing to Upgrade](#preparing), choose one of these tw
 [Upgrading to Greenplum 7 on the Same Hardware](#same_hardware)<br>
 [Upgrading to Greenplum 7 While Moving to New Hardware](#new_hardware)
 
+>**Note**
+>You cannot upgrade to VMware Greenplum 7.0.0 using the `gpupgrade` utility.
+
 ## <a id="preparing"></a>Preparing to Upgrade
 
 To prepare for upgrading from Greenplum 6 to Greenplum 7:
