@@ -48,7 +48,6 @@ typedef struct
 
 /* Used in UDFs */
 static EndpointState state_string_to_enum(const char *state);
-static bool check_parallel_retrieve_cursor_has_error(EState *estate);
 
 /*
  * Convert the string-format token to array
@@ -95,10 +94,9 @@ endpoint_name_equals(const char *name1, const char *name2)
 }
 
 /*
- * gp_check_parallel_retrieve_cursor
+ * Check every parallel retrieve cursor status and cancel QEs if it has error.
  *
- * Check every parallel retrieve cursor status and cancel other QEs if has error.
- * return true if has error.
+ * Also return true if it has error.
  */
 bool
 gp_check_parallel_retrieve_cursor_error(void)
@@ -116,14 +114,15 @@ gp_check_parallel_retrieve_cursor_error(void)
 
 		estate = portal->queryDesc->estate;
 
-		if (estate->dispatcherState->primaryResults->errcode ||
-			check_parallel_retrieve_cursor_has_error(estate))
-		{
+		if (estate->dispatcherState->primaryResults->errcode)
 			has_error = true;
-		}
+		else
+			has_error = cdbdisp_checkForCancel(estate->dispatcherState);
 	}
+
 	/* free the list to avoid memory leak */
 	list_free(portals);
+
 	return has_error;
 }
 
@@ -195,24 +194,6 @@ check_parallel_retrieve_cursor_errors(EState *estate)
 		FlushErrorState();
 		ReThrowError(qeError);
 	}
-}
-
-/*
- * check_parallel_retrieve_cursor_has_error - Check the PARALLEL RETRIEVE CURSOR
- * execution status, If has error, cancel the other QEs which are still running.
- * If get error, return true.
- */
-static bool
-check_parallel_retrieve_cursor_has_error(EState *estate)
-{
-	CdbDispatcherState *ds;
-
-	ds = estate->dispatcherState;
-
-	if(cdbdisp_checkForCancel(ds))
-		return true;
-
-	return false;
 }
 
 /*
@@ -607,14 +588,15 @@ generate_endpoint_name(char *name, const char *cursorName)
 }
 
 /*
- * Enable the timeout of parallel_retrieve_cursor check
+ * Enable the timeout of parallel retrieve cursor check if not yet
  */
 void
-enable_parallel_retrieve_cursor_timeout(void)
+enable_parallel_retrieve_cursor_check_timeout(void)
 {
 	if (Gp_role == GP_ROLE_DISPATCH &&
 		!get_timeout_active(GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT))
 	{
-		enable_timeout_after(GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT, GP_PARALLEL_RETRIEVE_CURSOR_CHECK_PERIOD_MS);
+		enable_timeout_after(GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT,
+							 GP_PARALLEL_RETRIEVE_CURSOR_CHECK_PERIOD_MS);
 	}
 }

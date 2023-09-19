@@ -214,8 +214,8 @@ PerformCursorOpen(DeclareCursorStmt *cstmt, ParamListInfo params,
 	{
 		WaitEndpointsReady(portal->queryDesc->estate);
 
-		/* Start the check error timer if the alarm is not active */
-		enable_parallel_retrieve_cursor_timeout();
+		/* Enable the check error timer if the alarm is not active */
+		enable_parallel_retrieve_cursor_check_timeout();
 	}
 
 	/*

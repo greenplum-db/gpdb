@@ -1472,7 +1472,7 @@ ForgetPortalSnapshots(void)
 			 numPortalSnaps, numActiveSnaps);
 }
 
-/* Find all Parallel Retrieve cursors and return a list of Portals */
+/* Find all parallel retrieve cursors and return a list of their portals */
 List *
 GetAllParallelRetrieveCursorPortals(void)
 {
@@ -1495,7 +1495,7 @@ GetAllParallelRetrieveCursorPortals(void)
 	return portals;
 }
 
-/* Return the amount of parallel retrieve cursors */
+/* Return the number of active parallel retrieve cursors */
 int
 GetNumOfParallelRetrieveCursors(void)
 {
@@ -1506,5 +1506,6 @@ GetNumOfParallelRetrieveCursors(void)
 	sum = list_length(portals);
 
 	list_free(portals);
+
 	return sum;
 }
