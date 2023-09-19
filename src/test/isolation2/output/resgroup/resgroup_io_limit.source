@@ -107,6 +107,9 @@ SELECT check_cgroup_io_max('rg_test_group5', 'rg_io_limit_ts_1', 'rbps=104857600
  t                   
 (1 row)
 
+ALTER RESOURCE GROUP rg_test_group5 SET concurrency 1;
+ALTER RESOURCE GROUP
+
 SELECT check_clear_io_max('rg_test_group5');
  check_clear_io_max 
 --------------------
@@ -134,8 +137,8 @@ SELECT gp_inject_fault('create_resource_group_fail', 'reset', 1);
  Success:        
 (1 row)
 
--- start_ignore
 -- view
+-- start_ignore
 SELECT * from gp_toolkit.gp_resgroup_iostats_per_host;
  rsgname        | hostname | tablespace       | rbps | wbps | riops | wiops 
 ----------------+----------+------------------+------+------+-------+-------
@@ -146,6 +149,16 @@ SELECT * from gp_toolkit.gp_resgroup_iostats_per_host;
  rg_test_group5 | mtspc    | rg_io_limit_ts_1 | 0    | 0    | 0     | 0     
 (5 rows)
 -- end_ignore
+
+-- start_matchsubs
+-- m/^ rg_test_group\d+ \|/
+-- s/(\| \S+ *){2}(\| \d+ *){4}/| gpadmin | $2 | 0 | 0 | 0 | 0 /
+-- end_matchsubs
+SELECT * from gp_toolkit.gp_resgroup_iostats_per_host where rsgname = 'rg_test_group1';
+ rsgname        | hostname | tablespace | rbps | wbps | riops | wiops 
+----------------+----------+------------+------+------+-------+-------
+ rg_test_group1 | mdw    | pg_default | 0    | 0    | 0     | 0     
+(1 row)
 
 -- clean
 DROP RESOURCE GROUP rg_test_group1;

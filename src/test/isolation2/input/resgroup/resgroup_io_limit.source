@@ -56,6 +56,8 @@ ALTER RESOURCE GROUP rg_test_group5 SET io_limit 'rg_io_limit_ts_1:rbps=1000,wbp
 
 SELECT check_cgroup_io_max('rg_test_group5', 'rg_io_limit_ts_1', 'rbps=1048576000 wbps=1048576000 riops=max wiops=max');
 
+ALTER RESOURCE GROUP rg_test_group5 SET concurrency 1;
+
 SELECT check_clear_io_max('rg_test_group5');
 
 -- fault injector
@@ -67,10 +69,16 @@ SELECT groupid, groupname, cpuset FROM gp_toolkit.gp_resgroup_config WHERE group
 
 SELECT gp_inject_fault('create_resource_group_fail', 'reset', 1);
 
--- start_ignore
 -- view
+-- start_ignore
 SELECT * from gp_toolkit.gp_resgroup_iostats_per_host;
 -- end_ignore
+
+-- start_matchsubs
+-- m/^ rg_test_group\d+ \|/
+-- s/(\| \S+ *){2}(\| \d+ *){4}/| gpadmin | $2 | 0 | 0 | 0 | 0 /
+-- end_matchsubs
+SELECT * from gp_toolkit.gp_resgroup_iostats_per_host where rsgname = 'rg_test_group1';
 
 -- clean
 DROP RESOURCE GROUP rg_test_group1;
