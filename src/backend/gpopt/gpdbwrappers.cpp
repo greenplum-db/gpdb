@@ -42,6 +42,7 @@ extern "C" {
 #include "optimizer/clauses.h"
 #include "optimizer/optimizer.h"
 #include "optimizer/plancat.h"
+#include "optimizer/subselect.h"
 #include "parser/parse_agg.h"
 #include "partitioning/partdesc.h"
 #include "storage/lmgr.h"
@@ -2718,4 +2719,16 @@ gpdb::GPDBRelationRetrievePartitionKey(Relation rel)
 	}
 	GP_WRAP_END;
 }
+
+bool
+gpdb::TestexprIsHashable(Node *testexpr, List *param_ids)
+{
+	GP_WRAP_START;
+	{
+		return testexpr_is_hashable(testexpr, param_ids);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
 // EOF

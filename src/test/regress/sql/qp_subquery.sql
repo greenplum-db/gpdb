@@ -705,5 +705,31 @@ from(
   from subquery_nonpush_through_1,subquery_nonpush_through_2) t
 where xx='dd';
 
+-- Ensure we produce a hashed subplan when there are no outer references
+CREATE TABLE a1 AS (
+    SELECT * FROM generate_series(1, 5) AS a1)
+    WITH data distributed replicated;
+
+CREATE TABLE a2 AS (
+    SELECT * FROM generate_series(1, 10) AS a1)
+    WITH data distributed BY (a1);
+
+CREATE TABLE a3 AS (
+	SELECT a1, row_to_json(a2) AS rj FROM a2)
+	WITH data distributed BY (a1);
+
+-- explain "verbose" is needed to show that the subplan is hashed
+explain (verbose, costs off) select a1,case when a2 in (select a1::text from a1 where a1 is not null) then 'true' else 'false' end as checkcol
+from (
+      select a1,rj->>'a1'::text as a2
+      from a3
+      )t;
+
+select a1,case when a2 in (select a1::text from a1 where a1 is not null) then 'true' else 'false' end as checkcol
+from (
+      select a1,rj->>'a1'::text as a2
+      from a3
+      )t;
+
 set client_min_messages='warning';
 drop schema qp_subquery cascade;
