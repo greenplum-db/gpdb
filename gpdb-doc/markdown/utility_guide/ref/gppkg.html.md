@@ -77,7 +77,7 @@ sync [<command_options>]
 -h | --help
 :   Display the online help.
 
---tempdir
+--tmpdir
 :   Specify the directory to which `gppkg` should write temporary files. If not specified, `gppkg` writes temporary files to the directory specified in the `TMPDIR` environment variable.
 
 -V | --version
