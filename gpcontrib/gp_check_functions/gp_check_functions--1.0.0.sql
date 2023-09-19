@@ -141,26 +141,24 @@ GRANT EXECUTE ON FUNCTION __get_aoco_segno_list() TO public;
 --------------------------------------------------------------------------------
 -- return the list of existing files in the database
 CREATE OR REPLACE VIEW __get_exist_files AS
--- 1. List of files in the default tablespace
-SELECT 0 AS tablespace, filename 
-FROM pg_ls_dir('base/' || (
-  SELECT d.oid::text
-  FROM pg_database d
-  WHERE d.datname = current_database()
-))
-AS filename
-UNION
--- 2. List of files in the global tablespace
-SELECT 1664 AS tablespace, filename
-FROM pg_ls_dir('global/') 
-AS filename
-UNION
--- 3. List of files in user-defined tablespaces
-SELECT ts.oid AS tablespace,
-       pg_ls_dir('pg_tblspc/' || ts.oid::text || '/' || get_tablespace_version_directory_name() || '/' || 
-         (SELECT d.oid::text FROM pg_database d WHERE d.datname = current_database()), true/*missing_ok*/,false/*include_dot*/) AS filename
-FROM pg_tablespace ts
-WHERE ts.oid > 1664; 
+WITH Tablespaces AS (
+-- 1. The default tablespace
+    SELECT 0 AS tablespace, 'base/' || d.oid::text AS dirname
+    FROM pg_database d
+    WHERE d.datname = current_database()
+    UNION
+-- 2. The global tablespace
+    SELECT 1664 AS tablespace, 'global/' AS dirname
+    UNION
+-- 3. The user-defined tablespaces
+    SELECT ts.oid AS tablespace,
+       'pg_tblspc/' || ts.oid::text || '/' || get_tablespace_version_directory_name() || '/' ||
+         (SELECT d.oid::text FROM pg_database d WHERE d.datname = current_database()) AS dirname
+    FROM pg_tablespace ts
+    WHERE ts.oid > 1664
+)
+SELECT tablespace, files.filename, dirname || '/' || files.filename AS filepath
+FROM Tablespaces, pg_ls_dir(dirname) AS files(filename);
 
 GRANT SELECT ON __get_exist_files TO public;
 
@@ -236,7 +234,7 @@ GRANT SELECT ON __get_expect_files_ext TO public;
 --
 --------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW __check_orphaned_files AS
-SELECT f1.tablespace, f1.filename
+SELECT f1.tablespace, f1.filename, f1.filepath
 from __get_exist_files f1
 LEFT JOIN __get_expect_files f2
 ON f1.tablespace = f2.tablespace AND substring(f1.filename from '[0-9]+') = f2.filename
@@ -244,6 +242,69 @@ WHERE f2.tablespace IS NULL
   AND f1.filename SIMILAR TO '[0-9]+(\.)?(\_)?%';
 
 GRANT SELECT ON __check_orphaned_files TO public;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        __gp_check_orphaned_files_func
+--
+-- @in:
+--
+-- @out:
+--        gp_segment_id int - segment content ID
+--        tablespace oid - tablespace OID
+--        filename text - name of the orphaned file
+--        filepath text - relative path of the orphaned file in data directory
+--
+-- @doc:
+--        (Internal UDF, shouldn't be exposed)
+--        UDF to retrieve orphaned files and their paths
+--
+--------------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION __gp_check_orphaned_files_func()
+RETURNS TABLE (
+    gp_segment_id int,
+    tablespace oid,
+    filename text,
+    filepath text
+)
+LANGUAGE plpgsql AS $$
+BEGIN
+    BEGIN
+        -- lock pg_class so that no one will be adding/altering relfilenodes
+        LOCK TABLE pg_class IN SHARE MODE NOWAIT;
+
+        -- make sure no other active/idle transaction is running
+        IF EXISTS (
+            SELECT 1
+            FROM (SELECT * from pg_stat_activity UNION ALL SELECT * FROM gp_dist_random('pg_stat_activity'))q
+            WHERE
+            sess_id <> -1
+            AND sess_id <> current_setting('gp_session_id')::int -- Exclude the current session
+        ) THEN
+            RAISE EXCEPTION 'There is a client session running on one or more segment. Aborting...';
+        END IF;
+
+        -- force checkpoint to make sure we do not include files that are normally pending delete
+        CHECKPOINT;
+
+        RETURN QUERY 
+        SELECT pg_catalog.gp_execution_segment() AS gp_segment_id, *
+        FROM gp_dist_random('__check_orphaned_files')
+        UNION ALL
+        SELECT -1 AS gp_segment_id, *
+        FROM __check_orphaned_files;
+    EXCEPTION
+        WHEN lock_not_available THEN
+            RAISE EXCEPTION 'cannot obtain SHARE lock on pg_class';
+        WHEN OTHERS THEN
+            RAISE;
+    END;
+
+    RETURN;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION __gp_check_orphaned_files_func() TO public;
 
 --------------------------------------------------------------------------------
 -- @view:
@@ -293,11 +354,7 @@ GRANT SELECT ON __check_missing_files_ext TO public;
 --
 --------------------------------------------------------------------------------
 CREATE OR REPLACE VIEW gp_check_orphaned_files AS 
-SELECT pg_catalog.gp_execution_segment() AS gp_segment_id, *
-FROM gp_dist_random('__check_orphaned_files')
-UNION ALL 
-SELECT -1 AS gp_segment_id, *
-FROM __check_orphaned_files;
+SELECT * FROM __gp_check_orphaned_files_func();
 
 GRANT SELECT ON gp_check_orphaned_files TO public;
 
