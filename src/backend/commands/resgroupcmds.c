@@ -1113,6 +1113,9 @@ alterResgroupCallback(XactEvent event, void *arg)
 	if (callbackCtx->caps.io_limit != NIL)
 		cgroupOpsRoutine->freeio(callbackCtx->caps.io_limit);
 
+	/*
+	 * In alterResgroupCallback, the callbackCtx->caps equals callbackCtx->oldCaps initially.
+	 * If the io_limit has not been altered, the io_limit of caps and old Caps will be identical finally.*/
 	if (callbackCtx->caps.io_limit != callbackCtx->oldCaps.io_limit &&
 		callbackCtx->oldCaps.io_limit != NIL)
 		cgroupOpsRoutine->freeio(callbackCtx->oldCaps.io_limit);
