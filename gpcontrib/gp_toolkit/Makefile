@@ -1,7 +1,7 @@
 EXTENSION = gp_toolkit
 DATA = gp_toolkit--1.0--1.1.sql gp_toolkit--1.0.sql
 MODULE_big = gp_toolkit
-ifeq ($(PORTNAME),linux)
+ifeq ($(shell uname -s), Linux)
 OBJS = resgroup.o
 else
 OBJS = resgroup-dummy.o
