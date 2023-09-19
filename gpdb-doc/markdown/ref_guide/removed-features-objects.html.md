@@ -24,6 +24,8 @@ The following features have been removed in Greenplum 7:
 
 - The `createlang` and `droplang` utilties. Instead, use `CREATE EXTENSION` and `DROP EXTENSION` directly.
 
+- Support for python2 and the `plpythonu` extension.
+
 ## <a id="rem_objects"></a>Removed Objects
 
 This section summarizes objects removed in VMware Greenplum 7.
