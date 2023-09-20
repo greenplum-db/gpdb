@@ -181,7 +181,6 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 	bool		createAoBlockDirectory;
 	ObjectAddress address;
 	RefreshClause *refreshClause;
-	List 		  *indexes;
 
 	/* MATERIALIZED_VIEW_FIXME: Refresh MatView is not MPP-fied. */
 
@@ -331,8 +330,7 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 	}
 
 	/* If an AO temp table has index, we need to create it. */
-	indexes = RelationGetIndexList(matviewRel);
-	createAoBlockDirectory = (indexes != NIL);
+	createAoBlockDirectory = matviewRel->rd_rel->relhasindex;
 
 	/*
 	 * Create the transient table that will receive the regenerated data. Lock
@@ -555,7 +553,6 @@ transientrel_init(QueryDesc *queryDesc)
 	LOCKMODE	lockmode;
 	bool		createAoBlockDirectory;
 	RefreshClause *refreshClause;
-	List 		  *indexes;
 
 	refreshClause = queryDesc->plannedstmt->refreshClause;
 	/* Determine strength of lock needed. */
@@ -589,8 +586,7 @@ transientrel_init(QueryDesc *queryDesc)
 	}
 
 	/* If an AO temp table has index, we need to create it. */
-	indexes = RelationGetIndexList(matviewRel);
-	createAoBlockDirectory = (indexes != NIL);
+	createAoBlockDirectory = matviewRel->rd_rel->relhasindex;
 
 	/*
 	 * Create the transient table that will receive the regenerated data. Lock
