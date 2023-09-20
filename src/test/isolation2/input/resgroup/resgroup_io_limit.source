@@ -78,7 +78,7 @@ SELECT * from gp_toolkit.gp_resgroup_iostats_per_host;
 -- m/^ rg_test_group\d+ \|/
 -- s/(\| \S+ *){2}(\| \d+ *){4}/| gpadmin | $2 | 0 | 0 | 0 | 0 /
 -- end_matchsubs
-SELECT * from gp_toolkit.gp_resgroup_iostats_per_host where rsgname = 'rg_test_group1';
+SELECT * from gp_toolkit.gp_resgroup_iostats_per_host where rsgname = 'rg_test_group1' limit 1;
 
 -- clean
 DROP RESOURCE GROUP rg_test_group1;
