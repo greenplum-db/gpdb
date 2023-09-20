@@ -23,6 +23,8 @@ BEGIN
                 RAISE LOG 'attempt failed % with error: %', retry_counter + 1, SQLERRM;
                 -- When an exception occurs, wait for 5 seconds and then retry
                 PERFORM pg_sleep(5);
+                -- Refresh to get the latest pg_stat_activity
+                PERFORM pg_stat_clear_snapshot();
                 retry_counter := retry_counter + 1;
         END;
     END LOOP;
