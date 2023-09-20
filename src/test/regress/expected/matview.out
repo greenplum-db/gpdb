@@ -675,3 +675,34 @@ ERROR:  materialized view "mat_view_twn" has not been populated
 HINT:  Use the REFRESH MATERIALIZED VIEW command.
 DROP MATERIALIZED VIEW mat_view_twn;
 DROP TABLE mvtest_twn;
+-- test REFRESH MATERIALIZED VIEW on AO table with index
+-- more details could be found at https://github.com/greenplum-db/gpdb/issues/16447
+CREATE TABLE base_table (idn character varying(10) NOT NULL);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'idn' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO base_table select i from generate_series(1, 5000) i;
+CREATE MATERIALIZED VIEW base_view WITH (APPENDONLY=true) AS SELECT tt1.idn AS idn_ban FROM base_table tt1;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'idn_ban' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX test_id1 on base_view using btree(idn_ban);
+REFRESH MATERIALIZED VIEW base_view ;
+SELECT * FROM base_view where idn_ban = '10';
+ idn_ban 
+---------
+ 10
+(1 row)
+
+-- should use index scan rather than seq scan
+EXPLAIN SELECT * FROM base_view where idn_ban = '10';
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=4.19..8.28 rows=5 width=38)
+   ->  Bitmap Heap Scan on base_view  (cost=4.19..8.21 rows=2 width=38)
+         Recheck Cond: ((idn_ban)::text = '10'::text)
+         ->  Bitmap Index Scan on test_id1  (cost=0.00..4.19 rows=2 width=0)
+               Index Cond: ((idn_ban)::text = '10'::text)
+ Optimizer: Postgres-based planner
+(6 rows)
+
+DROP MATERIALIZED VIEW base_view;
+DROP TABLE base_table;

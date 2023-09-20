@@ -283,3 +283,17 @@ SELECT * FROM mat_view_twn;
 
 DROP MATERIALIZED VIEW mat_view_twn;
 DROP TABLE mvtest_twn;
+
+-- test REFRESH MATERIALIZED VIEW on AO table with index
+-- more details could be found at https://github.com/greenplum-db/gpdb/issues/16447
+CREATE TABLE base_table (idn character varying(10) NOT NULL);
+INSERT INTO base_table select i from generate_series(1, 5000) i;
+CREATE MATERIALIZED VIEW base_view WITH (APPENDONLY=true) AS SELECT tt1.idn AS idn_ban FROM base_table tt1;
+CREATE INDEX test_id1 on base_view using btree(idn_ban);
+REFRESH MATERIALIZED VIEW base_view ;
+SELECT * FROM base_view where idn_ban = '10';
+-- should use index scan rather than seq scan
+EXPLAIN SELECT * FROM base_view where idn_ban = '10';
+
+DROP MATERIALIZED VIEW base_view;
+DROP TABLE base_table;
