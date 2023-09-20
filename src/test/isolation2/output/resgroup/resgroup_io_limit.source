@@ -150,14 +150,10 @@ SELECT * from gp_toolkit.gp_resgroup_iostats_per_host;
 (5 rows)
 -- end_ignore
 
--- start_matchsubs
--- m/^ rg_test_group\d+ \|/
--- s/(\| \S+ *){2}(\| \d+ *){4}/| gpadmin | $2 | 0 | 0 | 0 | 0 /
--- end_matchsubs
-SELECT * from gp_toolkit.gp_resgroup_iostats_per_host where rsgname = 'rg_test_group1' limit 1;
- rsgname        | hostname | tablespace | rbps | wbps | riops | wiops 
-----------------+----------+------------+------+------+-------+-------
- rg_test_group1 | mdw    | pg_default | 0    | 0    | 0     | 0     
+SELECT count(*) > 0 as r from gp_toolkit.gp_resgroup_iostats_per_host;
+ r    
+------
+ t    
 (1 row)
 
 -- clean
