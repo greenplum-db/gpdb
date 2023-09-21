@@ -40,7 +40,7 @@ Before using `gpcheckperf`, you must have a trusted host setup between the hosts
 --buffer-size buffer_size
 Specifies the size of the send buffer in kilobytes. The default size is 8 kilobytes.
 
-> **Note** If you want to compare network performance between Greenplum 6 and Greenplum 7, set `--buffer-size` flag within `gpcheckperf` to 32KB in Greenplum 7 to make it consistent with the default `--buffer-size` of Greenplum 6. The `--buffer-size`of Greenplum 7 is set to 8KB by default.
+> **Note** If you want to compare network performance between Greenplum 6 and Greenplum 7, set `--buffer-size` to 32KB in Greenplum 7 to make it consistent with the default Greenplum 6 buffer size.
 
 -d test\_directory
 :   For the disk I/O test, specifies the file system directory locations to test. You must have write access to the test directory on all hosts involved in the performance test. You can use the `-d` option multiple times to specify multiple test directories \(for example, to test disk I/O of your primary and mirror data directories\).
