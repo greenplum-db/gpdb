@@ -1874,7 +1874,7 @@ aocs_fetch_init(Relation relation,
 									   checksum,
 									   blksz,
 									   TupleDescAttr(tupleDesc, colno),
-									   relation->rd_rel->relname.data,
+									   RelationGetRelationName(relation),
 									    /* title */ titleBuf.data);
 
 		}
