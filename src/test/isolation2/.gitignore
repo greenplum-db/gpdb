@@ -10,6 +10,10 @@ sql/workfile_mgr_test.sql
 expected/workfile_mgr_test.out
 expected/idle_gang_cleaner.out
 sql/idle_gang_cleaner.sql
+expected/resgroup/resgroup_io_limit.out
+sql/resgroup/resgroup_io_limit.sql
+expected/resgroup/resgroup_views.out
+sql/resgroup/resgroup_views.sql
 
 -- ignore generated pg_basebackup tests
 /sql/pg_basebackup*.sql

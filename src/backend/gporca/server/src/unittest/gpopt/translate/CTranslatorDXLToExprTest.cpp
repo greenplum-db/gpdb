@@ -252,7 +252,8 @@ public:
 		m_ptabdesc = GPOS_NEW(mp) CTableDescriptor(
 			mp, mdid, CName(&strTableName), convert_hash_to_random,
 			CMDRelationGPDB::EreldistrCoordinatorOnly,
-			CMDRelationGPDB::ErelstorageHeap, ulExecuteAsUser,
+			CMDRelationGPDB::ErelstorageHeap,
+			IMDRelation::GetCurrentAOVersion(), ulExecuteAsUser,
 			-1, /* lockmode */
 			2,	/* aclmode SELECT */
 			0 /* UNASSIGNED_QUERYID */);

@@ -217,6 +217,7 @@ make_command(const char *cmd, extvar_t *ev)
 	make_export("GP_MASTER_PORT", ev->GP_MASTER_PORT, &buf);
 	make_export("GP_SEG_PG_CONF", ev->GP_SEG_PG_CONF, &buf);
 	make_export("GP_SEG_DATADIR", ev->GP_SEG_DATADIR, &buf);
+	make_export("GP_SEG_LOGDIR", ev->GP_SEG_LOGDIR, &buf);
 	make_export("GP_DATABASE", ev->GP_DATABASE, &buf);
 	make_export("GP_USER", ev->GP_USER, &buf);
 	make_export("GP_DATE", ev->GP_DATE, &buf);

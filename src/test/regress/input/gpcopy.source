@@ -1376,3 +1376,14 @@ COPY issue_14353_multi_dist FROM '/tmp/issue_14353_multi_dist_<SEGID>.csv' WITH 
 -- Test that gpdb emits an error message saying the data distribution is malformed.
 \! cp /tmp/issue_14353_multi_dist_1.csv /tmp/issue_14353_multi_dist_0.csv
 COPY issue_14353_multi_dist FROM '/tmp/issue_14353_multi_dist_<SEGID>.csv' WITH CSV DELIMITER ',' ON SEGMENT;
+
+-- special case about distributed replicated table, please refer to issue-14126 and issue-16250
+\set QUIET off
+CREATE TABLE replicated_issue_16250(c1 int, c2 text) distributed replicated;
+COPY replicated_issue_16250 FROM '@abs_srcdir@/data/empty.data';
+DROP TABLE replicated_issue_16250;
+
+CREATE TABLE replicated_issue_14126(c1 int, c2 text) distributed replicated;
+COPY replicated_issue_14126 FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
+DROP TABLE replicated_issue_14126;
+\set QUIET on

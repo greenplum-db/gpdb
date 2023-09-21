@@ -242,12 +242,15 @@ select cleanup(:content_id_under_test, :'tablespace_location');
 --           it is no longer in memory, and we did not succeed in writing the
 --           prepared transaction, therefore we cannot safely clean
 --           the tablespace directory.
+--           Note that we need to panic even before writing WAL for creating the
+--           tablespace so mirror doesn't create the same and results in 2 orphaned
+--           directories instead of 1.
 --
 \set content_id_under_test 0
 \set expected_number_of_tablespaces 1
 \set error_type panic
 \set tablespace_location /tmp/my_tablespace_for_testing
-\set fault_to_set before_xlog_xact_prepare
+\set fault_to_set before_xlog_create_tablespace
 
 select setup(:content_id_under_test, :'fault_to_set', :'error_type', :'tablespace_location');
 CREATE TABLESPACE my_tablespace_for_testing LOCATION :'tablespace_location';

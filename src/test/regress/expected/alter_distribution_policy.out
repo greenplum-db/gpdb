@@ -1662,8 +1662,8 @@ DROP TABLE t_reorganize_false;
 set optimizer = false;
 -- check the distribution difference between 't1' and 't2' after executing 'query_string'
 -- return true if data distribution changed, otherwise false.
--- Note: in extremely rare cases, even after 't2' being randomly-distributed from 't1', they could still have the 
--- exact same distribution. So let the tables have a reasonably large number of rows to reduce that possibility.
+-- Make sure that the data distribution of 't1' and 't2' should be significantly different for
+-- this function to detect it (e.g., 't1' has all data on one segment and 't2' is randomly-distributed, etc.)
 CREATE OR REPLACE FUNCTION check_redistributed(query_string text, t1 text, t2 text) 
 RETURNS BOOLEAN AS 
 $$
@@ -1700,6 +1700,7 @@ $$
 LANGUAGE plpgsql;
 -- CO table builds temp table first instead of doing CTAS during REORGANIZE=true
 create table t_reorganize(a int, b int) using ao_column distributed by (a);
+-- insert all data into one segment
 insert into t_reorganize select 0,i from generate_series(1,1000)i;
 select gp_segment_id, count(*) from t_reorganize group by gp_segment_id;
  gp_segment_id | count 
@@ -1707,22 +1708,27 @@ select gp_segment_id, count(*) from t_reorganize group by gp_segment_id;
              1 |  1000
 (1 row)
 
--- firstly, no redistribute
+-- firstly, no force redistribution
 set gp_force_random_redistribution = off;
+-- case 1. reorganize from hash to random should redistribute regardless of the GUC
 select check_redistributed('alter table t_reorganize set with (reorganize=true) distributed randomly', 't_reorganize', 't_reorganize');
  check_redistributed 
 ------------
  t
 (1 row)
 
--- reorganize from randomly to randomly should still redistribute
+-- make only one segment have data
+delete from t_reorganize where gp_segment_id != 0;
+-- case 2. reorganize from randomly to randomly should still redistribute
 select check_redistributed('alter table t_reorganize set with (reorganize=true) distributed randomly', 't_reorganize', 't_reorganize');
  check_redistributed 
 ------------
  t
 (1 row)
 
--- but insert into table won't redistribute
+-- change dist policy back for the rest of tests
+alter table t_reorganize set with (reorganize=true) distributed by (a);
+-- case 3. insert into a randomly-distributed table won't redistribute
 create table t_random (like t_reorganize) distributed randomly;
 select check_redistributed('insert into t_random select * from t_reorganize', 't_reorganize', 't_random');
  check_redistributed 
@@ -1730,14 +1736,19 @@ select check_redistributed('insert into t_random select * from t_reorganize', 't
  f
 (1 row)
 
--- but insert into a different distribution policy would still redistribute
-create table t_distbya (like t_reorganize) distributed by (a);
-select check_redistributed('insert into t_distbya select * from t_reorganize', 't_reorganize', 't_distbya');
+-- case 4. but insert into a different distribution policy would still redistribute
+create table t_distbyb (like t_reorganize) distributed by (b);
+select check_redistributed('insert into t_distbyb select * from t_reorganize', 't_reorganize', 't_distbyb');
  check_redistributed 
 ------------
  t
 (1 row)
 
+drop table t_reorganize;
+drop table t_random;
+drop table t_distbyb;
+create table t_reorganize(a int, b int) using ao_column distributed by (a);
+insert into t_reorganize select 0,i from generate_series(1,1000)i;
 -- now force distribute should redistribute in all cases
 set gp_force_random_redistribution = on;
 select check_redistributed('alter table t_reorganize set with (reorganize=true) distributed randomly', 't_reorganize', 't_reorganize');
@@ -1746,6 +1757,7 @@ select check_redistributed('alter table t_reorganize set with (reorganize=true) 
  t
 (1 row)
 
+delete from t_reorganize where gp_segment_id != 0;
 select check_redistributed('alter table t_reorganize set with (reorganize=true) distributed randomly', 't_reorganize', 't_reorganize');
  check_redistributed 
 ------------
@@ -1753,16 +1765,15 @@ select check_redistributed('alter table t_reorganize set with (reorganize=true) 
 (1 row)
 
 create table t_random (like t_reorganize) distributed randomly;
-ERROR:  relation "t_random" already exists
 select check_redistributed('insert into t_random select * from t_reorganize', 't_reorganize', 't_random');
  check_redistributed 
 ------------
  t
 (1 row)
 
-create table t_distbya (like t_reorganize) distributed by (a);
-ERROR:  relation "t_distbya" already exists
-select check_redistributed('insert into t_distbya select * from t_reorganize', 't_reorganize', 't_distbya');
+alter table t_reorganize set with (reorganize=true) distributed by (a);
+create table t_distbyb (like t_reorganize) distributed by (b);
+select check_redistributed('insert into t_distbyb select * from t_reorganize', 't_reorganize', 't_distbyb');
  check_redistributed 
 ------------
  t
@@ -1770,3 +1781,14 @@ select check_redistributed('insert into t_distbya select * from t_reorganize', '
 
 reset optimizer;
 reset gp_force_random_redistribution;
+-- Check that AT SET DISTRIBUTED BY cannot be combined with other subcommands
+-- on the same table
+CREATE TABLE atsdby_multiple(i int, j int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+ALTER TABLE atsdby_multiple SET DISTRIBUTED BY(j), ADD COLUMN k int;
+ERROR:  cannot alter distribution with other subcommands for relation "atsdby_multiple"
+HINT:  consider separating into multiple statements
+ALTER TABLE atsdby_multiple SET WITH (reorganize=true), ADD COLUMN k int;
+ERROR:  cannot alter distribution with other subcommands for relation "atsdby_multiple"
+HINT:  consider separating into multiple statements

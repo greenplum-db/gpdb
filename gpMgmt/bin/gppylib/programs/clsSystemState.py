@@ -187,7 +187,7 @@ class GpStateData:
         self.__currentSegmentData["values"][key] = value
         self.__currentSegmentData["isWarning"][key] = isWarning
 
-        assert key in self.__allValues;
+        assert key in self.__allValues
 
     def isClusterProbablyDown(self, gpArray):
         """

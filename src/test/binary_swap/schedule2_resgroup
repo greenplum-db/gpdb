@@ -5,6 +5,7 @@ test: diff_dumps
 test: pg_dumpall_other
 test: gpcheckcat
 
+test: resgroup_switch_queue
 test: resgroup_other_2_queue
 test: resgroup_switch_group
 test: resgroup_other_2_group

@@ -123,9 +123,15 @@ CXformSelect2DynamicIndexGet::Transform(CXformContext *pxfctxt,
 	{
 		IMDId *pmdidIndex = pmdrel->IndexMDidAt(ul);
 		const IMDIndex *pmdindex = md_accessor->RetrieveIndex(pmdidIndex);
+		// We consider ForwardScan here because, because ORCA currently doesn't
+		// support BackwardScan on partition tables. Moreover, BackwardScan is
+		// only supported in the case where we have Order by clause in the
+		// query, but this xform handles scenario of a filter on top of a
+		// partitioned table.
 		CExpression *pexprDynamicIndexGet = CXformUtils::PexprLogicalIndexGet(
 			mp, md_accessor, pexprRelational, pexpr->Pop()->UlOpId(), pdrgpexpr,
-			pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel);
+			pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel,
+			false /*indexForOrderBy*/, EForwardScan /*indexScanDirection*/);
 		if (nullptr != pexprDynamicIndexGet)
 		{
 			// create a redundant SELECT on top of DynamicIndexGet to be able to use predicate in partition elimination

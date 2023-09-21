@@ -56,7 +56,7 @@ typedef enum SortByDir
 	SORTBY_DEFAULT,
 	SORTBY_ASC,
 	SORTBY_DESC,
-	SORTBY_USING				/* not allowed in CREATE INDEX ... */
+	SORTBY_USING				/* not allowed in CREATE INDEX or AT REPACK */
 } SortByDir;
 
 typedef enum SortByNulls
@@ -2016,7 +2016,10 @@ typedef enum AlterTableType
 	AT_PartRename,				/* Rename */
 	AT_PartSetTemplate,			/* Set Subpartition Template */
 	AT_PartSplit,				/* Split */
-	AT_PartTruncate				/* Truncate */
+	AT_PartTruncate,			/* Truncate */
+
+	/* kept at end for ABI hygiene */
+	AT_RepackTable				/* REPACK TABLE */
 } AlterTableType;
 
 typedef struct ReplicaIdentityStmt

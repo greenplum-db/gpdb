@@ -191,7 +191,7 @@ $ sudo yum install tk
 4.  Use the `gppkg` command to install the package. For example:
 
     ```
-    $ gppkg install DataSciencePython3.9-3.0.0-gp7-rhel8_x86_64.gppkg
+    $ gppkg install DataSciencePython3.9-1.2.0-gp7-el8_x86_64.gppkg
     ```
 
     `gppkg` installs the Data Science Package for Python modules on all nodes in your Greenplum Database cluster. The command also updates the `PYTHONPATH`, `PATH`, and `LD_LIBRARY_PATH` environment variables in your `greenplum_path.sh` file.

@@ -201,11 +201,12 @@ static struct
 	const char* c; /* config file */
 	struct transform* trlist; /* transforms from config file */
 	const char* ssl; /* path to certificates in case we use gpfdist with ssl */
+	const char*	ssl_verify; /* enable SSL certificate authentication on the GPDB side */
 	int			w; /* The time used for session timeout in seconds */
 	int 		k; /* The time used to clean up sessions in seconds */
 	int			compress; /* The flag to indicate whether comopression transmission is open */
 	int			multi_thread; /* The number of working threads for compression transmission */
-} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, 0, 300, 0, 0};
+} opt = { 8080, 8080, 0, 0, 0, ".", 0, 0, -1, 5, 0, 32768, 0, 256, 0, 0, 0, "on", 0, 300, 0, 0};
 
 #define START_BUFFER_SIZE (1 << 20) /* 1M as start size */
 #define MAXIMUM_BUFFER_SIZE (1 << 30) /* 1G as Maximum size */
@@ -689,6 +690,7 @@ static void parse_command_line(int argc, const char* const argv[],
 	{ NULL, 'S', 0, "use O_SYNC when opening files for write" },
 	{ NULL, 'z', 1, "internal - queue size for listen call" },
 	{ "ssl", 257, 1, "ssl - certificates files under this directory" },
+	{ "ssl_verify_peer", 260, 1, "ssl_verify_peer - enable or disable the authentication for gpdb identity" },
 #ifdef GPFXDIST
 	{ NULL, 'c', 1, "transform configuration file" },
 #endif
@@ -772,9 +774,15 @@ static void parse_command_line(int argc, const char* const argv[],
 		case 257:
 			opt.ssl = arg;
 			break;
+		case 260:
+			opt.ssl_verify = arg;
+			break;
 #else
 		case 257:
-			usage_error("SSL is not supported by this build", 0);
+			usage_error("Flag ssl is not supported by this build", 0);
+			break;
+		case 260:
+			usage_error("Flag ssl_verify_peer is not supported by this build", 0);
 			break;
 #endif
 		case 256:
@@ -3660,19 +3668,19 @@ static void handle_post_request(request_t *r, int header_end)
 
 done_processing_request:
 
+	/* 
+	 * To ensure that retry works well,
+	 * there are two cases where seq_segs will be updated.
+	 * 1. Data has been written successfully.
+	 * 2. Request is OPEN_SEQ.
+	 */
+	session->seq_segs[r->segid] = r->seq;
+
 	/* send our success response and end the request */
 	if (0 != http_ok(r))
 		request_end(r, ERROR_CODE_GENERIC, 0);
 	else
-	{
 		request_end(r, ERROR_CODE_SUCCESS, 0); /* we're done! */
-		/* 
-		 * Only when send http_ok successfully will we set
-		 * OPEN_SEQ and normal seq, we just add 1.
-		 * For duplicate case, we set it unchanged.
-		 */
-		session->seq_segs[r->segid] = r->seq;
-	}
 }
 
 static int request_set_path(request_t *r, const char* d, char* p, char* pp, char* path)
@@ -4604,27 +4612,35 @@ static SSL_CTX *initialize_ctx(void)
 		}
 	}
 
-	/* Copy the path + the filename */
-	snprintf(fileName,stringSize,"%s%c%s",opt.ssl,slash,TrustedCaFilename);
-
-	/* Load the CAs we trust*/
-	if (!(SSL_CTX_load_verify_locations(ctx, fileName,0)))
-	{
-		gfatal (NULL,"Unable to to load CA from file: \"%s\"", fileName);
-	}
-	else
-	{
-		if ( opt.v )
-		{
-			gprint(NULL, "The CA file successfully loaded from \"%s\"\n",fileName);
-		}
-	}
-
 	/* 
 	 * Set the verification flags for ctx
 	 * We always require client certificate
 	 */
-	SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, 0);
+	if (!strcmp(opt.ssl_verify, "on")) {
+		/* Copy the path + the filename */
+		snprintf(fileName,stringSize,"%s%c%s",opt.ssl,slash,TrustedCaFilename);
+
+		/* Load the CAs we trust*/
+		if (!(SSL_CTX_load_verify_locations(ctx, fileName,0)))
+		{
+			gfatal (NULL,"Unable to to load CA from file: \"%s\"", fileName);
+		}
+		else
+		{
+			if ( opt.v )
+			{
+				gprint(NULL, "The CA file successfully loaded from \"%s\"\n",fileName);
+			}
+		}
+		
+		SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, 0);
+	}
+	else if (!strcmp(opt.ssl_verify, "off")) {
+		SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, 0); 
+	}
+	else {
+		gfatal(NULL, "Invalid parameter for --ssl_verify_peer");
+	}
 
 	/* 
 	 * Consider using these - experinments on Mac showed no improvement,
@@ -4768,10 +4784,8 @@ static void free_SSL_resources(const request_t *r)
 static void handle_ssl_error(SOCKET sock, BIO *sbio, SSL *ssl)
 {
 	gwarning(NULL, "SSL accept failed");
-	if (opt.v)
-	{
-		ERR_print_errors(gcb.bio_err);
-	}
+	
+	ERR_print_errors(gcb.bio_err);
 
 	SSL_shutdown(ssl);
 	SSL_free(ssl);

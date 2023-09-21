@@ -57,6 +57,7 @@ int			WalSegSz;
 char	   *datadir_target = NULL;
 char	   *datadir_source = NULL;
 char	   *connstr_source = NULL;
+char	   *log_directory = NULL;
 
 static bool debug = false;
 bool		showprogress = false;
@@ -495,6 +496,7 @@ main(int argc, char **argv)
 		pg_log_info("syncing target data directory");
 	syncTargetDirectory();
 
+	pg_free(log_directory);
 	pg_log_info("Done!");
 
 	return 0;

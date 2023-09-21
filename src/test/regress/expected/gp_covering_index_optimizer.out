@@ -255,7 +255,6 @@ SELECT a, b, c FROM test_replicated WHERE c>42;
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
--- ORCA_FEATURE_NOT_SUPPORTED: enable index scans on AO tables
 CREATE TABLE test_ao(a int, b int, c int) WITH (appendonly=true) DISTRIBUTED BY (a);
 CREATE INDEX i_test_ao ON test_ao(a) INCLUDE (b);
 INSERT INTO test_ao SELECT i, i+i, i*i FROM generate_series(1, 100)i;
@@ -263,14 +262,16 @@ VACUUM ANALYZE test_ao;
 -- KEYS: [a] INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT b FROM test_ao WHERE a<42 AND b>42;
-                            QUERY PLAN                             
--------------------------------------------------------------------
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=20 loops=1)
-   ->  Seq Scan on test_ao (actual rows=8 loops=1)
-         Filter: ((a < 42) AND (b > 42))
-         Rows Removed by Filter: 30
+   ->  Index Only Scan using i_test_ao on test_ao (actual rows=8 loops=1)
+         Index Cond: (a < 42)
+         Filter: (b > 42)
+         Rows Removed by Filter: 8
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
-(5 rows)
+(7 rows)
 
 -- KEYS: [a] INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
@@ -567,6 +568,96 @@ SELECT a, b FROM test_cover_index_on_pt WHERE a<10;
  Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
+-- Test mixed partitioned tables
+--
+-- AO partitioned table contains a non-AO leaf partition
+CREATE TABLE ao_pt(a bigint) WITH (appendonly=true) PARTITION BY RANGE(a)
+(
+  START (1) END (11) WITH (tablename='ao_pt_1_prt_1'),
+  START (11) END (21) WITH (tablename='ao_pt_1_prt_2', appendonly=false),
+  START (21) END (31) WITH (tablename='ao_pt_1_prt_3')
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO ao_pt SELECT i FROM generate_series(1,30)i;
+CREATE INDEX idx_ao_pt_a ON ao_pt USING btree (a);
+VACUUM ANALYZE ao_pt;
+-- Allow dynamic index-only scan on mixed partitioned AO table
+EXPLAIN SELECT a FROM ao_pt WHERE a=29;
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..6.00 rows=1 width=8)
+   ->  Dynamic Index Only Scan on idx_ao_pt_a on ao_pt  (cost=0.00..6.00 rows=1 width=8)
+         Index Cond: (a = 29)
+         Number of partitions to scan: 1 (out of 3)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+-- imitate child partition has GPDB 6 version file via catalog
+-- start_ignore
+SET allow_system_table_mods=on;
+UPDATE pg_appendonly SET version=1 WHERE relid='ao_pt_1_prt_3'::regclass;
+RESET allow_system_table_mods;
+-- end_ignore
+-- Disallow if the table contains child partition with GPDB 6 version
+EXPLAIN SELECT a FROM ao_pt WHERE a=29;
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..387.97 rows=1 width=8)
+   ->  Dynamic Bitmap Heap Scan on ao_pt  (cost=0.00..387.97 rows=1 width=8)
+         Number of partitions to scan: 1 (out of 3)
+         Recheck Cond: (a = 29)
+         Filter: (a = 29)
+         ->  Dynamic Bitmap Index Scan on idx_ao_pt_a  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: (a = 29)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+DROP TABLE ao_pt;
+-- AO/CO partitioned table contains a non-AO leaf partition
+CREATE TABLE aocs_pt(a bigint) WITH (appendonly=true, orientation=column) PARTITION BY RANGE(a)
+(
+  START (1) END (11) WITH (tablename='aocs_pt_1_prt_1'),
+  START (11) END (21) WITH (tablename='aocs_pt_1_prt_2', appendonly=false),
+  START (21) END (31) WITH (tablename='aocs_pt_1_prt_3')
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO aocs_pt SELECT i FROM generate_series(1,30)i;
+CREATE INDEX idx_aocs_pt_a ON aocs_pt USING btree (a);
+VACUUM ANALYZE aocs_pt;
+-- Allow dynamic index-only scan on mixed partitioned AO/CO table
+EXPLAIN SELECT a FROM aocs_pt WHERE a=29;
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..6.00 rows=1 width=8)
+   ->  Dynamic Index Only Scan on idx_aocs_pt_a on aocs_pt  (cost=0.00..6.00 rows=1 width=8)
+         Index Cond: (a = 29)
+         Number of partitions to scan: 1 (out of 3)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+-- imitate child partition has GPDB 6 version file via catalog
+-- start_ignore
+SET allow_system_table_mods=on;
+UPDATE pg_appendonly SET version=1 WHERE relid='aocs_pt_1_prt_3'::regclass;
+RESET allow_system_table_mods;
+-- end_ignore
+-- Disallow if the table contains child partition with GPDB 6 version
+EXPLAIN SELECT a FROM aocs_pt WHERE a=29;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..387.97 rows=1 width=8)
+   ->  Dynamic Bitmap Heap Scan on aocs_pt  (cost=0.00..387.97 rows=1 width=8)
+         Number of partitions to scan: 1 (out of 3)
+         Recheck Cond: (a = 29)
+         Filter: (a = 29)
+         ->  Dynamic Bitmap Index Scan on idx_aocs_pt_a  (cost=0.00..0.00 rows=0 width=0)
+               Index Cond: (a = 29)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+DROP TABLE aocs_pt;
 -- Test various index types
 --
 -- Check that different index types can be used with cover indexes.
@@ -577,17 +668,43 @@ INSERT INTO test_index_types VALUES ('(1.0,1.0,3.0,3.0)', 3, 3);
 CREATE INDEX i_test_index_types ON test_index_types USING GIST (a) INCLUDE (b);
 VACUUM ANALYZE test_index_types;
 -- KEYS: [a]    INCLUDED: [b]
--- ORCA_FEATURE_NOT_SUPPORTED: support index-only-scan on GIST indexes
+-- Check support index-only-scan on GIST indexes
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_index_types WHERE a<@ box '(0,0,3,3)';
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=2 loops=1)
-   ->  Index Scan using i_test_index_types on test_index_types (actual rows=2 loops=1)
+   ->  Index Only Scan using i_test_index_types on test_index_types (actual rows=2 loops=1)
          Index Cond: (a <@ '(3,3),(0,0)'::box)
-         Filter: (a <@ '(3,3),(0,0)'::box)
+         Heap Fetches: 0
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
+
+-- KEYS: [a]    INCLUDED: [b]
+-- Check support dynamic-index-only-scan on GIST indexes
+CREATE TABLE test_partition_table_with_gist_index(a int, b_box box)
+DISTRIBUTED BY (a)
+PARTITION BY RANGE (a)
+(
+    START (0) END (4) EVERY (1)
+);
+CREATE INDEX gist_index_on_column_a_box ON test_partition_table_with_gist_index USING GIST (b_box) INCLUDE (a);
+INSERT INTO test_partition_table_with_gist_index VALUES (2, '(2.0,2.0,0.0,0.0)');
+INSERT INTO test_partition_table_with_gist_index VALUES (3, '(1.0,1.0,3.0,3.0)');
+VACUUM ANALYZE test_partition_table_with_gist_index;
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT a, b_box FROM test_partition_table_with_gist_index WHERE b_box<@ box '(0,0,3,3)';
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3) (actual rows=2 loops=1)
+   ->  Dynamic Index Only Scan on gist_index_on_column_a_box on test_partition_table_with_gist_index (actual rows=2 loops=1)
+         Index Cond: (b_box <@ '(3,3),(0,0)'::box)
+         Filter: (b_box <@ '(3,3),(0,0)'::box)
+         Heap Fetches: 0
+         Number of partitions to scan: 4 (out of 4)
+         Partitions scanned:  Avg 4.0 x 3 workers.  Max 4 parts (seg0).
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
 
 -- 8) Test partial indexes
 --

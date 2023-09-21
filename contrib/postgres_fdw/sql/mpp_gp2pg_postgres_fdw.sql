@@ -218,15 +218,27 @@ SELECT count(c1), sum(c3), avg(c4), min(c5), max(c6), count(c1) * (random() <= 1
 
 ALTER FOREIGN TABLE mpp_ft2 OPTIONS(set use_remote_estimate 'false');
 
--- limit is not pushed down when there are multiple remote servers
--- limit with agg functions
-EXPLAIN (VERBOSE, COSTS OFF)
-SELECT count(c1), max(c6) FROM mpp_ft2 GROUP BY c2 order by c2 limit 3;
-SELECT count(c1), max(c6) FROM mpp_ft2 GROUP BY c2 order by c2 limit 3;
--- limit with normal scan without agg functions
+-- ===================================================================
+-- Queries with LIMIT/OFFSET clauses
+-- ===================================================================
+-- Simple query with LIMIT clause is pushed down.
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT c1, c2 FROM mpp_ft2 order by c1 limit 3;
 SELECT c1, c2 FROM mpp_ft2 order by c1 limit 3;
+-- Simple query with OFFSET and LIMIT clause together is NOT pushed down.
+-- Because it's unsafe to do offset and limit in multiple remote servers.
+EXPLAIN (VERBOSE, COSTS OFF)
+SELECT c1, c2 FROM mpp_ft2 order by c1 offset 2 limit 3;
+SELECT c1, c2 FROM mpp_ft2 order by c1 offset 2 limit 3;
+-- Query with aggregates and limit clause together is NOT pushed down.
+-- Because it's unsafe to do partial aggregate and limit in multiple remote servers.
+EXPLAIN (VERBOSE, COSTS OFF)
+SELECT count(c1), max(c6) FROM mpp_ft2 GROUP BY c2 order by c2 limit 3;
+SELECT count(c1), max(c6) FROM mpp_ft2 GROUP BY c2 order by c2 limit 3;
+
+-- ===================================================================
+-- Queries with JOIN
+-- ===================================================================
 -- join is not safe to pushed down when there are multiple remote servers
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT count(*), sum(t1.c1), avg(t2.c2) FROM mpp_ft2 t1 inner join mpp_ft2 t2 on (t1.c1 = t2.c1) where t1.c1 = 2;

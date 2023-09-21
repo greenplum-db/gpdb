@@ -255,6 +255,8 @@ class GpStop:
         gp.check_permissions(self.user)
         self._read_postgresqlconf()
         self._check_db_running()
+        if self._is_db_shutting_down():
+            self._handle_shutdown_state()
         self._build_gparray()
         if self.onlyThisHost:
             self._is_hostname_valid()
@@ -313,6 +315,60 @@ class GpStop:
         logger.info("Obtaining Segment details from coordinator...")
         self.dburl = dbconn.DbURL(port=self.port, dbname='template1')
         self.gparray = GpArray.initFromCatalog(self.dburl, utility=True)
+
+    def _handle_shutdown_state(self):
+        """
+        Handle the scenario where the Greenplum database is in shutting down state.
+        """
+        # Check if gpstop is called with -u option
+        if self.sighup:
+            logger.fatal("Cannot send SIGHUP to postmaster as the database is shutting down. "
+                         "Please run 'gpstop' to complete the shutdown process.")
+            sys.exit(1)
+
+        # Prompt user for mode selection
+        mode_selection = userinput.ask_string("Please select fast or immediate mode to complete the shutdown:",
+                                              "['(f)ast_mode', '(i)mmediate_mode']", 'f',
+                                              ['f', 'i'])
+        logger.info("Your choice was '{0}'".format(mode_selection))
+        self.mode = 'fast' if mode_selection == 'f' else 'immediate'
+
+        # Stop the coordinator processes stuck in shutting down state
+        logger.info("Stopping the coordinator to finish the database shutdown")
+        try:
+            cmd = gp.CoordinatorStop("stopping coordinator", self.coordinator_datadir, mode='immediate')
+            cmd.run(validateAfter=True)
+        except Exception as exc:
+            raise Exception("Unable to stop the coordinator: {0}".format(exc))
+
+        # Starting the cluster in coordinator_only mode. It is required to gather segment information
+        # in subsequent steps in order to continue the normal gpstop workflow.
+        self._start_db_coordinatoronly()
+
+    def _is_db_shutting_down(self):
+        """
+        Check if the Greenplum database is in the process of shutting down.
+        Returns True if the database is shutting down.
+        """
+        try:
+            self.dburl = dbconn.DbURL(port=self.port, dbname='template1')
+            with closing(dbconn.connect(self.dburl)) as conn:
+                pass  # Nothing to do here, as we are only testing the database connection
+        except Exception as exc:
+            if "the database system is shutting down" in str(exc):
+                logger.warning("The database is currently in the process of shutting down.")
+                return True
+
+    def _start_db_coordinatoronly(self):
+        """
+        Starting the cluster in coordinator-only mode.
+        """
+        logger.info("Running gpstart in coordinator_only mode.")
+        try:
+            cmd = gp.GpStart("running gpstart -am", coordinatorOnly=True)
+            cmd.run(validateAfter=True)
+        except Exception as exc:
+            raise Exception("Unable to start the cluster in coordinator_only mode: {0}".format(exc))
 
     class _SigIntHandler(object):
         def __init__(self):
@@ -915,6 +971,17 @@ class GpStop:
                       logfileDirectory=logfileDirectory,
                       onlyThisHost=options.only_this_host)
 
+    @staticmethod
+    def mainOptions():
+        """
+        This method returns a dictionary instructing simple_main to check for
+        a gpstop.lock file under COORDINATOR_DATA_DIRECTORY in order to prevent
+        the customer from running multiple instances of gpstop.
+        """
+        return {'pidlockpath': 'gpstop.lock', 'parentpidvar': 'GPSTOPPID'}
 
 if __name__ == '__main__':
-    simple_main(GpStop.createParser, GpStop.createProgram)
+    simple_main(GpStop.createParser, GpStop.createProgram, GpStop.mainOptions())
+
+
+

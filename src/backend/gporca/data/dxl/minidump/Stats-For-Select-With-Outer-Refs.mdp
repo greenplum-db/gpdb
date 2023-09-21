@@ -471,40 +471,28 @@
       <dxl:Relation Mdid="6.2604.1.1" Name="pg_attrdef" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="11,4">
         <dxl:Columns>
           <dxl:Column Name="adrelid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="adnum" Attno="2" Mdid="0.21.1.0" Nullable="false" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="adbin" Attno="3" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="adsrc" Attno="4" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="oid" Attno="-2" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -538,76 +526,52 @@
       <dxl:Relation Mdid="6.1249.1.1" Name="pg_attribute" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="23,17">
         <dxl:Columns>
           <dxl:Column Name="attrelid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="attname" Attno="2" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="atttypid" Attno="3" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="attstattarget" Attno="4" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="attlen" Attno="5" Mdid="0.21.1.0" Nullable="false" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="attnum" Attno="6" Mdid="0.21.1.0" Nullable="false" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="attndims" Attno="7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="attcacheoff" Attno="8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="atttypmod" Attno="9" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="attbyval" Attno="10" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="attstorage" Attno="11" Mdid="0.18.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="attalign" Attno="12" Mdid="0.18.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="attnotnull" Attno="13" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="atthasdef" Attno="14" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="attisdropped" Attno="15" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="attislocal" Attno="16" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="attinhcount" Attno="17" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -736,7 +700,7 @@
             <dxl:Ident ColId="1" ColName="attname" TypeMdid="0.19.1.0"/>
           </dxl:ProjElem>
           <dxl:ProjElem ColId="24" Alias="format_type">
-            <dxl:FuncExpr FuncId="0.1081.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+            <dxl:FuncExpr FuncId="0.1081.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
               <dxl:Ident ColId="2" ColName="atttypid" TypeMdid="0.26.1.0"/>
               <dxl:Ident ColId="8" ColName="atttypmod" TypeMdid="0.23.1.0"/>
             </dxl:FuncExpr>
@@ -755,8 +719,8 @@
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="37" Alias="substring">
-                    <dxl:FuncExpr FuncId="0.936.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
-                      <dxl:FuncExpr FuncId="0.1716.1.0" FuncRetSet="false" TypeMdid="0.25.1.0">
+                    <dxl:FuncExpr FuncId="0.936.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
+                      <dxl:FuncExpr FuncId="0.1716.1.0" FuncRetSet="false" TypeMdid="0.25.1.0" FuncVariadic="false">
                         <dxl:Ident ColId="27" ColName="adbin" TypeMdid="0.25.1.0"/>
                         <dxl:Ident ColId="25" ColName="adrelid" TypeMdid="0.26.1.0"/>
                       </dxl:FuncExpr>
@@ -812,7 +776,7 @@
                     <dxl:Filter>
                       <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.607.1.0">
                         <dxl:Ident ColId="25" ColName="adrelid" TypeMdid="0.26.1.0"/>
-                        <dxl:FuncExpr FuncId="0.313.1.0" FuncRetSet="false" TypeMdid="0.26.1.0">
+                        <dxl:FuncExpr FuncId="0.313.1.0" FuncRetSet="false" TypeMdid="0.26.1.0" FuncVariadic="false">
                           <dxl:Ident ColId="26" ColName="adnum" TypeMdid="0.21.1.0"/>
                         </dxl:FuncExpr>
                       </dxl:Comparison>

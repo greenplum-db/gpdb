@@ -642,49 +642,49 @@ SELECT t1.a, t1.c, t2.b, t2.c FROM prt1_e t1, prt2_e t2 WHERE (t1.a + t1.b)/2 = 
 --
 EXPLAIN (COSTS OFF)
 SELECT t1.a, t1.c, t2.b, t2.c, t3.a + t3.b, t3.c FROM prt1 t1, prt2 t2, prt1_e t3 WHERE t1.a = t2.b AND t1.a = (t3.a + t3.b)/2 AND t1.b = 0 ORDER BY t1.a, t2.b;
-                                         QUERY PLAN                                          
----------------------------------------------------------------------------------------------
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: t1.a
    ->  Sort
          Sort Key: t1.a
          ->  Append
-               ->  Hash Join
-                     Hash Cond: (((t3.a + t3.b) / 2) = t1.a)
-                     ->  Seq Scan on prt1_e_p1 t3
-                     ->  Hash
-                           ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                                 ->  Hash Join
-                                       Hash Cond: (t2.b = t1.a)
-                                       ->  Seq Scan on prt2_p1 t2
-                                       ->  Hash
-                                             ->  Broadcast Motion 3:3  (slice3; segments: 3)
-                                                   ->  Seq Scan on prt1_p1 t1
-                                                         Filter: (b = 0)
-               ->  Hash Join
-                     Hash Cond: (((t3_1.a + t3_1.b) / 2) = t1_1.a)
-                     ->  Seq Scan on prt1_e_p2 t3_1
-                     ->  Hash
-                           ->  Broadcast Motion 3:3  (slice4; segments: 3)
-                                 ->  Hash Join
-                                       Hash Cond: (t2_1.b = t1_1.a)
-                                       ->  Seq Scan on prt2_p2 t2_1
-                                       ->  Hash
-                                             ->  Broadcast Motion 3:3  (slice5; segments: 3)
-                                                   ->  Seq Scan on prt1_p2 t1_1
-                                                         Filter: (b = 0)
-               ->  Hash Join
-                     Hash Cond: (((t3_2.a + t3_2.b) / 2) = t1_2.a)
-                     ->  Seq Scan on prt1_e_p3 t3_2
-                     ->  Hash
-                           ->  Broadcast Motion 3:3  (slice6; segments: 3)
-                                 ->  Hash Join
-                                       Hash Cond: (t2_2.b = t1_2.a)
-                                       ->  Seq Scan on prt2_p3 t2_2
-                                       ->  Hash
-                                             ->  Broadcast Motion 3:3  (slice7; segments: 3)
-                                                   ->  Seq Scan on prt1_p3 t1_2
-                                                         Filter: (b = 0)
+               ->  Nested Loop
+                     Join Filter: (t1.a = ((t3.a + t3.b) / 2))
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                           ->  Hash Join
+                                 Hash Cond: (t2.b = t1.a)
+                                 ->  Seq Scan on prt2_p1 t2
+                                 ->  Hash
+                                       ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                             ->  Seq Scan on prt1_p1 t1
+                                                   Filter: (b = 0)
+                     ->  Index Scan using iprt1_e_p1_ab2 on prt1_e_p1 t3
+                           Index Cond: (((a + b) / 2) = t2.b)
+               ->  Nested Loop
+                     Join Filter: (t1_1.a = ((t3_1.a + t3_1.b) / 2))
+                     ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                           ->  Hash Join
+                                 Hash Cond: (t2_1.b = t1_1.a)
+                                 ->  Seq Scan on prt2_p2 t2_1
+                                 ->  Hash
+                                       ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                                             ->  Seq Scan on prt1_p2 t1_1
+                                                   Filter: (b = 0)
+                     ->  Index Scan using iprt1_e_p2_ab2 on prt1_e_p2 t3_1
+                           Index Cond: (((a + b) / 2) = t2_1.b)
+               ->  Nested Loop
+                     Join Filter: (t1_2.a = ((t3_2.a + t3_2.b) / 2))
+                     ->  Broadcast Motion 3:3  (slice6; segments: 3)
+                           ->  Hash Join
+                                 Hash Cond: (t2_2.b = t1_2.a)
+                                 ->  Seq Scan on prt2_p3 t2_2
+                                 ->  Hash
+                                       ->  Broadcast Motion 3:3  (slice7; segments: 3)
+                                             ->  Seq Scan on prt1_p3 t1_2
+                                                   Filter: (b = 0)
+                     ->  Index Scan using iprt1_e_p3_ab2 on prt1_e_p3 t3_2
+                           Index Cond: (((a + b) / 2) = t2_2.b)
  Optimizer: Postgres query optimizer
 (42 rows)
 
@@ -817,16 +817,15 @@ SELECT t1.a, t1.c, t2.b, t2.c, t3.a + t3.b, t3.c FROM (prt1 t1 LEFT JOIN prt2 t2
                      ->  Hash
                            ->  Redistribute Motion 3:3  (slice9; segments: 3)
                                  Hash Key: t1_2.a
-                                 ->  Hash Right Join
-                                       Hash Cond: (t1_2.a = ((t3_2.a + t3_2.b) / 2))
-                                       ->  Seq Scan on prt1_p3 t1_2
-                                       ->  Hash
-                                             ->  Redistribute Motion 3:3  (slice10; segments: 3)
-                                                   Hash Key: ((t3_2.a + t3_2.b) / 2)
-                                                   ->  Seq Scan on prt1_e_p3 t3_2
-                                                         Filter: (c = 0)
+                                 ->  Nested Loop Left Join
+                                       ->  Redistribute Motion 3:3  (slice10; segments: 3)
+                                             Hash Key: ((t3_2.a + t3_2.b) / 2)
+                                             ->  Seq Scan on prt1_e_p3 t3_2
+                                                   Filter: (c = 0)
+                                       ->  Index Scan using iprt1_p3_a on prt1_p3 t1_2
+                                             Index Cond: (a = ((t3_2.a + t3_2.b) / 2))
  Optimizer: Postgres query optimizer
-(54 rows)
+(53 rows)
 
 SELECT t1.a, t1.c, t2.b, t2.c, t3.a + t3.b, t3.c FROM (prt1 t1 LEFT JOIN prt2 t2 ON t1.a = t2.b) RIGHT JOIN prt1_e t3 ON (t1.a = (t3.a + t3.b)/2) WHERE t3.c = 0 ORDER BY t1.a, t2.b, t3.a + t3.b;
   a  |  c   |  b  |  c   | ?column? | c 

@@ -12,7 +12,7 @@ Just-in-Time (JIT) compilation is the process of turning some form of interprete
 
 Greenplum Database uses LLVM for JIT compilation and it is enabled with all RPM distributions of Greenplum Database. If you build Greenplum Database from source, you must include the `--with-llvm` build option to include JIT compilation support.
 
-It is possible to use JIT with both GPORCA and Postgres Planner. Since GPORCA and Postgres Planner use different algorithms and the values for the calculated costs are different, you must tune the JIT thresholds according to your usage. See [When to JIT?](#topic3) for more information.
+It is possible to use JIT with both GPORCA and Postgres-based planner. Since GPORCA and Postgres-based planner use different algorithms and the values for the calculated costs are different, you must tune the JIT thresholds according to your usage. See [When to JIT?](#topic3) for more information.
 
 ### <a id="topic21"></a>JIT accelerated operations
 
@@ -38,16 +38,16 @@ The internal workflow of JIT can be divided into three different stages:
 
 1. Planner Stage
     
-    This stage takes place in the Greenplum Database coordinator. The planner generates the plan tree of a query and its estimated cost. By default, Greenplum Database uses GPORCA to generate a query plan. Otherwise it uses Postgres Planner as a fallback method.
+    This stage takes place in the Greenplum Database coordinator. The planner generates the plan tree of a query and its estimated cost. By default, Greenplum Database uses GPORCA to generate a query plan. Otherwise it uses Postgres-based planner as a fallback method.
 
     The planner decides to trigger JIT compilation if:
 
     - The server configuration parameter [jit](../../../ref_guide/config_params/guc-list.html#jit) is `true`.
-    - The estimated cost of the query is higher than the value of the configuration parameter [optimizer_jit_above_cost](../../../ref_guide/config_params/guc-list.html#optimizer_jit_above_cost) (or [jit_above_cost](../../../ref_guide/config_params/guc-list.html#jit_above_cost) for Postgres Planner).  
+    - The estimated cost of the query is higher than the value of the configuration parameter [optimizer_jit_above_cost](../../../ref_guide/config_params/guc-list.html#optimizer_jit_above_cost) (or [jit_above_cost](../../../ref_guide/config_params/guc-list.html#jit_above_cost) for Postgres-based planner).  
 
-    If the parameter [jit_expressions](../../../ref_guide/config_params/guc-list.html#jit_expressions) is enabled, the planner suggests to the executor to compile the expressions in JIT space. Additionally, the planner must make other decisions; if the estimated cost is more than the setting of [optimizer_jit_inline_above_cost](../../../ref_guide/config_params/guc-list.html#optimizer_jit_inline_above_cost) (or [jit_inline_above_cost](../../../ref_guide/config_params/guc-list.html#jit_inline_above_cost) for Postgres Planner), the planner compiles short functions and operators used in the query using in-line compilation. If the estimated cost is more than the setting of [optimizer_jit_optimize_above_cost](../../../ref_guide/config_params/guc-list.html#optimizer_jit_optimize_above_cost) (or [jit_optimize_above_cost](../../../ref_guide/config_params/guc-list.html#jit_optimize_above_cost) for Postgres Planner), it applies expensive optimizations to improve the generated code. If the configuration parameter [jit_tuple_deforming](../../../ref_guide/config_params/guc-list.html#jit_tuple_deforming) is enabled, it generates a custom function to deform the target table. Each of these options increases the JIT compilation overhead, but can reduce query execution time considerably.
+    If the parameter [jit_expressions](../../../ref_guide/config_params/guc-list.html#jit_expressions) is enabled, the planner suggests to the executor to compile the expressions in JIT space. Additionally, the planner must make other decisions; if the estimated cost is more than the setting of [optimizer_jit_inline_above_cost](../../../ref_guide/config_params/guc-list.html#optimizer_jit_inline_above_cost) (or [jit_inline_above_cost](../../../ref_guide/config_params/guc-list.html#jit_inline_above_cost) for Postgres-based planner), the planner compiles short functions and operators used in the query using in-line compilation. If the estimated cost is more than the setting of [optimizer_jit_optimize_above_cost](../../../ref_guide/config_params/guc-list.html#optimizer_jit_optimize_above_cost) (or [jit_optimize_above_cost](../../../ref_guide/config_params/guc-list.html#jit_optimize_above_cost) for Postgres-based planner), it applies expensive optimizations to improve the generated code. If the configuration parameter [jit_tuple_deforming](../../../ref_guide/config_params/guc-list.html#jit_tuple_deforming) is enabled, it generates a custom function to deform the target table. Each of these options increases the JIT compilation overhead, but can reduce query execution time considerably.
 
-    Verify the values of these configuration parameters for both GPORCA and Postgres Planner, as the meaning of cost is different. When using GPORCA, Greenplum Database may sometimes fall back to Postgres Planner for some operations. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting them to a negative value will disable the feature the parameter provides.
+    Verify the values of these configuration parameters for both GPORCA and Postgres-based planner, as the meaning of cost is different. When using GPORCA, Greenplum Database may sometimes fall back to Postgres-based planner for some operations. Note that setting the JIT cost parameters to ‘0’ forces all queries to be JIT-compiled and, as a result, slows down queries. Setting them to a negative value will disable the feature the parameter provides.
 
     When the plan is ready, the planner provides the plan trees and JIT flags to the executor.
 
@@ -84,7 +84,7 @@ QUERY PLAN
 Limit  (cost=0.00..431.00 rows=1 width=4) (actual time=1.103..1.107 rows=10 loops=1)
   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.013..0.014 rows=10 loops=1)
         ->  Seq Scan on jit_explain_output  (cost=0.00..431.00 rows=1 width=4) (actual time=0.025..0.030 rows=38 loops=1)
-Optimizer: Pivotal Optimizer (GPORCA)
+Optimizer: GPORCA
 Planning Time: 5.824 ms
   (slice0)    Executor memory: 37K bytes.
   (slice1)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
@@ -96,7 +96,7 @@ Execution Time: 1.597 ms
 (12 rows)
 ```
 
-With Postgres Planner:
+With Postgres-based planner:
 
 ```
 EXPLAIN (ANALYZE) SELECT * FROM jit_explain_output LIMIT 10;
@@ -105,7 +105,7 @@ Limit  (cost=35.50..35.67 rows=10 width=4) (actual time=13.199..13.310 rows=10 l
   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=35.50..36.01 rows=30 width=4) (actual time=11.848..11.890 rows=10 loops=1)
         ->  Limit  (cost=35.50..35.61 rows=10 width=4) (actual time=0.861..0.971 rows=10 loops=1)
               ->  Seq Scan on jit_explain_output  (cost=0.00..355.00 rows=32100 width=4) (actual time=0.029..0.070 rows=10 loops=1)
-Optimizer: Postgres query optimizer
+Optimizer: Postgres-based planner
 Planning Time: 0.158 ms
   (slice0)    Executor memory: 37K bytes.
   (slice1)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).

@@ -2544,7 +2544,6 @@ reset enable_nestloop;
 -- like it does on PostgreSQL?
 -- end_ignore
 set work_mem to '64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set enable_mergejoin to off;
 explain (costs off)
 select count(*) from tenk1 a, tenk1 b
@@ -2572,7 +2571,6 @@ select count(*) from tenk1 a, tenk1 b
 (1 row)
 
 reset work_mem;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 reset enable_mergejoin;
 --
 -- regression test for 8.2 bug with improper re-ordering of left joins
@@ -6663,16 +6661,17 @@ analyze j1; -- GPDB also needs this to get the same plan as in upstream
 explain (costs off) select * from j1
 inner join j2 on j1.id1 = j2.id1 and j1.id2 = j2.id2
 where j1.id1 % 1000 = 1 and j2.id1 % 1000 = 1;
-                  QUERY PLAN                   
------------------------------------------------
+                          QUERY PLAN                           
+---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Merge Join
-         Merge Cond: (j1.id1 = j2.id1)
-         Join Filter: (j1.id2 = j2.id2)
-         ->  Index Scan using j1_id1_idx on j1
-         ->  Index Scan using j2_id1_idx on j2
+         Merge Cond: ((j1.id1 = j2.id1) AND (j1.id2 = j2.id2))
+         ->  Index Only Scan using j1_pkey on j1
+               Filter: ((id1 % 1000) = 1)
+         ->  Index Only Scan using j2_pkey on j2
+               Filter: ((id1 % 1000) = 1)
  Optimizer: Postgres query optimizer
-(7 rows)
+(8 rows)
 
 select * from j1
 inner join j2 on j1.id1 = j2.id1 and j1.id2 = j2.id2

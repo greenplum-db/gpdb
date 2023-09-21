@@ -46,6 +46,7 @@
 #include "storage/proc.h"
 #include "utils/builtins.h"
 #include "utils/gdd.h"
+#include "utils/gp_alloc.h"
 #include "utils/guc_tables.h"
 #include "utils/inval.h"
 #include "utils/resscheduler.h"
@@ -2255,7 +2256,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"optimizer_enable_hashagg", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Enables Pivotal Optimizer (GPORCA) to use hash aggregates."),
+			gettext_noop("Enables GPORCA to use hash aggregates."),
 			NULL,
 			GUC_NOT_IN_SAMPLE
 		},
@@ -2266,7 +2267,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"optimizer_enable_groupagg", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Enables Pivotal Optimizer (GPORCA) to use group aggregates."),
+			gettext_noop("Enables GPORCA to use group aggregates."),
 			NULL,
 			GUC_NOT_IN_SAMPLE
 		},
@@ -2597,7 +2598,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"optimizer_enable_dml", PGC_USERSET, QUERY_TUNING_METHOD,
-			gettext_noop("Enable DML plans in Pivotal Optimizer (GPORCA)."),
+			gettext_noop("Enable DML plans in GPORCA."),
 			NULL,
 			GUC_NOT_IN_SAMPLE
 		},
@@ -2984,6 +2985,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
+	{
+		{"gp_detect_data_correctness", PGC_USERSET, UNGROUPED,
+		gettext_noop("Detect if the current partitioning of the table or data distribution is correct."),
+		NULL,
+		GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_detect_data_correctness,
+		false,
+		NULL, NULL, NULL
+	},
 
 	/* End-of-list marker */
 	{
@@ -3182,6 +3193,17 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_workfile_limit_per_query,
 		0, 0, INT_MAX,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_workfile_compression_overhead_limit", PGC_USERSET, RESOURCES,
+			gettext_noop("The overhead memory (kB) limit for all compressed workfiles of a single workfile_set."),
+			gettext_noop("0 for no limit. Once the limit is hit, the following files will not be compressed."),
+			GUC_UNIT_KB
+		},
+		&gp_workfile_compression_overhead_limit,
+		2048 * 1024, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
 
@@ -4222,6 +4244,19 @@ struct config_int ConfigureNamesInt_gp[] =
 		NULL, NULL, NULL
 	},
 
+#ifdef GP_ALLOC_DEBUG
+	{
+		{"gp_max_alloc_size", PGC_USERSET, DEVELOPER_OPTIONS,
+		 gettext_noop("Sets the max size of a memory allocation request in the backend."),
+		 NULL,
+		 GUC_UNIT_MB
+		},
+		&gp_max_alloc_size_mb,
+		GP_MAX_ALLOC_SIZE_MB_DEFAULT, 1, MAX_KILOBYTES,
+		NULL, NULL, NULL
+	},
+#endif
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, 0, 0, 0, NULL, NULL
@@ -4418,17 +4453,6 @@ struct config_string ConfigureNamesString_gp[] =
 		&memory_profiler_query_id,
 		"none",
 		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_session_role", PGC_BACKEND, COMPAT_OPTIONS_PREVIOUS,
-			gettext_noop("Alias of gp_role for compatibility."),
-			gettext_noop("Valid values are DISPATCH, EXECUTE, and UTILITY."),
-			GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
-		},
-		&gp_session_role_string,
-		"undefined",
-		check_gp_role, assign_gp_role, show_gp_role
 	},
 
 	{

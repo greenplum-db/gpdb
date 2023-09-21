@@ -305,6 +305,10 @@ select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
    49 | hello49 | world | drop this |    1
 (18 rows)
 
+-- With the updated Index scan costing, additional rows are added to enable DPE using
+-- dynamic index only scan on ptid_pt1_idx. These rows are deleted after this test.
+insert into pt select i, 'hello' || i, 'world', 'drop this', i % 6 from generate_series(54,2500) i;
+vacuum analyze pt;
 explain (costs off, timing off, summary off, analyze) select ptid from pt where ptid in (select tid from t where t1 = 'hello' || tid) and pt1 = 'hello1';
                                          QUERY PLAN                                          
 ---------------------------------------------------------------------------------------------
@@ -318,7 +322,7 @@ explain (costs off, timing off, summary off, analyze) select ptid from pt where 
                      Filter: (pt1 = 'hello1'::text)
                ->  Seq Scan on pt_1_prt_3 (actual rows=1 loops=1)
                      Filter: (pt1 = 'hello1'::text)
-                     Rows Removed by Filter: 2
+                     Rows Removed by Filter: 118
                ->  Seq Scan on pt_1_prt_4 (never executed)
                      Filter: (pt1 = 'hello1'::text)
                ->  Seq Scan on pt_1_prt_5 (never executed)
@@ -333,7 +337,7 @@ explain (costs off, timing off, summary off, analyze) select ptid from pt where 
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                            ->  Seq Scan on t (actual rows=2 loops=1)
                                  Filter: (t1 = ('hello'::text || (tid)::text))
- Optimizer: Postgres query optimizer
+ Optimizer: Postgres-based planner
 (26 rows)
 
 select ptid from pt where ptid in (select tid from t where t1 = 'hello' || tid) and pt1 = 'hello1';
@@ -342,6 +346,8 @@ select ptid from pt where ptid in (select tid from t where t1 = 'hello' || tid) 
     1
 (1 row)
 
+delete from pt where dist>53;
+vacuum analyze pt;
 -- start_ignore
 -- Known_opt_diff: MPP-21320
 -- end_ignore

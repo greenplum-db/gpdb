@@ -30,6 +30,7 @@
 
 #include "storage/sharedfileset.h"
 #include "utils/workfile_mgr.h"
+#include "cdb/cdbvars.h"
 
 /* BufFile is an opaque type whose details are not known outside buffile.c. */
 

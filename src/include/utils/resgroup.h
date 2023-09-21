@@ -78,10 +78,10 @@ typedef struct ResGroupCaps
 	volatile ResGroupCap	min_cost;
 
 	/*
-	 * io_limit are local pointers,
-	 * do not use it for cross MemoryContext.
+	 * io_limit is a pointer in TopMemoryContext,
+	 * This cell of list should be converted to TblSpcIOLimit when use.
 	 */
-	char			*io_limit;
+	List			*io_limit;
 
 	char			cpuset[MaxCpuSetLength];
 } ResGroupCaps;
@@ -216,6 +216,7 @@ extern void ResGroupMoveQuery(int sessionId, Oid groupId, const char *groupName)
 extern Oid ResGroupGetGroupIdBySessionId(int sessionId);
 extern char *getCpuSetByRole(const char *cpuset);
 extern void checkCpuSetByRole(const char *cpuset);
+extern bool checkTablespaceInIOlimit(Oid tblspcid, bool errout);
 
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);

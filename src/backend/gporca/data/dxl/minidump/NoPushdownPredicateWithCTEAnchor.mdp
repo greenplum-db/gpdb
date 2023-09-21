@@ -191,31 +191,22 @@
       <dxl:Relation Mdid="6.18205.1.0" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -565,7 +556,7 @@
                   <dxl:ProjElem ColId="18" Alias="max_a">
                     <dxl:AggFunc AggMdid="0.2116.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
                       <dxl:ValuesList ParamType="aggargs">
-                      <dxl:Ident ColId="121" ColName="ColRef_0121" TypeMdid="0.23.1.0"/>
+                        <dxl:Ident ColId="121" ColName="ColRef_0121" TypeMdid="0.23.1.0"/>
                       </dxl:ValuesList>
                       <dxl:ValuesList ParamType="aggdirectargs"/>
                       <dxl:ValuesList ParamType="aggorder"/>
@@ -594,7 +585,7 @@
                       <dxl:ProjElem ColId="121" Alias="ColRef_0121">
                         <dxl:AggFunc AggMdid="0.2116.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
                           <dxl:ValuesList ParamType="aggargs">
-                          <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
+                            <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
                           </dxl:ValuesList>
                           <dxl:ValuesList ParamType="aggdirectargs"/>
                           <dxl:ValuesList ParamType="aggorder"/>
@@ -778,7 +769,7 @@
             <dxl:ProjElem ColId="120" Alias="max">
               <dxl:AggFunc AggMdid="0.2116.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
                 <dxl:ValuesList ParamType="aggargs">
-                <dxl:Ident ColId="123" ColName="ColRef_0123" TypeMdid="0.23.1.0"/>
+                  <dxl:Ident ColId="123" ColName="ColRef_0123" TypeMdid="0.23.1.0"/>
                 </dxl:ValuesList>
                 <dxl:ValuesList ParamType="aggdirectargs"/>
                 <dxl:ValuesList ParamType="aggorder"/>
@@ -807,7 +798,7 @@
                 <dxl:ProjElem ColId="123" Alias="ColRef_0123">
                   <dxl:AggFunc AggMdid="0.2116.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
                     <dxl:ValuesList ParamType="aggargs">
-                    <dxl:Ident ColId="79" ColName="a" TypeMdid="0.23.1.0"/>
+                      <dxl:Ident ColId="79" ColName="a" TypeMdid="0.23.1.0"/>
                     </dxl:ValuesList>
                     <dxl:ValuesList ParamType="aggdirectargs"/>
                     <dxl:ValuesList ParamType="aggorder"/>
@@ -908,7 +899,7 @@
                           <dxl:ProjElem ColId="78" Alias="max_a">
                             <dxl:AggFunc AggMdid="0.2116.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
                               <dxl:ValuesList ParamType="aggargs">
-                              <dxl:Ident ColId="122" ColName="ColRef_0122" TypeMdid="0.23.1.0"/>
+                                <dxl:Ident ColId="122" ColName="ColRef_0122" TypeMdid="0.23.1.0"/>
                               </dxl:ValuesList>
                               <dxl:ValuesList ParamType="aggdirectargs"/>
                               <dxl:ValuesList ParamType="aggorder"/>
@@ -937,7 +928,7 @@
                               <dxl:ProjElem ColId="122" Alias="ColRef_0122">
                                 <dxl:AggFunc AggMdid="0.2116.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
                                   <dxl:ValuesList ParamType="aggargs">
-                                  <dxl:Ident ColId="69" ColName="a" TypeMdid="0.23.1.0"/>
+                                    <dxl:Ident ColId="69" ColName="a" TypeMdid="0.23.1.0"/>
                                   </dxl:ValuesList>
                                   <dxl:ValuesList ParamType="aggdirectargs"/>
                                   <dxl:ValuesList ParamType="aggorder"/>

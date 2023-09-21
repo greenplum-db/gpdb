@@ -17,6 +17,7 @@ create schema co_nestloop_idxscan;
 create table co_nestloop_idxscan.foo (id bigint, data text) with (appendonly=true, orientation=column)
 distributed by (id);
 create table co_nestloop_idxscan.bar (id bigint) distributed by (id);
+set optimizer_enable_indexonlyscan = off;
 -- Changing the text to be smaller doesn't repro the issue
 insert into co_nestloop_idxscan.foo select i, repeat('xxxxxxxxxx', 100000) from generate_series(1,50) i;
 insert into co_nestloop_idxscan.bar values (1);
@@ -155,6 +156,7 @@ select b.id from co_nestloop_idxscan.bar b where b.id in (select f.id from co_ne
 (2 rows)
 
 reset optimizer;
+reset optimizer_enable_indexonlyscan;
 drop schema co_nestloop_idxscan cascade;
 NOTICE:  drop cascades to 2 other objects
 DETAIL:  drop cascades to table co_nestloop_idxscan.foo

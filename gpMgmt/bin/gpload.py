@@ -548,8 +548,16 @@ def is_keyword(tab):
     else:
         return False
 
+# Escape single quotes, backslashes appearing in the string according to the SQL string constants syntax.
+# E.g.,
+# >>> escape_string(r"O'Reilly")
+# "O''Reilly"
 def escape_string(string):
-    return psycopg2.extensions.QuotedString(string).getquoted()[1:-1].decode()
+    adapted = psycopg2.extensions.QuotedString(string)
+    # The getquoted() API returns 'latin-1' encoded binary string by default, we need to specify
+    # the encoding manually.
+    adapted.encoding = 'utf-8'
+    return adapted.getquoted().decode()[1:-1]
 
 def caseInsensitiveDictLookup(key, dictionary):
     """
@@ -807,11 +815,11 @@ class CatThread(threading.Thread):
 
 def cli_help():
     help_path = os.path.join(sys.path[0], '..', 'docs', 'cli_help', EXECNAME +
-                             '_help');
+                             '_help')
     f = None
     try:
         try:
-            f = open(help_path);
+            f = open(help_path)
             return f.read(-1)
         except:
             return ''
@@ -1278,7 +1286,7 @@ class gpload:
                 pass
 
         if level == self.ERROR:
-            self.exitValue = 2;
+            self.exitValue = 2
             sys.exit(self.exitValue)
 
     def getconfig(self, a, typ=None, default='error', extraStuff='', returnOriginal=False):
@@ -2593,7 +2601,7 @@ class gpload:
                     results = cur.fetchall()
                     global NUM_WARN_ROWS
                     NUM_WARN_ROWS = (results[0])[0]
-                    return (results[0])[0];
+                    return (results[0])[0]
         return 0
 
     def report_errors(self):
@@ -2879,7 +2887,7 @@ class gpload:
         truncate = False
         self.reuse_tables = False
 
-        if not self.options.no_auto_trans and not method=='insert':
+        if not self.options.no_auto_trans:
             with self.conn.cursor() as cur:
                 cur.execute("BEGIN")
 
@@ -2947,9 +2955,10 @@ class gpload:
                     self.log(self.ERROR, 'could not execute SQL in sql:after "%s": %s' %
                              (after, str(e)))
 
-        if not self.options.no_auto_trans and not method=='insert':
+        if not self.options.no_auto_trans:
             with self.conn.cursor() as cur:
                 cur.execute("COMMIT")
+
 
     def stop_gpfdists(self):
         if self.subprocesses:

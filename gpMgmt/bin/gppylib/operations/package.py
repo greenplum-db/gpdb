@@ -1,9 +1,10 @@
 # Line too long - pylint: disable=C0301
 # Copyright (c) Greenplum Inc 2011. All Rights Reserved.
 
+import sys
 try:
     from gppylib import gplog
-    from gppylib.commands.base import Command, findCmdInPath
+    from gppylib.commands.base import Command, findCmdInPath, CommandNotFoundException
     from gppylib.operations import Operation
 except ImportError as ex:
     sys.exit(
@@ -27,7 +28,7 @@ class SyncPackages(Operation):
         self.gppkg_path = None
         try:
             self.gppkg_path = findCmdInPath('gppkg')
-        except CommandNotFoundException as e:
+        except CommandNotFoundException:
             pass
 
     def execute(self):

@@ -1,2 +1,9 @@
-alter system set autovacuum = on;
-select gp_segment_id, pg_reload_conf() from gp_id union select gp_segment_id, pg_reload_conf() from gp_dist_random('gp_id');
+-- start_ignore
+!\retcode  gpconfig -c autovacuum -v on;
+!\retcode  gpstop -au;
+-- end_ignore
+
+-- Impose a stronger exit criteria for this test:
+-- the AV launcher has shut down (and by extension the workers) following the config change.
+-- This is done to ensure tests in the suite immediately following this one are run under the right conditions.
+select check_autovacuum(true);

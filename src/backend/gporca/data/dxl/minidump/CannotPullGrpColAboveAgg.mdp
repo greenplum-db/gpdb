@@ -1710,49 +1710,34 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
       <dxl:Relation Mdid="6.15754823.1.1" Name="s_co_plew_persl" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="14,12">
         <dxl:Columns>
           <dxl:Column Name="dtime" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="dversion" Attno="2" Mdid="0.1043.1.0" Nullable="true" ColWidth="15">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="dbridge" Attno="3" Mdid="0.1043.1.0" Nullable="true" ColWidth="17">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="dcomp" Attno="4" Mdid="0.1043.1.0" Nullable="true" ColWidth="12">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="dkst" Attno="5" Mdid="0.1043.1.0" Nullable="true" ColWidth="12">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="dverw_e" Attno="6" Mdid="0.1043.1.0" Nullable="true" ColWidth="12">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="dbudget" Attno="7" Mdid="0.1043.1.0" Nullable="true" ColWidth="15">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="dfkt_grp" Attno="8" Mdid="0.1043.1.0" Nullable="true" ColWidth="12">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="dmeas_pb" Attno="9" Mdid="0.1043.1.0" Nullable="true" ColWidth="12">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="wert" Attno="10" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="verarb_ab" Attno="11" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="verarb_bis" Attno="12" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -3279,79 +3264,54 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
       <dxl:Relation Mdid="6.15754853.1.1" Name="s_kst_ps_elem_vgz" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="24,22">
         <dxl:Columns>
           <dxl:Column Name="element_id" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="element_id_vm" Attno="2" Mdid="0.1043.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="element_name" Attno="3" Mdid="0.1043.1.0" Nullable="true" ColWidth="80">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="name_german" Attno="4" Mdid="0.1043.1.0" Nullable="true" ColWidth="80">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="order_position" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ress_bezei" Attno="6" Mdid="0.1043.1.0" Nullable="true" ColWidth="50">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gsch_fdf" Attno="7" Mdid="0.1043.1.0" Nullable="true" ColWidth="12">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="kst_art" Attno="8" Mdid="0.1043.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="org_elem_nr" Attno="9" Mdid="0.1043.1.0" Nullable="true" ColWidth="12">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="guelt_ab" Attno="10" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="guelt_bis" Attno="11" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="element_name_lang" Attno="12" Mdid="0.1043.1.0" Nullable="true" ColWidth="80">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="fid" Attno="13" Mdid="0.21.1.0" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="fid_kst" Attno="14" Mdid="0.21.1.0" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="inn_dienst_ad" Attno="15" Mdid="0.1043.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="kst_stat" Attno="16" Mdid="0.21.1.0" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="parent_element_id" Attno="17" Mdid="0.1043.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="parent_element_id_vm" Attno="18" Mdid="0.1043.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="keze_entl_kst" Attno="19" Mdid="0.21.1.0" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="keze_parent" Attno="20" Mdid="0.21.1.0" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="verarb_ab" Attno="21" Mdid="0.1082.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="verarb_bis" Attno="22" Mdid="0.1082.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>

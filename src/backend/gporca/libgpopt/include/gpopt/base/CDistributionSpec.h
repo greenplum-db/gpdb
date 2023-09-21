@@ -34,6 +34,30 @@ using namespace gpos;
 class CDistributionSpec : public CPropSpec
 {
 public:
+	/*
+	 * A required distribution spec is a property that we can
+	 * enforce the input data to satisfy. A derived dist spec
+	 * is a property that the input data can possess.
+	 *
+	 * Universal, hashed, randomly distributed, replicated,
+	 * and singleton (together with their sub-types) are
+	 * properties that the input data can possess. Those are
+	 * intrinsic distribution properties.
+	 *
+	 * Non-singleton and non-replicated aren't properties
+	 * that the input data can possess. They are required-only
+	 * specs. We cannot say the input is a non-singleton, or
+	 * is non-replicated. We can only enforce the input to
+	 * comply with the non-singleton, or non-replicated
+	 * requirement.
+	 *
+	 * Based on the logic above, a derived-only spec cannot
+	 * be required. Therefore, it shouldn't have an enforcer.
+	 *
+	 * Correspondingly, a required-only spec cannot be derived.
+	 * Therefore, it shouldn't have a `Satisfies` function.
+	 */
+
 	enum EDistributionType
 	{
 		EdtHashed,		// data is hashed across all segments
@@ -50,6 +74,7 @@ public:
 		EdtRouted,	// data is routed to a segment explicitly specified in the tuple,
 		EdtUniversal,  // data is available everywhere (derived only)
 		EdtNonSingleton,  // data can have any distribution except singleton (required only)
+		EdtNonReplicated,  // data cannot be duplicated (required only)
 
 		EdtSentinel
 	};

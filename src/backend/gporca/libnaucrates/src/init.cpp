@@ -15,8 +15,6 @@
 #include <xercesc/framework/MemBufInputSource.hpp>
 #include <xercesc/util/XMLString.hpp>
 
-#include "gpos/memory/CAutoMemoryPool.h"
-
 #include "naucrates/dxl/parser/CParseHandlerFactory.h"
 #include "naucrates/dxl/xml/CDXLMemoryManager.h"
 #include "naucrates/dxl/xml/dxltokens.h"
@@ -123,23 +121,13 @@ void
 gpdxl_init()
 {
 	// create memory pool for Xerces global allocations
-	{
-		CAutoMemoryPool amp;
-
-		// detach safety
-		pmpXerces = amp.Detach();
-	}
+	pmpXerces = CMemoryPoolManager::CreateMemoryPool();
 
 	// create memory pool for DXL global allocations
-	{
-		CAutoMemoryPool amp;
-
-		// detach safety
-		pmpDXL = amp.Detach();
-	}
+	pmpDXL = CMemoryPoolManager::CreateMemoryPool();
 
 	// add standard exception messages
-	(void) EresExceptionInit(pmpDXL);
+	EresExceptionInit(pmpDXL);
 }
 
 
@@ -159,13 +147,13 @@ gpdxl_terminate()
 
 	if (nullptr != pmpDXL)
 	{
-		(CMemoryPoolManager::GetMemoryPoolMgr())->Destroy(pmpDXL);
+		CMemoryPoolManager::Destroy(pmpDXL);
 		pmpDXL = nullptr;
 	}
 
 	if (nullptr != pmpXerces)
 	{
-		(CMemoryPoolManager::GetMemoryPoolMgr())->Destroy(pmpXerces);
+		CMemoryPoolManager::Destroy(pmpXerces);
 		pmpXerces = nullptr;
 	}
 #endif	// GPOS_DEBUG

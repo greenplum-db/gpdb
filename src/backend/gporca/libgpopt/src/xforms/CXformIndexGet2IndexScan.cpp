@@ -52,9 +52,9 @@ CXformIndexGet2IndexScan::Exfp(CExpressionHandle &exprhdl) const
 							 ptabdesc->RetrieveRelStorageType() ==
 								 IMDRelation::ErelstorageMixedPartitioned;
 
-	if (pindexdesc->IndexType() == IMDIndex::EmdindBtree && possible_ao_table)
+	if (pindexdesc->IndexType() != IMDIndex::EmdindBitmap && possible_ao_table)
 	{
-		// we don't support btree index scans on AO tables
+		// we only support index scan type bitmap on AO tables
 		return CXform::ExfpNone;
 	}
 
@@ -113,7 +113,8 @@ CXformIndexGet2IndexScan::Transform(CXformContext *pxfctxt,
 		mp,
 		GPOS_NEW(mp) CPhysicalIndexScan(
 			mp, pindexdesc, ptabdesc, pexpr->Pop()->UlOpId(),
-			GPOS_NEW(mp) CName(mp, pop->NameAlias()), pdrgpcrOutput, pos),
+			GPOS_NEW(mp) CName(mp, pop->NameAlias()), pdrgpcrOutput, pos,
+			pop->ResidualPredicateSize(), pop->ScanDirection()),
 		pexprIndexCond);
 	pxfres->Add(pexprAlt);
 }

@@ -68,6 +68,7 @@ enum Edxlopid
 	EdxlopScalarHashCondList,
 	EdxlopScalarArray,
 	EdxlopScalarArrayRef,
+	EdxlopScalarFieldSelect,
 	EdxlopScalarArrayRefIndexList,
 
 	EdxlopScalarAssertConstraintList,

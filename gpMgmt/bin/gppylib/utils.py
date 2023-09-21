@@ -503,8 +503,16 @@ def escapeDoubleQuoteInSQLString(string, forceDoubleQuote=True):
         string = '"' + string + '"'
     return string
 
+# Escape single quotes, backslashes appearing in the string according to the SQL string constants syntax.
+# E.g.,
+# >>> escape_string(r"O'Reilly")
+# "O''Reilly"
 def escape_string(string):
-    return psycopg2.extensions.QuotedString(string).getquoted()[1:-1].decode()
+    adapted = psycopg2.extensions.QuotedString(string)
+    # The getquoted() API returns 'latin-1' encoded binary string by default, we need to specify
+    # the encoding manually.
+    adapted.encoding = 'utf-8'
+    return adapted.getquoted().decode()[1:-1]
 
 def escapeArrayElement(query_str):
     # also escape backslashes and double quotes, in addition to the doubling of single quotes

@@ -46,24 +46,24 @@ Create a service principal for the Greenplum Database service and a Kerberos adm
 2.  Create a principal for the Greenplum Database service.
 
     ```
-    # kadmin.local -q "addprinc -randkey postgres/cdw@GPDB.KRB"
+    # kadmin.local -q "addprinc -randkey servicename/hostname@realm"
     ```
 
     The `-randkey` option prevents the command from prompting for a password.
 
-    The `postgres` part of the principal names matches the value of the Greenplum Database `krb_srvname` server configuration parameter, which is `postgres` by default.
+    The `servicename` part of the principal is ordinarily `postgres`, but you may specify a different value via the `libpq`'s configuration parameter `krbsrvname`.
 
-    The host name part of the principal name must match the output of the `hostname` command on the Greenplum Database coordinator host. If the `hostname` command shows the fully qualified domain name \(FQDN\), use it in the principal name, for example `postgres/cdw.example.com@GPDB.KRB`.
+    The `hostname` part of the principal name must match the output of the `hostname` command on the Greenplum Database coordinator host. If the `hostname` command shows the fully qualified domain name \(FQDN\), use it in the principal name, for example `postgres/cdw.example.com@GPDB.KRB`.
 
-    The `GPDB.KRB` part of the principal name is the Kerberos realm name.
+    The `realm` part of the principal name is the Kerberos realm name. For example, `GPDB.KRB`.
 
 3.  Create a principal for the gpadmin/admin role.
 
     ```
-    # kadmin.local -q "addprinc gpadmin/admin@GPDB.KRB"
+    # kadmin.local -q "addprinc gpadmin/admin@realm"
     ```
 
-    This principal allows you to manage the KDC database when you are logged in as gpadmin. Make sure that the Kerberos `kadm.acl` configuration file contains an ACL to grant permissions to this principal. For example, this ACL grants all permissions to any admin user in the GPDB.KRB realm.
+    This principal allows you to manage the KDC database when you are logged in as gpadmin. Make sure that the Kerberos `kadm.acl` configuration file contains an ACL to grant permissions to this principal. For example, this ACL grants all permissions to any admin user in the `GPDB.KRB` realm.
 
     ```
     */admin@GPDB.KRB *

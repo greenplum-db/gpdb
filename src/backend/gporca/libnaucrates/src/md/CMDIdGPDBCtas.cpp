@@ -32,7 +32,6 @@ CMDIdGPDBCtas CMDIdGPDBCtas::m_mdid_invalid_key(0);
 CMDIdGPDBCtas::CMDIdGPDBCtas(OID oid)
 	: CMDIdGPDB(CSystemId(IMDId::EmdidGeneral, GPMD_GPDB_CTAS_SYSID), oid)
 {
-	Serialize();
 }
 
 
@@ -49,7 +48,6 @@ CMDIdGPDBCtas::CMDIdGPDBCtas(const CMDIdGPDBCtas &mdid_source)
 {
 	GPOS_ASSERT(mdid_source.IsValid());
 	GPOS_ASSERT(IMDId::EmdidGPDBCtas == mdid_source.MdidType());
-	Serialize();
 }
 
 //---------------------------------------------------------------------------

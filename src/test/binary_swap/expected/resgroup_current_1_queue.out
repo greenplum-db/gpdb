@@ -4,14 +4,15 @@ show gp_resource_manager;
  queue
 (1 row)
 
-select * from pg_resgroup
+select rsgname, parent from pg_resgroup
   where rsgname not like 'rg_dump_test%'
   order by oid;
     rsgname    | parent 
 ---------------+--------
  default_group |      0
  admin_group   |      0
-(2 rows)
+ system_group  |      0
+(3 rows)
 
 select avg(reslimittype)
   from pg_resgroupcapability
@@ -28,13 +29,14 @@ select groupname from gp_toolkit.gp_resgroup_config
 ---------------
  default_group
  admin_group
-(2 rows)
+ system_group
+(3 rows)
 
-select rsgname from gp_toolkit.gp_resgroup_status
-  where rsgname not like 'rg_dump_test%'
+select groupname from gp_toolkit.gp_resgroup_status
+  where groupname not like 'rg_dump_test%'
   order by groupid;
- rsgname 
----------
+ groupname 
+-----------
 (0 rows)
 
 create resource group rg1 with (cpu_max_percent=10, memory_limit=10);

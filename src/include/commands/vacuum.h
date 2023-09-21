@@ -158,16 +158,18 @@ typedef enum VacuumOption
 	VACOPT_SKIP_LOCKED = 1 << 5,	/* skip if cannot get lock */
 	VACOPT_SKIPTOAST = 1 << 6,	/* don't process the TOAST table, if any */
 	VACOPT_DISABLE_PAGE_SKIPPING = 1 << 7,	/* don't skip any pages */
+	VACOPT_SKIP_DATABASE_STATS = 1 << 8, /* skip vac_update_datfrozenxid() */
+	VACOPT_ONLY_DATABASE_STATS = 1 << 9, /* only vac_update_datfrozenxid() */
 
 	/* Extra GPDB options */
-	VACOPT_AO_AUX_ONLY = 1 << 8,
-	VACOPT_ROOTONLY = 1 << 10,
-	VACOPT_FULLSCAN = 1 << 11,
+	VACOPT_AO_AUX_ONLY = 1 << 10,
+	VACOPT_ROOTONLY = 1 << 11,
+	VACOPT_FULLSCAN = 1 << 12,
 
 	/* AO vacuum phases. Mutually exclusive */
-	VACOPT_AO_PRE_CLEANUP_PHASE = 1 << 12,
-	VACOPT_AO_COMPACT_PHASE = 1 << 13,
-	VACOPT_AO_POST_CLEANUP_PHASE = 1 << 14
+	VACOPT_AO_PRE_CLEANUP_PHASE = 1 << 13,
+	VACOPT_AO_COMPACT_PHASE = 1 << 14,
+	VACOPT_AO_POST_CLEANUP_PHASE = 1 << 15
 } VacuumOption;
 
 #define VACUUM_AO_PHASE_MASK (VACOPT_AO_PRE_CLEANUP_PHASE | \
@@ -212,7 +214,16 @@ typedef struct VPgClassStats
 	BlockNumber rel_pages;
 	double		rel_tuples;
 	BlockNumber relallvisible;
+	int32		segid;
 } VPgClassStats;
+
+/* Hash entry for VPgClassStats */
+typedef struct VPgClassStatsEntry
+{
+	Oid	relid;
+	VPgClassStats	*relstats; /* array of relstats entries indexed by segid of size nseg */
+	int	count;	/* expect to equal to the number of dispatched segments */
+} VPgClassStatsEntry;
 
 typedef struct VPgClassStatsCombo
 {

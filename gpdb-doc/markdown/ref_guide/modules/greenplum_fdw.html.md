@@ -2,7 +2,7 @@
 title: greenplum_fdw
 ---
 
-The `greenplum_fdw` module is a foreign-data wrapper \(FDW\) that you can use to run queries across one or more Greenplum Database version 7 Beta 4+ clusters.
+The `greenplum_fdw` module is a foreign-data wrapper \(FDW\) that you can use to run queries between one or more Greenplum Database version 6.20+ and 7 clusters.
 
 The Greenplum Database `greenplum_fdw` module is an MPP extension of the PostgreSQL `postgres_fdw` module.
 
@@ -51,11 +51,11 @@ num_segments '<num>'
 
 in the `OPTIONS` clause when you create the server. Set `<num>` to the number of segments in the the remote Greenplum Database cluster. If you do not provide the `num_segments` option, the default value is the number of segments on the local Greenplum Database cluster.
 
-The following example command creates a server named `gpc1_testdb` that will be used to access tables residing in the database named `testdb` on the remote 8-segment Greenplum Database cluster whose master is running on the host `gpc1_master`, port `5432`:
+The following example command creates a server named `gpc1_testdb` that will be used to access tables residing in the database named `testdb` on the remote 8-segment Greenplum Database cluster whose coordinator is running on the host `gpc1_coordinator`, port `5432`:
 
 ```
 CREATE SERVER gpc1_testdb FOREIGN DATA WRAPPER greenplum_fdw
-    OPTIONS (host 'gpc1_master', port '5432', dbname 'testdb', mpp_execute 'all segments', num_segments '8');
+    OPTIONS (host 'gpc1_coordinator', port '5432', dbname 'testdb', mpp_execute 'all segments', num_segments '8');
 ```
 
 ### <a id="user_mapping"></a>Creating a User Mapping 
@@ -184,6 +184,55 @@ These parameters are likely to be less problematic than `search_path`, but can b
 
 Do not override this behavior by changing the session-level settings of these parameters; that is likely to cause `greenplum_fdw` to malfunction.
 
+## <a id="resgroups"></a>About Using Resource Groups to Limit Concurrency
+
+You can create a dedicated user and resource group to manage `greenplum_fdw` concurrency on the remote Greenplum clusters. In the following example scenario, local cluster 2 reads data from remote cluster 1.
+
+Remote cluster (1) configuration:
+
+1. Create a dedicated Greenplum Database user/role to represent the `greenplum_fdw` users on cluster 2 that initiate queries. For example, to create a role named `gpcluster2_users`:
+
+    ```
+    CREATE ROLE gpcluster2_users;
+    ```
+
+1. Create a dedicated resource group to manage resources for these users:
+
+    ```
+    CREATE RESOURCE GROUP rg_gpcluster2_users with (concurrency=2, cpu_max_percent=20);
+    ALTER ROLE gpcluster2_users RESOURCE GROUP rg_gpcluster2_users;
+    ```
+
+    When you configure the remote cluster as described above, the `rg_gpcluster2_users` resource group manages the resources used by all queries that are initiated by `gpcluster2_users`.
+
+Local cluster (2) configuration:
+
+1. Create a `greenplum_fdw` foreign server to access the remote cluster. For example, to create a server named `gpc1_testdb` that accesses the `testdb` database:
+
+    ```
+    CREATE SERVER gpc1_testdb FOREIGN DATA WRAPPER greenplum_fdw
+        OPTIONS (host 'gpc1_coordinator', port '5432', dbname 'testdb', mpp_execute 'all segments', );
+    ```
+
+1. Map local users of the `greenplum_fdw` foreign server to the remote role. For example, to map specific users of the `gpc1_testdb` server on the local cluster to the `gpcluster2_users` role on the remote cluster:
+
+    ```
+    CREATE USER MAPPING FOR greenplum_fdw_user1 SERVER gpc1_testdb
+        OPTIONS (user ‘gpcluster2_users’, password ‘changeme’);
+    CREATE USER MAPPING FOR greenplum_fdw_user2 SERVER gpc1_testdb
+        OPTIONS (user ‘gpcluster2_users’, password ‘changeme’);
+    ```
+
+1.  Create a foreign table referencing a table on the remote cluster. For example to create a foreign table that references table `t1` on the remote cluster:
+
+    ```
+    CREATE FOREIGN TABLE table_on_cluster1 ( tc1 int )
+      SERVER gpc1_testdb
+      OPTIONS (schema_name 'public', table_name 't1', mpp_execute 'all segments');
+    ```
+
+All local queries on foreign table `table_on_cluster1` are bounded on the remote cluster by the `rg_gpcluster2_users` resource group limits.
+
 ## <a id="topic_limits"></a>Known Issues and Limitations 
 
 The `greenplum_fdw` module has the following known issues and limitations:
@@ -196,13 +245,13 @@ The `greenplum_fdw` module has the following known issues and limitations:
 
 ## <a id="topic_compat"></a>Compatibility 
 
-You can use `greenplum_fdw` to access other remote Greenplum Database clusters running version 7 Beta 4 and later.
+You can use `greenplum_fdw` to access other remote Greenplum Database clusters running version 6.20+ and 7.
 
 ## <a id="topic_examples"></a>Example 
 
-In this example, you query data residing in a database named `rdb` on the remote 16-segment Greenplum Database cluster whose master is running on host `gpc2_master`, port `5432`:
+In this example, you query data residing in a database named `rdb` on the remote 16-segment Greenplum Database cluster whose coordinator is running on host `gpc2_coordinator`, port `5432`:
 
-1.  Initiate a `psql` session to the database named `testdb` on the local Greenplum Database master host:
+1.  Initiate a `psql` session to the database named `testdb` on the local Greenplum Database coordinator host:
 
     ```
     $ psql -d testdb
@@ -218,7 +267,7 @@ In this example, you query data residing in a database named `rdb` on the remote
 
     ```
     CREATE SERVER gpc2_rdb FOREIGN DATA WRAPPER greenplum_fdw
-        OPTIONS (host 'gpc2_master', port '5432', dbname 'rdb', mpp_execute 'all segments', num_segments '16');
+        OPTIONS (host 'gpc2_coordinator', port '5432', dbname 'rdb', mpp_execute 'all segments', num_segments '16');
     ```
 
 1.  Create a user mapping for a user named `jane` on the local Greenplum Database cluster and the user named `john` on the remote Greenplum cluster and database represented by the server named `gpc2_rdb`:

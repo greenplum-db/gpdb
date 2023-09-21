@@ -106,7 +106,10 @@ BTreeIndex-Against-InList BTreeIndex-Against-InListLarge BTreeIndex-Against-Scal
 IndexScan-AOTable IndexScan-DroppedColumns IndexScan-BoolTrue IndexScan-BoolFalse
 IndexScan-Relabel IndexGet-OuterRefs LogicalIndexGetDroppedCols
 IndexScan-ORPredsNonPart IndexScan-ORPredsAOPart IndexScan-AndedIn SubqInIndexPred Hash-IndexScan
-IndexScan-OrderBy-on-Single-IndexCol IndexScan-OrderBy-on-Multiple-IndexCols IndexScan-OrderBy-on-NonIndexCol;
+IndexScan-OrderBy-on-Single-IndexCol IndexScan-OrderBy-on-Multiple-IndexCols IndexScan-OrderBy-on-NonIndexCol
+Forward-IndexScan-OrderBy-on-SingleCol-Index Backward-IndexScan-OrderBy-on-SingleCol-Index
+Forward-IndexScan-OrderBy-on-MultiCol-Index Backward-IndexScan-OrderBy-on-MultiCol-Index
+IndexScan-OrderBy-on-MultiCol-NonIndex;
 
 CBitmapScanTest:
 IndexedNLJBitmap BitmapIndex-ChooseHashJoin BitmapTableScan-AO-Btree-PickOnlyHighNDV
@@ -173,7 +176,8 @@ BroadcastSkewedHashjoin OrderByNullsFirst ConvertHashToRandomSelect ConvertHashT
 ProjectRepeatedColumn1 ProjectRepeatedColumn2 NLJ-BC-Outer-Spool-Inner Self-Comparison Self-Comparison-Nullable
 SelectCheckConstraint ExpandJoinOrder SelectOnBpchar EqualityJoin EffectsOfJoinFilter InnerJoin-With-OuterRefs
 UDA-AnyElement-1 UDA-AnyElement-2 Project-With-NonScalar-Func SixWayDPv2 Join-Varchar-Equality NLJ-Rewindability
-NLJ-Rewindability-CTAS DisableBroadcastThreshold VariadicFlagWithJson VariadicFlagWithFormatQuery VariadicFlagWithUnionAll;
+NLJ-Rewindability-CTAS DisableBroadcastThreshold VariadicFlagWithJson VariadicFlagWithFormatQuery VariadicFlagWithUnionAll
+IndexScanCosting IndexOnlyScanCosting DynamicIndexScanCosting DynamicIndexOnlyScanCosting;
 
 CJoinPredTest:
 MultipleDampedPredJoinCardinality MultipleIndependentPredJoinCardinality MultiDistKeyJoinCardinality
@@ -350,7 +354,8 @@ ReplicatedJoinRandomDistributedTable ReplicatedLOJHashDistributedTable
 ReplicatedLOJRandomDistributedTable ReplicatedLOJReplicated
 ReplicatedNLJReplicated ReplicatedTableAggregate ReplicatedTableCTE
 ReplicatedTableGroupBy ReplicatedJoinPartitionedTable
-ReplicatedTableInClause ReplicatedTableSequenceInsert;
+ReplicatedTableInClause ReplicatedTableSequenceInsert
+JoinOnReplicatedUniversal;
 
 CTaintedReplicatedTest:
 InsertNonSingleton NonSingleton TaintedReplicatedAgg TaintedReplicatedWindowAgg TaintedReplicatedLimit TaintedReplicatedFilter
@@ -376,7 +381,14 @@ Subq2PartialDecorrelate Subq2CorrSQInLOJOn Subq2NotInWhereLOJ Subq2OuterRef2InJo
 Index-Join-With-Subquery-In-Pred NestedSubqLimitBindings;
 
 CIndexOnlyScanTest:
-IndexOnlyScan-NoDistKeyInIndex IndexConstraintsMDidCache IndexOnlyScan-CTE;
+IndexOnlyScan-NoDistKeyInIndex IndexConstraintsMDidCache IndexOnlyScan-CTE AllowIndexOnlyScanOnAppendOnlyTable
+AllowIndexOnlyScanOnMixedAppendOnlyPartitionedTable AllowIndexOnlyScanOnMixedPartitionedTable
+PreventIndexOnlyScanOnMixedAppendOnlyPartitionedTableContainingAppendOnlyVersion6Child
+PreventIndexOnlyScanOnMixedPartitionedTableContainingAppendOnlyVersion6Child
+PreventIndexOnlyScanOnAppendOnlyVersion6UpgradedTable
+IndexOnlyScan-NoDistKeyInIndex IndexConstraintsMDidCache IndexOnlyScan-CTE
+Forward-IndexOnlyScan-OrderBy-on-MultiCol-Index Backward-IndexOnlyScan-OrderBy-on-MultiCol-Index
+IndexOnlyScan-OrderBy-on-MultiCol-NonIndex;
 
 CRightJoinTest:
 RightJoinHashed RightJoinRedistribute RightJoinReplicated RightJoinBothReplicated RightJoinNoDPSNonDistKey RightJoinTVF
@@ -388,14 +400,18 @@ SqlFuncNullReject SqlFuncPredFactorize SqlFuncDmlScalar SqlFuncDmlTvf CompositeT
 CScalarFuncPushDownTest:
 ScalarFuncPushedBelowGather ConstScalarFuncNotPushedBelowGather;
 
+CScalarTest:
+FieldSelect;
+
 COrderedAggTest:
 CTAS_OrderedAgg_multiple_cols OrderedAgg_multiple_diffcol OrderedAgg_with_groupby OrderedAgg_computed_col
 OrderedAggUsingGroupColumnInDirectArg OrderedAgg_multiple_samecol OrderedAgg_with_nonOrderedAgg OrderedAgg_single
 OrderedAgg_array_fraction OrderedAgg_multiple_samecol_difforderespec OrderedAgg_with_nonconst_fraction
 OrderedAgg_skewed_data;
 
-CoverintIndexTest:
-CoveringIndex-1 CoveringIndex-2 CoveringIndex-3 CoveringIndex-Cost-1 CoveringIndex-Cost-2;
+CoveringIndexTest:
+CoveringIndex-1 CoveringIndex-2 CoveringIndex-3 CoveringIndex-Cost-1 CoveringIndex-Cost-2
+CoveringIndex-DoesSupport-Gist CoveringIndex-DoesNotSupport-Gin;
 
 CForeignPartTest:
 ForeignPartUniform PartForeignMixed PartForeignDifferentServer PartForeignDifferentExecLocation PartForeignMixedDPE PartForeignMixedSPE PartForeignUniformSPE ForeignScanExecLocAnySimpleScan ForeignScanExecLocAnyJoin ForeignPartOneTimeFilterDPE

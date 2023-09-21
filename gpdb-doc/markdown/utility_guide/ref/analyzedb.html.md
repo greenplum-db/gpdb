@@ -41,9 +41,9 @@ By default, analyzedb creates a maximum of 5 concurrent sessions to analyze tabl
 
 **Partitioned Append-Optimized Tables**
 
-For a partitioned, append-optimized table, analyzedb checks the partitioned table root partition and leaf partitions. If needed, the utility updates statistics for non-current partitions and the root partition. For information about how statistics are collected for partitioned tables, see [ANALYZE](../../ref_guide/sql_commands/ANALYZE.html).
+For a partitioned, append-optimized table, analyzedb checks the root partitioned table and the leaf partitions. If needed, the utility updates statistics for non-current partitions and the root partition. For information about how statistics are collected for partitioned tables, see [ANALYZE](../../ref_guide/sql_commands/ANALYZE.html).
 
-`analyzedb` must sample additional partitions within a partitioned table when it encounters a stale partition, even when statistics are already collected. Consider it a best practice to run `analyzedb` on the root partition any time that you add a new partition(s) to a partitioned table. This operation both analyzes the child leaf partitions in parallel and merges any updated statistics into the root partition.
+`analyzedb` must sample additional partitions within a partitioned table when it encounters a stale partition, even when statistics are already collected. VMware recommends that you run `analyzedb` on the root partition any time that you add a new partition(s) to a partitioned table. This operation both analyzes the leaf partitions in parallel and merges any updated statistics into the root partition.
 
 ## <a id="notes"></a>Notes 
 
@@ -139,7 +139,7 @@ Running the `ANALYZE` command on a table, not using the `analyzedb` utility, doe
 :   Displays the online help.
 
 -v \| --verbose
-:   If specified, sets the logging level to verbose to write additional information the log file and to the command line during command execution. The information includes a list of all the tables to be analyzed \(including child leaf partitions of partitioned tables\). Output also includes the duration of each `ANALYZE` operation.
+:   If specified, sets the logging level to verbose to write additional information the log file and to the command line during command execution. The information includes a list of all the tables to be analyzed \(including leaf partitions of partitioned tables\). Output also includes the duration of each `ANALYZE` operation.
 
 --version
 :   Displays the version of this utility.

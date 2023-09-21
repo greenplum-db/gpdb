@@ -21,6 +21,8 @@
 -- s/Memory used:  \d+\w?B/Memory used: ###B/
 -- m/Memory Usage: \d+\w?B/
 -- s/Memory Usage: \d+\w?B/Memory Usage: ###B/
+-- m/Memory wanted:  \d+\w?kB/
+-- s/Memory wanted:  \d+\w?kB/Memory wanted: ###kB/
 -- m/Peak Memory Usage: \d+/
 -- s/Peak Memory Usage: \d+/Peak Memory Usage: ###/
 -- m/Buckets: \d+/
@@ -216,9 +218,54 @@ RESET jit;
 RESET jit_above_cost;
 RESET gp_explain_jit;
 RESET optimizer_jit_above_cost;
+
+-- start_matchsubs
+-- m/Extra Text: \(seg\d+\)   hash table\(s\): \d+; \d+ groups total in \d+ batches, \d+ spill partitions; disk usage: \d+KB; chain length \d+.\d+ avg, \d+ max; using \d+ of \d+ buckets; total \d+ expansions./
+-- s/Extra Text: \(seg\d+\)   hash table\(s\): \d+; \d+ groups total in \d+ batches, \d+ spill partitions; disk usage: \d+KB; chain length \d+.\d+ avg, \d+ max; using \d+ of \d+ buckets; total \d+ expansions./Extra Text: (seg0)   hash table(s): ###; ### groups total in ### batches, ### spill partitions; disk usage: ###KB; chain length ###.## avg, ### max; using ## of ### buckets; total ### expansions./
+-- m/Work_mem: \d+K bytes max, \d+K bytes wanted/
+-- s/Work_mem: \d+K bytes max, \d+K bytes wanted/Work_mem: ###K bytes max, ###K bytes wanted/
+-- end_matchsubs
+-- Greenplum hash table extra message
+CREATE TABLE test_src_tbl AS
+SELECT i % 10000 AS a, i % 10000 + 1 AS b FROM generate_series(1, 50000) i DISTRIBUTED BY (a);
+ANALYZE test_src_tbl;
+
+-- Enable optimizer_enable_hashagg, and set statement_mem to a small value to force spilling
+set optimizer_enable_hashagg = on;
+SET statement_mem = '1000kB';
+
+-- Hashagg with spilling
+CREATE TABLE test_hashagg_spill AS
+SELECT a, COUNT(DISTINCT b) AS b FROM test_src_tbl GROUP BY a;
+WITH query_plan (et) AS
+(
+  SELECT test_util.get_explain_output(
+    'SELECT a, COUNT(DISTINCT b) AS b FROM test_src_tbl GROUP BY a',
+    false)
+)
+SELECT BTRIM(et) as explain_info FROM query_plan WHERE et like '%Extra Text%' limit 2;
+
+-- Hashagg with grouping sets
+CREATE TABLE test_hashagg_groupingsets AS
+SELECT a, avg(b) AS b FROM test_src_tbl GROUP BY grouping sets ((a), (b));
+-- The planner generates multiple hash tables but ORCA uses Shared Scan.
+WITH query_plan (et) AS
+(
+  SELECT test_util.get_explain_output(
+    'SELECT a, avg(b) AS b FROM test_src_tbl GROUP BY grouping sets ((a), (b))',
+    false)
+)
+SELECT BTRIM(et) as explain_info FROM query_plan WHERE et like '%Extra Text%' limit 2;
+
+RESET optimizer_enable_hashagg;
+RESET statement_mem;
+
 -- Cleanup
 DROP TABLE boxes;
 DROP TABLE apples;
 DROP TABLE box_locations;
 DROP TABLE jsonexplaintest;
 DROP TABLE jit_explain_output;
+DROP TABLE test_src_tbl;
+DROP TABLE test_hashagg_spill;
+DROP TABLE test_hashagg_groupingsets;

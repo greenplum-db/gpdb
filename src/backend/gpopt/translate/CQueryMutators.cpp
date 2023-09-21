@@ -445,11 +445,12 @@ CQueryMutators::RunGroupingColMutator(Node *node,
 
 		GPOS_ASSERT(IsA(old_sublink->subselect, Query));
 
-		new_sublink->subselect = gpdb::MutateQueryOrExpressionTree(
-			old_sublink->subselect,
-			(MutatorWalkerFn) CQueryMutators::RunGroupingColMutator, context,
-			0  // flags -- mutate into cte-lists
-		);
+		// One need to call the Query mutator for subselect and take into
+		// account that SubLink can be multi-level. Therefore, the
+		// context->m_current_query_level must be modified properly
+		// while diving into such nested SubLink.
+		new_sublink->subselect =
+			RunGroupingColMutator(old_sublink->subselect, context);
 
 		context->m_current_query_level--;
 
@@ -808,15 +809,43 @@ CQueryMutators::RunExtractAggregatesMutator(Node *node,
 
 		GPOS_ASSERT(IsA(old_sublink->subselect, Query));
 
-		new_sublink->subselect = gpdb::MutateQueryOrExpressionTree(
-			old_sublink->subselect,
-			(MutatorWalkerFn) RunExtractAggregatesMutator, (void *) context,
-			0  // mutate into cte-lists
-		);
+		// One need to call the Query mutator for subselect and take into
+		// account that SubLink can be multi-level. Therefore, the
+		// context->m_current_query_level must be modified properly
+		// while diving into such nested SubLink.
+		new_sublink->subselect =
+			RunExtractAggregatesMutator(old_sublink->subselect, context);
 
 		context->m_current_query_level--;
 
 		return (Node *) new_sublink;
+	}
+
+	if (IsA(node, Query))
+	{
+		// Mutate Query tree and ignore rtable subqueries in order to modify
+		// m_current_query_level properly when mutating them below.
+		Query *query = gpdb::MutateQueryTree(
+			(Query *) node, (MutatorWalkerFn) RunExtractAggregatesMutator,
+			context, QTW_IGNORE_RT_SUBQUERIES);
+
+		ListCell *lc;
+		ForEach(lc, query->rtable)
+		{
+			RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
+
+			if (RTE_SUBQUERY == rte->rtekind)
+			{
+				Query *subquery = rte->subquery;
+				context->m_current_query_level++;
+				rte->subquery = (Query *) RunExtractAggregatesMutator(
+					(Node *) subquery, context);
+				context->m_current_query_level--;
+				gpdb::GPDBFree(subquery);
+			}
+		}
+
+		return (Node *) query;
 	}
 
 	return gpdb::MutateExpressionTree(

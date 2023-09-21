@@ -6765,6 +6765,12 @@ add_foreign_final_paths(PlannerInfo *root, RelOptInfo *input_rel,
 		return;
 
 	/*
+	 * It's unsafe to pushdown OFFSET/LIMIT when mpp_execute = 'all segments' and the OFFSET is specified.
+	 */
+	if (final_rel->exec_location == FTEXECLOCATION_ALL_SEGMENTS && parse->limitOffset)
+		return;
+
+	/*
 	 * Also, the LIMIT/OFFSET cannot be pushed down, if their expressions are
 	 * not safe to remote.
 	 */

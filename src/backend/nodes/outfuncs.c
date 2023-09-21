@@ -3527,6 +3527,7 @@ _outAlteredTableInfo(StringInfo str, const AlteredTableInfo *node)
 
 	WRITE_STRING_FIELD(replicaIdentityIndex);
 	WRITE_STRING_FIELD(clusterOnIndex);
+	WRITE_NODE_FIELD(repack_cols);
 }
 
 static void

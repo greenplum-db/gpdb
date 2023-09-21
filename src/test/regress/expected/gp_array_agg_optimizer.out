@@ -127,8 +127,8 @@ select a, b, array_dims(gp_array_agg(x)) from mergeappend_test r group by a, b
 union all
 select null, null, array_dims(gp_array_agg(x)) from mergeappend_test r, pg_sleep(0)
 order by 1,2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  a | b | array_dims 
 ---+---+------------
  0 | 0 | [1:99]
@@ -214,8 +214,8 @@ from (
 group by y;
 -- ensure results are correct.
 select * from v_pagg_test order by y;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  y | tmin | tmax | tndistinct | amin | amax | andistinct 
 ---+------+------+------------+------+------+------------
  0 |   10 | 5000 |        500 |   10 | 5000 |        500
@@ -231,8 +231,8 @@ DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disab
 (10 rows)
 
 explain (costs off) select * from v_pagg_test order by y;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
                                      QUERY PLAN                                     
 ------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -360,8 +360,8 @@ from arrtest;
 $query$ AS qry \gset
 EXPLAIN (COSTS OFF, VERBOSE)
 :qry ;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-default collation
                                                                                        QUERY PLAN                                                                                       
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Finalize Aggregate
@@ -376,8 +376,8 @@ DETAIL:  Feature not supported: Non-default collation
 (9 rows)
 
 :qry ;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-default collation
      agg_a     |        dims_b        |   dims_c   |             agg_d             |   dims_e   |               agg_f               |           agg_g           
 ---------------+----------------------+------------+-------------------------------+------------+-----------------------------------+---------------------------
  {{1,2},{1,2}} | [1:2][1:2][1:2][1:2] | [1:2][1:1] | {{{elt1,elt2}},{{elt1,elt2}}} | [1:2][1:2] | {{"abc  ",abcde},{"abc  ",abcde}} | {{abc,abcde},{abc,abcde}}

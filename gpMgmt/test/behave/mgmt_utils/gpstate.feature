@@ -596,6 +596,55 @@ Feature: gpstate tests
         And the pg_log files on primary segments should not contain "connections to primary segments are not allowed"
         And the user drops log_timestamp table
 
+    Scenario: gpstate runs with given coordinator data directory option
+        Given the cluster is generated with "3" primaries only
+         And "COORDINATOR_DATA_DIRECTORY" environment variable is not set
+        Then the user runs utility "gpstate" with coordinator data directory and "-a -b"
+         And gpstate should return a return code of 0
+         And gpstate output has rows with keys values
+            | Coordinator instance                              = Active                            |
+            | Coordinator standby                               = No coordinator standby configured |
+            | Total segment instance count from metadata        = 3                                 |
+            | Primary Segment Status                                                                |
+            | Total primary segments                            = 3                                 |
+            | Total primary segment valid \(at coordinator\)    = 3                                 |
+            | Total primary segment failures \(at coordinator\) = 0                                 |
+            | Total number of postmaster.pid files missing      = 0                                 |
+            | Total number of postmaster.pid files found        = 3                                 |
+            | Total number of postmaster.pid PIDs missing       = 0                                 |
+            | Total number of postmaster.pid PIDs found         = 3                                 |
+            | Total number of /tmp lock files missing           = 0                                 |
+            | Total number of /tmp lock files found             = 3                                 |
+            | Total number postmaster processes missing         = 0                                 |
+            | Total number postmaster processes found           = 3                                 |
+            | Mirror Segment Status                                                                 |
+            | Mirrors not configured on this array
+         And "COORDINATOR_DATA_DIRECTORY" environment variable should be restored
+
+    Scenario: gpstate priorities given coordinator data directory over env option
+        Given the cluster is generated with "3" primaries only
+          And the environment variable "COORDINATOR_DATA_DIRECTORY" is set to "/tmp/"
+        Then the user runs utility "gpstate" with coordinator data directory and "-a -b"
+         And gpstate should return a return code of 0
+         And gpstate output has rows with keys values
+            | Coordinator instance                              = Active                            |
+            | Coordinator standby                               = No coordinator standby configured |
+            | Total segment instance count from metadata        = 3                                 |
+            | Primary Segment Status                                                                |
+            | Total primary segments                            = 3                                 |
+            | Total primary segment valid \(at coordinator\)    = 3                                 |
+            | Total primary segment failures \(at coordinator\) = 0                                 |
+            | Total number of postmaster.pid files missing      = 0                                 |
+            | Total number of postmaster.pid files found        = 3                                 |
+            | Total number of postmaster.pid PIDs missing       = 0                                 |
+            | Total number of postmaster.pid PIDs found         = 3                                 |
+            | Total number of /tmp lock files missing           = 0                                 |
+            | Total number of /tmp lock files found             = 3                                 |
+            | Total number postmaster processes missing         = 0                                 |
+            | Total number postmaster processes found           = 3                                 |
+            | Mirror Segment Status                                                                 |
+            | Mirrors not configured on this array
+        And "COORDINATOR_DATA_DIRECTORY" environment variable should be restored
 
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster

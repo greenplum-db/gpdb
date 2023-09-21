@@ -101,9 +101,7 @@ DROP FUNCTION if exists test_call_set_command();
 -- a SET command. If this stops emitting a WARNING in the future, we'll need
 -- another way to detect that the GUC's assign-hook is called only once.
 set work_mem='1MB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 reset work_mem;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 --
 -- Test if RESET timezone is dispatched to all slices
 --

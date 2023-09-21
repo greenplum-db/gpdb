@@ -36,9 +36,6 @@ CMDIdScCmp::CMDIdScCmp(CMDIdGPDB *left_mdid, CMDIdGPDB *right_mdid,
 	GPOS_ASSERT(IMDType::EcmptOther != cmp_type);
 
 	GPOS_ASSERT(left_mdid->Sysid().Equals(right_mdid->Sysid()));
-
-	// serialize mdid into static string
-	Serialize();
 }
 
 //---------------------------------------------------------------------------
@@ -64,8 +61,13 @@ CMDIdScCmp::~CMDIdScCmp()
 //
 //---------------------------------------------------------------------------
 void
-CMDIdScCmp::Serialize()
+CMDIdScCmp::Serialize() const
 {
+	if (m_str.Length() > 0)
+	{
+		return;
+	}
+
 	// serialize mdid as SystemType.mdidLeft;mdidRight;CmpType
 	m_str.AppendFormat(GPOS_WSZ_LIT("%d.%d.%d.%d;%d.%d.%d;%d"), MdidType(),
 					   m_mdid_left->Oid(), m_mdid_left->VersionMajor(),
@@ -167,6 +169,7 @@ void
 CMDIdScCmp::Serialize(CXMLSerializer *xml_serializer,
 					  const CWStringConst *attribute_str) const
 {
+	Serialize();
 	xml_serializer->AddAttribute(attribute_str, &m_str);
 }
 
@@ -181,7 +184,7 @@ CMDIdScCmp::Serialize(CXMLSerializer *xml_serializer,
 IOstream &
 CMDIdScCmp::OsPrint(IOstream &os) const
 {
-	os << "(" << m_str.GetBuffer() << ")";
+	os << "(" << GetBuffer() << ")";
 	return os;
 }
 

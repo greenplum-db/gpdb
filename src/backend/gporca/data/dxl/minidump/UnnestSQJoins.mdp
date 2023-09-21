@@ -131,13 +131,13 @@ WHERE
         <dxl:Commutator Mdid="0.410.1.0"/>
         <dxl:InverseOp Mdid="0.411.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.2654.1.0" Name="pg_amop_opr_opc_index" IsClustered="false" KeyColumns="4,0" IncludedColumns="">
+      <dxl:Index Mdid="0.2654.1.0" Name="pg_amop_opr_opc_index" IsClustered="false" KeyColumns="4,0" IncludedColumns="" ReturnableColumns="4,0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2652.1.0" Name="pg_am_oid_index" IsClustered="false" KeyColumns="26" IncludedColumns="">
+      <dxl:Index Mdid="0.2652.1.0" Name="pg_am_oid_index" IsClustered="false" KeyColumns="26" IncludedColumns="" ReturnableColumns="26">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
@@ -501,26 +501,26 @@ WHERE
         <dxl:Commutator Mdid="0.1869.1.0"/>
         <dxl:InverseOp Mdid="0.1862.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Index Mdid="0.2653.1.0" Name="pg_amop_opc_strat_index" IsClustered="false" KeyColumns="0,1,2" IncludedColumns="">
+      <dxl:Index Mdid="0.2653.1.0" Name="pg_amop_opc_strat_index" IsClustered="false" KeyColumns="0,1,2" IncludedColumns="" ReturnableColumns="0,1,2">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2651.1.0" Name="pg_am_name_index" IsClustered="false" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.2651.1.0" Name="pg_am_name_index" IsClustered="false" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2686.1.0" Name="pg_opclass_am_name_nsp_index" IsClustered="false" KeyColumns="0,1,2" IncludedColumns="">
+      <dxl:Index Mdid="0.2686.1.0" Name="pg_opclass_am_name_nsp_index" IsClustered="false" KeyColumns="0,1,2" IncludedColumns="" ReturnableColumns="0,1,2">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
           <dxl:Opfamily Mdid="0.1986.1.0"/>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.2687.1.0" Name="pg_opclass_oid_index" IsClustered="false" KeyColumns="8" IncludedColumns="">
+      <dxl:Index Mdid="0.2687.1.0" Name="pg_opclass_oid_index" IsClustered="false" KeyColumns="8" IncludedColumns="" ReturnableColumns="8">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1989.1.0"/>
         </dxl:Opfamilies>
@@ -666,40 +666,28 @@ WHERE
       <dxl:Relation Mdid="6.2602.1.1" Name="pg_amop" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
         <dxl:Columns>
           <dxl:Column Name="amopclaid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amopsubtype" Attno="2" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amopstrategy" Attno="3" Mdid="0.21.1.0" Nullable="false" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amopreqcheck" Attno="4" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amopopr" Attno="5" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -711,49 +699,34 @@ WHERE
       <dxl:Relation Mdid="6.2616.1.1" Name="pg_opclass" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
         <dxl:Columns>
           <dxl:Column Name="opcamid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="opcname" Attno="2" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="opcnamespace" Attno="3" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="opcowner" Attno="4" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="opcintype" Attno="5" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="opcdefault" Attno="6" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="opckeytype" Attno="7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="oid" Attno="-2" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -973,103 +946,70 @@ WHERE
       <dxl:Relation Mdid="6.2601.1.1" Name="pg_am" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
         <dxl:Columns>
           <dxl:Column Name="amname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amstrategies" Attno="2" Mdid="0.21.1.0" Nullable="false" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amsupport" Attno="3" Mdid="0.21.1.0" Nullable="false" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amorderstrategy" Attno="4" Mdid="0.21.1.0" Nullable="false" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amcanunique" Attno="5" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amcanmulticol" Attno="6" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amoptionalkey" Attno="7" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amindexnulls" Attno="8" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amstorage" Attno="9" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amclusterable" Attno="10" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amcanshrink" Attno="11" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="aminsert" Attno="12" Mdid="0.24.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ambeginscan" Attno="13" Mdid="0.24.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amgettuple" Attno="14" Mdid="0.24.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amgetmulti" Attno="15" Mdid="0.24.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amrescan" Attno="16" Mdid="0.24.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amendscan" Attno="17" Mdid="0.24.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ammarkpos" Attno="18" Mdid="0.24.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amrestrpos" Attno="19" Mdid="0.24.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ambuild" Attno="20" Mdid="0.24.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ambulkdelete" Attno="21" Mdid="0.24.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amvacuumcleanup" Attno="22" Mdid="0.24.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amcostestimate" Attno="23" Mdid="0.24.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amoptions" Attno="24" Mdid="0.24.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amcanreturn" Attno="25" Mdid="0.16.1.0" Nullable="false" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="oid" Attno="-2" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -1282,7 +1222,7 @@ WHERE
     <dxl:Plan Id="0" SpaceSize="51358">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1306.828702" Rows="199.680000" Width="148"/>
+          <dxl:Cost StartupCost="0" TotalCost="1306.829302" Rows="199.680000" Width="148"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="26" Alias="oid">
@@ -1305,7 +1245,7 @@ WHERE
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1306.718569" Rows="199.680000" Width="148"/>
+            <dxl:Cost StartupCost="0" TotalCost="1306.719169" Rows="199.680000" Width="148"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="26" Alias="oid">
@@ -1336,7 +1276,7 @@ WHERE
           <dxl:OneTimeFilter/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1306.703172" Rows="702.000000" Width="150"/>
+              <dxl:Cost StartupCost="0" TotalCost="1306.703772" Rows="702.000000" Width="150"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="73" Alias="ColRef_0073">
@@ -1365,7 +1305,7 @@ WHERE
             <dxl:OneTimeFilter/>
             <dxl:HashJoin JoinType="Left">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1306.668072" Rows="702.000000" Width="158"/>
+                <dxl:Cost StartupCost="0" TotalCost="1306.668672" Rows="702.000000" Width="158"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="amname">
@@ -1404,7 +1344,7 @@ WHERE
               </dxl:HashCondList>
               <dxl:RedistributeMotion InputSegments="-1" OutputSegments="0,1,2">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="875.127646" Rows="702.000000" Width="150"/>
+                  <dxl:Cost StartupCost="0" TotalCost="875.128246" Rows="702.000000" Width="150"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="0" Alias="amname">
@@ -1438,7 +1378,7 @@ WHERE
                 </dxl:HashExprList>
                 <dxl:HashJoin JoinType="Inner">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="874.854217" Rows="702.000000" Width="150"/>
+                    <dxl:Cost StartupCost="0" TotalCost="874.854817" Rows="702.000000" Width="150"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="0" Alias="amname">
@@ -1470,7 +1410,7 @@ WHERE
                   </dxl:HashCondList>
                   <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="443.223121" Rows="141.000000" Width="146"/>
+                      <dxl:Cost StartupCost="0" TotalCost="443.223721" Rows="141.000000" Width="146"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="0" Alias="amname">
@@ -1537,7 +1477,7 @@ WHERE
                     </dxl:TableScan>
                     <dxl:IndexScan IndexScanDirection="Forward">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="12.131206" Rows="70.500000" Width="72"/>
+                        <dxl:Cost StartupCost="0" TotalCost="12.131806" Rows="70.500000" Width="72"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="34" Alias="opcname">

@@ -817,7 +817,7 @@ CTranslatorUtils::OidCmpOperator(Expr *expr)
 			return LInitialOID(((RowCompareExpr *) expr)->opnos);
 
 		default:
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
 					   GPOS_WSZ_LIT("Unsupported comparison"));
 			return InvalidOid;
 	}

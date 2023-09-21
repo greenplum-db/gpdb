@@ -33,7 +33,6 @@ OBJS        = CDXLBucket.o \
               CMDIndexGPDB.o \
               CMDIndexInfo.o \
               CMDName.o \
-              CMDPartConstraintGPDB.o \
               CMDProviderGeneric.o \
               CMDProviderMemory.o \
               CMDRelationCtasGPDB.o \

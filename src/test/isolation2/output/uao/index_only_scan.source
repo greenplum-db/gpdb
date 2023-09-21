@@ -22,7 +22,7 @@ SET
 SET
 1: BEGIN ISOLATION LEVEL REPEATABLE READ;
 BEGIN
-1: EXPLAIN SELECT i FROM uao_index_only_scan_@amname@;
+1: EXPLAIN SELECT i FROM uao_index_only_scan_@amname@ ORDER BY i;
  QUERY PLAN                                                                                                                          
 -------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.17..2265.67 rows=86100 width=4)                                                   
@@ -30,7 +30,7 @@ BEGIN
  Optimizer: Postgres query optimizer                                                                                                 
 (3 rows)
 -- We should see the rows from Set 1.
-1: SELECT i FROM uao_index_only_scan_@amname@;
+1: SELECT i FROM uao_index_only_scan_@amname@ ORDER BY i;
  i 
 ---
  1 

@@ -637,6 +637,11 @@ static void writetup_cluster(Tuplesortstate *state, int tapenum,
 							 SortTuple *stup);
 static void readtup_cluster(Tuplesortstate *state, SortTuple *stup,
 							int tapenum, unsigned int len);
+static int	comparetup_repack(const SortTuple *a, const SortTuple *b,
+							   Tuplesortstate *state);
+static void copytup_repack(Tuplesortstate *state, SortTuple *stup, void *tup);
+static void readtup_repack(Tuplesortstate *state, SortTuple *stup,
+							int tapenum, unsigned int len);
 static int	comparetup_index_btree(const SortTuple *a, const SortTuple *b,
 								   Tuplesortstate *state);
 static int	comparetup_index_hash(const SortTuple *a, const SortTuple *b,
@@ -812,6 +817,87 @@ tuplesort_begin_common(int workMem, SortCoordinate coordinate,
 
 	MemoryContextSwitchTo(oldcontext);
 
+	return state;
+}
+
+/*
+ * GPDB: To perform a tuplesort for repacking a table on-disk, without having an
+ * index, we need a separate set of tuplesort routines that operate on full
+ * HeapTuple, not MinimalTuple, but do not require an index.  The current
+ * *_cluster tuplesort routines are very tightly coupled to an index, and
+ * rewriting them would impost significant burden on future merges.
+ */
+Tuplesortstate *
+tuplesort_begin_repack(TupleDesc tupDesc,
+					   int nkeys, AttrNumber *attNums,
+					   Oid *sortOperators, Oid *sortCollations,
+					   bool *nullsFirstFlags,
+					   int workMem, SortCoordinate coordinate, bool randomAccess)
+{
+	Tuplesortstate *state = tuplesort_begin_common(workMem, coordinate,
+												randomAccess);
+
+	MemoryContext oldcontext;
+	int			i;
+
+	oldcontext = MemoryContextSwitchTo(state->sortcontext);
+
+	AssertArg(nkeys > 0);
+
+#ifdef TRACE_SORT
+	if (trace_sort)
+		elog(LOG,
+			 "begin tuple sort: nkeys = %d, workMem = %d, randomAccess = %c",
+			 nkeys, workMem, randomAccess ? 't' : 'f');
+#endif
+
+	state->nKeys = nkeys;
+
+	TRACE_POSTGRESQL_SORT_START(HEAP_SORT,
+								false,	/* no unique check */
+								nkeys,
+								workMem,
+								randomAccess,
+								PARALLEL_SORT(state));
+
+
+	state->comparetup = comparetup_repack;
+	state->copytup = copytup_repack;
+	state->writetup = writetup_cluster; /* we can use the CLUSTER write because it doesn't rely on an index */
+	state->readtup = readtup_repack;
+	state->tupDesc = tupDesc;	/* assume we need not copy tupDesc */
+	state->abbrevNext = 10;
+
+	/* Prepare SortSupport data for each column */
+	state->sortKeys = (SortSupport) palloc0(nkeys * sizeof(SortSupportData));
+
+	for (i = 0; i < nkeys; i++)
+	{
+		SortSupport sortKey = state->sortKeys + i;
+
+		AssertArg(attNums[i] != 0);
+		AssertArg(sortOperators[i] != 0);
+
+		sortKey->ssup_cxt = CurrentMemoryContext;
+		sortKey->ssup_collation = sortCollations[i];
+		sortKey->ssup_nulls_first = nullsFirstFlags[i];
+		sortKey->ssup_attno = attNums[i];
+		/* Convey if abbreviation optimization is applicable in principle */
+		sortKey->abbreviate = (i == 0);
+
+		PrepareSortSupportFromOrderingOp(sortOperators[i], sortKey);
+	}
+
+	/*
+	 * The "onlyKey" optimization cannot be used with abbreviated keys, since
+	 * tie-breaker comparisons may be required.  Typically, the optimization
+	 * is only of value to pass-by-value types anyway, whereas abbreviated
+	 * keys are typically only of value to pass-by-reference types.
+	 */
+	if (nkeys == 1 && !state->sortKeys->abbrev_converter)
+		state->onlyKey = state->sortKeys;
+
+	MemoryContextSwitchTo(oldcontext);
 	return state;
 }
 
@@ -4068,6 +4154,168 @@ readtup_cluster(Tuplesortstate *state, SortTuple *stup,
 	if (state->indexInfo->ii_IndexAttrNumbers[0] != 0)
 		stup->datum1 = heap_getattr(tuple,
 									state->indexInfo->ii_IndexAttrNumbers[0],
+									state->tupDesc,
+									&stup->isnull1);
+}
+
+static int
+comparetup_repack(const SortTuple *a, const SortTuple *b,
+				   Tuplesortstate *state)
+{
+	AttrNumber	attno;
+	Datum		datum1;
+	Datum		datum2;
+	HeapTuple	ltup;
+	HeapTuple	rtup;
+	TupleDesc	tupDesc;
+	bool		isnull1;
+	bool		isnull2;
+	int			nkey;
+	int32		compare;
+
+	SortSupport sortKey = state->sortKeys;
+
+	/* Compare the leading sort key */
+	compare = ApplySortComparator(a->datum1, a->isnull1,
+								  b->datum1, b->isnull1,
+								  sortKey);
+	if (compare != 0)
+		return compare;
+
+	/* Compare additional sort keys */
+	ltup = (HeapTuple) a->tuple;
+	rtup = (HeapTuple) b->tuple;
+	tupDesc = state->tupDesc;
+
+	if (sortKey->abbrev_converter)
+	{
+		attno = sortKey->ssup_attno;
+
+		datum1 = heap_getattr(ltup, attno, tupDesc, &isnull1);
+		datum2 = heap_getattr(rtup, attno, tupDesc, &isnull2);
+
+		compare = ApplySortAbbrevFullComparator(datum1, isnull1,
+												datum2, isnull2,
+												sortKey);
+		if (compare != 0)
+			return compare;
+	}
+
+	sortKey++;
+	for (nkey = 1; nkey < state->nKeys; nkey++, sortKey++)
+	{
+		attno = sortKey->ssup_attno;
+
+		datum1 = heap_getattr(ltup, attno, tupDesc, &isnull1);
+		datum2 = heap_getattr(rtup, attno, tupDesc, &isnull2);
+
+		compare = ApplySortComparator(datum1, isnull1,
+									  datum2, isnull2,
+									  sortKey);
+		if (compare != 0)
+			return compare;
+	}
+	return 0;
+}
+
+static void copytup_repack(Tuplesortstate *state, SortTuple *stup, void *tup)
+{
+	Datum original;
+
+	HeapTuple		tuple = (HeapTuple) tup;
+	MemoryContext	oldcontext = MemoryContextSwitchTo(state->tuplecontext);
+
+	/* copy the tuple into sort storage */
+	tuple = heap_copytuple(tuple);
+	stup->tuple = (void *) tuple;
+	USEMEM(state, GetMemoryChunkSpace(tuple));
+
+	MemoryContextSwitchTo(oldcontext);
+
+	/*
+	 * set up first-column key value, and potentially abbreviate, if it's a
+	 * simple column
+	 */
+	if (state->sortKeys[0].ssup_attno == 0)
+		return;
+
+	original = heap_getattr(tuple,
+							state->sortKeys[0].ssup_attno,
+							state->tupDesc,
+							&stup->isnull1);
+
+	if (!state->sortKeys->abbrev_converter || stup->isnull1)
+	{
+		/*
+		 * Store ordinary Datum representation, or NULL value.  If there is a
+		 * converter it won't expect NULL values, and cost model is not
+		 * required to account for NULL, so in that case we avoid calling
+		 * converter and just set datum1 to zeroed representation (to be
+		 * consistent, and to support cheap inequality tests for NULL
+		 * abbreviated keys).
+		 */
+		stup->datum1 = original;
+	}
+	else if (!consider_abort_common(state))
+	{
+		/* Store abbreviated key representation */
+		stup->datum1 = state->sortKeys->abbrev_converter(original,
+														 state->sortKeys);
+	}
+	else
+	{
+		/* Abort abbreviation */
+		int			i;
+
+		stup->datum1 = original;
+
+		/*
+		 * Set state to be consistent with never trying abbreviation.
+		 *
+		 * Alter datum1 representation in already-copied tuples, so as to
+		 * ensure a consistent representation (current tuple was just
+		 * handled).  It does not matter if some dumped tuples are already
+		 * sorted on tape, since serialized tuples lack abbreviated keys
+		 * (TSS_BUILDRUNS state prevents control reaching here in any case).
+		 */
+		for (i = 0; i < state->memtupcount; i++)
+		{
+			SortTuple  *mtup = &state->memtuples[i];
+
+			tuple = (HeapTuple) mtup->tuple;
+			mtup->datum1 = heap_getattr(tuple,
+										state->sortKeys[0].ssup_attno,
+										state->tupDesc,
+										&mtup->isnull1);
+		}
+	}
+}
+
+static void readtup_repack(Tuplesortstate *state, SortTuple *stup,
+							int tapenum, unsigned int len)
+{
+	unsigned int t_len = len - sizeof(ItemPointerData) - sizeof(int);
+	HeapTuple	tuple = (HeapTuple) readtup_alloc(state,
+												  t_len + HEAPTUPLESIZE);
+
+	/* Reconstruct the HeapTupleData header */
+	tuple->t_data = (HeapTupleHeader) ((char *) tuple + HEAPTUPLESIZE);
+	tuple->t_len = t_len;
+	LogicalTapeReadExact(state->tapeset, tapenum,
+						 &tuple->t_self, sizeof(ItemPointerData));
+	/* We don't currently bother to reconstruct t_tableOid */
+	tuple->t_tableOid = InvalidOid;
+	/* Read in the tuple body */
+	LogicalTapeReadExact(state->tapeset, tapenum,
+						 tuple->t_data, tuple->t_len);
+	if (state->randomAccess)	/* need trailing length word? */
+		LogicalTapeReadExact(state->tapeset, tapenum,
+							 &len, sizeof(len));
+	stup->tuple = (void *) tuple;
+	/* set up first-column key value, if it's a simple column */
+	if (state->sortKeys[0].ssup_attno != 0)
+		stup->datum1 = heap_getattr(tuple,
+									state->sortKeys[0].ssup_attno,
 									state->tupDesc,
 									&stup->isnull1);
 }

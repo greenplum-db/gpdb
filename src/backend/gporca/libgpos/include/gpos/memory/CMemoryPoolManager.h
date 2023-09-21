@@ -63,7 +63,7 @@ private:
 	virtual CMemoryPool *NewMemoryPool();
 
 	// clean-up memory pools
-	void Cleanup();
+	static void Cleanup();
 
 	// destroy a memory pool at shutdown
 	static void DestroyMemoryPoolAtShutdown(CMemoryPool *mp);
@@ -96,7 +96,7 @@ protected:
 
 	// Initialize global memory pool manager using given types
 	template <typename ManagerType, typename PoolType>
-	static GPOS_RESULT
+	static void
 	SetupGlobalMemoryPoolManager()
 	{
 		// raw allocation of memory for internal memory pools
@@ -104,32 +104,22 @@ protected:
 
 		GPOS_OOM_CHECK(alloc_internal);
 
-		GPOS_TRY
-		{
-			// create internal memory pool
-			CMemoryPool *internal = ::new (alloc_internal) PoolType();
+		// create internal memory pool
+		CMemoryPool *internal = ::new (alloc_internal) PoolType();
 
-			// instantiate manager
-			m_memory_pool_mgr = ::new ManagerType(internal, EMemoryPoolTracker);
-			m_memory_pool_mgr->Setup();
-		}
-		GPOS_CATCH_EX(ex)
-		{
-			gpos::clib::Free(alloc_internal);
-			GPOS_RETHROW(ex);
-		}
-		GPOS_CATCH_END;
-		return GPOS_OK;
+		// instantiate manager
+		m_memory_pool_mgr = ::new ManagerType(internal, EMemoryPoolTracker);
+		m_memory_pool_mgr->Setup();
 	}
 
 public:
 	CMemoryPoolManager(const CMemoryPoolManager &) = delete;
 
 	// create new memory pool
-	CMemoryPool *CreateMemoryPool();
+	static CMemoryPool *CreateMemoryPool();
 
 	// release memory pool
-	void Destroy(CMemoryPool *);
+	static void Destroy(CMemoryPool *);
 
 #ifdef GPOS_DEBUG
 	// print internal contents of allocated memory pools
@@ -140,13 +130,14 @@ public:
 #endif	// GPOS_DEBUG
 
 	// delete memory pools and release manager
-	void Shutdown();
+	static void Shutdown();
 
 	// accessor of memory pool used in global new allocations
-	CMemoryPool *
+	static CMemoryPool *
 	GetGlobalMemoryPool()
 	{
-		return m_global_memory_pool;
+		GPOS_ASSERT(nullptr != m_memory_pool_mgr);
+		return m_memory_pool_mgr->m_global_memory_pool;
 	}
 
 	virtual ~CMemoryPoolManager() = default;
@@ -161,7 +152,7 @@ public:
 	virtual ULONG UserSizeOfAlloc(const void *ptr);
 
 	// initialize global instance
-	static GPOS_RESULT Init();
+	static void Init();
 
 	// global accessor
 	static CMemoryPoolManager *

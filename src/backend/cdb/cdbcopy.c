@@ -434,9 +434,9 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 											 * QEs */
 	int64		total_rows_rejected = 0;	/* total num rows rejected by all
 											 * QEs */
-	int64		first_segment_rows_completed = -1;	/* total num rows completed by first QE,
+	int64		first_segment_rows_completed = 0;	/* total num rows completed by first QE,
 											 		 * mainly for replicated table */
-	int64		first_segment_rows_rejected = -1;	/* total num rows rejected by first QE,
+	int64		first_segment_rows_rejected = 0;	/* total num rows rejected by first QE,
 													 * mainly for replicated table */
 	ErrorData *first_error = NULL;
 	int			seg;
@@ -653,7 +653,7 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 				 */
 				if (c->is_replicated)
 				{
-					if (first_segment_rows_rejected == -1) 
+					if (first_segment_rows_rejected == 0) 
 						first_segment_rows_rejected = res->numRejected;
 					else
 					{
@@ -677,7 +677,7 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 				 */
 				if (c->is_replicated)
 				{
-					if (first_segment_rows_completed == -1) 
+					if (first_segment_rows_completed == 0) 
 						first_segment_rows_completed = res->numCompleted;
 					else
 					{

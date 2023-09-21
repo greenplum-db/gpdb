@@ -18,7 +18,7 @@ As a best practice, the secondary \(mirror\) segment instance must always reside
 
 Two standard mirroring configurations are available when you initialize or expand a Greenplum system. The default configuration, called *group mirroring*, places all the mirrors for a host's primary segments on one other host in the cluster. The other standard configuration, *spread mirroring*, can be selected with a command-line option. Spread mirroring spreads each host's mirrors over the remaining hosts and requires that there are more hosts in the cluster than primary segments per host.
 
-[Figure 1](#iw157574) shows how table data is distributed across segments when spread mirroring is configured.
+This figure shows how table data is distributed across segments when spread mirroring is configured.
 
 ![Spread Mirroring in Greenplum Database](../graphics/spread-mirroring.png "Spread Mirroring in Greenplum Database")
 

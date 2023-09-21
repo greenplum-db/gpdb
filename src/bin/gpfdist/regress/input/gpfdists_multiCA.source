@@ -83,7 +83,7 @@ INSERT INTO tbl_on_heap SELECT * FROM tbl;
 SELECT * FROM tbl_on_heap ORDER BY s1;
 
 -- start_ignore
-\! bash change_client_cert.bash 
+\! bash change_cert.bash client
 -- end_ignore
 
 -- gpfdists_multiCA case 4

@@ -1,6 +1,6 @@
 -- start_matchsubs
--- m/^LOG.*\"Feature/
--- s/^LOG.*\"Feature/\"Feature/
+-- m/^LOG.*\"Falling/
+-- s/^LOG.*\"Falling/\"Falling/
 -- end_matchsubs
 
 CREATE SCHEMA auto_explain_test;

@@ -64,6 +64,7 @@ where <action> is one of:
   FORCE ROW LEVEL SECURITY
   NO FORCE ROW LEVEL SECURITY
   CLUSTER ON <index_name>
+  REPACK BY COLUMNS (<colum_name_1> [ASC|DESC], <column_name_2> [ASC|DESC], ...)
   SET WITHOUT CLUSTER
   SET WITHOUT OIDS
   SET TABLESPACE <new_tablespace>
@@ -210,7 +211,7 @@ DROP COLUMN [ IF EXISTS ]
 SET DATA TYPE
 :   This form changes the data type of a column of a table. Note that you cannot alter column data types that are being used as distribution or partitioning keys. Indexes and simple table constraints involving the column will be automatically converted to use the new column type by reparsing the originally supplied expression. The optional `COLLATE` clause specifies a collation for the new column; if omitted, the collation is the default for the new column type. The optional `USING` clause specifies how to compute the new column value from the old. If omitted, the default conversion is the same as an assignment cast from old data type to new. A `USING` clause must be provided if there is no implicit or assignment cast from old to new type.
 
-:   > **Note** The Greenplum Query Optimizer (GPORCA) supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres Planner.
+:   > **Note** The Greenplum query optimizer (GPORCA) supports collation only when all columns in the query use the same collation. If columns in the query use different collations, then Greenplum uses the Postgres-based planner.
 
 :   Changing a column data type may or may not require a table rewrite. For information about table rewrites performed by `ALTER TABLE`, see [Notes](#section5).
 
@@ -302,6 +303,11 @@ CLUSTER ON
 
 :   Changing cluster options acquires a `SHARE UPDATE EXCLUSIVE` lock.
 
+REPACK BY COLUMNS
+:   Physically reorders a table based on one or more columns to improve physical correlation. You specify one or more columns, and an optional column order. If not specified, the default is `ASC`. The command is equivalent to the [CLUSTER](CLUSTER.html) command, but it uses the provided column list instead of an index to determine the sorting order. 
+
+:   The command is especially useful for tables that are loaded in small batches. You may combine `REPACK BY COLUMNS` with most other `ALTER TABLE` commands that do not require a rewrite of the table. You may use `REPACK BY COLUMNS` to add compression or change the existing compression settings of a table while physically reordering the table, which results in better compression and storage. See [Examples](#section6) for more details.
+
 SET WITHOUT CLUSTER
 :   Removes the most recently used [CLUSTER](CLUSTER.html) index specification from the table. This affects future cluster operations that do not specify an index.
 
@@ -312,7 +318,7 @@ SET TABLESPACE
 
 :   All tables in the current database in a tablespace can be moved by using the `ALL IN TABLESPACE` form, which will lock all tables to be moved first and then move each one. This form also supports `OWNED BY`, which will only move tables owned by the roles specified. If the `NOWAIT` option is specified then the command will fail if it is unable to acquire all of the locks required immediately. Note that system catalogs are not moved by this command, use `ALTER DATABASE` or explicit `ALTER TABLE` invocations instead if desired. The `information_schema` relations are not considered part of the system catalogs and will be moved. See also [CREATE TABLESPACE](CREATE_TABLESPACE.html).
 
-:   If changing the tablespace of a partitioned table, all child table partitions will also be moved to the new tablespace.
+:   If changing the tablespace of a partitioned table, all child tables will also be moved to the new tablespace.
 
 SET { LOGGED | UNLOGGED }
 :   This form changes the table from unlogged to logged or vice-versa. It cannot be applied to a temporary table.
@@ -374,15 +380,15 @@ ATTACH PARTITION partition_name { FOR VALUES partition_bound_spec | DEFAULT }
 
 :   Attaching a partition acquires a `SHARE UPDATE EXCLUSIVE` lock on the parent table, in addition to the `ACCESS EXCLUSIVE` locks on the table being attached and on the default partition (if any).
 
-:   Further locks must also be held on all sub-partitions if the table being attached is itself a partitioned table. Likewise if the default partition is itself a partitioned table. The locking of the sub-partitions can be avoided by adding a `CHECK` constraint as described in [Paritioning Large Tables](../../admin_guide/ddl/ddl-partition.html.md).
+:   Additional locks must also be held on all sub-partitions if the table being attached is itself a partitioned table. Likewise if the default partition is itself a partitioned table. The locking of the sub-partitions can be avoided by adding a `CHECK` constraint as described in [Partitioning Large Tables](../../admin_guide/ddl/ddl-partition.html.md).
 
 DETACH PARTITION partition_name
 :   This form of the *modern partitioning syntax* detaches the specified partition of the target table. The detached partition continues to exist as a standalone table, but no longer has any ties to the table from which it was detached. Any indexes that were attached to the target table's indexes are detached.
 
 ALTER PARTITION \| DROP PARTITION \| RENAME PARTITION \| TRUNCATE PARTITION \| ADD PARTITION \| SPLIT PARTITION \| EXCHANGE PARTITION \| SET SUBPARTITION TEMPLATE
-:   These forms of the *classic partitioning syntax* change the structure of a partitioned table. You must go through the parent table to alter one of its child table partitions.
+:   These forms of the *classic partitioning syntax* change the structure of a partitioned table. You must go through the parent table to alter one of its child tables.
 
-> **Note** If you add a partition to a table that has subpartition encodings, the new partition inherits the storage directives for the subpartitions. For more information about the precedence of compression settings, see [Using Compression](../../admin_guide/ddl/ddl-storage.html#topic40).
+> **Note** If you add a partition to a table that has sub-partition encodings, the new partition inherits the storage directives for the sub-partitions. For more information about the precedence of compression settings, see [Using Compression](../../admin_guide/ddl/ddl-storage.html#topic40).
 
 You can combine all forms of `ALTER TABLE` that act on a single table into a list of multiple alterations to apply together, except `RENAME`, `SET SCHEMA`, `ATTACH PARTITION`, and `DETACH PARTITION`. For example, it is possible to add several columns and/or alter the type of several columns in a single command. This is particularly useful with large tables, since only one pass over the table need be made.
 
@@ -481,13 +487,13 @@ SET WITH (reorganize=true\|false)
 Descriptions of additional parameters that are specific to the *classic partitioning syntax* follow.
 
 ALTER \[DEFAULT\] PARTITION
-:   If altering a partition deeper than the first level of partitions, use `ALTER PARTITION` clauses to specify which subpartition in the hierarchy you want to alter. For each partition level in the table hierarchy that is above the target partition, specify the partition that is related to the target partition in an `ALTER PARTITION` clause.
+:   If altering a partition deeper than the first level of partitions, use `ALTER PARTITION` clauses to specify which sub-partition in the hierarchy you want to alter. For each partition level in the table hierarchy that is above the target partition, specify the partition that is related to the target partition in an `ALTER PARTITION` clause.
 
 DROP \[DEFAULT\] PARTITION
-:   Drops the specified partition. If the partition has subpartitions, the subpartitions are automatically dropped as well.
+:   Drops the specified partition. If the partition has sub-partitions, the sub-partitions are automatically dropped as well.
 
 TRUNCATE \[DEFAULT\] PARTITION
-:   Truncates the specified partition. If the partition has subpartitions, the subpartitions are automatically truncated as well.
+:   Truncates the specified partition. If the partition has sub-partitions, the sub-partitions are automatically truncated as well.
 
 RENAME \[DEFAULT\] PARTITION
 :   Changes the partition name of a partition \(not the relation name\). Partitioned tables are created using the naming convention: `<`parentname`>_<`level`>_prt_<`partition\_name`>`.
@@ -510,23 +516,23 @@ ADD PARTITION
 
 :   **TABLESPACE** - The name of the tablespace in which the partition is to be created.
 
-:   subpartition\_spec - Only allowed on partition designs that were created without a subpartition template. Declares a subpartition specification for the new partition you are adding. If the partitioned table was originally defined using a subpartition template, then the template will be used to generate the subpartitions automatically.
+:   subpartition\_spec - Only allowed on partition designs that were created without a sub-partition template. Declares a sub-partition specification for the new partition you are adding. If the partitioned table was originally defined using a sub-partition template, then the template will be used to generate the sub-partitions automatically.
 
 EXCHANGE \[DEFAULT\] PARTITION
 :   Exchanges another table into the partition hierarchy into the place of an existing partition. In a multi-level partition design, you can only exchange the lowest level partitions \(those that contain data\).
 
 :   **WITH TABLE** table\_name - The name of the table you are swapping into the partition design. You can exchange a table where the table data is stored in the database. For example, the table is created with the `CREATE TABLE` command. The table must have the same number of columns, column order, column names, column types, and distribution policy as the parent table.
 
-:   With the `EXCHANGE PARTITION` clause, you can also exchange a readable external table \(created with the `CREATE EXTERNAL TABLE` command\) into the partition hierarchy in the place of an existing leaf child partition.
+:   With the `EXCHANGE PARTITION` clause, you can also exchange a readable external table \(created with the `CREATE EXTERNAL TABLE` command\) into the partition hierarchy in the place of an existing leaf partition.
 
-:   Exchanging a leaf child partition with an external table is not supported if the partitioned table contains a column with a check constraint or a `NOT NULL` constraint.
+:   Exchanging a leaf partition with an external table is not supported if the partitioned table contains a column with a check constraint or a `NOT NULL` constraint.
 
 :   You cannot exchange a partition with a replicated table. Exchanging a partition with a partitioned table or a child partition of a partitioned table is not supported.
 
 :   **WITH** \| **WITHOUT VALIDATION** - No-op (always validate the data against the partition constraint).
 
 SET SUBPARTITION TEMPLATE
-:   Modifies the subpartition template for an existing partition. After a new subpartition template is set, all new partitions added will have the new subpartition design \(existing partitions are not modified\).
+:   Modifies the sub-partition template for an existing partition. After a new sub-partition template is set, all new partitions added will have the new sub-partition design \(existing partitions are not modified\).
 
 SPLIT DEFAULT PARTITION
 :   Splits a default partition. In a multi-level partition, only a range partition can be split, not a list partition, and you can only split the lowest level default partitions \(those that contain data\). Splitting a default partition creates a new partition containing the values specified and leaves the default partition containing any values that do not match to an existing partition.
@@ -550,7 +556,7 @@ partition\_name
 :   The given name of a partition. You can obtain the the table names of the leaf partitions of a partitioned table using the `pg_partition_tree() function.
 
 FOR ('value')
-:   Specifies a partition by declaring a value that falls within the partition boundary specification. If the value declared with `FOR` matches to both a partition and one of its subpartitions (for example, if the value is a date and the table is partitioned by month and then by day), then `FOR` will operate on the first level where a match is found (for example, the monthly partition). If your intent is to operate on a subpartition, you must declare so as follows: `ALTER TABLE name ALTER PARTITION FOR ('2016-10-01') DROP PARTITION FOR ('2016-10-01');`
+:   Specifies a partition by declaring a value that falls within the partition boundary specification. If the value declared with `FOR` matches to both a partition and one of its sub-partitions (for example, if the value is a date and the table is partitioned by month and then by day), then `FOR` will operate on the first level where a match is found (for example, the monthly partition). If your intent is to operate on a sub-partition, you must declare so as follows: `ALTER TABLE name ALTER PARTITION FOR ('2016-10-01') DROP PARTITION FOR ('2016-10-01');`
 
 ## <a id="section5"></a>Notes 
 
@@ -600,14 +606,14 @@ Be aware of the following when altering partitioned tables using the *classic sy
 
 - The table name specified in the `ALTER TABLE` command must be the actual table name of the partition, not the partition alias that is specified in the classic syntax.
 - Use the `pg_partition_tree()` function to view the structure of a partitioned table. This function returns the partition hierarchy, and can help you identify the particular partitions you may want to alter.
-- These `ALTER PARTITION` operations are supported if no data is changed on a partitioned table that contains a leaf child partition that has been exchanged to use an external table. Otherwise, an error is returned.
+- These `ALTER PARTITION` operations are supported if no data is changed on a partitioned table that contains a leaf partition that has been exchanged to use an external table. Otherwise, an error is returned.
 
     -   Adding or dropping a column.
     -   Changing the data type of column.
 
-- These `ALTER PARTITION` operations are not supported for a partitioned table that contains a leaf child partition that has been exchanged to use an external table:
+- These `ALTER PARTITION` operations are not supported for a partitioned table that contains a leaf partition that has been exchanged to use an external table:
 
-    -   Setting a subpartition template.
+    -   Setting a sub-partition template.
     -   Altering the partition properties.
     -   Creating a default partition.
     -   Setting a distribution policy.
@@ -806,6 +812,14 @@ Change the distribution policy of a table to random and force a table rewrite:
 
 ```
 ALTER TABLE distributors SET WITH (REORGANIZE=true) SET DISTRIBUTED RANDOMLY;
+```
+
+Set compression for a table and physically reorder the table by column `i`:
+
+```
+ALTER TABLE distributors 
+    REPACK BY COLUMNS (i),
+    SET (compresstype=zstd, compresslevel=3);
 ```
 
 ### <a id="examples_modern"></a>Modern Syntax Partioning Examples

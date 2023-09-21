@@ -192,6 +192,7 @@ Doc Index
         - [dblink](./modules/dblink.md)
         - [diskquota](./modules/diskquota.md)
         - [fuzzystrmatch](./modules/fuzzystrmatch.md)
+        - [gp\_exttable\_fdw](./modules/gp_exttable_fdw.md)
         - [gp\_legacy\_string\_agg](./modules/gp_legacy_string_agg.md)
         - [gp\_sparse\_vector](./modules/gp_sparse_vector.md)
         - [greenplum_fdw](./modules/greenplum_fdw.md)

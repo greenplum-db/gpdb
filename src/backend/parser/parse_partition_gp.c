@@ -355,8 +355,8 @@ list_qsort_arg(List *list, qsort_arg_comparator cmp, void *arg)
 static void
 deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *stmts, bool addpartition)
 {
-	PartitionKey key = RelationGetPartitionKey(parentrel);
-	PartitionDesc desc = RelationGetPartitionDesc(parentrel);
+	PartitionKey key = RelationRetrievePartitionKey(parentrel);
+	PartitionDesc desc = RelationRetrievePartitionDesc(parentrel);
 
 	list_qsort_arg(stmts, qsort_stmt_cmp, key);
 
@@ -817,7 +817,7 @@ generateRangePartitions(ParseState *pstate,
 				 parser_errposition(pstate, elem->location)));
 
 	boundspec = (GpPartitionRangeSpec *) elem->boundSpec;
-	partkey = RelationGetPartitionKey(parentrel);
+	partkey = RelationRetrievePartitionKey(parentrel);
 	/* Syntax doesn't allow expressions in partition key */
 	Assert(partkey->partattrs[0] != 0);
 
@@ -1385,7 +1385,7 @@ transformGpPartDefElemWithRangeSpec(ParseState *pstate, Relation parentrel, GpPa
 					parser_errposition(pstate, elem->location)));
 
 	boundspec = (GpPartitionRangeSpec *) elem->boundSpec;
-	partkey = RelationGetPartitionKey(parentrel);
+	partkey = RelationRetrievePartitionKey(parentrel);
 
 	/*
 	 * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: We currently disabled support for multi-column
@@ -1613,7 +1613,7 @@ transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
 	pstate->p_sourcetext = queryString;
 
 	parentrel = table_open(parentrelid, NoLock);
-	partkey = RelationGetPartitionKey(parentrel);
+	partkey = RelationRetrievePartitionKey(parentrel);
 	Assert(partkey != NULL);
 	if (list_length(partkey->partexprs) > 0)
 		ereport(ERROR,
@@ -1832,7 +1832,7 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 			new_parts = generateDefaultPartition(pstate, parentrel, elem, tmpSubPartSpec, &partcomp);
 		else
 		{
-			PartitionKey key = RelationGetPartitionKey(parentrel);
+			PartitionKey key = RelationRetrievePartitionKey(parentrel);
 			Assert(key != NULL);
 			switch (key->strategy)
 			{

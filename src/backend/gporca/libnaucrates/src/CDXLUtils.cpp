@@ -1515,14 +1515,13 @@ CDXLUtils::CreateMDNameFromCharArray(CMemoryPool *mp, const CHAR *c)
 {
 	GPOS_ASSERT(nullptr != c);
 
-	CWStringDynamic *dxl_string =
-		CDXLUtils::CreateDynamicStringFromCharArray(mp, c);
-	CMDName *md_name = GPOS_NEW(mp) CMDName(mp, dxl_string);
+	// The CMDName will take ownership of the buffer. This ensures we minimize allocations
+	// and improves performance for this very hot code path
+	const CWStringConst *str = GPOS_NEW(mp) CWStringConst(mp, c);
 
-	// CMDName ctor created a copy of the string
-	GPOS_DELETE(dxl_string);
+	CMDName *mdname = GPOS_NEW(mp) CMDName(str, true /* owns_memory */);
 
-	return md_name;
+	return mdname;
 }
 
 //---------------------------------------------------------------------------
@@ -1765,6 +1764,52 @@ CDXLUtils::Read(CMemoryPool *mp, const CHAR *filename)
 	read_buffer[read_bytes] = '\0';
 
 	return read_buffer.RgtReset();
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CDXLUtils::SerializeBooleanArray
+//
+//	@doc:
+//		Serialize a boolean array by mapping 1 to true_value
+//		and 0 to false_value
+//
+//---------------------------------------------------------------------------
+CWStringDynamic *
+CDXLUtils::SerializeBooleanArray(CMemoryPool *mp,
+								 ULongPtrArray *dynamic_ptr_array,
+								 const CWStringConst *true_value,
+								 const CWStringConst *false_value)
+{
+	CAutoP<CWStringDynamic> string_var(GPOS_NEW(mp) CWStringDynamic(mp));
+
+	if (nullptr == dynamic_ptr_array)
+	{
+		return string_var.Reset();
+	}
+
+	ULONG length = dynamic_ptr_array->Size();
+	for (ULONG ul = 0; ul < length; ul++)
+	{
+		ULONG value = *((*dynamic_ptr_array)[ul]);
+		GPOS_ASSERT(value == 0 || value == 1);
+		const CWStringConst *string_repr;
+		string_repr = (value == 1) ? true_value : false_value;
+
+		if (ul == length - 1)
+		{
+			// last element: do not print a comma
+			string_var->AppendFormat(string_repr->GetBuffer());
+		}
+		else
+		{
+			string_var->AppendFormat(
+				GPOS_WSZ_LIT("%ls%ls"), string_repr->GetBuffer(),
+				CDXLTokens::GetDXLTokenStr(EdxltokenComma)->GetBuffer());
+		}
+	}
+
+	return string_var.Reset();
 }
 
 #ifdef GPOS_DEBUG

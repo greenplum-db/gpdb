@@ -4,14 +4,6 @@ title: Machine Learning and Deep Learning using MADlib
 
 Apache MADlib is an open-source library for scalable in-database analytics. The Greenplum MADlib extension provides the ability to run machine learning and deep learning workloads in a Greenplum Database.
 
-This chapter includes the following information:
-
--   [Installing MADlib](#topic3)
--   [Upgrading MADlib](#topic_eqm_klx_hw)
--   [Uninstalling MADlib](#topic6)
--   [Examples](#topic9)
--   [References](#topic10)
-
 You can install it as an extension in a Greenplum Database system you can run data-parallel implementations of mathematical, statistical, graph, machine learning, and deep learning methods on structured and unstructured data. For Greenplum and MADlib version compatibility, refer to [MADlib FAQ](https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?).
 
 MADlib’s suite of SQL-based algorithms run at scale within a single Greenplum Database engine without needing to transfer data between the database and other tools.
@@ -30,7 +22,7 @@ In the area of model selection, MADlib supports cross validation and the most co
 
 ## <a id="section_hrn_pv1_rqb"></a>Deep Learning 
 
-Starting in Apache MADlib release 1.16, Greenplum Database supports using Keras and TensorFlow for deep learning. You can review the [supported libraries and configuration instructions](https://cwiki.apache.org/confluence/display/MADLIB/Deep+Learning) on the Apache MADlib pages as well as user documentation for [Keras API](http://madlib.apache.org/docs/latest/group__grp__dl.html) using the Tensorflow backend. Note that it is not supported with RHEL 6.
+Greenplum Database supports using Keras and TensorFlow for deep learning. You can review the [supported libraries and configuration instructions](https://cwiki.apache.org/confluence/display/MADLIB/Deep+Learning) on the Apache MADlib pages as well as user documentation for [Keras API](http://madlib.apache.org/docs/latest/group__grp__dl.html) using the Tensorflow backend.
 
 MADlib supports Keras with a TensorFlow backend, with or without Graphics Processing Units \(GPUs\). GPUs can significantly accelerate the training of deep neural networks so they are typically used for enterprise level workloads. For further GPU information, visit the MADlib wiki, [https://cwiki.apache.org/confluence/display/MADLIB/Deep+Learning](https://cwiki.apache.org/confluence/display/MADLIB/Deep+Learning).
 
@@ -53,9 +45,13 @@ For information about PivotalR, including supported MADlib functionality, see [h
 
 The R package for PivotalR can be found at [https://cran.r-project.org/web/packages/PivotalR/index.html](https://cran.r-project.org/web/packages/PivotalR/index.html).
 
-## <a id="topic3"></a>Installing MADlib 
+## <a id="prereq"></a>Prerequisites
 
-> **Note** MADlib requires the `m4` macro processor version 1.4.13 or later.
+MADlib requires the `m4` macro processor version 1.4.13 or later. Ensure that you have access to, or superuser permissions to install, this package on each Greenplum Database host.
+
+MADlib 2.0.0 requires Python 3, which should already be installed as a dependency when you install the Greenplum Database software on each Greenplum host.
+
+## <a id="topic3"></a>Installing MADlib 
 
 To install MADlib on Greenplum Database, you first install a compatible Greenplum MADlib package and then install the MADlib function libraries on all databases that will use MADlib.
 
@@ -67,21 +63,20 @@ If you have GPUs installed on some or across all hosts in the cluster, then the 
 
 Before you install the MADlib package, make sure that your Greenplum database is running, you have sourced `greenplum_path.sh`, and that the`$COORDINATOR_DATA_DIRECTORY` and `$GPHOME` variables are set.
 
-1.  Download the MADlib extension package from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
+1.  Download the MADlib extension package from [VMware Tanzu Network](https://network.tanzu.vmware.com/products/vmware-greenplum/).
 2.  Copy the MADlib package to the Greenplum Database coordinator host.
 3.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Advanced Analytics MADlib** software.
 4.  Unpack the MADlib distribution package. For example:
 
     ```
-    $ tar xzvf madlib-1.18.0+2-gp7-rhel8-x86_64.tar.gz
+    $ tar xzvf madlib-2.0.0-gp7-rhel8-x86_64.tar.gz
     ```
 
 5.  Install the software package by running the `gppkg` command. For example:
 
     ```
-    $ gppkg install ./madlib-1.18.0+2-gp7-rhel8-x86_64/madlib-1.18.0+2-gp7-rhel8-x86_64.gppkg
+    $ gppkg install ./madlib-2.0.0-gp7-rhel8-x86_64/madlib-2.0.0-gp7-rhel8-x86_64.gppkg.tar.gz
     ```
-
 
 ### <a id="topic5"></a>Adding MADlib Functions to a Database 
 
@@ -107,32 +102,6 @@ $ madpack -s madlib -p greenplum -c gpadmin@cdw:5432/testdb install-check
 
 > **Note** The command `madpack -h` displays information for the utility.
 
-## <a id="topic_eqm_klx_hw"></a>Upgrading MADlib 
-
-You upgrade an installed MADlib package with the Greenplum Database `gppkg` utility and the MADlib `madpack` command.
-
-For information about the upgrade paths that MADlib supports, see the MADlib support and upgrade matrix in the [MADlib FAQ page](https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?).
-
-### <a id="topic_tb3_2gd_3w"></a>Upgrading a MADlib Package 
-
-To upgrade MADlib, run the `gppkg` utility with the `install` option to install the newer package version. This command upgrades an installed MADlib package to MADlib 1.18.0+2.
-
-```
-$ gppkg install madlib-1.18.0+2-gp7-rhel8-x86_64.gppkg
-```
-
-### <a id="topic_bql_bgd_3w"></a>Upgrading MADlib Functions 
-
-After you upgrade the MADlib package from one major version to another, run `madpack upgrade` to upgrade the MADlib functions in a database schema.
-
-> **Note** Use `madpack upgrade` only if you upgraded a major MADlib package version, for example from 1.15 to 1.18.0. You do not need to update the functions within a patch version upgrade, for example from 1.16+1 to 1.16+3.
-
-This example command upgrades the MADlib functions in the schema `madlib` of the Greenplum Database `test`.
-
-```
-madpack -s madlib -p greenplum -c gpadmin@cdw:5432/testdb upgrade
-```
-
 ## <a id="topic6"></a>Uninstalling MADlib 
 
 -   [Remove MADlib objects from the database](#topic7)
@@ -153,7 +122,7 @@ $ madpack  -s madlib -p greenplum -c gpadmin@cdw:5432/testdb uninstall
 If no databases use the MADlib functions, use the Greenplum `gppkg` utility with the `remove` option to uninstall the MADlib package. When removing the package you must specify the package and version. This example uninstalls MADlib package version 1.18.
 
 ```
-$ gppkg remove madlib-1.18.0+2-gp5-rhel8-x86_64
+$ gppkg remove madlib-2.0.0-gp7-rhel8-x86_64
 ```
 
 You can run the `gppkg` utility with the `query` option to list the installed extensions and their versions.

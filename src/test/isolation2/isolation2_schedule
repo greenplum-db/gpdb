@@ -8,6 +8,7 @@ test: checkpoint_dtx_info
 test: autovacuum-analyze
 test: vacuum_skip_locked_onseg
 test: lockmodes
+test: log_directory
 test: pg_rewind_fail_missing_xlog
 test: prepared_xact_deadlock_pg_rewind
 test: ao_partition_lock
@@ -278,7 +279,7 @@ test: segwalrep/dtm_recovery_on_standby
 test: segwalrep/commit_blocking_on_standby
 test: segwalrep/max_slot_wal_keep_size
 test: segwalrep/dtx_recovery_wait_lsn
-test: segwalrep/select_throttle
+test: segwalrep/hintbit_throttle
 test: fts_manual_probe
 test: fts_session_reset
 test: fts_segment_reset

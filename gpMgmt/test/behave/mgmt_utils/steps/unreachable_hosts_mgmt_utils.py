@@ -1,5 +1,6 @@
 import subprocess
 import tempfile
+import socket
 
 from behave import given, when, then
 
@@ -88,7 +89,10 @@ def _blackhole_route_helper(disconnect_host, hosts, disconnect=False):
         subprocess.check_output(["ssh", host, cmd])
 
 @given('all postgres processes are killed on "{disconnected}" hosts')
+@then('all postgres processes are killed on "{disconnected}" hosts')
 def impl(context, disconnected):
+    if disconnected == "current":
+        disconnected = socket.gethostname()
     disconnected_hosts = disconnected.split(',')
 
     # clean up disconnected

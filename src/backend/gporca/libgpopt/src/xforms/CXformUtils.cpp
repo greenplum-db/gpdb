@@ -1774,25 +1774,6 @@ CXformUtils::PstrErrorMessage(CMemoryPool *mp, ULONG major, ULONG minor, ...)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformUtils::PcrsIndexKeysAndIncludes
-//
-//	@doc:
-//		Return the set of columns from the given array of columns which appear
-//		in the index key and included columns
-//
-//---------------------------------------------------------------------------
-CColRefSet *
-CXformUtils::PcrsIndexKeysAndIncludes(CMemoryPool *mp,
-									  CColRefArray *colref_array,
-									  const IMDIndex *pmdindex,
-									  const IMDRelation *pmdrel)
-{
-	return PcrsIndexColumns(mp, colref_array, pmdindex, pmdrel,
-							EicKeyAndIncluded);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CXformUtils::PdrgpcrIndexKeys
 //
 //	@doc:
@@ -1805,7 +1786,7 @@ CXformUtils::PdrgpcrIndexKeys(CMemoryPool *mp, CColRefArray *colref_array,
 							  const IMDIndex *pmdindex,
 							  const IMDRelation *pmdrel)
 {
-	return PdrgpcrIndexColumns(mp, colref_array, pmdindex, pmdrel, EicKey);
+	return PdrgpcrIndexColumns(mp, colref_array, pmdindex, pmdrel);
 }
 
 //---------------------------------------------------------------------------
@@ -1821,7 +1802,7 @@ CColRefSet *
 CXformUtils::PcrsIndexKeys(CMemoryPool *mp, CColRefArray *colref_array,
 						   const IMDIndex *pmdindex, const IMDRelation *pmdrel)
 {
-	return PcrsIndexColumns(mp, colref_array, pmdindex, pmdrel, EicKey);
+	return PcrsIndexColumns(mp, colref_array, pmdindex, pmdrel);
 }
 
 //---------------------------------------------------------------------------
@@ -1836,14 +1817,45 @@ CXformUtils::PcrsIndexKeys(CMemoryPool *mp, CColRefArray *colref_array,
 CColRefSet *
 CXformUtils::PcrsIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 							  const IMDIndex *pmdindex,
-							  const IMDRelation *pmdrel, EIndexCols eic)
+							  const IMDRelation *pmdrel)
 {
-	GPOS_ASSERT(EicKey == eic || EicKeyAndIncluded == eic);
 	CColRefArray *pdrgpcrIndexColumns =
-		PdrgpcrIndexColumns(mp, colref_array, pmdindex, pmdrel, eic);
+		PdrgpcrIndexColumns(mp, colref_array, pmdindex, pmdrel);
 	CColRefSet *pcrsCols = GPOS_NEW(mp) CColRefSet(mp, pdrgpcrIndexColumns);
 
 	pdrgpcrIndexColumns->Release();
+
+	return pcrsCols;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CXformUtils::PdrgpcrIndexColumns
+//
+//	@doc:
+//		Return the set of columns from the given array of columns which are
+//		retunable through the index (to determine index-only scan capable)
+//
+//---------------------------------------------------------------------------
+CColRefSet *
+CXformUtils::PcrsIndexReturnableColumns(CMemoryPool *mp,
+										CColRefArray *colref_array,
+										const IMDIndex *pmdindex,
+										const IMDRelation *pmdrel)
+{
+	CColRefSet *pcrsCols = GPOS_NEW(mp) CColRefSet(mp);
+
+	// returnable columns
+	for (ULONG ul = 0; ul < pmdindex->ReturnableCols(); ul++)
+	{
+		ULONG ulPos = pmdindex->ReturnableColAt(ul);
+
+		ULONG ulPosNonDropped = pmdrel->NonDroppedColAt(ulPos);
+		GPOS_ASSERT(gpos::ulong_max != ulPosNonDropped);
+		GPOS_ASSERT(ulPosNonDropped < colref_array->Size());
+		CColRef *colref = (*colref_array)[ulPosNonDropped];
+		pcrsCols->Include(colref);
+	}
 
 	return pcrsCols;
 }
@@ -1860,10 +1872,8 @@ CXformUtils::PcrsIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 CColRefArray *
 CXformUtils::PdrgpcrIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 								 const IMDIndex *pmdindex,
-								 const IMDRelation *pmdrel, EIndexCols eic)
+								 const IMDRelation *pmdrel)
 {
-	GPOS_ASSERT(EicKey == eic || EicKeyAndIncluded == eic);
-
 	CColRefArray *pdrgpcrIndex = GPOS_NEW(mp) CColRefArray(mp);
 
 	// key columns
@@ -1879,8 +1889,7 @@ CXformUtils::PdrgpcrIndexColumns(CMemoryPool *mp, CColRefArray *colref_array,
 	}
 
 	// included columns
-	for (ULONG ul = 0;
-		 ul < (EicKeyAndIncluded == eic ? pmdindex->IncludedCols() : 0); ul++)
+	for (ULONG ul = 0; ul < pmdindex->IncludedCols(); ul++)
 	{
 		ULONG ulPos = pmdindex->IncludedColAt(ul);
 
@@ -1935,9 +1944,8 @@ CXformUtils::FIndexApplicable(CMemoryPool *mp, const IMDIndex *pmdindex,
 		 altindtype !=
 			 pmdindex
 				 ->IndexType()) ||	// otherwise make sure the index matches the given type(s)
-		0 == pcrsScalar->Size() ||	// no columns to match index against
-		(emdindtype != IMDIndex::EmdindBitmap &&
-		 possible_ao_table))  // only bitmap scans are supported on AO tables
+		0 == pcrsScalar->Size()	 // no columns to match index against
+	)
 	{
 		return false;
 	}
@@ -2400,7 +2408,8 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 	CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprGet,
 	ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
 	CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
-	const IMDIndex *pmdindex, const IMDRelation *pmdrel, BOOL indexForOrderBy)
+	const IMDIndex *pmdindex, const IMDRelation *pmdrel,
+	EIndexScanDirection indexscanDirection, BOOL indexForOrderBy)
 {
 	GPOS_ASSERT(nullptr != pexprGet);
 	GPOS_ASSERT(nullptr != pdrgpexprConds);
@@ -2463,10 +2472,21 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 	CColRefArray *pdrgppcrIndexCols =
 		PdrgpcrIndexKeys(mp, pdrgpcrOutput, pmdindex, pmdrel);
 	CExpressionArray *pdrgpexprIndex = GPOS_NEW(mp) CExpressionArray(mp);
+
+	// pdrgpexprResidual holds all the predicate conditions that can't leverage
+	// indexing (either don't refer to index keys at all, or,
+	// refer to index keys but can't make use of indexing)
 	CExpressionArray *pdrgpexprResidual = GPOS_NEW(mp) CExpressionArray(mp);
+
+	// Count of predicates which don't refer to index keys at all.
+	// This, count is used in costing index scans.
+	// Eg: Table : foo (a,b,c,d); Index keys: a,b; Predicate on: a,c,d; here:
+	// UnindexedPredCol =c,d and ulUnindexedPredColCount - 2
+	ULONG ulUnindexedPredColCount = 0;
+
 	CPredicateUtils::ExtractIndexPredicates(
 		mp, md_accessor, pdrgpexprConds, pmdindex, pdrgppcrIndexCols,
-		pdrgpexprIndex, pdrgpexprResidual, outer_refs);
+		pdrgpexprIndex, pdrgpexprResidual, ulUnindexedPredColCount, outer_refs);
 	CColRefSet *outer_refs_in_index_get =
 		CUtils::PcrsExtractColumns(mp, pdrgpexprIndex);
 	outer_refs_in_index_get->Intersection(outer_refs);
@@ -2523,13 +2543,14 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 		popLogicalGet = PopDynamicBtreeIndexOpConstructor(
 			mp, pmdindex, ptabdesc, ulOriginOpId,
 			GPOS_NEW(mp) CName(mp, CName(alias)), ulPartIndex, pdrgpcrOutput,
-			pdrgpdrgpcrPart, partition_mdids);
+			pdrgpdrgpcrPart, partition_mdids, ulUnindexedPredColCount);
 	}
 	else
 	{
 		popLogicalGet = PopStaticBtreeIndexOpConstructor(
 			mp, pmdindex, ptabdesc, ulOriginOpId,
-			GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput);
+			GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput,
+			ulUnindexedPredColCount, indexscanDirection);
 	}
 
 	// clean up
@@ -2836,6 +2857,8 @@ CXformUtils::PexprBitmapSelectBestIndex(
 	}
 
 	const ULONG ulIndexes = pmdrel->IndexCount();
+	ULONG ulUnsupportedPredCount = 0;
+
 	for (ULONG ul = 0; ul < ulIndexes; ul++)
 	{
 		const IMDIndex *pmdindex =
@@ -2857,8 +2880,8 @@ CXformUtils::PexprBitmapSelectBestIndex(
 
 			CPredicateUtils::ExtractIndexPredicates(
 				mp, md_accessor, pdrgpexprScalar, pmdindex, pdrgpcrIndexCols,
-				pdrgpexprIndex, pdrgpexprResidual, pcrsOuterRefs,
-				considerBitmapAltForArrayCmp);
+				pdrgpexprIndex, pdrgpexprResidual, ulUnsupportedPredCount,
+				pcrsOuterRefs, considerBitmapAltForArrayCmp);
 
 			pdrgpexprScalar->Release();
 
@@ -4097,7 +4120,7 @@ CXformUtils::FCoverIndex(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
 	GPOS_ASSERT(nullptr != pdrgpcrOutput);
 	pdrgpcrOutput->AddRef();
 
-	CColRefSet *matched_cols = CXformUtils::PcrsIndexKeysAndIncludes(
+	CColRefSet *returnable_cols = CXformUtils::PcrsIndexReturnableColumns(
 		mp, pdrgpcrOutput, pmdindex, pmdrel);
 	CColRefSet *output_cols = GPOS_NEW(mp) CColRefSet(mp);
 
@@ -4126,14 +4149,14 @@ CXformUtils::FCoverIndex(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
 		}
 	}
 
-	if (!matched_cols->ContainsAll(output_cols))
+	if (!returnable_cols->ContainsAll(output_cols))
 	{
-		matched_cols->Release();
+		returnable_cols->Release();
 		output_cols->Release();
 		pdrgpcrOutput->Release();
 		return false;
 	}
-	matched_cols->Release();
+	returnable_cols->Release();
 	output_cols->Release();
 
 	return true;

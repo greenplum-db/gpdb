@@ -98,6 +98,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 												 * pg_conf file  */
 	extvar->GP_SEG_DATADIR = DataDir;	/* location of the segments
 												 * datadirectory */
+	extvar->GP_SEG_LOGDIR = Log_directory;	/* location of the segments */
 	sprintf(extvar->GP_DATE, "%04d%02d%02d",
 			1900 + tm->tm_year, 1 + tm->tm_mon, tm->tm_mday);
 	sprintf(extvar->GP_TIME, "%02d%02d%02d",

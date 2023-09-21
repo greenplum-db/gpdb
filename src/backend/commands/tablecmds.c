@@ -75,6 +75,7 @@
 #include "commands/trigger.h"
 #include "commands/typecmds.h"
 #include "commands/user.h"
+#include "commands/vacuum.h"
 #include "executor/executor.h"
 #include "executor/instrument.h"
 #include "foreign/foreign.h"
@@ -115,6 +116,8 @@
 #include "utils/memutils.h"
 #include "utils/metrics_utils.h"
 #include "utils/partcache.h"
+#include "utils/pg_rusage.h"
+#include "utils/rel.h"
 #include "utils/relcache.h"
 #include "utils/resgroup.h"
 #include "utils/ruleutils.h"
@@ -465,6 +468,7 @@ static void ATExecDropCluster(Relation rel, LOCKMODE lockmode);
 static void ATPrepSetAccessMethod(AlteredTableInfo *tab, Relation rel, const char *amname);
 static void ATExecSetAccessMethodNoStorage(Relation rel, Oid newAccessMethod);
 static bool ATPrepChangePersistence(Relation rel, bool toLogged);
+static void ATPrepRepack(Relation rel, List *cols);
 static void ATPrepSetTableSpace(AlteredTableInfo *tab, Relation rel,
 								const char *tablespacename, LOCKMODE lockmode);
 static void ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmode);
@@ -501,6 +505,7 @@ static void RangeVarCallbackForAlterRelation(const RangeVar *rv, Oid relid,
 											 Oid oldrelid, void *arg);
 
 static void ATExecExpandTable(List **wqueue, Relation rel, AlterTableCmd *cmd);
+static void ATRepackTable(Relation origTable, AlteredTableInfo *tab);
 static void ATExecExpandPartitionTablePrepare(Relation rel);
 static void ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd);
 
@@ -536,6 +541,9 @@ static bool prebuild_temp_table(Relation rel, RangeVar *tmpname, DistributedBy *
 static void prepare_AlterTableStmt_for_dispatch(AlterTableStmt *stmt);
 static List *strip_gpdb_part_commands(List *cmds);
 static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOptions);
+
+static void checkATSetDistributedByStandalone(AlteredTableInfo *tab, Relation rel);
+
 
 /* ----------------------------------------------------------------
  *		DefineRelation
@@ -1227,7 +1235,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 		 * lock the partition so as to avoid a deadlock.
 		 */
 		defaultPartOid =
-			get_default_oid_from_partdesc(RelationGetPartitionDesc(parent));
+			get_default_oid_from_partdesc(RelationRetrievePartitionDesc(parent));
 		if (OidIsValid(defaultPartOid))
 			defaultRel = table_open(defaultPartOid, AccessExclusiveLock);
 
@@ -4753,7 +4761,9 @@ AlterTableGetLockLevel(List *cmds)
 			case AT_SetDistributedBy:
 				cmd_lockmode = AccessExclusiveLock;
 				break;
-
+			case AT_RepackTable: /* GPDB: REPACK TABLE */ 
+				cmd_lockmode = AccessExclusiveLock;
+				break;
 				/*
 				 * GPDB: For these commands lookup root partition to construct
 				 * the appropriate stmt. Hence, AccessShareLock should be
@@ -5200,7 +5210,7 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 						if (!recurse)
 						{
 							/* Don't allow ALTER TABLE ONLY on a partitioned table */
-							if (RelationGetPartitionKey(rel))
+							if (RelationRetrievePartitionKey(rel))
 							{
 								ereport(ERROR,
 										(errcode(ERRCODE_WRONG_OBJECT_TYPE),
@@ -5242,7 +5252,17 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 			ATSimpleRecursion(wqueue, rel, cmd, recurse, lockmode);
 			pass = AT_PASS_MISC;
 			break;
+		case AT_RepackTable: /* GPDB: REPACK TABLE */
+			ATSimplePermissions(rel, ATT_TABLE);
+			ATSimpleRecursion(wqueue, rel, cmd, recurse, lockmode);
+			tab->repack_cols = (List *) cmd->def;
+						
+			ATPrepRepack(rel, tab->repack_cols);
+			if (rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE) 
+				tab->rewrite |= AT_REWRITE_REPACK;
 
+			pass = AT_PASS_MISC;
+			break;
 		case AT_ExpandPartitionTablePrepare:
 			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE | ATT_MATVIEW);
 
@@ -5777,10 +5797,23 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			ATExecGenericOptions(rel, (List *) cmd->def);
 			break;
 		case AT_SetDistributedBy:	/* SET DISTRIBUTED BY */
+			checkATSetDistributedByStandalone(tab, rel);
 			ATExecSetDistributedBy(rel, (Node *) cmd->def, cmd);
 			break;
 		case AT_ExpandTable:	/* EXPAND TABLE */
 			ATExecExpandTable(wqueue, rel, cmd);
+			break;
+		case AT_RepackTable: 
+			for (int i = 0; i < AT_NUM_PASSES; ++i)
+			{
+				if (i == AT_PASS_ADD_COL && tab->subcmds[i])
+				{
+					ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						errmsg("cannot run REPACK with ADD COLUMN in one statement"),
+						errhint("consider separating into multiple statements")));
+				}
+			}
 			break;
 		case AT_ExpandPartitionTablePrepare:	/* EXPAND PARTITION PREPARE */
 			ATExecExpandPartitionTablePrepare(rel);
@@ -5843,6 +5876,18 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 		if (!RELKIND_HAS_STORAGE(tab->relkind))
 			continue;
 
+		/*
+		 * AT REPACK may only be combined with AT ALTER RELOPTS when
+		 * rewriting the table 
+		 */
+		if ((tab->rewrite & AT_REWRITE_REPACK) &&
+			(tab->rewrite != (AT_REWRITE_REPACK | AT_REWRITE_ALTER_RELOPTS) 
+				&& tab->rewrite != AT_REWRITE_REPACK))
+			ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("cannot run REPACK together with most other subcommands that rewrite the table"),
+				errhint("consider separating into multiple statements")));
+	
 		/*
 		 * If we change column data types or add/remove OIDs, the operation
 		 * has to be propagated to tables that use this table's rowtype as a
@@ -5921,6 +5966,16 @@ ATRewriteTables(AlterTableStmt *parsetree, List **wqueue, LOCKMODE lockmode)
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				errmsg("cannot rewrite temporary tables of other sessions")));
+		}
+
+		/*
+		 * If we are repacking an AO table, we do not want to invoke the full rewrite machinery.
+		 * Instead divert to a special handler that will perform the required operations
+		 */
+		if (tab->rewrite & AT_REWRITE_REPACK)
+		{
+			ATRepackTable(OldHeap, tab);
+			continue;
 		}
 
 		/*
@@ -7940,7 +7995,7 @@ ATPrepDropNotNull(Relation rel, bool recurse, bool recursing)
 	 */
 	if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
 	{
-		PartitionDesc partdesc = RelationGetPartitionDesc(rel);
+		PartitionDesc partdesc = RelationRetrievePartitionDesc(rel);
 
 		Assert(partdesc != NULL);
 		if (partdesc->nparts > 0 && !recurse && !recursing)
@@ -10263,7 +10318,7 @@ addFkRecurseReferenced(List **wqueue, Constraint *fkconstraint, Relation rel,
 	 */
 	if (pkrel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
 	{
-		PartitionDesc pd = RelationGetPartitionDesc(pkrel);
+		PartitionDesc pd = RelationRetrievePartitionDesc(pkrel);
 
 		for (int i = 0; i < pd->nparts; i++)
 		{
@@ -10398,7 +10453,7 @@ addFkRecurseReferencing(List **wqueue, Constraint *fkconstraint, Relation rel,
 	}
 	else if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
 	{
-		PartitionDesc pd = RelationGetPartitionDesc(rel);
+		PartitionDesc pd = RelationRetrievePartitionDesc(rel);
 
 		/*
 		 * Recurse to take appropriate action on each partition; either we
@@ -13734,9 +13789,68 @@ ATPostAlterTypeParse(Oid oldId, Oid oldRelId, Oid refRelId, char *cmd,
 	/*
 	 * In the QE, don't add items to the work queues. They were already
 	 * added in the QD, and we don't want to do them twice.
+	 *
+	 * However, we need to check if we are to reuse the relfilenode of an
+	 * existing index. This information is unique to QD and each QE. If so,
+	 * we need to replace that with QE's own relfilenode. Note that this is
+	 * not a problem for foreign key operator oids (see TryReuseForeignKey)
+	 * since those are the same among QD/QEs.
 	 */
 	if (Gp_role == GP_ROLE_EXECUTE)
+	{
+		ListCell 		*lc;
+		Relation 		rel;
+		Relation 		irel = NULL;
+		AlteredTableInfo 	*tab;
+
+		/* Caller should already have acquired whatever lock we need. */
+		rel = relation_open(oldRelId, NoLock);
+		tab = ATGetQueueEntry(wqueue, rel);
+
+		/* Check the commands I got from QD for any re-used index. */
+		foreach (lc, tab->subcmds[AT_PASS_OLD_INDEX])
+		{
+			AlterTableCmd 	*cmd = castNode(AlterTableCmd, lfirst(lc));
+			IndexStmt 	*stmt;
+
+			Assert(cmd->subtype == AT_ReAddIndex);
+
+			stmt = (IndexStmt *) cmd->def;
+
+			/* if we are not reusing this index, continue */
+			if (!OidIsValid(stmt->oldNode))
+				continue;
+
+			if (irel == NULL)
+			{
+				Oid 		indoid = InvalidOid;
+				HeapTuple 	tup;
+
+				tup = SearchSysCache1(INDEXRELID, ObjectIdGetDatum(oldId));
+				if (HeapTupleIsValid(tup))
+					indoid = oldId;
+				else
+					/* not an index, them it must be a constraint */
+					indoid = get_constraint_index(oldId);
+
+				if (HeapTupleIsValid(tup))
+					ReleaseSysCache(tup);
+
+				Assert(OidIsValid(indoid));
+
+				/* We might not open index on QE, so acquire a valid lock */
+				irel = index_open(indoid, AccessShareLock);
+			}
+
+			/* replace it with my own */
+			stmt->oldNode = irel->rd_node.relNode;
+		}
+
+		if (irel != NULL)
+			index_close(irel, AccessShareLock);
+		relation_close(rel, NoLock);
 		return;
+	}
 
 	/*
 	 * We expect that we will get only ALTER TABLE and CREATE INDEX
@@ -17233,7 +17347,7 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 
 		/* Step (a) */
 		/*
-		 * Force the use of Postgres query optimizer, since Pivotal Optimizer (GPORCA) will not
+		 * Force the use of Postgres based planner, since GPORCA will not
 		 * redistribute the tuples if the current and required distributions
 		 * are both RANDOM even when reorganize is set to "true"
 		 */
@@ -17355,6 +17469,235 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 
 		performDeletion(&object, DROP_RESTRICT, 0);
 	}
+}
+
+/*
+ * ALTER TABLE REPACK BY COLUMNS (...)
+ * Reload an appendonly table to a physically sorted order on disk.
+ *
+ * This uses similar logic to CLUSTER, but does not rely on having an index
+ * in place. See rebuild_relation() for the equivalent logic in the CLUSTER 
+ * case. Further, we rely on the AT scaffolding to omit much of the checks 
+ * and bookkeeping needed for CLUSTER and VACUUM.
+ */
+static void
+ATRepackTable(Relation origTable, AlteredTableInfo *tab)
+{
+
+	AttrNumber		*attNums;
+	BlockNumber		num_pages;
+	Form_pg_class	relform;
+	HeapTuple		reltup;
+	ListCell		*cell;
+	MultiXactId		cutoffMulti;
+	Oid				*sortCollations;
+	Oid				*sortOperators;
+	Oid				newTableOid;
+	Relation		newTable;
+	Relation		pgClassRelation;
+	TransactionId	OldestXmin;
+	TransactionId	frozenXid;
+	bool			*nullsFirstFlags;
+	int				keyNo;
+
+	Oid			accessMethod = origTable->rd_rel->relam;
+	Oid			origTableOid = RelationGetRelid(origTable);
+	Oid			tableSpace = origTable->rd_rel->reltablespace;
+	char		relpersistence = origTable->rd_rel->relpersistence;
+	double		num_tuples = 0;
+
+	/* 
+	 * ATPrepRepack already checked that origTable is an AO table, not a system
+	 * relation, that a lock is held by ATController, and that relation is 
+	 * already open.
+	 */ 
+
+	int nkeys = list_length(tab->repack_cols);
+	attNums = (AttrNumber *) palloc0(nkeys * sizeof(AttrNumber));
+	sortCollations = (Oid *) palloc0(nkeys * sizeof(Oid));
+	sortOperators = (Oid *) palloc0(nkeys * sizeof(Oid));
+	nullsFirstFlags = (bool *) palloc0(nkeys * sizeof(bool));
+	
+
+	/* Create and open the new table that will receive the re-ordered data */
+	newTableOid = make_new_heap(origTableOid, tableSpace,
+							   accessMethod, NULL,
+							   tab->newOptions, /* newoptions */
+							   relpersistence,
+							   AccessExclusiveLock,
+							   true /* createAoBlockDirectory */,
+							   false);
+	newTable = table_open(newTableOid, AccessExclusiveLock);
+
+	/* Extract per-column info from user-provided columns, store to usable structs */
+	keyNo = 0;
+	foreach(cell, tab->repack_cols)
+	{
+		Form_pg_attribute 	attTup;
+		Form_pg_opclass		opform;
+		HeapTuple			attHeapTup;
+		HeapTuple			opClassTup;
+		Oid					opClassId;
+		Oid					sortop;
+		int					sortDir;
+
+		SortBy		*colSortBy = lfirst(cell);
+		ColumnRef	*cref = castNode(ColumnRef, colSortBy->node);
+		char		*colname = strVal((Value *) linitial(cref->fields));
+
+		/* Find and cast the column tuple so we can extract its required fields */
+		attHeapTup = SearchSysCacheAttName(RelationGetRelid(origTable), colname);
+		/* Re-check column exists, in case DROP COLUMN nicked it*/
+		if (!HeapTupleIsValid(attHeapTup))
+			ereport(ERROR,
+			(errcode(ERRCODE_UNDEFINED_COLUMN),
+			errmsg("column \"%s\" of relation \"%s\" is invalid for REPACK",
+				colname, RelationGetRelationName(origTable)),
+			errhint("cannot drop a column when repacking by it")));
+
+		attTup = (Form_pg_attribute) GETSTRUCT(attHeapTup);
+		attNums[keyNo] = attTup->attnum;
+
+		if (OidIsValid(attTup->attcollation))
+			sortCollations[keyNo] = attTup->attcollation;
+		else
+			sortCollations[keyNo] = DEFAULT_COLLATION_OID;
+
+		/* 
+		 * Retrieve opclass info for this column, using the btree access
+		 * methods.  Given that we're only using these for sorting, the btree
+		 * opclass will for each column type will give us the correct methods. 
+		 */
+		opClassId = GetDefaultOpClass(attTup->atttypid, BTREE_AM_OID);
+		if (opClassId == InvalidOid)
+			/* This should not be possible, but handle it just in case */
+			ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("column \"%s\" is of a type that cannot serve as a repacking key",
+				colname)));
+
+		opClassTup = SearchSysCache1(CLAOID, ObjectIdGetDatum(opClassId));
+		opform = (Form_pg_opclass) GETSTRUCT(opClassTup);
+
+
+		/* Default ordering is ASCENDING */
+		if (colSortBy->sortby_dir == SORTBY_DESC)
+			sortDir = BTGreaterStrategyNumber;
+		else
+			sortDir = BTLessStrategyNumber;
+
+		/* Default null ordering is LAST for ASC, FIRST for DESC */
+		if (colSortBy->sortby_nulls == SORTBY_NULLS_DEFAULT)
+		{
+			if (sortDir == BTLessStrategyNumber)
+				nullsFirstFlags[keyNo] = false;
+			else
+				nullsFirstFlags[keyNo] = true;
+		}
+		else if (colSortBy->sortby_nulls == SORTBY_NULLS_FIRST)
+			nullsFirstFlags[keyNo] = true;
+		else
+			nullsFirstFlags[keyNo] = false;
+
+		sortop = get_opfamily_member(opform->opcfamily, attTup->atttypid,
+									attTup->atttypid, sortDir);
+
+		if (sortop == InvalidOid)
+			/* This should not be possible, but handle it just in case */
+			ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("column \"%s\" is of a type that cannot serve as a repacking key",
+				colname)));
+
+		sortOperators[keyNo] = sortop;
+
+		ReleaseSysCache(attHeapTup);
+		ReleaseSysCache(opClassTup);
+		keyNo++;
+	}
+
+	/*
+	 * Compute xids used to freeze and weed out dead tuples and multixacts.
+	 * Since we're going to rewrite the whole table anyway, there's no reason
+	 * not to be aggressive about this.
+	 */
+	vacuum_set_xid_limits(origTable, 0, 0, 0, 0,
+						  &OldestXmin, &frozenXid, NULL, &cutoffMulti,
+						  NULL);
+
+	/*
+	 * FreezeXid will become the table's new relfrozenxid, and that mustn't go
+	 * backwards, so take the max.
+	 */
+	if (TransactionIdIsValid(origTable->rd_rel->relfrozenxid) &&
+		TransactionIdPrecedes(frozenXid, origTable->rd_rel->relfrozenxid))
+		frozenXid= origTable->rd_rel->relfrozenxid;
+
+	/*
+	 * MultiXactCutoff, similarly, shouldn't go backwards either.
+	 */
+	if (MultiXactIdIsValid(origTable->rd_rel->relminmxid) &&
+		MultiXactIdPrecedes(cutoffMulti, origTable->rd_rel->relminmxid))
+		cutoffMulti = origTable->rd_rel->relminmxid;
+
+
+	/* hand off to AM handler for actual copying*/
+	table_relation_copy_for_repack(origTable, newTable, 
+		nkeys, attNums, sortOperators, sortCollations,
+		nullsFirstFlags, &frozenXid, &cutoffMulti, OldestXmin, &num_tuples);
+
+
+	/* Reset rd_toastoid just to be tidy --- it shouldn't be looked at again */
+	newTable->rd_toastoid = InvalidOid;
+
+	/*
+	 * We need to hike the command counter here so
+	 * that we can retrieve the ao(cs)seg eof count of the rewritten table,
+	 * during the num_pages calculation below.
+	 */
+	CommandCounterIncrement();
+
+	num_pages = RelationGetNumberOfBlocks(newTable);
+
+	table_close(origTable, NoLock);
+	table_close(newTable, NoLock);
+
+	/* Update pg_class to reflect the correct values of pages and tuples. */
+	pgClassRelation = table_open(RelationRelationId, RowExclusiveLock);
+
+	reltup = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(newTableOid));
+	if (!HeapTupleIsValid(reltup))
+		elog(ERROR, "cache lookup failed for relation %u", newTableOid);
+	relform = (Form_pg_class) GETSTRUCT(reltup);
+
+	relform->relpages = num_pages;
+	relform->reltuples = num_tuples;
+	CatalogTupleUpdate(pgClassRelation, &reltup->t_self, reltup);
+
+	heap_freetuple(reltup);
+	table_close(pgClassRelation, RowExclusiveLock);
+
+	/* Make the update to pg_class visible */
+	CommandCounterIncrement();
+
+	/*
+	 * Swap the physical files of the target and transient tables, then
+	 * rebuild the target's indexes and throw away the transient table.
+	 */
+	finish_heap_swap(origTableOid, newTableOid, 
+		false, /* is not a system catalog */
+		false, /* AO tables do not have TOAST */
+		true /* swap_stats */,
+		false, 
+		true,
+		frozenXid,
+		cutoffMulti,
+		relpersistence);
+	
+	pfree(attNums);
+	pfree(sortCollations);
+	pfree(sortOperators);
+	pfree(nullsFirstFlags);
 }
 
 /*
@@ -17727,7 +18070,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			/*
 			 * Make sure the redistribution happens for a randomly distributed table.
 			 *
-			 * Force the use of Postgres query optimizer, since Pivotal Optimizer (GPORCA) will not
+			 * Force the use of Postgres based planner, since GPORCA will not
 			 * redistribute the tuples if the current and required distributions
 			 * are both RANDOM even when reorganize is set to "true"
 			 * Also set gp_force_random_redistribution to true.
@@ -18701,6 +19044,60 @@ ATPrepChangePersistence(Relation rel, bool toLogged)
 	table_close(pg_constraint, AccessShareLock);
 
 	return true;
+}
+
+/*
+ * Preparation phase for REPACK BY COLUMNS (...)
+ * Check for expected attributes of the table, error/warn as needed.
+ */
+static void
+ATPrepRepack(Relation rel, List * cols)
+{
+	ListCell   *cell;
+
+	if (rel->rd_rel->relpersistence == RELPERSISTENCE_TEMP)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("cannot repack \"%s\" because it is a temporary table",
+							RelationGetRelationName(rel)),
+					 errtable(rel)));
+
+	if (!RelationIsAppendOptimized(rel))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("cannot repack \"%s\" because it is not an append-optimized table",
+						RelationGetRelationName(rel)),
+				 errtable(rel)));
+
+	/* Confirm that indicated columns are valid on the provided table */
+	foreach(cell, cols)
+	{
+		HeapTuple attHeapTup;
+		SortBy	*colSortBy = lfirst(cell);
+
+		if (!IsA(colSortBy->node, ColumnRef))
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("only simple column references are allowed in ALTER TABLE REPACK")));
+
+		ColumnRef *cref = castNode(ColumnRef, colSortBy->node);
+
+		if (list_length(cref->fields) != 1)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("only simple column references are allowed in ALTER TABLE REPACK")));
+
+		char *colname = strVal((Value *) linitial(cref->fields));
+
+		attHeapTup = SearchSysCacheAttName(RelationGetRelid(rel), colname);
+		if (!HeapTupleIsValid(attHeapTup))
+			ereport(ERROR,
+			(errcode(ERRCODE_UNDEFINED_COLUMN),
+			errmsg("column \"%s\" of relation \"%s\" does not exist",
+			colname, RelationGetRelationName(rel))));
+
+		ReleaseSysCache(attHeapTup);
+	}
 }
 
 /*
@@ -19989,7 +20386,7 @@ QueuePartitionConstraintValidation(List **wqueue, Relation scanrel,
 	}
 	else if (scanrel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
 	{
-		PartitionDesc partdesc = RelationGetPartitionDesc(scanrel);
+		PartitionDesc partdesc = RelationRetrievePartitionDesc(scanrel);
 		int			i;
 
 		for (i = 0; i < partdesc->nparts; i++)
@@ -20050,7 +20447,7 @@ ATExecAttachPartition(List **wqueue, Relation rel, PartitionCmd *cmd)
 	 * new partition will change its partition constraint.
 	 */
 	defaultPartOid =
-		get_default_oid_from_partdesc(RelationGetPartitionDesc(rel));
+		get_default_oid_from_partdesc(RelationRetrievePartitionDesc(rel));
 	if (OidIsValid(defaultPartOid))
 		LockRelationOid(defaultPartOid, AccessExclusiveLock);
 
@@ -20789,7 +21186,7 @@ ATExecDetachPartition(Relation rel, RangeVar *name)
 	 * will change its partition constraint.
 	 */
 	defaultPartOid =
-		get_default_oid_from_partdesc(RelationGetPartitionDesc(rel));
+		get_default_oid_from_partdesc(RelationRetrievePartitionDesc(rel));
 	if (OidIsValid(defaultPartOid))
 		LockRelationOid(defaultPartOid, AccessExclusiveLock);
 
@@ -21174,7 +21571,7 @@ ATExecAttachPartitionIdx(List **wqueue, Relation parentIdx, RangeVar *name)
 							   RelationGetRelationName(partIdx))));
 
 		/* Make sure it indexes a partition of the other index's table */
-		partDesc = RelationGetPartitionDesc(parentTbl);
+		partDesc = RelationRetrievePartitionDesc(parentTbl);
 		found = false;
 		for (i = 0; i < partDesc->nparts; i++)
 		{
@@ -21330,7 +21727,7 @@ validatePartitionedIndex(Relation partedIdx, Relation partedTbl)
 	 * If we found as many inherited indexes as the partitioned table has
 	 * partitions, we're good; update pg_index to set indisvalid.
 	 */
-	if (tuples == RelationGetPartitionDesc(partedTbl)->nparts)
+	if (tuples == RelationRetrievePartitionDesc(partedTbl)->nparts)
 	{
 		Relation	idxRel;
 		HeapTuple	newtup;
@@ -21475,4 +21872,36 @@ ATDetachCheckNoForeignKeyRefs(Relation partition)
 
 		table_close(rel, NoLock);
 	}
+}
+
+/*
+ * Check if AT SET DISTRIBUTED BY for this relation was specified in isolation.
+ * Currently, we don't allow AT SET DISTRIBUTED BY to be specified with other
+ * subcommands. This is due to the way that AT SET DISTRIBUTED BY is currently
+ * implemented: ATExecSetDistributedBy dispatches a CTAS, outside the regular
+ * AT dispatch workflow, which results in an inconsistent view of the catalog on
+ * the QEs.
+ */
+static void
+checkATSetDistributedByStandalone(AlteredTableInfo *tab, Relation rel)
+{
+	bool standalone = true;
+
+	for (int i = 0; i < AT_NUM_PASSES; ++i)
+	{
+		if (i != AT_PASS_MISC && list_length(tab->subcmds[i]) > 0)
+		{
+			standalone = false;
+			break;
+		}
+	}
+	if (list_length(tab->subcmds[AT_PASS_MISC]) > 1)
+		standalone = false;
+
+	if (!standalone)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("cannot alter distribution with other subcommands for relation \"%s\"",
+						   RelationGetRelationName(rel)),
+					errhint("consider separating into multiple statements")));
 }

@@ -891,28 +891,11 @@ AppendOnlyExecutorReadBlock_ProcessTuple(AppendOnlyExecutorReadBlock *executorRe
 	AppendOnlyExecutorReadBlock_BindingInit(executorReadBlock, slot, rowNum);
 
 	{
-		bool		shouldFree = false;
-
 		Assert(executorReadBlock->mt_bind);
 
 		ExecClearTuple(slot);
 		memtuple_deform(tuple, executorReadBlock->mt_bind, slot->tts_values, slot->tts_isnull);
 		slot->tts_tid = fake_ctid;
-
-		if (shouldFree)
-		{
-			/*
-			 * Store the converted memtuple in slot->data, so that it gets free'd
-			 * automatically when it's no longer needed.
-			 */
-			Assert(TTS_IS_VIRTUAL(slot));
-			VirtualTupleTableSlot *vslot = (VirtualTupleTableSlot *) slot;
-			Assert(vslot->data == NULL);
-			Assert(!TTS_SHOULDFREE(slot));
-
-			slot->tts_flags |= TTS_FLAG_SHOULDFREE;
-			vslot->data = (char *) tuple;
-		}
 		ExecStoreVirtualTuple(slot);
 	}
 

@@ -9,7 +9,7 @@ You enter SQL statements called queries to view, change, and analyze data in a d
 -   **[About Greenplum Query Processing](../../query/topics/parallel-proc.html)**  
 This topic provides an overview of how Greenplum Database processes queries. Understanding this process can be useful when writing and tuning queries.
 -   **[About GPORCA](../../query/topics/query-piv-optimizer.html)**  
-In Greenplum Database, the default GPORCA optimizer co-exists with the Postgres Planner.
+In Greenplum Database, the default GPORCA optimizer co-exists with the Postgres-based planner.
 -   **[Defining Queries](../../query/topics/defining-queries.html)**  
 Greenplum Database is based on the PostgreSQL implementation of the SQL standard.
 -   **[WITH Queries \(Common Table Expressions\)](../../query/topics/CTE-query.html)**  

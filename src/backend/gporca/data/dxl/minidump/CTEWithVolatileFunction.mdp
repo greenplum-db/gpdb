@@ -163,7 +163,7 @@
     <dxl:Plan Id="0" SpaceSize="60">
       <dxl:Sequence>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.000309" Rows="2.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.000399" Rows="2.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="4" Alias="sum">
@@ -185,7 +185,7 @@
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="nextval">
-                <dxl:FuncExpr FuncId="0.1574.1.0" FuncRetSet="false" TypeMdid="0.20.1.0">
+                <dxl:FuncExpr FuncId="0.1574.1.0" FuncRetSet="false" TypeMdid="0.20.1.0" FuncVariadic="false">
                   <dxl:ConstValue TypeMdid="0.2205.1.0" Value="NKEAAA=="/>
                 </dxl:FuncExpr>
               </dxl:ProjElem>
@@ -208,7 +208,7 @@
         </dxl:CTEProducer>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000183" Rows="2.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.000273" Rows="2.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="4" Alias="sum">
@@ -219,7 +219,7 @@
           <dxl:SortingColumnList/>
           <dxl:Append IsTarget="false" IsZapped="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000111" Rows="2.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000202" Rows="2.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="4" Alias="sum">
@@ -229,7 +229,7 @@
             <dxl:Filter/>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000057" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000148" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="4" Alias="sum">
@@ -240,7 +240,7 @@
               <dxl:OneTimeFilter/>
               <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000057" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000148" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="2"/>
@@ -263,7 +263,7 @@
                 <dxl:Filter/>
                 <dxl:Sort SortDiscardDuplicates="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000044" Rows="1.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000135" Rows="1.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="2" Alias="nextval">

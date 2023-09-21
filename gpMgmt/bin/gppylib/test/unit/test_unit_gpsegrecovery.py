@@ -210,7 +210,6 @@ class FullRecoveryTestCase(GpTestCase):
         self.assertEqual([expected_init_args], self.mock_pgbasebackup_init.call_args_list)
         self.assertEqual(1, self.mock_pgbasebackup_run.call_count)
         self.assertEqual([call(validateAfter=True)], self.mock_pgbasebackup_run.call_args_list)
-        self.mock_logger.info.any_call('Running pg_basebackup failed: backup failed once')
         self.assertEqual(0, gpsegrecovery.start_segment.call_count)
         self._assert_cmd_failed('{"error_type": "full", "error_msg": "backup failed once", "dbid": 2, ' \
                                 '"datadir": "/data/mirror0", "port": 50000, "progress_file": "/tmp/test_progress_file"}')
@@ -228,7 +227,6 @@ class FullRecoveryTestCase(GpTestCase):
         self.assertEqual([expected_init_args], self.mock_pgbasebackup_init.call_args_list)
         self.assertEqual(1, self.mock_pgbasebackup_run.call_count)
         self.assertEqual([call(validateAfter=True)], self.mock_pgbasebackup_run.call_args_list)
-        self.mock_logger.info.any_call('Running pg_basebackup failed: backup failed once')
         self.assertEqual(0, gpsegrecovery.start_segment.call_count)
         self._assert_cmd_failed('{"error_type": "full", "error_msg": "backup failed once", "dbid": 2, ' \
                                 '"datadir": "/data/mirror0", "port": 50000, "progress_file": "/tmp/test_progress_file"}')
@@ -486,8 +484,12 @@ class DifferentialRecoveryClsTestCase(GpTestCase):
                          self.mock_logger.debug.call_args_list)
 
     @patch('gppylib.db.catalog.RemoteQueryCommand.get_results',
-           return_value=[['/data/mytblspace1'], ['/data/mytblspace2']])
-    def test_sync_tablespaces_outside_data_dir(self, mock):
+           return_value=[['1111','/data/mytblspace1'], ['2222','/data/mytblspace2']])
+    @patch('gpsegrecovery.get_remote_link_path',
+           return_value='/data/mytblspace1/2')
+    @patch('os.listdir')
+    @patch('os.symlink')
+    def test_sync_tablespaces_outside_data_dir(self, mock1,mock2,mock3,mock4):
         self.diff_recovery_cmd.sync_tablespaces()
         self.assertEqual(2, self.mock_rsync_init.call_count)
         self.assertEqual(2, self.mock_rsync_run.call_count)
@@ -496,8 +498,10 @@ class DifferentialRecoveryClsTestCase(GpTestCase):
                          self.mock_logger.debug.call_args_list)
 
     @patch('gppylib.db.catalog.RemoteQueryCommand.get_results',
-           return_value=[['/data/mirror0']])
-    def test_sync_tablespaces_within_data_dir(self, mock):
+           return_value=[['1234','/data/primary0']])
+    @patch('os.listdir')
+    @patch('os.symlink')
+    def test_sync_tablespaces_within_data_dir(self, mock, mock2,mock3):
         self.diff_recovery_cmd.sync_tablespaces()
         self.assertEqual(0, self.mock_rsync_init.call_count)
         self.assertEqual(0, self.mock_rsync_run.call_count)
@@ -505,8 +509,12 @@ class DifferentialRecoveryClsTestCase(GpTestCase):
                          self.mock_logger.debug.call_args_list)
 
     @patch('gppylib.db.catalog.RemoteQueryCommand.get_results',
-           return_value=[['/data/mirror0'], ['/data/mytblspace1']])
-    def test_sync_tablespaces_mix_data_dir(self, mock):
+           return_value=[['1111','/data/primary0'], ['2222','/data/mytblspace1']])
+    @patch('gpsegrecovery.get_remote_link_path',
+           return_value='/data/mytblspace1/2')
+    @patch('os.listdir')
+    @patch('os.symlink')
+    def test_sync_tablespaces_mix_data_dir(self, mock1, mock2, mock3,mock4):
         self.diff_recovery_cmd.sync_tablespaces()
         self.assertEqual(1, self.mock_rsync_init.call_count)
         self.assertEqual(1, self.mock_rsync_run.call_count)
@@ -625,18 +633,49 @@ class DifferentialRecoveryRunTestCase(GpTestCase):
         self.assertFalse(self.diff_recovery_cmd.get_results().wasSuccessful())
 
     @patch('gpsegrecovery.DifferentialRecovery.write_conf_files', return_value=Mock())
+    @patch('gppylib.db.dbconn.query', return_value=FakeCursor(my_list=[["some_log"]]))
     @patch('gppylib.commands.unix.Rsync.__init__', return_value=None)
     @patch('gppylib.commands.unix.Rsync.run')
-    def test_rsync_run_passes(self, run, init, mock1):
+    def test_rsync_run_passes_with_changed_log_directory(self, run, init, conn, mock1):
         self.mock_rsync_run = run
         self.mock_rsync_init = init
         self.diff_recovery_cmd.run()
         self._assert_rsync_runs()
         self._assert_cmd_passed()
+        expected_exclude_list = {'/log', 'pgsql_tmp',
+                                 'postgresql.auto.conf.tmp',
+                                 'current_logfiles.tmp', 'postmaster.pid',
+                                 'postmaster.opts', 'pg_dynshmem','tablespace_map',
+                                 'pg_notify/*', 'pg_replslot/*', 'pg_serial/*',
+                                 'pg_stat_tmp/*', 'pg_snapshots/*',
+                                 'pg_subtrans/*', 'pg_tblspc/*', 'backups/*', '/db_dumps',
+                                 '/promote', '/some_log'}
+        self.assertEqual(expected_exclude_list, self.mock_rsync_init.call_args_list[0][1]['exclude_list'])
+
+    @patch('gpsegrecovery.DifferentialRecovery.write_conf_files', return_value=Mock())
+    @patch('gppylib.db.dbconn.query', return_value=FakeCursor(my_list=[["log"]]))
+    @patch('gppylib.commands.unix.Rsync.__init__', return_value=None)
+    @patch('gppylib.commands.unix.Rsync.run')
+    def test_rsync_run_passes_with_default_log_directory(self, run, init, conn, mock1):
+        self.mock_rsync_run = run
+        self.mock_rsync_init = init
+        self.diff_recovery_cmd.run()
+        self._assert_rsync_runs()
+        self._assert_cmd_passed()
+        expected_exclude_list = {'/log', 'pgsql_tmp',
+                                 'postgresql.auto.conf.tmp',
+                                 'current_logfiles.tmp', 'postmaster.pid',
+                                 'postmaster.opts', 'pg_dynshmem', 'tablespace_map',
+                                 'pg_notify/*', 'pg_replslot/*', 'pg_serial/*',
+                                 'pg_stat_tmp/*', 'pg_snapshots/*',
+                                 'pg_subtrans/*', 'pg_tblspc/*', 'backups/*', '/db_dumps',
+                                 '/promote'}
+        self.assertEqual(expected_exclude_list, self.mock_rsync_init.call_args_list[0][1]['exclude_list'])
 
     @patch('gppylib.commands.unix.Rsync.__init__', return_value=None)
     @patch('gppylib.commands.unix.Rsync.run')
-    def test_basebackup_run_passes(self, mock1, mock2):
+    @patch('gppylib.db.dbconn.query', return_value=FakeCursor(my_list=[["some_log"]]))
+    def test_basebackup_run_passes(self, mock1, mock2, mock3):
         self.diff_recovery_cmd.run()
         expected_init_args = call("/data/mirror0", "sdw1", '40000', writeconffilesonly=True,
                                   replication_slot_name='internal_wal_replication_slot',
@@ -682,12 +721,14 @@ class DifferentialRecoveryRunTestCase(GpTestCase):
             [call('Running differential recovery with progress output temporarily in /tmp/test_progress_file')],
             self.mock_logger.info.call_args_list)
 
-    def test_diff_recovery_sync_tablespaces_exception(self):
+    @patch('gppylib.db.dbconn.query', return_value=FakeCursor(my_list=[["some_log"]]))
+    def test_diff_recovery_sync_tablespaces_exception(self, mock1):
         self.mock_sync_tablespaces.side_effect = Exception()
         self.diff_recovery_cmd.run()
         self.assertEqual(1, self.mock_pg_stop_backup.call_count)
-        self.assertEqual(1, self.mock_logger.debug.call_count)
-        self.assertEqual([call('Syncing pg_data of dbid 2')],
+        self.assertEqual(2, self.mock_logger.debug.call_count)
+        self.assertEqual([call('Syncing pg_data of dbid 2'),
+                          call('adding /some_log to the exclude list')],
                          self.mock_logger.debug.call_args_list)
         self.assertEqual(1, self.mock_logger.info.call_count)
         self.assertEqual(
@@ -771,7 +812,6 @@ class DifferentialRecoveryRunTestCase(GpTestCase):
         self.assertEqual([expected_init_args], self.mock_pgbasebackup_init.call_args_list)
         self.assertEqual(1, self.mock_pgbasebackup_run.call_count)
         self.assertEqual([call(validateAfter=True)], self.mock_pgbasebackup_run.call_args_list)
-        self.mock_logger.info.any_call('Running pg_basebackup failed: backup failed once')
         self.assertEqual(0, gpsegrecovery.start_segment.call_count)
         self.assertEqual(2, self.mock_logger.debug.call_count)
         self.assertEqual([call('Writing recovery.conf and internal.auto.conf files for dbid 2'),

@@ -195,9 +195,10 @@ CDistributionSpecHashed::FSatisfies(const CDistributionSpec *pds) const
 		return true;
 	}
 
-	if (EdtAny == pds->Edt() || EdtNonSingleton == pds->Edt())
+	if (EdtAny == pds->Edt() || EdtNonSingleton == pds->Edt() ||
+		EdtNonReplicated == pds->Edt())
 	{
-		// hashed distribution satisfies the "any" and "non-singleton" distribution requirement
+		// hashed distribution satisfies the "any", "non-singleton", and "non-replicated" distribution requirement
 		return true;
 	}
 

@@ -12,6 +12,7 @@
     create index idx_abc on t1 using btree(a, b, c);
     create index idx_ac on t1 using btree(a,c);
     analyze t1;
+    set optimizer_enable_indexonlyscan=off;
      explain select * from t1 where a= 4 and c = 20;
 
                                         QUERY PLAN
@@ -36,7 +37,7 @@
         </dxl:CostParams>
       </dxl:CostModelConfig>
       <dxl:Hint JoinArityForAssociativityCommutativity="18" ArrayExpansionThreshold="100" JoinOrderDynamicProgThreshold="10" BroadcastThreshold="100000" EnforceConstraintsOnDML="false" PushGroupByBelowSetopThreshold="10"/>
-      <dxl:TraceFlags Value="102001,102002,102003,102074,102113,102120,102144,102147,103001,103014,103015,103022,103027,103029,103033,104003,104004,104005,104006,105000"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102074,102113,102120,102144,102147,103001,103014,103015,103022,103027,103029,103033,104003,104004,104005,104006,105000,102152"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:ColumnStatistics Mdid="1.55591.1.0.2" Name="c" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false">
@@ -505,22 +506,16 @@
       <dxl:Relation Mdid="6.55591.1.0" Name="t1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -530,7 +525,7 @@
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Index Mdid="0.55598.1.0" Name="idx_a" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.55598.1.0" Name="idx_a" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
@@ -557,13 +552,13 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="4"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.55603.1.0" Name="idx_ac" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0,2" IncludedColumns="">
+      <dxl:Index Mdid="0.55603.1.0" Name="idx_ac" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0,2" IncludedColumns="" ReturnableColumns="0,2">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.55602.1.0" Name="idx_abc" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0,1,2" IncludedColumns="">
+      <dxl:Index Mdid="0.55602.1.0" Name="idx_abc" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0,1,2" IncludedColumns="" ReturnableColumns="0,1,2">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>

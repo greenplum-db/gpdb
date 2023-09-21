@@ -1,6 +1,6 @@
 show gp_resource_manager;
 
-select * from pg_resgroup
+select rsgname, parent from pg_resgroup
   where rsgname not like 'rg_dump_test%'
   order by oid;
 select avg(reslimittype)

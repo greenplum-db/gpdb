@@ -261,11 +261,6 @@ private:
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 		CParseHandlerBase *parse_handler_root);
 
-	// construct a column default value expression parse handler
-	static CParseHandlerBase *CreateColDefaultValExprParseHandler(
-		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-		CParseHandlerBase *parse_handler_root);
-
 	// construct a scalar operator parse handler
 	static CParseHandlerBase *CreateScalarOpParseHandler(
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
@@ -403,6 +398,11 @@ private:
 
 	// construct an arrayref parse handler
 	static CParseHandlerBase *CreateScArrayRefParseHandler(
+		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+		CParseHandlerBase *parse_handler_root);
+
+	// construct an FieldSelect parse handler
+	static CParseHandlerBase *CreateScalarFieldSelectParseHandler(
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 		CParseHandlerBase *parse_handler_root);
 

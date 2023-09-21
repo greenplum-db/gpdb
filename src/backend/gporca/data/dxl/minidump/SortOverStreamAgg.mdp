@@ -541,121 +541,82 @@
       <dxl:Relation Mdid="6.40615.1.1" Name="dm_calendar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;38,32">
         <dxl:Columns>
           <dxl:Column Name="calendar_id" Attno="1" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="date_name" Attno="2" Mdid="0.1043.1.0" Nullable="true" ColWidth="200">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="date_name_cn" Attno="3" Mdid="0.1043.1.0" Nullable="true" ColWidth="200">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="calendar_date" Attno="4" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="current_day" Attno="5" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="month_id" Attno="6" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="month_name" Attno="7" Mdid="0.1043.1.0" Nullable="true" ColWidth="200">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="month_name_cn" Attno="8" Mdid="0.1043.1.0" Nullable="true" ColWidth="200">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="month_name_short" Attno="9" Mdid="0.1043.1.0" Nullable="true" ColWidth="200">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="month_name_short_cn" Attno="10" Mdid="0.1043.1.0" Nullable="true" ColWidth="200">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="days_in_month" Attno="11" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="first_of_month" Attno="12" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="last_month_id" Attno="13" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="month_end" Attno="14" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="quarter_id" Attno="15" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="quarter_name" Attno="16" Mdid="0.1043.1.0" Nullable="true" ColWidth="200">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="quarter_name_cn" Attno="17" Mdid="0.1043.1.0" Nullable="true" ColWidth="200">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="quarter_name_short" Attno="18" Mdid="0.1043.1.0" Nullable="true" ColWidth="200">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="quarter_name_short_cn" Attno="19" Mdid="0.1043.1.0" Nullable="true" ColWidth="200">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="year_id" Attno="20" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="year_name" Attno="21" Mdid="0.1043.1.0" Nullable="true" ColWidth="200">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="year_name_cn" Attno="22" Mdid="0.1043.1.0" Nullable="true" ColWidth="200">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="description" Attno="23" Mdid="0.1043.1.0" Nullable="true" ColWidth="500">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="create_date" Attno="24" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="month_week_num" Attno="25" Mdid="0.1043.1.0" Nullable="true" ColWidth="100">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="month_week_begin" Attno="26" Mdid="0.1043.1.0" Nullable="true" ColWidth="100">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="month_week_end" Attno="27" Mdid="0.1043.1.0" Nullable="true" ColWidth="100">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="half_year" Attno="28" Mdid="0.1043.1.0" Nullable="true" ColWidth="100">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="weekend_flag" Attno="29" Mdid="0.1043.1.0" Nullable="true" ColWidth="100">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="holidays_flag" Attno="30" Mdid="0.1043.1.0" Nullable="true" ColWidth="100">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="workday_flag" Attno="31" Mdid="0.1043.1.0" Nullable="true" ColWidth="100">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="month_number" Attno="32" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -2076,7 +2037,7 @@
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="431.985181" Rows="2.000000" Width="15"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.985351" Rows="2.000000" Width="15"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="19" Alias="id">
@@ -2092,7 +2053,7 @@
         </dxl:SortingColumnList>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.985046" Rows="2.000000" Width="15"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.985216" Rows="2.000000" Width="15"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="19" Alias="year_id">
@@ -2122,7 +2083,7 @@
               <dxl:ProjElem ColId="40" Alias="a">
                 <dxl:AggFunc AggMdid="0.2145.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                   <dxl:ValuesList ParamType="aggargs">
-                  <dxl:Ident ColId="39" ColName="year_name" TypeMdid="0.25.1.0"/>
+                    <dxl:Ident ColId="39" ColName="year_name" TypeMdid="0.25.1.0"/>
                   </dxl:ValuesList>
                   <dxl:ValuesList ParamType="aggdirectargs"/>
                   <dxl:ValuesList ParamType="aggorder"/>
@@ -2142,9 +2103,9 @@
                 <dxl:ProjElem ColId="39" Alias="year_name">
                   <dxl:AggFunc AggMdid="0.2145.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                     <dxl:ValuesList ParamType="aggargs">
-                    <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
-                      <dxl:Ident ColId="20" ColName="year_name" TypeMdid="0.1043.1.0"/>
-                    </dxl:Cast>
+                      <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.0.0.0">
+                        <dxl:Ident ColId="20" ColName="year_name" TypeMdid="0.1043.1.0"/>
+                      </dxl:Cast>
                     </dxl:ValuesList>
                     <dxl:ValuesList ParamType="aggdirectargs"/>
                     <dxl:ValuesList ParamType="aggorder"/>

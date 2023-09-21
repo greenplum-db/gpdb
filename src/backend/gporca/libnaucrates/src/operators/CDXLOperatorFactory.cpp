@@ -52,6 +52,7 @@
 #include "naucrates/dxl/operators/CDXLScalarCoerceViaIO.h"
 #include "naucrates/dxl/operators/CDXLScalarComp.h"
 #include "naucrates/dxl/operators/CDXLScalarDistinctComp.h"
+#include "naucrates/dxl/operators/CDXLScalarFieldSelect.h"
 #include "naucrates/dxl/operators/CDXLScalarFuncExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarHashExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarIdent.h"
@@ -396,21 +397,7 @@ CDXLOperatorFactory::MakeDXLAppend(CDXLMemoryManager *dxl_memory_manager,
 												   EdxltokenAppendIsZapped,
 												   EdxltokenPhysicalAppend);
 
-	ULONG scan_id = ExtractConvertAttrValueToUlong(
-		dxl_memory_manager, attrs, EdxltokenPartIndexId,
-		EdxltokenPhysicalAppend, true /* is_optional */,
-		gpos::ulong_max /* default_value */);
-
-	ULongPtrArray *selector_ids = nullptr;
-	if (scan_id != gpos::ulong_max)
-	{
-		selector_ids = ExtractConvertValuesToArray(dxl_memory_manager, attrs,
-												   EdxltokenSelectorIds,
-												   EdxltokenPhysicalAppend);
-	}
-
-	return GPOS_NEW(mp) CDXLPhysicalAppend(mp, is_target, is_zapped, scan_id,
-										   nullptr, selector_ids);
+	return GPOS_NEW(mp) CDXLPhysicalAppend(mp, is_target, is_zapped);
 }
 
 //---------------------------------------------------------------------------
@@ -963,6 +950,37 @@ CDXLOperatorFactory::MakeDXLArrayCoerceExpr(
 	return GPOS_NEW(mp)
 		CDXLScalarArrayCoerceExpr(mp, mdid_type, type_modifier,
 								  (EdxlCoercionForm) coercion_form, location);
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CDXLOperatorFactory::MakeDXLFieldSelectExpr
+//
+//	@doc:
+//		Construct a scalar FieldSelect expression
+//
+//---------------------------------------------------------------------------
+CDXLScalar *
+CDXLOperatorFactory::MakeDXLFieldSelect(CDXLMemoryManager *dxl_memory_manager,
+										const Attributes &attrs)
+{
+	CMemoryPool *mp = dxl_memory_manager->Pmp();
+
+	IMDId *field_type = ExtractConvertAttrValueToMdId(
+		dxl_memory_manager, attrs, EdxltokenScalarFieldSelectFieldType,
+		EdxltokenScalarFieldSelect);
+	IMDId *field_collation = ExtractConvertAttrValueToMdId(
+		dxl_memory_manager, attrs, EdxltokenScalarFieldSelectFieldCollation,
+		EdxltokenScalarFieldSelect);
+	INT type_modifier = ExtractConvertAttrValueToInt(
+		dxl_memory_manager, attrs, EdxltokenScalarFieldSelectTypeModifier,
+		EdxltokenScalarFieldSelect);
+	SINT field_number = ExtractConvertAttrValueToInt(
+		dxl_memory_manager, attrs, EdxltokenScalarFieldSelectFieldNumber,
+		EdxltokenScalarFieldSelect);
+
+	return GPOS_NEW(mp) CDXLScalarFieldSelect(mp, field_type, field_collation,
+											  type_modifier, field_number);
 }
 
 //---------------------------------------------------------------------------
@@ -3721,4 +3739,56 @@ CDXLOperatorFactory::ParseIndexType(const Attributes &attrs)
 	return IMDIndex::EmdindSentinel;
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CDXLOperatorFactory::ExtractConvertBooleanListToULongArray
+//
+//	@doc:
+//		Parse boolean list to ULong Array, maps false_value in the list
+//		to 0 and if value in list isn't equals to false_value it is mapped to 1.
+//---------------------------------------------------------------------------
+ULongPtrArray *
+CDXLOperatorFactory::ExtractConvertBooleanListToULongArray(
+	CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val,
+	const XMLCh *true_value GPOS_ASSERTS_ONLY, const XMLCh *false_value,
+	ULONG num_of_keys)
+{
+	CMemoryPool *mp = dxl_memory_manager->Pmp();
+
+	ULongPtrArray *ulong_array = GPOS_NEW(mp) ULongPtrArray(mp);
+
+	// Only B-tree indices have sort and nulls directions in dxl
+	// For mdps with btree indices that do not have sort/nulls direction
+	// return array with 0s and consider ASC as default
+	if (xml_val == nullptr)
+	{
+		for (ULONG ul = 0; ul < num_of_keys; ul++)
+		{
+			ulong_array->Append(GPOS_NEW(mp) ULONG(0));
+		}
+		return ulong_array;
+	}
+
+	XMLStringTokenizer commma_sep_str_components(
+		xml_val, CDXLTokens::XmlstrToken(EdxltokenComma));
+	const ULONG num_tokens = commma_sep_str_components.countTokens();
+
+	if (num_tokens == 0)
+	{
+		return ulong_array;
+	}
+
+	for (ULONG ul = 0; ul < num_tokens; ul++)
+	{
+		XMLCh *current_str = commma_sep_str_components.nextToken();
+		GPOS_ASSERT(nullptr != current_str);
+		GPOS_ASSERT(0 == XMLString::compareString(current_str, true_value) ||
+					0 == XMLString::compareString(current_str, false_value));
+		ULONG value;
+		value =
+			(0 == XMLString::compareString(current_str, false_value)) ? 0 : 1;
+		ulong_array->Append(GPOS_NEW(mp) ULONG(value));
+	}
+	return ulong_array;
+}
 // EOF

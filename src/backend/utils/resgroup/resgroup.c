@@ -33,6 +33,7 @@
 #include "cdb/cdbdisp_query.h"
 #include "cdb/memquota.h"
 #include "commands/resgroupcmds.h"
+#include "commands/tablespace.h"
 #include "common/hashfn.h"
 #include "funcapi.h"
 #include "miscadmin.h"
@@ -59,6 +60,7 @@
 #include "utils/cgroup-ops-v1.h"
 #include "utils/cgroup-ops-dummy.h"
 #include "utils/cgroup-ops-v2.h"
+#include "utils/cgroup_io_limit.h"
 #include "access/xact.h"
 
 #define InvalidSlotId	(-1)
@@ -414,7 +416,7 @@ initCgroup(void)
 
 	bool probe_result = cgroupOpsRoutine->probecgroup();
 	if (!probe_result)
-		elog(ERROR, "The control group is not well configured, please check your"
+		elog(ERROR, "The control group is not well configured, please check your "
 					"system configuration.");
 
 	cgroupOpsRoutine->checkcgroup();
@@ -495,8 +497,11 @@ InitResGroups(void)
 
 		cgroupOpsRoutine->createcgroup(groupId);
 
-		if (caps.io_limit != NULL)
-			cgroupOpsRoutine->setio(groupId, cgroupOpsRoutine->parseio(caps.io_limit));
+		if (caps.io_limit != NIL)
+		{
+			cgroupOpsRoutine->setio(groupId, caps.io_limit);
+			cgroupOpsRoutine->freeio(caps.io_limit);
+		}
 
 		if (CpusetIsEmpty(caps.cpuset))
 		{
@@ -802,7 +807,11 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		}
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_IO_LIMIT)
 		{
-			cgroupOpsRoutine->setio(callbackCtx->groupid, callbackCtx->ioLimit);
+			if (callbackCtx->caps.io_limit != NIL)
+			{
+				cgroupOpsRoutine->cleario(callbackCtx->groupid);
+				cgroupOpsRoutine->setio(callbackCtx->groupid, callbackCtx->caps.io_limit);
+			}
 		}
 
 		/* reset default group if cpuset has changed */
@@ -974,7 +983,7 @@ createGroup(Oid groupId, const ResGroupCaps *caps)
 	group->caps = *caps;
 
 	/* remove local pointers */
-	group->caps.io_limit = NULL;
+	group->caps.io_limit = NIL;
 
 	group->nRunning = 0;
 	group->nRunningBypassed = 0;
@@ -1366,7 +1375,7 @@ addTotalQueueDuration(ResGroupData *group)
 	if (group == NULL)
 		return;
 
-	group->totalQueuedTimeMs += (groupWaitEnd - groupWaitEnd);
+	group->totalQueuedTimeMs += (groupWaitEnd - groupWaitStart);
 }
 
 /*
@@ -1857,6 +1866,7 @@ waitOnGroup(ResGroupData *group, bool isMoveQuery)
 	PG_END_TRY();
 
 	groupAwaited = NULL;
+	groupWaitEnd = GetCurrentTimestamp();
 
 	/* reset ps status */
 	if (update_process_title)
@@ -3695,6 +3705,94 @@ check_and_unassign_from_resgroup(PlannedStmt* stmt)
 
 	cgroupOpsRoutine->attachcgroup(bypassedGroup->groupId, MyProcPid,
 								   bypassedGroup->caps.cpuMaxPercent == CPU_MAX_PERCENT_DISABLED);
+}
+
+/*
+ * return ture if there is a resource group which io_limit contains tblspcid.
+ * if errout is true, print warning, message. */
+bool
+checkTablespaceInIOlimit(Oid tblspcid, bool errout)
+{
+	Relation rel_resgroup_caps;
+	SysScanDesc	sscan;
+	HeapTuple	tuple;
+	bool		contain = false;
+	bool		print_header = false;
+	StringInfo  log = makeStringInfo();
+
+	rel_resgroup_caps = table_open(ResGroupCapabilityRelationId, AccessShareLock);
+	/* get io limit string from catalog */
+	sscan = systable_beginscan(rel_resgroup_caps, InvalidOid, false,
+							   NULL, 0, NULL);
+	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
+	{
+		Oid id;
+		bool isNULL;
+		Datum id_datum;
+		Datum type_datum;
+		Datum value_datum;
+		ResGroupLimitType type;
+		char *io_limit_str;
+		List *limit_list;
+		ListCell *cell;
+
+		type_datum = heap_getattr(tuple, Anum_pg_resgroupcapability_reslimittype,
+								  rel_resgroup_caps->rd_att, &isNULL);
+		type = (ResGroupLimitType) DatumGetInt16(type_datum);
+		if (type != RESGROUP_LIMIT_TYPE_IO_LIMIT)
+			continue;
+
+		id_datum = heap_getattr(tuple, Anum_pg_resgroupcapability_resgroupid,
+								rel_resgroup_caps->rd_att, &isNULL);
+		id = DatumGetObjectId(id_datum);
+
+		value_datum = heap_getattr(tuple, Anum_pg_resgroupcapability_value,
+								   rel_resgroup_caps->rd_att, &isNULL);
+		io_limit_str = TextDatumGetCString(value_datum);
+
+		if (strcmp(io_limit_str, DefaultIOLimit) == 0)
+			continue;
+
+		limit_list = cgroupOpsRoutine->parseio(io_limit_str);
+		foreach(cell, limit_list)
+		{
+			TblSpcIOLimit *limit = (TblSpcIOLimit *) lfirst(cell);
+
+			if (limit->tablespace_oid == tblspcid)
+			{
+				contain = true;
+
+				if (!errout)
+					break;
+
+				if (!print_header)
+				{
+					print_header = true;
+					appendStringInfo(log, "io limit: following resource groups depend on tablespace %s:", get_tablespace_name(tblspcid));
+				}
+
+				appendStringInfo(log, " %s", GetResGroupNameForId(id));
+			}
+		}
+
+		cgroupOpsRoutine->freeio(limit_list);
+
+		if (contain && !errout)
+			break;
+	}
+	systable_endscan(sscan);
+
+	table_close(rel_resgroup_caps, AccessShareLock);
+
+	if (contain && errout)
+		ereport(ERROR, (errcode(ERRCODE_DEPENDENT_OBJECTS_STILL_EXIST),
+						errmsg("%s", log->data),
+						errhint("you can remove those resource groups or remove tablespace %s from io_limit of those resource groups.", get_tablespace_name(tblspcid))));
+
+	pfree(log->data);
+	pfree(log);
+
+	return contain;
 }
 
 /*

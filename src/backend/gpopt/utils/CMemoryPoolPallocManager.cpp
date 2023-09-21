@@ -50,11 +50,11 @@ CMemoryPoolPallocManager::UserSizeOfAlloc(const void *ptr)
 	return CMemoryPoolPalloc::UserSizeOfAlloc(ptr);
 }
 
-GPOS_RESULT
+void
 CMemoryPoolPallocManager::Init()
 {
-	return CMemoryPoolManager::SetupGlobalMemoryPoolManager<
-		CMemoryPoolPallocManager, CMemoryPoolPalloc>();
+	CMemoryPoolManager::SetupGlobalMemoryPoolManager<CMemoryPoolPallocManager,
+													 CMemoryPoolPalloc>();
 }
 
 // EOF

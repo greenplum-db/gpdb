@@ -13,7 +13,6 @@
 #include "gpos/common/CDebugCounter.h"
 
 #include "gpos/error/CAutoTrace.h"
-#include "gpos/memory/CAutoMemoryPool.h"
 
 using namespace gpos;
 
@@ -59,14 +58,11 @@ CDebugCounter::~CDebugCounter()
 void
 CDebugCounter::Init()
 {
-	CAutoMemoryPool amp;
-	CMemoryPool *mp = amp.Pmp();
-
 	GPOS_RTL_ASSERT(NULL == m_instance);
-	m_instance = GPOS_NEW(mp) CDebugCounter(mp);
 
-	// detach safety
-	(void) amp.Detach();
+	CMemoryPool *mp = CMemoryPoolManager::CreateMemoryPool();
+
+	m_instance = GPOS_NEW(mp) CDebugCounter(mp);
 }
 
 void
@@ -78,7 +74,7 @@ CDebugCounter::Shutdown()
 
 		GPOS_DELETE(m_instance);
 		m_instance = NULL;
-		CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
+		CMemoryPoolManager::Destroy(mp);
 	}
 }
 

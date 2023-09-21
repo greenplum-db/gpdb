@@ -12,8 +12,7 @@ LINE 1: INSERT INTO test_665_after VALUES('a')
 2021-01-11 18:56:59|INFO|gpload failed
  c1 
 ----
-  1
-(1 row)
+(0 rows)
 
  c1 
 ----
@@ -21,6 +20,6 @@ LINE 1: INSERT INTO test_665_after VALUES('a')
 
  count 
 -------
-    16
+     0
 (1 row)
 

@@ -37,6 +37,7 @@ typedef struct EventTriggerData
 #define AT_REWRITE_REWRITE_COLUMNS_ONLY 0x20
 /* set if we need to rewrite a table due to a relopt change. */
 #define AT_REWRITE_ALTER_RELOPTS			 0x40
+#define AT_REWRITE_REPACK				 0x80
 
 /*
  * EventTriggerData is the node type that is passed as fmgr "context" info

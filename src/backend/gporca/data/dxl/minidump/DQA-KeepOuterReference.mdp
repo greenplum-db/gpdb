@@ -131,28 +131,20 @@ select (select distinct tint.c from tint as tt)  x from tint;
       <dxl:Relation Mdid="6.242735.1.0" Name="tint" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -226,7 +218,7 @@ select (select distinct tint.c from tint as tt)  x from tint;
     <dxl:Plan Id="0" SpaceSize="6">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1324039.388951" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="1324039.435400" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="16" Alias="x">
@@ -237,7 +229,7 @@ select (select distinct tint.c from tint as tt)  x from tint;
         <dxl:SortingColumnList/>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1324039.388937" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="1324039.435385" Rows="1.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="16" Alias="x">
@@ -248,7 +240,7 @@ select (select distinct tint.c from tint as tt)  x from tint;
                 </dxl:ParamList>
                 <dxl:Result>
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000038" Rows="3.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000084" Rows="3.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="18" Alias="ColRef_0018">
@@ -259,7 +251,7 @@ select (select distinct tint.c from tint as tt)  x from tint;
                   <dxl:OneTimeFilter/>
                   <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000034" Rows="3.000000" Width="1"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000080" Rows="3.000000" Width="1"/>
                     </dxl:Properties>
                     <dxl:GroupingColumns>
                       <dxl:GroupingColumn ColId="17"/>
@@ -272,7 +264,7 @@ select (select distinct tint.c from tint as tt)  x from tint;
                     <dxl:Filter/>
                     <dxl:Sort SortDiscardDuplicates="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000030" Rows="3.000000" Width="4"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000075" Rows="3.000000" Width="4"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="17" Alias="ColRef_0017">
@@ -341,7 +333,7 @@ select (select distinct tint.c from tint as tt)  x from tint;
           <dxl:OneTimeFilter/>
           <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1324039.388935" Rows="1000.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="1324039.435384" Rows="1000.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="c">

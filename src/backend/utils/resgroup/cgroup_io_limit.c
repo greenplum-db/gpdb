@@ -1,28 +1,50 @@
 #include "postgres.h"
-#include "port.h"
+#include "access/genam.h"
 #include "access/heapam.h"
+#include "access/htup.h"
 #include "access/relscan.h"
 #include "access/table.h"
 #include "access/tableam.h"
+#include "catalog/indexing.h"
+#include "catalog/pg_resgroup_d.h"
+#include "catalog/pg_resgroupcapability_d.h"
+#include "common/string.h"
 #include "commands/tablespace.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_tablespace_d.h"
+#include "commands/resgroupcmds.h"
+#include "commands/tablespace.h"
+#include "common/string.h"
+#include "fmgr.h"
+#include "port.h"
+#include "storage/fd.h"
+#include "utils/cgroup.h"
+#include "utils/builtins.h"
+#include "utils/fmgroids.h"
+#include "utils/hsearch.h"
+#include "utils/palloc.h"
 #include "utils/relcache.h"
+#include "utils/resgroup.h"
 #include "utils/cgroup_io_limit.h"
+#include <utils/cgroup.h>
 
+#ifndef __linux__
+#error  cgroup is only available on linux
+#endif
+
+#include <libgen.h>
 #include <limits.h>
+#include <mntent.h>
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
-#include <sys/types.h>
 #include <sys/sysmacros.h>
-#include <mntent.h>
-#include <libgen.h>
+#include <sys/types.h>
 #include <unistd.h>
 
-const char	*IOconfigFields[4] = { "rbps", "wbps", "riops", "wiops" };
+const char *IOconfigFields[4] = {"rbps", "wbps", "riops", "wiops"};
+const char	*IOStatFields[4] = {"rbytes", "wbytes", "rios", "wios"};
 
 static int bdi_cmp(const void *a, const void *b);
-static void ioconfig_validate(IOconfig *config);
 
 typedef struct BDICmp
 {
@@ -64,7 +86,7 @@ io_limit_validate(List *limit_list)
 	BDICmp *bdi_array;
 	bool is_star = false;
 
-	foreach (limit_cell, limit_list)
+	foreach(limit_cell, limit_list)
 	{
 		TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(limit_cell);
 		bdi_count += fill_bdi_list(limit);
@@ -75,12 +97,10 @@ io_limit_validate(List *limit_list)
 
 	bdi_array = (BDICmp *) palloc(bdi_count * sizeof(BDICmp));
 	/* fill bdi list and check wbps/rbps range */
-	foreach (limit_cell, limit_list)
+	foreach(limit_cell, limit_list)
 	{
 		TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(limit_cell);
-		ListCell      *bdi_cell;
-
-		ioconfig_validate(limit->ioconfig);
+		ListCell	  *bdi_cell;
 
 		foreach (bdi_cell, limit->bdi_list)
 		{
@@ -104,9 +124,9 @@ io_limit_validate(List *limit_list)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("io limit: tablespaces of io limit must locate at different disks, tablespace '%s' and '%s' have the same disk identifier.",
-						 get_tablespace_name(bdi_array[i].ts),
-						 get_tablespace_name(bdi_array[i + 1].ts))),
-					 errhint("either omit these tablespaces from the IO limit or mount them separately"));
+							get_tablespace_name(bdi_array[i].ts),
+							get_tablespace_name(bdi_array[i + 1].ts))),
+					errhint("either omit these tablespaces from the IO limit or mount them separately"));
 		}
 	}
 
@@ -188,11 +208,9 @@ get_bdi_of_path(const char *ori_path)
 
 	char *res = realpath(ori_path, path);
 	if (res == NULL)
-	{
 		ereport(ERROR,
 				(errcode(ERRCODE_IO_ERROR),
 				errmsg("io limit: cannot find realpath of %s, details: %m.", ori_path)));
-	}
 
 	FILE *fp = setmntent("/proc/self/mounts", "r");
 
@@ -238,6 +256,10 @@ get_bdi_of_path(const char *ori_path)
 				 errmsg("cannot find disk of %s, details: %m", path),
 				 errhint("mount point of %s is: %s", path, match_mnt.mnt_fsname)));
 	}
+	pfree(match_mnt.mnt_fsname);
+	pfree(match_mnt.mnt_dir);
+	pfree(match_mnt.mnt_type);
+	pfree(match_mnt.mnt_opts);
 
 	maj = major(sb.st_rdev);
 	min = minor(sb.st_rdev);
@@ -284,31 +306,27 @@ get_bdi_of_path(const char *ori_path)
 	return make_bdi(parent_maj, parent_min);
 }
 
-static void
-ioconfig_validate(IOconfig *config)
+
+bool
+io_limit_value_validate(const char *field, const uint64 value, uint64 *max)
 {
 	const uint64 ULMAX = ULLONG_MAX / 1024 / 1024;
 	const uint32 UMAX = UINT_MAX;
 
-	if (config->rbps != IO_LIMIT_MAX && (config->rbps > ULMAX || config->rbps < 2))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("io limit: rbps must in range [2, %lu] or equal 0", ULMAX)));
+	*max = 0;
 
-	if (config->wbps != IO_LIMIT_MAX && (config->wbps > ULMAX || config->wbps < 2))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("io limit: wbps must in range [2, %lu] or equal 0", ULMAX)));
+	if (strcmp(field, "rbps") == 0 || strcmp(field, "wbps") == 0)
+	{
+		*max = ULMAX;
+		return value == IO_LIMIT_MAX || !(value > ULMAX || value < 2);
+	}
+	else if (strcmp(field, "riops") == 0 || strcmp(field, "wiops") == 0)
+	{
+		*max = (uint64) UMAX;
+		return value == IO_LIMIT_MAX || !(value > UMAX || value < 2);
+	}
 
-	if (config->wiops != IO_LIMIT_MAX && (config->wiops > UMAX || config->wiops < 2))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("io limit: wiops must in range [2, %u] or equal 0", UMAX)));
-
-	if (config->riops != IO_LIMIT_MAX && (config->riops > UMAX || config->riops < 2))
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("io limit: riops must in range [2, %u] or equal 0", UMAX)));
+	return false;
 }
 
 char *
@@ -329,4 +347,256 @@ get_tablespace_path(Oid spcid)
 	}
 
 	return psprintf("pg_tblspc/%u", spcid);
+}
+
+void
+io_limit_free(List *limit_list)
+{
+	ListCell *cell;
+
+	foreach (cell, limit_list)
+	{
+		TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(cell);
+		list_free_deep(limit->bdi_list);
+		pfree(limit->ioconfig);
+	}
+
+	list_free_deep(limit_list);
+}
+
+/*
+ * Get content from io.stat of cgroup.
+ *
+ * Use group oid to find the cgroup path, and then use
+ * parsed io limit objects to collect data for tablespaces.
+ *
+ * params:
+ *	groupid: resource group oid
+ *	io_limit: parsed io_limit str objects
+ *	result: array of IOStat to save statistics
+ *
+ * Return the count of result IOStat
+ *
+ */
+List *
+get_iostat(Oid groupid, List *io_limit)
+{
+	List *result = NIL;
+
+	HTAB *io_stat_hash = NULL;
+	HASHCTL ctl;
+
+	char io_stat_path[PATH_MAX];
+	ListCell *cell;
+	StringInfo line = makeStringInfo();
+	FILE *f;
+
+	buildPath(groupid, BASEDIR_GPDB, CGROUP_COMPONENT_PLAIN, "io.stat",
+			  io_stat_path, sizeof(io_stat_path));
+	f = AllocateFile(io_stat_path, "r");
+	if (f == NULL)
+		ereport(ERROR,
+				(errcode(ERRCODE_IO_ERROR),
+				 errmsg("io limit: cannot read %s, details: %m.", io_stat_path)));
+
+	/*
+	 * parse file content.
+	 * content example:
+	 * "8:16 rbytes=1459200 wbytes=314773504 rios=192 wios=353 ..."
+	 */
+	memset(&ctl, 0, sizeof(ctl));
+	ctl.keysize = sizeof(bdi_t);
+	ctl.entrysize = sizeof(IOStatHashEntry);
+	ctl.hcxt = CurrentMemoryContext;
+	io_stat_hash =
+		hash_create("hash table for bdi -> io stat", list_length(io_limit), &ctl,
+					HASH_ELEM | HASH_CONTEXT);
+
+	while (pg_get_line_append(f, line))
+	{
+		uint32 maj, min;
+		bdi_t bdi;
+		IOStatHashEntry *entry;
+		char *t;
+
+		char *str = (char *) line->data;
+		int res = sscanf(str, "%u:%u", &maj, &min);
+		if (res != 2)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_IO_ERROR),
+					 errmsg("io limit: cannot parse content from '%s', details: %m.",
+							str)));
+		}
+
+		bdi = make_bdi(maj, min);
+		entry = hash_search(io_stat_hash, (void *)&bdi, HASH_ENTER, NULL);
+		memset(entry, 0, sizeof(IOStatHashEntry));
+		entry->id = bdi;
+
+		t = str;
+		while (true)
+		{
+			char key[64];
+			int i;
+
+			t = strstr(t, " ");
+			if (t == NULL)
+				break;
+			t++;
+
+			for (i = 0; i < lengthof(IOStatFields); i++)
+			{
+				if (strncmp(IOStatFields[i], t, strlen(IOStatFields[i])) == 0)
+				{
+					uint64 *value = (uint64 *) &entry->items;
+					sprintf(key, "%s=%%lu", IOStatFields[i]);
+					sscanf(t, key, value + i);
+					break;
+				}
+			}
+		}
+
+		initStringInfo(line);
+	}
+	FreeFile(f);
+
+	foreach (cell, io_limit)
+	{
+		ListCell *bdi_cell;
+		IOStat *stat = (IOStat *) palloc0(sizeof(IOStat));
+
+		TblSpcIOLimit *limit = (TblSpcIOLimit *) lfirst(cell);
+		fill_bdi_list(limit);
+		stat->tablespace = limit->tablespace_oid;
+		stat->groupid = groupid;
+
+		foreach (bdi_cell, limit->bdi_list)
+		{
+			bdi_t *bdi = (bdi_t *)lfirst(bdi_cell);
+			IOStatHashEntry *entry =
+				hash_search(io_stat_hash, (void *)bdi, HASH_FIND, NULL);
+
+			if (entry != NULL)
+			{
+				stat->items.wbytes += entry->items.wbytes;
+				stat->items.rbytes += entry->items.rbytes;
+				stat->items.rios += entry->items.rios;
+				stat->items.wios += entry->items.wios;
+			}
+		}
+
+		result = lappend(result, stat);
+	}
+
+	hash_destroy(io_stat_hash);
+	io_limit_free(io_limit);
+
+	return result;
+}
+
+/*
+ * sort a list of IOStat
+ */
+int
+compare_iostat(const void *x, const void *y)
+{
+	IOStat *a = (IOStat *) lfirst(*(ListCell **) x);
+	IOStat *b = (IOStat *) lfirst(*(ListCell **) y);
+	if (a->groupid != b->groupid)
+	{
+		if (a->groupid < b->groupid)
+			return -1;
+		return 1;
+	}
+
+	if (a->tablespace != b->tablespace)
+	{
+		if (a->tablespace < b->tablespace)
+			return -1;
+		return 1;
+	}
+
+	return 0;
+}
+
+char *
+io_limit_dump(List *limit_list)
+{
+	ListCell *cell;
+
+	StringInfo result = makeStringInfo();
+
+	foreach(cell, limit_list)
+	{
+		int i;
+		int fields_length = lengthof(IOconfigFields);
+		TblSpcIOLimit *limit = (TblSpcIOLimit *) lfirst(cell);
+		uint64 *value = (uint64 *) limit->ioconfig;
+
+		if (limit->tablespace_oid != InvalidOid)
+			appendStringInfo(result, "%u:", limit->tablespace_oid);
+		else
+			appendStringInfo(result, "*:");
+
+		for(i = 0; i < fields_length; i++)
+		{
+			if ((*(value + i) != IO_LIMIT_MAX) && (*(value + i) != IO_LIMIT_EMPTY))
+				appendStringInfo(result, "%s=%lu", IOconfigFields[i], *(value + i));
+			else
+				appendStringInfo(result, "%s=max", IOconfigFields[i]);
+
+			if (i + 1 != fields_length)
+				appendStringInfo(result, ",");
+		}
+
+		if (cell != limit_list->tail)
+			appendStringInfo(result, ";");
+	}
+
+	return result->data;
+}
+
+void
+clear_io_max(Oid groupid)
+{
+	FILE *f;
+	StringInfo line			 = makeStringInfo();
+	StringInfo result		 = makeStringInfo();
+	List	   *result_lines = NIL;
+	ListCell   *cell;
+	char	   path[MAX_CGROUP_PATHLEN];
+	buildPath(groupid, BASEDIR_GPDB, CGROUP_COMPONENT_PLAIN, "io.max", path, MAX_CGROUP_PATHLEN);
+
+	f = AllocateFile(path, "r");
+	/* pg_get_line_buf will reset line each time */
+	while (pg_get_line_buf(f, line))
+	{
+		uint32 maj, min;
+		int i;
+		char *str = line->data;
+
+		sscanf(str, "%u:%u", &maj, &min);
+
+		appendStringInfo(result, "%u:%u", maj, min);
+		for (i = 0; i < lengthof(IOconfigFields); i++)
+			appendStringInfo(result, " %s=max", IOconfigFields[i]);
+
+		result_lines = lappend(result_lines, (void *) pstrdup(result->data));
+
+		resetStringInfo(result);
+	}
+	FreeFile(f);
+	pfree(line->data);
+	pfree(result->data);
+	pfree(line);
+	pfree(result);
+
+	foreach(cell, result_lines)
+	{
+		char *str = (char *)lfirst(cell);
+		writeStr(groupid, BASEDIR_GPDB, CGROUP_COMPONENT_PLAIN, "io.max", str);
+	}
+
+	list_free_deep(result_lines);
 }

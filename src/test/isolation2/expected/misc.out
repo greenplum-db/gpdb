@@ -100,3 +100,21 @@ CREATE VIEW
 DROP VIEW
 drop view misc_v;
 DROP VIEW
+
+--
+-- gp_toolkit.gp_check_orphaned_files should not be running with concurrent transaction (even idle)
+--
+-- use a different database to do the test, otherwise we might be reporting tons
+-- of orphaned files produced by the many intential PANICs/restarts in the isolation2 tests.
+create database check_orphaned_db;
+CREATE DATABASE
+1:@db_name check_orphaned_db: begin;
+BEGIN
+2:@db_name check_orphaned_db: select * from gp_toolkit.gp_check_orphaned_files;
+ERROR:  There is a client session running on one or more segment. Aborting...
+CONTEXT:  PL/pgSQL function gp_toolkit.__gp_check_orphaned_files_func() line 15 at RAISE
+1q: ... <quitting>
+2q: ... <quitting>
+
+drop database check_orphaned_db;
+DROP DATABASE

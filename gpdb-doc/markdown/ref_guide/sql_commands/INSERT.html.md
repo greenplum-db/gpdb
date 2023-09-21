@@ -94,10 +94,14 @@ output\_expression
 output\_name
 :   A name to use for a returned column.
 
+To insert data into a partitioned table, you specify the root partitioned table, the table created with the `CREATE TABLE` command. You also can specify a leaf partition in an `INSERT` command. An error is returned if the data is not valid for the specified leaf partition. Specifying a table that is not a leaf partition in the `INSERT` command is not supported. Execution of other DML commands such as `UPDATE` and `DELETE` on any child table of a partitioned table is not supported. These commands must be run on the root partitioned table, the table created with the `CREATE TABLE` command.
+
+For a partitioned table, all the child tables are locked during the `INSERT` operation when the Global Deadlock Detector is not enabled \(the default\). Only some of the leaf partitions are locked when the Global Deadlock Detector is enabled. For information about the Global Deadlock Detector, see [Global Deadlock Detector](../../admin_guide/dml.html#topic_gdd).
 
 ## <a id="section5a"></a>ON CONFLICT Clause
 
 The optional `ON CONFLICT` clause specifies an alternative action to raising a unique violation or exclusion constraint violation error. For each individual row proposed for insertion, either the insertion proceeds, or, if an arbiter constraint or index specified by conflict\_target is violated, the alternative conflict\_action is taken. `ON CONFLICT DO NOTHING` simply avoids inserting a row as its alternative action. `ON CONFLICT DO UPDATE` updates the existing row that conflicts with the row proposed for insertion as its alternative action.
+
 
 conflict\_target can perform unique index inference. When performing inference, it consists of one or more index\_column\_name columns and/or index\_expression expressions, and an optional index\_predicate. All table\_name unique indexes that, without regard to order, contain exactly the conflict\_target-specified columns/expressions are inferred \(chosen\) as arbiter indexes. If an index\_predicate is specified, it must, as a further requirement for inference, satisfy arbiter indexes. Note that this means a non-partial unique index \(a unique index without a predicate\) will be inferred \(and thus used by `ON CONFLICT`\) if such an index satisfying every other criteria is available. If an attempt at inference is unsuccessful, Greenplum Database raises an error.
 

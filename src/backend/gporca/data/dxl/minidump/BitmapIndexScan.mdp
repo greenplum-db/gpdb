@@ -147,22 +147,16 @@ see sql/BitmapIndexScan.sql
       <dxl:Relation Mdid="6.24732.1.1" Name="inner_table" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,3">
         <dxl:Columns>
           <dxl:Column Name="flex_value_set_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value_id" Attno="2" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value" Attno="3" Mdid="0.1043.1.0" Nullable="true" ColWidth="150">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -197,7 +191,7 @@ see sql/BitmapIndexScan.sql
       <dxl:ColumnStatistics Mdid="1.24702.1.1.12" Name="dataowner" Width="0.000000" NullFreq="1.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.24702.1.1.5" Name="created_by" Width="0.000000" NullFreq="1.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.24702.1.1.4" Name="creation_date" Width="4.000000" NullFreq="1.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="false"/>
-      <dxl:Index Mdid="0.24762.1.0" Name="inner_table_idx" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="0.24762.1.0" Name="inner_table_idx" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1988.1.0"/>
         </dxl:Opfamilies>
@@ -230,28 +224,20 @@ see sql/BitmapIndexScan.sql
       <dxl:Relation Mdid="6.24783.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="fid" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -301,55 +287,38 @@ see sql/BitmapIndexScan.sql
       <dxl:Relation Mdid="6.24702.1.1" Name="outer_table" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="16,14">
         <dxl:Columns>
           <dxl:Column Name="flex_value_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="language" Attno="2" Mdid="0.1043.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="last_update_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="last_updated_by" Attno="4" Mdid="0.1700.1.0" Nullable="true" ColWidth="0">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="creation_date" Attno="5" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="created_by" Attno="6" Mdid="0.1700.1.0" Nullable="true" ColWidth="0">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="last_update_login" Attno="7" Mdid="0.1700.1.0" Nullable="true" ColWidth="0">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="description" Attno="8" Mdid="0.1043.1.0" Nullable="true" ColWidth="240">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="source_lang" Attno="9" Mdid="0.1043.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value_meaning" Attno="10" Mdid="0.1043.1.0" Nullable="true" ColWidth="150">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="legalhold" Attno="11" Mdid="0.1043.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="legaldescription" Attno="12" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="dataowner" Attno="13" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="purgedate" Attno="14" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>

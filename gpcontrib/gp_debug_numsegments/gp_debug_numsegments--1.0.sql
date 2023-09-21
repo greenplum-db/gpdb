@@ -3,8 +3,6 @@
 -- complain if script is sourced in psql, rather than via CREATE EXTENSION
 \echo Use "CREATE EXTENSION gp_debug_numsegments" to load this file. \quit
 
-SET search_path = public;
-
 -- This function set the default numsegments when creating tables.
 -- This form accepts a text argument: 'full', 'minimal', 'random'.
 CREATE OR REPLACE FUNCTION gp_debug_set_create_table_default_numsegments(text) RETURNS text

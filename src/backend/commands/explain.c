@@ -982,10 +982,10 @@ ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc)
 	 * don't match the built-in defaults.
 	 */
 	if (queryDesc->plannedstmt->planGen == PLANGEN_PLANNER)
-		ExplainPropertyStringInfo("Optimizer", es, "Postgres query optimizer");
+		ExplainPropertyStringInfo("Optimizer", es, "Postgres-based planner");
 #ifdef USE_ORCA
 	else
-		ExplainPropertyStringInfo("Optimizer", es, "Pivotal Optimizer (GPORCA)");
+		ExplainPropertyStringInfo("Optimizer", es, "GPORCA");
 #endif
 
 	ExplainPrintSettings(es);
@@ -3656,7 +3656,11 @@ show_hashagg_info(AggState *aggstate, ExplainState *es)
 							   aggstate->hash_planned_partitions, es);
 	}
 
-	if (!es->analyze)
+	/*
+	 * Greenplums outputs hash aggregate information in "Extra Text" via
+	 * cdbexplainbuf, hash_agg_update_metrics() is never called on QD.
+	 */
+	if (Gp_role != GP_ROLE_UTILITY || !es->analyze)
 		return;
 
 	/* EXPLAIN ANALYZE */

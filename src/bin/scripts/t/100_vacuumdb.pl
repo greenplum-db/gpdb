@@ -3,7 +3,7 @@ use warnings;
 
 use PostgresNode;
 use TestLib;
-use Test::More tests => 44;
+use Test::More tests => 54;
 
 program_help_ok('vacuumdb');
 program_version_ok('vacuumdb');
@@ -15,35 +15,35 @@ $node->start;
 
 $node->issues_sql_like(
 	[ 'vacuumdb', 'postgres' ],
-	qr/statement: VACUUM.*;/,
+	qr/statement: VACUUM \(SKIP_DATABASE_STATS\);/,
 	'SQL VACUUM run');
 $node->issues_sql_like(
 	[ 'vacuumdb', '-f', 'postgres' ],
-	qr/statement: VACUUM \(FULL\).*;/,
+	qr/statement: VACUUM \(SKIP_DATABASE_STATS, FULL\);/,
 	'vacuumdb -f');
 $node->issues_sql_like(
 	[ 'vacuumdb', '-F', 'postgres' ],
-	qr/statement: VACUUM \(FREEZE\).*;/,
+	qr/statement: VACUUM \(SKIP_DATABASE_STATS, FREEZE\);/,
 	'vacuumdb -F');
 $node->issues_sql_like(
 	[ 'vacuumdb', '-zj2', 'postgres' ],
-	qr/statement: VACUUM \(ANALYZE\).*;/,
+	qr/statement: VACUUM \(SKIP_DATABASE_STATS, ANALYZE\).*;/,
 	'vacuumdb -zj2');
 $node->issues_sql_like(
 	[ 'vacuumdb', '-Z', 'postgres' ],
-	qr/statement: ANALYZE.*;/,
+	qr/statement: ANALYZE;/,
 	'vacuumdb -Z');
 $node->issues_sql_like(
 	[ 'vacuumdb', '--disable-page-skipping', 'postgres' ],
-	qr/statement: VACUUM \(DISABLE_PAGE_SKIPPING\).*;/,
+	qr/statement: VACUUM \(DISABLE_PAGE_SKIPPING, SKIP_DATABASE_STATS\);/,
 	'vacuumdb --disable-page-skipping');
 $node->issues_sql_like(
 	[ 'vacuumdb', '--skip-locked', 'postgres' ],
-	qr/statement: VACUUM \(SKIP_LOCKED\).*;/,
+	qr/statement: VACUUM \(SKIP_DATABASE_STATS, SKIP_LOCKED\);/,
 	'vacuumdb --skip-locked');
 $node->issues_sql_like(
 	[ 'vacuumdb', '--skip-locked', '--analyze-only', 'postgres' ],
-	qr/statement: ANALYZE \(SKIP_LOCKED\).*;/,
+	qr/statement: ANALYZE \(SKIP_LOCKED\);/,
 	'vacuumdb --skip-locked --analyze-only');
 $node->command_fails(
 	[ 'vacuumdb', '--analyze-only', '--disable-page-skipping', 'postgres' ],
@@ -64,6 +64,7 @@ $node->safe_psql(
 	'postgres', q|
   CREATE TABLE "need""q(uot" (")x" text);
   CREATE TABLE vactable (a int, b int);
+	CREATE TABLE vactable2 (a int, b int);
   CREATE VIEW vacview AS SELECT 1 as a;
 
   CREATE FUNCTION f0(int) RETURNS int LANGUAGE SQL AS 'SELECT $1 * $1';
@@ -83,7 +84,7 @@ $node->command_fails(
 	'incorrect column name with ANALYZE');
 $node->issues_sql_like(
 	[ 'vacuumdb', '--analyze', '--table', 'vactable(a, b)', 'postgres' ],
-	qr/statement: VACUUM \(ANALYZE\) public.vactable\(a, b\);/,
+	qr/statement: VACUUM \(SKIP_DATABASE_STATS, ANALYZE\) public.vactable\(a, b\);/,
 	'vacuumdb --analyze with complete column list');
 $node->issues_sql_like(
 	[ 'vacuumdb', '--analyze-only', '--table', 'vactable(b)', 'postgres' ],
@@ -112,3 +113,48 @@ $node->issues_sql_like(
 	[ 'vacuumdb', '--min-xid-age', '2147483001', 'postgres' ],
 	qr/GREATEST.*relfrozenxid.*2147483001/,
 	'vacuumdb --table --min-xid-age');
+$node->issues_sql_like(
+	[ 'vacuumdb', '--table', 'vactable', '--table', 'vactable2', 'postgres' ],
+	qr/statement: VACUUM \(SKIP_DATABASE_STATS\) public.vactable, public.vactable2;/,
+	'vacuumdb with two tables');
+$node->issues_sql_like(
+	[ 'vacuumdb', '-j2', 'postgres' ],
+	qr/statement:\ VACUUM\ .*;
+								.*statement:\ VACUUM\ /sx,
+	'vacuumdb -j2 issues two vacuum commands');
+$node->issues_sql_like(
+	[ 'vacuumdb', '-j4', 'postgres' ],
+	qr/statement:\ VACUUM\ .*;
+								.*statement:\ VACUUM\ .*;
+								.*statement:\ VACUUM\ .*;
+								.*statement:\ VACUUM\ .*/sx,
+	'vacuumdb -j4 issues four vacuum commands');
+$node->issues_sql_like(
+	[ 'vacuumdb', '-j4', '--table', 'vactable', '--table', 'vactable2', 'postgres' ],
+	qr/statement:\ VACUUM\ .*;
+								.*statement:\ VACUUM\ /sx,
+	'vacuumdb -j4 with two tables issues two vacuum commands');
+$node->safe_psql(
+	'postgres', q|
+  CREATE TABLE vactable3 (a int, b int);
+	CREATE TABLE vactable4 (a int, b int);
+	CREATE TABLE vactable5 (a int, b int);
+	CREATE TABLE vactable6 (a int, b int);
+	CREATE TABLE vactable7 (a int, b int);
+	CREATE TABLE vactable8 (a int, b int);
+	CREATE TABLE vactable9 (a int, b int);
+	CREATE TABLE vactable10 (a int, b int);
+|);
+$node->issues_sql_like(
+	[ 'vacuumdb', '-j4',
+	'--table', 'vactable', '--table', 'vactable2',
+	'--table', 'vactable3', '--table', 'vactable4',
+	'--table', 'vactable5', '--table', 'vactable6',
+	'--table', 'vactable7', '--table', 'vactable8',
+	'--table', 'vactable9', '--table', 'vactable10', 'postgres' ],
+	qr/statement:\ VACUUM\ \(SKIP_DATABASE_STATS\)\ .*;
+								.*statement:\ VACUUM\ \(SKIP_DATABASE_STATS\)\ .*;
+								.*statement:\ VACUUM\ \(SKIP_DATABASE_STATS\)\ .*;
+								.*statement:\ VACUUM\ \(SKIP_DATABASE_STATS\)\ .*;
+								.*statement:\ VACUUM\ \(SKIP_DATABASE_STATS\)\ .*;/sx,
+	'vacuumdb -j4 with ten tables issues five vacuum commands');

@@ -142,7 +142,7 @@ ANALYZE cust_info;
 VACUUM cust_info;
 ```
 
-> **Important** If you intend to run queries on partitioned tables with GPORCA enabled \(the default\), you must collect statistics on the partitioned table root partition with the ANALYZE command. For information about GPORCA, see [Overview of GPORCA](../query/topics/query-piv-opt-overview.html).
+> **Important** If you intend to run queries on partitioned tables with GPORCA enabled \(the default\), you must collect statistics on the root partitioned table with the ANALYZE command. For information about GPORCA, see [Overview of GPORCA](../query/topics/query-piv-opt-overview.html).
 
 > **Note** You can use the Greenplum Database utility analyzedb to update table statistics. Tables can be analyzed concurrently. For append optimized tables, analyzedb updates statistics only if the statistics are not current. See the [analyzedb](../../utility_guide/ref/analyzedb.html) utility.
 

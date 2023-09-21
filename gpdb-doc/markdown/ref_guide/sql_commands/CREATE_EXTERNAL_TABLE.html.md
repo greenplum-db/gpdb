@@ -183,7 +183,7 @@ LOCATION \('protocol://\[host\[:port\]\]/path/file' \[, ...\]\)
 
     With two `gpfdist` locations listed as in the above example, half of the segments would send their output data to the `data1.out` file and the other half to the `data2.out` file.
 
-    With the option `#transform=trans\_name`, you can specify a transform to apply when loading or extracting data. The trans\_name is the name of the transform in the YAML configuration file you specify with the you run the `gpfdist` utility. For information about specifying a transform, see [`gpfdist`](../../utility_guide/ref/gpfdist.html) in the *Greenplum Utility Guide*.
+    With the option `#transform=trans_name`, you can specify a transform to apply when loading or extracting data. The trans\_name is the name of the transform in the YAML configuration file you specify with the you run the `gpfdist` utility. For information about specifying a transform, see [gpfdist](../../utility_guide/ref/gpfdist.html) in the *Greenplum Utility Guide*.
 
 ON COORDINATOR
 :   Restricts all table-related operations to the Greenplum coordinator segment. Permitted only on readable and writable external tables created with the `s3` or custom protocols. The `gpfdist`, `gpfdists`, `pxf`, and `file` protocols do not support `ON COORDINATOR`.
@@ -205,7 +205,7 @@ EXECUTE 'command' \[ON ...\]
     For writable external tables, the command specified in the `EXECUTE` clause must be prepared to have data piped into it. Since all segments that have data to send will write their output to the specified command or program, the only available option for the `ON` clause is `ON ALL`.
 
 FORMAT 'TEXT \| CSV' \(options\)
-:   When the `FORMAT` clause identfies delimited text \(`TEXT`\) or comma separated values \(`CSV`\) format, formatting options are similar to those available with the PostgreSQL [COPY](COPY.html) command. If the data in the file does not use the default column delimiter, escape character, null string and so on, you must specify the additional formatting options so that the data in the external file is read correctly by Greenplum Database. For information about using a custom format, see "Loading and Unloading Data" in the *Greenplum Database Administrator Guide*.
+:   When the `FORMAT` clause identfies delimited text \(`TEXT`\) or comma separated values \(`CSV`\) format, formatting options are similar to those available with the PostgreSQL [COPY](COPY.html) command. If the data in the file does not use the default column delimiter, escape character, null string and so on, you must specify the additional formatting options so that the data in the external file is read correctly by Greenplum Database. For information about using a custom format, see [Loading and Unloading Data](../../admin_guide/load/topics/g-loading-and-unloading-data.html) in the *Greenplum Database Administrator Guide*.
 
 :   If you use the `pxf` protocol to access an external data source, refer to [Accessing External Data with PXF](../../admin_guide/external/pxf-overview.html) for information about using PXF.
 
@@ -231,7 +231,7 @@ FORMAT 'text' (delimiter ',' null '\'\'\'\'' )
 ```
 
 ESCAPE
-:   Specifies the single character that is used for C escape sequences \(such as `\n`,`\t`,`\100`, and so on\) and for escaping data characters that might otherwise be taken as row or column delimiters. Make sure to choose an escape character that is not used anywhere in your actual column data. The default escape character is a \\ \(backslash\) for text-formatted files and a `"` \(double quote\) for csv-formatted files, however it is possible to specify another character to represent an escape. It is also possible to deactivate escaping in text-formatted files by specifying the value `'OFF'` as the escape value. This is very useful for data such as text-formatted web log data that has many embedded backslashes that are not intended to be escapes.
+:   Specifies the single character that is used for C escape sequences \(such as `\n`,`\t`,`\100`, and so on\) and for escaping data characters that might otherwise be taken as row or column delimiters. Make sure to choose an escape character that is not used anywhere in your actual column data. The default escape character is a `\` \(backslash\) for text-formatted files and a `"` \(double quote\) for csv-formatted files, however it is possible to specify another character to represent an escape. It is also possible to deactivate escaping in text-formatted files by specifying the value `'OFF'` as the escape value. This is very useful for data such as text-formatted web log data that has many embedded backslashes that are not intended to be escapes.
 
 NEWLINE
 :   Specifies the newline used in your data files – `LF` \(Line feed, 0x0A\), `CR` \(Carriage return, 0x0D\), or `CRLF` \(Carriage return plus line feed, 0x0D 0x0A\). If not specified, a Greenplum Database segment will detect the newline type by looking at the first row of data it receives and using the first newline type encountered.
@@ -277,7 +277,7 @@ SEGMENT REJECT LIMIT count \[ROWS \| PERCENT\]
 
 :   > **Note** When reading an external table, Greenplum Database limits the initial number of rows that can contain formatting errors if the `SEGMENT REJECT LIMIT` is not triggered first or is not specified. If the first 1000 rows are rejected, the `COPY` operation is stopped and rolled back.
 
-The limit for the number of initial rejected rows can be changed with the Greenplum Database server configuration parameter `gp_initial_bad_row_limit`. See [Server Configuration Parameters](../config_params/guc_config.html) for information about the parameter.
+You can change the limit for the number of initial rejected rows with the Greenplum Database server configuration parameter [gp_initial_bad_row_limit](../config_params/guc_config.html#gp_initial_bad_row_limit).
 
 DISTRIBUTED BY \(\{column \[opclass\]\}, \[ ... \] \)
 DISTRIBUTED RANDOMLY
@@ -355,8 +355,7 @@ CREATE WRITABLE EXTERNAL WEB TABLE campaign_out
 Use the writable external table defined above to unload selected data:
 
 ```
-INSERT INTO campaign_out SELECT * FROM campaign WHERE 
-customer_id=123;
+INSERT INTO campaign_out SELECT * FROM campaign WHERE customer_id=123;
 ```
 
 ## <a id="section8"></a>Notes 

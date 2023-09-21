@@ -2,11 +2,7 @@
 
 This topic describes the Greenplum Database 7 platform and operating system software requirements for deploying the software to on-premise hardware, or to public cloud services such as AWS, GCP, or Azure.
 
-## <a id="on-prem"></a>On-Premise Hardware Requirements
-
-This topic describes the Greenplum Database 7 platform and operating system software requirements for deploying to on-premise hardware. It also provides important compatibility information for Greenplum tools and extensions.
-
-### <a id="topic13"></a>Operating Systems 
+## <a id="operating-systems"></a>Operating System Requirements
 
 Greenplum Database 7 runs on the following operating system platforms:
 
@@ -14,13 +10,13 @@ Greenplum Database 7 runs on the following operating system platforms:
 -   Oracle Linux 64-bit 8.7 or later, using the Red Hat Compatible Kernel \(RHCK\)
 -   Rocky Linux 8.7 or later
 
-> **Important** A kernel issue in Red Hat Enterprise Linux 8.5 and 8.6 can cause I/O freezes and synchronization problems with XFS filesystems. This issue is fixed in RHEL 8.7. See [RHEL8: xfs_buf deadlock between inode deletion and block allocation](https://access.redhat.com/solutions/6984334).
+> **Caution** Do not install anti-virus software of any type on Greenplum Database hosts. VMware Greenplum is not supported for use with anti-virus software because the additional CPU and IO load interferes with Greenplum Database operations.
 
-> **Note** Do not install anti-virus software on Greenplum Database hosts as the software might cause extra CPU and IO load that interferes with Greenplum Database operations.
+> **Caution** A kernel issue in Red Hat Enterprise Linux 8.5 and 8.6 can cause I/O freezes and synchronization problems with XFS filesystems. This issue is fixed in RHEL 8.7. See [RHEL8: xfs_buf deadlock between inode deletion and block allocation](https://access.redhat.com/solutions/6984334).
 
 Greenplum Database server supports TLS version 1.2 on RHEL/CentOS systems, and TLS version 1.3 on Ubuntu systems.
 
-#### <a id="topic_i4k_nlx_zgb"></a>Software Dependencies 
+### <a id="topic_i4k_nlx_zgb"></a>Software Dependencies 
 
 Greenplum Database 7 requires the following software packages on RHEL systems. The packages are installed automatically as dependencies when you install the Greenplum RPM package\):
 
@@ -44,7 +40,6 @@ Greenplum Database 7 requires the following software packages on RHEL systems. T
 -   python39
 -   readline
 -   rsync
--   R
 -   sed \(used by `gpinitsystem`\)
 -   tar
 -   zip
@@ -60,14 +55,132 @@ VMware Greenplum Database 7 client software requires these operating system pack
 
 > **Important** For all Greenplum Database host systems, if SELinux is enabled in `Enforcing` mode then the Greenplum process and users can operate successfully in the default `Unconfined` context. If increased confinement is required, then you must configure SELinux contexts, policies, and domains based on your security requirements, and test your configuration to ensure there is no functionality or performance impact to Greenplum Database. Similarly, you should either deactivate or configure firewall software as needed to allow communication between Greenplum hosts. See [Deactivate or Configure SELinux](prep_os.html).
 
-#### <a id="topic_xbl_mkx_zgb"></a>Java 
+### <a id="topic_xbl_mkx_zgb"></a>Java 
 
 Greenplum Databased 7 supports these Java versions for PL/Java and PXF:
 
 -   Open JDK 8 or Open JDK 11, available from [AdoptOpenJDK](https://adoptopenjdk.net)
 -   Oracle JDK 8 or Oracle JDK 11
 
-### <a id="topic_tnl_3mx_zgb"></a>Hardware and Network 
+#### <a id="topic_xbl_mkx_python"></a>Python
+
+Greenplum Database uses the system default `python3` for the Greenplum management utilities, and `python3.9` for the [PL/Python module](../analytics/pl_python.html). For most of the supported OS versions, the system default `python3` is `python3.9`. If you are installing Greenplum Database on Rocky Linux 8, the default `python3` version included is `python3.6`. You may want to unify the `python3` versions to `python3.9` by running the following commands:
+
+```
+sudo yum install python39-psycopg2 python39-pyyaml python39-psutil
+sudo update-alternatives set python3 /usr/bin/python39
+sudo update-alternatives set python /usr/bin/python39
+```
+
+## <a id="topic31"></a>VMware Greenplum Tools and Extensions Compatibility
+
+### <a id="topic32"></a>Client Tools
+
+VMware releases a Clients tool package on various platforms that can be used to access Greenplum Database from a client system. The Greenplum 7 Clients tool package is supported on the following platforms:
+
+-   Red Hat Enterprise Linux x86\_64 8.x \(RHEL 8\)
+-   Oracle Linux 64-bit 8, using the Red Hat Compatible Kernel \(RHCK\)
+-   Rocky Linux 8
+-   Windows 10 \(64-bit\) 
+-   Windows 8 \(64-bit\)
+-   Windows Server 2012 \(64-bit\)
+-   Windows Server 2012 R2 \(64-bit\)
+-   Windows Server 2008 R2 \(64-bit\) 
+
+The Greenplum 7 Clients package includes the client and loader programs plus database/role/language commands and the Greenplum Streaming Server command utilities. Refer to [Greenplum Client and Loader Tools Package](/vmware/client_tool_guides/intro.html) for installation and usage details of the Greenplum 7 Client tools.
+
+### <a id="topic_eyc_l2h_zz"></a>Extensions 
+
+This table lists the versions of the Greenplum Extensions that are compatible with this release of Greenplum Database 7.
+
+<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_eyc_l2h_zz__table_b1q_m2h_zz" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap">Greenplum Extensions Compatibility </span></caption><colgroup><col /><col /><col /></colgroup><thead class="thead" style="text-align:left;">
+<tr class="row">
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d78288e683">Component</th>
+<th class="entry nocellnorowborder" style="vertical-align:top;" id="d78288e686">Package Version</th>
+<th class="entry cell-norowborder" style="vertical-align:top;" id="d78288e689">Additional Information</th>
+</tr>
+</thead>
+<tbody class="tbody">
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/pl_java.html">PL/Java</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.0.7</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Supports Java 8 and 11.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../install_guide/install_python_dsmod.html">Python 3.9 Data Science Module Package</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">1.2</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/pl_r.html">PL/R</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">3.1.1</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">(CentOS) R 3.3.3<p class="p"> (Ubuntu) You install R 3.5.1+.</p>
+</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../install_guide/install_r_dslib.html">R Data Science Library Package</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.0.2</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/pl_container.html">PL/Container</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.2.1</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 ">PL/Container Image for R </td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.1.2</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">R 3.6.3</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 ">PL/Container Images for Python </td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.1.2</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Python 2.7.12<p class="p">Python 3.7</p>
+</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/madlib.html">MADlib Machine Learning</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.0.0</td>
+<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Support matrix at <a class="xref" href="https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?" target="_blank">MADlib FAQ</a>.</td>
+</tr>
+<tr class="row">
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/postGIS.html">PostGIS Spatial and Geographic Objects</a></td>
+<td class="entry row-nocellborder" style="vertical-align:top;" headers="d78288e686 ">3.3.2</td>
+<td class="entry cellrowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
+</tr>
+</tbody>
+</table>
+</div>
+
+For information about the Oracle Compatibility Functions, see [Oracle Compatibility Functions](../ref_guide/modules/orafce_ref.html).
+
+These Greenplum Database extensions are installed with Greenplum Database
+
+-   Fuzzy String Match Extension
+-   PL/Python Extension
+-   pgcrypto Extension
+
+### <a id="topic_xpf_25b_hbb"></a>Data Connectors
+
+-   Greenplum Platform Extension Framework \(PXF\) - PXF provides access to Hadoop, object store, and SQL external data stores. Refer to [Accessing External Data with PXF](../admin_guide/external/pxf-overview.html) in the *Greenplum Database Administrator Guide* for PXF configuration and usage information.
+
+    > **Note** VMware Greenplum Database versions starting with 6.19.0 no longer bundle a version of PXF. You can install PXF in your Greenplum cluster by installing [the independent distribution of PXF](https://docs.vmware.com/en/VMware-Greenplum-Platform-Extension-Framework/index.html) as described in the PXF documentation.
+-   Greenplum Streaming Server v1.5.3 - The VMware Greenplum Streaming Server is an ETL tool that provides high speed, parallel data transfer from Informatica, Kafka, Apache NiFi and custom client data sources to a VMware Greenplum cluster. Refer to the [VMware Greenplum Streaming Server](https://docs.vmware.com/en/VMware-Greenplum-Streaming-Server/index.html) Documentation for more information about this feature.
+-   Greenplum Streaming Server Kafka integration - The Kafka integration provides high speed, parallel data transfer from a Kafka cluster to a Greenplum Database cluster for batch and streaming ETL operations. It requires Kafka version 0.11 or newer for exactly-once delivery assurance. Refer to the [VMware Greenplum Streaming Server](https://docs.vmware.com/en/VMware-Greenplum-Streaming-Server/index.html) Documentation for more information about this feature.
+-   Greenplum Connector for Apache Spark v1.6.2 - The VMware Greenplum Connector for Apache Spark supports high speed, parallel data transfer between Greenplum and an Apache Spark cluster using Spark’s Scala API.
+-   Greenplum Connector for Apache NiFi v1.0.0 - The VMware Greenplum Connector for Apache NiFi enables you to set up a NiFi dataflow to load record-oriented data from any source into Greenplum Database.
+-   Greenplum Informatica Connector v1.0.5 - The VMware Greenplum Connector for Informatica supports high speed data transfer from an Informatica PowerCenter cluster to a VMware Greenplum cluster for batch and streaming ETL operations.
+-   Progress DataDirect JDBC Drivers v5.1.4+275, v6.0.0+181 - The Progress DataDirect JDBC drivers are compliant with the Type 4 architecture, but provide advanced features that define them as Type 5 drivers.
+-   Progress DataDirect ODBC Drivers v7.1.6+7.16.389 - The Progress DataDirect ODBC drivers enable third party applications to connect via a common interface to the VMware Greenplum system.
+-   R2B X-LOG v5.x and v6.x - Real-time data replication solution that achieves high-speed database replication through the use of Redo Log Capturing method.
+
+> **Note** Greenplum 5.x clients (gpload, gpfdist) are supported with Greenplum 6.x and 7x Server and Informatica PowerCenter and PowerExchange 10.4.
+
+> **Note** VMware Greenplum 7 does not support the ODBC driver for Cognos Analytics V11.
+
+Connecting to IBM Cognos software with an ODBC driver is not supported. Greenplum Database supports connecting to IBM Cognos software with the DataDirect JDBC driver for VMware Greenplum. This driver is available as a download from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
+
+## <a id="topic_tnl_3mx_zgb"></a>Hardware Requirements
 
 The following table lists minimum recommended specifications for hardware servers intended to support Greenplum Database on Linux systems in a production environment. All host servers in your Greenplum Database system must have the same hardware and software configuration. Greenplum also provides hardware build guides for its certified hardware platforms. Work with a Greenplum Systems Engineer to review your anticipated environment to ensure an appropriate hardware configuration for Greenplum Database.
 
@@ -108,11 +221,11 @@ Resource Groups - one of the key Greenplum Database features - can control trans
 
 When using resource groups to control resource allocation on Intel based systems, consider switching off Hyper-Threading (HT) in the server BIOS (for Intel cores the default is ON). Switching off HT might cause a small throughput reduction (less than 15%), but can achieve greater isolation between resource groups, and higher query performance with lower concurrency workloads.
 
-#### <a id="topic_elb_4ss_n4b"></a>VMware Greenplum on DCA Systems 
+### <a id="topic_elb_4ss_n4b"></a>VMware Greenplum on DCA Systems 
 
 You must run VMware Greenplum version 6.9 or later on Dell EMC DCA systems, with software version 4.2.0.0 and later.
 
-### <a id="topic_pnz_5zd_xs"></a>Storage 
+## <a id="topic_pnz_5zd_xs"></a>Storage 
 
 The only file system supported for running Greenplum Database is the XFS file system. All other file systems are explicitly *not* supported by VMware.
 
@@ -126,7 +239,7 @@ Greenplum Database is supported on Amazon Web Services \(AWS\) servers using eit
 
 <!--- VERIFY 7X interoperablity with DDBOOST
 
-#### <a id="fixme"></a>Data Domain Boost \(VMware Greenplum\) 
+### <a id="fixme"></a>Data Domain Boost \(VMware Greenplum\) 
 
 VMware Greenplum 7 supports Data Domain Boost for backup on Red Hat Enterprise Linux. This table lists the versions of Data Domain Boost SDK and DDOS supported by VMware Greenplum 7.
 
@@ -138,121 +251,7 @@ VMware Greenplum 7 supports Data Domain Boost for backup on Red Hat Enterprise L
 
 -->
 
-### <a id="topic31"></a>VMware Greenplum Tools and Extensions Compatibility 
-
--   [Client Tools](#topic32) \(VMware Greenplum\)
--   [Extensions](#topic_eyc_l2h_zz)
--   [Data Connectors](#topic_xpf_25b_hbb)
--   [VMware Greenplum Text](#topic_ncl_w1d_r1b)
--   [Greenplum Command Center](#topic_zkq_j5b_hbb)
-
-#### <a id="topic32"></a>Client Tools 
-
-VMware releases a Clients tool package on various platforms that can be used to access Greenplum Database from a client system. The Greenplum 7 Clients tool package is supported on the following platforms:
-
--   Red Hat Enterprise Linux x86\_64 8.x \(RHEL 8\)
--   Oracle Linux 64-bit 8, using the Red Hat Compatible Kernel \(RHCK\)
--   Rocky Linux 8
--   Windows 10 \(64-bit\)
--   Windows 8 \(64-bit\)
--   Windows Server 2012 \(64-bit\)
--   Windows Server 2012 R2 \(64-bit\)
--   Windows Server 2008 R2 \(64-bit\)
-
-The Greenplum 7 Clients package includes the client and loader programs plus database/role/language commands and the Greenplum Streaming Server command utilities. Refer to [Greenplum Client and Loader Tools Package](/vmware/client_tool_guides/intro.html) for installation and usage details of the Greenplum 7 Client tools.
-
-#### <a id="topic_eyc_l2h_zz"></a>Extensions 
-
-This table lists the versions of the Greenplum Extensions that are compatible with this release of Greenplum Database 7.
-
-<div class="tablenoborder"><table cellpadding="4" cellspacing="0" summary="" id="topic_eyc_l2h_zz__table_b1q_m2h_zz" class="table" frame="border" border="1" rules="all"><caption><span class="tablecap">Greenplum Extensions Compatibility </span></caption><colgroup><col /><col /><col /></colgroup><thead class="thead" style="text-align:left;">
-<tr class="row">
-<th class="entry nocellnorowborder" style="vertical-align:top;" id="d78288e683">Component</th>
-<th class="entry nocellnorowborder" style="vertical-align:top;" id="d78288e686">Package Version</th>
-<th class="entry cell-norowborder" style="vertical-align:top;" id="d78288e689">Additional Information</th>
-</tr>
-</thead>
-<tbody class="tbody">
-<tr class="row">
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/pl_java.html">PL/Java</a></td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.0.7</td>
-<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Supports Java 8 and 11.</td>
-</tr>
-<tr class="row">
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../install_guide/install_python_dsmod.html">Python 3.9 Data Science Module Package</a></td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">1.1</td>
-<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
-</tr>
-<tr class="row">
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/pl_r.html">PL/R</a></td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">3.1.1</td>
-<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">(CentOS) R 3.3.3<p class="p"> (Ubuntu) You install R 3.5.1+.</p>
-</td>
-</tr>
-<tr class="row">
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../install_guide/install_r_dslib.html">R Data Science Library Package</a></td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.0.2</td>
-<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
-</tr>
-<tr class="row">
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/pl_container.html">PL/Container</a></td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.2.1</td>
-<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
-</tr>
-<tr class="row">
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 ">PL/Container Image for R </td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.1.2</td>
-<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">R 3.6.3</td>
-</tr>
-<tr class="row">
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 ">PL/Container Images for Python </td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">2.1.2</td>
-<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Python 2.7.12<p class="p">Python 3.7</p>
-</td>
-</tr>
-<tr class="row">
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/madlib.html">MADlib Machine Learning</a></td>
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">1.21, 1.20, 1.19, 1.18, 1.17, 1.16</td>
-<td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Support matrix at <a class="xref" href="https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?" target="_blank">MADlib FAQ</a>.</td>
-</tr>
-<tr class="row">
-<td class="entry row-nocellborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../analytics/postGIS.html">PostGIS Spatial and Geographic Objects</a></td>
-<td class="entry row-nocellborder" style="vertical-align:top;" headers="d78288e686 ">3.3.2</td>
-<td class="entry cellrowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
-</tr>
-</tbody>
-</table>
-</div>
-
-For information about the Oracle Compatibility Functions, see [Oracle Compatibility Functions](../ref_guide/modules/orafce_ref.html).
-
-These Greenplum Database extensions are installed with Greenplum Database
-
--   Fuzzy String Match Extension
--   PL/Python Extension
--   pgcrypto Extension
-
-#### <a id="topic_xpf_25b_hbb"></a>Data Connectors 
-
--   Greenplum Platform Extension Framework \(PXF\) - PXF provides access to Hadoop, object store, and SQL external data stores. Refer to [Accessing External Data with PXF](../admin_guide/external/pxf-overview.html) in the *Greenplum Database Administrator Guide* for PXF configuration and usage information.
-
-    > **Note** VMware Greenplum Database versions starting with 6.19.0 no longer bundle a version of PXF. You can install PXF in your Greenplum cluster by installing [the independent distribution of PXF](https://docs.vmware.com/en/VMware-Greenplum-Platform-Extension-Framework/index.html) as described in the PXF documentation.
--   Greenplum Streaming Server v1.5.3 - The VMware Greenplum Streaming Server is an ETL tool that provides high speed, parallel data transfer from Informatica, Kafka, Apache NiFi and custom client data sources to a VMware Greenplum cluster. Refer to the [VMware Greenplum Streaming Server](https://docs.vmware.com/en/VMware-Greenplum-Streaming-Server/index.html) Documentation for more information about this feature.
--   Greenplum Streaming Server Kafka integration - The Kafka integration provides high speed, parallel data transfer from a Kafka cluster to a Greenplum Database cluster for batch and streaming ETL operations. It requires Kafka version 0.11 or newer for exactly-once delivery assurance. Refer to the [VMware Greenplum Streaming Server](https://docs.vmware.com/en/VMware-Greenplum-Streaming-Server/index.html) Documentation for more information about this feature.
--   Greenplum Connector for Apache Spark v1.6.2 - The VMware Greenplum Connector for Apache Spark supports high speed, parallel data transfer between Greenplum and an Apache Spark cluster using Spark’s Scala API.
--   Greenplum Connector for Apache NiFi v1.0.0 - The VMware Greenplum Connector for Apache NiFi enables you to set up a NiFi dataflow to load record-oriented data from any source into Greenplum Database.
--   Greenplum Informatica Connector v1.0.5 - The VMware Greenplum Connector for Informatica supports high speed data transfer from an Informatica PowerCenter cluster to a VMware Greenplum cluster for batch and streaming ETL operations.
--   Progress DataDirect JDBC Drivers v5.1.4+275, v6.0.0+181 - The Progress DataDirect JDBC drivers are compliant with the Type 4 architecture, but provide advanced features that define them as Type 5 drivers.
--   Progress DataDirect ODBC Drivers v7.1.6+7.16.389 - The Progress DataDirect ODBC drivers enable third party applications to connect via a common interface to the VMware Greenplum system.
--   R2B X-LOG v5.x and v6.x - Real-time data replication solution that achieves high-speed database replication through the use of Redo Log Capturing method.
-
-> **Note** Greenplum 5.x clients (gpload, gpfdist) are supported with Greenplum 6.x and 7x Server and Informatica PowerCenter and PowerExchange 10.4.
-
-> **Note** VMware Greenplum 7 does not support the ODBC driver for Cognos Analytics V11.
-
-Connecting to IBM Cognos software with an ODBC driver is not supported. Greenplum Database supports connecting to IBM Cognos software with the DataDirect JDBC driver for VMware Greenplum. This driver is available as a download from [VMware Tanzu Network](https://network.pivotal.io/products/pivotal-gpdb).
-
-### <a id="topic36"></a>Hadoop Distributions 
+## <a id="topic36"></a>Hadoop Distributions 
 
 Greenplum Database provides access to HDFS with the [Greenplum Platform Extension Framework \(PXF\)](https://docs.vmware.com/en/VMware-Greenplum-Platform-Extension-Framework/index.html).
 
@@ -291,10 +290,6 @@ The disk settings for cloud deployments are the same as on-premise with a few mo
    > **Note** The `nobarrier` option is not supported on RHEL 8 or Ubuntu nodes.
 -  Use mq-deadline instead of the deadline scheduler for the R5 series instance type in AWS
 -  Use a swap disk per VM (32GB size works well)
-
-### <a id="cd-security"></a>Security
-
-It is highly encouraged to deactivate SSH password authentication to the virtual machines in the cloud and use SSH keys instead.  Using MD5-encrypted passwords for Greenplum Database is also a good practice.
 
 ### <a id="aws"></a>Amazon Web Services (AWS)
 

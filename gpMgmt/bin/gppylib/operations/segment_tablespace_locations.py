@@ -48,7 +48,7 @@ def get_tablespace_locations(all_hosts, mirror_data_directory):
     return tablespace_locations
 
 
-def get_segment_tablespace_locations(primary_hostname, primary_port):
+def get_segment_tablespace_oid_locations(primary_hostname, primary_port):
     """
         to get user defined tablespace locations for a specific primary segment. This function is called by
         gprecoverseg --differential to get the tablespace locations by connecting to primary while mirror is down.
@@ -57,9 +57,9 @@ def get_segment_tablespace_locations(primary_hostname, primary_port):
 
         :param primary_hostname: string type primary hostname
         :param primary_port: int type primary segment port
-        :return: list of tablespace locations
+        :return: list of tablespace oids and locations
         """
-    sql = "SELECT distinct(tblspc_loc) FROM ( SELECT oid FROM pg_tablespace WHERE spcname NOT IN " \
+    sql = "SELECT distinct(oid),tblspc_loc FROM ( SELECT oid FROM pg_tablespace WHERE spcname NOT IN " \
           "('pg_default', 'pg_global')) AS q,LATERAL gp_tablespace_location(q.oid);"
     try:
         query = RemoteQueryCommand("Get segment tablespace locations", sql, primary_hostname, primary_port)

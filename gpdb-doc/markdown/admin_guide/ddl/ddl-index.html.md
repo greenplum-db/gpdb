@@ -43,7 +43,7 @@ VACUUM ANALYZE old_table;
 
 Greenplum Database supports the Postgres index types B-tree, hash, GiST, SP-GiST, GIN, and [BRIN](ddl-brin.html). Each index type uses a different algorithm that is best suited to different types of queries. B-tree indexes fit the most common situations and are the default index type. See [Index Types](https://www.postgresql.org/docs/12/indexes-types.html) in the PostgreSQL documentation for a description of these types.
 
-> **Note** Greenplum Database allows unique indexes only if the columns of the index key are the same as \(or a superset of\) the Greenplum distribution key. Unique indexes are not supported on append-optimized tables. On partitioned tables, a unique index cannot be enforced across all child table partitions of a partitioned table. A unique index is supported only within a partition.
+> **Note** Greenplum Database allows unique indexes only if the columns of the index key are the same as \(or a superset of\) the Greenplum distribution key. On a partitioned table, a unique index cannot be enforced across all child tables; a unique index is supported only within a child partition.
 
 ### <a id="topic93"></a>About Bitmap Indexes 
 
@@ -322,6 +322,8 @@ While a search in this larger index might have to descend through a couple more 
 If your table is large enough that a single index really is a bad idea, you should look into using partitioning instead. With that mechanism, Greenplum Database does understand that the tables and indexes are non-overlapping, so far better performance is possible.
 
 ## <a id="scan_cover"></a>Understanding Index-Only Scans and Covering Indexes
+
+> **Note** Greenplum Database selects index-only and covering index scan options for a query plan only for new tables that you create in Greenplum 7. Greenplum does not select these plan types for tables that you have upgraded from Greenplum 6.
 
 All indexes in Greenplum Database are secondary indexes, meaning that each index is stored separately from the table's main data area (which is called the table's heap). In an ordinary index scan, each row retrieval requires fetching data from both the index and the heap. While the index entries that match a given indexable `WHERE` condition are often close together in the index, the table rows they reference might reside anywhere in the heap. The heap-access portion of an index scan can involve a lot of random access into the heap, which can be slow, particularly on traditional rotating media. Bitmap scans try to alleviate this cost by doing the heap accesses in sorted order, but that only goes so far.
 

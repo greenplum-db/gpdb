@@ -51,14 +51,14 @@ NUM_REPORTS_TO_SAVE = 3
 GET_ALL_DATA_TABLES_SQL = """
 select n.nspname as schemaname, c.relname as tablename
 from pg_class c, pg_namespace n
-where c.relnamespace = n.oid and c.relkind='r'::char
+where c.relnamespace = n.oid and (c.relkind='r'::char or c.relkind = 'm'::char)
 and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog')
 and c.oid not in (select ftrelid from pg_foreign_table)
 """
 
 GET_VALID_DATA_TABLES_SQL = """
 select n.nspname as schemaname, c.relname as tablename from pg_class c, pg_namespace n where
-c.relnamespace = n.oid and c.oid in (%s) and c.relkind='r'::char and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog') and c.oid not in (select ftrelid from pg_foreign_table)
+c.relnamespace = n.oid and c.oid in (%s) and (c.relkind='r'::char or c.relkind = 'm'::char) and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog') and c.oid not in (select ftrelid from pg_foreign_table)
 """
 
 GET_REQUESTED_AO_DATA_TABLE_INFO_SQL = """
@@ -85,7 +85,7 @@ GET_REQUESTED_LAST_OP_INFO_SQL = """
 GET_ALL_DATA_TABLES_IN_SCHEMA_SQL = """
 select n.nspname as schemaname, c.relname as tablename
 from pg_class c, pg_namespace n
-where c.relnamespace = n.oid and c.relkind='r'::char
+where c.relnamespace = n.oid and (c.relkind='r'::char or c.relkind = 'm'::char)
  and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog')
 and c.oid not in (select ftrelid from pg_foreign_table)
 and n.nspname = '%s'
@@ -111,7 +111,7 @@ and c.relkind = 'p' and c.relispartition
 GET_REQUESTED_NON_AO_TABLES_SQL = """
 select n.nspname as schemaname, c.relname as tablename
 from pg_class c, pg_namespace n
-where c.relnamespace = n.oid and c.relkind='r'::char
+where c.relnamespace = n.oid and (c.relkind='r'::char or c.relkind = 'm'::char)
 and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog')
 and c.oid not in (select ftrelid from pg_foreign_table)
 and c.oid not in (select relid from pg_appendonly)
@@ -553,7 +553,7 @@ class AnalyzeDb(Operation):
         At the same time, parse the requested columns and populate the col_dict.
         If a requested table is partitioned, expand all the leaf partitions.
         """
-        logger.info("Getting and verifying input tables...")
+        logger.info("Getting and verifying input tables and materialized views...")
         if self.single_table:
 
             # Check that the table name given on the command line is schema-qualified.

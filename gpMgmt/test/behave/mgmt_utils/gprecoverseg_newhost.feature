@@ -177,7 +177,7 @@ Feature: gprecoverseg tests involving migrating to a new host
     And the cluster configuration has no segments where "hostname='sdw1' and status='u'"
     And the cluster configuration is saved for "before_recoverseg"
     And datadirs from "before_recoverseg" configuration for "sdw1" are created on "sdw5" with mode 700
-    When the user would run "gprecoverseg -a -p sdw5 --hba-hostnames" and terminate the process with SIGTERM
+    When the user would run "gprecoverseg -a -p sdw5 --hba-hostnames" and terminate the process for host "sdw5" with SIGTERM
     Then gprecoverseg should return a return code of 1
     And check if moving the mirrors from sdw1 to sdw5 failed with user termination
     And gprecoverseg should print "[WARNING]:-Recieved SIGTERM signal, terminating gprecoverseg" escaped to stdout

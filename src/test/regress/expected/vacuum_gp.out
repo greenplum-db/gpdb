@@ -507,3 +507,28 @@ select count_unfrozen_rows('pg_stat_last_shoperation');
                    0
 (1 row)
 
+-- Multiple VACUUM commands run on a table should not distort the values of reltuples.
+CREATE TABLE vac_reltuple_distortion(a int) DISTRIBUTED BY (a);
+INSERT INTO vac_reltuple_distortion SELECT generate_series(1, 1000000);
+ANALYZE vac_reltuple_distortion;
+SELECT reltuples, relname FROM pg_class WHERE oid='vac_reltuple_distortion'::regclass;
+ reltuples |         relname         
+-----------+-------------------------
+     1e+06 | vac_reltuple_distortion
+(1 row)
+
+VACUUM vac_reltuple_distortion;
+VACUUM vac_reltuple_distortion; -- 2nd call to VACUUM after ANALYZE
+SELECT reltuples, relname FROM pg_class WHERE oid='vac_reltuple_distortion'::regclass;
+ reltuples |         relname         
+-----------+-------------------------
+     1e+06 | vac_reltuple_distortion
+(1 row)
+
+VACUUM vac_reltuple_distortion;
+SELECT reltuples, relname FROM pg_class WHERE oid='vac_reltuple_distortion'::regclass;
+ reltuples |         relname         
+-----------+-------------------------
+     1e+06 | vac_reltuple_distortion
+(1 row)
+

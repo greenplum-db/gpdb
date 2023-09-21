@@ -119,6 +119,14 @@ def create_pipeline(args, git_remote, git_branch):
         "rocky9": "rocky9",
         "oel9" : "rocky9"
     }
+    dist = {
+        "rhel8" : "el8",
+        "rocky8" : "el8",
+        "oel8" : "el8",
+        "rhel9" : "el9",
+        "rocky9" : "el9",
+        "oel9": "el9"
+    }
 
 
     context = {
@@ -130,6 +138,7 @@ def create_pipeline(args, git_remote, git_branch):
         'os_username': os_username[args.os_type],
         'test_os': test_os[args.os_type],
         'compile_platform': compile_platform[args.os_type],
+        'dist': dist[args.os_type],
         'pipeline_target': args.pipeline_target,
         'test_sections': args.test_sections,
         'use_ICW_workers': args.use_ICW_workers,
@@ -276,13 +285,13 @@ def main():
         action='store',
         dest='test_sections',
         choices=[
-            'ICW',
-            'CLI',
-            'Release',
+            'icw',
+            'cli',
+            'release',
         ],
         default=[],
         nargs='+',
-        help='Select tests sections to run, Release section should be specified with ICW and CLI, and will be ignored if os_type is not ' + default_os_type
+        help='Select tests sections to run, release section should be specified with icw and cli, and will be ignored if os_type is not ' + default_os_type
     )
 
     parser.add_argument(
@@ -335,11 +344,11 @@ def main():
         print("You can only use one of --output or --user.")
         exit(1)
 
-    if args.pipeline_target == 'prod' and not args.directed_release and args.os_type not in ["rocky9", "oel9", "rhel9"]:
+    if args.pipeline_target == 'prod' and not args.directed_release:
         args.test_sections = [
-            'ICW',
-            'CLI',
-            'Release'
+            'icw',
+            'cli',
+            'release'
         ]
 
     # use_ICW_workers adds tags to the specified concourse definitions which

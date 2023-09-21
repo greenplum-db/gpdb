@@ -68,7 +68,7 @@ FormPartitionKeyDatumFromExpr(Relation rel, Node *expr, Datum *values, bool *isn
 	int			i;
 
 	Assert(rel);
-	partkey = RelationGetPartitionKey(rel);
+	partkey = RelationRetrievePartitionKey(rel);
 	Assert(partkey != NULL);
 
 	Assert(IsA(expr, List));
@@ -136,7 +136,7 @@ GpFindTargetPartition(Relation parent, GpAlterPartitionId *partid,
 		case AT_AP_IDDefault:
 			/* Find default partition */
 			target_relid =
-				get_default_oid_from_partdesc(RelationGetPartitionDesc(parent));
+				get_default_oid_from_partdesc(RelationRetrievePartitionDesc(parent));
 			if (!OidIsValid(target_relid) && !missing_ok)
 				ereport(ERROR,
 						(errcode(ERRCODE_UNDEFINED_OBJECT),
@@ -183,7 +183,7 @@ GpFindTargetPartition(Relation parent, GpAlterPartitionId *partid,
 				if (partRel->rd_rel->relispartition)
 				{
 					bool		    found = false;
-					PartitionDesc   partdesc = RelationGetPartitionDesc(parent);
+					PartitionDesc   partdesc = RelationRetrievePartitionDesc(parent);
 					target_relid = RelationGetRelid(partRel);
 					table_close(partRel, AccessShareLock);
 					/*
@@ -221,11 +221,11 @@ GpFindTargetPartition(Relation parent, GpAlterPartitionId *partid,
 			{
 				Datum		values[PARTITION_MAX_KEYS];
 				bool		isnull[PARTITION_MAX_KEYS];
-				PartitionDesc partdesc = RelationGetPartitionDesc(parent);
+				PartitionDesc partdesc = RelationRetrievePartitionDesc(parent);
 				int partidx;
 
 				FormPartitionKeyDatumFromExpr(parent, partid->partiddef, values, isnull);
-				partidx = get_partition_for_tuple(RelationGetPartitionKey(parent),
+				partidx = get_partition_for_tuple(RelationRetrievePartitionKey(parent),
 												  partdesc, values, isnull);
 
 				if (partidx < 0)
@@ -239,7 +239,7 @@ GpFindTargetPartition(Relation parent, GpAlterPartitionId *partid,
 				}
 
 				if (partdesc->oids[partidx] ==
-					get_default_oid_from_partdesc(RelationGetPartitionDesc(parent)))
+					get_default_oid_from_partdesc(RelationRetrievePartitionDesc(parent)))
 				{
 					ereport(ERROR,
 							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
@@ -616,7 +616,7 @@ AtExecGPSplitPartition(Relation rel, AlterTableCmd *cmd)
 		Assert(OidIsValid(partrelid));
 		partrel = table_open(partrelid, AccessShareLock);
 
-		if (partrelid == get_default_oid_from_partdesc(RelationGetPartitionDesc(rel)))
+		if (partrelid == get_default_oid_from_partdesc(RelationRetrievePartitionDesc(rel)))
 			defaultpartname = pstrdup(RelationGetRelationName(partrel));
 		else
 			defaultpartname = NULL;
@@ -702,7 +702,7 @@ AtExecGPSplitPartition(Relation rel, AlterTableCmd *cmd)
 		GpPartDefElem       *elem;
 		PartitionBoundSpec  *boundspec1;
 		PartitionBoundSpec  *boundspec2 = boundspec;
-		PartitionKey        partkey     = RelationGetPartitionKey(rel);
+		PartitionKey        partkey     = RelationRetrievePartitionKey(rel);
 		ParseState          *pstate     = make_parsestate(NULL);
 		char                *part_col_name;
 		Oid                 part_col_typid;
@@ -1206,7 +1206,7 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 				Oid firstchildoid;
 
 				Assert(temprel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE);
-				partdesc = RelationGetPartitionDesc(temprel);
+				partdesc = RelationRetrievePartitionDesc(temprel);
 
 				if (partdesc->nparts == 0)
 					ereport(ERROR,
@@ -1271,7 +1271,7 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 				break;
 
 			partrel = table_open(partrelid, AccessShareLock);
-			partdesc = RelationGetPartitionDesc(rel);
+			partdesc = RelationRetrievePartitionDesc(rel);
 
 			/*
 			 * If two drop partition cmds are specified in same alter table stmt,
@@ -1346,7 +1346,7 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 			{
 				Relation firstrel;
 				Oid firstchildoid;
-				PartitionDesc partdesc = RelationGetPartitionDesc(rel);
+				PartitionDesc partdesc = RelationRetrievePartitionDesc(rel);
 
 				if (partdesc->nparts == 0)
 					ereport(ERROR,
@@ -1360,13 +1360,13 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 							(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 								errmsg("level %d is not partitioned and hence can't set subpartition template for the same",
 									   level)));
-				if (RelationGetPartitionDesc(firstrel)->nparts == 0)
+				if (RelationRetrievePartitionDesc(firstrel)->nparts == 0)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 								errmsg("GPDB SET SUBPARTITION TEMPLATE syntax needs at least one sibling to exist")));
 
 				/* if this is not leaf level partition then sub-partition must exist for next level */
-				if (!RelationGetPartitionDesc(firstrel)->is_leaf[0])
+				if (!RelationRetrievePartitionDesc(firstrel)->is_leaf[0])
 				{
 					if (GetGpPartitionTemplate(topParentrelid, level + 1) == NULL)
 					{

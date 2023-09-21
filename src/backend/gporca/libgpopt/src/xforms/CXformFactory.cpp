@@ -352,44 +352,19 @@ CXformFactory::IsXformIdUsed(CXform::EXformId exfid)
 //		Initializes global instance
 //
 //---------------------------------------------------------------------------
-GPOS_RESULT
+void
 CXformFactory::Init()
 {
-	GPOS_ASSERT(nullptr == Pxff() && "Xform factory was already initialized");
-
-	GPOS_RESULT eres = GPOS_OK;
+	GPOS_ASSERT(nullptr == m_pxff && "Xform factory was already initialized");
 
 	// create xform factory memory pool
-	CMemoryPool *mp =
-		CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
-	GPOS_TRY
-	{
-		// create xform factory instance
-		m_pxff = GPOS_NEW(mp) CXformFactory(mp);
-	}
-	GPOS_CATCH_EX(ex)
-	{
-		// destroy memory pool if global instance was not created
-		CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
-		m_pxff = nullptr;
+	CMemoryPool *mp = CMemoryPoolManager::CreateMemoryPool();
 
-		if (GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiOOM))
-		{
-			eres = GPOS_OOM;
-		}
-		else
-		{
-			eres = GPOS_FAILED;
-		}
-
-		return eres;
-	}
-	GPOS_CATCH_END;
+	// create xform factory instance
+	m_pxff = GPOS_NEW(mp) CXformFactory(mp);
 
 	// instantiating the factory
 	m_pxff->Instantiate();
-
-	return eres;
 }
 
 
@@ -404,18 +379,18 @@ CXformFactory::Init()
 void
 CXformFactory::Shutdown()
 {
-	CXformFactory *pxff = CXformFactory::Pxff();
+	CXformFactory *pxff = m_pxff;
 
 	GPOS_ASSERT(nullptr != pxff && "Xform factory has not been initialized");
 
 	CMemoryPool *mp = pxff->m_mp;
 
 	// destroy xform factory
-	CXformFactory::m_pxff = nullptr;
+	m_pxff = nullptr;
 	GPOS_DELETE(pxff);
 
 	// release allocated memory pool
-	CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
+	CMemoryPoolManager::Destroy(mp);
 }
 
 

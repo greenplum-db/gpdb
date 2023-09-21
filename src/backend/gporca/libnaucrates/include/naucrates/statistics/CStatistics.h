@@ -42,6 +42,10 @@ using UlongToIntMap =
 	CHashMap<ULONG, INT, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
 			 CleanupDelete<ULONG>, CleanupDelete<INT>>;
 
+// iterator
+using UlongToIntMapIter =
+	CHashMapIter<ULONG, INT, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+				 CleanupDelete<ULONG>, CleanupDelete<INT>>;
 // hash maps ULONG -> array of ULONGs
 using UlongToUlongPtrArrayMap =
 	CHashMap<ULONG, ULongPtrArray, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
@@ -139,6 +143,13 @@ private:
 	static void AddWidthInfoWithRemap(CMemoryPool *mp,
 									  UlongToDoubleMap *src_width,
 									  UlongToDoubleMap *dest_width,
+									  UlongToColRefMap *colref_mapping,
+									  BOOL must_exist);
+
+	// helper method to add attno information where the column ids have been
+	// remapped
+	static void AddAttnoInfoWithRemap(CMemoryPool *mp, UlongToIntMap *src_attno,
+									  UlongToIntMap *dest_attno,
 									  UlongToColRefMap *colref_mapping,
 									  BOOL must_exist);
 

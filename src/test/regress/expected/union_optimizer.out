@@ -794,8 +794,8 @@ explain (costs off)
    UNION ALL
    SELECT ab FROM t2) t
   ORDER BY 1 LIMIT 8;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Inherited tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Inherited tables
                          QUERY PLAN                         
 ------------------------------------------------------------
  Limit
@@ -816,8 +816,8 @@ DETAIL:  Feature not supported: Inherited tables
    UNION ALL
    SELECT ab FROM t2) t
   ORDER BY 1 LIMIT 8;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Inherited tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Inherited tables
  ab 
 ----
  ab
@@ -846,8 +846,8 @@ select event_id
        union all
        select event_id from other_events) ss
  order by event_id;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Inherited tables
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Inherited tables
                            QUERY PLAN                           
 ----------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -872,8 +872,8 @@ explain (costs off)
    UNION ALL
    SELECT 2 AS t, * FROM tenk1 b) c
  WHERE t = 2;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Non-default collation
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Non-default collation
                 QUERY PLAN                
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
@@ -920,23 +920,21 @@ SELECT * FROM
    SELECT 2 AS t, 4 AS x) ss
 WHERE x < 4
 ORDER BY x;
-                            QUERY PLAN                            
-------------------------------------------------------------------
- Sort
-   Sort Key: (generate_series(1, 10))
-   ->  GroupAggregate
-         Group Key: (1), (generate_series(1, 10))
-         ->  Sort
-               Sort Key: (1), (generate_series(1, 10))
-               ->  Append
-                     ->  Result
-                           Filter: ((generate_series(1, 10)) < 4)
-                           ->  ProjectSet
-                                 ->  Result
-                     ->  Result
-                           One-Time Filter: false
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
-(14 rows)
+                         QUERY PLAN                         
+------------------------------------------------------------
+ GroupAggregate
+   Group Key: (1), (generate_series(1, 10))
+   ->  Sort
+         Sort Key: (generate_series(1, 10)), (1)
+         ->  Append
+               ->  Result
+                     Filter: ((generate_series(1, 10)) < 4)
+                     ->  ProjectSet
+                           ->  Result
+               ->  Result
+                     One-Time Filter: false
+ Optimizer: Pivotal Optimizer (GPORCA)
+(12 rows)
 
 SELECT * FROM
   (SELECT 1 AS t, generate_series(1,10) AS x
@@ -958,8 +956,8 @@ SELECT * FROM
    SELECT 2 AS t, 4 AS x) ss
 WHERE x > 3
 ORDER BY x;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
                                QUERY PLAN                                
 -------------------------------------------------------------------------
  Sort
@@ -982,8 +980,8 @@ SELECT * FROM
    SELECT 2 AS t, 4 AS x) ss
 WHERE x > 3
 ORDER BY x;
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: SIRV functions
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  t | x 
 ---+---
  2 | 4

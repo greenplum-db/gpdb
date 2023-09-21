@@ -5,7 +5,8 @@ set -u
 source /usr/local/greenplum-db-devel/greenplum_path.sh
 source ./gpdb_src/gpAux/gpdemo/gpdemo-env.sh
 
-gpstart -a
+# launch the cluster when necessary
+psql -d postgres -qt -P pager=off -c 'select 1' >/dev/null 2>&1 || gpstart -a
 
 psql \
     -X \

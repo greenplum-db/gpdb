@@ -68,6 +68,9 @@ EOF
 }
 
 function download() {
+    # On RHEL9 platform, the path C:\Users\buildbot cannot be escaped for scp
+    # So replace all backslash with double backslashes
+    WORK_DIR=${WORK_DIR//\\/\\\\}
     pushd "$ROOT_DIR/gpdb_artifacts/"
         scp -P "${REMOTE_PORT}" -q "${REMOTE_USER}"@"${REMOTE_HOST}":"${WORK_DIR}/*.msi" ./
         scp -P "${REMOTE_PORT}" -q "${REMOTE_USER}"@"${REMOTE_HOST}":"${WORK_DIR}/*.exe" ./

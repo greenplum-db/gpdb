@@ -147,7 +147,6 @@ SELECT b, c FROM test_replicated WHERE a<42 AND b>42;
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b, c FROM test_replicated WHERE c>42;
 
--- ORCA_FEATURE_NOT_SUPPORTED: enable index scans on AO tables
 CREATE TABLE test_ao(a int, b int, c int) WITH (appendonly=true) DISTRIBUTED BY (a);
 CREATE INDEX i_test_ao ON test_ao(a) INCLUDE (b);
 INSERT INTO test_ao SELECT i, i+i, i*i FROM generate_series(1, 100)i;
@@ -294,6 +293,58 @@ VACUUM ANALYZE test_cover_index_on_pt;
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_cover_index_on_pt WHERE a<10;
 
+-- Test mixed partitioned tables
+--
+-- AO partitioned table contains a non-AO leaf partition
+CREATE TABLE ao_pt(a bigint) WITH (appendonly=true) PARTITION BY RANGE(a)
+(
+  START (1) END (11) WITH (tablename='ao_pt_1_prt_1'),
+  START (11) END (21) WITH (tablename='ao_pt_1_prt_2', appendonly=false),
+  START (21) END (31) WITH (tablename='ao_pt_1_prt_3')
+);
+INSERT INTO ao_pt SELECT i FROM generate_series(1,30)i;
+CREATE INDEX idx_ao_pt_a ON ao_pt USING btree (a);
+VACUUM ANALYZE ao_pt;
+
+-- Allow dynamic index-only scan on mixed partitioned AO table
+EXPLAIN SELECT a FROM ao_pt WHERE a=29;
+
+-- imitate child partition has GPDB 6 version file via catalog
+-- start_ignore
+SET allow_system_table_mods=on;
+UPDATE pg_appendonly SET version=1 WHERE relid='ao_pt_1_prt_3'::regclass;
+RESET allow_system_table_mods;
+-- end_ignore
+
+-- Disallow if the table contains child partition with GPDB 6 version
+EXPLAIN SELECT a FROM ao_pt WHERE a=29;
+DROP TABLE ao_pt;
+
+-- AO/CO partitioned table contains a non-AO leaf partition
+CREATE TABLE aocs_pt(a bigint) WITH (appendonly=true, orientation=column) PARTITION BY RANGE(a)
+(
+  START (1) END (11) WITH (tablename='aocs_pt_1_prt_1'),
+  START (11) END (21) WITH (tablename='aocs_pt_1_prt_2', appendonly=false),
+  START (21) END (31) WITH (tablename='aocs_pt_1_prt_3')
+);
+INSERT INTO aocs_pt SELECT i FROM generate_series(1,30)i;
+CREATE INDEX idx_aocs_pt_a ON aocs_pt USING btree (a);
+VACUUM ANALYZE aocs_pt;
+
+-- Allow dynamic index-only scan on mixed partitioned AO/CO table
+EXPLAIN SELECT a FROM aocs_pt WHERE a=29;
+
+-- imitate child partition has GPDB 6 version file via catalog
+-- start_ignore
+SET allow_system_table_mods=on;
+UPDATE pg_appendonly SET version=1 WHERE relid='aocs_pt_1_prt_3'::regclass;
+RESET allow_system_table_mods;
+-- end_ignore
+
+-- Disallow if the table contains child partition with GPDB 6 version
+EXPLAIN SELECT a FROM aocs_pt WHERE a=29;
+DROP TABLE aocs_pt;
+
 
 -- Test various index types
 --
@@ -306,9 +357,24 @@ CREATE INDEX i_test_index_types ON test_index_types USING GIST (a) INCLUDE (b);
 VACUUM ANALYZE test_index_types;
 
 -- KEYS: [a]    INCLUDED: [b]
--- ORCA_FEATURE_NOT_SUPPORTED: support index-only-scan on GIST indexes
+-- Check support index-only-scan on GIST indexes
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_index_types WHERE a<@ box '(0,0,3,3)';
+
+-- KEYS: [a]    INCLUDED: [b]
+-- Check support dynamic-index-only-scan on GIST indexes
+CREATE TABLE test_partition_table_with_gist_index(a int, b_box box)
+DISTRIBUTED BY (a)
+PARTITION BY RANGE (a)
+(
+    START (0) END (4) EVERY (1)
+);
+CREATE INDEX gist_index_on_column_a_box ON test_partition_table_with_gist_index USING GIST (b_box) INCLUDE (a);
+INSERT INTO test_partition_table_with_gist_index VALUES (2, '(2.0,2.0,0.0,0.0)');
+INSERT INTO test_partition_table_with_gist_index VALUES (3, '(1.0,1.0,3.0,3.0)');
+VACUUM ANALYZE test_partition_table_with_gist_index;
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT a, b_box FROM test_partition_table_with_gist_index WHERE b_box<@ box '(0,0,3,3)';
 
 
 -- 8) Test partial indexes

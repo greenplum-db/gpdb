@@ -143,31 +143,22 @@
       <dxl:Relation Mdid="6.26153.1.0" Name="rngfunc2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="rngfuncid" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="f2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-2" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-3" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-4" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-5" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-6" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -330,9 +321,9 @@
       </dxl:LogicalLimit>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="4">
-      <dxl:Result>
+      <dxl:Sort SortDiscardDuplicates="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="882758.081876" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="882758.081967" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="rngfuncid">
@@ -342,54 +333,16 @@
             <dxl:Ident ColId="1" ColName="f2" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:Filter>
-          <dxl:SubPlan TypeMdid="0.16.1.0" SubPlanType="AnySubPlan">
-            <dxl:TestExpr>
-              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                <dxl:Ident ColId="1" ColName="f2" TypeMdid="0.23.1.0"/>
-                <dxl:Ident ColId="10" ColName="f2" TypeMdid="0.23.1.0"/>
-              </dxl:Comparison>
-            </dxl:TestExpr>
-            <dxl:ParamList>
-              <dxl:Param ColId="0" ColName="rngfuncid" TypeMdid="0.23.1.0"/>
-            </dxl:ParamList>
-            <dxl:Result>
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.040900" Rows="400.000000" Width="4"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="10" Alias="f2">
-                  <dxl:Ident ColId="10" ColName="f2" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter>
-                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                  <dxl:Ident ColId="9" ColName="rngfuncid" TypeMdid="0.23.1.0"/>
-                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-                </dxl:Comparison>
-              </dxl:Filter>
-              <dxl:OneTimeFilter/>
-              <dxl:TableValuedFunction FuncId="0.26156.1.0" Name="rngfunct" TypeMdid="0.26155.1.0">
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="0.008000" Rows="1000.000000" Width="8"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="9" Alias="rngfuncid">
-                    <dxl:Ident ColId="9" ColName="rngfuncid" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="10" Alias="f2">
-                    <dxl:Ident ColId="10" ColName="f2" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Ident ColId="0" ColName="rngfuncid" TypeMdid="0.23.1.0"/>
-              </dxl:TableValuedFunction>
-            </dxl:Result>
-          </dxl:SubPlan>
-        </dxl:Filter>
-        <dxl:OneTimeFilter/>
-        <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
+        <dxl:Filter/>
+        <dxl:SortingColumnList>
+          <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+          <dxl:SortingColumn ColId="1" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+        </dxl:SortingColumnList>
+        <dxl:LimitCount/>
+        <dxl:LimitOffset/>
+        <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="431.000125" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="882758.081876" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="rngfuncid">
@@ -399,14 +352,54 @@
               <dxl:Ident ColId="1" ColName="f2" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:Filter/>
-          <dxl:SortingColumnList>
-            <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-            <dxl:SortingColumn ColId="1" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-          </dxl:SortingColumnList>
-          <dxl:Sort SortDiscardDuplicates="false">
+          <dxl:Filter>
+            <dxl:SubPlan TypeMdid="0.16.1.0" SubPlanType="AnySubPlan">
+              <dxl:TestExpr>
+                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                  <dxl:Ident ColId="1" ColName="f2" TypeMdid="0.23.1.0"/>
+                  <dxl:Ident ColId="10" ColName="f2" TypeMdid="0.23.1.0"/>
+                </dxl:Comparison>
+              </dxl:TestExpr>
+              <dxl:ParamList>
+                <dxl:Param ColId="0" ColName="rngfuncid" TypeMdid="0.23.1.0"/>
+              </dxl:ParamList>
+              <dxl:Result>
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="0.040900" Rows="400.000000" Width="4"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="10" Alias="f2">
+                    <dxl:Ident ColId="10" ColName="f2" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+                <dxl:Filter>
+                  <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                    <dxl:Ident ColId="9" ColName="rngfuncid" TypeMdid="0.23.1.0"/>
+                    <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                  </dxl:Comparison>
+                </dxl:Filter>
+                <dxl:OneTimeFilter/>
+                <dxl:TableValuedFunction FuncId="0.26156.1.0" Name="rngfunct" TypeMdid="0.26155.1.0">
+                  <dxl:Properties>
+                    <dxl:Cost StartupCost="0" TotalCost="0.008000" Rows="1000.000000" Width="8"/>
+                  </dxl:Properties>
+                  <dxl:ProjList>
+                    <dxl:ProjElem ColId="9" Alias="rngfuncid">
+                      <dxl:Ident ColId="9" ColName="rngfuncid" TypeMdid="0.23.1.0"/>
+                    </dxl:ProjElem>
+                    <dxl:ProjElem ColId="10" Alias="f2">
+                      <dxl:Ident ColId="10" ColName="f2" TypeMdid="0.23.1.0"/>
+                    </dxl:ProjElem>
+                  </dxl:ProjList>
+                  <dxl:Ident ColId="0" ColName="rngfuncid" TypeMdid="0.23.1.0"/>
+                </dxl:TableValuedFunction>
+              </dxl:Result>
+            </dxl:SubPlan>
+          </dxl:Filter>
+          <dxl:OneTimeFilter/>
+          <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000036" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000125" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="rngfuncid">
@@ -417,12 +410,7 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:SortingColumnList>
-              <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-              <dxl:SortingColumn ColId="1" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-            </dxl:SortingColumnList>
-            <dxl:LimitCount/>
-            <dxl:LimitOffset/>
+            <dxl:SortingColumnList/>
             <dxl:TableScan>
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="431.000021" Rows="1.000000" Width="8"/>
@@ -450,9 +438,9 @@
                 </dxl:Columns>
               </dxl:TableDescriptor>
             </dxl:TableScan>
-          </dxl:Sort>
-        </dxl:GatherMotion>
-      </dxl:Result>
+          </dxl:GatherMotion>
+        </dxl:Result>
+      </dxl:Sort>
     </dxl:Plan>
   </dxl:Thread>
 </dxl:DXLMessage>

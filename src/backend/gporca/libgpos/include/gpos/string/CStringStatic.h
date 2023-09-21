@@ -15,8 +15,6 @@
 #include "gpos/base.h"
 #include "gpos/common/clibwrapper.h"
 
-#define GPOS_SZ_LENGTH(x) gpos::clib::Strlen(x)
-
 // use this character to substitute non-ASCII wide characters
 #define GPOS_WCHAR_UNPRINTABLE '.'
 

@@ -905,8 +905,64 @@ SELECT count(c1), sum(c3), avg(c4), min(c5), max(c6), count(c1) * (random() <= 1
 (10 rows)
 
 ALTER FOREIGN TABLE mpp_ft2 OPTIONS(set use_remote_estimate 'false');
--- limit is not pushed down when there are multiple remote servers
--- limit with agg functions
+-- ===================================================================
+-- Queries with LIMIT/OFFSET clauses
+-- ===================================================================
+-- Simple query with LIMIT clause is pushed down.
+EXPLAIN (VERBOSE, COSTS OFF)
+SELECT c1, c2 FROM mpp_ft2 order by c1 limit 3;
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Limit
+   Output: c1, c2
+   ->  Gather Motion 2:1  (slice1; segments: 2)
+         Output: c1, c2
+         Merge Key: c1
+         ->  Foreign Scan on public.mpp_ft2
+               Output: c1, c2
+               Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST LIMIT 3::bigint
+ Optimizer: Postgres query optimizer
+ Settings: gp_enable_minmax_optimization = 'off'
+(10 rows)
+
+SELECT c1, c2 FROM mpp_ft2 order by c1 limit 3;
+ c1 | c2 
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+(3 rows)
+
+-- Simple query with OFFSET and LIMIT clause together is NOT pushed down.
+-- Because it's unsafe to do offset and limit in multiple remote servers.
+EXPLAIN (VERBOSE, COSTS OFF)
+SELECT c1, c2 FROM mpp_ft2 order by c1 offset 2 limit 3;
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
+ Limit
+   Output: c1, c2
+   ->  Gather Motion 2:1  (slice1; segments: 2)
+         Output: c1, c2
+         Merge Key: c1
+         ->  Limit
+               Output: c1, c2
+               ->  Foreign Scan on public.mpp_ft2
+                     Output: c1, c2
+                     Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST
+ Optimizer: Postgres query optimizer
+ Settings: gp_enable_minmax_optimization = 'off'
+(12 rows)
+
+SELECT c1, c2 FROM mpp_ft2 order by c1 offset 2 limit 3;
+ c1 | c2 
+----+----
+  3 |  3
+  4 |  4
+  5 |  5
+(3 rows)
+
+-- Query with aggregates and limit clause together is NOT pushed down.
+-- Because it's unsafe to do partial aggregate and limit in multiple remote servers.
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT count(c1), max(c6) FROM mpp_ft2 GROUP BY c2 order by c2 limit 3;
                                                QUERY PLAN                                                
@@ -926,7 +982,7 @@ SELECT count(c1), max(c6) FROM mpp_ft2 GROUP BY c2 order by c2 limit 3;
                            Output: c1, c2, c3, c4, c5, c6, c7
                            Remote SQL: SELECT c1, c2, c6 FROM "MPP_S 1"."T 2" ORDER BY c2 ASC NULLS LAST
  Optimizer: Postgres query optimizer
- Settings: gp_enable_minmax_optimization = 'off', optimizer = 'off'
+ Settings: gp_enable_minmax_optimization = 'off'
 (16 rows)
 
 SELECT count(c1), max(c6) FROM mpp_ft2 GROUP BY c2 order by c2 limit 3;
@@ -937,33 +993,9 @@ SELECT count(c1), max(c6) FROM mpp_ft2 GROUP BY c2 order by c2 limit 3;
    100 | 0.992
 (3 rows)
 
--- limit with normal scan without agg functions
-EXPLAIN (VERBOSE, COSTS OFF)
-SELECT c1, c2 FROM mpp_ft2 order by c1 limit 3;
-                                          QUERY PLAN                                           
------------------------------------------------------------------------------------------------
- Limit
-   Output: c1, c2
-   ->  Gather Motion 2:1  (slice1; segments: 2)
-         Output: c1, c2
-         Merge Key: c1
-         ->  Limit
-               Output: c1, c2
-               ->  Foreign Scan on public.mpp_ft2
-                     Output: c1, c2
-                     Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST
- Optimizer: Postgres query optimizer
- Settings: gp_enable_minmax_optimization = 'off', optimizer = 'off'
-(12 rows)
-
-SELECT c1, c2 FROM mpp_ft2 order by c1 limit 3;
- c1 | c2 
-----+----
-  1 |  1
-  2 |  2
-  3 |  3
-(3 rows)
-
+-- ===================================================================
+-- Queries with JOIN
+-- ===================================================================
 -- join is not safe to pushed down when there are multiple remote servers
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT count(*), sum(t1.c1), avg(t2.c2) FROM mpp_ft2 t1 inner join mpp_ft2 t2 on (t1.c1 = t2.c1) where t1.c1 = 2;

@@ -2,6 +2,7 @@
 
 import os
 import signal
+from contextlib import closing
 
 from gppylib.recoveryinfo import RecoveryErrorType
 from gppylib.commands.pg import PgBaseBackup, PgRewind, PgReplicationSlot
@@ -11,10 +12,12 @@ from gppylib.commands.base import Command, LOCAL
 from gppylib.commands.gp import SegmentStart
 from gppylib.gparray import Segment
 from gppylib.commands.gp import ModifyConfSetting
+from gppylib.db import dbconn
 from gppylib.db.catalog import RemoteQueryCommand
 from gppylib.operations.get_segments_in_recovery import is_seg_in_backup_mode
-from gppylib.operations.segment_tablespace_locations import get_segment_tablespace_locations
+from gppylib.operations.segment_tablespace_locations import get_segment_tablespace_oid_locations
 from gppylib.commands.unix import terminate_proc_tree
+from gppylib.commands.unix import get_remote_link_path
 
 
 class FullRecovery(Command):
@@ -166,7 +169,7 @@ class DifferentialRecovery(Command):
             4. In future we will have to add backup_label in rsync_exclude_list if pg_start_backup needs be started in
                non-exclusive mode for differential recovery.
         """
-        rsync_exclude_list = [
+        rsync_exclude_list = {
             "/log",  # logs are segment specific so it can be skipped
             "pgsql_tmp",
             "postgresql.auto.conf.tmp",
@@ -174,16 +177,44 @@ class DifferentialRecovery(Command):
             "postmaster.pid",
             "postmaster.opts",
             "pg_dynshmem",
+            "tablespace_map", # this files getting generated on call of pg_start_backup
             "pg_notify/*",
             "pg_replslot/*",
             "pg_serial/*",
             "pg_stat_tmp/*",
             "pg_snapshots/*",
             "pg_subtrans/*",
+            "pg_tblspc/*",  # excluding as the tablespace is handled in sync_tablespaces()
             "backups/*",
             "/db_dumps",  # as we exclude during pg_basebackup
-            "/promote",  # Need to check why do we exclude it during pg_basebackup
-        ]
+            "/promote",  # as we exclude during pg_basebackup
+        }
+
+        log_directory_sql = """
+        SELECT
+            gucs.log_directory
+        FROM (
+            -- split to two separate columns log_directory and data_directory
+            SELECT
+                MAX(setting) FILTER (WHERE name='log_directory') AS log_directory,
+                MAX(setting) FILTER (WHERE name='data_directory') AS data_directory
+            FROM pg_settings WHERE (name='log_directory' AND LEFT(setting,1) NOT LIKE '/') OR name='data_directory'
+        ) AS gucs where gucs.log_directory IS NOT NULL;
+        """
+
+        dburl = dbconn.DbURL(hostname=self.recovery_info.source_hostname,
+                             port=self.recovery_info.source_port,
+                             dbname='template1')
+        with closing(dbconn.connect(dburl, utility=True)) as conn:
+            res = dbconn.query(conn, log_directory_sql)
+            # There should only be a single result.
+            # Only exclude if the log_directory is a relative path,
+            # because absolute path for log_directory will usually be out of the
+            # datadir
+            for row in res.fetchall():
+                rsync_exclude_list.add(f'/{row[0]}')
+                self.logger.debug("adding /%s to the exclude list" % row[0])
+
         """
             Rsync options used:
                 srcFile: source datadir
@@ -261,29 +292,52 @@ class DifferentialRecovery(Command):
                     srcHost=self.recovery_info.source_hostname, progress_file=self.recovery_info.progress_file)
         cmd.run(validateAfter=True)
 
+
     def sync_tablespaces(self):
         self.logger.debug(
             "Syncing tablespaces of dbid {} which are outside of data_dir".format(
                 self.recovery_info.target_segment_dbid))
 
-        # get the tablespace locations
-        tablespaces = get_segment_tablespace_locations(self.recovery_info.source_hostname,
+        # get the oid and tablespace locations
+        tablespaces = get_segment_tablespace_oid_locations(self.recovery_info.source_hostname,
                                                        self.recovery_info.source_port)
 
-        for tablespace_location in tablespaces:
-            if tablespace_location[0].startswith(self.recovery_info.target_datadir):
-                continue
-            # os.path.join(dir, "") will append a '/' at the end of dir. When using "/" at the end of source,
-            # rsync will copy the content of the last directory. When not using "/" at the end of source, rsync
-            # will copy the last directory and the content of the directory.
-            cmd = Rsync(name="Sync tablespace",
-                        srcFile=os.path.join(tablespace_location[0], ""),
-                        dstFile=tablespace_location[0],
-                        srcHost=self.recovery_info.source_hostname,
-                        progress=True,
-                        checksum=True,
-                        progress_file=self.recovery_info.progress_file)
-            cmd.run(validateAfter=True)
+        # clear all tablespace symlink for target.
+        for file in os.listdir(os.path.join(self.recovery_info.target_datadir,"pg_tblspc")):
+            file_path = os.path.join(self.recovery_info.target_datadir,"pg_tblspc",file)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+            except Exception as e:
+                raise Exception("Failed to remove link {} for dbid {} : {}".
+                                format(file_path,self.recovery_info.target_segment_dbid, str(e)))
+
+        for oid, tablespace_location in tablespaces:
+            # tablespace_location is the link path who's symlink is created at $DATADIR/pg_tblspc/{oid}
+            # tablespace_location is the base path in which datafiles are stored in respective dbid directory.
+            targetOidPath = os.path.join(self.recovery_info.target_datadir, "pg_tblspc", str(oid))
+            targetPath = os.path.join(tablespace_location, str(self.recovery_info.target_segment_dbid))
+
+            #if tablespace is not inside the datadir do rsync for copy, if it is inside datadirectory
+            #files would have been copied while doing rsync for data dir.
+            if not tablespace_location.startswith(self.recovery_info.source_datadir):
+                srcOidPath = os.path.join(self.recovery_info.source_datadir, "pg_tblspc", str(oid))
+                srcPath = get_remote_link_path(srcOidPath,self.recovery_info.source_hostname)
+
+                # os.path.join(dir, "") will append a '/' at the end of dir. When using "/" at the end of source,
+                # rsync will copy the content of the last directory. When not using "/" at the end of source, rsync
+                # will copy the last directory and the content of the directory.
+                cmd = Rsync(name="Sync tablespace",
+                            srcFile=os.path.join(srcPath, ""),
+                            dstFile=targetPath,
+                            srcHost=self.recovery_info.source_hostname,
+                            progress=True,
+                            checksum=True,
+                            progress_file=self.recovery_info.progress_file)
+                cmd.run(validateAfter=True)
+
+            # create tablespace symlink for target data directory.
+            os.symlink(targetPath, targetOidPath)
 
 
 def start_segment(recovery_info, logger, era):
@@ -317,12 +371,18 @@ class SegRecovery(object):
         recovery_base = RecoveryBase(__file__)
 
         def signal_handler(sig, frame):
-            recovery_base.logger.warning("Recieved termination signal, stopping gpsegrecovery")
+            recovery_base.termination_requested = True
 
             while not recovery_base.pool.isDone():
 
+                # Ignore the signal once the signal handler is invoked to
+                # prevent multiple triggers of the signal handler.
+                signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
                 # gpsegrecovery will be the parent for all the child processes (pg_basebackup/pg_rewind/rsync)
-                terminate_proc_tree(pid=os.getpid(), include_parent=False)
+                # NOTE: Since we are ignoring the SIGTERM above, the child will also inherit the same behaviour,
+                # hence use a different signal to terminate.
+                terminate_proc_tree(pid=os.getpid(), sig=signal.SIGINT, timeout=60, include_parent=False)
 
         signal.signal(signal.SIGTERM, signal_handler)
 

@@ -21,6 +21,8 @@
 -- s/Memory used:  \d+\w?B/Memory used: ###B/
 -- m/Memory Usage: \d+\w?B/
 -- s/Memory Usage: \d+\w?B/Memory Usage: ###B/
+-- m/Memory wanted:  \d+\w?kB/
+-- s/Memory wanted:  \d+\w?kB/Memory wanted: ###kB/
 -- m/Peak Memory Usage: \d+/
 -- s/Peak Memory Usage: \d+/Peak Memory Usage: ###/
 -- m/Buckets: \d+/
@@ -55,7 +57,7 @@ EXPLAIN SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT 
                            Index Cond: (id = boxes.location_id)
          ->  Index Scan using apples_pkey on apples  (cost=0.00..12.00 rows=1 width=12)
                Index Cond: (id = boxes.apple_id)
- Optimizer: Pivotal Optimizer (GPORCA)
+ Optimizer: GPORCA
 (15 rows)
 
 -- explain_processing_on
@@ -78,7 +80,7 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
                            Index Cond: (id = boxes.location_id)
          ->  Index Scan using apples_pkey on apples  (cost=0.00..12.00 rows=1 width=12) (never executed)
                Index Cond: (id = boxes.apple_id)
- Optimizer: Pivotal Optimizer (GPORCA)
+ Optimizer: GPORCA
  Planning Time: 40.380 ms
    (slice0)    Executor memory: 56K bytes.
    (slice1)    Executor memory: 43K bytes avg x 3 workers, 43K bytes max (seg0).
@@ -243,7 +245,7 @@ QUERY PLAN
             Plan Rows: 1
             Plan Width: 12
             Index Cond: "(id = boxes.apple_id)"
-  Optimizer: "Pivotal Optimizer (GPORCA)"
+  Optimizer: "GPORCA"
 (1 row)
 SET random_page_cost = 1;
 SET cpu_index_tuple_cost = 0.1;
@@ -283,7 +285,7 @@ QUERY PLAN
           - "id"
           - "apple_id"
           - "location_id"
-  Optimizer: "Pivotal Optimizer (GPORCA)"
+  Optimizer: "GPORCA"
   Settings: 
     cpu_index_tuple_cost: "0.1"
     random_page_cost: "1"
@@ -328,7 +330,7 @@ QUERY PLAN
           - "id"
           - "apple_id"
           - "location_id"
-  Optimizer: "Pivotal Optimizer (GPORCA)"
+  Optimizer: "GPORCA"
   Settings: 
     cpu_index_tuple_cost: "0.1"
     random_page_cost: "1"
@@ -484,7 +486,7 @@ QUERY PLAN
             Actual Loops: 0
             Index Cond: "(id = boxes.apple_id)"
             Rows Removed by Index Recheck: 0
-  Optimizer: "Pivotal Optimizer (GPORCA)"
+  Optimizer: "GPORCA"
   Planning Time: 14.827
   Triggers: 
   Slice statistics: 
@@ -538,7 +540,7 @@ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12) (a
         work_mem: 177kB  Segments: 3  Max: 59kB (segment 0)  Workfile: (0 spilling)
         ->  Seq Scan on public.boxes  (cost=0.00..431.00 rows=1 width=12) (actual time=0.000..0.014 rows=0 loops=1)
               Output: id, apple_id, location_id
-Optimizer: Pivotal Optimizer (GPORCA)
+Optimizer: GPORCA
 Settings: cpu_index_tuple_cost = '0.1', random_page_cost = '1'
 Planning Time: 4.622 ms
   (slice0)    Executor memory: 40K bytes.
@@ -574,7 +576,7 @@ QUERY PLAN
       "Function Name": "generate_series",
       "Alias": "generate_series"
     },
-    "Optimizer": "Pivotal Optimizer (GPORCA)"
+    "Optimizer": "GPORCA"
   }
 ]
 (1 row)
@@ -591,7 +593,7 @@ QUERY PLAN
       <Function-Name>generate_series</Function-Name>
       <Alias>generate_series</Alias>
     </Plan>
-    <Optimizer>Pivotal Optimizer (GPORCA)</Optimizer>
+    <Optimizer>GPORCA</Optimizer>
   </Query>
 </explain>
 (1 row)
@@ -627,7 +629,7 @@ QUERY PLAN
         }
       ]
     },
-    "Optimizer": "Pivotal Optimizer (GPORCA)"
+    "Optimizer": "GPORCA"
   }
 ]
 (1 row)
@@ -655,7 +657,7 @@ QUERY PLAN
 Limit  (cost=0.00..431.00 rows=1 width=4)
   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
         ->  Seq Scan on jit_explain_output  (cost=0.00..431.00 rows=1 width=4)
-Optimizer: Pivotal Optimizer (GPORCA)
+Optimizer: GPORCA
 JIT:
   Functions: 2
   Options: Inlining false, Optimization false, Expressions true, Deforming true
@@ -668,7 +670,7 @@ QUERY PLAN
 Limit  (cost=0.00..431.00 rows=1 width=4) (actual time=1.103..1.107 rows=10 loops=1)
   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.013..0.014 rows=10 loops=1)
         ->  Seq Scan on jit_explain_output  (cost=0.00..431.00 rows=1 width=4) (actual time=0.025..0.030 rows=38 loops=1)
-Optimizer: Pivotal Optimizer (GPORCA)
+Optimizer: GPORCA
 Planning Time: 5.824 ms
   (slice0)    Executor memory: 37K bytes.
   (slice1)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
@@ -772,7 +774,7 @@ QUERY PLAN
         }
       ]
     },
-    "Optimizer": "Pivotal Optimizer (GPORCA)",
+    "Optimizer": "GPORCA",
     "Planning Time": 5.884,
     "Triggers": [
     ],
@@ -815,9 +817,58 @@ RESET jit;
 RESET jit_above_cost;
 RESET gp_explain_jit;
 RESET optimizer_jit_above_cost;
+-- start_matchsubs
+-- m/Extra Text: \(seg\d+\)   hash table\(s\): \d+; \d+ groups total in \d+ batches, \d+ spill partitions; disk usage: \d+KB; chain length \d+.\d+ avg, \d+ max; using \d+ of \d+ buckets; total \d+ expansions./
+-- s/Extra Text: \(seg\d+\)   hash table\(s\): \d+; \d+ groups total in \d+ batches, \d+ spill partitions; disk usage: \d+KB; chain length \d+.\d+ avg, \d+ max; using \d+ of \d+ buckets; total \d+ expansions./Extra Text: (seg0)   hash table(s): ###; ### groups total in ### batches, ### spill partitions; disk usage: ###KB; chain length ###.## avg, ### max; using ## of ### buckets; total ### expansions./
+-- m/Work_mem: \d+K bytes max, \d+K bytes wanted/
+-- s/Work_mem: \d+K bytes max, \d+K bytes wanted/Work_mem: ###K bytes max, ###K bytes wanted/
+-- end_matchsubs
+-- Greenplum hash table extra message
+CREATE TABLE test_src_tbl AS
+SELECT i % 10000 AS a, i % 10000 + 1 AS b FROM generate_series(1, 50000) i DISTRIBUTED BY (a);
+ANALYZE test_src_tbl;
+-- Enable optimizer_enable_hashagg, and set statement_mem to a small value to force spilling
+set optimizer_enable_hashagg = on;
+SET statement_mem = '1000kB';
+-- Hashagg with spilling
+CREATE TABLE test_hashagg_spill AS
+SELECT a, COUNT(DISTINCT b) AS b FROM test_src_tbl GROUP BY a;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
+WITH query_plan (et) AS
+(
+  SELECT test_util.get_explain_output(
+    'SELECT a, COUNT(DISTINCT b) AS b FROM test_src_tbl GROUP BY a',
+    false)
+)
+SELECT BTRIM(et) as explain_info FROM query_plan WHERE et like '%Extra Text%' limit 2;
+explain_info
+Extra Text: (seg0)   hash table(s): 1; 3368 groups total in 4 batches, 2576 spill partitions; disk usage: 800KB; chain length 2.9 avg, 9 max; using 3368 of 20480 buckets; total 0 expansions.
+Extra Text: (seg0)   hash table(s): 1; 3368 groups total in 4 batches, 1264 spill partitions; disk usage: 800KB; chain length 2.3 avg, 5 max; using 3368 of 40960 buckets; total 1 expansions.
+(2 rows)
+-- Hashagg with grouping sets
+CREATE TABLE test_hashagg_groupingsets AS
+SELECT a, avg(b) AS b FROM test_src_tbl GROUP BY grouping sets ((a), (b));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
+-- The planner generates multiple hash tables but ORCA uses Shared Scan.
+WITH query_plan (et) AS
+(
+  SELECT test_util.get_explain_output(
+    'SELECT a, avg(b) AS b FROM test_src_tbl GROUP BY grouping sets ((a), (b))',
+    false)
+)
+SELECT BTRIM(et) as explain_info FROM query_plan WHERE et like '%Extra Text%' limit 2;
+explain_info
+Extra Text: (seg0)   hash table(s): 1; 3368 groups total in 8 batches, 53148 spill partitions; disk usage: 1152KB; chain length 2.2 avg, 5 max; using 3368 of 18432 buckets; total 0 expansions.
+Extra Text: (seg1)   hash table(s): 1; 3385 groups total in 8 batches, 53488 spill partitions; disk usage: 1152KB; chain length 2.1 avg, 4 max; using 3385 of 18432 buckets; total 0 expansions.
+(2 rows)
+RESET optimizer_enable_hashagg;
+RESET statement_mem;
 -- Cleanup
 DROP TABLE boxes;
 DROP TABLE apples;
 DROP TABLE box_locations;
 DROP TABLE jsonexplaintest;
 DROP TABLE jit_explain_output;
+DROP TABLE test_src_tbl;
+DROP TABLE test_hashagg_spill;
+DROP TABLE test_hashagg_groupingsets;

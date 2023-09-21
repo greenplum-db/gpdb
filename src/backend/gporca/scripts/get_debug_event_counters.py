@@ -27,7 +27,7 @@ CDebugCounter class, see file ../libgpos/include/gpos/common/CDebugCounter.h
 
 try:
 	from gppylib.db import dbconn
-except ImportError, e:
+except ImportError as e:
 	sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh to set PYTHONPATH. '
 			 'Detail: ' + str(e))
 
@@ -60,6 +60,10 @@ distributed by (query_number, counter_name)
 
 glob_insert = """
 insert into debug_counters values(%s, %s, '%s', '%s', '%s', %s)
+"""
+
+show_log_directory = """
+show log_directory
 """
 
 
@@ -170,6 +174,22 @@ def processLogFile(logFileLines, allruns):
 			csv = "%d, %s" % (current_run_number, csv)
 			current_output.append(csv)
 
+# Helper function
+# -----------------------------------------------------------------------------
+
+def get_log_directory(args):
+	log_directory = ""
+	log_directory_conn = connect(args.host, args.port, args.dbName)
+	exp_curs = dbconn.query(log_directory_conn, show_log_directory)
+	rows = exp_curs.fetchall()
+	log_directory_conn.close()
+	# since we only care about the coordinator directory, there should only
+	# be one
+	if len(rows) != 1:
+		print("expected log directory result to be 1; got %d" % len(rows))
+	for row in rows:
+		log_directory = row[0]
+	return log_directory
 
 def parseargs():
 	parser = argparse.ArgumentParser(description=_help)
@@ -230,7 +250,13 @@ def main():
 		else:
 			print("$COORDINATOR_DATA_DIRECTORY environment variable is not defined, exiting")
 			exit()
-		grep_command = grep_command + coordinator_data_dir + '/log/*.csv'
+
+		log_directory = get_log_directory(args)
+		full_log_path = os.path.join(coordinator_data_dir, log_directory, '*.csv')
+		if os.path.isabs(log_directory):
+			full_log_path = os.path.join(log_directory, '*.csv')
+
+		grep_command = grep_command + full_log_path
 	else:
 		grep_command = grep_command + logfile
 

@@ -60,7 +60,7 @@ class OptParser(OptionParser):
         f = None
         try:
             try:
-                f = open(help_path);
+                f = open(help_path)
                 return f.read(-1)
             except:
                 return None

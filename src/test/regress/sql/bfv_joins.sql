@@ -534,6 +534,16 @@ drop table l_table;
 drop table r_table1;
 drop table r_table2;
 
+-- Should throw an error during planning: FULL JOIN is only supported with merge-joinable or hash-joinable join conditions
+-- Falls back on GPORCA, but shouldn't cause GPORCA to crash
+CREATE TABLE ext_stats_tbl(c0 name, c2 boolean);
+CREATE STATISTICS IF NOT EXISTS s0 (mcv) ON c2, c0 FROM ext_stats_tbl;
+
+INSERT INTO ext_stats_tbl VALUES('tC', true);
+ANALYZE ext_stats_tbl;
+
+explain SELECT 1 FROM ext_stats_tbl t11 FULL JOIN ext_stats_tbl t12 ON t12.c2;
+
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;
 set client_min_messages='warning';

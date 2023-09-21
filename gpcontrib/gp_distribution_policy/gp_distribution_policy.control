@@ -2,4 +2,4 @@
 comment = 'check distribution policy in a GPDB cluster'
 default_version = '1.0'
 module_pathname = '$libdir/gp_distribution_policy'
-relocatable = true
+schema = public

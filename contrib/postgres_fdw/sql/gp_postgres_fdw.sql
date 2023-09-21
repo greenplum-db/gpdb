@@ -110,6 +110,7 @@ TRUNCATE TABLE postgres_fdw_gp."GP 1";
 set search_path=postgres_fdw_gp;
 alter server loopback options(add num_segments '4');
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1;
+EXPLAIN ANALYZE SELECT * FROM gp_ft1;
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT count(*) FROM gp_ft1;
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1 t1 INNER JOIN gp_ft1 t2 ON t1.f1 = t2.f1 LIMIT 3;
 EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
@@ -321,3 +322,95 @@ select * from part_mixed_dpe, non_part where part_mixed_dpe.b=non_part.b;
 explain (costs false) update t1 set b = b + 1 where b in (select a from gp_all where gp_all.a > 10);
 explain (costs false) update t1 set b = b + 1 where b in (select a from gp_any where gp_any.a > 10);
 explain (costs false) update t1 set b = b + 1 where b in (select a from gp_coord where gp_coord.a > 10);
+
+---
+--- Test for #16376 of multi-level partition table with foreign table
+---
+CREATE TABLE sub_part (
+                          a int,
+                          b int,
+                          c int)
+    DISTRIBUTED BY (a)
+partition by range(b) subpartition by list(c) 
+ SUBPARTITION TEMPLATE 
+  (
+   SUBPARTITION one values (1),
+   SUBPARTITION two values (2)
+  )
+(
+   START (0) INCLUSIVE END (5) EXCLUSIVE EVERY (1)
+);
+
+-- Create foreign tables
+CREATE FOREIGN TABLE sub_part_1_prt_1_2_prt_one_foreign (
+    a int,
+    b int,
+    c int)
+SERVER loopback;
+
+CREATE FOREIGN TABLE sub_part_1_prt_1_2_prt_two_foreign (
+    a int,
+    b int,
+    c int)
+SERVER loopback;
+
+-- change a sub partition's all leaf table to foreign table
+ALTER TABLE sub_part_1_prt_1 EXCHANGE PARTITION for(1) WITH TABLE sub_part_1_prt_1_2_prt_one_foreign;
+ALTER TABLE sub_part_1_prt_1 EXCHANGE PARTITION for(2) WITH TABLE sub_part_1_prt_1_2_prt_two_foreign;
+
+-- explain with ORCA should fall back to planner, rather than raise ERROR
+explain select * from sub_part;
+
+--- Clean up
+DROP TABLE sub_part;
+DROP TABLE sub_part_1_prt_1_2_prt_one_foreign;
+DROP TABLE sub_part_1_prt_1_2_prt_two_foreign;
+
+-- GPDB #16219: validate scram-sha-256 in postgres_fdw
+alter system set password_encryption = 'scram-sha-256';
+-- add created user to pg_hba.conf
+\! echo "host    all    u16219  0.0.0.0/0 scram-sha-256" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
+\! echo "host    all    u16219   ::1/128  scram-sha-256" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
+\! echo "local    all    u16219   scram-sha-256" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
+select pg_reload_conf();
+\c postgres
+create user u16219 password '123456';
+
+create database database_16219;
+\c database_16219
+create extension postgres_fdw;
+grant usage on FOREIGN DATA WRAPPER postgres_fdw to public;
+
+set role u16219;
+create table t1 (a int, b int);
+insert into t1 values(generate_series(1,10),generate_series(11,20));
+
+DO $d$
+    BEGIN
+        EXECUTE $$CREATE SERVER database_16219 FOREIGN DATA WRAPPER postgres_fdw
+            OPTIONS (dbname '$$||current_database()||$$',
+                     port '$$||current_setting('port')||$$',
+                     host 'localhost'
+            )$$;
+    END;
+$d$;
+
+CREATE USER MAPPING FOR CURRENT_USER SERVER database_16219
+    OPTIONS (user 'u16219', password '123456');
+
+CREATE FOREIGN TABLE f_t1(a int, b int) 
+	server database_16219 options(schema_name 'public', table_name 't1');
+
+select count(*) from f_t1;
+DO $d$
+    BEGIN
+        EXECUTE $$ALTER SERVER database_16219
+            OPTIONS (SET port '$$||current_setting('port')||$$')$$;
+    END;
+$d$;
+select count(*) from f_t1;
+\c postgres
+drop database database_16219;
+drop user u16219;
+alter system reset password_encryption;
+select pg_reload_conf();

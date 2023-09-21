@@ -211,34 +211,24 @@ explain select * from foo left join bar on foo.a=bar.a and foo.b=bar.b and foo.c
       <dxl:Relation Mdid="6.49211.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-2" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-3" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-4" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-5" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-6" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -252,34 +242,24 @@ explain select * from foo left join bar on foo.a=bar.a and foo.b=bar.b and foo.c
       <dxl:Relation Mdid="6.49223.1.0" Name="zoo" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-2" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-3" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-4" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-5" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-6" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -298,34 +278,24 @@ explain select * from foo left join bar on foo.a=bar.a and foo.b=bar.b and foo.c
       <dxl:Relation Mdid="6.49217.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-2" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-3" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-4" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-5" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-6" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -341,43 +311,43 @@ explain select * from foo left join bar on foo.a=bar.a and foo.b=bar.b and foo.c
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.49211.1.0.2" Name="c" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:Index Mdid="0.49236.1.0" Name="bar_idx_c" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="2" IncludedColumns="">
+      <dxl:Index Mdid="0.49236.1.0" Name="bar_idx_c" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="2" IncludedColumns="" ReturnableColumns="2">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.49235.1.0" Name="bar_idx_b" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="0.49235.1.0" Name="bar_idx_b" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="" ReturnableColumns="1">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.49234.1.0" Name="bar_idx_a" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.49234.1.0" Name="bar_idx_a" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1994.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.49233.1.0" Name="bar_idx_ab" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="1,0" IncludedColumns="">
+      <dxl:Index Mdid="0.49233.1.0" Name="bar_idx_ab" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="1,0" IncludedColumns="" ReturnableColumns="1,0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1994.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.49243.1.0" Name="zoo_idx_c" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="2" IncludedColumns="">
+      <dxl:Index Mdid="0.49243.1.0" Name="zoo_idx_c" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="2" IncludedColumns="" ReturnableColumns="2">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.49242.1.0" Name="zoo_idx_b" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="">
+      <dxl:Index Mdid="0.49242.1.0" Name="zoo_idx_b" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="" ReturnableColumns="1">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.49241.1.0" Name="zoo_idx_a" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.49241.1.0" Name="zoo_idx_a" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1994.1.0"/>
         </dxl:Opfamilies>
       </dxl:Index>
-      <dxl:Index Mdid="0.49240.1.0" Name="zoo_idx_ab" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="1,0" IncludedColumns="">
+      <dxl:Index Mdid="0.49240.1.0" Name="zoo_idx_ab" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="1,0" IncludedColumns="" ReturnableColumns="1,0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1994.1.0"/>
@@ -542,7 +512,7 @@ explain select * from foo left join bar on foo.a=bar.a and foo.b=bar.b and foo.c
     <dxl:Plan Id="0" SpaceSize="9">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1324046.055241" Rows="3.000000" Width="48"/>
+          <dxl:Cost StartupCost="0" TotalCost="1324046.055474" Rows="3.000000" Width="48"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -577,7 +547,7 @@ explain select * from foo left join bar on foo.a=bar.a and foo.b=bar.b and foo.c
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="true" OuterRefAsParam="true">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1324046.054704" Rows="3.000000" Width="48"/>
+            <dxl:Cost StartupCost="0" TotalCost="1324046.054937" Rows="3.000000" Width="48"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -757,7 +727,7 @@ explain select * from foo left join bar on foo.a=bar.a and foo.b=bar.b and foo.c
           </dxl:NestedLoopJoin>
           <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="12.000165" Rows="0.500000" Width="16"/>
+              <dxl:Cost StartupCost="0" TotalCost="12.000398" Rows="0.500000" Width="16"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="a">
@@ -771,16 +741,10 @@ explain select * from foo left join bar on foo.a=bar.a and foo.b=bar.b and foo.c
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter>
-              <dxl:And>
-                <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                  <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
-                  <dxl:Ident ColId="11" ColName="b" TypeMdid="0.23.1.0"/>
-                </dxl:Comparison>
-                <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
-                  <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
-                  <dxl:Ident ColId="12" ColName="c" TypeMdid="0.23.1.0"/>
-                </dxl:Comparison>
-              </dxl:And>
+              <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
+                <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
+                <dxl:Ident ColId="12" ColName="c" TypeMdid="0.23.1.0"/>
+              </dxl:Comparison>
             </dxl:Filter>
             <dxl:IndexCondList>
               <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
@@ -791,9 +755,13 @@ explain select * from foo left join bar on foo.a=bar.a and foo.b=bar.b and foo.c
                   <dxl:Ident ColId="0" ColName="a" TypeMdid="0.1043.1.0"/>
                 </dxl:Cast>
               </dxl:Comparison>
+              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                <dxl:Ident ColId="11" ColName="b" TypeMdid="0.23.1.0"/>
+                <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
+              </dxl:Comparison>
             </dxl:IndexCondList>
-	<dxl:Partitions/>
-            <dxl:IndexDescriptor Mdid="0.49234.1.0" IndexName="bar_idx_a"/>
+            <dxl:Partitions/>
+            <dxl:IndexDescriptor Mdid="0.49233.1.0" IndexName="bar_idx_ab"/>
             <dxl:TableDescriptor Mdid="6.49217.1.0" TableName="bar" LockMode="1">
               <dxl:Columns>
                 <dxl:Column ColId="10" Attno="1" ColName="a" TypeMdid="0.1043.1.0" ColWidth="8"/>

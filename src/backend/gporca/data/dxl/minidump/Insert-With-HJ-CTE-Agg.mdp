@@ -58,31 +58,22 @@
       <dxl:Relation Mdid="6.57345.1.0" Name="country" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;8,2">
         <dxl:Columns>
           <dxl:Column Name="code" Attno="1" Mdid="0.1042.1.0" TypeModifier="7" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="name" Attno="2" Mdid="0.25.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -111,31 +102,22 @@
       <dxl:Relation Mdid="6.57366.1.0" Name="countrylanguage" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="0,1;8,2">
         <dxl:Columns>
           <dxl:Column Name="countrycode" Attno="1" Mdid="0.1042.1.0" TypeModifier="7" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="language" Attno="2" Mdid="0.25.1.0" Nullable="false" ColWidth="16">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -143,7 +125,7 @@
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Index Mdid="0.57364.1.0" Name="country_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0" IncludedColumns="">
+      <dxl:Index Mdid="0.57364.1.0" Name="country_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.426.1.0"/>
         </dxl:Opfamilies>
@@ -287,46 +269,34 @@
       <dxl:Relation Mdid="6.57387.1.0" Name="countries_results" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="country_code" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="country_name" Attno="2" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="lang_count" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="area" Attno="4" Mdid="0.701.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gnp" Attno="5" Mdid="0.701.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Index Mdid="0.57385.1.0" Name="countrylanguage_pkey" IsClustered="false" IndexType="B-tree" KeyColumns="0,1" IncludedColumns="">
+      <dxl:Index Mdid="0.57385.1.0" Name="countrylanguage_pkey" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="0,1" IncludedColumns="" ReturnableColumns="0,1">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.426.1.0"/>
           <dxl:Opfamily Mdid="0.1994.1.0"/>
@@ -556,7 +526,7 @@
               <dxl:Ident ColId="39" ColName="?column?" TypeMdid="0.25.1.0"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="42" Alias="lang_count">
-              <dxl:FuncExpr FuncId="0.480.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
+              <dxl:FuncExpr FuncId="0.480.1.0" FuncRetSet="false" TypeMdid="0.23.1.0" FuncVariadic="false">
                 <dxl:Ident ColId="19" ColName="lang_count" TypeMdid="0.20.1.0"/>
               </dxl:FuncExpr>
             </dxl:ProjElem>

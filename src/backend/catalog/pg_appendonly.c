@@ -102,22 +102,15 @@ GetAppendOnlyEntryAttributes(Oid relid,
 {
 	Relation	ao_rel;
 	StdRdOptions *relopts;
-	HeapTuple	tuple;
-	Datum reloptions;
-	bool		isNull;
 
 	ao_rel = table_open(relid, AccessShareLock);
 
-	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "cache lookup failed for relation %u", relid);
-
-	reloptions = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_reloptions,
-								 &isNull);
-	if (isNull)
-		reloptions = (Datum) 0;
-
-	relopts = (StdRdOptions *) default_reloptions(reloptions, false, RELOPT_KIND_APPENDOPTIMIZED);
+	/* construct deafult options */
+	if (ao_rel->rd_options == NULL)
+		relopts = (StdRdOptions *) default_reloptions((Datum) 0,
+				false, RELOPT_KIND_APPENDOPTIMIZED);
+	else
+		relopts = (StdRdOptions *) ao_rel->rd_options;
 
 	if (blocksize != NULL)
 		*blocksize = relopts->blocksize;
@@ -131,7 +124,6 @@ GetAppendOnlyEntryAttributes(Oid relid,
 	if (checksum != NULL)
 		*checksum = relopts->checksum;
 
-	ReleaseSysCache(tuple);
 	table_close(ao_rel, AccessShareLock);
 }
 

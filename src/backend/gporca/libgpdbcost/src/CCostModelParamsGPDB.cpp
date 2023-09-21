@@ -191,6 +191,15 @@ const CDouble CCostModelParamsGPDB::DPenalizeHJSkewUpperLimit(10.0);
 // default scalar func cost
 const CDouble CCostModelParamsGPDB::DScalarFuncCost(1.0e-04);
 
+// Cost conversion factor for Index & Index only scans.
+// 1. Kept it as '1.0e-04' because using the cost factor, aim is to differentiate
+// between different Index scan alternatives. For eg cost for index idx_ab &
+// idx_ba, will be same without this cost component.
+// 2. This factor will also not result in any change of table scan operators as:
+// In costing of Bitmap scans & Sequential scans, the cost equation has a fixed
+// 'Initial cost' mapped to DInitScanFacorVal (431.0). It is not present in the
+// "Index scan costing".
+const CDouble CCostModelParamsGPDB::DIndexCostConversionFactor = 1.0e-04;
 #define GPOPT_COSTPARAM_NAME_MAX_LENGTH 80
 
 // parameter names in the same order of param enumeration
@@ -444,6 +453,10 @@ CCostModelParamsGPDB::CCostModelParamsGPDB(CMemoryPool *mp) : m_mp(mp)
 	m_rgpcp[EcpScalarFuncCost] =
 		GPOS_NEW(mp) SCostParam(EcpScalarFuncCost, DScalarFuncCost,
 								DScalarFuncCost - 0.0, DScalarFuncCost + 0.0);
+
+	m_rgpcp[EcpIndexCostConversionFactor] = GPOS_NEW(mp) SCostParam(
+		EcpIndexCostConversionFactor, DIndexCostConversionFactor,
+		DIndexCostConversionFactor - 0.0, DIndexCostConversionFactor + 0.0);
 }
 
 

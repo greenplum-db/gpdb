@@ -1775,3 +1775,18 @@ Feature: Incrementally analyze the database
         And the user runs "dropdb schema_with_temp_table"
         And the user drops the named connection "default"
 
+    Scenario: analyzedb can handle the table name with special utf-8 characters.
+        Given database "special_encoding_db" is dropped and recreated
+        And the user connects to "special_encoding_db" with named connection "default"
+        And the user executes "CREATE TEMP TABLE spiegelungssätze (c1 int) DISTRIBUTED BY (c1)" with named connection "default"
+        When the user runs "analyzedb -a -d special_encoding_db"
+        Then analyzedb should return a return code of 0
+
+    Scenario: analyzedb finds materialized views
+        Given  a materialized view "public.mv_test_view" exists on table "pg_class"
+        And the user runs "analyzedb -a -d incr_analyze"
+        Then analyzedb should print "-public.mv_test_view" to stdout
+        And the user runs "analyzedb -a -s public -d incr_analyze"
+        Then analyzedb should print "-public.mv_test_view" to stdout
+        And the user runs "analyzedb -a -t public.mv_test_view -d incr_analyze"
+        Then analyzedb should print "-public.mv_test_view" to stdout

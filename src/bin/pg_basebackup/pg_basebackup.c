@@ -121,6 +121,9 @@ static int	num_exclude_from = 0;
 static char *excludefroms[MAX_EXCLUDE];
 static int target_gp_dbid = 0;
 
+/* GUC */
+static char *log_directory = NULL;
+
 /* Progress counters */
 static uint64 totalsize;
 static uint64 totaldone;
@@ -155,6 +158,7 @@ static void progress_report(int tablespacenum, const char *filename, bool force,
 
 static void ReceiveTarFile(PGconn *conn, PGresult *res, int rownum);
 static void ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum);
+static void GetLogDirectory(PGconn *conn);
 static void BaseBackup(void);
 
 static bool reached_end_position(XLogRecPtr segendpos, uint32 timeline,
@@ -163,6 +167,8 @@ static bool reached_end_position(XLogRecPtr segendpos, uint32 timeline,
 static const char *get_tablespace_mapping(const char *dir);
 static void tablespace_list_append(const char *arg);
 static void WriteInternalConfFile(void);
+
+static char *run_simple_query(PGconn *conn, const char *sql);
 
 static void
 cleanup_directories_atexit(void)
@@ -1439,6 +1445,7 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 	bool		basetablespace;
 	char	   *copybuf = NULL;
 	FILE	   *file = NULL;
+	char		log_directory_path[MAXPGPATH];
 
 	basetablespace = PQgetisnull(res, rownum, 0);
 	if (basetablespace)
@@ -1582,10 +1589,12 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 						 * streammode was used then it may have already copied
 						 * new xlog files into pg_xlog directory.
 						 */
+						snprintf(log_directory_path, sizeof(log_directory_path), "/%s", log_directory);
 						if (pg_str_endswith(filename, "/pg_log") ||
 							pg_str_endswith(filename, "/log") ||
 							pg_str_endswith(filename, "/pg_wal") ||
-							pg_str_endswith(filename, "/pg_xlog"))
+							pg_str_endswith(filename, "/pg_xlog") ||
+							pg_str_endswith(filename, log_directory_path))
 							continue;
 
 						rmtree(filename, true);
@@ -1834,6 +1843,12 @@ build_exclude_list(void)
 	}
 
 	return buf.data;
+}
+
+static void
+GetLogDirectory(PGconn *conn)
+{
+	log_directory = run_simple_query(conn, "SHOW log_directory");
 }
 
 static void
@@ -2703,6 +2718,8 @@ main(int argc, char **argv)
 		free(linkloc);
 	}
 
+	GetLogDirectory(conn);
+
 	BaseBackup();
 
 	success = true;
@@ -2735,4 +2752,27 @@ WriteInternalConfFile(void)
 	}
 
 	fclose(cf);
+}
+
+static char *
+run_simple_query(PGconn *conn, const char *sql)
+{
+	PGresult   *res;
+	char	   *result;
+
+	res = PQexec(conn, sql);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK)
+		pg_log_error("error running query (%s) in source server: %s",
+				 sql, PQresultErrorMessage(res));
+
+	/* sanity check the result set */
+	if (PQnfields(res) != 1 || PQntuples(res) != 1 || PQgetisnull(res, 0, 0))
+		pg_log_error("unexpected result set from query");
+
+	result = pg_strdup(PQgetvalue(res, 0, 0));
+
+	PQclear(res);
+
+	return result;
 }

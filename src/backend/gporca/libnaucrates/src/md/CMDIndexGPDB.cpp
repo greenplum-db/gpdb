@@ -31,30 +31,36 @@ using namespace gpmd;
 //		Constructor
 //
 //---------------------------------------------------------------------------
-CMDIndexGPDB::CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
-						   BOOL is_clustered, BOOL is_partitioned,
-						   EmdindexType index_type, IMDId *mdid_item_type,
-						   ULongPtrArray *index_key_cols_array,
-						   ULongPtrArray *included_cols_array,
-						   IMdIdArray *mdid_opfamilies_array,
-						   IMdIdArray *child_index_oids)
+CMDIndexGPDB::CMDIndexGPDB(
+	CMemoryPool *mp, IMDId *mdid, CMDName *mdname, BOOL is_clustered,
+	BOOL is_partitioned, BOOL amcanorder, EmdindexType index_type,
+	IMDId *mdid_item_type, ULongPtrArray *index_key_cols_array,
+	ULongPtrArray *included_cols_array, ULongPtrArray *returnable_cols_array,
+	IMdIdArray *mdid_opfamilies_array, IMdIdArray *child_index_oids,
+	ULongPtrArray *sort_direction, ULongPtrArray *nulls_direction)
+
 	: m_mp(mp),
 	  m_mdid(mdid),
 	  m_mdname(mdname),
 	  m_clustered(is_clustered),
 	  m_partitioned(is_partitioned),
+	  m_amcanorder(amcanorder),
 	  m_index_type(index_type),
 	  m_mdid_item_type(mdid_item_type),
 	  m_index_key_cols_array(index_key_cols_array),
 	  m_included_cols_array(included_cols_array),
+	  m_returnable_cols_array(returnable_cols_array),
 	  m_mdid_opfamilies_array(mdid_opfamilies_array),
-	  m_child_index_oids(child_index_oids)
+	  m_child_index_oids(child_index_oids),
+	  m_sort_direction(sort_direction),
+	  m_nulls_direction(nulls_direction)
 {
 	GPOS_ASSERT(mdid->IsValid());
 	GPOS_ASSERT(IMDIndex::EmdindSentinel > index_type);
 	GPOS_ASSERT(nullptr != index_key_cols_array);
 	GPOS_ASSERT(0 < index_key_cols_array->Size());
 	GPOS_ASSERT(nullptr != included_cols_array);
+	GPOS_ASSERT(nullptr != returnable_cols_array);
 	GPOS_ASSERT_IMP(nullptr != mdid_item_type,
 					IMDIndex::EmdindBitmap == index_type ||
 						IMDIndex::EmdindBtree == index_type ||
@@ -65,6 +71,8 @@ CMDIndexGPDB::CMDIndexGPDB(CMemoryPool *mp, IMDId *mdid, CMDName *mdname,
 	GPOS_ASSERT_IMP(IMDIndex::EmdindBitmap == index_type,
 					nullptr != mdid_item_type && mdid_item_type->IsValid());
 	GPOS_ASSERT(nullptr != mdid_opfamilies_array);
+	GPOS_ASSERT(nullptr != sort_direction);
+	GPOS_ASSERT(nullptr != nulls_direction);
 }
 
 //---------------------------------------------------------------------------
@@ -86,8 +94,11 @@ CMDIndexGPDB::~CMDIndexGPDB()
 	CRefCount::SafeRelease(m_mdid_item_type);
 	m_index_key_cols_array->Release();
 	m_included_cols_array->Release();
+	m_returnable_cols_array->Release();
 	m_mdid_opfamilies_array->Release();
 	CRefCount::SafeRelease(m_child_index_oids);
+	m_sort_direction->Release();
+	m_nulls_direction->Release();
 }
 
 const CWStringDynamic *
@@ -154,6 +165,20 @@ BOOL
 CMDIndexGPDB::IsPartitioned() const
 {
 	return m_partitioned;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CMDIndexGPDB::CanOrder
+//
+//	@doc:
+//		Does Index Access Method support Ordering
+//
+//---------------------------------------------------------------------------
+BOOL
+CMDIndexGPDB::CanOrder() const
+{
+	return m_amcanorder;
 }
 
 //---------------------------------------------------------------------------
@@ -250,6 +275,66 @@ CMDIndexGPDB::IncludedColAt(ULONG pos) const
 	return *((*m_included_cols_array)[pos]);
 }
 
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CMDIndexGPDB::KeySortDirectionAt
+//
+//	@doc:
+//		Returns n-th column sort direction.
+//		0 corresponds to ASC
+//		1 corresponds to DESC
+//---------------------------------------------------------------------------
+ULONG
+CMDIndexGPDB::KeySortDirectionAt(ULONG pos) const
+{
+	return *((*m_sort_direction)[pos]);
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CMDIndexGPDB::KeyNullsDirectionAt
+//
+//	@doc:
+//		Returns n-th column Nulls direction
+//		0 corresponds to NULLS LAST
+//		1 corresponds to NULLS FIRST
+//---------------------------------------------------------------------------
+ULONG
+CMDIndexGPDB::KeyNullsDirectionAt(ULONG pos) const
+{
+	return *((*m_nulls_direction)[pos]);
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CMDIndexGPDB::ReturnableCols
+//
+//	@doc:
+//		Returns the number of returnable columns
+//
+//---------------------------------------------------------------------------
+ULONG
+CMDIndexGPDB::ReturnableCols() const
+{
+	return m_returnable_cols_array->Size();
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CMDIndexGPDB::ReturnableColAt
+//
+//	@doc:
+//		Returns the n-th returnable column
+//
+//---------------------------------------------------------------------------
+ULONG
+CMDIndexGPDB::ReturnableColAt(ULONG pos) const
+{
+	return *((*m_returnable_cols_array)[pos]);
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CMDIndexGPDB::GetIncludedColPos
@@ -299,6 +384,9 @@ CMDIndexGPDB::Serialize(CXMLSerializer *xml_serializer) const
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenIndexClustered), m_clustered);
 
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenIndexAmCanOrder), m_amcanorder);
+
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenIndexType),
 								 GetDXLStr(m_index_type));
 	if (nullptr != m_mdid_item_type)
@@ -320,6 +408,38 @@ CMDIndexGPDB::Serialize(CXMLSerializer *xml_serializer) const
 		CDXLTokens::GetDXLTokenStr(EdxltokenIndexIncludedCols),
 		available_cols_str);
 	GPOS_DELETE(available_cols_str);
+
+	CWStringDynamic *returnable_cols_str =
+		CDXLUtils::Serialize(m_mp, m_returnable_cols_array);
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenIndexReturnableCols),
+		returnable_cols_str);
+	GPOS_DELETE(returnable_cols_str);
+
+	// Only if Index Access Method Support Ordering, serialize sort and nulls
+	// directions
+	if (m_amcanorder)
+	{
+		CWStringDynamic *key_cols_sort_direction_str =
+			CDXLUtils::SerializeBooleanArray(
+				m_mp, m_sort_direction,
+				CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeySortDESC),
+				CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeySortASC));
+		xml_serializer->AddAttribute(
+			CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeysSortDirection),
+			key_cols_sort_direction_str);
+		GPOS_DELETE(key_cols_sort_direction_str);
+
+		CWStringDynamic *key_cols_nulls_direction_str =
+			CDXLUtils::SerializeBooleanArray(
+				m_mp, m_nulls_direction,
+				CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyNullsFirst),
+				CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeyNullsLast));
+		xml_serializer->AddAttribute(
+			CDXLTokens::GetDXLTokenStr(EdxltokenIndexKeysNullsDirection),
+			key_cols_nulls_direction_str);
+		GPOS_DELETE(key_cols_nulls_direction_str);
+	}
 
 	// serialize operator class information
 	SerializeMDIdList(xml_serializer, m_mdid_opfamilies_array,

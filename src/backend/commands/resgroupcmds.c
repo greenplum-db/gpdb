@@ -215,20 +215,14 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 		callbackCtx->groupid = groupid;
 		callbackCtx->caps = caps;
 
-		if (caps.io_limit != NULL)
-		{
-			callbackCtx->caps.io_limit = pstrdup(caps.io_limit);
-			callbackCtx->ioLimit = cgroupOpsRoutine->parseio(caps.io_limit);
-		}
-
 		MemoryContextSwitchTo(oldContext);
 		RegisterXactCallbackOnce(createResgroupCallback, callbackCtx);
 
 		/* Create os dependent part for this resource group */
 		cgroupOpsRoutine->createcgroup(groupid);
 
-		if (caps.io_limit != NULL)
-			cgroupOpsRoutine->setio(groupid, callbackCtx->ioLimit);
+		if (caps.io_limit != NIL)
+			cgroupOpsRoutine->setio(groupid, caps.io_limit);
 
 		if (CpusetIsEmpty(caps.cpuset))
 		{
@@ -439,6 +433,12 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 
 	/* Load current resource group capabilities */
 	GetResGroupCapabilities(pg_resgroupcapability_rel, groupid, &oldCaps);
+	/* If io_limit not been altered, reset io_limit field to NIL */
+	if (limitType != RESGROUP_LIMIT_TYPE_IO_LIMIT && oldCaps.io_limit != NIL)
+	{
+		cgroupOpsRoutine->freeio(oldCaps.io_limit);
+		oldCaps.io_limit = NIL;
+	}
 	caps = oldCaps;
 
 	switch (limitType)
@@ -465,13 +465,23 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 			caps.min_cost = value;
 			break;
 		case RESGROUP_LIMIT_TYPE_IO_LIMIT:
-			caps.io_limit = io_limit;
+			oldContext = CurrentMemoryContext;
+			if (cgroupOpsRoutine == NULL)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("resource group must be enabled to use io limit feature")));
+
+			MemoryContextSwitchTo(TopMemoryContext);
+			caps.io_limit = cgroupOpsRoutine->parseio(io_limit);
+			MemoryContextSwitchTo(oldContext);
 			break;
 		default:
 			break;
 	}
 
 	validateCapabilities(pg_resgroupcapability_rel, groupid, &caps, false);
+	AssertImply(limitType != RESGROUP_LIMIT_TYPE_IO_LIMIT, caps.io_limit == NIL);
+	AssertImply(limitType == RESGROUP_LIMIT_TYPE_IO_LIMIT, caps.io_limit != NIL);
 
 	/* cpuset & cpu_max_percent can not coexist.
 	 * if cpuset is active, then cpu_max_percent must set to CPU_RATE_LIMIT_DISABLED,
@@ -500,9 +510,10 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 	}
 	else if (limitType == RESGROUP_LIMIT_TYPE_IO_LIMIT)
 	{
-		updateResgroupCapabilityEntry(pg_resgroupcapability_rel,
-									  groupid, RESGROUP_LIMIT_TYPE_IO_LIMIT,
-									  0, caps.io_limit);
+		if (caps.io_limit != NIL)
+			updateResgroupCapabilityEntry(pg_resgroupcapability_rel,
+										  groupid, RESGROUP_LIMIT_TYPE_IO_LIMIT,
+										  0, cgroupOpsRoutine->dumpio(caps.io_limit));
 	}
 	else
 	{
@@ -535,15 +546,7 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 		callbackCtx->groupid = groupid;
 		callbackCtx->limittype = limitType;
 		callbackCtx->caps = caps;
-
-		if (caps.io_limit != NULL)
-		{
-			callbackCtx->ioLimit = cgroupOpsRoutine->parseio(caps.io_limit);
-			callbackCtx->caps.io_limit = pstrdup(caps.io_limit);
-		}
-
 		callbackCtx->oldCaps = oldCaps;
-		callbackCtx->oldCaps.io_limit = NULL;
 
 		MemoryContextSwitchTo(oldContext);
 		RegisterXactCallbackOnce(alterResgroupCallback, callbackCtx);
@@ -552,10 +555,13 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 
 /*
  * Get all the capabilities of one resource group in pg_resgroupcapability.
+ *
+ * Note: the io_limit in ResGroupCaps will be NIL if parse io_limit string failed.
  */
 void
 GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 {
+	MemoryContext oldContext;
 	SysScanDesc	sscan;
 	ScanKeyData	key;
 	HeapTuple	tuple;
@@ -631,10 +637,41 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 													getResgroupOptionName(type));
 				break;
 			case RESGROUP_LIMIT_TYPE_IO_LIMIT:
-				if (strcmp(value, DefaultIOLimit) != 0)
-					resgroupCaps->io_limit = value;
+				if (cgroupOpsRoutine != NULL)
+				{
+					/* if InterruptHoldoffCount doesn't restore in PG_CATCH,
+					 * the catch will failed. */
+					int32 savedholdoffCount = InterruptHoldoffCount;
+
+					oldContext = CurrentMemoryContext;
+					MemoryContextSwitchTo(TopMemoryContext);
+					/*
+					 * This function will be called in InitResGroups and AlterResourceGroup which
+					 * shoud not be abort. In some circumstances, for example, the directory of a
+					 * tablespace in io_limit be removed, then parseio will throw error. If
+					 * InitResGroups be aborted, the cluster cannot launched. */
+					PG_TRY();
+					{
+						resgroupCaps->io_limit = cgroupOpsRoutine->parseio(value);
+					}
+					PG_CATCH();
+					{
+						resgroupCaps->io_limit = NIL;
+
+						InterruptHoldoffCount = savedholdoffCount;
+
+						if (elog_demote(WARNING))
+						{
+							EmitErrorReport();
+							FlushErrorState();
+						}
+					}
+					PG_END_TRY();
+					MemoryContextSwitchTo(oldContext);
+				}
 				else
-				    resgroupCaps->io_limit = NULL;
+					resgroupCaps->io_limit = NIL;
+				break;
 			default:
 				break;
 		}
@@ -786,6 +823,9 @@ ResGroupCheckForRole(Oid groupId)
 	/* Load current resource group capabilities */
 	GetResGroupCapabilities(pg_resgroupcapability_rel, groupId, &caps);
 
+	if (cgroupOpsRoutine != NULL && caps.io_limit != NIL)
+		cgroupOpsRoutine->freeio(caps.io_limit);
+
 	heap_close(pg_resgroupcapability_rel, AccessShareLock);
 }
 
@@ -925,6 +965,7 @@ checkResgroupCapLimit(ResGroupLimitType type, int value)
 static void
 parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 {
+	MemoryContext oldContext;
 	ListCell *cell;
 	ResGroupCap value;
 	int mask = 0;
@@ -956,7 +997,19 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 			caps->cpuWeight = RESGROUP_DEFAULT_CPU_WEIGHT;
 		}
 		else if (type == RESGROUP_LIMIT_TYPE_IO_LIMIT)
-			caps->io_limit = defGetString(defel);
+		{
+			char *io_limit_str = defGetString(defel);
+
+			oldContext = CurrentMemoryContext;
+			if (cgroupOpsRoutine == NULL)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("resource group must be enabled to use io limit feature")));
+
+			MemoryContextSwitchTo(TopMemoryContext);
+			caps->io_limit = cgroupOpsRoutine->parseio(io_limit_str);
+			MemoryContextSwitchTo(oldContext);
+		}
 		else
 		{
 			value = getResgroupOptionValue(defel);
@@ -1031,11 +1084,8 @@ createResgroupCallback(XactEvent event, void *arg)
 		ResGroupCreateOnAbort(callbackCtx);
 	}
 
-	if (callbackCtx->caps.io_limit != NULL)
-	{
-		cgroupOpsRoutine->freeio(callbackCtx->ioLimit);
-		pfree(callbackCtx->caps.io_limit);
-	}
+	if (callbackCtx->caps.io_limit != NIL)
+		cgroupOpsRoutine->freeio(callbackCtx->caps.io_limit);
 	pfree(callbackCtx);
 }
 
@@ -1068,11 +1118,12 @@ alterResgroupCallback(XactEvent event, void *arg)
 	if (event == XACT_EVENT_COMMIT)
 		ResGroupAlterOnCommit(callbackCtx);
 
-	if (callbackCtx->caps.io_limit != NULL)
-	{
-		cgroupOpsRoutine->freeio(callbackCtx->ioLimit);
-		pfree(callbackCtx->caps.io_limit);
-	}
+	if (callbackCtx->caps.io_limit != NIL)
+		cgroupOpsRoutine->freeio(callbackCtx->caps.io_limit);
+
+	if (callbackCtx->oldCaps.io_limit != NIL)
+		cgroupOpsRoutine->freeio(callbackCtx->oldCaps.io_limit);
+
 	pfree(callbackCtx);
 }
 
@@ -1118,9 +1169,10 @@ insertResgroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *caps)
 	insertResgroupCapabilityEntry(rel, groupId,
 								  RESGROUP_LIMIT_TYPE_MIN_COST, value);
 
-	if (caps->io_limit != NULL)
+	if (caps->io_limit != NIL)
 		insertResgroupCapabilityEntry(rel, groupId,
-									  RESGROUP_LIMIT_TYPE_IO_LIMIT, caps->io_limit);
+									  RESGROUP_LIMIT_TYPE_IO_LIMIT,
+									  cgroupOpsRoutine->dumpio((caps->io_limit)));
 	else
 		insertResgroupCapabilityEntry(rel, groupId,
 									  RESGROUP_LIMIT_TYPE_IO_LIMIT, DefaultIOLimit);

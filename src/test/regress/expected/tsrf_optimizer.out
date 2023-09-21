@@ -115,17 +115,15 @@ SELECT * FROM few f1,
    ->  Nested Loop
          Output: id, dataa, datab, (unnest('{1,2}'::integer[]))
          Join Filter: true
+         ->  ProjectSet
+               Output: unnest('{1,2}'::integer[])
+               ->  Result
+                     Output: NULL::integer, NULL::tid, NULL::xid, NULL::cid, NULL::xid, NULL::cid, NULL::oid, NULL::integer
+                     One-Time Filter: false
          ->  Seq Scan on public.few
                Output: id, dataa, datab
-         ->  Materialize
-               Output: (unnest('{1,2}'::integer[]))
-               ->  ProjectSet
-                     Output: unnest('{1,2}'::integer[])
-                     ->  Result
-                           Output: NULL::integer, NULL::tid, NULL::xid, NULL::cid, NULL::xid, NULL::cid, NULL::oid, NULL::integer
-                           One-Time Filter: false
  Optimizer: Pivotal Optimizer (GPORCA)
-(15 rows)
+(13 rows)
 
 SELECT * FROM few f1,
   (SELECT unnest(ARRAY[1,2]) FROM few f2 WHERE false OFFSET 0) ss;

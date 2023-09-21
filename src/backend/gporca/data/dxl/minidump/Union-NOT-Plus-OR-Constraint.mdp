@@ -24,34 +24,24 @@ explain SELECT a.f3 FROM tb a JOIN tb b ON a.f1 = b.f1 AND NOT ( a.f2 = 0 OR a.f
       <dxl:Relation Mdid="6.32768.1.0" Name="tb" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="f1" Attno="1" Mdid="0.21.1.0" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="f2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="f3" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -290,7 +280,7 @@ explain SELECT a.f3 FROM tb a JOIN tb b ON a.f1 = b.f1 AND NOT ( a.f2 = 0 OR a.f
     <dxl:Plan Id="0" SpaceSize="2958">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.001808" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.001899" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="2" Alias="f3">
@@ -301,7 +291,7 @@ explain SELECT a.f3 FROM tb a JOIN tb b ON a.f1 = b.f1 AND NOT ( a.f2 = 0 OR a.f
         <dxl:SortingColumnList/>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.001779" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.001869" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="2"/>
@@ -314,7 +304,7 @@ explain SELECT a.f3 FROM tb a JOIN tb b ON a.f1 = b.f1 AND NOT ( a.f2 = 0 OR a.f
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.001769" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.001860" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="2" Alias="f3">

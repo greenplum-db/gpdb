@@ -161,31 +161,22 @@ select i, j from (select unnest(string_to_array(c, '|')) i, abs(d) j from foo) t
       <dxl:Relation Mdid="6.49493.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="d" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c" Attno="2" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -277,8 +268,8 @@ select i, j from (select unnest(string_to_array(c, '|')) i, abs(d) j from foo) t
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="9" Alias="i">
-              <dxl:FuncExpr FuncId="0.3240.1.0" FuncRetSet="true" TypeMdid="0.25.1.0">
-                <dxl:FuncExpr FuncId="0.394.1.0" FuncRetSet="false" TypeMdid="0.1009.1.0">
+              <dxl:FuncExpr FuncId="0.3240.1.0" FuncRetSet="true" TypeMdid="0.25.1.0" FuncVariadic="false">
+                <dxl:FuncExpr FuncId="0.394.1.0" FuncRetSet="false" TypeMdid="0.1009.1.0" FuncVariadic="false">
                   <dxl:Cast TypeMdid="0.25.1.0" FuncId="0.401.1.0">
                     <dxl:Ident ColId="1" ColName="c" TypeMdid="0.1042.1.0"/>
                   </dxl:Cast>
@@ -287,7 +278,7 @@ select i, j from (select unnest(string_to_array(c, '|')) i, abs(d) j from foo) t
               </dxl:FuncExpr>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="10" Alias="j">
-              <dxl:FuncExpr FuncId="0.1397.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
+              <dxl:FuncExpr FuncId="0.1397.1.0" FuncRetSet="false" TypeMdid="0.23.1.0" FuncVariadic="false">
                 <dxl:Ident ColId="0" ColName="d" TypeMdid="0.23.1.0"/>
               </dxl:FuncExpr>
             </dxl:ProjElem>

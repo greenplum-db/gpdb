@@ -1,6 +1,9 @@
 # When a tuple that has been updated is locked, the locking command
 # should traverse the update chain; thus, a DELETE should not be able
 # to proceed until the lock has been released.
+#
+# GPDB: have to run sessions that have SELECT ... FOR ... w/ planner because 
+# ORCA would upgrade lock to ExclusiveLock.
 
 setup
 {
@@ -18,7 +21,7 @@ teardown
 }
 
 session s1
-setup		{ BEGIN; }
+setup		{ SET optimizer=off; BEGIN; }
 step s1s	{ SAVEPOINT f; }
 step s1u	{ UPDATE foo SET key = 2; }	# obtain KEY REVOKE
 step s1r	{ ROLLBACK TO f; } # lose KEY REVOKE
@@ -26,7 +29,7 @@ step s1l	{ SELECT * FROM foo FOR KEY SHARE; }
 step s1c	{ COMMIT; }
 
 session s2
-setup		{ BEGIN; }
+setup		{ SET optimizer=off; BEGIN; }
 step s2l	{ SELECT * FROM foo FOR KEY SHARE; }
 step s2c	{ COMMIT; }
 

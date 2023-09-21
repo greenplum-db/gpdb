@@ -308,12 +308,12 @@ If the compression type, compression level and block size are not defined, the d
 
 ### <a id="topic45"></a>Precedence of Compression Settings 
 
-Column compression settings are inherited from the type level to the table level to the partition level to the subpartition level. The lowest-level settings have priority.
+Column compression settings are inherited from the type level to the table level to the partition level to the sub-partition level. The lowest-level settings have priority.
 
 -   Column compression settings defined at the table level override any compression settings for the type.
 -   Column compression settings specified at the table level override any compression settings for the entire table.
 -   Column compression settings specified for partitions override any compression settings at the column or table levels.
--   Column compression settings specified for subpartitions override any compression settings at the partition, column or table levels.
+-   Column compression settings specified for sub-partitions override any compression settings at the partition, column or table levels.
 -   When an `ENCODING` clause conflicts with a `WITH` clause, the `ENCODING` clause has higher precedence than the `WITH` clause.
 
 > **Note** The `INHERITS` clause is not allowed in a table that contains a storage parameter or a column reference storage parameter.
@@ -322,7 +322,7 @@ Tables created using the `LIKE` clause ignore storage parameter and column refer
 
 ### <a id="topic46"></a>Optimal Location for Column Compression Settings 
 
-The best practice is to set the column compression settings at the level where the data resides. See [Example 5](#topic52), which shows a table with a partition depth of 2. `RLE_TYPE` compression is added to a column at the subpartition level.
+The best practice is to set the column compression settings at the level where the data resides. See [Example 5](#topic52), which shows a table with a partition depth of 2. `RLE_TYPE` compression is added to a column at the sub-partition level.
 
 ### <a id="topic47"></a>Storage Parameters Examples 
 
@@ -387,10 +387,10 @@ CREATE TABLE T4 (c1 int ENCODING (compresstype=zlib),
 
 #### <a id="topic52"></a>Example 5 
 
-This example creates an append-optimized, column-oriented table, T5. T5 has two partitions, `p1` and `p2`, each of which has subpartitions. Each subpartition has `ENCODING` clauses:
+This example creates an append-optimized, column-oriented table, T5. T5 has two partitions, `p1` and `p2`, each of which has sub-partitions. Each sub-partition has `ENCODING` clauses:
 
--   The `ENCODING` clause for partition `p1`'s subpartition `sp1` defines column `i`'s compression type as `zlib` and block size as 65536.
--   The `ENCODING` clauses for partition `p2`'s subpartition `sp1` defines column `i`'s compression type as `rle_type` and block size is the default value. Column `k` uses the default compression and its block size is 8192.
+-   The `ENCODING` clause for partition `p1`'s sub-partition `sp1` defines column `i`'s compression type as `zlib` and block size as 65536.
+-   The `ENCODING` clauses for partition `p2`'s sub-partition `sp1` defines column `i`'s compression type as `rle_type` and block size is the default value. Column `k` uses the default compression and its block size is 8192.
 
     ```
     CREATE TABLE T5(i int, j int, k int, l int) 
@@ -458,7 +458,7 @@ Specifying large block sizes can consume large amounts of memory. Block size det
 
 ## <a id="topic55"></a>Altering a Table 
 
-The `ALTER TABLE` command changes the definition of a table. Use `ALTER TABLE` to change table attributes such as column definitions, distribution policy, access method, storage parameters, and partition structure \(see also [Maintaining Partitioned Tables](ddl-partition.html)\). For example, to add a not-null constraint to a table column:
+The `ALTER TABLE` command changes the definition of a table. Use `ALTER TABLE` to change table attributes such as column definitions, distribution policy, access method, storage parameters, and partition structure \(see also [Partitioning Large Tables](ddl-partition.html)\). For example, to add a not-null constraint to a table column:
 
 ```
 => ALTER TABLE address ALTER COLUMN street SET NOT NULL;
@@ -537,7 +537,7 @@ ALTER TABLE T1
 
 #### <a id="topic61"></a>Inheritance of Compression Settings 
 
-A partition added to a table that has subpartitions defined with compression settings inherits the compression settings from the subpartition. The following example shows how to create a table with subpartition encodings, then alter it to add a partition.
+A partition added to a table that has sub-partitions defined with compression settings inherits the compression settings from the sub-partition. The following example shows how to create a table with sub-partition encodings, then alter it to add a partition.
 
 ```
 CREATE TABLE ccddl (i int, j int, k int, l int)
@@ -561,7 +561,7 @@ ALTER TABLE ccddl
 
 ```
 
-Running the `ALTER TABLE` command creates partitions of table `ccddl` named `ccddl_1_prt_p3` and `ccddl_1_prt_p3_2_prt_sp1`. Partition `ccddl_1_prt_p3` inherits the different compression encodings of subpartition `sp1`.
+Running the `ALTER TABLE` command creates partitions of table `ccddl` named `ccddl_1_prt_p3` and `ccddl_1_prt_p3_2_prt_sp1`. Partition `ccddl_1_prt_p3` inherits the different compression encodings of sub-partition `sp1`.
 
 ## <a id="topic62"></a>Dropping a Table 
 

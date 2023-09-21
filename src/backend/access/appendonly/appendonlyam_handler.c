@@ -29,6 +29,7 @@
 #include "catalog/index.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_appendonly.h"
+#include "catalog/pg_type.h"
 #include "catalog/storage.h"
 #include "catalog/storage_xlog.h"
 #include "cdb/cdbappendonlyam.h"
@@ -43,6 +44,7 @@
 #include "utils/lsyscache.h"
 #include "utils/pg_rusage.h"
 #include "utils/sampling.h"
+#include "utils/tuplesort.h"
 
 #define IS_BTREE(r) ((r)->rd_rel->relam == BTREE_AM_OID)
 
@@ -1167,56 +1169,31 @@ appendonly_relation_rewrite_columns(Relation rel, List *newvals, TupleDesc oldDe
 }
 
 static void
-appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
-								 Relation OldIndex, bool use_sort,
-								 TransactionId OldestXmin,
-								 TransactionId *xid_cutoff,
-								 MultiXactId *multi_cutoff,
-								 double *num_tuples,
-								 double *tups_vacuumed,
-								 double *tups_recently_dead)
+appendonly_relation_cluster_internals(Relation OldHeap, Relation NewHeap,
+									TupleDesc oldTupDesc, TransactionId OldestXmin,
+									TransactionId *xid_cutoff, MultiXactId *multi_cutoff,
+									double *num_tuples, double *tups_vacuumed, 
+									double *tups_recently_dead, Tuplesortstate *tuplesort)
 {
-	TupleDesc	oldTupDesc;
-	TupleDesc	newTupDesc;
-	int			natts;
-	Datum	   *values;
-	bool	   *isnull;
-	TransactionId FreezeXid;
-	MultiXactId MultiXactCutoff;
-	Tuplesortstate *tuplesort;
-	PGRUsage	ru0;
-
 	AOTupleId				aoTupleId;
-	AppendOnlyInsertDesc	aoInsertDesc = NULL;
-	MemTupleBinding*		mt_bind = NULL;
-	int						write_seg_no;
-	MemTuple				mtuple = NULL;
-	TupleTableSlot		   *slot;
+	Datum					*values;
+	MultiXactId				MultiXactCutoff;
 	TableScanDesc			aoscandesc;
+	TransactionId			FreezeXid;
+	TupleDesc				newTupDesc;
+	TupleTableSlot			*slot;
+	bool					*isnull;
+	int						natts;
+	int						write_seg_no;
+
+	MemTupleBinding*		mt_bind = NULL;
+	MemTuple				mtuple = NULL;
+	AppendOnlyInsertDesc	aoInsertDesc = NULL;
 	double					n_tuples_written = 0;
-
-	pg_rusage_init(&ru0);
-
-	/*
-	 * Curently AO storage lacks cost model for IndexScan, thus IndexScan
-	 * is not functional. In future, probably, this will be fixed and CLUSTER
-	 * command will support this. Though, random IO over AO on TID stream
-	 * can be impractical anyway.
-	 * Here we are sorting data on on the lines of heap tables, build a tuple
-	 * sort state and sort the entire AO table using the index key, rewrite
-	 * the table, one tuple at a time, in order as returned by tuple sort state.
-	 */
-	if (OldIndex == NULL || !IS_BTREE(OldIndex))
-		ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("cannot cluster append-optimized table \"%s\"", RelationGetRelationName(OldHeap)),
-					errdetail("Append-optimized tables can only be clustered against a B-tree index")));
-
 	/*
 	 * Their tuple descriptors should be exactly alike, but here we only need
 	 * assume that they have the same number of columns.
 	 */
-	oldTupDesc = RelationGetDescr(OldHeap);
 	newTupDesc = RelationGetDescr(NewHeap);
 	Assert(newTupDesc->natts == oldTupDesc->natts);
 
@@ -1268,10 +1245,6 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	/* return selected values to caller */
 	*xid_cutoff = FreezeXid;
 	*multi_cutoff = MultiXactCutoff;
-
-	tuplesort = tuplesort_begin_cluster(oldTupDesc, OldIndex,
-											maintenance_work_mem, NULL, false);
-
 
 	/* Log what we're doing */
 	ereport(DEBUG2,
@@ -1395,6 +1368,79 @@ appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	/* Finish and deallocate insertion */
 	appendonly_insert_finish(aoInsertDesc);
 }
+
+static void
+appendonly_relation_copy_for_repack(Relation OldHeap, Relation NewHeap, 
+									int nkeys, AttrNumber *attNums, 
+									Oid *sortOperators, Oid *sortCollations,
+									bool *nullsFirstFlags, TransactionId *frozenXid,
+									MultiXactId *cutoffMulti, TransactionId OldestXmin,
+									double *num_tuples)
+{
+	PGRUsage		ru0;
+	TupleDesc		oldTupDesc;
+	Tuplesortstate	*tuplesort;
+
+	/* these are thrown away, just here so we can share code with CLUSTER */
+	double tups_recently_dead = 0; 
+	double tups_vacuumed = 0;
+
+	pg_rusage_init(&ru0);
+	oldTupDesc = RelationGetDescr(OldHeap);
+
+	tuplesort = tuplesort_begin_repack(oldTupDesc, nkeys, attNums, sortOperators, 
+										sortCollations, nullsFirstFlags,
+										maintenance_work_mem, NULL, false);
+
+	appendonly_relation_cluster_internals(OldHeap, NewHeap, oldTupDesc, 
+									   OldestXmin, frozenXid, cutoffMulti, 
+									   num_tuples, &tups_vacuumed, 
+									   &tups_recently_dead, tuplesort);
+}
+
+static void
+appendonly_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
+								 Relation OldIndex, bool use_sort,
+								 TransactionId OldestXmin,
+								 TransactionId *xid_cutoff,
+								 MultiXactId *multi_cutoff,
+								 double *num_tuples,
+								 double *tups_vacuumed,
+								 double *tups_recently_dead)
+{
+	TupleDesc	oldTupDesc;
+	Tuplesortstate *tuplesort;
+	PGRUsage	ru0;
+
+
+	pg_rusage_init(&ru0);
+
+	/*
+	 * Curently AO storage lacks cost model for IndexScan, thus IndexScan
+	 * is not functional. In future, probably, this will be fixed and CLUSTER
+	 * command will support this. Though, random IO over AO on TID stream
+	 * can be impractical anyway.
+	 * Here we are sorting data on on the lines of heap tables, build a tuple
+	 * sort state and sort the entire AO table using the index key, rewrite
+	 * the table, one tuple at a time, in order as returned by tuple sort state.
+	 */
+	if (OldIndex == NULL || !IS_BTREE(OldIndex))
+		ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("cannot cluster append-optimized table \"%s\"", RelationGetRelationName(OldHeap)),
+					errdetail("Append-optimized tables can only be clustered against a B-tree index")));
+	
+	oldTupDesc = RelationGetDescr(OldHeap);
+	tuplesort = tuplesort_begin_cluster(oldTupDesc, OldIndex,
+											maintenance_work_mem, NULL, false);
+
+	appendonly_relation_cluster_internals(OldHeap, NewHeap, oldTupDesc,
+									   OldestXmin, xid_cutoff, multi_cutoff, 
+									   num_tuples, tups_vacuumed, 
+									   tups_recently_dead, tuplesort);
+}
+
+
 
 static bool
 appendonly_scan_analyze_next_block(TableScanDesc scan, BlockNumber blockno,
@@ -2289,6 +2335,7 @@ static const TableAmRoutine ao_row_methods = {
 	.relation_set_new_filenode = appendonly_relation_set_new_filenode,
 	.relation_nontransactional_truncate = appendonly_relation_nontransactional_truncate,
 	.relation_copy_data = appendonly_relation_copy_data,
+	.relation_copy_for_repack = appendonly_relation_copy_for_repack,
 	.relation_copy_for_cluster = appendonly_relation_copy_for_cluster,
 	.relation_add_columns = appendonly_relation_add_columns,
 	.relation_rewrite_columns = appendonly_relation_rewrite_columns,

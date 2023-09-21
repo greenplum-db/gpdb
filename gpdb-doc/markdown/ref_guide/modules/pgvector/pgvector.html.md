@@ -305,7 +305,7 @@ CREATE INDEX ON items USING ivfflat (embedding vector_l2_ops) WITH (lists = 1000
 
 `pgvector` for Greenplum Database has the following limitations:
 
-- The Greenplum Query Optimizer (GPORCA) does not support vector indexes.
+- The Greenplum query optimizer (GPORCA) does not support `ivfflat` and `hnsw` vector indexes. Queries on tables that utilize these index types fall back to the Postgres-based planner.
 - Append-optimized tables cannot use vector indexes.
 - The size of (a vector) index can be larger than the table size.
 

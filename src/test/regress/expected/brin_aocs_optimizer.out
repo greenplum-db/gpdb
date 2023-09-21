@@ -332,7 +332,7 @@ BEGIN
 			IF plan_line LIKE '%Bitmap Heap Scan on brintest_aocs%' THEN
 				plan_ok := true;
 			END IF;
-			IF plan_line LIKE '%Postgres query optimizer%' THEN
+			IF plan_line LIKE '%Postgres-based planner%' THEN
 				is_planner_plan := true;
 			END IF;
 		END LOOP;

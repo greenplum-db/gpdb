@@ -163,6 +163,7 @@ OBJS        = CExpression.o \
               CScalarCoerceViaIO.o \
               CScalarConst.o \
               CScalarDMLAction.o \
+              CScalarFieldSelect.o \
               CScalarFunc.o \
               CScalarIdent.o \
               CScalarIf.o \

@@ -165,6 +165,9 @@ static float convertcpuusage_v2(int64 usage, int64 duration);
 static List *parseio_v2(const char *io_limit);
 static void setio_v2(Oid group, List *limit_list);
 static void freeio_v2(List *limit_list);
+static List	*getiostat_v2(Oid group, List *io_limit);
+static char *dumpio_v2(List *limit_list);
+static void cleario_v2(Oid groupid);
 
 /*
  * Dump component dir to the log.
@@ -287,9 +290,6 @@ probecgroup_v2(void)
 	 * probed, the error will be reported in checkcgroup() later.
 	 */
 	if (!getCgroupMountDir())
-		return false;
-
-	if (!normalPermissionCheck(permlists, CGROUP_ROOT_ID, false))
 		return false;
 
 	return true;
@@ -826,6 +826,9 @@ parseio_v2(const char *io_limit)
 	if (io_limit == NULL)
 		return NIL;
 
+	if (strcmp(io_limit, DefaultIOLimit) == 0)
+		return NIL;
+
 	result = io_limit_parse(io_limit);
 	io_limit_validate(result);
 
@@ -852,22 +855,22 @@ setio_v2(Oid group, List *limit_list)
 	{
 		TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(tblspc_cell);
 
-		if (limit->ioconfig->rbps == IO_LIMIT_MAX )
+		if (limit->ioconfig->rbps == IO_LIMIT_MAX || limit->ioconfig->rbps == IO_LIMIT_EMPTY)
 			sprintf(rbps_str, "rbps=max");
 		else
 			sprintf(rbps_str, "rbps=%lu", limit->ioconfig->rbps * 1024 * 1024);
 
-		if (limit->ioconfig->wbps == IO_LIMIT_MAX)
+		if (limit->ioconfig->wbps == IO_LIMIT_MAX || limit->ioconfig->wbps == IO_LIMIT_EMPTY)
 			sprintf(wbps_str, "wbps=max");
 		else
 			sprintf(wbps_str, "wbps=%lu", limit->ioconfig->wbps * 1024 * 1024);
 
-		if (limit->ioconfig->riops == IO_LIMIT_MAX)
+		if (limit->ioconfig->riops == IO_LIMIT_MAX || limit->ioconfig->riops == IO_LIMIT_EMPTY)
 			sprintf(riops_str, "riops=max");
 		else
 			sprintf(riops_str, "riops=%u", (uint32)limit->ioconfig->riops);
 
-		if (limit->ioconfig->wiops == IO_LIMIT_MAX)
+		if (limit->ioconfig->wiops == IO_LIMIT_MAX || limit->ioconfig->wiops == IO_LIMIT_EMPTY)
 			sprintf(wiops_str, "wiops=max");
 		else
 			sprintf(wiops_str, "wiops=%u", (uint32)limit->ioconfig->wiops);
@@ -887,16 +890,25 @@ setio_v2(Oid group, List *limit_list)
 static void
 freeio_v2(List *limit_list)
 {
-	ListCell *cell;
+	io_limit_free(limit_list);
+}
 
-	foreach (cell, limit_list)
-	{
-		TblSpcIOLimit *limit = (TblSpcIOLimit *) lfirst(cell);
-		list_free_deep(limit->bdi_list);
-		pfree(limit->ioconfig);
-	}
+static List *
+getiostat_v2(Oid groupid, List *io_limit)
+{
+	return get_iostat(groupid, io_limit);
+}
 
-	list_free_deep(limit_list);
+static char *
+dumpio_v2(List *limit_list)
+{
+	return io_limit_dump(limit_list);
+}
+
+static void
+cleario_v2(Oid groupid)
+{
+	clear_io_max(groupid);
 }
 
 static CGroupOpsRoutine cGroupOpsRoutineV2 = {
@@ -927,6 +939,9 @@ static CGroupOpsRoutine cGroupOpsRoutineV2 = {
 		.parseio = parseio_v2,
 		.setio = setio_v2,
 		.freeio = freeio_v2,
+		.getiostat = getiostat_v2,
+		.dumpio = dumpio_v2,
+		.cleario = cleario_v2
 };
 
 CGroupOpsRoutine *get_group_routine_v2(void)

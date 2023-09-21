@@ -271,7 +271,7 @@ By default, Greenplum Database does not limit the number of parallel retrieve cu
 
 The parallel retrieve cursor implementation has the following limitations:
 
-- The VMware Greenplum Query Optimizer (GPORCA) does not support queries on a parallel retrieve cursor.
+- The VMware Greenplum query optimizer (GPORCA) does not support queries on a parallel retrieve cursor.
 - Greenplum Database ignores the `BINARY` clause when you declare a parallel retrieve cursor.
 - Parallel retrieve cursors cannot be declared `WITH HOLD`.
 - Parallel retrieve cursors do not support the `FETCH` and `MOVE` cursor operations.

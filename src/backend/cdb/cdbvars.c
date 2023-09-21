@@ -51,7 +51,6 @@
 GpRoleValue Gp_role;			/* Role paid by this Greenplum Database
 								 * backend */
 char	   *gp_role_string;		/* Staging area for guc.c */
-char	   *gp_session_role_string; /* Staging area for guc.c */
 
 bool		Gp_is_writer;		/* is this qExec a "writer" process. */
 
@@ -101,6 +100,8 @@ int         gp_segment_connect_timeout = 180;  /* Maximum time (in seconds) allo
 												* for a new worker process to start
 												* or a mirror to respond.
 												*/
+
+bool		gp_detect_data_correctness;		/* Detect if the current data distribution is correct */
 
 /*
  * Configurable timeout for snapshot add: exceptionally busy systems may take
@@ -300,6 +301,12 @@ int			gp_workfile_limit_per_query = 0;
 /* Maximum number of workfiles to be created by a query */
 int			gp_workfile_limit_files_per_query = 0;
 
+/*
+ * The overhead memory (kB) used by all compressed workfiles of a single
+ * workfile_set
+ */
+int			gp_workfile_compression_overhead_limit = 0;
+
 /* Enable single-slice single-row inserts ?*/
 bool		gp_enable_fast_sri = true;
 
@@ -439,6 +446,9 @@ assign_gp_role(const char *newval, void *extra)
 
 	if (Gp_role == GP_ROLE_UTILITY && MyProc != NULL)
 		MyProc->mppIsWriter = false;
+
+	if (Gp_role == GP_ROLE_UTILITY)
+		should_reject_connection = false;
 }
 
 /*

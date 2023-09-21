@@ -558,6 +558,9 @@ pqCheckInBufferSpace(size_t bytes_needed, PGconn *conn)
 int
 pqPutMsgStart(char msg_type, bool force_len, PGconn *conn)
 {
+	/* GPDB: we won't manage to send new message during dispatch */
+	Assert(!conn->outBuffer_shared);
+
 	int			lenPos;
 	int			endPos;
 

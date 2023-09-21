@@ -38,28 +38,20 @@ ON (a.col = b.col);
       <dxl:Relation Mdid="6.32783.1.0" Name="mytable" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="col" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-2" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-3" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-4" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-5" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-6" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -335,7 +327,7 @@ ON (a.col = b.col);
     <dxl:Plan Id="0" SpaceSize="1127">
       <dxl:DMLInsert Columns="0" ActionCol="34" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1724.011735" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="1724.011826" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -357,7 +349,7 @@ ON (a.col = b.col);
         </dxl:TableDescriptor>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1724.001319" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="1724.001410" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="col">
@@ -371,7 +363,7 @@ ON (a.col = b.col);
           <dxl:OneTimeFilter/>
           <dxl:HashJoin JoinType="Inner">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1724.001316" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="1724.001407" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="col">
@@ -411,7 +403,7 @@ ON (a.col = b.col);
             </dxl:TableScan>
             <dxl:HashJoin JoinType="LeftAntiSemiJoin">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1293.001045" Rows="1.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="1293.001136" Rows="1.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="8" Alias="col">
@@ -436,7 +428,7 @@ ON (a.col = b.col);
               </dxl:HashCondList>
               <dxl:Window PartitionColumns="8">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="862.000424" Rows="1.000000" Width="12"/>
+                  <dxl:Cost StartupCost="0" TotalCost="862.000469" Rows="1.000000" Width="12"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="32" Alias="row_number">
@@ -449,7 +441,7 @@ ON (a.col = b.col);
                 <dxl:Filter/>
                 <dxl:Sort SortDiscardDuplicates="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="862.000424" Rows="1.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="862.000469" Rows="1.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="8" Alias="col">
@@ -535,7 +527,7 @@ ON (a.col = b.col);
               </dxl:Window>
               <dxl:Window PartitionColumns="24">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000026" Rows="1.000000" Width="12"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000071" Rows="1.000000" Width="12"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="33" Alias="row_number">
@@ -548,7 +540,7 @@ ON (a.col = b.col);
                 <dxl:Filter/>
                 <dxl:Sort SortDiscardDuplicates="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000026" Rows="1.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000071" Rows="1.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="24" Alias="col">

@@ -113,6 +113,9 @@ private:
 	Expr *TranslateDXLScalarArrayCoerceExprToScalar(
 		const CDXLNode *coerce_node, CMappingColIdVar *colid_var);
 
+	Expr *TranslateDXLFieldSelectToScalar(const CDXLNode *field_select_node,
+										  CMappingColIdVar *colid_var);
+
 	Expr *TranslateDXLScalarNullTestToScalar(
 		const CDXLNode *scalar_null_test_node, CMappingColIdVar *colid_var);
 

@@ -499,3 +499,70 @@ EXIT WHEN curtid > upto; /* in func */
 END LOOP; /* in func */
 END; $$ /* in func */
     LANGUAGE PLPGSQL;
+
+-- Check if autovacuum is enabled/disabled by inspecting the av launcher.
+CREATE or REPLACE FUNCTION check_autovacuum (enabled boolean) RETURNS bool AS
+$$
+declare
+	retries int; /* in func */
+	expected_count int; /* in func */
+begin
+	retries := 1200; /* in func */
+	if enabled then
+		/* (1 for each primary and 1 for the coordinator) */
+		expected_count := 4; /* in func */
+	else
+		expected_count := 0; /* in func */
+	end if; /* in func */
+	loop
+		if (select count(*) = expected_count from gp_stat_activity
+			where backend_type = 'autovacuum launcher') then
+			return true; /* in func */
+		end if; /* in func */
+		if retries <= 0 then
+			return false; /* in func */
+		end if; /* in func */
+		perform pg_sleep(0.1); /* in func */
+		retries := retries - 1; /* in func */
+	end loop; /* in func */
+end; /* in func */
+$$
+language plpgsql;
+
+CREATE OR REPLACE FUNCTION write_bogus_file(datadir text, log_dir text)
+RETURNS TEXT AS $$
+    import subprocess
+    import os
+    bogus_file = os.path.join(datadir, log_dir, 'bogusfile')
+    cmd = "echo 'something' >> %s" % bogus_file
+
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        shell=True)
+    stdout, stderr = proc.communicate()
+
+    if proc.returncode == 0:
+        return 'OK'
+    else:
+        raise Exception(stdout.decode()+'|'+stderr.decode())
+$$ LANGUAGE plpython3u;
+
+CREATE OR REPLACE FUNCTION remove_bogus_file(datadir text, log_dir text)
+RETURNS TEXT AS $$
+    import subprocess
+    import os
+    bogus_file = os.path.join(datadir, log_dir, 'bogusfile')
+    try:
+        os.remove(bogus_file)
+    except FileNotFoundError as e:
+        pass
+$$ LANGUAGE plpython3u;
+
+CREATE OR REPLACE FUNCTION assert_bogus_file_does_not_exist(datadir text, log_dir text)
+RETURNS TEXT AS $$
+    import subprocess
+    import os
+    bogus_file = os.path.join(datadir, log_dir, 'bogusfile')
+    if os.path.exists(bogus_file):
+        raise Exception("bogus file: %s should not exist" % bogus_file)
+    return 'OK'
+$$ LANGUAGE plpython3u;

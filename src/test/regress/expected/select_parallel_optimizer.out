@@ -540,7 +540,6 @@ BEGIN
 EXCEPTION WHEN invalid_parameter_value THEN
 END $$;
 set work_mem='64kB';  --set small work mem to force lossy pages
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 explain (costs off)
 	select count(*) from tenk1, tenk2 where tenk1.hundred > 1 and tenk2.thousand=0;
                              QUERY PLAN                              
@@ -600,7 +599,6 @@ explain (analyze, timing off, summary off, costs off)
 
 alter table tenk2 reset (parallel_workers);
 reset work_mem;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 create function explain_parallel_sort_stats() returns setof text
 language plpgsql as
 $$
@@ -1073,32 +1071,25 @@ explain (costs off, verbose)
 explain (costs off)
   select * from tenk1 a where two in
     (select two from tenk1 b where stringu1 like '%AAAA' limit 3);
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
          Hash Cond: (tenk1.two = tenk1_1.two)
          ->  Seq Scan on tenk1
          ->  Hash
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Broadcast Motion 1:3  (slice2)
                      ->  GroupAggregate
                            Group Key: tenk1_1.two
                            ->  Sort
                                  Sort Key: tenk1_1.two
-                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                       Hash Key: tenk1_1.two
-                                       ->  GroupAggregate
-                                             Group Key: tenk1_1.two
-                                             ->  Sort
-                                                   Sort Key: tenk1_1.two
-                                                   ->  Redistribute Motion 1:3  (slice4)
-                                                         ->  Limit
-                                                               ->  Gather Motion 3:1  (slice5; segments: 3)
-                                                                     ->  Limit
-                                                                           ->  Seq Scan on tenk1 tenk1_1
-                                                                                 Filter: (stringu1 ~~ '%AAAA'::text)
+                                 ->  Limit
+                                       ->  Gather Motion 3:1  (slice3; segments: 3)
+                                             ->  Limit
+                                                   ->  Seq Scan on tenk1 tenk1_1
+                                                         Filter: (stringu1 ~~ '%AAAA'::text)
  Optimizer: Pivotal Optimizer (GPORCA)
-(23 rows)
+(16 rows)
 
 -- to increase the parallel query test coverage
 SAVEPOINT settings;

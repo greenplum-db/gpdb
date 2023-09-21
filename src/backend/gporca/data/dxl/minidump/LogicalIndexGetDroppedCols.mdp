@@ -1066,115 +1066,78 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
       <dxl:Relation Mdid="6.30044.1.0" Name="solo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="36,30">
         <dxl:Columns>
           <dxl:Column Name="some_id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="year_id" Attno="2" Mdid="0.21.1.0" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="month_id" Attno="3" Mdid="0.21.1.0" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a1" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a2" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a3" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a4" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a5" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a6" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a7" Attno="10" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a8" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a9" Attno="12" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a10" Attno="13" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a11" Attno="14" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a12" Attno="15" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a13" Attno="16" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a14" Attno="17" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a15" Attno="18" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="........pg.dropped.19........" Attno="19" Mdid="0.0.0.0" Nullable="true" IsDropped="true">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="........pg.dropped.20........" Attno="20" Mdid="0.0.0.0" Nullable="true" IsDropped="true">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a18" Attno="21" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a19" Attno="22" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a20" Attno="23" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="........pg.dropped.24........" Attno="24" Mdid="0.0.0.0" Nullable="true" IsDropped="true">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="........pg.dropped.25........" Attno="25" Mdid="0.0.0.0" Nullable="true" IsDropped="true">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="........pg.dropped.26........" Attno="26" Mdid="0.0.0.0" Nullable="true" IsDropped="true">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="........pg.dropped.27........" Attno="27" Mdid="0.0.0.0" Nullable="true" IsDropped="true">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="........pg.dropped.28........" Attno="28" Mdid="0.0.0.0" Nullable="true" IsDropped="true">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a26" Attno="29" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="a27" Attno="30" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -1182,7 +1145,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Index Mdid="0.30058.1.0" Name="solo_idx" IsClustered="false" IndexType="B-tree" KeyColumns="1,2,7,17,22,29" IncludedColumns="">
+      <dxl:Index Mdid="0.30058.1.0" Name="solo_idx" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1,2,7,17,22,29" IncludedColumns="" ReturnableColumns="1,2,7,17,22,29">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
@@ -1474,7 +1437,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
     <dxl:Plan Id="0" SpaceSize="2">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.001520" Rows="1.774224" Width="88"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.002520" Rows="1.774224" Width="88"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="some_id">
@@ -1551,7 +1514,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
         <dxl:SortingColumnList/>
         <dxl:IndexScan IndexScanDirection="Forward">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.000841" Rows="1.774224" Width="88"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.001841" Rows="1.774224" Width="88"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="some_id">
@@ -1635,7 +1598,7 @@ EXPLAIN SELECT * FROM solo WHERE year_id=2017 AND month_id=6;
               <dxl:ConstValue TypeMdid="0.23.1.0" Value="6"/>
             </dxl:Comparison>
           </dxl:IndexCondList>
-	<dxl:Partitions/>
+          <dxl:Partitions/>
           <dxl:IndexDescriptor Mdid="0.30058.1.0" IndexName="solo_idx"/>
           <dxl:TableDescriptor Mdid="6.30044.1.0" TableName="solo">
             <dxl:Columns>

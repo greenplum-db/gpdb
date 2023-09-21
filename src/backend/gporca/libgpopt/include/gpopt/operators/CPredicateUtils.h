@@ -400,7 +400,7 @@ public:
 		CMemoryPool *mp, CMDAccessor *md_accessor,
 		CExpressionArray *pdrgpexprPredicate, const IMDIndex *pmdindex,
 		CColRefArray *pdrgpcrIndex, CExpressionArray *pdrgpexprIndex,
-		CExpressionArray *pdrgpexprResidual,
+		CExpressionArray *pdrgpexprResidual, ULONG &ulUnindexedPredColCount,
 		CColRefSet *pcrsAcceptedOuterRefs =
 			nullptr,  // outer refs that are acceptable in an index predicate
 		BOOL allowArrayCmpIndexQual = false);

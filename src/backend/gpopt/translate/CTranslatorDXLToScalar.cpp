@@ -55,6 +55,7 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLScalarCoerceToDomain.h"
 #include "naucrates/dxl/operators/CDXLScalarCoerceViaIO.h"
 #include "naucrates/dxl/operators/CDXLScalarDistinctComp.h"
+#include "naucrates/dxl/operators/CDXLScalarFieldSelect.h"
 #include "naucrates/dxl/operators/CDXLScalarFuncExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarIfStmt.h"
 #include "naucrates/dxl/operators/CDXLScalarMinMax.h"
@@ -214,6 +215,10 @@ CTranslatorDXLToScalar::TranslateDXLToScalar(const CDXLNode *dxlnode,
 		case EdxlopScalarArrayRef:
 		{
 			return TranslateDXLScalarArrayRefToScalar(dxlnode, colid_var);
+		}
+		case EdxlopScalarFieldSelect:
+		{
+			return TranslateDXLFieldSelectToScalar(dxlnode, colid_var);
 		}
 		case EdxlopScalarDMLAction:
 		{
@@ -455,7 +460,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayCompToScalar(
 
 		default:
 			GPOS_RAISE(
-				gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+				gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
 				GPOS_WSZ_LIT(
 					"Scalar Array Comparison: Specified operator type is invalid"));
 	}
@@ -585,7 +590,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 			break;
 		default:
 			GPOS_RAISE(
-				gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+				gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
 				GPOS_WSZ_LIT("AGGREF: Specified AggStage value is invalid"));
 	}
 
@@ -2112,6 +2117,37 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayRefToScalar(
 	}
 
 	return (Expr *) array_ref;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToScalar::TranslateDXLFieldSelectToScalar
+//
+//	@doc:
+//		Translates a DXL Scalar FieldSelect into a GPDB FieldSelect node
+//
+//---------------------------------------------------------------------------
+Expr *
+CTranslatorDXLToScalar::TranslateDXLFieldSelectToScalar(
+	const CDXLNode *scalar_field_select, CMappingColIdVar *colid_var)
+{
+	GPOS_ASSERT(nullptr != scalar_field_select);
+
+	CDXLScalarFieldSelect *dxlop =
+		CDXLScalarFieldSelect::Cast(scalar_field_select->GetOperator());
+
+	FieldSelect *fieldSelect = MakeNode(FieldSelect);
+
+	fieldSelect->arg =
+		TranslateDXLToScalar((*scalar_field_select)[0], colid_var);
+	fieldSelect->fieldnum = dxlop->GetDXLFieldNumber();
+	fieldSelect->resulttype =
+		CMDIdGPDB::CastMdid(dxlop->GetDXLFieldType())->Oid();
+	fieldSelect->resulttypmod = dxlop->GetDXLTypeModifier();
+	fieldSelect->resultcollid =
+		CMDIdGPDB::CastMdid(dxlop->GetDXLFieldCollation())->Oid();
+
+	return (Expr *) fieldSelect;
 }
 
 //---------------------------------------------------------------------------

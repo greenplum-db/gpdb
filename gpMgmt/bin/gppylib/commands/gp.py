@@ -52,6 +52,11 @@ DEFAULT_COORDINATOR_NUM_WORKERS=16
 #max batch size of thread pool on coordinator
 MAX_COORDINATOR_NUM_WORKERS=64
 
+# Maximum replay lag (in GBs) allowed on mirror when rebalancing the segments
+# The default value for ALLOWED_REPLAY_LAG has been decided to be 10 GBs as mirror
+# took 5 mins to replay 10 GB lag on a local demo cluster.
+ALLOWED_REPLAY_LAG = 10
+
 # Application name used by the pg_rewind instance that gprecoverseg starts
 # during incremental recovery. gpstate uses this to figure out when incremental
 # recovery is active.
@@ -336,7 +341,7 @@ class CoordinatorStart(Command):
 
         # build pg_ctl command
         c = PgCtlStartArgs(dataDir, b, era, wrapper, wrapper_args, wait, timeout)
-        logger.info("CoordinatorStart pg_ctl cmd is %s", c);
+        logger.info("CoordinatorStart pg_ctl cmd is %s", c)
         self.cmdStr = str(c)
 
         Command.__init__(self, name, self.cmdStr, ctxt, remoteHost)
@@ -393,7 +398,7 @@ class SegmentStart(Command):
 
         # build pg_ctl command
         c = PgCtlStartArgs(datadir, b, era, wrapper, wrapper_args, pg_ctl_wait, timeout)
-        logger.info("SegmentStart pg_ctl cmd is %s", c);
+        logger.info("SegmentStart pg_ctl cmd is %s", c)
         self.cmdStr = str(c) + ' 2>&1'
 
         Command.__init__(self, name, self.cmdStr, ctxt, remoteHost)
@@ -1035,11 +1040,11 @@ class GpVersion(Command):
 
         self.gphome=gphome
         #self.cmdStr="%s/bin/postgres --gp-version" % gphome
-        self.cmdStr="$GPHOME/bin/postgres --gp-version"
+        self.cmdStr="echo 'START_CMD_OUTPUT';$GPHOME/bin/postgres --gp-version"
         Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
 
     def get_version(self):
-        return self.results.stdout.strip()
+        return self.results.stdout.strip().split('START_CMD_OUTPUT\n')[1]
 
     @staticmethod
     def local(name,gphome):
@@ -1185,16 +1190,31 @@ def get_gphome():
         raise GpError('Environment Variable GPHOME not set')
     return gphome
 
+'''
+gprecoverseg, gpstart, gpstate, gpstop, gpaddmirror have -d option to give the coordinator data directory.
+but its value was not used throughout the utilities. to fix this the best possible way is
+to set and retrieve that set coordinator dir when we call get_coordinatordatadir().
+'''
+option_coordinator_datadir = None
+def set_coordinatordatadir(coordinator_datadir=None):
+    global option_coordinator_datadir
+    option_coordinator_datadir = coordinator_datadir
 
 ######
 # Support both COORDINATOR_DATA_DIRECTORY and MASTER_DATA_DIRECTORY for backwards compatibility.
 # If both are set, the former is used and the latter is ignored.
+# if -d <coordinator_datadir> is provided with utility, it will be prioritiese over other options.
 def get_coordinatordatadir():
-    coordinator_datadir = os.environ.get('COORDINATOR_DATA_DIRECTORY')
-    if not coordinator_datadir:
-        coordinator_datadir = os.environ.get('MASTER_DATA_DIRECTORY')
+    if option_coordinator_datadir is not None:
+        coordinator_datadir = option_coordinator_datadir
+    else:
+        coordinator_datadir = os.environ.get('COORDINATOR_DATA_DIRECTORY')
+        if not coordinator_datadir:
+            coordinator_datadir = os.environ.get('MASTER_DATA_DIRECTORY')
+
     if not coordinator_datadir:
         raise GpError("Environment Variable COORDINATOR_DATA_DIRECTORY not set!")
+
     return coordinator_datadir
 
 ######

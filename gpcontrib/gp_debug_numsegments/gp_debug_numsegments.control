@@ -2,4 +2,4 @@
 comment = 'get / set default numsegments when creating tables'
 default_version = '1.0'
 module_pathname = '$libdir/gp_debug_numsegments'
-relocatable = true
+schema = public

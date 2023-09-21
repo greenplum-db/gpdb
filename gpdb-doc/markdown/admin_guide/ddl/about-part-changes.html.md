@@ -2,7 +2,7 @@
 title: About Changes to Table Partitioning in Greenplum 7
 ---
 
-VMware Greenplum 7 retains most aspects of the partitioning syntax of prior versions of Greenplum, now referred to as the *classic* partitioning syntax. Version 7 also introduces support for the PostgreSQL declarative partitioning syntax, the *modern* syntax.
+VMware Greenplum 7 retains most aspects of the partitioning syntax of prior versions of Greenplum, now referred to as the *classic* partitioning syntax. Version 7 also introduces support for a *modern* syntax, derived from the PostgreSQL declarative partitioning syntax.
 
 This topic describes the Greenplum 7 partitioning syntax and behavior changes, and is geared toward existing users of Greenplum 6.
 
@@ -16,11 +16,16 @@ The following partitioning-related features are *new* in Greenplum 7:
 
 - Support for PostgreSQL declarative partitioning syntax, which introduces these new features *for the modern syntax only*:
 
+    - Partitions are first-class tables.
+    - The table name of a partition is just that, not an alias.
     - Support for the hash partitioning strategy.
-    - Support for a heterogeneous partitioning hierarchy that allows child partitions of different levels and allows for different partitioning strategies amonst the child partitions.
+    - Support for multi-column range partitioning.
+    - Support for specifying an expression in the partition key.
+    - A partitioned table may have zero partitions.
+    - Support for a heterogeneous partition hierarchy that allows child partitions of different levels and allows for different partitioning strategies amongst the child partitions.
 - Less restrictive locking in `ATTACH PARTITION`. You can now attach a partition to a partition hierarchy without disrupting many normal query executions on the partition.
-- `GRANT ... ONLY` and `REVOKE ... ONLY` syntaxes that direct Greenplum to apply the operation to the named table only (does not recurse the operation to child partition tables).
-- `ALTER TABLE ONLY` syntax that directs Greenplum to apply the operation to the named table only (does not recurse the operation to child partition tables).
+- `GRANT ... ONLY` and `REVOKE ... ONLY` syntaxes that direct Greenplum to apply the operation to the named table only (does not recurse the operation to child tables).
+- `ALTER TABLE ONLY` syntax that directs Greenplum to apply the operation to the named table only (does not recurse the operation to child tables).
 
 
 ## <a id="not"></a>What Hasn't Changed With Classic Syntax?
@@ -29,12 +34,12 @@ The following classic partitioning syntax and behaviors *have not* changed in Gr
 
 - Greenplum 7 supports the classic partitioning syntax of Greenplum 6 except where called out in the [What Has Changed?](#changed) section.
 - Support for range and list partition strategies.
-- Support for subpartition templates.
+- Support for sub-partition templates.
 - A partitioned table must be defined with at least one partition.
-- Only leaf partition tables contain data.
+- Only leaf partitions contain data.
 - The name that you assign a partition table is an alias.
-- By default, a `GRANT` or `REVOKE` operation on a parent partitioned table recurses to its child partition tables.
-- By default, an `ALTER TABLE` operation on a parent partitioned table recurses to its child partition tables.
+- By default, a `GRANT` or `REVOKE` operation on a parent partitioned table recurses to its child tables.
+- By default, an `ALTER TABLE` operation on a parent partitioned table recurses to its child tables.
 
 
 ## <a id="changed"></a>What Has Changed?
@@ -55,7 +60,7 @@ The following items describe the Greenplum 7 *changes* to classic partitioning s
     - `pg_stat_partition_operations`
     - `pg_partition_def()`
 
-    The new [pg_partitioned_table](../../ref_guide/system_catalogs/pg_partitioned_table.html) catalog table and `pg_partition_tree()`, `pg_partition_ancestors()`, and `pg_partition_root()` functions to provide similar information. Refer to [About Viewing Your Partition Design](ddl-partition.html#topic76) for more information on these new functions.
+    The new [pg_partitioned_table](../../ref_guide/system_catalogs/pg_partitioned_table.html) catalog table and `pg_partition_tree()`, `pg_partition_ancestors()`, and `pg_partition_root()` functions provide similar information. Refer to [About Viewing Your Partition Design](ddl-partition.html#topic76) for more information on these new functions.
 - The `FOR (RANK(<value>))` clause is no longer supported. When creating or altering a partitioned table, you must locate a partition by `VALUE`.
 - Partition boundaries are no longer represented as `CHECK` constraints, but rather internally-constructed partition constraints.
 - The interpretation of `START`/`END` and `EXCLUSIVE`/`INCLUSIVE` clauses for range partition boundaries has changed:
@@ -96,6 +101,8 @@ The following items describe the Greenplum 7 *changes* to classic partitioning s
     - A created/added partition inherits the properties of its parent.
     - The partitions created from a `SPLIT PARTITION` inherit the properties of the split child.
     - An attached partition maintains its original properties.
+
+> **Note** The Greenplum query optimizer (GPORCA) does not support multi-level partitioned tables.
 
 ## <a id="other"></a>Additional Considerations
 

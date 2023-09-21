@@ -31,9 +31,6 @@ CMDIdColStats::CMDIdColStats(CMDIdGPDB *rel_mdid, ULONG pos)
 	  m_str(m_mdid_buffer, GPOS_ARRAY_SIZE(m_mdid_buffer))
 {
 	GPOS_ASSERT(rel_mdid->IsValid());
-
-	// serialize mdid into static string
-	Serialize();
 }
 
 //---------------------------------------------------------------------------
@@ -58,8 +55,14 @@ CMDIdColStats::~CMDIdColStats()
 //
 //---------------------------------------------------------------------------
 void
-CMDIdColStats::Serialize()
+CMDIdColStats::Serialize() const
 {
+	if (m_str.Length() > 0)
+	{
+		return;
+	}
+
+	m_str.Reset();
 	// serialize mdid as SystemType.Oid.Major.Minor.Attno
 	m_str.AppendFormat(GPOS_WSZ_LIT("%d.%d.%d.%d.%d"), MdidType(),
 					   m_rel_mdid->Oid(), m_rel_mdid->VersionMajor(),
@@ -77,6 +80,7 @@ CMDIdColStats::Serialize()
 const WCHAR *
 CMDIdColStats::GetBuffer() const
 {
+	Serialize();
 	return m_str.GetBuffer();
 }
 
@@ -142,6 +146,7 @@ void
 CMDIdColStats::Serialize(CXMLSerializer *xml_serializer,
 						 const CWStringConst *attribute_str) const
 {
+	Serialize();
 	xml_serializer->AddAttribute(attribute_str, &m_str);
 }
 
@@ -156,7 +161,7 @@ CMDIdColStats::Serialize(CXMLSerializer *xml_serializer,
 IOstream &
 CMDIdColStats::OsPrint(IOstream &os) const
 {
-	os << "(" << m_str.GetBuffer() << ")";
+	os << "(" << GetBuffer() << ")";
 	return os;
 }
 

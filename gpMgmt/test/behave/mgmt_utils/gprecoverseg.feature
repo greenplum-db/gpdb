@@ -3,14 +3,15 @@ Feature: gprecoverseg tests
 
     Scenario Outline: <scenario> recovery works with tablespaces
         Given the database is running
-          And a tablespace is created with data
           And user stops all primary processes
           And user can start transactions
+          And a tablespace is created with data
          When the user runs "gprecoverseg <args>"
          Then gprecoverseg should return a return code of 0
           And the segments are synchronized
           And verify replication slot internal_wal_replication_slot is available on all the segments
           And the tablespace is valid
+          And the tablespace has valid symlink
           And the database segments are in execute mode
 
         Given another tablespace is created with data
@@ -19,6 +20,7 @@ Feature: gprecoverseg tests
           And the segments are synchronized
           And verify replication slot internal_wal_replication_slot is available on all the segments
           And the tablespace is valid
+          And the tablespace has valid symlink
           And the other tablespace is valid
           And the database segments are in execute mode
       Examples:
@@ -289,6 +291,32 @@ Feature: gprecoverseg tests
         And all the segments are running
         And the segments are synchronized
 
+    Scenario: gprecoverseg runs with given coordinator data directory option
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+          And user stops all mirror processes
+          And user can start transactions
+          And "COORDINATOR_DATA_DIRECTORY" environment variable is not set
+         Then the user runs utility "gprecoverseg" with coordinator data directory and "-F -a"
+          And gprecoverseg should return a return code of 0
+          And "COORDINATOR_DATA_DIRECTORY" environment variable should be restored
+          And all the segments are running
+          And the segments are synchronized
+
+    Scenario: gprecoverseg priorities given coordinator data directory over env option
+        Given the database is running
+          And all the segments are running
+          And the segments are synchronized
+          And user stops all mirror processes
+          And user can start transactions
+          And the environment variable "COORDINATOR_DATA_DIRECTORY" is set to "/tmp/"
+         Then the user runs utility "gprecoverseg" with coordinator data directory and "-F -a"
+          And gprecoverseg should return a return code of 0
+          And "COORDINATOR_DATA_DIRECTORY" environment variable should be restored
+          And all the segments are running
+          And the segments are synchronized
+
     Scenario: gprecoverseg differential recovery displays rsync progress to the user
         Given the database is running
         And all the segments are running
@@ -517,13 +545,14 @@ Feature: gprecoverseg tests
   @concourse_cluster
   Scenario Outline: <scenario> recovery works with tablespaces on a multi-host environment
     Given the database is running
-    And a tablespace is created with data
     And user stops all primary processes
     And user can start transactions
+    And a tablespace is created with data
     When the user runs "gprecoverseg <args>"
     Then gprecoverseg should return a return code of 0
     And the segments are synchronized
     And the tablespace is valid
+    And the tablespace has valid symlink
     And the database segments are in execute mode
 
     Given another tablespace is created with data
@@ -532,6 +561,7 @@ Feature: gprecoverseg tests
     And the segments are synchronized
     And verify replication slot internal_wal_replication_slot is available on all the segments
     And the tablespace is valid
+    And the tablespace has valid symlink
     And the other tablespace is valid
     And the database segments are in execute mode
 
@@ -580,6 +610,7 @@ Feature: gprecoverseg tests
 
         # verify the data
     And the tablespace is valid
+    And the tablespace has valid symlink
     And the row count from table "public.before_host_is_down" in "gptest" is verified against the saved data
     And the row count from table "public.after_host_is_down" in "gptest" is verified against the saved data
 
@@ -596,7 +627,7 @@ Feature: gprecoverseg tests
     Then the user waits until recovery_progress.file is created in gpAdminLogs and verifies its format
     And the user waits until saved async process is completed
     And recovery_progress.file should not exist in gpAdminLogs
-    And verify that mirror on content 0,1,2 is up
+    And the user waits until mirror on content 0,1,2 is up
     And user can start transactions
     And all files in gpAdminLogs directory are deleted on all hosts in the cluster
     And a sample recovery_progress.file is created from saved lines
@@ -708,7 +739,7 @@ Feature: gprecoverseg tests
     And the user reset the walsender on the primary on content 0
     And the user waits until saved async process is completed
     And recovery_progress.file should not exist in gpAdminLogs
-    And verify that mirror on content 0,1,2 is up
+    And the user waits until mirror on content 0,1,2 is up
     And the old data directories are cleaned up for content 0
     And user can start transactions
     And check segment conf: postgresql.conf
@@ -2233,3 +2264,65 @@ Feature: gprecoverseg tests
     And the user runs "gprecoverseg -a -v"
     Then gprecoverseg should return a return code of 0
     And the cluster is rebalanced
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg rebalance aborts and throws exception if replay lag on mirror is more than or equal to the allowed limit
+      Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+        And user immediately stops all primary processes for content 0
+        And user can start transactions
+        When the user runs "gprecoverseg -av"
+        Then gprecoverseg should return a return code of 0
+        When the user runs "gprecoverseg -ar --replay-lag 0"
+        Then gprecoverseg should return a return code of 2
+         And gprecoverseg should print "0 bytes of wal is still to be replayed on mirror with dbid.*, let mirror catchup on replay then trigger rebalance" regex to logfile
+        When the user runs "gprecoverseg -ar --disable-replay-lag"
+        Then gprecoverseg should return a return code of 0
+         And all the segments are running
+         And user can start transactions
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg errors out if invalid options are used with --disable-replay-lag
+      Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+        And user immediately stops all primary processes for content 0,1,2
+        And user can start transactions
+       When the user runs "gprecoverseg -av"
+       Then gprecoverseg should return a return code of 0
+        And verify that mirror on content 0,1,2 is up
+       When the user runs "gprecoverseg -aF --disable-replay-lag"
+       Then gprecoverseg should return a return code of 2
+        And gprecoverseg should print "--disable-replay-lag should be used only with -r" to stdout
+       When the user runs "gprecoverseg -ar"
+       Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Allowed replay lag during rebalance is 10 GB" to stdout
+        And all the segments are running
+        And user can start transactions
+
+
+    @remove_rsync_bash
+    @concourse_cluster
+    Scenario: None of the accumulated wal (after running pg_start_backup and before copying the pg_control file) is lost during differential
+      Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+        And sql "DROP TABLE IF EXISTS test_recoverseg; CREATE TABLE test_recoverseg AS SELECT generate_series(1,1000) AS a;" is executed in "postgres" db
+        And user immediately stops all mirror processes for content 0
+        And the user waits until mirror on content 0 is down
+        And user can start transactions
+        And user creates a new executable rsync script which inserts data into table and runs checkpoint along with doing rsync
+       When the user runs "gprecoverseg -av --differential"
+       Then gprecoverseg should return a return code of 0
+        And verify that mirror on content 0 is up
+       Then the row count of table test_recoverseg in "postgres" should be 2000
+      Given user immediately stops all primary processes for content 0
+        And user can start transactions
+       Then the row count of table test_recoverseg in "postgres" should be 2000
+       And the cluster is recovered in full and rebalanced

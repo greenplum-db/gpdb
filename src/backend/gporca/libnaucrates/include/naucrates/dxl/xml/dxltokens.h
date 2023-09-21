@@ -122,8 +122,6 @@ enum Edxltoken
 
 	EdxltokenDuplicateSensitive,
 
-	EdxltokenPartIndexId,
-	EdxltokenPartIndexIdPrintable,
 	EdxltokenSegmentIdCol,
 
 	EdxltokenScalar,
@@ -267,6 +265,13 @@ enum Edxltoken
 	EdxltokenWindowrefStagePreliminary,
 	EdxltokenWindowrefStageRowKey,
 	EdxltokenWindowrefWinSpecPos,
+
+	// FIELDSELECT
+	EdxltokenScalarFieldSelect,
+	EdxltokenScalarFieldSelectFieldType,
+	EdxltokenScalarFieldSelectFieldCollation,
+	EdxltokenScalarFieldSelectFieldNumber,
+	EdxltokenScalarFieldSelectTypeModifier,
 
 	EdxltokenValue,
 	EdxltokenTypeId,
@@ -505,14 +510,15 @@ enum Edxltoken
 	EdxltokenMetadataColumns,
 	EdxltokenMetadataColumn,
 	EdxltokenColumnNullable,
-	EdxltokenColumnDefaultValue,
 
 	EdxltokenKeys,
 	EdxltokenDistrColumns,
 
 	EdxltokenIndexKeyCols,
 	EdxltokenIndexIncludedCols,
+	EdxltokenIndexReturnableCols,
 	EdxltokenIndexClustered,
+	EdxltokenIndexAmCanOrder,
 	EdxltokenIndexPartial,
 	EdxltokenIndexType,
 	EdxltokenIndexTypeBtree,
@@ -521,6 +527,12 @@ enum Edxltoken
 	EdxltokenIndexTypeGist,
 	EdxltokenIndexTypeGin,
 	EdxltokenIndexItemType,
+	EdxltokenIndexKeysSortDirection,
+	EdxltokenIndexKeysNullsDirection,
+	EdxltokenIndexKeySortASC,
+	EdxltokenIndexKeySortDESC,
+	EdxltokenIndexKeyNullsFirst,
+	EdxltokenIndexKeyNullsLast,
 
 	EdxltokenOpfamily,
 	EdxltokenOpfamilies,
@@ -737,6 +749,7 @@ enum Edxltoken
 
 	EdxltokenForeignServerOid,
 	EdxltokenPhysicalDynamicIndexOnlyScan,
+	EdxltokenRelAppendOnlyVersion,
 
 	EdxltokenSentinel
 };

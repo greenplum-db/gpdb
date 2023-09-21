@@ -291,27 +291,27 @@ CREATE FUNCTION my_gen_series(int, int) RETURNS SETOF integer
   SUPPORT test_support_func;
 EXPLAIN (COSTS OFF)
 SELECT * FROM tenk1 a JOIN my_gen_series(1,1000) g ON a.unique1 = g;
-                         QUERY PLAN                         
-------------------------------------------------------------
- Hash Join
-   Hash Cond: (tenk1.unique1 = my_gen_series.my_gen_series)
-   ->  Gather Motion 3:1  (slice1; segments: 3)
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (tenk1.unique1 = my_gen_series.my_gen_series)
          ->  Seq Scan on tenk1
-   ->  Hash
-         ->  Function Scan on my_gen_series
+         ->  Hash
+               ->  Function Scan on my_gen_series
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
 EXPLAIN (COSTS OFF)
 SELECT * FROM tenk1 a JOIN my_gen_series(1,10) g ON a.unique1 = g;
-                         QUERY PLAN                         
-------------------------------------------------------------
- Hash Join
-   Hash Cond: (tenk1.unique1 = my_gen_series.my_gen_series)
-   ->  Gather Motion 3:1  (slice1; segments: 3)
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (tenk1.unique1 = my_gen_series.my_gen_series)
          ->  Seq Scan on tenk1
-   ->  Hash
-         ->  Function Scan on my_gen_series
+         ->  Hash
+               ->  Function Scan on my_gen_series
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 

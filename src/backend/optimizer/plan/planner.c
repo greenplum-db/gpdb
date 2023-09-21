@@ -3004,11 +3004,57 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 	 * If there is an FDW that's responsible for all baserels of the query,
 	 * let it consider adding ForeignPaths.
 	 */
-	if (final_rel->fdwroutine &&
-		final_rel->fdwroutine->GetForeignUpperPaths)
+	if (final_rel->fdwroutine && final_rel->fdwroutine->GetForeignUpperPaths)
 	{
-		if(final_rel->exec_location != FTEXECLOCATION_ALL_SEGMENTS ||
-		   !final_rel->fdwroutine->IsMPPPlanNeeded || final_rel->fdwroutine->IsMPPPlanNeeded() == 0)
+		/* If FDW need MPP plan, we need to create two-phase limit path. */
+		if (final_rel->exec_location == FTEXECLOCATION_ALL_SEGMENTS &&
+			final_rel->fdwroutine->IsMPPPlanNeeded && final_rel->fdwroutine->IsMPPPlanNeeded() == 1)
+		{
+			RelOptInfo *pre_final_rel = makeNode(RelOptInfo);
+			pre_final_rel->reloptkind = RELOPT_UPPER_REL;
+			pre_final_rel->relids = bms_copy(final_rel->relids);
+
+			/* cheap startup cost is interesting iff not all tuples to be retrieved */
+			pre_final_rel->consider_startup = final_rel->consider_startup;
+			pre_final_rel->consider_param_startup = false;
+			pre_final_rel->consider_parallel = false;	/* might get changed later */
+			pre_final_rel->reltarget = create_empty_pathtarget();
+			pre_final_rel->pathlist = NIL;
+			pre_final_rel->cheapest_startup_path = NULL;
+			pre_final_rel->cheapest_total_path = NULL;
+			pre_final_rel->cheapest_unique_path = NULL;
+			pre_final_rel->cheapest_parameterized_paths = NIL;
+
+			pre_final_rel->serverid = final_rel->serverid;
+			pre_final_rel->userid = final_rel->userid;
+			pre_final_rel->useridiscurrent = final_rel->useridiscurrent;
+			pre_final_rel->fdwroutine = final_rel->fdwroutine;
+			pre_final_rel->exec_location = final_rel->exec_location;
+
+			pre_final_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_FINAL,
+															current_rel, pre_final_rel,
+															&extra);
+
+			foreach(lc, pre_final_rel->pathlist)
+			{
+				/*
+				 * If there is a LIMIT/OFFSET clause, add the LIMIT node.
+				 */
+				if (limit_needed(parse))
+				{
+					Path	   *path = (Path *) lfirst(lc);
+					CdbPathLocus locus;
+					CdbPathLocus_MakeSingleQE(&locus, path->locus.numsegments);
+					path = cdbpath_create_motion_path(root, path, path->pathkeys, false, locus);
+					path = create_limit_path(root, final_rel, path,
+											 parse->limitOffset,
+											 parse->limitCount,
+											 offset_est, count_est);
+					add_path(final_rel, path);
+				}
+			}
+		}
+		else
 		{
 			final_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_FINAL,
 														current_rel, final_rel,

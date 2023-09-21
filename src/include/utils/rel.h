@@ -107,10 +107,15 @@ typedef struct RelationData
 	List	   *rd_fkeylist;	/* list of ForeignKeyCacheInfo (see below) */
 	bool		rd_fkeyvalid;	/* true if list has been computed */
 
-	struct PartitionKeyData *rd_partkey;	/* partition key, or NULL */
+	/* data managed by RelationRetrievePartitionKey: */
+	PartitionKey rd_partkey;	/* partition key, or NULL */
 	MemoryContext rd_partkeycxt;	/* private context for rd_partkey, if any */
-	struct PartitionDescData *rd_partdesc;	/* partitions, or NULL */
+
+	/* data managed by RelationRetrievePartitionDesc: */
+	PartitionDesc rd_partdesc;	/* partition descriptor, or NULL */
 	MemoryContext rd_pdcxt;		/* private context for rd_partdesc, if any */
+
+	/* data managed by RelationGetPartitionQual: */
 	List	   *rd_partcheck;	/* partition CHECK quals */
 	bool		rd_partcheckvalid;	/* true if list has been computed */
 	MemoryContext rd_partcheckcxt;	/* private cxt for rd_partcheck, if any */
@@ -704,12 +709,20 @@ typedef struct ViewOptions
 /*
  * RelationGetPartitionKey
  *		Returns the PartitionKey of a relation
+ *
+ * GPDB: This should not be used anymore. It is superceded by
+ * RelationRetrievePartionKey, and is kept around only to prevent ABI 
+ * breakage. See comments on that function for more details.
  */
 #define RelationGetPartitionKey(relation) ((relation)->rd_partkey)
 
 /*
  * RelationGetPartitionDesc
  *		Returns partition descriptor for a relation.
+ *
+ * GPDB: This should not be used anymore. It is superceded by
+ * RelationRetrievePartionDesc, and is kept around only to prevent ABI 
+ * breakage. See comments on that function for more details.
  */
 #define RelationGetPartitionDesc(relation) ((relation)->rd_partdesc)
 

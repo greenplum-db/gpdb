@@ -68,7 +68,6 @@ typedef enum
 
 extern GpRoleValue Gp_role;	/* GUC var - server operating mode.  */
 extern char *gp_role_string;	/* Use by guc.c as staging area for value. */
-extern char *gp_session_role_string; /* Use by guc.c as staging area for value. */
 
 extern bool gp_reraise_signal; /* try to force a core dump ?*/
 
@@ -122,6 +121,9 @@ extern int			gp_reject_percent_threshold;
  * "invisible" rows are returned.
  */
 extern bool           gp_select_invisible;
+
+/* Detect if the current partitioning of the table or data distribution is correct */
+extern bool			gp_detect_data_correctness;
 
 /*
  * Used to set the maximum length of the current query which is displayed
@@ -650,6 +652,7 @@ extern bool dml_ignore_target_partition_check;
 extern int gp_workfile_limit_per_segment;
 extern int gp_workfile_limit_per_query;
 extern int gp_workfile_limit_files_per_query;
+extern int gp_workfile_compression_overhead_limit;
 extern int gp_workfile_caching_loglevel;
 extern int gp_sessionstate_loglevel;
 extern int gp_workfile_bytes_to_checksum;

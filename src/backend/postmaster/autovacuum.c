@@ -3044,7 +3044,7 @@ table_recheck_autovac(Oid relid, HTAB *table_toast_map,
 		tab->at_relid = relid;
 		tab->at_sharedrel = classForm->relisshared;
 		tab->at_params.options = VACOPT_SKIPTOAST |
-			(dovacuum ? VACOPT_VACUUM : 0) |
+			(dovacuum ? (VACOPT_VACUUM | VACOPT_SKIP_DATABASE_STATS) : 0) |
 			(doanalyze ? VACOPT_ANALYZE : 0) |
 			(!wraparound ? VACOPT_SKIP_LOCKED : 0);
 		tab->at_params.index_cleanup = VACOPT_TERNARY_DEFAULT;

@@ -5037,7 +5037,7 @@ transformPartitionCmd(CreateStmtContext *cxt, PartitionCmd *cmd)
 	{
 		case RELKIND_PARTITIONED_TABLE:
 			/* transform the partition bound, if any */
-			Assert(RelationGetPartitionKey(parentRel) != NULL);
+			Assert(RelationRetrievePartitionKey(parentRel) != NULL);
 			if (cmd->bound != NULL)
 				cxt->partbound = transformPartitionBound(cxt->pstate, parentRel,
 														 cmd->bound);
@@ -5077,7 +5077,7 @@ transformPartitionBound(ParseState *pstate, Relation parent,
 						PartitionBoundSpec *spec)
 {
 	PartitionBoundSpec *result_spec;
-	PartitionKey key = RelationGetPartitionKey(parent);
+	PartitionKey key = RelationRetrievePartitionKey(parent);
 	char		strategy = get_partition_strategy(key);
 	int			partnatts = get_partition_natts(key);
 	List	   *partexprs = get_partition_exprs(key);
@@ -5225,7 +5225,7 @@ transformPartitionRangeBounds(ParseState *pstate, List *blist,
 							  Relation parent)
 {
 	List	   *result = NIL;
-	PartitionKey key = RelationGetPartitionKey(parent);
+	PartitionKey key = RelationRetrievePartitionKey(parent);
 	List	   *partexprs = get_partition_exprs(key);
 	ListCell   *lc;
 	int			i,

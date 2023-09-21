@@ -95,8 +95,10 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
+#include "utils/resource_manager.h"
 #include "utils/tarrable.h"
 #include "utils/varlena.h"
+#include "utils/resgroup.h"
 
 #include "catalog/heap.h"
 #include "catalog/oid_dispatch.h"
@@ -663,6 +665,9 @@ DropTableSpace(DropTableSpaceStmt *stmt)
 						tablespacename),
 				 errdetail_internal("%s", detail),
 				 errdetail_log("%s", detail_log)));
+
+	if (IsResGroupEnabled() && Gp_resource_manager_policy == RESOURCE_MANAGER_POLICY_GROUP_V2)
+		checkTablespaceInIOlimit(tablespaceoid, true);
 
 	/* DROP hook for the tablespace being removed */
 	InvokeObjectDropHook(TableSpaceRelationId, tablespaceoid, 0);

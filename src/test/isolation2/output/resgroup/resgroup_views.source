@@ -21,10 +21,10 @@ select groupname , groupid , segment_id , vmem_usage from gp_toolkit.gp_resgroup
 -----------+---------+------------+------------
 (0 rows)
 
-select * from gp_toolkit.gp_resgroup_role where rrrolname='gpadmin';
- rrrolname | rrrsgname   
------------+-------------
- gpadmin   | admin_group 
+select rrrsgname from gp_toolkit.gp_resgroup_role where rrrolname='@curusername@';
+ rrrsgname   
+-------------
+ admin_group 
 (1 row)
 
 -- also log the raw output of the views, if any of above tests failed it is

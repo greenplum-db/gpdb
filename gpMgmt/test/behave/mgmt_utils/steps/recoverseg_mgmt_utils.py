@@ -846,11 +846,23 @@ def impl(context, host):
 
 
 
-@then('verify that pg_basebackup {action} running for content {content_ids}')
-def impl(context, action, content_ids):
+@then('verify that pg_basebackup {action} running for {filter} {value}')
+def impl(context, action, filter, value):
     attempt = 0
-    num_retries = 600
-    content_ids_to_check = [int(c) for c in content_ids.split(',')]
+    num_retries = 6000
+
+    if filter == "host":
+        host_string = ",".join(["'{}'".format(host.strip()) for host in value.split(',')])
+
+        with closing(dbconn.connect(dbconn.DbURL(), unsetSearchPath=False)) as conn:
+            result = dbconn.query(conn,"SELECT content FROM gp_segment_configuration WHERE hostname in ({0});".format(host_string)).fetchall()
+            content_ids_to_check = [row[0] for row in result]
+
+    elif filter == "content":
+        content_ids_to_check = [int(c) for c in value.split(',')]
+
+    else:
+        raise Exception("Invalid filter: {0}".format(filter))
 
     while attempt < num_retries:
         attempt += 1
@@ -875,7 +887,7 @@ def impl(context, action, content_ids):
     rows = getRows('postgres', qry)
 
     attempt = 0
-    num_retries = 600
+    num_retries = 6000
     while attempt < num_retries:
         attempt += 1
 
@@ -898,7 +910,7 @@ def impl(context, action, content_ids):
     rows = getRows('postgres', qry)
 
     attempt = 0
-    num_retries = 600
+    num_retries = 6000
     while attempt < num_retries:
         attempt += 1
 

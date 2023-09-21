@@ -102,3 +102,37 @@ FROM gp_toolkit.gp_workfile_entries
 GROUP BY datname, pid, sess_id, command_cnt, usename, query, segid;
 
 GRANT SELECT ON gp_toolkit.gp_workfile_usage_per_query TO public;
+
+CREATE TYPE gp_toolkit.__iostats AS (segindex int4, rsgname text, groupid oid, tablespace text, "rbps" int8, "wbps" int8, "riops" int8, "wiops" int8);
+
+CREATE FUNCTION gp_toolkit.__gp_resgroup_iostats() RETURNS SETOF gp_toolkit.__iostats AS 'gp_toolkit.so','pg_resgroup_get_iostats' LANGUAGE C STRICT;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_resgroup_iostats TO public;
+
+--------------------------------------------------------------------------------
+-- @view:
+--              gp_toolkit.gp_resgroup_iostats_per_host
+--
+-- @doc:
+--              Resource group disk io speed calculated by cgroup
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.gp_resgroup_iostats_per_host AS
+    WITH iostats AS (
+        select * from
+        (select (gp_toolkit.__gp_resgroup_iostats()).* from gp_id union all select (gp_toolkit.__gp_resgroup_iostats()).* from gp_dist_random('gp_id')) as stats
+        join
+        (select content,hostname from gp_segment_configuration) as segs
+        on stats.segindex = segs.content
+    )
+    select rsgname,
+           hostname,
+           tablespace,
+           avg("rbps")::bigint rbps,
+           avg("wbps")::bigint wbps,
+           avg("riops")::bigint riops,
+           avg("wiops")::bigint wiops
+    from iostats group by (hostname, rsgname, tablespace);
+
+GRANT SELECT ON gp_toolkit.gp_resgroup_iostats_per_host TO public;

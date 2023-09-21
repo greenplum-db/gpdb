@@ -32,7 +32,7 @@ A user-level role is considered to be a database role that can log in to the dat
 
 ```
 
-A database role may have a number of attributes that define what sort of tasks that role can perform in the database. You can set these attributes when you create the role, or later using the `ALTER ROLE` command. See [Table 1](#iq139556) for a description of the role attributes you can set.
+A database role may have a number of attributes that define what sort of tasks that role can perform in the database. You can set these attributes when you create the role, or later using the `ALTER ROLE` command.
 
 ### <a id="topic4"></a>Altering Role Attributes 
 
@@ -48,7 +48,7 @@ A database role may have a number of attributes that define what sort of tasks t
 |`CONNECTION LIMIT *connlimit*`|If role can log in, this specifies how many concurrent connections the role can make. -1 \(the default\) means no limit.|
 |`CREATEEXTTABLE` or `NOCREATEEXTTABLE`|Determines whether a role is allowed to create external tables. `NOCREATEEXTTABLE` is the default. For a role with the `CREATEEXTTABLE` attribute, the default external table `type` is `readable` and the default `protocol` is `gpfdist`. Note that external tables that use the `file` or `execute` protocols can only be created by superusers.|
 |`PASSWORD '*password*'`|Sets the role's password. If you do not plan to use password authentication you can omit this option. If no password is specified, the password will be set to null and password authentication will always fail for that user. A null password can optionally be written explicitly as `PASSWORD NULL`.|
-|`ENCRYPTED` or `UNENCRYPTED`|Controls whether a new password is stored as a hash string in the `pg_authid` system catalog. If neither `ENCRYPTED` nor `UNENCRYPTED` is specified, the default behavior is determined by the `password_encryption` configuration parameter, which is `on` by default. If the supplied `*password*` string is already in hashed format, it is stored as-is, regardless of whether `ENCRYPTED` or `UNENCRYPTED` is specified.<br/><br/>See [Protecting Passwords in Greenplum Database](#topic9) for additional information about protecting login passwords. |
+|`ENCRYPTED`|The password is always stored encrypted in the system catalogs. The `ENCRYPTED` keyword has no effect, but is accepted for backwards compatibility. The method of encryption is determined by the configuration parameter `password_encryption`. If the presented password string is already in MD5-encrypted or SCRAM-encrypted format, then it is stored as-is regardless of `password_encryption`, since the system cannot decrypt the specified encrypted password string, to encrypt it in a different format). This allows reloading of encrypted passwords during dump/restore.<br/>See [Protecting Passwords in Greenplum Database](#topic9) for additional information about protecting login passwords. |
 |`VALID UNTIL 'timestamp'`|Sets a date and time after which the role's password is no longer valid. If omitted the password will be valid for all time.|
 |`RESOURCE QUEUE queue_name`|Assigns the role to the named resource queue for workload management. Any statement that role issues is then subject to the resource queue's limits. Note that the `RESOURCE QUEUE` attribute is not inherited; it must be set on each user-level \(`LOGIN`\) role.|
 |`DENY deny_interval` or `DENY deny_point` | Restricts access during an interval, specified by day or day and time. For more information see [Time-based Authentication](#topic13).|
@@ -88,7 +88,7 @@ Once the group role exists, you can add and remove members \(user roles\) using 
 
 ```
 
-For managing object privileges, you would then grant the appropriate permissions to the group-level role only \(see [Table 2](#iq139925)\). The member user roles then inherit the object privileges of the group role. For example:
+For managing object privileges, you would then grant the appropriate permissions to the group-level role only \(see [Managing Object Privileges](#topic6)\). The member user roles then inherit the object privileges of the group role. For example:
 
 ```
 =# GRANT ALL ON TABLE mytable TO admin;
@@ -345,41 +345,37 @@ Greenplum Database is installed with an optional module of encryption/decryption
 To use `pgcrypto` functions, register the `pgcrypto` extension in each database in which you want to use the functions. For example:
 
 ```
-$ psql -d testdb -c "CREATE EXTENSION pgcrypto"
+psql -d testdb -c "CREATE EXTENSION pgcrypto"
 ```
 
 See [pgcrypto](https://www.postgresql.org/docs/12/pgcrypto.html) in the PostgreSQL documentation for more information about individual functions.
 
 ## <a id="topic9"></a>Protecting Passwords in Greenplum Database 
 
-In its default configuration, Greenplum Database saves MD5 hashes of login users' passwords in the `pg_authid` system catalog rather than saving clear text passwords. Anyone who is able to view the `pg_authid` table can see hash strings, but no passwords. This also ensures that passwords are obscured when the database is dumped to backup files.
+In its default configuration, Greenplum Database saves MD5 or SCRAM-SHA-256 hashes of login users' passwords in the `pg_authid` system catalog rather than saving clear text passwords. Anyone who is able to view the `pg_authid` table can see hash strings, but no passwords. This also ensures that passwords are obscured when the database is dumped to backup files.
 
 The hash function runs when the password is set by using any of the following commands:
 
--   `CREATE USER name WITH ENCRYPTED PASSWORD 'password'`
--   `CREATE ROLE name WITH LOGIN ENCRYPTED PASSWORD 'password'`
--   `ALTER USER name WITH ENCRYPTED PASSWORD 'password'`
--   `ALTER ROLE name WITH ENCRYPTED PASSWORD 'password'`
-
-The `ENCRYPTED` keyword may be omitted when the `password_encryption` system configuration parameter is `on`, which is the default value. The `password_encryption` configuration parameter determines whether clear text or hashed passwords are saved when the `ENCRYPTED` or `UNENCRYPTED` keyword is not present in the command.
+-   `CREATE USER name WITH PASSWORD 'password'`
+-   `CREATE ROLE name WITH LOGIN PASSWORD 'password'`
+-   `ALTER USER name WITH PASSWORD 'password'`
+-   `ALTER ROLE name WITH PASSWORD 'password'`
 
 > **Note** The SQL command syntax and `password_encryption` configuration variable include the term *encrypt*, but the passwords are not technically encrypted. They are *hashed* and therefore cannot be decrypted.
 
-The hash is calculated on the concatenated clear text password and role name. The MD5 hash produces a 32-byte hexadecimal string prefixed with the characters `md5`. The hashed password is saved in the `rolpassword` column of the `pg_authid` system table.
-
-Although it is not recommended, passwords may be saved in clear text in the database by including the `UNENCRYPTED` keyword in the command or by setting the `password_encryption` configuration variable to `off`. Note that changing the configuration value has no effect on existing passwords, only newly created or updated passwords.
+The hash is calculated on the concatenated clear text password and role name. The MD5 hash produces a 32-byte hexadecimal string prefixed with the characters `md5` while the SCRAM-SHA-256 hash produces a 64-byte hexadecimal string prefixed with the characters `SCRAM-SHA-256`. The hashed password is saved in the `rolpassword` column of the `pg_authid` system table.
 
 To set `password_encryption` globally, run these commands in a shell as the `gpadmin` user:
 
 ```
-$ gpconfig -c password_encryption -v 'off'
+$ gpconfig -c password_encryption -v 'scram-sha-256'
 $ gpstop -u
 ```
 
 To set `password_encryption` in a session, use the SQL `SET` command:
 
 ```
-=# SET password_encryption = 'on';
+SET password_encryption = 'md5';
 ```
 
 ## <a id="topic13"></a>Time-based Authentication 

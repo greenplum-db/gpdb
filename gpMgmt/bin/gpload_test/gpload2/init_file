@@ -18,6 +18,8 @@ m/^HINT:  Use the escape string syntax for backslashes.*/
 -- s/ext_gpload_reusable_db\d*b\d_created_\d*_\d*_\d*/EXT_GPLOAD_REUSABLE/
 -- m/ext_gpload_reusable/
 -- s/ext_gpload_reusable_\w*_\w*_\w*_\w*_\w*/EXT_GPLOAD_REUSABLE/
+-- m/ext_gpload/
+-- s/ext_gpload_\w*_\w*_\w*_\w*_\w*/EXT_GPLOAD/
 -- m/staging_gpload_reusable/
 -- s/staging_gpload_reusable_\w+/STAGING_GPLOAD_REUSABLE/
 -- m/started gpfdist/

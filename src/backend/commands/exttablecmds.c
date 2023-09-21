@@ -47,7 +47,6 @@ static bool ExtractErrorLogPersistent(List **options);
 static List * GenerateExtTableEntryOptions(Oid tbloid,
 										   bool iswritable,
 										   bool issreh,
-										   char formattype,
 										   char rejectlimittype,
 										   char* commandString,
 										   int rejectlimit,
@@ -293,7 +292,6 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 	entryOptions = GenerateExtTableEntryOptions(reloid,
 										   iswritable,
 										   issreh,
-										   formattype,
 										   rejectlimittype,
 										   commandString,
 										   rejectlimit,
@@ -821,7 +819,6 @@ static List*
 GenerateExtTableEntryOptions(Oid 	tbloid,
 							 bool 	iswritable,
 							 bool	issreh,
-							 char	formattype,
 							 char	rejectlimittype,
 							 char*	commandString,
 							 int	rejectlimit,
@@ -831,8 +828,6 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 							 char*	locationUris)
 {
 	List		*entryOptions = NIL;
-
-	entryOptions = lappend(entryOptions, makeDefElem("format_type", (Node *) makeString(psprintf("%c", formattype)), -1));
 
 	if (commandString)
 	{
@@ -850,12 +845,29 @@ GenerateExtTableEntryOptions(Oid 	tbloid,
 	if (issreh)
 	{
 		entryOptions = lappend(entryOptions, makeDefElem("reject_limit", (Node *) makeString(psprintf("%d", rejectlimit)), -1));
-		entryOptions = lappend(entryOptions, makeDefElem("reject_limit_type", (Node *) makeString(psprintf("%c", rejectlimittype)), -1));
+		if (rejectlimittype == 'r')
+			entryOptions = lappend(entryOptions, makeDefElem("reject_limit_type", (Node *)makeString("rows"), -1));
+		else if (rejectlimittype == 'p')
+			entryOptions = lappend(entryOptions, makeDefElem("reject_limit_type", (Node *)makeString("percentage"), -1));
 	}
 
-	entryOptions = lappend(entryOptions, makeDefElem("log_errors", (Node *) makeString(psprintf("%c", logerrors)), -1));
-	entryOptions = lappend(entryOptions, makeDefElem("encoding", (Node *) makeString(psprintf("%d", encoding)), -1));
-	entryOptions = lappend(entryOptions, makeDefElem("is_writable", (Node *) makeString(iswritable ? pstrdup("true") : pstrdup("false")), -1));
+	/*
+	 * By default, use "enable", "disable", and "persistently" to align with
+	 * the log_errors macros in "cdbsreh.h".
+	 *
+	 * Check GetExtFromForeignTableOptions(), "true", "false", and "persistent"
+	 * also work.
+	 */
+	if (logerrors == 't')
+		entryOptions = lappend(entryOptions, makeDefElem("log_errors", (Node *) makeString("enable"), -1));
+	else if (logerrors == 'f')
+		entryOptions = lappend(entryOptions, makeDefElem("log_errors", (Node *) makeString("disable"), -1));
+	else if (logerrors == 'p')
+		entryOptions = lappend(entryOptions, makeDefElem("log_errors", (Node *) makeString("persistently"), -1));
+
+	entryOptions = lappend(entryOptions, makeDefElem("encoding", (Node *) makeString(pstrdup(pg_encoding_to_char(encoding))), -1));
+
+	entryOptions = lappend(entryOptions, makeDefElem("is_writable", (Node *) makeString(iswritable ? "true" : "false"), -1));
 
 	/*
 	 * Add the dependency of custom external table

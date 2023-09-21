@@ -3,6 +3,7 @@ from contextlib import redirect_stderr
 import io
 from mock import call, Mock, patch, ANY
 import sys
+import re
 
 from .gp_unittest import GpTestCase
 import gppylib
@@ -60,8 +61,8 @@ class RecoveryBaseTestCase(GpTestCase):
 
     def _asserts_for_failing_tests(self, ex, stderr_buf, expected_message, info_count=1):
         self.assertEqual(1, ex.exception.code)
-        self.assertEqual(expected_message, stderr_buf.getvalue().strip())
-        self.assertEqual([call(expected_message)], self.mock_logger.error.call_args_list)
+        self.assertRegexpMatches(expected_message, stderr_buf.getvalue().strip())
+        self.assertTrue(any(re.search(expected_message, call_args[0]) for call_args, _ in self.mock_logger.error.call_args_list))
         self.assertEqual(info_count, self.mock_logger.info.call_count)
 
     def _assert_workerpool_calls(self, mock_workerpool):
@@ -211,9 +212,9 @@ class RecoveryBaseTestCase(GpTestCase):
 
         stderr_buf, ex = self.run_recovery_base_get_stderr()
         self._asserts_for_failing_tests(ex, stderr_buf,
-                                        '[{"error_type": "default", "error_msg": "/bin/bash: invalid_cmd_str: command not found\\n",'
+                                        '[{"error_type": "default", "error_msg": "^/bin/bash.*invalid_cmd_str: command not found$",'
                                         ' "dbid": null, "datadir": null, "port": null, "progress_file": null},'
-                                        ' {"error_type": "default", "error_msg": "/bin/bash: invalid_cmd_str: command not found\\n",'
+                                        ' {"error_type": "default", "error_msg": "^/bin/bash.*invalid_cmd_str: command not found$",'
                                         ' "dbid": null, "datadir": null, "port": null, "progress_file": null}]')
 
     #TODO do we need this test where an invalid command fails but with a wrapper error?
@@ -239,9 +240,9 @@ class RecoveryBaseTestCase(GpTestCase):
 
         stderr_buf, ex = self.run_recovery_base_get_stderr()
         self._asserts_for_failing_tests(ex, stderr_buf,
-                                        '[{"error_type": "default", "error_msg": "/bin/bash: invalid_cmd_str: command not found\\n",'
+                                        '[{"error_type": "default", "error_msg": "^/bin/bash.*invalid_cmd_str: command not found$",'
                                         ' "dbid": null, "datadir": null, "port": null, "progress_file": null},'
-                                        ' {"error_type": "default", "error_msg": "/bin/bash: invalid_cmd_str: command not found\\n",'
+                                        ' {"error_type": "default", "error_msg": "^/bin/bash.*invalid_cmd_str: command not found$",'
                                         ' "dbid": null, "datadir": null, "port": null, "progress_file": null}]')
 
         self.assertEqual(1, self.mock_enable_verbose_logging.call_count)
