@@ -40,7 +40,6 @@ Greenplum Database 7 requires the following software packages on RHEL systems. T
 -   python39
 -   readline
 -   rsync
--   R
 -   sed \(used by `gpinitsystem`\)
 -   tar
 -   zip
