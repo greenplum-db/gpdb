@@ -104,6 +104,7 @@ OBJS        = CDecorrelator.o \
               CXformLeftSemiJoin2NLJoin.o \
               CXformLimit2IndexGet.o \
               CXformMaxOneRow2Assert.o \
+              CXformMinMax2IndexGet.o \
               CXformDynamicForeignGet2DynamicForeignScan.o \
               CXformProject2Apply.o \
               CXformProject2ComputeScalar.o \

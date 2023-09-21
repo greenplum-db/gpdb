@@ -30,6 +30,7 @@
 #include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/operators/CScalarFunc.h"
 #include "gpopt/operators/CScalarIdent.h"
+#include "gpopt/operators/CScalarNullTest.h"
 #include "naucrates/dxl/gpdb_types.h"
 #include "naucrates/md/CMDArrayCoerceCastGPDB.h"
 #include "naucrates/md/CMDIdGPDB.h"
@@ -2167,6 +2168,24 @@ CPredicateUtils::ExtractIndexPredicates(
 				mp, pexprScId,
 				CUtils::PexprScalarConstBool(mp, false /*value*/,
 											 false /*is_null*/));
+		}
+		// Expression of form 'col IS NULL' or 'col IS NOT NULL'.
+		// This check is to enable support of "IS NULL/IS NOT NULL" conditions
+		// for min/max optimization, which is possible only for btree indices.
+		else if (((CUtils::FScalarNullTest(pexprCond) &&
+				   CUtils::FScalarIdent(
+					   (*pexprCond)[0]) /* IS NULL expression*/) ||
+				  (FNot(pexprCond) &&
+				   CUtils::FScalarNullTest((*pexprCond)[0]) &&
+				   CUtils::FScalarIdent(
+					   (*(*pexprCond)[0])[0]) /* IS NOT NULL expression*/)) &&
+				 pmdindex->IndexType() == gpmd::IMDIndex::EmdindBtree)
+		{
+			// Expression is not transformed to a comparison as 'col IS NULL'
+			// or 'col IS NOT NULL' are not equivalent to 'col = NULL' or
+			// 'col!=NULL' respectively.
+			pdrgpexprTarget->Append(pexprCond);
+			continue;
 		}
 		else
 		{

@@ -1130,9 +1130,41 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 		Expr *index_cond_expr =
 			m_translator_dxl_to_scalar->TranslateDXLToScalar(
 				index_cond_dxlnode, &colid_var_mapping);
-		GPOS_ASSERT((IsA(index_cond_expr, OpExpr) ||
-					 IsA(index_cond_expr, ScalarArrayOpExpr)) &&
-					"expected OpExpr or ScalarArrayOpExpr in index qual");
+
+		// Translate BoolExpr of format 'NOT (col IS NULL)' to NullExpr
+		// 'col IS NOT NULL', because IndexScan only supports indexquals
+		// of types: OpExpr, RowCompareExpr, ScalarArrayOpExpr and NullTest
+		if (IsA(index_cond_expr, BoolExpr) &&
+			((BoolExpr *) index_cond_expr)->boolop == NOT_EXPR)
+		{
+			// Fetch first child of 'BoolExpr' condition
+			Node *null_test_arg = (Node *) lfirst(
+				gpdb::ListHead(((BoolExpr *) index_cond_expr)->args));
+			Node *original_null_test_arg = (Node *) lfirst(
+				gpdb::ListHead(((BoolExpr *) original_index_cond_expr)->args));
+			// If first child of BoolExpr with boolop NOT is a NullTest
+			// then, modify index qual to NullTest with opposite null test type
+			// condition
+			if (IsA(null_test_arg, NullTest))
+			{
+				index_cond_expr = (Expr *) null_test_arg;
+				NullTestType existing_null_test_type =
+					((NullTest *) index_cond_expr)->nulltesttype;
+				((NullTest *) index_cond_expr)->nulltesttype =
+					(existing_null_test_type == IS_NULL) ? IS_NOT_NULL
+														 : IS_NULL;
+				original_index_cond_expr = (Expr *) original_null_test_arg;
+				((NullTest *) original_index_cond_expr)->nulltesttype =
+					(existing_null_test_type == IS_NULL) ? IS_NOT_NULL
+														 : IS_NULL;
+			}
+		}
+
+		GPOS_ASSERT(
+			(IsA(index_cond_expr, OpExpr) ||
+			 IsA(index_cond_expr, ScalarArrayOpExpr) ||
+			 IsA(index_cond_expr, NullTest)) &&
+			"expected OpExpr or ScalarArrayOpExpr or NullTest in index qual");
 
 		// allow Index quals with scalar array only for bitmap and btree indexes
 		if (!is_bitmap_index_probe && IsA(index_cond_expr, ScalarArrayOpExpr) &&
@@ -1154,39 +1186,57 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 		{
 			args_list = ((OpExpr *) index_cond_expr)->args;
 		}
-		else
+		else if (IsA(index_cond_expr, ScalarArrayOpExpr))
 		{
 			args_list = ((ScalarArrayOpExpr *) index_cond_expr)->args;
 		}
 
-		Node *left_arg = (Node *) lfirst(gpdb::ListHead(args_list));
-		Node *right_arg = (Node *) lfirst(gpdb::ListTail(args_list));
-
-		BOOL is_relabel_type = false;
-		if (IsA(left_arg, RelabelType) &&
-			IsA(((RelabelType *) left_arg)->arg, Var))
+		Node *left_arg;
+		Node *right_arg;
+		bool is_null_test_type = false;
+		if (IsA(index_cond_expr, NullTest))
 		{
-			left_arg = (Node *) ((RelabelType *) left_arg)->arg;
-			is_relabel_type = true;
+			// NullTest only has one arg
+			left_arg = (Node *) (((NullTest *) index_cond_expr)->arg);
+			is_null_test_type = true;
 		}
-		else if (IsA(right_arg, RelabelType) &&
-				 IsA(((RelabelType *) right_arg)->arg, Var))
+		else
 		{
-			right_arg = (Node *) ((RelabelType *) right_arg)->arg;
-			is_relabel_type = true;
+			left_arg = (Node *) lfirst(gpdb::ListHead(args_list));
+			right_arg = (Node *) lfirst(gpdb::ListTail(args_list));
 		}
 
-		if (is_relabel_type)
+		// Type Coercion doesn't add much value for IS NULL and IS NOT NULL
+		// conditions, and is not supported
+		if (!is_null_test_type)
 		{
-			List *new_args_list = ListMake2(left_arg, right_arg);
-			gpdb::GPDBFree(args_list);
-			if (IsA(index_cond_expr, OpExpr))
+			BOOL is_relabel_type = false;
+			if (IsA(left_arg, RelabelType) &&
+				IsA(((RelabelType *) left_arg)->arg, Var))
 			{
-				((OpExpr *) index_cond_expr)->args = new_args_list;
+				left_arg = (Node *) ((RelabelType *) left_arg)->arg;
+				is_relabel_type = true;
 			}
-			else
+			else if (IsA(right_arg, RelabelType) &&
+					 IsA(((RelabelType *) right_arg)->arg, Var))
 			{
-				((ScalarArrayOpExpr *) index_cond_expr)->args = new_args_list;
+				right_arg = (Node *) ((RelabelType *) right_arg)->arg;
+				is_relabel_type = true;
+			}
+
+			if (is_relabel_type)
+			{
+				List *new_args_list = ListMake2(left_arg, right_arg);
+				gpdb::GPDBFree(args_list);
+				if (IsA(index_cond_expr, OpExpr))
+				{
+					((OpExpr *) index_cond_expr)->args = new_args_list;
+				}
+				else
+				{
+					((ScalarArrayOpExpr *) index_cond_expr)->args =
+						new_args_list;
+				}
 			}
 		}
 
@@ -1213,23 +1263,33 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 			attno = ((Var *) right_arg)->varattno;
 		}
 
-		// retrieve index strategy and subtype
-		StrategyNumber strategy_num;
-		OID index_subtype_oid = InvalidOid;
+		// NullTest indexqual doesn't need strategy or subtype
+		if (is_null_test_type)
+		{
+			index_qual_info_array->Append(GPOS_NEW(m_mp) CIndexQualInfo(
+				attno, index_cond_expr, original_index_cond_expr,
+				InvalidStrategy, InvalidOid));
+		}
+		else
+		{
+			// retrieve index strategy and subtype
+			StrategyNumber strategy_num;
+			OID index_subtype_oid = InvalidOid;
 
-		OID cmp_operator_oid =
-			CTranslatorUtils::OidCmpOperator(index_cond_expr);
-		GPOS_ASSERT(InvalidOid != cmp_operator_oid);
-		OID op_family_oid = CTranslatorUtils::GetOpFamilyForIndexQual(
-			attno, CMDIdGPDB::CastMdid(index->MDId())->Oid());
-		GPOS_ASSERT(InvalidOid != op_family_oid);
-		gpdb::IndexOpProperties(cmp_operator_oid, op_family_oid, &strategy_num,
-								&index_subtype_oid);
+			OID cmp_operator_oid =
+				CTranslatorUtils::OidCmpOperator(index_cond_expr);
+			GPOS_ASSERT(InvalidOid != cmp_operator_oid);
+			OID op_family_oid = CTranslatorUtils::GetOpFamilyForIndexQual(
+				attno, CMDIdGPDB::CastMdid(index->MDId())->Oid());
+			GPOS_ASSERT(InvalidOid != op_family_oid);
+			gpdb::IndexOpProperties(cmp_operator_oid, op_family_oid,
+									&strategy_num, &index_subtype_oid);
 
-		// create index qual
-		index_qual_info_array->Append(GPOS_NEW(m_mp) CIndexQualInfo(
-			attno, index_cond_expr, original_index_cond_expr, strategy_num,
-			index_subtype_oid));
+			// create index qual
+			index_qual_info_array->Append(GPOS_NEW(m_mp) CIndexQualInfo(
+				attno, index_cond_expr, original_index_cond_expr, strategy_num,
+				index_subtype_oid));
+		}
 	}
 
 	// the index quals much be ordered by attribute number
