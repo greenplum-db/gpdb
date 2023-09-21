@@ -2514,14 +2514,17 @@ explain(costs off) select c,d from test_yet_unsupported_backwrd_idxscan_cases or
 
 -- Since col a is asc in index, max(a) could use a backward index scan
 explain(costs off) select max(a) from test_yet_unsupported_backwrd_idxscan_cases;
-                                QUERY PLAN
---------------------------------------------------------------------------
- Finalize Aggregate
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Partial Aggregate
-               ->  Seq Scan on test_yet_unsupported_backwrd_idxscan_cases
- Optimizer: Pivotal Optimizer (GPORCA)
-(5 rows)
+                                               QUERY PLAN
+---------------------------------------------------------------------------------------------------------
+ Aggregate
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: a
+               ->  Limit
+                     ->  Index Scan Backward using index_a on test_yet_unsupported_backwrd_idxscan_cases
+                           Index Cond: (a IS NOT NULL)
+ Optimizer: GPORCA
+(8 rows)
 
 -- Cases with a predicate and order by (with/without limit). Order by columns commutating index column
 explain(costs off) select * from test_yet_unsupported_backwrd_idxscan_cases where a>997 order by c desc, d desc;
@@ -3134,3 +3137,1077 @@ explain(costs off) select a from part_table1 union all select a from part_table2
 reset enable_seqscan;
 DROP TABLE part_table1;
 DROP TABLE part_table2;
+-- Purpose: This section includes tests related to min(), max() aggregates optimization.
+CREATE TABLE min_max_aggregates(a int, b text, c int, d float, e numeric, f int);
+CREATE INDEX index_bc on min_max_aggregates using btree(b DESC, c);
+ANALYZE min_max_aggregates;
+-- Ensure Planner picks IndexScan wherever possible
+set enable_seqscan to off;
+-- Test min() and max() optimization if table doesn't have any tuples
+explain(costs off) select min(b) from min_max_aggregates;
+                                 QUERY PLAN
+----------------------------------------------------------------------------
+ Aggregate
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: b
+               ->  Index Scan Backward using index_bc on min_max_aggregates
+                     Index Cond: (b IS NOT NULL)
+ Optimizer: GPORCA
+(7 rows)
+
+select min(b) from min_max_aggregates;
+ min 
+-----
+ 
+(1 row)
+
+explain(costs off) select max(b) from min_max_aggregates;
+                            QUERY PLAN
+-------------------------------------------------------------------
+ Aggregate
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: b
+               ->  Index Scan using index_bc on min_max_aggregates
+                     Index Cond: (b IS NOT NULL)
+ Optimizer: GPORCA
+(7 rows)
+
+select max(b) from min_max_aggregates;
+ max 
+-----
+ 
+(1 row)
+
+INSERT INTO min_max_aggregates select i, concat('col_b', i), i*2, i/3.1, i*1.6, i-1 from generate_series(1,10000)i;
+INSERT INTO min_max_aggregates values(null, null, null, null, null, null);
+-- Positive Tests
+-- Test optimization on index_bc
+explain(costs off) select min(b) from min_max_aggregates;
+                                 QUERY PLAN
+----------------------------------------------------------------------------
+ Aggregate
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: b
+               ->  Index Scan Backward using index_bc on min_max_aggregates
+                     Index Cond: (b IS NOT NULL)
+ Optimizer: GPORCA
+(7 rows)
+
+select min(b) from min_max_aggregates;
+  min   
+--------
+ col_b1
+(1 row)
+
+explain(costs off) select max(b) from min_max_aggregates;
+                            QUERY PLAN
+-------------------------------------------------------------------
+ Aggregate
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: b
+               ->  Index Scan using index_bc on min_max_aggregates
+                     Index Cond: (b IS NOT NULL)
+ Optimizer: GPORCA
+(7 rows)
+
+select max(b) from min_max_aggregates;
+    max    
+-----------
+ col_b9999
+(1 row)
+
+-- Create index_a and test optimization on its keys
+CREATE INDEX index_a on min_max_aggregates using btree(a NULLS FIRST);
+ANALYZE min_max_aggregates;
+explain(costs off) select min(a) from min_max_aggregates;
+                               QUERY PLAN
+------------------------------------------------------------------------
+ Aggregate
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: a
+               ->  Limit
+                     ->  Index Scan using index_a on min_max_aggregates
+                           Index Cond: (a IS NOT NULL)
+ Optimizer: GPORCA
+(8 rows)
+
+select min(a) from min_max_aggregates;
+ min 
+-----
+   1
+(1 row)
+
+explain(costs off) select max(a) from min_max_aggregates;
+                                   QUERY PLAN
+---------------------------------------------------------------------------------
+ Aggregate
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: a
+               ->  Limit
+                     ->  Index Scan Backward using index_a on min_max_aggregates
+                           Index Cond: (a IS NOT NULL)
+ Optimizer: GPORCA
+(8 rows)
+
+select max(a) from min_max_aggregates;
+  max  
+-------
+ 10000
+(1 row)
+
+-- Create index_d and test optimization on its keys
+CREATE INDEX index_d on min_max_aggregates using btree(d DESC NULLS LAST);
+ANALYZE min_max_aggregates;
+explain(costs off) select min(d) from min_max_aggregates;
+                                   QUERY PLAN
+---------------------------------------------------------------------------------
+ Aggregate
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: d
+               ->  Limit
+                     ->  Index Scan Backward using index_d on min_max_aggregates
+                           Index Cond: (d IS NOT NULL)
+ Optimizer: GPORCA
+(8 rows)
+
+select min(d) from min_max_aggregates;
+        min         
+--------------------
+ 0.3225806451612903
+(1 row)
+
+explain(costs off) select max(d) from min_max_aggregates;
+                               QUERY PLAN
+------------------------------------------------------------------------
+ Aggregate
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: d
+               ->  Limit
+                     ->  Index Scan using index_d on min_max_aggregates
+                           Index Cond: (d IS NOT NULL)
+ Optimizer: GPORCA
+(8 rows)
+
+select max(d) from min_max_aggregates;
+        max         
+--------------------
+ 3225.8064516129034
+(1 row)
+
+-- Create index_e and test optimization on its keys
+CREATE INDEX index_e on min_max_aggregates using btree(e);
+ANALYZE min_max_aggregates;
+explain(costs off) select min(e) from min_max_aggregates;
+                               QUERY PLAN
+------------------------------------------------------------------------
+ Aggregate
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: e
+               ->  Limit
+                     ->  Index Scan using index_e on min_max_aggregates
+                           Index Cond: (e IS NOT NULL)
+ Optimizer: GPORCA
+(8 rows)
+
+select min(e) from min_max_aggregates;
+ min 
+-----
+ 1.6
+(1 row)
+
+explain(costs off) select max(e) from min_max_aggregates;
+                                   QUERY PLAN
+---------------------------------------------------------------------------------
+ Aggregate
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: e
+               ->  Limit
+                     ->  Index Scan Backward using index_e on min_max_aggregates
+                           Index Cond: (e IS NOT NULL)
+ Optimizer: GPORCA
+(8 rows)
+
+select max(e) from min_max_aggregates;
+   max   
+---------
+ 16000.0
+(1 row)
+
+-- Test min/max with empty group by
+explain(costs off) select min(e) from min_max_aggregates group by ();
+                               QUERY PLAN
+------------------------------------------------------------------------
+ Aggregate
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: e
+               ->  Limit
+                     ->  Index Scan using index_e on min_max_aggregates
+                           Index Cond: (e IS NOT NULL)
+ Optimizer: GPORCA
+(8 rows)
+
+select min(e) from min_max_aggregates group by ();
+ min 
+-----
+ 1.6
+(1 row)
+
+explain(costs off) select max(e) from min_max_aggregates group by ();
+                                   QUERY PLAN
+---------------------------------------------------------------------------------
+ Aggregate
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: e
+               ->  Limit
+                     ->  Index Scan Backward using index_e on min_max_aggregates
+                           Index Cond: (e IS NOT NULL)
+ Optimizer: GPORCA
+(8 rows)
+
+select max(e) from min_max_aggregates group by ();
+   max   
+---------
+ 16000.0
+(1 row)
+
+-- Negative Tests
+reset enable_seqscan;
+-- Test optimization on non index columns
+explain(costs off) select min(c) from min_max_aggregates;
+                    QUERY PLAN
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on min_max_aggregates
+ Optimizer: GPORCA
+(5 rows)
+
+select min(c) from min_max_aggregates;
+ min 
+-----
+   2
+(1 row)
+
+explain(costs off) select max(c) from min_max_aggregates;
+                    QUERY PLAN
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on min_max_aggregates
+ Optimizer: GPORCA
+(5 rows)
+
+select max(c) from min_max_aggregates;
+  max  
+-------
+ 20000
+(1 row)
+
+explain(costs off) select min(f) from min_max_aggregates;
+                    QUERY PLAN
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on min_max_aggregates
+ Optimizer: GPORCA
+(5 rows)
+
+select min(f) from min_max_aggregates;
+ min 
+-----
+   0
+(1 row)
+
+explain(costs off) select max(f) from min_max_aggregates;
+                    QUERY PLAN
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on min_max_aggregates
+ Optimizer: GPORCA
+(5 rows)
+
+select max(f) from min_max_aggregates;
+ max  
+------
+ 9999
+(1 row)
+
+-- Test min/max on a constant
+explain(costs off) select min(100) from min_max_aggregates;
+                    QUERY PLAN
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on min_max_aggregates
+ Optimizer: GPORCA
+(5 rows)
+
+select min(100) from min_max_aggregates;
+ min 
+-----
+ 100
+(1 row)
+
+explain(costs off) select max(100) from min_max_aggregates;
+                    QUERY PLAN
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on min_max_aggregates
+ Optimizer: GPORCA
+(5 rows)
+
+select max(100) from min_max_aggregates;
+ max 
+-----
+ 100
+(1 row)
+
+-- Test if optimization is applicable on other aggregates
+explain(costs off) select count(*) from min_max_aggregates;
+                    QUERY PLAN
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on min_max_aggregates
+ Optimizer: GPORCA
+(5 rows)
+
+select count(*) from min_max_aggregates;
+ count 
+-------
+ 10001
+(1 row)
+
+explain(costs off) select avg(e) from min_max_aggregates;
+                    QUERY PLAN
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on min_max_aggregates
+ Optimizer: GPORCA
+(5 rows)
+
+select avg(e) from min_max_aggregates;
+          avg          
+-----------------------
+ 8000.8000000000000000
+(1 row)
+
+explain(costs off) select sum(d) from min_max_aggregates;
+                    QUERY PLAN
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on min_max_aggregates
+ Optimizer: GPORCA
+(5 rows)
+
+select sum(d) from min_max_aggregates;
+        sum         
+--------------------
+ 16130645.161290325
+(1 row)
+
+-- Test min/max with group by
+explain(costs off) select min(e) from min_max_aggregates group by e;
+                         QUERY PLAN
+------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  HashAggregate
+         Group Key: e
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: e
+               ->  Seq Scan on min_max_aggregates
+ Optimizer: GPORCA
+(7 rows)
+
+explain(costs off) select max(e) from min_max_aggregates group by e;
+                         QUERY PLAN
+------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  HashAggregate
+         Group Key: e
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: e
+               ->  Seq Scan on min_max_aggregates
+ Optimizer: GPORCA
+(7 rows)
+
+-- Case with no aggregate function and empty group by
+explain(costs off) select 3 from min_max_aggregates group by ();
+                    QUERY PLAN
+--------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Aggregate
+               ->  Seq Scan on min_max_aggregates
+ Optimizer: GPORCA
+(5 rows)
+
+select 3 from min_max_aggregates group by ();
+ ?column? 
+----------
+        3
+(1 row)
+
+-- Case with more than one aggregate functions
+explain(costs off) select min(a), max(d) from min_max_aggregates;
+                    QUERY PLAN
+--------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on min_max_aggregates
+ Optimizer: GPORCA
+(5 rows)
+
+select min(a), max(d) from min_max_aggregates;
+ min |        max         
+-----+--------------------
+   1 | 3225.8064516129034
+(1 row)
+
+-- Purpose: This section tests IS NULL predicate on btree and non-index columns
+-- Tests with IS NULL on btree index columns
+-- Ensure Planner picks IndexScan wherever possible
+set enable_seqscan to off;
+explain(costs off) select * from min_max_aggregates where a is null;
+                      QUERY PLAN
+------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Index Scan using index_a on min_max_aggregates
+         Index Cond: (a IS NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+select * from min_max_aggregates where a is null;
+ a | b | c | d | e | f 
+---+---+---+---+---+---
+   |   |   |   |   |  
+(1 row)
+
+explain(costs off) select * from min_max_aggregates where b is null;
+                      QUERY PLAN
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Scan using index_bc on min_max_aggregates
+         Index Cond: (b IS NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+select * from min_max_aggregates where b is null;
+ a | b | c | d | e | f 
+---+---+---+---+---+---
+   |   |   |   |   |  
+(1 row)
+
+explain(costs off) select * from min_max_aggregates where c is null;
+                      QUERY PLAN
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Scan using index_bc on min_max_aggregates
+         Index Cond: (c IS NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+select * from min_max_aggregates where c is null;
+ a | b | c | d | e | f 
+---+---+---+---+---+---
+   |   |   |   |   |  
+(1 row)
+
+explain(costs off) select * from min_max_aggregates where d is null;
+                      QUERY PLAN
+------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Scan using index_d on min_max_aggregates
+         Index Cond: (d IS NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+select * from min_max_aggregates where d is null;
+ a | b | c | d | e | f 
+---+---+---+---+---+---
+   |   |   |   |   |  
+(1 row)
+
+explain(costs off) select * from min_max_aggregates where e is null;
+                      QUERY PLAN
+------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Scan using index_e on min_max_aggregates
+         Index Cond: (e IS NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+select * from min_max_aggregates where e is null;
+ a | b | c | d | e | f 
+---+---+---+---+---+---
+   |   |   |   |   |  
+(1 row)
+
+reset enable_seqscan;
+-- Tests with IS NULL on non-index columns
+explain(costs off) select * from min_max_aggregates where f is null;
+                QUERY PLAN
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on min_max_aggregates
+         Filter: (f IS NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+select * from min_max_aggregates where f is null;
+ a | b | c | d | e | f 
+---+---+---+---+---+---
+   |   |   |   |   |  
+(1 row)
+
+-- Purpose: This section tests IS NOT NULL predicate on btree and non-index columns
+-- Tests with IS NOT NULL on btree index columns
+-- Ensure 1 NON NULL and NULL row exists in table to exactly determine output
+-- for below queries
+delete from min_max_aggregates where a<10000;
+-- Ensure Planner picks IndexScan wherever possible
+set enable_seqscan to off;
+set enable_bitmapscan to off;
+explain(costs off) select * from min_max_aggregates where a is not null;
+                      QUERY PLAN
+------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Scan using index_a on min_max_aggregates
+         Index Cond: (a IS NOT NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+select * from min_max_aggregates where a is not null;
+   a   |     b      |   c   |         d          |    e    |  f   
+-------+------------+-------+--------------------+---------+------
+ 10000 | col_b10000 | 20000 | 3225.8064516129034 | 16000.0 | 9999
+(1 row)
+
+explain(costs off) select * from min_max_aggregates where b is not null;
+                      QUERY PLAN
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Scan using index_bc on min_max_aggregates
+         Index Cond: (b IS NOT NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+select * from min_max_aggregates where b is not null;
+   a   |     b      |   c   |         d          |    e    |  f   
+-------+------------+-------+--------------------+---------+------
+ 10000 | col_b10000 | 20000 | 3225.8064516129034 | 16000.0 | 9999
+(1 row)
+
+explain(costs off) select * from min_max_aggregates where c is not null;
+                      QUERY PLAN
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Scan using index_bc on min_max_aggregates
+         Index Cond: (c IS NOT NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+select * from min_max_aggregates where c is not null;
+   a   |     b      |   c   |         d          |    e    |  f   
+-------+------------+-------+--------------------+---------+------
+ 10000 | col_b10000 | 20000 | 3225.8064516129034 | 16000.0 | 9999
+(1 row)
+
+explain(costs off) select * from min_max_aggregates where d is not null;
+                      QUERY PLAN
+------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Scan using index_d on min_max_aggregates
+         Index Cond: (d IS NOT NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+select * from min_max_aggregates where d is not null;
+   a   |     b      |   c   |         d          |    e    |  f   
+-------+------------+-------+--------------------+---------+------
+ 10000 | col_b10000 | 20000 | 3225.8064516129034 | 16000.0 | 9999
+(1 row)
+
+explain(costs off) select * from min_max_aggregates where e is not null;
+                      QUERY PLAN
+------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Scan using index_e on min_max_aggregates
+         Index Cond: (e IS NOT NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+select * from min_max_aggregates where e is not null;
+   a   |     b      |   c   |         d          |    e    |  f   
+-------+------------+-------+--------------------+---------+------
+ 10000 | col_b10000 | 20000 | 3225.8064516129034 | 16000.0 | 9999
+(1 row)
+
+reset enable_seqscan;
+reset enable_bitmapscan;
+-- Tests with IS NOT NULL on non-index columns
+explain(costs off) select * from min_max_aggregates where f is not null;
+                QUERY PLAN
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on min_max_aggregates
+         Filter: (NOT (f IS NULL))
+ Optimizer: GPORCA
+(4 rows)
+
+select * from min_max_aggregates where f is not null;
+   a   |     b      |   c   |         d          |    e    |  f   
+-------+------------+-------+--------------------+---------+------
+ 10000 | col_b10000 | 20000 | 3225.8064516129034 | 16000.0 | 9999
+(1 row)
+
+-- Clean Up
+drop table min_max_aggregates;
+-- Purpose: Test min/max optimization on non-btree indices
+CREATE TABLE test_multi_index_types_table(a int, b int, c float, d text, e tsquery, f tsvector);
+-- create a bitmap index
+create index bitmap_a on test_multi_index_types_table using bitmap(a);
+-- create a hash index
+create index hash_b on test_multi_index_types_table using hash(b);
+-- create a brin index
+create index brin_c on test_multi_index_types_table using brin(c);
+-- create a spgist index
+create index spgist_d on test_multi_index_types_table using spgist(d);
+-- create a gin index
+create index gist_e on test_multi_index_types_table using gist(e);
+-- create a gin index
+create index gin_f on test_multi_index_types_table using gin(f);
+-- Test max optimization
+explain(costs off) select max(a) from test_multi_index_types_table;
+                         QUERY PLAN
+------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on test_multi_index_types_table
+ Optimizer: GPORCA
+(5 rows)
+
+select max(a) from test_multi_index_types_table;
+ max 
+-----
+    
+(1 row)
+
+explain(costs off) select max(b) from test_multi_index_types_table;
+                      QUERY PLAN
+------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on test_multi_index_types_table
+ Optimizer: GPORCA
+(4 rows)
+
+select max(b) from test_multi_index_types_table;
+ max 
+-----
+    
+(1 row)
+
+explain(costs off) select max(c) from test_multi_index_types_table;
+                      QUERY PLAN
+------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on test_multi_index_types_table
+ Optimizer: GPORCA
+(4 rows)
+
+select max(c) from test_multi_index_types_table;
+ max 
+-----
+    
+(1 row)
+
+explain(costs off) select max(d) from test_multi_index_types_table;
+                      QUERY PLAN
+------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on test_multi_index_types_table
+ Optimizer: GPORCA
+(4 rows)
+
+select max(d) from test_multi_index_types_table;
+ max 
+-----
+ 
+(1 row)
+
+-- Test min optimization
+explain(costs off) select min(a) from test_multi_index_types_table;
+                         QUERY PLAN
+------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Seq Scan on test_multi_index_types_table
+ Optimizer: GPORCA
+(5 rows)
+
+select min(a) from test_multi_index_types_table;
+ min 
+-----
+    
+(1 row)
+
+explain(costs off) select min(b) from test_multi_index_types_table;
+                      QUERY PLAN
+------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on test_multi_index_types_table
+ Optimizer: GPORCA
+(4 rows)
+
+select min(b) from test_multi_index_types_table;
+ min 
+-----
+    
+(1 row)
+
+explain(costs off) select min(c) from test_multi_index_types_table;
+                      QUERY PLAN
+------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on test_multi_index_types_table
+ Optimizer: GPORCA
+(4 rows)
+
+select min(c) from test_multi_index_types_table;
+ min 
+-----
+    
+(1 row)
+
+explain(costs off) select min(d) from test_multi_index_types_table;
+                      QUERY PLAN
+------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on test_multi_index_types_table
+ Optimizer: GPORCA
+(4 rows)
+
+select min(d) from test_multi_index_types_table;
+ min 
+-----
+ 
+(1 row)
+
+-- max/min functions are not associated with complex data types
+-- of gin, gist indices.
+-- Test IS NULL, IS NOT NULL on non-btree indices
+-- Expected to use SeqScan with Filter
+explain(costs off) select * from test_multi_index_types_table where a is null;
+                   QUERY PLAN
+------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Seq Scan on test_multi_index_types_table
+         Filter: (a IS NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+explain(costs off) select * from test_multi_index_types_table where b is null;
+                   QUERY PLAN
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on test_multi_index_types_table
+         Filter: (b IS NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+explain(costs off) select * from test_multi_index_types_table where c is null;
+                   QUERY PLAN
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on test_multi_index_types_table
+         Filter: (c IS NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+explain(costs off) select * from test_multi_index_types_table where d is null;
+                   QUERY PLAN
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on test_multi_index_types_table
+         Filter: (d IS NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+explain(costs off) select * from test_multi_index_types_table where e is null;
+                   QUERY PLAN
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on test_multi_index_types_table
+         Filter: (e IS NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+explain(costs off) select * from test_multi_index_types_table where f is null;
+                   QUERY PLAN
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on test_multi_index_types_table
+         Filter: (f IS NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+explain(costs off) select * from test_multi_index_types_table where a is not null;
+                   QUERY PLAN
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on test_multi_index_types_table
+         Filter: (NOT (a IS NULL))
+ Optimizer: GPORCA
+(4 rows)
+
+explain(costs off) select * from test_multi_index_types_table where b is not null;
+                   QUERY PLAN
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on test_multi_index_types_table
+         Filter: (NOT (b IS NULL))
+ Optimizer: GPORCA
+(4 rows)
+
+explain(costs off) select * from test_multi_index_types_table where c is not null;
+                   QUERY PLAN
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on test_multi_index_types_table
+         Filter: (NOT (c IS NULL))
+ Optimizer: GPORCA
+(4 rows)
+
+explain(costs off) select * from test_multi_index_types_table where d is not null;
+                   QUERY PLAN
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on test_multi_index_types_table
+         Filter: (NOT (d IS NULL))
+ Optimizer: GPORCA
+(4 rows)
+
+explain(costs off) select * from test_multi_index_types_table where e is not null;
+                   QUERY PLAN
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on test_multi_index_types_table
+         Filter: (NOT (e IS NULL))
+ Optimizer: GPORCA
+(4 rows)
+
+explain(costs off) select * from test_multi_index_types_table where f is not null;
+                   QUERY PLAN
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on test_multi_index_types_table
+         Filter: (NOT (f IS NULL))
+ Optimizer: GPORCA
+(4 rows)
+
+-- Clean Up
+drop table test_multi_index_types_table;
+-- Purpose: Test min/max optimization on AO table with mixed data type columns.
+-- IndexOnlyScans are supported but IndexScans aren't supported on AO tables
+CREATE TABLE test_ao_table(a int, b int, c float, d text, e numeric) WITH (appendonly=true) DISTRIBUTED BY (a);
+-- multi col index with mixed index keys properties
+CREATE INDEX ao_index_cb on test_ao_table using btree(c desc, b);
+INSERT INTO test_ao_table SELECT i, i+3, i/4.2, concat('sample_text ',i), i/5 from generate_series(1,100) i;
+ANALYZE test_ao_table;
+-- Test max() aggregate
+explain(costs off) select max(c) from test_ao_table;
+                                 QUERY PLAN
+----------------------------------------------------------------------------
+ Aggregate
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: c
+               ->  Limit
+                     ->  Index Only Scan using ao_index_cb on test_ao_table
+                           Index Cond: (c IS NOT NULL)
+ Optimizer: GPORCA
+(8 rows)
+
+select max(c) from test_ao_table;
+        max        
+-------------------
+ 23.80952380952381
+(1 row)
+
+-- Test min() aggregate
+explain(costs off) select min(c) from test_ao_table;
+                                     QUERY PLAN
+-------------------------------------------------------------------------------------
+ Aggregate
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Merge Key: c
+               ->  Limit
+                     ->  Index Only Scan Backward using ao_index_cb on test_ao_table
+                           Index Cond: (c IS NOT NULL)
+ Optimizer: GPORCA
+(8 rows)
+
+select min(c) from test_ao_table;
+         min         
+---------------------
+ 0.23809523809523808
+(1 row)
+
+-- Clean Up
+drop table test_ao_table;
+-- Purpose: Test min/max optimization on partition tables.
+CREATE TABLE test_partition_table(a int, b int, c float, d text) DISTRIBUTED BY (a) PARTITION BY range(a);
+CREATE TABLE partition1 PARTITION OF test_partition_table FOR VALUES FROM (1) TO (3);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE partition2 PARTITION OF test_partition_table FOR VALUES FROM (3) TO (6);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE INDEX part_index_c on test_partition_table using btree(c desc);
+INSERT INTO test_partition_table SELECT i, i+3, i/4.2, concat('sample_text ',i) from generate_series(1,4) i;
+-- Inserting nulls to verify results match when index key specifies nulls first or desc
+INSERT INTO test_partition_table values (5, null, null, null);
+ANALYZE test_partition_table;
+-- Test max() aggregate
+explain(costs off) select max(c) from test_partition_table;
+                           QUERY PLAN
+----------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Dynamic Seq Scan on test_partition_table
+                     Number of partitions to scan: 2 (out of 2)
+ Optimizer: GPORCA
+(6 rows)
+
+select max(c) from test_partition_table;
+        max         
+--------------------
+ 0.9523809523809523
+(1 row)
+
+-- Test min() aggregate
+explain(costs off) select min(c) from test_partition_table;
+                           QUERY PLAN
+----------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Dynamic Seq Scan on test_partition_table
+                     Number of partitions to scan: 2 (out of 2)
+ Optimizer: GPORCA
+(6 rows)
+
+select min(c) from test_partition_table;
+         min         
+---------------------
+ 0.23809523809523808
+(1 row)
+
+-- Test IS NULL, IS NOT NULL on partition table btree index column
+explain(costs off) select * from test_partition_table where c is null;
+                            QUERY PLAN
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Dynamic Index Scan on part_index_c on test_partition_table
+         Index Cond: (c IS NULL)
+         Number of partitions to scan: 2 (out of 2)
+ Optimizer: GPORCA
+(5 rows)
+
+select * from test_partition_table where c is null;
+ a | b | c | d 
+---+---+---+---
+ 5 |   |   | 
+(1 row)
+
+explain(costs off) select * from test_partition_table where c is not null;
+                            QUERY PLAN
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Dynamic Index Scan on part_index_c on test_partition_table
+         Index Cond: (c IS NOT NULL)
+         Number of partitions to scan: 2 (out of 2)
+ Optimizer: GPORCA
+(5 rows)
+
+select * from test_partition_table where c is not null;
+ a | b |          c          |       d       
+---+---+---------------------+---------------
+ 2 | 5 | 0.47619047619047616 | sample_text 2
+ 4 | 7 |  0.9523809523809523 | sample_text 4
+ 3 | 6 |  0.7142857142857143 | sample_text 3
+ 1 | 4 | 0.23809523809523808 | sample_text 1
+(4 rows)
+
+-- Test IS NULL, IS NOT NULL on partition table non-index column
+explain(costs off) select * from test_partition_table where d is null;
+                     QUERY PLAN
+----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Dynamic Seq Scan on test_partition_table
+         Number of partitions to scan: 2 (out of 2)
+         Filter: (d IS NULL)
+ Optimizer: GPORCA
+(5 rows)
+
+select * from test_partition_table where d is null;
+ a | b | c | d 
+---+---+---+---
+ 5 |   |   | 
+(1 row)
+
+explain(costs off) select * from test_partition_table where d is not null;
+                     QUERY PLAN
+----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Dynamic Seq Scan on test_partition_table
+         Number of partitions to scan: 2 (out of 2)
+         Filter: (NOT (d IS NULL))
+ Optimizer: GPORCA
+(5 rows)
+
+select * from test_partition_table where d is not null;
+ a | b |          c          |       d       
+---+---+---------------------+---------------
+ 1 | 4 | 0.23809523809523808 | sample_text 1
+ 2 | 5 | 0.47619047619047616 | sample_text 2
+ 3 | 6 |  0.7142857142857143 | sample_text 3
+ 4 | 7 |  0.9523809523809523 | sample_text 4
+(4 rows)
+
+-- Clean Up
+drop table test_partition_table;

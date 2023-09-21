@@ -1481,13 +1481,13 @@ select * from fix_param_a left join fix_param_b on
                Hash Cond: (fix_param_b.i = fix_param_a.i)
                ->  Hash Semi Join
                      Hash Cond: ((fix_param_b.i = fix_param_c.i) AND (fix_param_b.j = fix_param_c.j))
-                     ->  Seq Scan on fix_param_b
-                           Filter: (NOT (i IS NULL))
+                     ->  Index Scan using fix_param_b_i_key on fix_param_b
+                           Index Cond: (i IS NOT NULL)
                      ->  Hash
                            ->  Seq Scan on fix_param_c
                ->  Hash
                      ->  Seq Scan on fix_param_a
- Optimizer: Pivotal Optimizer (GPORCA)
+ Optimizer: GPORCA
 (15 rows)
 
 select * from fix_param_a left join fix_param_b on
