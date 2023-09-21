@@ -10,17 +10,17 @@ The following features have been removed in Greenplum 7:
 
 - Support for Quicklz compression. To avoid breaking applications that use Quicklz, set the `gp_quicklz_fallback` server configuration parameter to `true`.
 
-- The `--skip_root_stats` option  of the `analyzedb` utility.
+- The `--skip_root_stats` option  of the `analyzedb` utility. `analyzedb` populates root statistics required by the optimizer by default. 
 
 - The Greenplum R Client.
 
 - Greenplum MapReduce.
 
-- The `ARRAY_NAME` variable.
+- The `ARRAY_NAME` variable. It is no longer used by VMware Greenplum.
 
-- The PL/Container 3.0 Beta extension.
+- The PL/Container 3.0 Beta extension. Instead, use the regular PL/Container extension.
 
-- The `gp_percentil_agg` extension.
+- The `gp_percentil_agg` extension. This is not part of the core Greenplum product.
 
 - The `createlang` and `droplang` utilties. Instead, use `CREATE EXTENSION` and `DROP EXTENSION` directly.
 
