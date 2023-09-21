@@ -284,6 +284,9 @@ test: instr_in_shmem_verify
 # check autostats
 test: autostats
 test: dpe
+# run this near the end of the schedule for more chance to catch abnormalities
+# Have to run it w/o autovacuum to make sure it won't cause gp_check_orphaned_files to fail in any way.
+test: gp_check_files
 test: enable_autovacuum
 
 test: ao_checksum_corruption AOCO_Compression AORO_Compression table_statistics
@@ -354,9 +357,6 @@ test: enum_dist_part_ban
 
 # test compresstype fallback from quicklz when gp_quicklz_fallback=true
 test: quicklz_fallback
-
-# run this at the end of the schedule for more chance to catch abnormalities
-test: gp_check_files
 
 # run pg_hba raleted testing
 test: hba_conf
