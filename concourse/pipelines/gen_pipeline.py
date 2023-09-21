@@ -174,7 +174,6 @@ def gen_pipeline(args, pipeline_name, variable_files, git_remote, git_branch):
 
     return '''fly --target {target} \
 set-pipeline \
---check-creds \
 --pipeline {name} \
 --config {output_path} \
 {variables} \
