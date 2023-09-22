@@ -18,7 +18,7 @@ Refer to [Installing Additional Supplied Modules](../../../install_guide/install
 
 ## <a id="using"></a>About the vector Types, Operators, and Functions
 
-`pgvector` provides a `vector` data type and an new index access methods `ivfflat` and `hnsw`. This type and methods and the supporting functions and operators provided by the module enable you to perform exact and approximate neighbor search on, and determine L2, inner product, and cosine distance between, embeddings. You can also use the module to store and query embeddings.
+`pgvector` provides a `vector` data type and an new index access methods `ivfflat` and `hnsw`. The type, methods, and the supporting functions and operators provided by the module enable you to perform exact and approximate neighbor search on, and determine L2, inner product, and cosine distance between, embeddings. You can also use the module to store and query embeddings.
 
 ### <a id="datatype"></a>vector Data Type
 
