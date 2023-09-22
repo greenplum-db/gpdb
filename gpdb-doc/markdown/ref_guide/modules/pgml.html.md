@@ -1,6 +1,6 @@
-# postgresml
+# pgml
 
-The `postgresml` module provides functions for using tens of thousands of pre-trained open source AI/machine learning models in VMware Greenplum.
+The `pgml` module provides functions for using tens of thousands of pre-trained open source AI/machine learning models in VMware Greenplum.
 
 ksdfasdf
 adsfasdf
@@ -8,17 +8,17 @@ adsfasdf
 
 ## <a id="topic_reg"></a>Installing and Registering the Module
 
-The `ltree` module is installed when you install Greenplum Database. Before you can use any of the data types, functions, or operators defined in the module, you must register the `ltree` extension in each database in which you want to use the objects:
+The `pgml` module is installed when you install Greenplum Database. Before you can use any of the data types, functions, or operators defined in the module, you must register the `pgml` extension in each database in which you want to use the objects:
 
 ```
-CREATE EXTENSION ltree;
+CREATE EXTENSION pgml;
 ```
 
 Refer to [Installing Additional Supplied Modules](../../install_guide/install_modules.html) for more information.
 
 ## <a id="UDF_summary"></a>User-Defined Functions
 
-The `postgresml` extension provides the following user-defined functions for accessing AI/machine learning models in VMware Greenplum:
+The `pgml` extension provides the following user-defined functions for accessing AI/machine learning models in VMware Greenplum:
 
 - `pgml.embed()` - Generates an embedding for the dataset
 - `pgml.transform()`: Applies a pre-trained transformer to process data
@@ -60,7 +60,7 @@ pgml.transform(
 
 where: 
 
-- `task` is a ithetext string containing the huggingface sentence-transformer name
+- `task` is the huggingface sentence-transformer name passed as either a simple text string or, for more comples task setup, a JSONB object
 - `text` is a text string containing the input to embed 
 - `kwargs` is a set of optional arguments passes as JSON key-value pairs 
 
