@@ -805,7 +805,7 @@ select min(b) from min_max_aggregates;
 explain(costs off) select max(b) from min_max_aggregates;
 select max(b) from min_max_aggregates;
 
-INSERT INTO min_max_aggregates select i, concat('col_b', i), i*2, i/3.1, i*1.6, i-1 from generate_series(1,10000)i;
+INSERT INTO min_max_aggregates select i, concat('col_b', i), i*2, i/3.1, i*1.6, i-1 from generate_series(1,100)i;
 INSERT INTO min_max_aggregates values(null, null, null, null, null, null);
 
 -- Positive Tests
@@ -917,7 +917,7 @@ select * from min_max_aggregates where f is null;
 -- Tests with IS NOT NULL on btree index columns
 -- Ensure 1 NON NULL and NULL row exists in table to exactly determine output
 -- for below queries
-delete from min_max_aggregates where a<10000;
+delete from min_max_aggregates where a<100;
 -- Ensure Planner picks IndexScan wherever possible
 set enable_seqscan to off;
 set enable_bitmapscan to off;

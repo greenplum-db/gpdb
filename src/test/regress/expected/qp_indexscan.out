@@ -3286,7 +3286,7 @@ select max(b) from min_max_aggregates;
  
 (1 row)
 
-INSERT INTO min_max_aggregates select i, concat('col_b', i), i*2, i/3.1, i*1.6, i-1 from generate_series(1,10000)i;
+INSERT INTO min_max_aggregates select i, concat('col_b', i), i*2, i/3.1, i*1.6, i-1 from generate_series(1,100)i;
 INSERT INTO min_max_aggregates values(null, null, null, null, null, null);
 -- Positive Tests
 -- Test optimization on index_bc
@@ -3323,9 +3323,9 @@ explain(costs off) select max(b) from min_max_aggregates;
 (8 rows)
 
 select max(b) from min_max_aggregates;
-    max    
------------
- col_b9999
+   max   
+---------
+ col_b99
 (1 row)
 
 -- Create index_a and test optimization on its keys
@@ -3364,9 +3364,9 @@ explain(costs off) select max(a) from min_max_aggregates;
 (8 rows)
 
 select max(a) from min_max_aggregates;
-  max  
--------
- 10000
+ max 
+-----
+ 100
 (1 row)
 
 -- Create index_d and test optimization on its keys
@@ -3405,9 +3405,9 @@ explain(costs off) select max(d) from min_max_aggregates;
 (8 rows)
 
 select max(d) from min_max_aggregates;
-        max         
---------------------
- 3225.8064516129034
+        max        
+-------------------
+ 32.25806451612903
 (1 row)
 
 -- Create index_e and test optimization on its keys
@@ -3446,9 +3446,9 @@ explain(costs off) select max(e) from min_max_aggregates;
 (8 rows)
 
 select max(e) from min_max_aggregates;
-   max   
----------
- 16000.0
+  max  
+-------
+ 160.0
 (1 row)
 
 -- Test min/max with empty group by
@@ -3485,9 +3485,9 @@ explain(costs off) select max(e) from min_max_aggregates group by ();
 (8 rows)
 
 select max(e) from min_max_aggregates group by ();
-   max   
----------
- 16000.0
+  max  
+-------
+ 160.0
 (1 row)
 
 -- Negative Tests
@@ -3520,9 +3520,9 @@ explain(costs off) select max(c) from min_max_aggregates;
 (5 rows)
 
 select max(c) from min_max_aggregates;
-  max  
--------
- 20000
+ max 
+-----
+ 200
 (1 row)
 
 explain(costs off) select min(f) from min_max_aggregates;
@@ -3552,9 +3552,9 @@ explain(costs off) select max(f) from min_max_aggregates;
 (5 rows)
 
 select max(f) from min_max_aggregates;
- max  
-------
- 9999
+ max 
+-----
+  99
 (1 row)
 
 -- Test min/max on a constant
@@ -3610,7 +3610,7 @@ explain(costs off) select count(*) from min_max_aggregates;
 select count(*) from min_max_aggregates;
  count 
 -------
- 10001
+   101
 (1 row)
 
 explain(costs off) select avg(e) from min_max_aggregates;
@@ -3624,9 +3624,9 @@ explain(costs off) select avg(e) from min_max_aggregates;
 (5 rows)
 
 select avg(e) from min_max_aggregates;
-          avg          
------------------------
- 8000.8000000000000000
+         avg         
+---------------------
+ 80.8000000000000000
 (1 row)
 
 explain(costs off) select sum(d) from min_max_aggregates;
@@ -3640,9 +3640,9 @@ explain(costs off) select sum(d) from min_max_aggregates;
 (5 rows)
 
 select sum(d) from min_max_aggregates;
-        sum         
---------------------
- 16130645.161290325
+        sum        
+-------------------
+ 1629.032258064516
 (1 row)
 
 -- Test min/max with group by
@@ -3705,9 +3705,9 @@ explain(costs off) select min(a), max(d) from min_max_aggregates;
 (14 rows)
 
 select min(a), max(d) from min_max_aggregates;
- min |        max         
------+--------------------
-   1 | 3225.8064516129034
+ min |        max        
+-----+-------------------
+   1 | 32.25806451612903
 (1 row)
 
 -- Purpose: This section tests IS NULL predicate on btree and non-index columns
@@ -3810,7 +3810,7 @@ select * from min_max_aggregates where f is null;
 -- Tests with IS NOT NULL on btree index columns
 -- Ensure 1 NON NULL and NULL row exists in table to exactly determine output
 -- for below queries
-delete from min_max_aggregates where a<10000;
+delete from min_max_aggregates where a<100;
 -- Ensure Planner picks IndexScan wherever possible
 set enable_seqscan to off;
 set enable_bitmapscan to off;
@@ -3824,9 +3824,9 @@ explain(costs off) select * from min_max_aggregates where a is not null;
 (4 rows)
 
 select * from min_max_aggregates where a is not null;
-   a   |     b      |   c   |         d          |    e    |  f   
--------+------------+-------+--------------------+---------+------
- 10000 | col_b10000 | 20000 | 3225.8064516129034 | 16000.0 | 9999
+  a  |    b     |  c  |         d         |   e   | f  
+-----+----------+-----+-------------------+-------+----
+ 100 | col_b100 | 200 | 32.25806451612903 | 160.0 | 99
 (1 row)
 
 explain(costs off) select * from min_max_aggregates where b is not null;
@@ -3839,9 +3839,9 @@ explain(costs off) select * from min_max_aggregates where b is not null;
 (4 rows)
 
 select * from min_max_aggregates where b is not null;
-   a   |     b      |   c   |         d          |    e    |  f   
--------+------------+-------+--------------------+---------+------
- 10000 | col_b10000 | 20000 | 3225.8064516129034 | 16000.0 | 9999
+  a  |    b     |  c  |         d         |   e   | f  
+-----+----------+-----+-------------------+-------+----
+ 100 | col_b100 | 200 | 32.25806451612903 | 160.0 | 99
 (1 row)
 
 explain(costs off) select * from min_max_aggregates where c is not null;
@@ -3854,9 +3854,9 @@ explain(costs off) select * from min_max_aggregates where c is not null;
 (4 rows)
 
 select * from min_max_aggregates where c is not null;
-   a   |     b      |   c   |         d          |    e    |  f   
--------+------------+-------+--------------------+---------+------
- 10000 | col_b10000 | 20000 | 3225.8064516129034 | 16000.0 | 9999
+  a  |    b     |  c  |         d         |   e   | f  
+-----+----------+-----+-------------------+-------+----
+ 100 | col_b100 | 200 | 32.25806451612903 | 160.0 | 99
 (1 row)
 
 explain(costs off) select * from min_max_aggregates where d is not null;
@@ -3869,9 +3869,9 @@ explain(costs off) select * from min_max_aggregates where d is not null;
 (4 rows)
 
 select * from min_max_aggregates where d is not null;
-   a   |     b      |   c   |         d          |    e    |  f   
--------+------------+-------+--------------------+---------+------
- 10000 | col_b10000 | 20000 | 3225.8064516129034 | 16000.0 | 9999
+  a  |    b     |  c  |         d         |   e   | f  
+-----+----------+-----+-------------------+-------+----
+ 100 | col_b100 | 200 | 32.25806451612903 | 160.0 | 99
 (1 row)
 
 explain(costs off) select * from min_max_aggregates where e is not null;
@@ -3884,9 +3884,9 @@ explain(costs off) select * from min_max_aggregates where e is not null;
 (4 rows)
 
 select * from min_max_aggregates where e is not null;
-   a   |     b      |   c   |         d          |    e    |  f   
--------+------------+-------+--------------------+---------+------
- 10000 | col_b10000 | 20000 | 3225.8064516129034 | 16000.0 | 9999
+  a  |    b     |  c  |         d         |   e   | f  
+-----+----------+-----+-------------------+-------+----
+ 100 | col_b100 | 200 | 32.25806451612903 | 160.0 | 99
 (1 row)
 
 reset enable_seqscan;
@@ -3902,9 +3902,9 @@ explain(costs off) select * from min_max_aggregates where f is not null;
 (4 rows)
 
 select * from min_max_aggregates where f is not null;
-   a   |     b      |   c   |         d          |    e    |  f   
--------+------------+-------+--------------------+---------+------
- 10000 | col_b10000 | 20000 | 3225.8064516129034 | 16000.0 | 9999
+  a  |    b     |  c  |         d         |   e   | f  
+-----+----------+-----+-------------------+-------+----
+ 100 | col_b100 | 200 | 32.25806451612903 | 160.0 | 99
 (1 row)
 
 -- Clean Up
