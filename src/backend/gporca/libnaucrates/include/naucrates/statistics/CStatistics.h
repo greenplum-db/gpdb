@@ -235,6 +235,10 @@ public:
 	// look up the width of a particular column
 	virtual const CDouble *GetWidth(ULONG colid) const;
 
+	// Compute stats of a given column
+	IStatistics *ComputeColStats(CMemoryPool *mp, CColRef *colref,
+								 IMDId *rel_mdid) override;
+
 	// the risk of errors in cardinality estimation
 	ULONG
 	StatsEstimationRisk() const override

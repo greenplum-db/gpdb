@@ -1593,10 +1593,11 @@ CCostModelGPDB::CostSequenceProject(CMemoryPool *mp, CExpressionHandle &exprhdl,
 CDouble
 CCostModelGPDB::ComputeUnusedIndexWeight(CExpressionHandle &exprhdl,
 										 CColRefArray *pdrgpcrIndexColumns,
-										 IStatistics *stats)
+										 IStatistics *pBaseTableStats,
+										 CMemoryPool *mp, IMDId *rel_mdid)
 
 {
-	GPOS_ASSERT(nullptr != stats);
+	GPOS_ASSERT(nullptr != pBaseTableStats);
 
 	CDouble dCummulativeUnusedIndexWeight = 0;
 	CDouble dNdv(1.0);
@@ -1640,11 +1641,16 @@ CCostModelGPDB::ComputeUnusedIndexWeight(CExpressionHandle &exprhdl,
 				// more weightage.
 				dUnusedIndexColWeight = (ulNoOfColumnsInIndex - ulIndexColPos);
 
-				// Finding NDV of the unused column
-				dNdv =
-					CStatistics::CastStats(stats)->GetNDVs(colrefIndexColumn);
+				IStatistics *UnusedIndexColStats =
+					CStatistics::CastStats(pBaseTableStats)
+						->ComputeColStats(mp, colrefIndexColumn, rel_mdid);
 
-				CDouble dTableRows = CStatistics::CastStats(stats)->Rows();
+				// Finding NDV of the unused column
+				dNdv = CStatistics::CastStats(UnusedIndexColStats)
+						   ->GetNDVs(colrefIndexColumn);
+
+				CDouble dTableRows =
+					CStatistics::CastStats(pBaseTableStats)->Rows();
 
 				GPOS_ASSERT(0 != dTableRows);
 
@@ -1658,6 +1664,8 @@ CCostModelGPDB::ComputeUnusedIndexWeight(CExpressionHandle &exprhdl,
 
 				dCummulativeUnusedIndexWeight =
 					dCummulativeUnusedIndexWeight + dUnusedIndexColWeight;
+
+				UnusedIndexColStats->Release();
 			}
 		}
 	}
@@ -1729,6 +1737,8 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *mp GPOS_UNUSED,
 	COperator::EOperatorId op_id = pop->Eopid();
 	GPOS_ASSERT(COperator::EopPhysicalIndexScan == op_id ||
 				COperator::EopPhysicalDynamicIndexScan == op_id);
+
+	IMDId *rel_mdid = CPhysicalScan::PopConvert(pop)->Ptabdesc()->MDId();
 
 	const CDouble dTableWidth =
 		CPhysicalScan::PopConvert(pop)->PstatsBaseTable()->Width();
@@ -1802,7 +1812,8 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *mp GPOS_UNUSED,
 	CDouble dUnindexedPredCost =
 		ulUnindexedPredCount * dIndexCostConversionFactor;
 	CDouble dUnusedIndexCost =
-		ComputeUnusedIndexWeight(exprhdl, pdrgpcrIndexColumns, stats) *
+		ComputeUnusedIndexWeight(exprhdl, pdrgpcrIndexColumns, stats, mp,
+								 rel_mdid) *
 		dIndexCostConversionFactor;
 
 	pdrgpcrIndexColumns->Release();
@@ -1829,6 +1840,8 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 	COperator *pop = exprhdl.Pop();
 	GPOS_ASSERT(COperator::EopPhysicalIndexOnlyScan == pop->Eopid() ||
 				COperator::EopPhysicalDynamicIndexOnlyScan == pop->Eopid());
+
+	IMDId *rel_mdid = CPhysicalScan::PopConvert(pop)->Ptabdesc()->MDId();
 
 	const CDouble dTableWidth =
 		CPhysicalScan::PopConvert(pop)->PstatsBaseTable()->Width();
@@ -1924,7 +1937,8 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 			->Get();
 
 	CDouble dUnusedIndexCost =
-		ComputeUnusedIndexWeight(exprhdl, pdrgpcrIndexColumns, stats) *
+		ComputeUnusedIndexWeight(exprhdl, pdrgpcrIndexColumns, stats, mp,
+								 rel_mdid) *
 		dIndexCostConversionFactor;
 
 	pdrgpcrIndexColumns->Release();

@@ -137,6 +137,10 @@ public:
 
 	virtual ULONG GetNumberOfPredicates() const = 0;
 
+	// Compute stats for given column
+	virtual IStatistics *ComputeColStats(CMemoryPool *mp, CColRef *colref,
+										 IMDId *rel_mdid) = 0;
+
 	// inner join with another stats structure
 	virtual IStatistics *CalcInnerJoinStats(
 		CMemoryPool *mp, const IStatistics *other_stats,
