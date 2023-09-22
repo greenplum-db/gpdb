@@ -5,7 +5,10 @@ title: Using PL/Container
 This topic covers further details on:
 
 -   [PL/Container Resource Management](#topic_resmgmt)
--   [PL/Container Functions](#topic_rh3_p3q_dw)
+-   [PL/Container Logging](#plc_notes)
+-   [PL/Container Function Limitations](#topic_rh3_p3q_dw)
+-   [Developing PL/Container functions](#using_functions) 
+
 
 ## <a id="topic_resmgmt"></a>PL/Container Resource Management 
 
@@ -15,9 +18,7 @@ You cannot, by default, restrict the number of running PL/Container container in
 
 >**Caution** In this release of Greenplum 7, you cannot use resource groups to manage and limit the total CPU and memory resources for a PL/Container runtime. Container instances are limited only by system resources, and the containers may consume resources at the expense of the Greenplum Database server. Future releases of Greenplum 7 may restore functionality to manage PL/Container resources using resource groups.
 
-### <a id="plc_notes"></a>Notes 
-
-**PL/Container logging**
+## <a id="plc_notes"></a>PL/Container Logging
 
 When PL/Container logging is enabled, you can set the log level with the Greenplum Database server configuration parameter [log\_min\_messages](../ref_guide/config_params/guc-list.html). The default log level is `warning`. The parameter controls the PL/Container log level and also controls the Greenplum Database log level.
 
