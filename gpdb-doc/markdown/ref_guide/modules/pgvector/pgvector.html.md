@@ -2,7 +2,7 @@
 
 A machine language-generated embedding is a complex object transformed into a list of numbers (vector) that reflects both the semantic and syntactic relationships of the data. The `pgvector` module provides vector similarity search capabilities for Greenplum Database that enable you to search, store, and query embeddings at large scale.
 
-The Greenplum Database `pgvector` module is equivalent to version 0.4.4 of the `pgvector` module used with PostgreSQL. The limitations of the Greenplum version of the module are described in the [Greenplum Database Limitations](#limits) topic.
+The Greenplum Database `pgvector` module is equivalent to version 0.5.0 of the `pgvector` module used with PostgreSQL. The limitations of the Greenplum version of the module are described in the [Greenplum Database Limitations](#limits) topic.
 
 
 ## <a id="topic_reg"></a>Installing and Registering the Module
@@ -18,7 +18,7 @@ Refer to [Installing Additional Supplied Modules](../../../install_guide/install
 
 ## <a id="using"></a>About the vector Types, Operators, and Functions
 
-`pgvector` provides a `vector` data type and an index access method named `ivfflat`. This type and method and the supporting functions and operators provided by the module enable you to to perform exact and approximate neighbor search on, and determine L2, inner product, and cosine distance between, embeddings. You can also use the module to store and query embeddings.
+`pgvector` provides a `vector` data type and an new index access methods `ivfflat` and `hnsw`. This type and methods and the supporting functions and operators provided by the module enable you to perform exact and approximate neighbor search on, and determine L2, inner product, and cosine distance between, embeddings. You can also use the module to store and query embeddings.
 
 ### <a id="datatype"></a>vector Data Type
 
@@ -47,16 +47,18 @@ Function Name | Description
 cosine_distance(vector, vector) → double precision | Computes the cosine distance
 inner_product(vector, vector) → double precision | Computes the inner product
 l2_distance(vector, vector) → double precision | Computes the Euclidean distance
+l1_distance(vector, vector) → double precision | Computes the taxicab distance
 vector_dims(vector) → integer | Returns the number of dimensions
 vector_norm(vector) → double precision | Computes the Euclidean norm
 
 ### <a id="agg_funcs"></a>vector Aggregate Functions
 
-`pgvector` provides the following aggregate function for the `vector` data type:
+`pgvector` provides the following aggregate functions for the `vector` data type:
 
 Function | Description
 --- | ---
 avg(vector) → vector | Computes the arithmetic mean
+sum(vector) → vector | Computes the sum of the vector elements
 
 
 ## <a id="Using"></a>Using the pgvector Module
@@ -184,6 +186,8 @@ To achieve good recall, keep the following in mind:
 
 The following examples show how to add an index for various distance methods.
 
+#### IVFFlat Examples
+
 Create an index on the L2 distance:
 
 ``` sql
@@ -204,8 +208,7 @@ CREATE INDEX ON items USING ivfflat (embedding vector_cosine_ops) WITH (lists = 
 
 You can index a `vector` that has up to 2,000 dimensions.
 
-
-#### <a id="query_opts"></a>Query Options
+**Query Options**
 
 `pgvector` provides a `probes` parameter that you can set at query time to specify the number of regions to search during a query.
 
@@ -222,6 +225,58 @@ Use `SET LOCAL` inside a transaction block to set `probes` for a single query:
 ``` sql
 BEGIN;
 SET LOCAL ivfflat.probes = 10;
+SELECT ...
+COMMIT;
+```
+
+#### HNSW Examples
+
+Create an index on the L2 distance:
+
+``` sql
+CREATE INDEX ON items USING hnsw (embedding vector_l2_ops);
+```
+
+Create an index on the inner product:
+
+``` sql
+CREATE INDEX ON items USING hnsw (embedding vector_ip_ops);
+```
+
+Create an index on the cosine distance:
+
+``` sql
+CREATE INDEX ON items USING hnsw (embedding vector_cosine_ops);
+```
+
+You can index a `vector` that has up to 2,000 dimensions.
+
+HNSW indexes support the following parameters:
+
+- `m` specifies the maximum number of connections per layer (16 by default)
+- `ef_construction` specifies the size of the dynamic candidate list for constructing the graph (64 by default)
+
+For example:
+
+```
+CREATE INDEX ON items USING hnsw (embedding vector_l2_ops) WITH (m = 16, ef_construction = 64);
+```
+
+**Query Options**
+
+Specify a csutom size for the dynamic candidate list for a search:
+
+```
+SET hnsw.ef_search = 100;
+```
+
+Higher value provides better recall at the cost of speed. The default size of the candidate list is 40.
+
+This example sets the candidate size in a transaction for a single query:
+
+```
+BEGIN;
+SET LOCAL hnsw.ef_search = 100;
 SELECT ...
 COMMIT;
 ```
