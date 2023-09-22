@@ -2,11 +2,31 @@
 
 The `pgml` module provides functions for using tens of thousands of pre-trained open source AI/machine learning models in VMware Greenplum.
 
-ksdfasdf
-adsfasdf
+## <a id="prereqs"></a>Before Registering the `pgml` Module
 
+Before registering the `pgml` module, you must install the Data Science bundle for Python3.9, add the `pgml` library to the set of libraries the VMware Greenplum server loads at startup, and set the Python virtual environment:
 
-## <a id="topic_reg"></a>Installing and Registering the Module
+1. Install the Data Science bundle for Python 3.9:
+
+```
+gppkg install DataSciencePython3.9-x.x.x-gp7-el8_x86_64.gppkg 
+```
+
+2. Add the `pgml` library to preload when the VMware Greenplum server starts, using the `shared_preload_libraries` server configuration parameter:
+
+```
+gpconfig -c shared_preload_libraries -v 'xxx, pgml' 
+```
+
+3. Set the Python virtual environment:
+
+```
+SET pgml.venv='$GPHOME/ext/DataSciencePython3.9';
+```
+
+Proceed to the next section to register the `pgml` module.
+
+## <a id="install_register"></a>Registering the Module
 
 The `pgml` module is installed when you install Greenplum Database. Before you can use any of the data types, functions, or operators defined in the module, you must register the `pgml` extension in each database in which you want to use the objects:
 
