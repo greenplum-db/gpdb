@@ -106,6 +106,8 @@ GetTableAmRoutine(Oid amhandler)
 		   (routine->scan_bitmap_next_tuple == NULL));
 	Assert(routine->scan_sample_next_block != NULL);
 	Assert(routine->scan_sample_next_tuple != NULL);
+	Assert(routine->dml_init != NULL);
+	Assert(routine->dml_finish != NULL);
 
 	return routine;
 }
