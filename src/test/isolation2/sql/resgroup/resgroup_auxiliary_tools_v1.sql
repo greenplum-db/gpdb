@@ -4,12 +4,12 @@
 -- CPUSET, and the Cgroup file is exist or not.
 --
 -- In Cgroup v1 (Alpha), we will check the directory of
---  /sys/fs/cgroup/cpu/gpdb
---  /sys/fs/cgroup/cpuacct/gpdb
--- /sys/fs/cgroup/cpuset/gpdb
+--  /sys/fs/cgroup/cpu/gpdb.slice
+--  /sys/fs/cgroup/cpuacct/gpdb.slice
+-- /sys/fs/cgroup/cpuset/gpdb.slice
 --
 -- In Cgroup v2 (Beta), we will check the directory of
--- /sys/fs/cgroup/gpdb/*
+-- /sys/fs/cgroup/gpdb.slice/*
 --
 -- When we run different tests, we should include different auxiliary tool files
 -- to schedule file.
@@ -52,9 +52,9 @@ CREATE LANGUAGE plpython3u;
         return plpy.execute('SHOW {}'.format(guc))[0][guc]
 
     # get top-level cgroup props
-    cfs_quota_us = get_cgroup_prop('cpu/gpdb/cpu.cfs_quota_us')
-    cfs_period_us = get_cgroup_prop('cpu/gpdb/cpu.cfs_period_us')
-    shares = get_cgroup_prop('cpu/gpdb/cpu.shares')
+    cfs_quota_us = get_cgroup_prop('cpu/gpdb.slice/cpu.cfs_quota_us')
+    cfs_period_us = get_cgroup_prop('cpu/gpdb.slice/cpu.cfs_period_us')
+    shares = get_cgroup_prop('cpu/gpdb.slice/cpu.shares')
 
     # get system props
     ncores = os.cpu_count()
@@ -80,7 +80,7 @@ CREATE LANGUAGE plpython3u;
         oid = int(plpy.execute('''
                 SELECT oid FROM pg_resgroup WHERE rsgname='{}'
             '''.format(name))[0]['oid'])
-        sub_shares = get_cgroup_prop('cpu/gpdb/{}/cpu.shares'.format(oid))
+        sub_shares = get_cgroup_prop('cpu/gpdb.slice/{}/cpu.shares'.format(oid))
         assert sub_shares == int(cpu_weight * 1024 / 100)
 
     # check default groups
@@ -123,7 +123,7 @@ $$ LANGUAGE plpython3u;
 
     conf = cpuset
     if conf == '':
-        fd = open("/sys/fs/cgroup/cpuset/gpdb/cpuset.cpus")
+        fd = open("/sys/fs/cgroup/cpuset/gpdb.slice/cpuset.cpus")
         line = fd.readline()
         fd.close()
         conf = line.strip('\n')
@@ -155,7 +155,7 @@ $$ LANGUAGE plpython3u;
 0: CREATE OR REPLACE FUNCTION create_allcores_group(grp TEXT) RETURNS BOOL AS $$
     import subprocess
 
-    file = "/sys/fs/cgroup/cpuset/gpdb/cpuset.cpus"
+    file = "/sys/fs/cgroup/cpuset/gpdb.slice/cpuset.cpus"
     fd = open(file)
     line = fd.readline()
     fd.close()
@@ -167,7 +167,7 @@ $$ LANGUAGE plpython3u;
     if ret.returncode != 0:
         plpy.error('failed to create resource group.\n {} \n {}'.format(ret.stdout, ret.stderr))
 
-    file = "/sys/fs/cgroup/cpuset/gpdb/1/cpuset.cpus"
+    file = "/sys/fs/cgroup/cpuset/gpdb.slice/1/cpuset.cpus"
     fd = open(file)
     line = fd.readline()
     fd.close()
@@ -205,9 +205,9 @@ $$ LANGUAGE plpython3u;
     def get_cgroup_cpuset(group):
         group = str(group)
         if group == '0':
-            file = "/sys/fs/cgroup/cpuset/gpdb/cpuset.cpus"
+            file = "/sys/fs/cgroup/cpuset/gpdb.slice/cpuset.cpus"
         else:
-            file = "/sys/fs/cgroup/cpuset/gpdb/" + group + "/cpuset.cpus"
+            file = "/sys/fs/cgroup/cpuset/gpdb.slice/" + group + "/cpuset.cpus"
         fd = open(file)
         line = fd.readline()
         fd.close()
@@ -264,7 +264,7 @@ $$ LANGUAGE plpython3u;
                                 capture_output=True, check=True).stdout
         session_pids = stdout.splitlines()
 
-        path = "/sys/fs/cgroup/cpu/gpdb/{}/cgroup.procs".format(groupid)
+        path = "/sys/fs/cgroup/cpu/gpdb.slice/{}/cgroup.procs".format(groupid)
         stdout = subprocess.run(["ssh", "{}".format(host), "cat {}".format(path)], capture_output=True, check=True).stdout
         cgroups_pids = stdout.splitlines()
 

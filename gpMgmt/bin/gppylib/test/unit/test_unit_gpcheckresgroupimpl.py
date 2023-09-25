@@ -38,25 +38,25 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
 
         self.cgroup_default_mntpnt = self.cgroup.detect_cgroup_mount_point()
 
-        os.mkdir(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb"), 0o700)
-        self.touch(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb", "cgroup.procs"), 0o600)
-        self.touch(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb", "cpu.cfs_period_us"), 0o600)
-        self.touch(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb", "cpu.cfs_quota_us"), 0o600)
-        self.touch(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb", "cpu.shares"), 0o600)
+        os.mkdir(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice"), 0o700)
+        self.touch(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice", "cgroup.procs"), 0o600)
+        self.touch(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice", "cpu.cfs_period_us"), 0o600)
+        self.touch(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice", "cpu.cfs_quota_us"), 0o600)
+        self.touch(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice", "cpu.shares"), 0o600)
 
-        os.mkdir(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb"), 0o700)
-        self.touch(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb", "cgroup.procs"), 0o600)
-        self.touch(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb", "cpuacct.usage"), 0o400)
-        self.touch(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb", "cpuacct.stat"), 0o400)
+        os.mkdir(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice"), 0o700)
+        self.touch(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice", "cgroup.procs"), 0o600)
+        self.touch(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice", "cpuacct.usage"), 0o400)
+        self.touch(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice", "cpuacct.stat"), 0o400)
 
-        os.mkdir(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb"), 0o700)
-        self.touch(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cgroup.procs"), 0o600)
-        self.touch(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cpuset.cpus"), 0o600)
-        self.touch(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cpuset.mems"), 0o600)
+        os.mkdir(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice"), 0o700)
+        self.touch(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice", "cgroup.procs"), 0o600)
+        self.touch(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice", "cpuset.cpus"), 0o600)
+        self.touch(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice", "cpuset.mems"), 0o600)
 
-        os.mkdir(os.path.join(self.cgroup_mntpnt, "memory", "gpdb"), 0o700)
-        self.touch(os.path.join(self.cgroup_mntpnt, "memory", "gpdb", "cgroup.procs"), 0o600)
-        self.touch(os.path.join(self.cgroup_mntpnt, "memory", "gpdb", "memory.usage_in_bytes"), 0o600)
+        os.mkdir(os.path.join(self.cgroup_mntpnt, "memory", "gpdb.slice"), 0o700)
+        self.touch(os.path.join(self.cgroup_mntpnt, "memory", "gpdb.slice", "cgroup.procs"), 0o600)
+        self.touch(os.path.join(self.cgroup_mntpnt, "memory", "gpdb.slice", "memory.usage_in_bytes"), 0o600)
 
     def tearDown(self):
         shutil.rmtree(self.cgroup_mntpnt)
@@ -84,33 +84,33 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
         self.assertTrue(self.cgroup.validate_comp_dirs())
 
     def test_comp_dirs_validation_when_cpu_gpdb_dir_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb"), 0o100)
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice"), 0o100)
         self.assertFalse(self.cgroup.validate_comp_dirs())
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb"), 0o700)
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice"), 0o700)
 
     def test_comp_dirs_validation_when_cpu_gpdb_dir_missing(self):
-        shutil.rmtree(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb"))
+        shutil.rmtree(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice"))
         self.assertFalse(self.cgroup.validate_comp_dirs())
 
     def test_comp_dirs_validation_when_cpuacct_gpdb_dir_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb"), 0o100)
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice"), 0o100)
         self.assertFalse(self.cgroup.validate_comp_dirs())
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb"), 0o700)
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice"), 0o700)
 
     def test_comp_dirs_validation_when_cpuacct_gpdb_dir_missing(self):
-        shutil.rmtree(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb"))
+        shutil.rmtree(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice"))
         self.assertFalse(self.cgroup.validate_comp_dirs())
 
     def test_comp_dirs_validation_when_cpuset_gpdb_dir_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb"), 0o100)
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice"), 0o100)
         if gpver.version >= [6, 0, 0]:
             self.assertFalse(self.cgroup.validate_comp_dirs())
         else:
             self.assertTrue(self.cgroup.validate_comp_dirs())
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb"), 0o700)
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice"), 0o700)
 
     def test_comp_dirs_validation_when_cpuset_gpdb_dir_missing(self):
-        shutil.rmtree(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb"))
+        shutil.rmtree(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice"))
         if gpver.version >= [6, 0, 0]:
             self.assertFalse(self.cgroup.validate_comp_dirs())
         else:
@@ -136,161 +136,161 @@ class GpCheckResGroupImplCGroup(unittest.TestCase):
         self.cgroup.validate_all()
 
     def test_when_cpu_gpdb_dir_missing(self):
-        shutil.rmtree(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb"))
-        with self.assertRaisesRegex(AssertionError, "directory '.*/cpu/gpdb/' does not exist"):
+        shutil.rmtree(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice"))
+        with self.assertRaisesRegex(AssertionError, "directory '.*/cpu/gpdb.slice/' does not exist"):
             self.cgroup.validate_all()
 
     def test_when_cpu_gpdb_dir_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb"), 0o500)
-        with self.assertRaisesRegex(AssertionError, "directory '.*/cpu/gpdb/' permission denied: require permission 'rwx'"):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice"), 0o500)
+        with self.assertRaisesRegex(AssertionError, "directory '.*/cpu/gpdb.slice/' permission denied: require permission 'rwx'"):
             self.cgroup.validate_all()
         # restore permission for the dir to be removed in tearDown()
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb"), 0o700)
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice"), 0o700)
 
     def test_when_cpu_gpdb_cgroup_procs_missing(self):
-        os.unlink(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb", "cgroup.procs"))
-        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb/cgroup.procs' does not exist"):
+        os.unlink(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice", "cgroup.procs"))
+        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb.slice/cgroup.procs' does not exist"):
             self.cgroup.validate_all()
 
     def test_when_cpu_gpdb_cgroup_procs_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb", "cgroup.procs"), 0o100)
-        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb/cgroup.procs' permission denied: require permission 'rw'"):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice", "cgroup.procs"), 0o100)
+        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb.slice/cgroup.procs' permission denied: require permission 'rw'"):
             self.cgroup.validate_all()
 
     def test_when_cpu_gpdb_cpu_cfs_period_us_missing(self):
-        os.unlink(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb", "cpu.cfs_period_us"))
-        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb/cpu.cfs_period_us' does not exist"):
+        os.unlink(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice", "cpu.cfs_period_us"))
+        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb.slice/cpu.cfs_period_us' does not exist"):
             self.cgroup.validate_all()
 
     def test_when_cpu_gpdb_cpu_cfs_period_us_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb", "cpu.cfs_period_us"), 0o100)
-        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb/cpu.cfs_period_us' permission denied: require permission 'rw'"):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice", "cpu.cfs_period_us"), 0o100)
+        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb.slice/cpu.cfs_period_us' permission denied: require permission 'rw'"):
             self.cgroup.validate_all()
 
     def test_when_cpu_gpdb_cpu_cfs_quota_us_missing(self):
-        os.unlink(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb", "cpu.cfs_quota_us"))
-        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb/cpu.cfs_quota_us' does not exist"):
+        os.unlink(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice", "cpu.cfs_quota_us"))
+        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb.slice/cpu.cfs_quota_us' does not exist"):
             self.cgroup.validate_all()
 
     def test_when_cpu_gpdb_cpu_cfs_quota_us_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb", "cpu.cfs_quota_us"), 0o100)
-        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb/cpu.cfs_quota_us' permission denied: require permission 'rw'"):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice", "cpu.cfs_quota_us"), 0o100)
+        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb.slice/cpu.cfs_quota_us' permission denied: require permission 'rw'"):
             self.cgroup.validate_all()
 
     def test_when_cpu_gpdb_cpu_shares_missing(self):
-        os.unlink(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb", "cpu.shares"))
-        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb/cpu.shares' does not exist"):
+        os.unlink(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice", "cpu.shares"))
+        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb.slice/cpu.shares' does not exist"):
             self.cgroup.validate_all()
 
     def test_when_cpu_gpdb_cpu_shares_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb", "cpu.shares"), 0o100)
-        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb/cpu.shares' permission denied: require permission 'rw'"):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpu", "gpdb.slice", "cpu.shares"), 0o100)
+        with self.assertRaisesRegex(AssertionError, "file '.*/cpu/gpdb.slice/cpu.shares' permission denied: require permission 'rw'"):
             self.cgroup.validate_all()
 
     def test_when_cpuacct_gpdb_dir_missing(self):
-        shutil.rmtree(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb"))
-        with self.assertRaisesRegex(AssertionError, "directory '.*/cpuacct/gpdb/' does not exist"):
+        shutil.rmtree(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice"))
+        with self.assertRaisesRegex(AssertionError, "directory '.*/cpuacct/gpdb.slice/' does not exist"):
             self.cgroup.validate_all()
 
     def test_when_cpuacct_gpdb_dir_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb"), 0o500)
-        with self.assertRaisesRegex(AssertionError, "directory '.*/cpuacct/gpdb/' permission denied: require permission 'rwx'"):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice"), 0o500)
+        with self.assertRaisesRegex(AssertionError, "directory '.*/cpuacct/gpdb.slice/' permission denied: require permission 'rwx'"):
             self.cgroup.validate_all()
         # restore permission for the dir to be removed in tearDown()
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb"), 0o700)
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice"), 0o700)
 
     def test_when_cpuacct_gpdb_cgroup_procs_missing(self):
-        os.unlink(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb", "cgroup.procs"))
-        with self.assertRaisesRegex(AssertionError, "file '.*/cpuacct/gpdb/cgroup.procs' does not exist"):
+        os.unlink(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice", "cgroup.procs"))
+        with self.assertRaisesRegex(AssertionError, "file '.*/cpuacct/gpdb.slice/cgroup.procs' does not exist"):
             self.cgroup.validate_all()
 
     def test_when_cpuacct_gpdb_cgroup_procs_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb", "cgroup.procs"), 0o100)
-        with self.assertRaisesRegex(AssertionError, "file '.*/cpuacct/gpdb/cgroup.procs' permission denied: require permission 'rw'"):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice", "cgroup.procs"), 0o100)
+        with self.assertRaisesRegex(AssertionError, "file '.*/cpuacct/gpdb.slice/cgroup.procs' permission denied: require permission 'rw'"):
             self.cgroup.validate_all()
 
     def test_when_cpuacct_gpdb_cpuacct_usage_missing(self):
-        os.unlink(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb", "cpuacct.usage"))
-        with self.assertRaisesRegex(AssertionError, "file '.*/cpuacct/gpdb/cpuacct.usage' does not exist"):
+        os.unlink(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice", "cpuacct.usage"))
+        with self.assertRaisesRegex(AssertionError, "file '.*/cpuacct/gpdb.slice/cpuacct.usage' does not exist"):
             self.cgroup.validate_all()
 
     def test_when_cpuacct_gpdb_cpuacct_usage_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb", "cpuacct.usage"), 0o100)
-        with self.assertRaisesRegex(AssertionError, "file '.*/cpuacct/gpdb/cpuacct.usage' permission denied: require permission 'r'"):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice", "cpuacct.usage"), 0o100)
+        with self.assertRaisesRegex(AssertionError, "file '.*/cpuacct/gpdb.slice/cpuacct.usage' permission denied: require permission 'r'"):
             self.cgroup.validate_all()
 
     def test_when_cpuacct_gpdb_cpuacct_stat_missing(self):
-        os.unlink(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb", "cpuacct.stat"))
-        with self.assertRaisesRegex(AssertionError, "file '.*/cpuacct/gpdb/cpuacct.stat' does not exist"):
+        os.unlink(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice", "cpuacct.stat"))
+        with self.assertRaisesRegex(AssertionError, "file '.*/cpuacct/gpdb.slice/cpuacct.stat' does not exist"):
             self.cgroup.validate_all()
 
     def test_when_cpuacct_gpdb_cpuacct_stat_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb", "cpuacct.stat"), 0o100)
-        with self.assertRaisesRegex(AssertionError, "file '.*/cpuacct/gpdb/cpuacct.stat' permission denied: require permission 'r'"):
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuacct", "gpdb.slice", "cpuacct.stat"), 0o100)
+        with self.assertRaisesRegex(AssertionError, "file '.*/cpuacct/gpdb.slice/cpuacct.stat' permission denied: require permission 'r'"):
             self.cgroup.validate_all()
 
     def test_when_cpuset_gpdb_dir_missing(self):
-        shutil.rmtree(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb"))
+        shutil.rmtree(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice"))
         if gpver.version >= [6, 0, 0]:
-            with self.assertRaisesRegex(AssertionError, "directory '.*/cpuset/gpdb/' does not exist"):
+            with self.assertRaisesRegex(AssertionError, "directory '.*/cpuset/gpdb.slice/' does not exist"):
                 self.cgroup.validate_all()
         else:
             self.cgroup.validate_all()
 
     def test_when_cpuset_gpdb_dir_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb"), 0o500)
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice"), 0o500)
         if gpver.version >= [6, 0, 0]:
-            with self.assertRaisesRegex(AssertionError, "directory '.*/cpuset/gpdb/' permission denied: require permission 'rwx'"):
+            with self.assertRaisesRegex(AssertionError, "directory '.*/cpuset/gpdb.slice/' permission denied: require permission 'rwx'"):
                 self.cgroup.validate_all()
         else:
             self.cgroup.validate_all()
         # restore permission for the dir to be removed in tearDown()
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb"), 0o700)
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice"), 0o700)
 
     def test_when_cpuset_gpdb_cgroup_procs_missing(self):
-        os.unlink(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cgroup.procs"))
+        os.unlink(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice", "cgroup.procs"))
         if gpver.version >= [6, 0, 0]:
-            with self.assertRaisesRegex(AssertionError, "file '.*/cpuset/gpdb/cgroup.procs' does not exist"):
+            with self.assertRaisesRegex(AssertionError, "file '.*/cpuset/gpdb.slice/cgroup.procs' does not exist"):
                 self.cgroup.validate_all()
         else:
             self.cgroup.validate_all()
 
     def test_when_cpuset_gpdb_cgroup_procs_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cgroup.procs"), 0o100)
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice", "cgroup.procs"), 0o100)
         if gpver.version >= [6, 0, 0]:
-            with self.assertRaisesRegex(AssertionError, "file '.*/cpuset/gpdb/cgroup.procs' permission denied: require permission 'rw'"):
+            with self.assertRaisesRegex(AssertionError, "file '.*/cpuset/gpdb.slice/cgroup.procs' permission denied: require permission 'rw'"):
                 self.cgroup.validate_all()
         else:
             self.cgroup.validate_all()
 
     def test_when_cpuset_gpdb_cpuset_cpus_missing(self):
-        os.unlink(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cpuset.cpus"))
+        os.unlink(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice", "cpuset.cpus"))
         if gpver.version >= [6, 0, 0]:
-            with self.assertRaisesRegex(AssertionError, "file '.*/cpuset/gpdb/cpuset.cpus' does not exist"):
+            with self.assertRaisesRegex(AssertionError, "file '.*/cpuset/gpdb.slice/cpuset.cpus' does not exist"):
                 self.cgroup.validate_all()
         else:
             self.cgroup.validate_all()
 
     def test_when_cpuset_gpdb_cpuset_cpus_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cpuset.cpus"), 0o100)
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice", "cpuset.cpus"), 0o100)
         if gpver.version >= [6, 0, 0]:
-            with self.assertRaisesRegex(AssertionError, "file '.*/cpuset/gpdb/cpuset.cpus' permission denied: require permission 'rw'"):
+            with self.assertRaisesRegex(AssertionError, "file '.*/cpuset/gpdb.slice/cpuset.cpus' permission denied: require permission 'rw'"):
                 self.cgroup.validate_all()
         else:
             self.cgroup.validate_all()
 
     def test_when_cpuset_gpdb_cpuset_mems_missing(self):
-        os.unlink(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cpuset.mems"))
+        os.unlink(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice", "cpuset.mems"))
         if gpver.version >= [6, 0, 0]:
-            with self.assertRaisesRegex(AssertionError, "file '.*/cpuset/gpdb/cpuset.mems' does not exist"):
+            with self.assertRaisesRegex(AssertionError, "file '.*/cpuset/gpdb.slice/cpuset.mems' does not exist"):
                 self.cgroup.validate_all()
         else:
             self.cgroup.validate_all()
 
     def test_when_cpuset_gpdb_cpuset_mems_bad_permission(self):
-        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb", "cpuset.mems"), 0o100)
+        os.chmod(os.path.join(self.cgroup_mntpnt, "cpuset", "gpdb.slice", "cpuset.mems"), 0o100)
         if gpver.version >= [6, 0, 0]:
-            with self.assertRaisesRegex(AssertionError, "file '.*/cpuset/gpdb/cpuset.mems' permission denied: require permission 'rw'"):
+            with self.assertRaisesRegex(AssertionError, "file '.*/cpuset/gpdb.slice/cpuset.mems' permission denied: require permission 'rw'"):
                 self.cgroup.validate_all()
         else:
             self.cgroup.validate_all()

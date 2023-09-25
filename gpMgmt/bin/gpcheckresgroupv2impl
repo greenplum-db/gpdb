@@ -43,24 +43,24 @@ class CgroupValidationVersionTwo(CgroupValidation):
 
         self.validate_permission("cgroup.procs", "rw")
 
-        self.validate_permission("gpdb/", "rwx")
-        self.validate_permission("gpdb/cgroup.procs", "rw")
+        self.validate_permission("gpdb.slice/", "rwx")
+        self.validate_permission("gpdb.slice/cgroup.procs", "rw")
 
-        self.validate_permission("gpdb/cpu.max", "rw")
-        self.validate_permission("gpdb/cpu.pressure", "rw")
-        self.validate_permission("gpdb/cpu.weight", "rw")
-        self.validate_permission("gpdb/cpu.weight.nice", "rw")
-        self.validate_permission("gpdb/cpu.stat", "r")
+        self.validate_permission("gpdb.slice/cpu.max", "rw")
+        self.validate_permission("gpdb.slice/cpu.pressure", "rw")
+        self.validate_permission("gpdb.slice/cpu.weight", "rw")
+        self.validate_permission("gpdb.slice/cpu.weight.nice", "rw")
+        self.validate_permission("gpdb.slice/cpu.stat", "r")
 
-        self.validate_permission("gpdb/cpuset.cpus", "rw")
-        self.validate_permission("gpdb/cpuset.cpus.partition", "rw")
-        self.validate_permission("gpdb/cpuset.mems", "rw")
-        self.validate_permission("gpdb/cpuset.cpus.effective", "r")
-        self.validate_permission("gpdb/cpuset.mems.effective", "r")
+        self.validate_permission("gpdb.slice/cpuset.cpus", "rw")
+        self.validate_permission("gpdb.slice/cpuset.cpus.partition", "rw")
+        self.validate_permission("gpdb.slice/cpuset.mems", "rw")
+        self.validate_permission("gpdb.slice/cpuset.cpus.effective", "r")
+        self.validate_permission("gpdb.slice/cpuset.mems.effective", "r")
 
-        self.validate_permission("gpdb/memory.current", "r")
+        self.validate_permission("gpdb.slice/memory.current", "r")
 
-        self.validate_permission("gpdb/io.max", "rw")
+        self.validate_permission("gpdb.slice/io.max", "rw")
 
     def die(self, msg):
         raise ValidationException("cgroup is not properly configured: {}".format(msg))

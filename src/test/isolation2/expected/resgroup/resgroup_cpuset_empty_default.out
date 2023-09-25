@@ -5,7 +5,7 @@
 -- CREATE / ALTER RESOURCE GROUP, but missing in startup logic, an empty cpu
 -- core list "" is set to cgroup and cause a runtime error:
 --
---     can't write data to file '/sys/fs/cgroup/cpuset/gpdb/1/cpuset.cpus':
+--     can't write data to file '/sys/fs/cgroup/cpuset/gpdb.slice/1/cpuset.cpus':
 --       No space left on device (resgroup-ops-linux.c:916)
 --
 -- To trigger the issue we create a resource group, allocate all the cpu cores

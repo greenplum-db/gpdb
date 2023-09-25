@@ -720,7 +720,7 @@ getcpuusage_v2(Oid group)
 	int status = regexec(&reg, buffer, 1, &pmatch, 0);
 
 	if (status == REG_NOMATCH)
-		CGROUP_ERROR("can't read the value of usage_usec from /sys/fs/cgroup/gpdb/cpu.stat");
+		CGROUP_ERROR("can't read the value of usage_usec from /sys/fs/cgroup/gpdb.slice/cpu.stat");
 	else if (pmatch.rm_so != -1)
 		memcpy(result, buffer + pmatch.rm_so + strlen("usage_usec "), pmatch.rm_eo - pmatch.rm_so);
 

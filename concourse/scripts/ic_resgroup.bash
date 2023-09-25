@@ -48,9 +48,9 @@ make_cgroups_dir() {
     ssh -t $gpdb_host_alias sudo bash -ex <<EOF
         for comp in cpuset cpu cpuacct memory; do
             chmod -R 777 $basedir/\$comp
-            mkdir -p $basedir/\$comp/gpdb
-            chown -R gpadmin:gpadmin $basedir/\$comp/gpdb
-            chmod -R 777 $basedir/\$comp/gpdb
+            mkdir -p $basedir/\$comp/gpdb.slice
+            chown -R gpadmin:gpadmin $basedir/\$comp/gpdb.slice
+            chmod -R 777 $basedir/\$comp/gpdb.slice
         done
 EOF
 }
@@ -106,10 +106,10 @@ keep_minimal_cgroup_dirs() {
     local basedir=$CGROUP_BASEDIR
 
     ssh -t $gpdb_master_alias sudo bash -ex <<EOF
-        rmdir $basedir/memory/gpdb/*/ || :
-        rmdir $basedir/memory/gpdb
-        rmdir $basedir/cpuset/gpdb/*/ || :
-        rmdir $basedir/cpuset/gpdb
+        rmdir $basedir/memory/gpdb.slice/*/ || :
+        rmdir $basedir/memory/gpdb.slice
+        rmdir $basedir/cpuset/gpdb.slice/*/ || :
+        rmdir $basedir/cpuset/gpdb.slice
 EOF
 }
 

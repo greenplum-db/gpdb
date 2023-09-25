@@ -97,14 +97,14 @@ setComponentDir(CGroupComponentType component, const char *dir)
  *
  * - buildPath(ROOT, PARENT, CPU, ""     ): /sys/fs/cgroup/cpu
  * - buildPath(ROOT, PARENT, CPU, "tasks"): /sys/fs/cgroup/cpu/tasks
- * - buildPath(ROOT, GPDB  , CPU, "tasks"): /sys/fs/cgroup/cpu/gpdb/tasks
+ * - buildPath(ROOT, GPDB  , CPU, "tasks"): /sys/fs/cgroup/cpu/gpdb.slice/tasks
  *
  * - buildPath(ROOT, PARENT, ALL, "     "): /sys/fs/cgroup/
  * - buildPath(ROOT, PARENT, ALL, "tasks"): /sys/fs/cgroup/tasks
- * - buildPath(ROOT, GPDB  , ALL, "tasks"): /sys/fs/cgroup/gpdb/tasks
+ * - buildPath(ROOT, GPDB  , ALL, "tasks"): /sys/fs/cgroup/gpdb.slice/tasks
  *
- * - buildPath(6437, GPDB  , CPU, "tasks"): /sys/fs/cgroup/cpu/gpdb/6437/tasks
- * - buildPath(6437, GPDB  , ALL, "tasks"): /sys/fs/cgroup/gpdb/6437/tasks
+ * - buildPath(6437, GPDB  , CPU, "tasks"): /sys/fs/cgroup/cpu/gpdb.slice/6437/tasks
+ * - buildPath(6437, GPDB  , ALL, "tasks"): /sys/fs/cgroup/gpdb.slice/6437/tasks
  */
 void
 buildPath(Oid group,
@@ -147,7 +147,7 @@ buildPathSafe(Oid group,
 	Assert(base == BASEDIR_GPDB || base == BASEDIR_PARENT);
 
 	if (base == BASEDIR_GPDB)
-		base_dir = "/gpdb";
+		base_dir = "/gpdb.slice";
 	else
 		base_dir = "";
 
@@ -174,7 +174,7 @@ buildPathSafe(Oid group,
 		 * for cgroup v2, we just have the top level and child level,
 		 * don't need to care about the component.
 		 */
-		base_dir = base == BASEDIR_GPDB ? "gpdb" : "";
+		base_dir = base == BASEDIR_GPDB ? "gpdb.slice" : "";
 		len = snprintf(path, path_size, "%s/%s%s/%s",
 					   cgroupSystemInfo->cgroup_dir, base_dir, group_dir, filename);
 	}

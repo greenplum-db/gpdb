@@ -62,25 +62,25 @@ class CgroupValidationVersionOne(CgroupValidation):
         if not self.component_dirs:
             self.die("failed to detect cgroup component dirs.")
 
-        self.validate_permission("cpu", "gpdb/", "rwx")
-        self.validate_permission("cpu", "gpdb/cgroup.procs", "rw")
-        self.validate_permission("cpu", "gpdb/cpu.cfs_period_us", "rw")
-        self.validate_permission("cpu", "gpdb/cpu.cfs_quota_us", "rw")
-        self.validate_permission("cpu", "gpdb/cpu.shares", "rw")
+        self.validate_permission("cpu", "gpdb.slice/", "rwx")
+        self.validate_permission("cpu", "gpdb.slice/cgroup.procs", "rw")
+        self.validate_permission("cpu", "gpdb.slice/cpu.cfs_period_us", "rw")
+        self.validate_permission("cpu", "gpdb.slice/cpu.cfs_quota_us", "rw")
+        self.validate_permission("cpu", "gpdb.slice/cpu.shares", "rw")
 
-        self.validate_permission("cpuacct", "gpdb/", "rwx")
-        self.validate_permission("cpuacct", "gpdb/cgroup.procs", "rw")
-        self.validate_permission("cpuacct", "gpdb/cpuacct.usage", "r")
-        self.validate_permission("cpuacct", "gpdb/cpuacct.stat", "r")
+        self.validate_permission("cpuacct", "gpdb.slice/", "rwx")
+        self.validate_permission("cpuacct", "gpdb.slice/cgroup.procs", "rw")
+        self.validate_permission("cpuacct", "gpdb.slice/cpuacct.usage", "r")
+        self.validate_permission("cpuacct", "gpdb.slice/cpuacct.stat", "r")
 
-        self.validate_permission("cpuset", "gpdb/", "rwx")
-        self.validate_permission("cpuset", "gpdb/cgroup.procs", "rw")
-        self.validate_permission("cpuset", "gpdb/cpuset.cpus", "rw")
-        self.validate_permission("cpuset", "gpdb/cpuset.mems", "rw")
+        self.validate_permission("cpuset", "gpdb.slice/", "rwx")
+        self.validate_permission("cpuset", "gpdb.slice/cgroup.procs", "rw")
+        self.validate_permission("cpuset", "gpdb.slice/cpuset.cpus", "rw")
+        self.validate_permission("cpuset", "gpdb.slice/cpuset.mems", "rw")
 
-        self.validate_permission("memory", "gpdb/", "rwx")
-        self.validate_permission("memory", "gpdb/cgroup.procs", "rw")
-        self.validate_permission("memory", "gpdb/memory.usage_in_bytes", "r")
+        self.validate_permission("memory", "gpdb.slice/", "rwx")
+        self.validate_permission("memory", "gpdb.slice/cgroup.procs", "rw")
+        self.validate_permission("memory", "gpdb.slice/memory.usage_in_bytes", "r")
 
         self.validate_comp_hierarchy()
 
@@ -123,7 +123,7 @@ class CgroupValidationVersionOne(CgroupValidation):
                 return False
 
             component_dir = self.component_dirs[comp]
-            fullpath = os.path.join(self.mount_point, comp, component_dir, 'gpdb')
+            fullpath = os.path.join(self.mount_point, comp, component_dir, 'gpdb.slice')
 
             if not os.access(fullpath, os.R_OK | os.W_OK | os.X_OK):
                 return False
