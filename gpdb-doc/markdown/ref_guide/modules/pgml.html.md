@@ -1,6 +1,8 @@
 # pgml
 
-The `pgml` module provides functions for using tens of thousands of pre-trained open source AI/machine learning models in VMware Greenplum. The models are provided by the [Hugging Face AI data science platform](https://huggingface.co/). 
+PostgresML is a machine learning extension for PostgreSQL that enables you to perform training and inference on text and tabular data using SQL queries. With PostgresML, you can seamlessly integrate machine learning models into your PostgreSQL database and harness the power of cutting-edge algorithms to process data efficiently.
+
+The `pgml` module provides PostgresML functions for using tens of thousands of pre-trained open source AI/machine learning models in VMware Greenplum. The models are provided by the [Hugging Face AI data science platform](https://huggingface.co/). 
 
 ## <a id="prereqs"></a>Before Registering the `pgml` Module
 
@@ -38,11 +40,13 @@ Refer to [Installing Additional Supplied Modules](../../install_guide/install_mo
 
 ## <a id="UDF_summary"></a>User-Defined Functions
 
-The `pgml` extension provides the following user-defined functions for accessing AI/machine learning models in VMware Greenplum:
+The `pgml` extension currently supports just a subset of all of the user-defined functions provided by PostgresML. They are these three:
 
 - `pgml.load_dataset()`: Loads a dataset into tables in VMware Greenplum using the  `INSERT` SQL command. Read more about loading data [here](https://postgresml.org/docs/guides/transformers/fine_tuning#header-2).
 - `pgml.embed()` - Generates an embedding for the dataset. Read more about PostgresML embeddings [here](https://postgresml.org/docs/guides/transformers/embeddings). 
 - `pgml.transform()`: Applies a pre-trained transformer to process data. Read more about PostgresML pre-trained models [here](https://postgresml.org/docs/guides/transformers/pre_trained_models).
+
+VMware anticipates adding support for the additional PostgresML functions in future releases. 
 
 ### <a id="pgml_load_dataset"></a>pgml.load_dataset()
 
@@ -132,7 +136,7 @@ CREATE TABLE tweet_embeddings AS
 
 SELECT text, pgml.embed('distilbert-base-uncased', text) AS embedding 
 
-FROM pgml.tweet_eval; 
+FROM pgml.tweet_eval limit 5; 
 
 # Download and run pre-trained models
 
