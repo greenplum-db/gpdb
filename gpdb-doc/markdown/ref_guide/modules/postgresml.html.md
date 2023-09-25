@@ -1,6 +1,6 @@
 # postgresml
 
-[PostgresML](https://postgresml.org) is a machine learning extension for PostgreSQL that enables you to perform training and inference on text and tabular data using SQL queries. With PostgresML, you can seamlessly integrate machine learning models into your PostgreSQL database and harness the power of cutting-edge algorithms to process data efficiently.
+[PostgresML](https://postgresml.org) is a machine learning extension for PostgreSQL that enables you to perform training and inference on text and tabular data using SQL queries. With PostgresML, you can seamlessly integrate machine learning models into your VMware Greenplum database and harness the power of cutting-edge algorithms to process data efficiently.
 
 The `postgresml` module provides PostgresML functions for using tens of thousands of pre-trained open source AI/machine learning models in VMware Greenplum. The models are provided by the [Hugging Face AI data science platform](https://huggingface.co/). 
 
@@ -10,9 +10,13 @@ Before registering the `postgresml` module, you must install the Data Science bu
 
 1. Install the Data Science bundle for Python 3.9:
 
+For example:
+
     ```
     gppkg install DataSciencePython3.9-x.x.x-gp7-el8_x86_64.gppkg 
     ```
+
+    where x.x.x replresents any existing preloaded libraries.
 
 2. Add the `postgresml` library to preload when the VMware Greenplum server starts, using the `shared_preload_libraries` server configuration parameter:
 
@@ -54,9 +58,9 @@ VMware anticipates adding support for the additional PostgresML functions in fut
 
 ```
 pgml.load_dataset( 
-	source TEXT, -- data source name 
-	subset TEXT DEFAULT NULL, -- subset of the data source 
-	limit bigint 
+	source TEXT,
+	subset TEXT,
+	limit bigint,
 	kwargs JSONB
 )
 ```
@@ -65,7 +69,7 @@ where:
 
 `source` is the name of the data source.
 `subset` is a subset of the data source. The default is `NULL`. 
-`limit` is a user-defined number of imported XXX  **RADAR: IMPORTED WHAT???** The default is `NULL`.
+`limit` is a user-defined linit on the number of imported rows. The default is `NULL`.
 `kwargs` is a a JSONB object containing optional arguments. The default is an empty object (`{}`).
 
 
@@ -101,12 +105,12 @@ pgml.transform(
 
 where: 
 
-- `task` is the task name passed as either a simple text string or, for more complex task setup, a JSONB object containing a full pipeline and initializer arguments.
+- `task` is the task name passed as either a simple text string or, for a more complex task setup, a JSONB object containing a full pipeline and initializer arguments.
 - `call` is a JSONB object containing call arguments passed alongside the `inputs` values.
 - `inputs` is a `TEXT[]` or `BYTEA[]` array containing inputs for inference. 
 
 >**Note**
->You must explicityly specify a model when calling `pgml.transform()`; default models are not yet supported.
+>You must explicitly specify a model when calling `pgml.transform()`; default models are not yet supported.
 
 ## <a id="Example"></a>Example
 
