@@ -1,12 +1,12 @@
-# pgml
+# postgresml
 
-PostgresML is a machine learning extension for PostgreSQL that enables you to perform training and inference on text and tabular data using SQL queries. With PostgresML, you can seamlessly integrate machine learning models into your PostgreSQL database and harness the power of cutting-edge algorithms to process data efficiently.
+[PostgresML](https://postgresml.org) is a machine learning extension for PostgreSQL that enables you to perform training and inference on text and tabular data using SQL queries. With PostgresML, you can seamlessly integrate machine learning models into your PostgreSQL database and harness the power of cutting-edge algorithms to process data efficiently.
 
-The `pgml` module provides PostgresML functions for using tens of thousands of pre-trained open source AI/machine learning models in VMware Greenplum. The models are provided by the [Hugging Face AI data science platform](https://huggingface.co/). 
+The `postgresml` module provides PostgresML functions for using tens of thousands of pre-trained open source AI/machine learning models in VMware Greenplum. The models are provided by the [Hugging Face AI data science platform](https://huggingface.co/). 
 
-## <a id="prereqs"></a>Before Registering the `pgml` Module
+## <a id="prereqs"></a>Before Registering the `postgresml` Module
 
-Before registering the `pgml` module, you must install the Data Science bundle for Python3.9, add the `pgml` library to the set of libraries the VMware Greenplum server loads at startup, and set the Python virtual environment:
+Before registering the `postgresml` module, you must install the Data Science bundle for Python3.9, add the `postgresml` library to the set of libraries the VMware Greenplum server loads at startup, and set the Python virtual environment:
 
 1. Install the Data Science bundle for Python 3.9:
 
@@ -14,7 +14,7 @@ Before registering the `pgml` module, you must install the Data Science bundle f
     gppkg install DataSciencePython3.9-x.x.x-gp7-el8_x86_64.gppkg 
     ```
 
-2. Add the `pgml` library to preload when the VMware Greenplum server starts, using the `shared_preload_libraries` server configuration parameter:
+2. Add the `postgresml` library to preload when the VMware Greenplum server starts, using the `shared_preload_libraries` server configuration parameter:
 
     ```
     gpconfig -c shared_preload_libraries -v 'xxx, pgml' 
@@ -26,21 +26,21 @@ Before registering the `pgml` module, you must install the Data Science bundle f
     SET pgml.venv='$GPHOME/ext/DataSciencePython3.9';
     ```
 
-Proceed to the next section to register the `pgml` module.
+Proceed to the next section to register the `postgresml` module.
 
 ## <a id="install_register"></a>Registering the Module
 
-The `pgml` module is installed when you install Greenplum Database. Before you can use any of the data types, functions, or operators defined in the module, you must register the `pgml` extension in each database in which you want to use the objects:
+The `postgresml` module is installed when you install Greenplum Database. Before you can use any of the data types, functions, or operators defined in the module, you must register the `postgresml` extension in each database in which you want to use the objects:
 
 ```
-CREATE EXTENSION pgml;
+CREATE EXTENSION postgresml;
 ```
 
 Refer to [Installing Additional Supplied Modules](../../install_guide/install_modules.html) for more information.
 
 ## <a id="UDF_summary"></a>User-Defined Functions
 
-The `pgml` extension currently supports just a subset of all of the user-defined functions provided by PostgresML. They are these three:
+The `postgresml` extension currently supports just a subset of all of the user-defined functions provided by PostgresML. They are these three:
 
 - `pgml.load_dataset()`: Loads a dataset into tables in VMware Greenplum using the  `INSERT` SQL command. Read more about loading data [here](https://postgresml.org/docs/guides/transformers/fine_tuning#header-2).
 - `pgml.embed()` - Generates an embedding for the dataset. Read more about PostgresML embeddings [here](https://postgresml.org/docs/guides/transformers/embeddings). 
