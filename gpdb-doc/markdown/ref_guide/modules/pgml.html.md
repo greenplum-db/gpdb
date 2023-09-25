@@ -6,7 +6,7 @@ The `postgresml` module provides PostgresML functions for using tens of thousand
 
 ## <a id="prereqs"></a>Before Registering the `postgresml` Module
 
-Before registering the `postgresml` module, you must install the Data Science bundle for Python3.9, add the `postgresml` library to the set of libraries the VMware Greenplum server loads at startup, and set the Python virtual environment:
+Before registering the `postgresml` module, you must install the Data Science bundle for Python3.9, add the `pgml` library to the set of libraries the VMware Greenplum server loads at startup, and set the Python virtual environment:
 
 1. Install the Data Science bundle for Python 3.9:
 
@@ -55,9 +55,9 @@ VMware anticipates adding support for the additional PostgresML functions in fut
 ```
 pgml.load_dataset( 
 	source TEXT, -- data source name 
-	"subset" TEXT DEFAULT NULL, -- subset of the data source 
-	"limit" bigint DEFAULT NULL, -- User-defined number of imported  
-	"kwargs" JSON DEFAULT '{}'  -- optional arguments
+	subset TEXT DEFAULT NULL, -- subset of the data source 
+	limit bigint 
+	kwargs JSONB
 )
 ```
 
@@ -66,7 +66,7 @@ where:
 `source` is the name of the data source.
 `subset` is a subset of the data source. The default is `NULL`. 
 `limit` is a user-defined number of imported XXX  **RADAR: IMPORTED WHAT???** The default is `NULL`.
-`kwargs` is a set of optional arguments passes as JSON key-value pairs. The default is an empty object (`{}`).
+`kwargs` is a a JSONB object containing optional arguments. The default is an empty object (`{}`).
 
 
 ### <a id="pgml_embed"></a>pgml.embed()
@@ -76,16 +76,16 @@ where:
 ```
 pgml.embed(
     transformer TEXT, 
-    text TEXT,
-    kwargs JSON
+    inputs TEXT or TEXT[],
+    kwargs JSONB
 )
 ```
 
 where: 
 
 - `transformer` is the huggingface sentence-transformer name.
-- `text` is the input to embed.
-- `kwargs` is a set of optional arguments passes as JSON key-value pairs.
+- `inputs` are the text(s) to embed. It can be a single text string or an array of texts.
+- `kwargs` is a JSONB object containing optional arguments.
 
 ### <a id="pgml_transform"></a>pgml.transform()
 
@@ -128,7 +128,7 @@ SELECT pgml.embed('distilbert-base-uncased', 'Star Wars christmas special is on 
 
 SELECT text, pgml.embed('distilbert-base-uncased', text) 
 
-FROM pgml.tweet_eval; 
+FROM pgml.tweet_eval limit 5; 
 
 --------------------------------------------------------------------------------------------- 
 
