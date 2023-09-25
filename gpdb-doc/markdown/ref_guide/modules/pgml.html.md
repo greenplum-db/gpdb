@@ -101,6 +101,9 @@ where:
 - `call` is a JSONB object containing call arguments passed alongside the `inputs` values.
 - `inputs` is a `TEXT[]` or `BYTEA[]` array containing inputs for inference. 
 
+>**Note**
+>You must explicityly specify a model when calling `pgml.transform()`; default models are not yet supported.
+
 ## <a id="Example"></a>Example
 
 The following example:
