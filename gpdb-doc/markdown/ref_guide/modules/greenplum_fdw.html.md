@@ -179,7 +179,7 @@ Remote cluster (1) configuration:
 1. Create a dedicated resource group to manage resources for these users:
 
     ```
-    CREATE RESOURCE GROUP rg_gpcluster2_users with (concurrency=2, cpu_max_percent=20);
+    CREATE RESOURCE GROUP rg_gpcluster2_users with (concurrency=2, cpu_rate_limit=20, memory_limit=10);
     ALTER ROLE gpcluster2_users RESOURCE GROUP rg_gpcluster2_users;
     ```
 
