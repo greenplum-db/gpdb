@@ -1641,12 +1641,12 @@ CCostModelGPDB::ComputeUnusedIndexWeight(CExpressionHandle &exprhdl,
 				// more weightage.
 				dUnusedIndexColWeight = (ulNoOfColumnsInIndex - ulIndexColPos);
 
-				IStatistics *UnusedIndexColStats =
+				IStatistics *unusedIndexColStats =
 					CStatistics::CastStats(pBaseTableStats)
 						->ComputeColStats(mp, colrefIndexColumn, rel_mdid);
 
 				// Finding NDV of the unused column
-				dNdv = CStatistics::CastStats(UnusedIndexColStats)
+				dNdv = CStatistics::CastStats(unusedIndexColStats)
 						   ->GetNDVs(colrefIndexColumn);
 
 				CDouble dTableRows =
@@ -1665,7 +1665,7 @@ CCostModelGPDB::ComputeUnusedIndexWeight(CExpressionHandle &exprhdl,
 				dCummulativeUnusedIndexWeight =
 					dCummulativeUnusedIndexWeight + dUnusedIndexColWeight;
 
-				UnusedIndexColStats->Release();
+				unusedIndexColStats->Release();
 			}
 		}
 	}
