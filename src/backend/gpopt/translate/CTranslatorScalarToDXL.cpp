@@ -1396,7 +1396,7 @@ CTranslatorScalarToDXL::TranslateAggrefToDXL(
 	const Aggref *aggref = (Aggref *) expr;
 	BOOL is_distinct = false;
 
-	if (aggref->aggorder != NIL && !GPOS_FTRACE(EopttraceEnableOrderedAgg))
+	if (aggref->aggorder != NIL && GPOS_FTRACE(EopttraceDisableOrderedAgg))
 	{
 		GPOS_RAISE(
 			gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,

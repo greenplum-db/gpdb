@@ -221,7 +221,7 @@ enum EOptTraceFlag
 	EopttraceDisableInnerNLJ = 103046,
 
 	// Ordered Agg
-	EopttraceEnableOrderedAgg = 103047,
+	EopttraceDisableOrderedAgg = 103047,
 
 	///////////////////////////////////////////////////////
 	///////////////////// statistics flags ////////////////
