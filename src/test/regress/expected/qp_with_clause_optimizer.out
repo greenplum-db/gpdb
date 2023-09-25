@@ -11160,6 +11160,24 @@ SELECT * FROM c as c1, zoo WHERE zoo.c = c1.b;
      3 | 4 | 4 | 4
 (1 row)
 
+-- Test that nested CTE generates a valid plan
+EXPLAIN WITH q AS (SELECT * FROM (WITH cte AS (SELECT * FROM car) SELECT * FROM car WHERE a > 7) t) SELECT * FROM q;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+   ->  Seq Scan on car  (cost=0.00..431.00 rows=1 width=8)
+         Filter: (a > 7)
+ Optimizer: GPORCA
+(4 rows)
+
+WITH q AS (SELECT * FROM (WITH cte AS (SELECT * FROM car) SELECT * FROM car WHERE a > 7) t) SELECT * FROM q;
+ a  | b  
+----+----
+  8 |  9
+  9 | 10
+ 10 | 11
+(3 rows)
+
 -- start_ignore
 drop schema qp_with_clause cascade;
 NOTICE:  drop cascades to table zoo
