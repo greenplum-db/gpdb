@@ -51,10 +51,6 @@ CQueryContext::CQueryContext(CMemoryPool *mp, CExpression *pexpr,
 	const ULONG ulReqdColumns = m_pdrgpcr->Size();
 #endif	//GPOS_DEBUG
 
-	// mark unused CTEs
-	CCTEInfo *pcteinfo = COptCtxt::PoctxtFromTLS()->Pcteinfo();
-	pcteinfo->MarkUnusedCTEs();
-
 	CColRefSet *pcrsOutputAndOrderingCols = GPOS_NEW(mp) CColRefSet(mp);
 	CColRefSet *pcrsOrderSpec = prpp->Peo()->PosRequired()->PcrsUsed(mp);
 
@@ -79,6 +75,8 @@ CQueryContext::CQueryContext(CMemoryPool *mp, CExpression *pexpr,
 	// create the mapping between the computed column, defined in the expression
 	// and all CTEs, and its corresponding used columns
 	MapComputedToUsedCols(col_factory, m_pexpr);
+
+	CCTEInfo *pcteinfo = COptCtxt::PoctxtFromTLS()->Pcteinfo();
 	pcteinfo->MapComputedToUsedCols(col_factory);
 }
 
