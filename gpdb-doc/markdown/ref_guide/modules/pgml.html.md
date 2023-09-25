@@ -8,21 +8,21 @@ Before registering the `pgml` module, you must install the Data Science bundle f
 
 1. Install the Data Science bundle for Python 3.9:
 
-```
-gppkg install DataSciencePython3.9-x.x.x-gp7-el8_x86_64.gppkg 
-```
+    ```
+    gppkg install DataSciencePython3.9-x.x.x-gp7-el8_x86_64.gppkg 
+    ```
 
 2. Add the `pgml` library to preload when the VMware Greenplum server starts, using the `shared_preload_libraries` server configuration parameter:
 
-```
-gpconfig -c shared_preload_libraries -v 'xxx, pgml' 
-```
+    ```
+    gpconfig -c shared_preload_libraries -v 'xxx, pgml' 
+    ```
 
 3. Set the Python virtual environment:
 
-```
-SET pgml.venv='$GPHOME/ext/DataSciencePython3.9';
-```
+    ```
+    SET pgml.venv='$GPHOME/ext/DataSciencePython3.9';
+    ```
 
 Proceed to the next section to register the `pgml` module.
 
