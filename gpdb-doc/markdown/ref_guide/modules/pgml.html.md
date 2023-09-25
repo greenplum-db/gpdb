@@ -1,6 +1,6 @@
 # pgml
 
-The `pgml` module provides functions for using tens of thousands of pre-trained open source AI/machine learning models in VMware Greenplum.
+The `pgml` module provides functions for using tens of thousands of pre-trained open source AI/machine learning models in VMware Greenplum. The models are provided by the [Hugging Face AI data science platform](https://huggingface.co/). 
 
 ## <a id="prereqs"></a>Before Registering the `pgml` Module
 
@@ -40,9 +40,30 @@ Refer to [Installing Additional Supplied Modules](../../install_guide/install_mo
 
 The `pgml` extension provides the following user-defined functions for accessing AI/machine learning models in VMware Greenplum:
 
-- `pgml.embed()` - Generates an embedding for the dataset
-- `pgml.transform()`: Applies a pre-trained transformer to process data
-- `pgml.load_dataset()`: Loads a dataset into tables in VMware Greenplum using the  `INSERT` SQL command
+- `pgml.load_dataset()`: Loads a dataset into tables in VMware Greenplum using the  `INSERT` SQL command. Read more about loading data [here](https://postgresml.org/docs/guides/transformers/fine_tuning#header-2).
+- `pgml.embed()` - Generates an embedding for the dataset. Read more about PostgresML embeddings [here](https://postgresml.org/docs/guides/transformers/embeddings). 
+- `pgml.transform()`: Applies a pre-trained transformer to process data. Read more about PostgresML pre-trained models [here](https://postgresml.org/docs/guides/transformers/pre_trained_models).
+
+### <a id="pgml_load_dataset"></a>pgml.load_dataset()
+
+#### Syntax
+
+```
+pgml.load_dataset( 
+	source TEXT, -- data source name 
+	"subset" TEXT DEFAULT NULL, -- subset of the data source 
+	"limit" bigint DEFAULT NULL, -- User-defined number of imported  
+	"kwargs" JSON DEFAULT '{}'  -- optional arguments
+)
+```
+
+where:
+
+`source` is the name of the data source.
+`subset` is a subset of the data source. The default is `NULL`. 
+`limit` is a user-defined number of imported XXX  **RADAR: IMPORTED WHAT???** The default is `NULL`.
+`kwargs` is a set of optional arguments passes as JSON key-value pairs. The default is an empty object (`{}`).
+
 
 ### <a id="pgml_embed"></a>pgml.embed()
 
@@ -58,13 +79,9 @@ pgml.embed(
 
 where: 
 
-- `transformer` is the huggingface sentence-transformer name
-- `text` is the input to embed 
-- `kwargs` is a set of optional arguments passes as JSON key-value pairs 
-
-
-
-
+- `transformer` is the huggingface sentence-transformer name.
+- `text` is the input to embed.
+- `kwargs` is a set of optional arguments passes as JSON key-value pairs.
 
 ### <a id="pgml_transform"></a>pgml.transform()
 
@@ -80,13 +97,17 @@ pgml.transform(
 
 where: 
 
-- `task` is the huggingface sentence-transformer name passed as either a simple text string or, for more comples task setup, a JSONB object
-- `text` is a text string containing the input to embed 
-- `kwargs` is a set of optional arguments passes as JSON key-value pairs 
+- `task` is the task name passed as either a simple text string or, for more complex task setup, a JSONB object containing a full pipeline and initializer arguments.
+- `call` is a JSONB object containing call arguments passed alongside the `inputs` values.
+- `inputs` is a `TEXT[]` or `BYTEA[]` array containing inputs for inference. 
 
-## <a id="Examples"></a>Examples
+## <a id="Example"></a>Example
 
-The following example XYXYXYXYXYX:
+The following example:
+
+1. Downloads a dataset from the internet and creates a table to contain the data.
+2. Generates an embedding for the text.
+3. Downloads and runs pre-trained models.
 
 ```
 # Download the dataset from the internet and create table for it
