@@ -2209,6 +2209,53 @@ select * from union_schema.t3;
 (10 rows)
 
 reset allow_system_table_mods;
+-- The following tests demonstrate the plan alternative
+-- where ORCA requests union all's outer child to become
+-- a Non-Singleton. This alternative is at times costed
+-- lower than aligning the inner child's distribution spec
+-- with that delivered by the outer child. 
+-- 
+-- Replicated ∪ Hashed
+create table rep (a int) distributed replicated;
+insert into rep select i from generate_series (1, 10) i; 
+create table dist (a int);
+insert into dist select i from generate_series (1, 1000) i;
+analyze dist;
+analyze rep;
+-- It's more cost-effective to apply a duplicate-sensitive
+-- random motion (non-phyiscal) on a replicated table, 
+-- than a broadcast motion on a distributed table.
+explain select a from rep union all select a from dist;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..20.98 rows=1030 width=4)
+   ->  Append  (cost=0.00..7.25 rows=343 width=4)
+         ->  Result  (cost=0.00..1.20 rows=10 width=4)
+               One-Time Filter: (gp_execution_segment() = 0)
+               ->  Seq Scan on rep  (cost=0.00..1.10 rows=10 width=4)
+         ->  Seq Scan on dist  (cost=0.00..4.33 rows=333 width=4)
+ Optimizer: Postgres-based planner
+(7 rows)
+
+-- Universal ∪ Random
+create table rand (a int) distributed randomly;
+insert into rand select i from generate_series (1, 10000) i;
+analyze rand;
+-- It's more cost-effective to apply a duplicate-sensitive
+-- random motion (non-physical) on a universal TVF, than a
+-- gather motion on a randomly distributed table.
+explain select i from generate_series(1,1000) i union all select a from rand;
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..252.34 rows=13000 width=4)
+   ->  Append  (cost=0.00..79.00 rows=4333 width=4)
+         ->  Result  (cost=0.00..20.00 rows=1000 width=4)
+               One-Time Filter: (gp_execution_segment() = 0)
+               ->  Function Scan on generate_series i  (cost=0.00..10.00 rows=1000 width=4)
+         ->  Seq Scan on rand  (cost=0.00..37.33 rows=3333 width=4)
+ Optimizer: Postgres-based planner
+(7 rows)
+
 --
 -- Clean up
 --

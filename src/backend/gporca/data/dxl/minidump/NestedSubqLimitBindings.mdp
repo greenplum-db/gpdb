@@ -476,7 +476,7 @@ select a from t as t1 where a in (
         </dxl:LogicalGet>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="21139776">
+    <dxl:Plan Id="0" SpaceSize="38756256">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="4165951656888.123047" Rows="1.000000" Width="1"/>

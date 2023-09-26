@@ -309,7 +309,7 @@ INSERT INTO test_parse_arr (b)
 				  SELECT NULL 
 				) AS q;
 
-SELECT * FROM test_parse_arr ORDER BY a;
+SELECT b FROM test_parse_arr;
 
 --
 -- Test if sequence server information outlives a plpgsql exception and corresponding subtransaction rollback (MPP-25193)
