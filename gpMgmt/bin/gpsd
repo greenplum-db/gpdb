@@ -186,7 +186,7 @@ def main():
         with closing(connection.cursor()) as cursor:
             num_segments = get_num_segments(cursor)
     sys.stdout.writelines(['\n-- Greenplum database Statistics Dump',
-                           '\n-- Copyright (C) 2007 - 2014 Pivotal'
+                           '\n-- Copyright (C) 2007 - 2023 VMWare'
                            '\n-- Database: ' + db,
                            '\n-- Num Segments: ' + str(num_segments),
                            '\n-- Date:     ' + timestamp.date().isoformat(),
