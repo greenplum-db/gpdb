@@ -8,6 +8,8 @@ TODO: docs!
 """
 import json
 import os, time
+import base64
+import pickle
 import shlex
 import os.path
 import pipes
@@ -1107,7 +1109,7 @@ class GpConfigHelper(Command):
 
         addParameter = (not getParameter) and (not removeParameter)
         if addParameter:
-            args = "--add-parameter %s --value %s " % (name, shlex.quote(value))
+            args = "--add-parameter %s --value %s " % (name, base64.urlsafe_b64encode(pickle.dumps(value)).decode())
         if getParameter:
             args = "--get-parameter %s" % name
         if removeParameter:
@@ -1121,7 +1123,8 @@ class GpConfigHelper(Command):
 
     # FIXME: figure out how callers of this can handle exceptions here
     def get_value(self):
-        return self.get_results().stdout
+        raw_value = self.get_results().stdout
+        return pickle.loads(base64.urlsafe_b64decode(raw_value))
 
 
 #-----------------------------------------------

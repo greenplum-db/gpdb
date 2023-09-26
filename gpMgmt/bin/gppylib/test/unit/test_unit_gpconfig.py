@@ -1,7 +1,7 @@
 import errno
 import imp
 import os
-import shlex
+import base64, pickle
 import shutil
 import sys
 import tempfile
@@ -288,11 +288,11 @@ class GpConfig(GpTestCase):
         self.assertEqual(self.pool.addCommand.call_count, 5)
         segment_command = self.pool.addCommand.call_args_list[0][0][0]
         self.assertTrue("my_property_name" in segment_command.cmdStr)
-        value = shlex.quote("100")
+        value = base64.urlsafe_b64encode(pickle.dumps("100")).decode()
         self.assertTrue(value in segment_command.cmdStr)
         coordinator_command = self.pool.addCommand.call_args_list[4][0][0]
         self.assertTrue("my_property_name" in coordinator_command.cmdStr)
-        value = shlex.quote("20")
+        value = base64.urlsafe_b64encode(pickle.dumps("20")).decode()
         self.assertTrue(value in coordinator_command.cmdStr)
 
     def test_option_change_value_coordinatoronly_succeed(self):
@@ -311,7 +311,7 @@ class GpConfig(GpTestCase):
         self.assertEqual(self.pool.addCommand.call_count, 1)
         coordinator_command = self.pool.addCommand.call_args_list[0][0][0]
         self.assertTrue(("my_property_name") in coordinator_command.cmdStr)
-        value = shlex.quote("100")
+        value = base64.urlsafe_b64encode(pickle.dumps("100")).decode()
         self.assertTrue(value in coordinator_command.cmdStr)
 
     def test_new_option_change_value_coordinatoronly_succeed(self):
@@ -330,7 +330,7 @@ class GpConfig(GpTestCase):
         self.assertEqual(self.pool.addCommand.call_count, 1)
         coordinator_command = self.pool.addCommand.call_args_list[0][0][0]
         self.assertTrue(("my_property_name") in coordinator_command.cmdStr)
-        value = shlex.quote("100")
+        value = base64.urlsafe_b64encode(pickle.dumps("100")).decode()
         self.assertTrue(value in coordinator_command.cmdStr)
 
     def test_old_and_new_option_change_value_coordinatoronly_succeed(self):
@@ -349,7 +349,7 @@ class GpConfig(GpTestCase):
         self.assertEqual(self.pool.addCommand.call_count, 1)
         coordinator_command = self.pool.addCommand.call_args_list[0][0][0]
         self.assertTrue(("my_property_name") in coordinator_command.cmdStr)
-        value = shlex.quote("100")
+        value = base64.urlsafe_b64encode(pickle.dumps("100")).decode()
         self.assertTrue(value in coordinator_command.cmdStr)
 
 
@@ -372,7 +372,7 @@ class GpConfig(GpTestCase):
         self.assertTrue("my_hidden_guc_name" in segment_command.cmdStr)
         coordinator_command = self.pool.addCommand.call_args_list[1][0][0]
         self.assertTrue("my_hidden_guc_name" in coordinator_command.cmdStr)
-        value = shlex.quote("100")
+        value = base64.urlsafe_b64encode(pickle.dumps("100")).decode()
         self.assertTrue(value in coordinator_command.cmdStr)
 
     def test_option_change_value_hidden_guc_without_skipvalidation(self):
@@ -578,7 +578,7 @@ class GpConfig(GpTestCase):
             # In this case, we have an object as an argument to poo.addCommand
             # call_obj[1] returns a dict for all named arguments -> {key='arg3', key2='arg4'}
             gp_add_config_script_obj = call[0][0]
-            value = shlex.quote(expected_value)
+            value = base64.urlsafe_b64encode(pickle.dumps(expected_value)).decode()
             try:
                 self.assertTrue(value in gp_add_config_script_obj.cmdStr)
             except AssertionError as e:
