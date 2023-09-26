@@ -62,7 +62,8 @@ const CHAR *rgszCTEFileNames[] = {
 	"../data/dxl/minidump/CTE15Replicated.mdp",
 	"../data/dxl/minidump/CTE2Replicated.mdp",
 	"../data/dxl/minidump/CTE15HAReplicated.mdp",
-	"../data/dxl/minidump/CTE2HAReplicated.mdp"};
+	"../data/dxl/minidump/CTE2HAReplicated.mdp",
+	"../data/dxl/minidump/CTE-NestedWithPrunedProducer.mdp"};
 
 
 //---------------------------------------------------------------------------

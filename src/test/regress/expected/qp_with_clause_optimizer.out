@@ -11161,11 +11161,11 @@ SELECT * FROM c as c1, zoo WHERE zoo.c = c1.b;
 (1 row)
 
 -- Test that nested CTE generates a valid plan
-EXPLAIN WITH q AS (SELECT * FROM (WITH cte AS (SELECT * FROM car) SELECT * FROM car WHERE a > 7) t) SELECT * FROM q;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-   ->  Seq Scan on car  (cost=0.00..431.00 rows=1 width=8)
+EXPLAIN (COSTS OFF) WITH q AS (SELECT * FROM (WITH cte AS (SELECT * FROM car) SELECT * FROM car WHERE a > 7) t) SELECT * FROM q;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on car
          Filter: (a > 7)
  Optimizer: GPORCA
 (4 rows)
