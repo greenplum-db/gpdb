@@ -10,7 +10,7 @@ Before registering the `postgresml` module, you must install the Data Science bu
 
 1. Install the Data Science bundle for Python 3.9.
 
-For example:
+    For example:
 
     ```
     gppkg install DataSciencePython3.9-x.x.x-gp7-el8_x86_64.gppkg 
@@ -20,7 +20,7 @@ For example:
 
 2. Add the `postgresml` library to preload when the VMware Greenplum server starts, using the `shared_preload_libraries` server configuration parameter and then restart the cluster.
 
-For example:
+    For example:
 
     ```
     gpconfig -c shared_preload_libraries -v 'xxx, pgml' 
@@ -30,13 +30,13 @@ For example:
 
 3. Set the Python virtual environment. 
 
-At the session level:
+    At the session level:
 
     ```
     SET pgml.venv='$GPHOME/ext/DataSciencePython3.9';
     ```
 
-To last beyond a session:
+    To last beyond a session:
 
     ```
     gpconfig -c pgml.venv -v '$GPHOME/ext/DataSciencePython3.9'
@@ -62,7 +62,7 @@ Refer to [Installing Additional Supplied Modules](../../install_guide/install_mo
 
 The `postgresml` extension currently supports just a subset of all of the user-defined functions provided by PostgresML. They are these three:
 
-- `pgml.load_dataset()`: Loads a dataset into tables in VMware Greenplum using the  `INSERT` SQL command. Read more about loading data [here](https://postgresml.org/docs/guides/transformers/fine_tuning#header-2).
+- `pgml.load_dataset()`: Loads a dataset into tables in VMware Greenplum using the `INSERT` SQL command. Read more about loading data [here](https://postgresml.org/docs/guides/transformers/fine_tuning#header-2).
 - `pgml.embed()` - Generates an embedding for the dataset. Read more about PostgresML embeddings [here](https://postgresml.org/docs/guides/transformers/embeddings). 
 - `pgml.transform()`: Applies a pre-trained transformer to process data. Read more about PostgresML pre-trained models [here](https://postgresml.org/docs/guides/transformers/pre_trained_models).
 
@@ -85,7 +85,7 @@ where:
 
 `source` is the name of the data source.
 `subset` is a subset of the data source. The default is `NULL`. 
-`limit` is a user-defined linit on the number of imported rows. The default is `NULL`.
+`limit` is a user-defined limit on the number of imported rows. The default is `NULL`.
 `kwargs` is a a JSONB object containing optional arguments. The default is an empty object (`{}`).
 
 
