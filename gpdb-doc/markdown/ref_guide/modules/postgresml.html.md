@@ -8,7 +8,7 @@ The `postgresml` module provides PostgresML functions for using tens of thousand
 
 Before registering the `postgresml` module, you must install the Data Science bundle for Python3.9, add the `pgml` library to the set of libraries the VMware Greenplum server loads at startup, and set the Python virtual environment:
 
-1. Install the Data Science bundle for Python 3.9:
+1. Install the Data Science bundle for Python 3.9.
 
 For example:
 
@@ -16,19 +16,35 @@ For example:
     gppkg install DataSciencePython3.9-x.x.x-gp7-el8_x86_64.gppkg 
     ```
 
-    where x.x.x replresents any existing preloaded libraries.
+    where x.x.x is the version string.
 
-2. Add the `postgresml` library to preload when the VMware Greenplum server starts, using the `shared_preload_libraries` server configuration parameter:
+2. Add the `postgresml` library to preload when the VMware Greenplum server starts, using the `shared_preload_libraries` server configuration parameter and then restart the cluster.
+
+For example:
 
     ```
     gpconfig -c shared_preload_libraries -v 'xxx, pgml' 
     ```
 
-3. Set the Python virtual environment:
+    where xxx represents any existing preloaded libraries.
+
+3. Set the Python virtual environment. 
+
+At the session level:
 
     ```
     SET pgml.venv='$GPHOME/ext/DataSciencePython3.9';
     ```
+
+To last beyond a session:
+
+    ```
+    gpconfig -c pgml.venv -v '$GPHOME/ext/DataSciencePython3.9'
+    gpconfig -u
+    ```
+
+>**Note**
+>If this yields the the error message, `[CRITICAL]:-not a valid GUC: pgml.venv` it means you failed to run Step 2, including restarting the cluster, beforehand.
 
 Proceed to the next section to register the `postgresml` module.
 
