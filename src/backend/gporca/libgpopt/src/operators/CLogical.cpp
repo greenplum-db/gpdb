@@ -34,6 +34,7 @@
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
+#include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/md/IMDCheckConstraint.h"
 #include "naucrates/md/IMDColumn.h"
 #include "naucrates/md/IMDIndex.h"
@@ -187,46 +188,8 @@ CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 		const ULONG ulPosTabDesc = ptabdesc->GetAttributePosition(attno);
 		CColRef *colref = (*colref_array)[ulPosTabDesc];
 
-		IMDId *mdid = nullptr;
-		COrderSpec::ENullTreatment ent = COrderSpec::EntLast;
-		// if scan direction is forward, order spec computed should match
-		// the index's sort and nulls order.
-		if (scan_direction == EForwardScan)
-		{
-			// if sort direction of key is 0(ASC), choose MDID for less than
-			// type and vice-versa
-			mdid =
-				(pmdindex->KeySortDirectionAt(ul) == SORT_ASC)
-					? colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptL)
-					: colref->RetrieveType()->GetMdidForCmpType(
-						  IMDType::EcmptG);
-
-			// if nulls direction of key is 0, choose ENTLast and
-			// vice-versa
-			ent = (pmdindex->KeyNullsDirectionAt(ul) == COrderSpec::EntLast)
-					  ? COrderSpec::EntLast
-					  : COrderSpec::EntFirst;
-		}
-		// if scan direction is backward, order spec computed should be
-		// commutative to index's sort and nulls order.
-		else if (scan_direction == EBackwardScan)
-		{
-			// if sort order of key is 0(ASC), choose MDID for greater than
-			// type and vice-versa
-			mdid =
-				(pmdindex->KeySortDirectionAt(ul) == SORT_ASC)
-					? colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG)
-					: colref->RetrieveType()->GetMdidForCmpType(
-						  IMDType::EcmptL);
-
-			// if nulls direction of key is 0, choose ENTFirst and
-			// vice-versa
-			ent = (pmdindex->KeyNullsDirectionAt(ul) == COrderSpec::EntLast)
-					  ? COrderSpec::EntFirst
-					  : COrderSpec::EntLast;
-		}
-		mdid->AddRef();
-		pos->Append(mdid, colref, ent);
+		// Compute OrderSpec for Index key
+		CXformUtils::PosForIndexKey(pmdindex, scan_direction, colref, pos, ul);
 	}
 
 	return pos;

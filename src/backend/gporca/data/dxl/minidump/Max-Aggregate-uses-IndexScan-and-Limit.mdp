@@ -14,7 +14,7 @@
 
             Plan:
                                                                           QUERY PLAN
-               --------------------------------------------------------------------------------------------------------------------------------
+
                 Aggregate  (cost=0.00..7.83 rows=1 width=8)
                   ->  Limit  (cost=0.00..7.83 rows=1 width=9)
                         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..7.83 rows=1 width=9)

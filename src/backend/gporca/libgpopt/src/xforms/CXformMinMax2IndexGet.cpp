@@ -176,55 +176,14 @@ CXformMinMax2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 
 			if (pexprIndexGet != nullptr)
 			{
-				// Compute the required Order Spec
-				COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
-				IMDId *mdid = nullptr;
-				COrderSpec::ENullTreatment ent = COrderSpec::EntLast;
-				// if scan direction is forward, order spec computed should match
-				// the index's sort and nulls order.
-				if (scan_direction == EForwardScan)
-				{
-					mdid = (pmdindex->KeySortDirectionAt(0) == SORT_ASC)
-							   ? agg_colref->RetrieveType()->GetMdidForCmpType(
-									 IMDType::EcmptL)
-							   : agg_colref->RetrieveType()->GetMdidForCmpType(
-									 IMDType::EcmptG);
-					ent = (pmdindex->KeyNullsDirectionAt(0) ==
-						   COrderSpec::EntLast)
-							  ? COrderSpec::EntLast
-							  : COrderSpec::EntFirst;
-				}
-				// if scan direction is backward, order spec computed should be
-				// opposite to index's sort and nulls order.
-				else
-				{
-					mdid = (pmdindex->KeySortDirectionAt(0) == SORT_ASC)
-							   ? agg_colref->RetrieveType()->GetMdidForCmpType(
-									 IMDType::EcmptG)
-							   : agg_colref->RetrieveType()->GetMdidForCmpType(
-									 IMDType::EcmptL);
-
-					ent = (pmdindex->KeyNullsDirectionAt(0) ==
-						   COrderSpec::EntLast)
-							  ? COrderSpec::EntFirst
-							  : COrderSpec::EntLast;
-				}
-				mdid->AddRef();
-				pos->Append(mdid, agg_colref, ent);
-				// Build Limit Offset expression
-				CExpression *pexprLimitOffset =
-					CUtils::PexprScalarConstInt8(mp, 0);
-				// Build Limit Count expression
-				CExpression *pexprLimitCount =
-					CUtils::PexprScalarConstInt8(mp, 1);
-
 				// build Limit expression
-				CExpression *pexprLimit = GPOS_NEW(mp) CExpression(
-					mp,
-					GPOS_NEW(mp) CLogicalLimit(mp, pos, true /* fGlobal */,
-											   true /* fHasCount */,
-											   false /*fTopLimitUnderDML*/),
-					pexprIndexGet, pexprLimitOffset, pexprLimitCount);
+				CExpression *pexprLimit =
+					CUtils::PexprLimit(mp, pexprIndexGet, 0, 1);
+				CLogicalLimit *popLimit =
+					CLogicalLimit::PopConvert(pexprLimit->Pop());
+				// Compute the required OrderSpec for first index key
+				CXformUtils::PosForIndexKey(pmdindex, scan_direction,
+											agg_colref, popLimit->Pos(), 0);
 
 				popAgg->AddRef();
 				pexprScalarPrjList->AddRef();
