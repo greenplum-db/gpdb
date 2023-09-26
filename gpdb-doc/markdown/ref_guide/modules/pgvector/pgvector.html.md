@@ -32,6 +32,7 @@ Operator | Description
 --- | ---
 \+ | Element-wise addition
 \- | Element-wise subtraction
+\* | Element-wise multiplication
 &lt;&ndash;&gt; | Euclidean distance
 <#><sup>1</sup> | Negative inner product
 &lt;&equals;&gt; | Cosine distance
