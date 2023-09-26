@@ -1027,10 +1027,12 @@ select (select max((select t.i))) from t;
 
 drop table t;
 
+drop table if exists r,s,t;
 create table r(a int, b int) distributed randomly;
 create table s(a int, b int) distributed randomly;
 create table t(a int, b int) distributed randomly;
 
+ANALYZE r,s,t;
 -- Test nested query with aggregate inside a sublink,
 -- ORCA should correctly normalize the aggregate expression inside the
 -- sublink's nested query and the column variable accessed in aggregate should
