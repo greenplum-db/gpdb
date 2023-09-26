@@ -341,6 +341,15 @@ if begin:
 if end:
     end = end.replace(microsecond=0)
 
+if (begin and end) and begin > end:
+    execname = os.path.basename(sys.argv[0])
+    print >> sys.stderr, (
+        '%s: Invalid arguments "begin" date greater than "end" date (%s > %s)'
+        % (execname, begin, end)
+    )
+    sys.exit(2)
+
+
 # Insert trouble message filter ahead of other pattern matching filters
 if options.trouble:
     options.filters.insert(0, filterize(MatchInFirstLine,
@@ -431,13 +440,16 @@ try:
                         # the format isn't anything I understand
                         goodFormat = False
 
-                if goodFormat and begin and filedate < begin:
-                    if end and filedate > end:
-                        print >> sys.stderr, "SKIP file: %s" % zname
-                        for f in inputFilesToClose:
-                            f.close()
-                        inputFilesToClose = []
-                        continue
+                shouldSkip = False
+                if goodFormat:
+                    shouldSkip = (begin and begin > filedate) or (end and end < filedate)
+
+                if shouldSkip:
+                    print >> sys.stderr, "SKIP file: %s" % zname
+                    for f in inputFilesToClose:
+                        f.close()
+                    inputFilesToClose = []
+                    continue
 
             # Announce each input file *before* its output file if --out is dir
             if options.verbose and outputFilePerInputFile:
