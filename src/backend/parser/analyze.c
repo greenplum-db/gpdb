@@ -657,13 +657,34 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 		 * separate from the subquery's tlist because we may add columns,
 		 * insert datatype coercions, etc.)
 		 *
-		 * Const and Param nodes of type UNKNOWN in the SELECT's targetlist
-		 * no longer need special treatment here.  They'll be assigned proper
-         * types later by coerce_type() upon assignment to the target columns.
-		 * Otherwise this fails:  INSERT INTO foo SELECT 'bar', ... FROM baz
+		 * HACK: unknown-type constants and params in the SELECT's targetlist
+		 * are copied up as-is rather than being referenced as subquery
+		 * outputs.  This is to ensure that when we try to coerce them to
+		 * the target column's datatype, the right things happen (see
+		 * special cases in coerce_type).  Otherwise, this fails:
+		 *		INSERT INTO foo SELECT 'bar', ... FROM baz
 		 *----------
 		 */
-		expandRTE(rte, rtr->rtindex, 0, -1, false, NULL, &exprList);
+		exprList = NIL;
+		foreach(lc, selectQuery->targetList)
+		{
+			TargetEntry *tle = (TargetEntry *) lfirst(lc);
+			Expr	   *expr;
+
+			if (tle->resjunk)
+				continue;
+			if (tle->expr &&
+				(IsA(tle->expr, Const) ||IsA(tle->expr, Param)) &&
+				exprType((Node *) tle->expr) == UNKNOWNOID)
+				expr = tle->expr;
+			else
+			{
+				Var		   *var = makeVarFromTargetEntry(rtr->rtindex, tle);
+
+				expr = (Expr *) var;
+			}
+			exprList = lappend(exprList, expr);
+		}
 
 		/* Prepare row for assignment to target table */
 		exprList = transformInsertRow(pstate, exprList,
