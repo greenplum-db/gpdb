@@ -322,6 +322,35 @@ def openOutputFile(ifn, zname, options):
 
     return fileOut, filesToClose
 
+def shouldSkipFile(ifn, begin, end):
+    if os.path.isdir(ifn):
+        return False
+
+    # matchedGroup in case of match would be not None and contains next groups:
+    # - group(0) - whole file name
+    # - group(1) - the datetime of log (but may be without time suffix)
+    # - group(2) - would be not None if time suffix exists
+    matchedGroup = re.match('^.*gpdb-(\d{4}-\d{2}-\d{2}(_\d{6})?)\.csv$', ifn)
+    if not matchedGroup or not matchedGroup.group(1):
+        return False
+
+    pattern = '%Y-%m-%d'
+    if matchedGroup.group(2):
+        # we have time preix, so use extended pattern
+        pattern = '%Y-%m-%d_%H%M%S'
+
+    dt = None
+    try:
+        dt = datetime.strptime(matchedGroup.group(1), pattern)
+    except:
+        return False
+
+    # does this check really needed, in docs it's not
+    # clear the return value of strptime
+    if dt is None:
+        return False
+
+    return (begin and begin > dt) or (end and end < dt)
 
 # ------------------------------- Mainline --------------------------------
 
@@ -348,7 +377,6 @@ if (begin and end) and begin > end:
         % (execname, begin, end)
     )
     sys.exit(2)
-
 
 # Insert trouble message filter ahead of other pattern matching filters
 if options.trouble:
@@ -412,44 +440,23 @@ try:
         # Loop over input files
         for ifn in args:
             """ 
-            Open each file in the logs directory. Check to see if the file name
-            looks anything like a log file name with a time stamp that we 
-            recognize. If true, and the user specified a time range, skip the
-            file if it is outside the range. That is, close the file and any
-            associated temporary files.
+            Open files in the logs directory. Files with names looks anytging
+            like a log file name with time stamp (that could be recognized) are
+            cheked for belongin to the specified time range, if it's outside
+            the range the file is skipped.
 
             All other files with names that do not look like time stamps are
             processed. That is, their log information is extracted, and if 
             the user specified a time range, only those entries that are
             within that range are kept.
             """
+
+            if shouldSkipFile(ifn, begin, end):
+                print >> sys.stderr, "SKIP file: %s" % ifn
+                continue
+
             # Open next input file
             fileIn, inputFilesToClose, ifn, zname = openInputFile(ifn, options)
-
-            # if we can skip the whole file, let's do so
-            if zname.startswith('gpdb') and zname.endswith('.csv'):
-                goodFormat = True
-                try:
-                    # try format YYYY-MM-DD_HHMMSS
-                    filedate = datetime.strptime(zname[5:-4], '%Y-%m-%d_%H%M%S')
-                except:
-                    try:
-                        # try format YYYY-MM-DD
-                        filedate = datetime.strptime(zname[5:-4], '%Y-%m-%d')
-                    except:
-                        # the format isn't anything I understand
-                        goodFormat = False
-
-                shouldSkip = False
-                if goodFormat:
-                    shouldSkip = (begin and begin > filedate) or (end and end < filedate)
-
-                if shouldSkip:
-                    print >> sys.stderr, "SKIP file: %s" % zname
-                    for f in inputFilesToClose:
-                        f.close()
-                    inputFilesToClose = []
-                    continue
 
             # Announce each input file *before* its output file if --out is dir
             if options.verbose and outputFilePerInputFile:
