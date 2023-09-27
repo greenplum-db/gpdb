@@ -299,7 +299,7 @@ If you set the following per-segment tablespace quota:
 SELECT diskquota.set_per_segment_quota( 'tspaced1', '2.0' );
 ```
 
-You can calculate the the maximum allowed disk usage per segment allowed as follows:
+You can calculate the maximum allowed disk usage per segment allowed as follows:
 
 ```
 max_disk_usage_per_seg = average_segment_quota * ratio

@@ -44,7 +44,7 @@ Before registering the `postgresml` module, you must install the Data Science bu
     ```
 
 >**Note**
->If this yields the the error message, `[CRITICAL]:-not a valid GUC: pgml.venv` it means you failed to run Step 2, including restarting the cluster, beforehand.
+>If this yields the error message, `[CRITICAL]:-not a valid GUC: pgml.venv` it means you failed to run Step 2, including restarting the cluster, beforehand.
 
 Proceed to the next section to register the `postgresml` module.
 
