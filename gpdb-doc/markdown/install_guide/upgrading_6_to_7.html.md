@@ -26,6 +26,8 @@ To prepare for upgrading from Greenplum 6 to Greenplum 7:
 >**Note**
 You must use `gpbackup`/`gprestore` if upgrading on the same hardware. You may choose between `gpbackup`/`gprestore` and `gpcopy` when upgrading while moving to new hardware.
 
+<!--- NEXT TWO SECTIONS NEED REWORKING. POSSILBLY DISTILL TO A SINGLE SECTION, REMOVING DISTINCTION BETWEEN NEW HARDWARE VERUS NOT--->
+
 ## <a id="same_hardware"></a>Upgrading to Greenplum 7 On the Same Hardware
 
 Follow the steps below to upgrade to Greenplum 7 while remaining on the same hardware. You will move your data using the `gpbackup/gprestore` utilities. There are a number of caveats with respect to backing up and restoring your data. Be sure to review [Backup and Restore Caveats](#backup-and-restore-caveats) before starting the upgrade.
