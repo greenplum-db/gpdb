@@ -40,7 +40,7 @@ Before registering the `postgresml` module, you must install the Data Science bu
     To last beyond a session:
 
     ```
-    gpconfig -c pgml.venv -v "$GPHOME/ext/DataSciencePython3.9"
+    gpconfig -c pgml.venv -v "'$GPHOME/ext/DataSciencePython3.9'"
     gpstop -u
     ```
 
