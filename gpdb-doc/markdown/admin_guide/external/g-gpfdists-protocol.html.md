@@ -30,7 +30,7 @@ Use one of the following methods to invoke the `gpfdists` protocol.
 
 ## <a id="about_cert_files"></a> About the Required Certificate Files
 
-The settings of the [verify_gpfdists_cert](../../ref_guide/config_params/guc-list.html#verify_gpfdists_cert) server configuration parameter (default value `true`) and the the [gpfdist](../../utility_guide/ref/gpfdist.html) `--ssl_verify_peer <boolean>` option (default value `on`) control whether SSL certificate authentication is enabled when Greenplum Database communicates with the `gpfdist` utility to either read data from or write data to an external data source. These settings also determine which of the following certificate files must reside in the `$PGDATA/gpfdists` directory on each Greenplum Database segment:
+The settings of the [verify_gpfdists_cert](../../ref_guide/config_params/guc-list.html#verify_gpfdists_cert) server configuration parameter (default value `true`) and the [gpfdist](../../utility_guide/ref/gpfdist.html) `--ssl_verify_peer <boolean>` option (default value `on`) control whether SSL certificate authentication is enabled when Greenplum Database communicates with the `gpfdist` utility to either read data from or write data to an external data source. These settings also determine which of the following certificate files must reside in the `$PGDATA/gpfdists` directory on each Greenplum Database segment:
 
 -   The client certificate file, `client.crt`
 -   The client private key file, `client.key`
