@@ -35,13 +35,13 @@ To upgrade while moving data using `gpbackup/gprestore`:
 
 1. If not already installed, install the latest release of the Greenplum Backup and Restore utilities, available to download from [VMware Tanzu Network](https://network.pivotal.io/products/greenplum-backup-restore) or [github](https://github.com/greenplum-db/gpbackup/releases).
 
-2. Run the `gpbackup` utility to back up the date from your Greenplum 6 cluster to an external data source. For more infomation on `gpbackup`, see the [VMware Greenplum Backup and Restore guide](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/1.29/greenplum-backup-and-restore/backup-restore.html).
+2. Run the `gpbackup` utility to back up the data from your Greenplum 6 cluster to an external data storage location, such as a cloud storage or Data Domain. For more infomation on `gpbackup`, see the [VMware Greenplum Backup and Restore guide](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/1.29/greenplum-backup-and-restore/backup-restore.html).
 
-3. Initalize a Greenplum 7 cluster on the new hardware, by issuing the [`gpinitsystem` command](../utility_guide/ref/gpinitsystem.html).
+3. Initalize a Greenplum 7 cluster on the destination hardware, by issuing the [`gpinitsystem` command](../utility_guide/ref/gpinitsystem.html).
 
 4. Install any external modules used in your Greenplum 6 system in the Greenplum 7 system before you restore the backup, for example MADlib or PostGIS. If versions of the external modules are not compatible, you may need to exclude tables that reference them when restoring the Greenplum 6 backup to Greenplum 7.
 
-5. Run the `gprestore` utility to restore your data to the Greenplum 7 cluster from the external data source. For more infomation on `gprestore`, see the [VMware Greenplum Backup and Restore guide](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/1.29/greenplum-backup-and-restore/backup-restore.html).
+5. Run the `gprestore` utility to restore your data to the Greenplum 7 cluster from the external data storage location. For more infomation on `gprestore`, see the [VMware Greenplum Backup and Restore guide](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/1.29/greenplum-backup-and-restore/backup-restore.html).
 
 >**Note**
 >- When restoring language-based user-defined functions, the shared object file must be in the location specified in the `CREATE FUNCTION` SQL command and must have been recompiled on the Greenplum 7 system. This applies to user-defined functions, user-defined types, and any other objects that use custom functions, such as aggregates created with the `CREATE AGGREGATE` command.
