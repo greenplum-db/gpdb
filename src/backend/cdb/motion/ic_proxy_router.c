@@ -234,9 +234,8 @@ ic_proxy_router_route(uv_loop_t *loop, ICProxyPkt *pkt,
 	else
 	{
 		ICProxyPeer *peer;
-
 		peer = ic_proxy_peer_blessed_lookup(loop,
-											pkt->dstContentId, pkt->dstDbid);
+											pkt->dstContentId, pkt->dstDbid, NULL);
 
 		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
 			   "ic-proxy: router: routing %s to %s",

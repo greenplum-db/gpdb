@@ -58,7 +58,7 @@
 static ICProxyPeer *ic_proxy_peers[65536];
 
 
-static void ic_proxy_peer_shutdown(ICProxyPeer *peer);
+static void ic_proxy_peer_shutdown(ICProxyPeer *peer, bool disconnect_client);
 static void ic_proxy_peer_handle_out_cache(ICProxyPeer *peer);
 static void ic_proxy_peer_on_data_pkt(void *opaque,
 									  const void *data, uint16 size);
@@ -197,11 +197,11 @@ ic_proxy_peer_register(ICProxyPeer *peer)
 
 	if (placeholder)
 	{
+		bool disconnect_client = true;
 		/*
 		 * FIXME: is it possible for a new peer to come before the legacy one
 		 * is ready for message?
 		 */
-
 		if (placeholder->state & IC_PROXY_PEER_STATE_READY_FOR_MESSAGE)
 		{
 			/*
@@ -214,8 +214,6 @@ ic_proxy_peer_register(ICProxyPeer *peer)
 
 			placeholder->state |= IC_PROXY_PEER_STATE_LEGACY;
 			ic_proxy_peer_update_name(placeholder);
-
-			ic_proxy_peer_shutdown(placeholder);
 		}
 		else
 		{
@@ -237,9 +235,15 @@ ic_proxy_peer_register(ICProxyPeer *peer)
 			peer->reqs = list_concat(peer->reqs, placeholder->reqs);
 			placeholder->reqs = NIL;
 
-			/* finally free the placeholder */
-			ic_proxy_peer_free(placeholder);
+			/*
+			 * Don't disconnect clients for an actual placeholder,
+			 * otherwise it will report an ERROR in the client side.
+			 */
+			disconnect_client = false;
 		}
+
+		/* shutdown placeholder */
+		ic_proxy_peer_shutdown(placeholder, disconnect_client);
 	}
 
 	ic_proxy_peers[peer->dbid] = peer;
@@ -264,20 +268,25 @@ ic_proxy_peer_lookup(int16 content, uint16 dbid)
 
 /*
  * Lookup a peer with peerid, create a placeholder if not found.
+ * @param[out] tcp_inited
+ * 	if peer->tcp has been already inited in the function
  */
 ICProxyPeer *
-ic_proxy_peer_blessed_lookup(uv_loop_t *loop, int16 content, uint16 dbid)
+ic_proxy_peer_blessed_lookup(uv_loop_t *loop, int16 content, uint16 dbid, bool *tcp_inited)
 {
 	Assert(dbid > 0);
-
+	bool _tcp_inited = false;
 	if (!ic_proxy_peers[dbid])
 	{
 		ICProxyPeer *peer = ic_proxy_peer_new(loop, content, dbid);
+		_tcp_inited = true;
 
 		/* register as a placeholder */
 		ic_proxy_peer_register(peer);
 	}
 
+	if (tcp_inited != NULL)
+		*tcp_inited = _tcp_inited;
 	return ic_proxy_peers[dbid];
 }
 
@@ -333,7 +342,7 @@ ic_proxy_peer_on_data(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 		if (buf->base)
 			ic_proxy_pkt_cache_free(buf->base);
 
-		ic_proxy_peer_shutdown(peer);
+		ic_proxy_peer_shutdown(peer, true);
 		return;
 	}
 	else if (unlikely(nread == 0))
@@ -375,6 +384,22 @@ ic_proxy_peer_new(uv_loop_t *loop, int16 content, uint16 dbid)
 }
 
 /*
+ * free memory in the callback function of uv_close()
+ */
+static void
+_ic_proxy_peer_ensure_close(uv_handle_t *handle)
+{
+	Assert(!uv_is_active(handle));
+	ICProxyPeer *peer = CONTAINER_OF((void *) handle, ICProxyPeer, tcp);
+	ic_proxy_free(peer);
+}
+void
+ic_proxy_peer_close_free(ICProxyPeer *peer)
+{
+	uv_close((uv_handle_t *) &peer->tcp, _ic_proxy_peer_ensure_close);
+}
+
+/*
  * Free a peer.
  *
  * A peer should only be used if it is really unused.  Most of the time a
@@ -387,7 +412,7 @@ ic_proxy_peer_free(ICProxyPeer *peer)
 	ListCell   *cell;
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
-		   "ic-proxy: %s: freeing", peer->name);
+		   "ic-proxy: freeing peer %s, handle %p", peer->name, (void *)&peer->tcp);
 
 	foreach(cell, peer->reqs)
 	{
@@ -402,7 +427,20 @@ ic_proxy_peer_free(ICProxyPeer *peer)
 	list_free(peer->reqs);
 
 	ic_proxy_ibuf_uninit(&peer->ibuf);
-	ic_proxy_free(peer);
+
+	/*
+	 * If a handle is still in the uv_loop, we have to close it first
+	 * and free its memory in the callback function of uv_close().
+	 */
+	if (IC_PROXY_PEER_STATE_NEED_CLOSE(peer))
+	{
+		ic_proxy_peer_close_free(peer);
+	}
+	else
+	{
+		Assert(!uv_is_active((uv_handle_t *) &peer->tcp));
+		ic_proxy_free(peer);
+	}
 
 	/*
 	 * TODO: if a peer disconnected, should we also disconnect all the relative
@@ -423,8 +461,7 @@ ic_proxy_peer_on_close(uv_handle_t *handle)
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
 		   "ic-proxy: %s: closed", peer->name);
 
-	/* reset the state */
-	peer->state = 0;
+	peer->state |= IC_PROXY_PEER_STATE_CLOSED;
 
 	/* it's unlikely that the ibuf is non-empty, but clear it for sure */
 	ic_proxy_ibuf_clear(&peer->ibuf);
@@ -477,7 +514,7 @@ ic_proxy_peer_on_shutdown(uv_shutdown_t *req, int status)
  * Shutdown a peer.
  */
 static void
-ic_proxy_peer_shutdown(ICProxyPeer *peer)
+ic_proxy_peer_shutdown(ICProxyPeer *peer, bool disconnect_client)
 {
 	uv_shutdown_t *req;
 
@@ -490,7 +527,8 @@ ic_proxy_peer_shutdown(ICProxyPeer *peer)
 	peer->state |= IC_PROXY_PEER_STATE_SHUTTING;
 
 	/* disconnect all the clients */
-	ic_proxy_client_table_shutdown_by_dbid(peer->dbid);
+	if (disconnect_client)
+		ic_proxy_client_table_shutdown_by_dbid(peer->dbid);
 
 	req = ic_proxy_new(uv_shutdown_t);
 
@@ -507,7 +545,7 @@ ic_proxy_peer_on_sent_hello_ack(void *opaque, const ICProxyPkt *pkt, int status)
 
 	if (status < 0)
 	{
-		ic_proxy_peer_shutdown(peer);
+		ic_proxy_peer_shutdown(peer, true);
 		return;
 	}
 
@@ -609,7 +647,7 @@ ic_proxy_peer_on_hello_data(uv_stream_t *stream,
 		if (buf->base)
 			ic_proxy_pkt_cache_free(buf->base);
 
-		ic_proxy_peer_shutdown(peer);
+		ic_proxy_peer_shutdown(peer, true);
 		return;
 	}
 	else if (unlikely(nread == 0))
@@ -738,7 +776,7 @@ ic_proxy_peer_on_hello_ack_data(uv_stream_t *stream,
 		if (buf->base)
 			ic_proxy_pkt_cache_free(buf->base);
 
-		ic_proxy_peer_shutdown(peer);
+		ic_proxy_peer_shutdown(peer, true);
 		return;
 	}
 	else if (unlikely(nread == 0))
@@ -765,7 +803,7 @@ ic_proxy_peer_on_sent_hello(void *opaque, const ICProxyPkt *pkt, int status)
 
 	if (status < 0)
 	{
-		ic_proxy_peer_shutdown(peer);
+		ic_proxy_peer_shutdown(peer, true);
 		return;
 	}
 
@@ -839,7 +877,7 @@ ic_proxy_peer_on_connected(uv_connect_t *conn, int status)
  * Connect to a remote peer.
  */
 void
-ic_proxy_peer_connect(ICProxyPeer *peer, struct sockaddr_in *dest)
+ic_proxy_peer_connect(ICProxyPeer *peer, struct sockaddr_in *dest, bool init_tcp)
 {
 	uv_connect_t *conn;
 	char		name[HOST_NAME_MAX];
@@ -854,9 +892,12 @@ ic_proxy_peer_connect(ICProxyPeer *peer, struct sockaddr_in *dest)
 		   "ic-proxy: %s: connecting to %s:%d",
 				 peer->name, name, ntohs(dest->sin_port));
 
-	/* reinit the tcp handle */
-	uv_tcp_init(peer->tcp.loop, &peer->tcp);
-	uv_tcp_nodelay(&peer->tcp, true);
+	/* (re)init the tcp handle */
+	if (init_tcp)
+	{
+		uv_tcp_init(peer->tcp.loop, &peer->tcp);
+		uv_tcp_nodelay(&peer->tcp, true);
+	}
 
 	conn = ic_proxy_new(uv_connect_t);
 
@@ -883,7 +924,7 @@ ic_proxy_peer_disconnect(ICProxyPeer *peer)
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
 		   "ic-proxy: %s: disconnecting", peer->name);
-	ic_proxy_peer_shutdown(peer);
+	ic_proxy_peer_shutdown(peer, true);
 }
 
 /*

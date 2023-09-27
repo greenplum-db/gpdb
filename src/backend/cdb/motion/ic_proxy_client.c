@@ -102,6 +102,9 @@ struct ICProxyClient
 #define IC_PROXY_CLIENT_STATE_CLOSED          0x00000200
 #define IC_PROXY_CLIENT_STATE_PAUSED          0x00000800
 
+#define IC_PROXY_CLIENT_STATE_NEED_CLOSE(client) \
+	(client->state < IC_PROXY_CLIENT_STATE_CLOSING)
+
 	int			unconsumed;		/* count of the packets that are unconsumed by
 								 * the backend */
 	int			sending;		/* count of the packets being sent, both c2p &
@@ -229,6 +232,22 @@ ic_proxy_client_table_shutdown_by_dbid(uint16 dbid)
 }
 
 /*
+ * free memory in the callback function of uv_close()
+ */
+static void
+_ic_proxy_client_ensure_close(uv_handle_t *handle)
+{
+	Assert(!uv_is_active(handle));
+	ICProxyClient *client = CONTAINER_OF((void *) handle, ICProxyClient, pipe);
+	ic_proxy_free(client);
+}
+void
+ic_proxy_client_close_free(ICProxyClient *client)
+{
+	uv_close((uv_handle_t *) &client->pipe, _ic_proxy_client_ensure_close);
+}
+
+/*
  * Register a client with its key.
  *
  * - if there was a placeholder, replace it;
@@ -323,10 +342,11 @@ ic_proxy_client_register(ICProxyClient *client)
 			 * replaced it already.  The placeholder has nothing more than
 			 * itself, so free it directly.
 			 */
-			ic_proxy_free(placeholder);
 			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
-				   "ic-proxy: %s: freed my placeholder",
-						 ic_proxy_client_get_name(client));
+				   "ic-proxy: freeing client placeholder %s, handle %p",
+						 ic_proxy_client_get_name(client), (void *)&placeholder->pipe);
+
+			ic_proxy_client_close_free(placeholder);
 		}
 	}
 	else
@@ -890,7 +910,19 @@ ic_proxy_client_free(ICProxyClient *client)
 	Assert(client->successor == NULL);
 
 	ic_proxy_client_clear_name(client);
-	ic_proxy_free(client);
+	/*
+	 * If a handle is still in the uv_loop, we have to close it first
+	 * and free its memory in the callback function of uv_close().
+	 */
+	if (IC_PROXY_CLIENT_STATE_NEED_CLOSE(client))
+	{
+		ic_proxy_client_close_free(client);
+	}
+	else
+	{
+		Assert(!uv_is_active((uv_handle_t *) &client->pipe));
+		ic_proxy_free(client);
+	}
 }
 
 /*

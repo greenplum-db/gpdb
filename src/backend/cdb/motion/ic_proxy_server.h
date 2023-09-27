@@ -55,6 +55,9 @@ struct ICProxyPeer
 #define IC_PROXY_PEER_STATE_CLOSING                     0x00004000
 #define IC_PROXY_PEER_STATE_CLOSED                      0x00008000
 
+#define IC_PROXY_PEER_STATE_NEED_CLOSE(peer) \
+	(peer->state < IC_PROXY_PEER_STATE_SHUTTING)
+
 #define IC_PROXY_PEER_STATE_READY_FOR_MESSAGE \
 	(IC_PROXY_PEER_STATE_CONNECTED | \
 	 IC_PROXY_PEER_STATE_ACCEPTED)
@@ -104,7 +107,6 @@ struct ICProxyDelay
 
 
 extern int ic_proxy_server_main(void);
-extern void ic_proxy_server_quit(uv_loop_t *loop, bool relaunch);
 
 extern ICProxyClient *ic_proxy_client_new(uv_loop_t *loop, bool placeholder);
 extern const char *ic_proxy_client_get_name(ICProxyClient *client);
@@ -118,6 +120,7 @@ extern ICProxyClient *ic_proxy_client_blessed_lookup(uv_loop_t *loop,
 extern void ic_proxy_client_table_init(void);
 extern void ic_proxy_client_table_uninit(void);
 extern void ic_proxy_client_table_shutdown_by_dbid(uint16 dbid);
+extern void ic_proxy_client_close_free(ICProxyClient *client);
 
 extern void ic_proxy_peer_table_init(void);
 extern void ic_proxy_peer_table_uninit(void);
@@ -125,14 +128,17 @@ extern void ic_proxy_peer_table_uninit(void);
 extern ICProxyPeer *ic_proxy_peer_new(uv_loop_t *loop,
 									  int16 content, uint16 dbid);
 extern void ic_proxy_peer_free(ICProxyPeer *peer);
+extern void ic_proxy_peer_close_free(ICProxyPeer *peer);
 extern void ic_proxy_peer_read_hello(ICProxyPeer *peer);
-extern void ic_proxy_peer_connect(ICProxyPeer *peer, struct sockaddr_in *dest);
+extern void ic_proxy_peer_connect(ICProxyPeer *peer, struct sockaddr_in *dest,
+								  bool init_tcp);
 extern void ic_proxy_peer_disconnect(ICProxyPeer *peer);
 extern void ic_proxy_peer_route_data(ICProxyPeer *peer, ICProxyPkt *pkt,
 									 ic_proxy_sent_cb callback, void *opaque);
 extern ICProxyPeer *ic_proxy_peer_lookup(int16 content, uint16 dbid);
 extern ICProxyPeer *ic_proxy_peer_blessed_lookup(uv_loop_t *loop,
-												 int16 content, uint16 dbid);
+												 int16 content, uint16 dbid,
+												 bool *tcp_inited);
 extern ICProxyDelay *ic_proxy_peer_build_delay(ICProxyPeer *peer,
 											   ICProxyPkt *pkt,
 											   ic_proxy_sent_cb callback,

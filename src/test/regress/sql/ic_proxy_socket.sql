@@ -56,3 +56,10 @@ SET statement_timeout = 10000;
 select count(*) from PR_14998;
 RESET statement_timeout;
 drop table PR_14998;
+
+-- test delete corresponding domain socket file when IC-Proxy process quits
+-- should no domain socket file remains
+
+\! gpstop -M fast -aq;
+\! ls /tmp/.s.PGSQL.ic_proxy.* | wc -l
+\! gpstart -aq;
