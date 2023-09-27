@@ -374,7 +374,7 @@ def main():
     f_out = open(output_file, 'w')
     ts = datetime.today()
     f_out.writelines(['-- MiniRepro ' + version,
-                           '\n-- Copyright (C) 2007 - 2023 VMWare'
+                           '\n-- Copyright (C) 2007 - ' + ts.strftime("%Y") + ' VMWare'
                            '\n-- Database: ' + db,
                            '\n-- Date:     ' + ts.date().isoformat(),
                            '\n-- Time:     ' + ts.time().isoformat(),
