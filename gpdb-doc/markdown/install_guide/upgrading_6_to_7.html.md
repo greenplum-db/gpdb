@@ -27,10 +27,9 @@ When upgrading, you may move your data in one of two ways:
 - By using the `gpbackup/gprestore` utilities
 - By using the `gpcopy` utility
 
->**Note**
->If you are moving your data using `gpbackup/gprestore`, be sure to review [Backup and Restore Caveats](#backup-and-restore-caveats) before starting the upgrade.
-
 ### <a id="steps_br"></a>Steps to Upgrade Using Backup/Restore
+
+Review [Backup and Restore Caveats](#backup-and-restore-caveats) before starting the upgrade.
 
 To upgrade while moving data using `gpbackup/gprestore`:
 
