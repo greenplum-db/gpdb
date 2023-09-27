@@ -18,29 +18,6 @@ To prepare for upgrading from Greenplum 6 to Greenplum 7:
 
 - Before using `gpbackup`/`gprestore` to move your data, read carefully through [Backup and Restore Caveats](#br-caveats) to avert problems that can arise.  
 
-<!-->
-## <a id="same_hardware"></a>Upgrading to Greenplum 7 on the Same Hardware
-
-Follow the steps below to upgrade to Greenplum 7. You may move your data using either the `gpbackup/gprestore` utilities or the `gpcopy` utility. There are a number of caveats with respect to backing up and restoring your data. Be sure to review [Backup and Restore Caveats](#backup-and-restore-caveats) before starting the upgrade.
-
-To upgrade while staying on the same hardware:
-
-1. If not already installed, install the latest release of the Greenplum Backup and Restore utilities, available to download from [VMware Tanzu Network](https://network.pivotal.io/products/greenplum-backup-restore) or [github](https://github.com/greenplum-db/gpbackup/releases).
-
-2. Run the `gpbackup` utility to back up your data to an external data source. For more infomation on `gpbackup`, see the [VMware Greenplum Backup and Restore guide](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/1.29/greenplum-backup-and-restore/backup-restore.html).
-
-3. Delete the Greenplum 6 cluster by issuing the [`gpdeletesystem` command](../utility_guide/ref/gpdeletesystem.html).
-
-4. Initialize a Greenplum 7 cluster by issuing the [`gpinitsystem` command](../utility_guide/ref/gpinitsystem.html).
-
-5. Install any external modules used in your Greenplum 6 system in the Greenplum 7 system before you restore the backup, for example MADlib or PostGIS. If versions of the external modules are not compatible, you may need to exclude tables that reference them when restoring the Greenplum 6 backup to Greenplum 7.
-
-6. Run the `gprestore` utility to restore your data to the Greenplum 7 cluster from the external data source. For more infomation on `gprestore`, see the [VMware Greenplum Backup and Restore guide](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/1.29/greenplum-backup-and-restore/backup-restore.html).
-
->**Note**
->- When restoring language-based user-defined functions, the shared object file must be in the location specified in the `CREATE FUNCTION` SQL command and must have been recompiled on the Greenplum 7 system. This applies to user-defined functions, user-defined types, and any other objects that use custom functions, such as aggregates created with the `CREATE AGGREGATE` command.
--->
-
 ## <a id="steps"></a>Steps to Upgrade
 
 Follow the steps in this section to upgrade from Greenplum 6 to Greenplum 7.
