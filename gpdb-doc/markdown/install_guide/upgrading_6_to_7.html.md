@@ -70,7 +70,9 @@ There are a number of caveats with respect to backing up and restoring your data
 
 - Before you do an actual backup, use `gpbackup` to create a `--metadata-only` backup from the source Greenplum database and restore it to the Greenplum 7 system. Review the `gprestore` log file for error messages and correct any remaining problems in the source Greenplum database.
 
-- If you intend to install VMware Greenplum 7 on the same hardware as your 6 system, you will need enough disk space to accommodate over five times the original data set (two full copies of the primary and mirror data sets, plus the original backup data in ASCII format) in order to migrate data with `gpbackup` and `gprestore`. Keep in mind that the ASCII backup data will require more disk space than the original data, which may be stored in compressed binary format. Offline backup solutions such as Dell EMC Data Domain can reduce the required disk space on each host. If you do not have the disk space, then:
+- If you intend to install VMware Greenplum 7 on the same hardware as your 6 system, you will need enough disk space to accommodate over five times the original data set (two full copies of the primary and mirror data sets, plus the original backup data in ASCII format) in order to migrate data with `gpbackup` and `gprestore`. Keep in mind that the ASCII backup data will require more disk space than the original data, which may be stored in compressed binary format. Offline backup solutions such as Dell EMC Data Domain can reduce the required disk space on each host. 
+
+    If you do not have the disk space, then:
 
     - Run `gpbackup` on your Greenplum 6 cluster to back up your data
     - Run `gpdeletesystem` to remove the existing Greenplum 6 cluster
