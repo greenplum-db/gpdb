@@ -1335,3 +1335,26 @@ explain (costs off) select * from r where b in (select b from s where c=10 order
 select * from r where b in (select b from s where c=10 order by c);
 explain (costs off) select * from r where b in (select b from s where c=10 order by c limit 2);
 select * from r where b in (select b from s where c=10 order by c limit 2);
+
+drop table if exists r,s,t;
+create table r(a int, b int) distributed randomly;
+create table s(a int, b int) distributed randomly;
+create table t(a int, b int) distributed randomly;
+
+ANALYZE r,s,t;
+-- Test nested query with aggregate inside a sublink,
+-- ORCA should correctly normalize the aggregate expression inside the
+-- sublink's nested query and the column variable accessed in aggregate should
+-- be accessible to the aggregate after the normalization of query.
+-- If the query is not supported, ORCA should gracefully fallback to postgres
+explain (COSTS OFF) with t0 AS (
+    SELECT
+       ROW_TO_JSON((SELECT x FROM (SELECT max(t.b)) x))
+       AS c
+    FROM r
+        JOIN s ON true
+        JOIN t ON  true
+   )
+SELECT c FROM t0;
+
+drop table r,s,t;
