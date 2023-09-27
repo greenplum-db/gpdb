@@ -3431,18 +3431,20 @@ When a Greenplum Database external table is defined with the `gpfdists` protocol
 
 Regardless of the setting of this server configuration parameter, Greenplum Database always encrypts data that you read from or write to an external table that specifies the `gpfdists` protocol.
 
-The default is `true`, SSL authentication is enabled when Greenplum Database communicates with the `gpfdist` utility to either read data from or write data to an external data source.
+The default is `true`, SSL certificate authentication is enabled when Greenplum Database communicates with the `gpfdist` utility to either read data from or write data to an external data source.
 
 The value `false` deactivates SSL certificate authentication. These SSL exceptions are ignored:
 
 -   The self-signed SSL certificate that is used by `gpfdist` is not trusted by Greenplum Database.
 -   The host name contained in the SSL certificate does not match the host name that is running `gpfdist`.
 
+When you set `verify_gpfdists_cert` to `false`, the CA certification file is not required for Greenplum Database segments.
+
 You can set the value to `false` to deactivate authentication when testing the communication between the Greenplum Database external table and the `gpfdist` utility that is serving the external data.
 
 > **Caution** Deactivating SSL certificate authentication exposes a security risk by not validating the `gpfdists` SSL certificate.
 
-For information about the `gpfdists` protocol, see [gpfdists:// Protocol](../../admin_guide/external/g-gpfdists-protocol.html). For information about running the `gpfdist` utility, see [gpfdist](../../utility_guide/ref/gpfdist.html).
+For information about the `gpfdists` protocol and how this setting affects the certificate files required on Greenplum Database segments, see [gpfdists:// Protocol](../../admin_guide/external/g-gpfdists-protocol.html). For information about running the `gpfdist` utility, see [gpfdist](../../utility_guide/ref/gpfdist.html).
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|

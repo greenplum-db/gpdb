@@ -7,7 +7,7 @@ Serves data files to or writes data files out from Greenplum Database segments.
 ```
 gpfdist [-d <directory>] [-p <http_port>] [-P <last_http_port>] [-l <log_file>]
    [-t <timeout>] [-S] [-w <time>] [-v | -V] [-s] [-m <max_length>]
-   [--ssl <certificate_path> [--sslclean <wait_time>] ]
+   [--ssl <certificate_path> [--ssl_verify_peer <boolean>] [--sslclean <wait_time>] ]
    [--compress] [--multi_thread <num_threads>]
    [-c <config.yml>]
 
@@ -24,7 +24,7 @@ gpfdist --version
 
 In order for `gpfdist` to be used by an external table, the `LOCATION` clause of the external table definition must specify the external table data using the `gpfdist://` protocol \(see the Greenplum Database command `CREATE EXTERNAL TABLE`\).
 
-> **Note** If the `--ssl` option is specified to enable SSL security, create the external table with the `gpfdists://` protocol.
+> **Note** If you specify the `--ssl` option to enable SSL security, you must create the external table with the `gpfdists://` protocol.
 
 The benefit of using `gpfdist` is that you are guaranteed maximum parallelism while reading from or writing to external tables, thereby offering the best performance as well as easier administration of external tables.
 
@@ -78,15 +78,22 @@ Most likely, you will want to run `gpfdist` on your ETL machines rather than the
 :   For a Greenplum Database with multiple segments, there might be a delay between segments when writing data from different segments to the file. You can specify a time to wait before Greenplum Database closes the file to ensure all the data is written to the file.
 
 --ssl certificate\_path
-:   Adds SSL encryption to data transferred with `gpfdist`. After running `gpfdist` with the `--ssl certificate\_path` option, the only way to load data from this file server is with the `gpfdist://` protocol. For information on the `gpfdist://` protocol, see "Loading and Unloading Data" in the *Greenplum Database Administrator Guide*.
+:   Prompts `gpfdist` to use SSL encryption for the data transfer. After running `gpfdist` with the `--ssl <certificate_path>` option, you must use the `gpfdists://` protocol to load data from this file server. For information on `gpfdists`, refer to [gpfdists:// Protocol](../../admin_guide/external/g-gpfdists-protocol.html) in the *Greenplum Database Administrator Guide*.
 
-:   The location specified in certificate\_path must contain the following files:
+:   The setting of the `--ssl_verify_peer` option determines which of the following files are required in the file system location specified by certificate\_path:
 
     -   The server certificate file, `server.crt`
     -   The server private key file, `server.key`
     -   The trusted certificate authorities, `root.crt`
 
-    The root directory \(`/`\) cannot be specified as certificate\_path.
+:   The settings of both the [verify_gpfdists_cert](../../ref_guide/config_params/guc-list.html#verify_gpfdists_cert) server configuration parameter and the `--ssl_verify_peer` option also determine which certificate files are required on the Greenplum Database segments as described in [gpfdists:// Protocol](../../admin_guide/external/g-gpfdists-protocol.html).
+
+:   You cannot specify the root directory \(`/`\) as the certificate\_path.
+
+--ssl_verify_peer boolean
+:   When the `--ssl` option is also provided, specifies whether `gpfdist` enables or disables SSL certificate authentication on the Greenplum Database side.
+:   The default value is `on`; `gpfdist` checks the identities of clients, and requires that the `root.crt`, `server.crt`, and `server.key` be present in the certificate\_path specified.
+:   When set to `off`, `gpfdist` does not check the identities of clients, and requires that only the `server.crt` and `server.key` be present in the `--ssl <certificate_path>` specified. The certificate authority file `root.crt` is not required.
 
 --sslclean wait\_time
 :   When the utility is run with the `--ssl` option, sets the number of seconds that the utility delays before closing an SSL session and cleaning up the SSL resources after it completes writing data to or from a Greenplum Database segment. The default value is 0, no delay. The maximum value is 500 seconds. If the delay is increased, the transfer speed decreases.
@@ -123,13 +130,6 @@ Most likely, you will want to run `gpfdist` on your ETL machines rather than the
 
 ## <a id="notes"></a>Notes 
 
-The server configuration parameter [verify\_gpfdists\_cert](../../ref_guide/config_params/guc-list.html) controls whether SSL certificate authentication is enabled when Greenplum Database communicates with the `gpfdist` utility to either read data from or write data to an external data source. You can set the parameter value to `false` to deactivate authentication when testing the communication between the Greenplum Database external table and the `gpfdist` utility that is serving the external data. If the value is `false`, these SSL exceptions are ignored:
-
--   The self-signed SSL certificate that is used by `gpfdist` is not trusted by Greenplum Database.
--   The host name contained in the SSL certificate does not match the host name that is running `gpfdist`.
-
-> **Caution** Deactivating SSL certificate authentication exposes a security risk by not validating the `gpfdists` SSL certificate.
-
 You can set the server configuration parameter [gpfdist\_retry\_timeout](../../ref_guide/config_params/guc-list.html) to control the time that Greenplum Database waits before returning an error when a `gpfdist` server does not respond while Greenplum Database is attempting to write data to `gpfdist`. The default is 300 seconds \(5 minutes\).
 
 If the `gpfdist` utility hangs with no read or write activity occurring, you can generate a core dump the next time a hang occurs to help debug the issue. Set the environment variable `GPFDIST_WATCHDOG_TIMER` to the number of seconds of no activity to wait before `gpfdist` is forced to exit. When the environment variable is set and `gpfdist` hangs, the utility is stopped after the specified number of seconds, creates a core dump, and sends relevant information to the log file.
@@ -160,6 +160,12 @@ To enable multi-threaded data transfer (with implicit compression) using four th
 
 ```
 gpfdist -d /var/load_files -p 8081 --multi_thread 4
+```
+
+To enable SSL certificate authentication without peer verification, start `gpfdist` as follows:
+
+```
+gpfdist -d /var/load_files -p 8081 --ssl /path/to/certs --ssl_verify_peer off
 ```
 
 To stop `gpfdist` when it is running in the background:
