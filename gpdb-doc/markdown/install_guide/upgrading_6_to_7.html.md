@@ -44,13 +44,13 @@ To upgrade while moving data using `gpbackup/gprestore`:
 5. Run the `gprestore` utility to restore your data to the Greenplum 7 cluster from the external data storage location. For more infomation on `gprestore`, see the [VMware Greenplum Backup and Restore guide](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/1.29/greenplum-backup-and-restore/backup-restore.html).
 
 >**Note**
->- When restoring language-based user-defined functions, the shared object file must be in the location specified in the `CREATE FUNCTION` SQL command and must have been recompiled on the Greenplum 7 system. This applies to user-defined functions, user-defined types, and any other objects that use custom functions, such as aggregates created with the `CREATE AGGREGATE` command.
+>When restoring language-based user-defined functions, the shared object file must be in the location specified in the `CREATE FUNCTION` SQL command and must have been recompiled on the Greenplum 7 system. This applies to user-defined functions, user-defined types, and any other objects that use custom functions, such as aggregates created with the `CREATE AGGREGATE` command.
 
 ### <a id="steps_br"></a>Steps to Upgrade Using `gpcopy`
 
 1. Review the information in [Migrating Data with gpcopy](https://docs.vmware.com/en/VMware-Greenplum-Data-Copy-Utility/2.6/greenplum-copy/gpcopy-migrate.html).
 
-2. Initalize a Greenplum 7 cluster on the new hardware, by issuing the [`gpinitsystem` command](../utility_guide/ref/gpinitsystem.html).
+2. Initalize a Greenplum 7 cluster on the destination hardware, by issuing the [`gpinitsystem` command](../utility_guide/ref/gpinitsystem.html).
 
 3. Verify network connectivity between your Greenplum 6 and your Greenplum 7 cluster. 
 
@@ -70,7 +70,11 @@ There are a number of caveats with respect to backing up and restoring your data
 
 - Before you do an actual backup, use `gpbackup` to create a `--metadata-only` backup from the source Greenplum database and restore it to the Greenplum 7 system. Review the `gprestore` log file for error messages and correct any remaining problems in the source Greenplum database.
 
-- If you intend to install VMware Greenplum 7 on the same hardware as your 6 system, you will need enough disk space to accommodate over five times the original data set (two full copies of the primary and mirror data sets, plus the original backup data in ASCII format) in order to migrate data with `gpbackup` and `gprestore`. Keep in mind that the ASCII backup data will require more disk space than the original data, which may be stored in compressed binary format. Offline backup solutions such as Dell EMC Data Domain can reduce the required disk space on each host.
+- If you intend to install VMware Greenplum 7 on the same hardware as your 6 system, you will need enough disk space to accommodate over five times the original data set (two full copies of the primary and mirror data sets, plus the original backup data in ASCII format) in order to migrate data with `gpbackup` and `gprestore`. Keep in mind that the ASCII backup data will require more disk space than the original data, which may be stored in compressed binary format. Offline backup solutions such as Dell EMC Data Domain can reduce the required disk space on each host. If you do not have the disk space, then:
+
+    - Run `gpbackup` on your Greenplum 6 cluster to back up your data
+    - Run `gpdeletesystem` to remove the existing Greenplum 6 cluster
+    - Proceed with initializing then new cluster, as described above
 
 - When restoring language-based user-defined functions, the shared object file must be in the location specified in the `CREATE FUNCTION` SQL command and must have been recompiled on the Greenplum 7 system. This applies to user-defined functions, user-defined types, and any other objects that use custom functions, such as aggregates created with the `CREATE AGGREGATE` command.
 
