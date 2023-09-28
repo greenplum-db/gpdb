@@ -171,7 +171,6 @@ The following server configuration parameters are removed in Greenplum 7:
 - `memory_spill_ratio`
 - `optimizer_analyze_enable_merge_of_leaf_stats`
 - `optimizer_enable_dml_triggers`
-- `optimizer_enable_orderedagg`
 - `optimizer_enable_partial_index`
 - `optimizer_prune_unused_columns`
 - `password_hash_algorithm`
@@ -182,10 +181,10 @@ The following server configuration parameters are removed in Greenplum 7:
 
 These server configuration parameters are changed in Greenplum 7:
 
+- The server configuration paramater `optimizer_enable_orderedagg` has a new default value of `on`.
 - The server configuration parameter `vacuum_cost_page_miss` has a new default value of 2.
 - The default value for the server configuration parameter `gp_interconnect_address_type` changed from `wildcard` to `unicast`.
 - The `wal_keep_segments` server configuration parameter has been replaced by the `wal_keep_size` parameter.
 - The `autovacuum` server configuration parameter is now enabled for all databases by default, rather than just for the `template0` and `template1` databases.
 - The `gp_autostats_mode` server configuration parameter default value has been changed to `none`.
 - The `gp_default_storage_options` parameter no longer supports the `appendonly` and `appendoptimized` keywords. Use the `default_table_access_method` parameter instead.
-
