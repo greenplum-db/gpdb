@@ -53,7 +53,7 @@ Proceed to the next section to register the `postgresml` module.
 The `postgresml` module is installed when you install Greenplum Database. Before you can use any of the data types, functions, or operators defined in the module, you must register the `postgresml` extension in each database in which you want to use the objects:
 
 ```
-CREATE EXTENSION postgresml;
+CREATE EXTENSION pgml;
 ```
 
 Refer to [Installing Additional Supplied Modules](../../install_guide/install_modules.html) for more information.
