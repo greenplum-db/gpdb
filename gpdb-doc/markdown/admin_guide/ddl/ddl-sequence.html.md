@@ -33,7 +33,6 @@ To examine the current attributes of a sequence, query the sequence directly. Fo
 
 ```
 SELECT * FROM myserial;
-
 ```
 
 ### <a id="retnex"></a>Returning the Next Sequence Counter Value 
@@ -42,7 +41,6 @@ You can invoke the `nextval()` built-in function to return and use the next valu
 
 ```
 INSERT INTO vendors VALUES (nextval('myserial'), 'acme');
-
 ```
 
 `nextval()` uses the sequence's `is_called` attribute value to determine whether or not to increment the sequence counter before returning the value. `nextval()` advances the counter when `is_called` is `true`. `nextval()` sets the sequence `is_called` attribute to `true` before returning.
@@ -70,6 +68,14 @@ SELECT setval('myserial', 201, false);
 ```
 
 `setval()` operations are never rolled back.
+
+### <a id="notes"></a> nextval() and setval() Caution
+
+To avoid blocking concurrent transactions that obtain numbers from the same sequence, the value obtained by `nextval()` is not reclaimed for re-use if the calling transaction later aborts. As such, transaction aborts or database crashes can result in gaps in the sequence of assigned values. This situation can occur without a transaction abort, also. For example, an `INSERT` with an `ON CONFLICT` clause will compute the to-be-inserted tuple, including invoking any required `nextval()` calls, before detecting any conflict that would cause it to follow the `ON CONFLICT` rule instead. Consequently, you cannot use Greenplum Database sequence objects to obtain "gapless" sequences.
+
+Similarly, sequence state changes made by `setval()` are immediately visible to other transactions, and are not undone if the calling transaction rolls back.
+
+If the database cluster crashes before committing a transaction containing a `nextval()` or `setval()` call, the sequence state change may not have been propogated to persistent storage, so that it is uncertain whether the sequence has its original or updated state after the cluster restarts. This is harmless for usage of the sequence within the database, since other effects of uncommitted transactions are visible either. However, if you wish to use a sequence value for persistent outside-the-database purposes, ensure that the `nextval()` call has been committed before doing so.
 
 ## <a id="topic89"></a>Altering a Sequence 
 

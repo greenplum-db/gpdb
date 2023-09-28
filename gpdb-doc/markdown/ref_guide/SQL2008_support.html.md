@@ -231,7 +231,7 @@ For information about Greenplum features and SQL compliance, see the *Greenplum 
 |F311-03|`CREATE VIEW`|YES| |
 |F311-04|`CREATE VIEW: WITH CHECK OPTION`|NO| |
 |F311-05|`GRANT` statement|YES| |
-|F312|`MERGE` statement|NO| |
+|F312|`MERGE` statement|NO|consider `INSERT ... ON CONFLICT DO UPDATE` |
 |F313|Enhanced `MERGE` statement|NO| |
 |F321|User authorization|YES| |
 |F341|Usage Tables|NO| |
