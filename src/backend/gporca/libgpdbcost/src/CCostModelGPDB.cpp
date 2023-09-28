@@ -1833,6 +1833,10 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 	const CDouble dTableWidth =
 		CPhysicalScan::PopConvert(pop)->PstatsBaseTable()->Width();
 
+	BOOL isAO = CPhysicalScan::PopConvert(exprhdl.Pop())
+					->Ptabdesc()
+					->IsAORowOrColTable();
+
 	CDouble dIndexFilterCostUnit =
 		pcmgpdb->GetCostModelParams()
 			->PcpLookup(CCostModelParamsGPDB::EcpIndexFilterCostUnit)
@@ -1853,9 +1857,7 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 	GPOS_ASSERT(0 < dIndexScanTupCostUnit);
 	GPOS_ASSERT(0 < dIndexScanTupRandomFactor);
 
-	if (CPhysicalScan::PopConvert(exprhdl.Pop())
-			->Ptabdesc()
-			->IsAORowOrColTable())
+	if (isAO)
 	{
 		// AO specific costs related to index-scan/index-only-scan:
 		//
@@ -1939,9 +1941,17 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 	// approximately equal to the precent of tuples in all-visible blocks
 	// compared to total blocks. It is approximate because there is no
 	// guarantee that blocks are equally filled with live tuples.
+	//
+	// We never scan the underlying append-optimized table relfile for
+	// performing visibility checks. It's as if all blocks are all-visible. See
+	// cdb_estimate_rel_size(). So consider dPartialVisFrac as 0.
 
 	CDouble dPartialVisFrac(1);
-	if (stats->RelPages() != 0)
+	if (isAO)
+	{
+		dPartialVisFrac = 0;
+	}
+	else if (stats->RelPages() != 0)
 	{
 		dPartialVisFrac =
 			1 - (CDouble(stats->RelAllVisible()) / CDouble(stats->RelPages()));
