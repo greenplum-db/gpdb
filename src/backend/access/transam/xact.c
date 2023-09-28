@@ -4173,7 +4173,11 @@ AbortCurrentTransaction(void)
 		case TBLOCK_DEFAULT:
 			if (s->state == TRANS_DEFAULT)
 			{
-				/* we are idle, so nothing to do */
+				/*
+				 * we are idle, reset SecurityRestrictionContext, because
+				 * its value may not be 0 if a transaction error occurred.
+				 */
+				SetUserIdAndSecContext(GetUserId(), 0);
 			}
 			else
 			{
