@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # Copyright (c) 2014 Pivotal inc.
+# Copyright (c) 2023 VMware, Inc. or its affiliates. All Rights Reserved.
 
 
 import datetime
@@ -186,7 +187,6 @@ def main():
         with closing(connection.cursor()) as cursor:
             num_segments = get_num_segments(cursor)
     sys.stdout.writelines(['\n-- Greenplum database Statistics Dump',
-                           '\n-- Copyright (C) 2007 - ' + timestamp.strftime("%Y") + ' VMWare'
                            '\n-- Database: ' + db,
                            '\n-- Num Segments: ' + str(num_segments),
                            '\n-- Date:     ' + timestamp.date().isoformat(),
