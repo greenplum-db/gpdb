@@ -49,3 +49,10 @@ $$ LANGUAGE plpythonu EXECUTE ON MASTER;
 1: RESET statement_timeout;
 1: drop table PR_14998;
 1q:
+
+-- test delete corresponding domain socket file when IC-Proxy process quits
+-- should no domain socket file remains
+
+\! gpstop -M fast -aq;
+\! ls /tmp/.s.PGSQL.ic_proxy.* | wc -l
+\! gpstart -aq;

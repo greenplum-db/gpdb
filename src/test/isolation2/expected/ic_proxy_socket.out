@@ -30,3 +30,11 @@ RESET
 1: drop table PR_14998;
 DROP
 1q: ... <quitting>
+
+-- test delete corresponding domain socket file when IC-Proxy process quits
+-- should no domain socket file remains
+\! gpstop -M fast -aq;
+\! ls /tmp/.s.PGSQL.ic_proxy.* | wc -l
+ls: cannot access '/tmp/.s.PGSQL.ic_proxy.*': No such file or directory
+0
+\! gpstart -aq;

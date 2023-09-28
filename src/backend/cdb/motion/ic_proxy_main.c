@@ -271,7 +271,7 @@ ic_proxy_server_client_listener_init(uv_loop_t *loop)
 
 	ic_proxy_build_server_sock_path(path, sizeof(path));
 
-	/* FIXME: do not unlink here */
+	/* delete leftover domain socket file, just in case */
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG5,
 		   "ic-proxy: unlink(%s) ...", path);
 	unlink(path);
@@ -493,10 +493,9 @@ ic_proxy_server_main(void)
 	ic_proxy_router_uninit();
 
 	ic_proxy_build_server_sock_path(path, sizeof(path));
-#if 0
-	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG5, LOG, "unlink(%s) ...", path);
+
+	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, LOG, "unlink(%s) ...", path);
 	unlink(path);
-#endif
 
 	ic_proxy_pkt_cache_uninit();
 
@@ -504,6 +503,7 @@ ic_proxy_server_main(void)
 		   "ic-proxy: server closed with code %d",
 				 ic_proxy_server_exit_code);
 
+	ic_proxy_server_quit(&ic_proxy_server_loop, true);
 	return ic_proxy_server_exit_code;
 }
 
