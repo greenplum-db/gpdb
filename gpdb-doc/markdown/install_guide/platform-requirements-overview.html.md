@@ -190,7 +190,7 @@ These Greenplum Database extensions are installed with Greenplum Database
 -   Greenplum Connector for Apache NiFi v1.0.0 - The VMware Greenplum Connector for Apache NiFi enables you to set up a NiFi dataflow to load record-oriented data from any source into Greenplum Database.
 -   Greenplum Informatica Connector v1.0.5 - The VMware Greenplum Connector for Informatica supports high speed data transfer from an Informatica PowerCenter cluster to a VMware Greenplum cluster for batch and streaming ETL operations.
 - Progress DataDirect JDBC Drivers v6.0.0+109 - The Progress DataDirect JDBC drivers are compliant with the Type 4 architecture, but provide advanced features that define them as Type 5 drivers.
--  Progress DataDirect ODBC Drivers 7.1.6+7.16.1058 - The Progress DataDirect ODBC drivers enable third party applications to connect via a common interface to the VMware Greenplum system.
+- Progress DataDirect ODBC Drivers 7.1.6+7.16.1058 - The Progress DataDirect ODBC drivers enable third party applications to connect via a common interface to the VMware Greenplum system.
 -   R2B X-LOG v5.x and v6.x - Real-time data replication solution that achieves high-speed database replication through the use of Redo Log Capturing method.
 
 > **Note** Greenplum 5.x clients (gpload, gpfdist) are supported with Greenplum 6.x and 7x Server and Informatica PowerCenter and PowerExchange 10.4.
