@@ -37,6 +37,7 @@ from test.behave_utils.gpexpand_dml import TestDML
 from gppylib.commands.base import Command, REMOTE
 from gppylib import pgconf
 from gppylib.commands.gp import get_coordinatordatadir
+from gppylib.parseutils import canonicalize_address
 
 coordinator_data_dir = gp.get_coordinatordatadir()
 if coordinator_data_dir is None:
@@ -4198,4 +4199,29 @@ def impl(context, table, dbname, count):
     if int(count) != sum(current_row_count):
         raise Exception(
             "%s table in %s has %d rows, expected %d rows." % (table, dbname, sum(current_row_count), int(count)))
+
+
+@then('the created config file {output_config_file} contains the row for unreachable failed segment')
+def impl(context, output_config_file):
+    all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+    failed_segments = filter(lambda seg: seg.getSegmentStatus() == 'd', all_segments)
+
+    expected_seg_rows = []
+    actual_seg_rows = []
+    for seg in failed_segments:
+        addr = canonicalize_address(seg.getSegmentAddress())
+        expected_seg_rows.append('{}|{}|{}'.format(addr, seg.getSegmentPort(), seg.getSegmentDataDirectory()))
+
+    if os.path.exists(output_config_file):
+        with open(output_config_file, 'r') as fp:
+            config_lines = fp.readlines()
+
+        for line in config_lines:
+            actual_seg_rows.append(line.strip())
+    else:
+        raise Exception("{} file does not exist".format(output_config_file))
+
+    if set(expected_seg_rows) != set(actual_seg_rows):
+        raise Exception("created config file {} does not contain all of the expected rows".format(output_config_file))
+
 

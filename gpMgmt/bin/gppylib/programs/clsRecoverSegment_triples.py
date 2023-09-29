@@ -159,7 +159,7 @@ class RecoveryTripletRequest:
 # TODO: Note that gparray is mutated for all triplets, even if we skip recovery for them(if they are unreachable)
 class RecoveryTripletsFactory:
     @staticmethod
-    def instance(gpArray, config_file=None, new_hosts=[], paralleldegree=1):
+    def instance(gpArray, config_file=None, new_hosts=[], outputConfigFile=None, paralleldegree=1):
         """
         :param gpArray: The variable gpArray may get mutated when the getMirrorTriples function is called on this instance.
         :param config_file: user passed in config file, if any
@@ -171,19 +171,20 @@ class RecoveryTripletsFactory:
             return RecoveryTripletsUserConfigFile(gpArray, config_file, paralleldegree)
         else:
             if not new_hosts:
-                return RecoveryTripletsInplace(gpArray, paralleldegree)
+                return RecoveryTripletsInplace(gpArray, outputConfigFile, paralleldegree)
             else:
-                return RecoveryTripletsNewHosts(gpArray, new_hosts, paralleldegree)
+                return RecoveryTripletsNewHosts(gpArray, new_hosts, outputConfigFile, paralleldegree)
 
 
 class RecoveryTriplets(abc.ABC):
-    def __init__(self, gpArray, paralleldegree=1):
+    def __init__(self, gpArray, outputConfigFile=None, paralleldegree=1):
         """
         :param gpArray: Needs to be a shallow copy since we may return a mutated gpArray
         """
         self.gpArray = gpArray
         self.interfaceHostnameWarnings = []
         self.paralleldegree = paralleldegree
+        self.outputConfigFile = outputConfigFile
 
     @abc.abstractmethod
     def getTriplets(self) -> List[RecoveryTriplet]:
@@ -279,7 +280,9 @@ class RecoveryTriplets(abc.ABC):
                 failover.unreachable = failover.getSegmentHostName() in unreachable_failover_hosts
             else:
                 # recovery in place, check for host reachable
-                if req.failed.unreachable:
+                # Recovery triplet should be added to the final list if output config file has been requested. As the
+                # output config file should have row for of each failed segment in segment configuration.
+                if req.failed.unreachable and self.outputConfigFile is None:
                     # skip the recovery
                     continue
 
@@ -304,8 +307,8 @@ class RecoveryTriplets(abc.ABC):
 
 
 class RecoveryTripletsInplace(RecoveryTriplets):
-    def __init__(self, gpArray, paralleldegree):
-        super().__init__(gpArray, paralleldegree)
+    def __init__(self, gpArray, outputConfigFile, paralleldegree):
+        super().__init__(gpArray, outputConfigFile, paralleldegree)
 
     def getTriplets(self):
         requests = []
@@ -321,8 +324,8 @@ class RecoveryTripletsInplace(RecoveryTriplets):
 
 
 class RecoveryTripletsNewHosts(RecoveryTriplets):
-    def __init__(self, gpArray, newHosts, paralleldegree):
-        super().__init__(gpArray, paralleldegree)
+    def __init__(self, gpArray, newHosts, outputConfigFile, paralleldegree):
+        super().__init__(gpArray, outputConfigFile, paralleldegree)
         self.newHosts = [] if not newHosts else newHosts[:]
         self.portAssigner = self._PortAssigner(gpArray)
 
