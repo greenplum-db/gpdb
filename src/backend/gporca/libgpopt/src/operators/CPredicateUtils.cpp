@@ -2172,13 +2172,9 @@ CPredicateUtils::ExtractIndexPredicates(
 		// Expression of form 'col IS NULL' or 'col IS NOT NULL'.
 		// This check is to enable support of "IS NULL/IS NOT NULL" conditions
 		// for min/max optimization, which is possible only for btree indices.
-		else if (((CUtils::FScalarNullTest(pexprCond) &&
-				   CUtils::FScalarIdent(
-					   (*pexprCond)[0]) /* IS NULL expression*/) ||
+		else if (((CUtils::FScalarIdentNullTest(pexprCond)) ||
 				  (FNot(pexprCond) &&
-				   CUtils::FScalarNullTest((*pexprCond)[0]) &&
-				   CUtils::FScalarIdent(
-					   (*(*pexprCond)[0])[0]) /* IS NOT NULL expression*/)) &&
+				   CUtils::FScalarIdentNullTest((*pexprCond)[0]))) &&
 				 pmdindex->IndexType() == gpmd::IMDIndex::EmdindBtree)
 		{
 			// Expression is not transformed to a comparison as 'col IS NULL'

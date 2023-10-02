@@ -138,8 +138,7 @@ CXformMinMax2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	}
 
 	// Generate index column not null condition.
-	CExpression *notNullExpr = nullptr;
-	notNullExpr =
+	CExpression *notNullExpr =
 		CUtils::PexprIsNotNull(mp, CUtils::PexprScalarIdent(mp, agg_colref));
 
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
@@ -218,14 +217,10 @@ CXformMinMax2IndexGet::GetScanDirection(const CColRef *agg_col,
 										CScalarAggFunc *popScAggFunc,
 										const IMDType *agg_col_type)
 {
-	// Ordered IndexScan is only applicable for BTree index
-	if (pmdindex->IndexType() != IMDIndex::EmdindBtree)
-	{
-		return EisdSentinel;
-	}
-
-	// Check if aggregate function's column matches with first index key
-	if (!CColRef::Equals(agg_col, (*pdrgpcrIndexColumns)[0]))
+	// Ordered IndexScan is only applicable if index type is Btree and
+	// if aggregate function's column matches with first index key
+	if (pmdindex->IndexType() != IMDIndex::EmdindBtree ||
+		!CColRef::Equals(agg_col, (*pdrgpcrIndexColumns)[0]))
 	{
 		return EisdSentinel;
 	}
@@ -237,8 +232,8 @@ CXformMinMax2IndexGet::GetScanDirection(const CColRef *agg_col,
 		// Find the minimum element by:
 		// 1. Scanning Forward, if index is sorted in ascending order.
 		// 2. Scanning Backward, if index is sorted in descending order.
-		return (pmdindex->KeySortDirectionAt(0) == SORT_DESC) ? EBackwardScan
-															  : EForwardScan;
+		return pmdindex->KeySortDirectionAt(0) == SORT_DESC ? EBackwardScan
+															: EForwardScan;
 	}
 	// If Aggregate function is max()
 	else
@@ -246,8 +241,8 @@ CXformMinMax2IndexGet::GetScanDirection(const CColRef *agg_col,
 		// Find the maximum element by:
 		// 1. Scanning Forward, if index is sorted in descending order.
 		// 2. Scanning Backward, if index is sorted in ascending order.
-		return (pmdindex->KeySortDirectionAt(0) == SORT_DESC) ? EForwardScan
-															  : EBackwardScan;
+		return pmdindex->KeySortDirectionAt(0) == SORT_DESC ? EForwardScan
+															: EBackwardScan;
 	}
 }
 

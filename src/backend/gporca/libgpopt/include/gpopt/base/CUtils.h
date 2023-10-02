@@ -1012,6 +1012,8 @@ public:
 	static BOOL FScalarConstBoolNull(CExpression *pexpr);
 
 	static BOOL FScalarConstOrBinaryCoercible(CExpression *pexpr);
+
+	static BOOL FScalarIdentNullTest(CExpression *pexpr);
 };	// class CUtils
 
 // hash set from expressions

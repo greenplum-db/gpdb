@@ -2539,6 +2539,16 @@ CUtils::FScalarConstOrBinaryCoercible(CExpression *pexpr)
 	return CUtils::FScalarConst(pexpr) ||
 		   CCastUtils::FBinaryCoercibleCastedConst(pexpr);
 }
+
+// checks to see if expression is a NullTest check on a column (ex: col IS NULL)
+BOOL
+CUtils::FScalarIdentNullTest(CExpression *pexpr)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+	return (CUtils::FScalarNullTest(pexpr) &&
+			CUtils::FScalarIdent((*pexpr)[0]));
+}
+
 // checks to see if the expression is a scalar const TRUE
 BOOL
 CUtils::FScalarConstTrue(CExpression *pexpr)

@@ -1204,12 +1204,8 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 		{
 			left_arg = (Node *) lfirst(gpdb::ListHead(args_list));
 			right_arg = (Node *) lfirst(gpdb::ListTail(args_list));
-		}
-
-		// Type Coercion doesn't add much value for IS NULL and IS NOT NULL
-		// conditions, and is not supported
-		if (!is_null_test_type)
-		{
+			// Type Coercion doesn't add much value for IS NULL and IS NOT NULL
+			// conditions, and is not supported
 			BOOL is_relabel_type = false;
 			if (IsA(left_arg, RelabelType) &&
 				IsA(((RelabelType *) left_arg)->arg, Var))
