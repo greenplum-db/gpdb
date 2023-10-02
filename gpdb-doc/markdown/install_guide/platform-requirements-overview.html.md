@@ -184,16 +184,15 @@ These Greenplum Database extensions are installed with Greenplum Database
 -   Greenplum Platform Extension Framework \(PXF\) - PXF provides access to Hadoop, object store, and SQL external data stores. Refer to [Accessing External Data with PXF](../admin_guide/external/pxf-overview.html) in the *Greenplum Database Administrator Guide* for PXF configuration and usage information.
 
     > **Note** VMware Greenplum Database versions starting with 6.19.0 no longer bundle a version of PXF. You can install PXF in your Greenplum cluster by installing [the independent distribution of PXF](https://docs.vmware.com/en/VMware-Greenplum-Platform-Extension-Framework/index.html) as described in the PXF documentation.
--   Greenplum Streaming Server v1.5.3 - The VMware Greenplum Streaming Server is an ETL tool that provides high speed, parallel data transfer from Informatica, Kafka, Apache NiFi and custom client data sources to a VMware Greenplum cluster. Refer to the [VMware Greenplum Streaming Server](https://docs.vmware.com/en/VMware-Greenplum-Streaming-Server/index.html) Documentation for more information about this feature.
+-   Greenplum Streaming Server v1.5.3 - The VMware Greenplum Streaming Server is an ETL tool that provides high speed, parallel data transfer from Kafka, Apache NiFi and custom client data sources to a VMware Greenplum cluster. Refer to the [VMware Greenplum Streaming Server](https://docs.vmware.com/en/VMware-Greenplum-Streaming-Server/index.html) Documentation for more information about this feature.
 -   Greenplum Streaming Server Kafka integration - The Kafka integration provides high speed, parallel data transfer from a Kafka cluster to a Greenplum Database cluster for batch and streaming ETL operations. It requires Kafka version 0.11 or newer for exactly-once delivery assurance. Refer to the [VMware Greenplum Streaming Server](https://docs.vmware.com/en/VMware-Greenplum-Streaming-Server/index.html) Documentation for more information about this feature.
 -   Greenplum Connector for Apache Spark v1.6.2 - The VMware Greenplum Connector for Apache Spark supports high speed, parallel data transfer between Greenplum and an Apache Spark cluster using Spark’s Scala API.
 -   Greenplum Connector for Apache NiFi v1.0.0 - The VMware Greenplum Connector for Apache NiFi enables you to set up a NiFi dataflow to load record-oriented data from any source into Greenplum Database.
--   Greenplum Informatica Connector v1.0.5 - The VMware Greenplum Connector for Informatica supports high speed data transfer from an Informatica PowerCenter cluster to a VMware Greenplum cluster for batch and streaming ETL operations.
 - Progress DataDirect JDBC Drivers v6.0.0+109 - The Progress DataDirect JDBC drivers are compliant with the Type 4 architecture, but provide advanced features that define them as Type 5 drivers.
 - Progress DataDirect ODBC Drivers 7.1.6+7.16.1058 - The Progress DataDirect ODBC drivers enable third party applications to connect via a common interface to the VMware Greenplum system.
 -   R2B X-LOG v5.x and v6.x - Real-time data replication solution that achieves high-speed database replication through the use of Redo Log Capturing method.
 
-> **Note** Greenplum 5.x clients (gpload, gpfdist) are supported with Greenplum 6.x and 7x Server and Informatica PowerCenter and PowerExchange 10.4.
+> **Note** Greenplum 5.x clients (gpload, gpfdist) are supported with Greenplum 6.x and 7x Server.
 
 ## <a id="topic_tnl_3mx_zgb"></a>Hardware Requirements
 
