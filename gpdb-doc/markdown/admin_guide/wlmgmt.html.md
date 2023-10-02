@@ -12,11 +12,11 @@ The following table summarizes some of the differences between resource queues a
 
 |Metric|Resource Queues|Resource Groups|
 |------|---------------|---------------|
-|Concurrency|Managed at the query level|Managed at the transaction level|
+|Concurrency|Defines the number of query slots available at a time|Defines the number of transaction slots available at a time|
 |CPU|Specify query priority|Specify percentage of CPU resources or the specific number of CPU cores; uses Linux Control Groups|
 |Memory|Managed at the queue and operator level; users can over-subscribe|Managed at the transaction level, with enhanced allocation and tracking; users can over-subscribe|
-|Memory Isolation|None|None|
 |Users|Limits are applied only to non-admin users|Limits are applied to `SUPERUSER`, non-admin users, and system processes of non-user classes|
+|Disk I/O|None|Limit the maximum read/write disk I/O throughput, and maximum read/write I/O operations per second|
 |Queueing|Queue when no slot available or not enough available memory|Queue only when no slot is available|
 |Query Failure|Query may fail immediately if the allocated memory for the query surpasses the available system memory and spill limits|Query may fail if the allocated memory for the query surpasses the available system memory and spill limits|
 |Limit Bypass|Limits are not enforced for `SUPERUSER` roles and certain operators and functions|Limits are not enforced on `SET`, `RESET`, and `SHOW` commands. Additionally, certain queries may be configured to bypass the concurrency limit|

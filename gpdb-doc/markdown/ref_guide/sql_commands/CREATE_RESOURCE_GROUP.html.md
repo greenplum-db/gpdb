@@ -7,34 +7,51 @@ Defines a new resource group.
 ``` {#sql_command_synopsis}
 CREATE RESOURCE GROUP <name> WITH (<group_attribute>=<value> [, ... ])
 ```
-
 where group_attribute is one of:
 
 ```
-CPU_MAX_PERCENT=<integer> | CPUSET=<coordinator_cores>;<segment_cores>
-[ MEMORY_LIMIT=<integer> ]
-[ CPU_WEIGHT=<integer> ]
 [ CONCURRENCY=<integer> ]
+CPU_MAX_PERCENT=<integer> | CPUSET=<coordinator_cores>;<segment_cores>
+[ CPU_WEIGHT=<integer> ]
+[ MEMORY_LIMIT=<integer> ]
 [ MIN_COST=<integer> ]
+[ IO_LIMIT=' <tablespace_io_limit_spec> [; ...] ' ]
+```
+
+Where `<tablespace_io_limit_spec>` is:
+
+```
+<tablespace_name> | <oid> : <io_limit_option_spec> [, ...]
+```
+
+Where `<io_limit_option_spec>` is:
+
+```
+wbps=<io_limit_option_value>
+| rbps=<io_limit_option_value>
+| wiops=<io_limit_option_value>
+| riops=<io_limit_option_value>
+```
+
+Where `<io_limit_option_vlaue>` is:
+
+```
+<integer> | max
 ```
 
 ## <a id="section3"></a>Description 
 
-Creates a new resource group for Greenplum Database resource management. You can create resource groups to manage resources for roles or to manage the resources of a Greenplum Database external component such as PL/Container.
+Creates a new resource group for Greenplum Database resource management. 
 
-A resource group that you create to manage a user role identifies concurrent transaction, memory, and CPU limits for the role when resource groups are enabled. You may assign such resource groups to one or more roles.
-
-A resource group that you create to manage the resources of a Greenplum Database external component such as PL/Container identifies the memory and CPU limits for the component when resource groups are enabled. These resource groups use cgroups for both CPU and memory management. Assignment of resource groups to external components is component-specific. For example, you assign a PL/Container resource group when you configure a PL/Container runtime. You cannot assign a resource group that you create for external components to a role, nor can you assign a resource group that you create for roles to an external component.
+A resource group that you create to manage a user role identifies concurrent transaction, memory, CPU, and disk I/O limits for the role when resource groups are enabled. You may assign such resource groups to one or more roles.
 
 You must have `SUPERUSER` privileges to create a resource group. The maximum number of resource groups allowed in your Greenplum Database cluster is 100.
 
-Greenplum Database pre-defines two default resource groups: `admin_group` and `default_group`. These group names, as well as the group name `none`, are reserved.
+Greenplum Database pre-defines three default resource groups: `admin_group`, `default_group`, and `system_group`. These group names, as well as the group name `none`, are reserved.
 
-To set appropriate limits for resource groups, the Greenplum Database administrator must be familiar with the queries typically run on the system, as well as the users/roles running those queries and the external components they may be using, such as PL/Containers.
+To set appropriate limits for resource groups, the Greenplum Database administrator must be familiar with the queries typically run on the system, as well as the users/roles running those queries.
 
 After creating a resource group for a role, assign the group to one or more roles using the [ALTER ROLE](ALTER_ROLE.html) or [CREATE ROLE](CREATE_ROLE.html) commands.
-
-After you create a resource group to manage the CPU and memory resources of an external component, configure the external component to use the resource group. For example, configure the PL/Container runtime `resource_group_id`.
 
 ## <a id="section4"></a>Parameters 
 
@@ -64,6 +81,39 @@ CPUSET <coordinator_cores>;<segment_cores>
 
 :   > **Note** You can configure `CPUSET` for a resource group only after you have enabled resource group-based resource management for your Greenplum Database cluster.
 
+IO_LIMIT='<tablespace_io_limit_spec> [; ...]'
+:   Optional. The maximum read/write sequential disk I/O throughput, and the maximum read/write I/O operations per second for the queries assigned to a specific resource group.
+
+Where `<tablespace_io_limit_spec>` is:
+
+```
+<tablespace_name> | <oid> : <io_limit_option_spec> [, ...]
+```
+
+Where `<io_limit_option_spec>` is:
+
+```
+wbps=<io_limit_option_value>
+| rbps=<io_limit_option_value>
+| wiops=<io_limit_option_value>
+| riops=<io_limit_option_value>
+```
+
+Where `<io_limit_option_vlaue>` is:
+
+```
+<integer> | max 
+```
+
+When you use this parameter, you may speficy: 
+- The tablespace name or the tablespace object ID (OID) you set the limits for. Use `*` to set limits for all tablespaces.
+- The values for `rbps` and `wbps` to limit the maximum read and write sequential disk I/O throughput in the resource group, in MB/S. The default value is `max`, which means there is no limit.
+- The values for `riops` and `wiops` to limit the maximum read and write I/O operations per second in the resource group. The default value is `max`, which means there is no limit.
+
+If the parameter `IO_LIMIT` is not set, the default value for `rbps`, `wpbs`, `riops`, and `wiops`s is set to `max`, which means that there are no disk I/O limits. In this scenario, the `gp_toolkit.gp_resgroup_config` system view displays its value as `-1`.
+
+> **Note** The parameter `IO_LIMIT` is only available when you use Linux Control Groups v2. See [Configuring and Using Resource Groups](../../admin_guide/workload_mgmt_resgroups.html#topic71717999) for more information.
+
 MEMORY_LIMIT integer
 :   Optional. The maximum available memory, in MB, to reserve for this resource group. This value determines the total amount of memory that all worker processes within a resource group can consume on a segment host during query execution. 
 
@@ -92,30 +142,32 @@ SELECT * FROM gp_toolkit.gp_resgroup_config;
 
 ## <a id="section6"></a>Examples 
 
-Create a resource group with CPU and memory limit percentages of 35:
+Create a resource group with CPU and memory limit of 350 MB:
 
 ```
-CREATE RESOURCE GROUP rgroup1 WITH (CPU_MAX_PERCENT=35, MEMORY_LIMIT=35);
+CREATE RESOURCE GROUP rgroup1 WITH (CPU_MAX_PERCENT=35, MEMORY_LIMIT=350);
 ```
 
-Create a resource group with a concurrent transaction limit of 20, a memory limit of 15, and a CPU limit of 25:
+Create a resource group with a concurrent transaction limit of 20, a memory limit of 1500 MB, a CPU limit of 25, and disk I/O limits for the `pg_default` tablespace:
 
 ```
 CREATE RESOURCE GROUP rgroup2 WITH (CONCURRENCY=20, 
-  MEMORY_LIMIT=15, CPU_MAX_PERCENT=25);
+  MEMORY_LIMIT=1500, CPU_MAX_PERCENT=25,
+  IO_LIMIT=’pg_default: wbps=1000, rbps=1000, wiops=100, riops=100’);
 ```
 
-Create a resource group to manage PL/Container resources specifying a memory limit of 10, and a CPU limit of 10:
+Create a resource group with a concurrent transaction limit of 20, a memory limit of 1500 MB, a CPU limit of 25, and disk I/O limits for a tablespace with oid 1663:
 
 ```
-CREATE RESOURCE GROUP plc_run1 WITH (MEMORY_LIMIT=10, CPU_MAX_PERCENT=10,
-  CONCURRENCY=0);
+CREATE RESOURCE GROUP rgroup2 WITH (CONCURRENCY=20,
+  MEMORY_LIMIT=1500, CPU_MAX_PERCENT=25,
+  IO_LIMIT=’1663: wbps=1000, rbps=1000, wiops=100, riops=100’);
 ```
 
-Create a resource group with a memory limit percentage of 11 to which you assign CPU core 1 on the coordinator host, and cores 1 to 3 on segment hosts:
+Create a resource group with a memory limit of 110 MB to which you assign CPU core 1 on the coordinator host, and cores 1 to 3 on segment hosts:
 
 ```
-CREATE RESOURCE GROUP rgroup3 WITH (CPUSET='1;1-3', MEMORY_LIMIT=11);
+CREATE RESOURCE GROUP rgroup3 WITH (CPUSET='1;1-3', MEMORY_LIMIT=110);
 ```
 
 ## <a id="section7"></a>Compatibility 

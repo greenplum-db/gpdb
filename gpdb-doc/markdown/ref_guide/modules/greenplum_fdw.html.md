@@ -49,7 +49,7 @@ and
 num_segments '<num>'
 ```
 
-in the `OPTIONS` clause when you create the server. Set `<num>` to the number of segments in the the remote Greenplum Database cluster. If you do not provide the `num_segments` option, the default value is the number of segments on the local Greenplum Database cluster.
+in the `OPTIONS` clause when you create the server. Set `<num>` to the number of segments in the remote Greenplum Database cluster. If you do not provide the `num_segments` option, the default value is the number of segments on the local Greenplum Database cluster.
 
 The following example command creates a server named `gpc1_testdb` that will be used to access tables residing in the database named `testdb` on the remote 8-segment Greenplum Database cluster whose coordinator is running on the host `gpc1_coordinator`, port `5432`:
 

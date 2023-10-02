@@ -419,6 +419,7 @@ The following parameters configure the Greenplum Database resource group workloa
 - [gp_resource_group_bypass_direct_dispatch](guc-list.html#gp_resource_group_bypass_direct_dispatch)
 - [gp_resource_group_cpu_limit](guc-list.html#gp_resource_group_cpu_limit)
 - [gp_resource_group_cpu_priority](guc-list.html#gp_resource_group_cpu_priority)
+- [gp_resource_group_move_timeout](guc-list.html#gp_resource_group_move_timeout)
 - [gp_resource_group_queuing_timeout](guc-list.html#gp_resource_group_queuing_timeout)
 - [gp_resource_manager](guc-list.html#gp_resource_manager)
 - [gp_vmem_idle_resource_timeout](guc-list.html#gp_vmem_idle_resource_timeout)

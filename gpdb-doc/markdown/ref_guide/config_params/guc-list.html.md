@@ -1416,8 +1416,6 @@ The value of `gp_resgroup_memory_query_fixed_mem` must be lower than `max_statem
 
 > **Note** The `gp_resource_group_bypass` server configuration parameter is enforced only when resource group-based resource management is active.
 
-This parameter can only be changed by a superuser.
-
  Activates or deactivates  the enforcement of resource group concurrent transaction limits on Greenplum Database resources. The default value is `false`, which enforces resource group transaction limits. Resource groups manage resources such as CPU, memory, and the number of concurrent transactions that are used by queries.
 
 You can set this parameter to `true` to bypass resource group concurrent transaction limitations so that a query can run immediately. If you set this parameter to true, the query no longer enforces the CPU or memory limits assigned to its resource group. Instead, the memory quota assigned to this query is `statement_mem` per query. If there is not enough memory to satisfy the memory allocation request, the query will fail.
@@ -1479,11 +1477,21 @@ Sets the CPU priority for Greenplum processes relative to non-Greenplum processe
 |-----------|-------|-------------------|
 |1 - 50|10|local, system, restart|
 
+## <a id="gp_resource_group_move_timeout"></a>gp\_resource\_group\_move\_timeout
+
+> **Note** The `gp_resource_group_move_timeout` server configuration parameter is enforced only when resource group-based resource management is active.
+
+Cancels the `pg_resgroup_move_query()` function, which moves a running query from one resouce group to another, if it waits longer than the specified number of miliseconds.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|10 - `INT_MAX` millisecs|3000 millisecs|coordinator, session, reload|
+
 ## <a id="gp_resource_group_queuing_timeout"></a>gp\_resource\_group\_queuing\_timeout 
 
 > **Note** The `gp_resource_group_queuing_timeout` server configuration parameter is enforced only when resource group-based resource management is active.
 
-Cancel a transaction queued in a resource group that waits longer than the specified number of milliseconds. The time limit applies separately to each transaction. The default value is zero; transactions are queued indefinitely and never time out.
+Cancels a transaction queued in a resource group that waits longer than the specified number of milliseconds. The time limit applies separately to each transaction. The default value is zero; transactions are queued indefinitely and never time out.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|

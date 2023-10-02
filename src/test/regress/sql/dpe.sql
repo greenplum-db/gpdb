@@ -117,15 +117,9 @@ explain (costs off, timing off, summary off, analyze) select * from pt where pti
 
 select * from pt where ptid in (select tid from t where t1 = 'hello' || tid);
 
--- With the updated Index scan costing, additional rows are added to enable DPE using
--- dynamic index only scan on ptid_pt1_idx. These rows are deleted after this test.
-insert into pt select i, 'hello' || i, 'world', 'drop this', i % 6 from generate_series(54,2500) i;
-vacuum analyze pt;
 explain (costs off, timing off, summary off, analyze) select ptid from pt where ptid in (select tid from t where t1 = 'hello' || tid) and pt1 = 'hello1';
 
 select ptid from pt where ptid in (select tid from t where t1 = 'hello' || tid) and pt1 = 'hello1';
-delete from pt where dist>53;
-vacuum analyze pt;
 
 -- start_ignore
 -- Known_opt_diff: MPP-21320

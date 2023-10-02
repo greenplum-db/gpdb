@@ -14,13 +14,13 @@ Since different kinds of statistics may be appropriate for different kinds of da
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`starelid`|oid|[pg\_class](pg_class.html).oid|The table or index that the described column belongs to.|
-|`staattnum`|int2|[pg\_attribute](pg_attribute.html).attnum|The number of the described column.|
-|`stainherit`|bool| |If true, the statistics include inheritance child columns, not just the values in the specified relations.|
-|`stanullfrac`|float4| |The fraction of the column's entries that are null.|
-|`stawidth`|int4| |The average stored width, in bytes, of nonnull entries.|
+|`starelid`|oid|[pg\_class](pg_class.html).oid|The table or index that the described column belongs to|
+|`staattnum`|smallint|[pg\_attribute](pg_attribute.html).attnum|The number of the described column|
+|`stainherit`|boolean| |If true, the statistics include inheritance child columns, not just the values in the specified relations.|
+|`stanullfrac`|float4| |The fraction of the column's entries that are null|
+|`stawidth`|integer| |The average stored width, in bytes, of nonnull entries|
 |`stadistinct`|float4| |The number of distinct nonnull data values in the column. A value greater than zero is the actual number of distinct values. A value less than zero is the negative of a multiplier for the number rows in the table \(for example, a column in which about 80% of the values are nonnull and each nonnull value appears about twice on the average could be represented by `stadistinct` = -0.4\). A zero value means the number of distinct values is unknown.|
-|`stakind*N*`|int2| |A code number indicating the kind of statistics stored in the `N`th slot of the `pg_statistic` row.|
+|`stakind*N*`|integer| |A code number indicating the kind of statistics stored in the `N`th slot of the `pg_statistic` row|
 |`staop*N*`|oid|[pg\_operator](pg_operator.html).oid|An operator used to derive the statistics stored in the `N`th slot. For example, a histogram slot would show the `<` operator that defines the sort order of the data.|
 |`stacoll*N*`|oid|pg\_collation.oid|The collation used to derive the statistics stored in the `N`th slot. For example, a histogram slot for a collatable column would show the collation that defines the sort order of the data. Zero for noncollatable data.|
 |`stanumbers*N*`|float4\[\]| |Numerical statistics of the appropriate kind for the `N`th slot, or NULL if the slot kind does not involve numerical values.|

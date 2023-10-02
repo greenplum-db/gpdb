@@ -3304,6 +3304,9 @@ CExpressionPreprocessor::PexprPreprocess(
 				  GPOS_FTRACE(EopttracePrintOptimizationStatistics));
 
 	// (1) remove unused CTE anchors
+	CCTEInfo *pcteinfo = COptCtxt::PoctxtFromTLS()->Pcteinfo();
+	pcteinfo->MarkUnusedCTEs();
+
 	CExpression *pexprNoUnusedCTEs = PexprRemoveUnusedCTEs(mp, pexpr);
 	GPOS_CHECK_ABORT;
 

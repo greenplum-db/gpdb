@@ -882,5 +882,26 @@ CStatistics::GetNDVs(const CColRef *colref)
 	return std::min(m_rows, GetColUpperBoundNDVs(colref));
 }
 
+// Compute stats of a given column
+IStatistics *
+CStatistics::ComputeColStats(CMemoryPool *mp, CColRef *colref, IMDId *rel_mdid)
+{
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != colref);
+	GPOS_ASSERT(nullptr != rel_mdid);
+
+	CColRefSet *pcrsHist = GPOS_NEW(mp) CColRefSet(mp);
+	pcrsHist->Include(colref);
+
+	CColRefSet *pcrsWidth = GPOS_NEW(mp) CColRefSet(mp);
+	pcrsWidth->Include(colref);
+
+	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+	IStatistics *stats = md_accessor->Pstats(mp, rel_mdid, pcrsHist, pcrsWidth);
+
+	pcrsHist->Release();
+	pcrsWidth->Release();
+	return stats;
+}
 
 // EOF

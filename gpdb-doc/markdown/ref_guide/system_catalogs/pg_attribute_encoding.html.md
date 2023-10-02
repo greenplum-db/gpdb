@@ -7,6 +7,7 @@ The `pg_attribute_encoding` system catalog table contains column storage informa
 |`attrelid`|oid|not null|plain|Foreign key to `pg_attribute.attrelid`|
 |`attnum`|smallint|not null|plain|Foreign key to `pg_attribute.attnum`|
 |`filenum`|smallint|not null|plain|Shorthand for the file range assigned to the column|
+|`lastrownums`|bigint| |extended|The last row number of each segfile when this attribute is added.|
 |`attoptions`|text \[ \]| |extended|The options|
 
 For a column with `filenum = f`, the column files on disk use the suffix `(f - 1)*128 to f*128 - 1`. For example:

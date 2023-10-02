@@ -91,7 +91,6 @@ static Node *convert_testexpr_mutator(Node *node,
 									  convert_testexpr_context *context);
 static bool subplan_is_hashable(PlannerInfo *root, Plan *plan);
 static bool subpath_is_hashable(PlannerInfo *root, Path *path);
-static bool testexpr_is_hashable(Node *testexpr, List *param_ids);
 static bool test_opexpr_is_hashable(OpExpr *testexpr, List *param_ids);
 static bool hash_ok_operator(OpExpr *expr);
 #if 0
@@ -1000,7 +999,7 @@ subpath_is_hashable(PlannerInfo *root, Path *path)
  * To identify LHS vs RHS of the hash expression, we must be given the
  * list of output Param IDs of the SubLink's subquery.
  */
-static bool
+bool
 testexpr_is_hashable(Node *testexpr, List *param_ids)
 {
 	/*

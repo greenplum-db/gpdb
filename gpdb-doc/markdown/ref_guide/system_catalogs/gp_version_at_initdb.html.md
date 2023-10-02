@@ -4,7 +4,7 @@ The `gp_version_at_initdb` table is populated on the coordinator and each segmen
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`schemaversion`|integer| |Schema version number.|
+|`schemaversion`|smallint| |Schema version number.|
 |`productversion`|text| |Product version number.|
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)

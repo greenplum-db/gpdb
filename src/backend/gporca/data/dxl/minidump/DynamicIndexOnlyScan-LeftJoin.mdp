@@ -960,7 +960,7 @@
     <dxl:Plan Id="0" SpaceSize="63">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="12.001823" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="12.001663" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -974,7 +974,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Left">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="12.001793" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="12.001633" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -994,7 +994,7 @@
           </dxl:HashCondList>
           <dxl:DynamicIndexOnlyScan IndexScanDirection="Forward" SelectorIds="">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000360" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000300" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -1042,7 +1042,7 @@
           </dxl:DynamicIndexOnlyScan>
           <dxl:IndexOnlyScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000644" Rows="9.090900" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000544" Rows="9.090900" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="a">

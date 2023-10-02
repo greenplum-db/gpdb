@@ -10346,6 +10346,10 @@ SELECT * FROM c as c1, zoo WHERE zoo.c != 4 AND c1.b = zoo.c
 UNION ALL
 SELECT * FROM c as c1, zoo WHERE zoo.c = c1.b;
 
+-- Test that nested CTE generates a valid plan
+EXPLAIN (COSTS OFF) WITH q AS (SELECT * FROM (WITH cte AS (SELECT * FROM car) SELECT * FROM car WHERE a > 7) t) SELECT * FROM q;
+WITH q AS (SELECT * FROM (WITH cte AS (SELECT * FROM car) SELECT * FROM car WHERE a > 7) t) SELECT * FROM q;
+
 -- start_ignore
 drop schema qp_with_clause cascade;
 -- end_ignore

@@ -572,7 +572,7 @@
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.072012" Rows="13.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.071726" Rows="13.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -583,7 +583,7 @@
         <dxl:SortingColumnList/>
         <dxl:IndexOnlyScan IndexScanDirection="Forward">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="6.071785" Rows="13.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="6.071500" Rows="13.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

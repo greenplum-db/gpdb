@@ -51,7 +51,7 @@ Greenplum 7 also:
 
 - Changes some server configuration parameters. See [Server Configuration Parameter Changes from Greenplum 6 to Greenplum 7](../ref_guide/guc-changes-6to7.html).
 
-- Makes changes to how partitioning works. See [Changes in Partitioning](../admin_guide/ddl/about-part-changes.html).
+- Changes the partitioning system catalogs. See [Changes in Partitioning](../admin_guide/ddl/about-part-changes.html) and [Migrating Partition Maintenance Scripts to the New Greenplum 7 Partitioning Catalogs](migrate-classic-partitioning.html).
 
 - Makes changes to external tables. See [Changes to External Tables](../admin_guide/external/about_exttab_7.html.md).
 
