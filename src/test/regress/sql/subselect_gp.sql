@@ -1215,3 +1215,36 @@ explain (costs off) select * from r where b in (select b from s where c=10 order
 select * from r where b in (select b from s where c=10 order by c);
 explain (costs off) select * from r where b in (select b from s where c=10 order by c limit 2);
 select * from r where b in (select b from s where c=10 order by c limit 2);
+
+-- Test that Explicit Redistribute Motion is applied properly for
+-- queries that have modifying operation inside a SubPlan. That
+-- requires the ModifyTable's top Flow node to be copied correctly inside
+-- ParallelizeSubPlan function.
+--start_ignore
+drop table if exists t1;
+drop table if exists t2;
+--end_ignore
+create table t1 (i int) distributed randomly;
+create table t2 (i int) distributed by (i);
+insert into t1 values (1);
+insert into t2 values (1);
+
+explain (costs off)
+with cte as
+(delete from t1
+ using t2 where t2.i = t1.i
+ returning t1.i)
+select i from t2
+where exists (select i from cte);
+
+with cte as
+(delete from t1
+ using t2 where t2.i = t1.i
+ returning t1.i)
+select i from t2
+where exists (select i from cte);
+
+select count(*) from t1;
+
+drop table t2;
+drop table t1;

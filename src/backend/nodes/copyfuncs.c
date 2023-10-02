@@ -2321,6 +2321,7 @@ _copyFlow(const Flow *from)
 	COPY_SCALAR_FIELD(numsegments);
 	COPY_NODE_FIELD(hashExprs);
 	COPY_NODE_FIELD(hashOpfamilies);
+	COPY_SCALAR_FIELD(segidColIdx);
 	COPY_NODE_FIELD(flow_before_req_move);
 
 	return newnode;

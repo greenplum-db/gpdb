@@ -60,6 +60,8 @@
 #define WRITE_INT_FIELD(fldname) \
 	appendStringInfo(str, " :" CppAsString(fldname) " %d", node->fldname)
 
+#define WRITE_INT16_FIELD(fldname) WRITE_INT_FIELD(fldname)
+
 /* Write an unsigned integer field (anything written as ":fldname %u") */
 #define WRITE_UINT_FIELD(fldname) \
 	appendStringInfo(str, " :" CppAsString(fldname) " %u", node->fldname)
@@ -1955,7 +1957,7 @@ _outFlow(StringInfo str, const Flow *node)
 
 	WRITE_NODE_FIELD(hashExprs);
 	WRITE_NODE_FIELD(hashOpfamilies);
-
+	WRITE_INT16_FIELD(segidColIdx);
 	WRITE_NODE_FIELD(flow_before_req_move);
 }
 
