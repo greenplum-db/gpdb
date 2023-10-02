@@ -395,6 +395,10 @@ SELECT pg_get_expr(template, relid) FROM gp_partition_template
   WHERE relid = '<table_name>'::regclass;
 ```
 
+### <a id="topic76classic"></a>Constructing a pg_partitions-Equivalent Query
+
+Refer to [Migrating Partition Maintenance Scripts to the New Greenplum 7 Partitioning Catalogs](../../install_guide/migrate-classic-partitioning.html) for information about mapping Greenplum 6 partitioning catalogs to the new definitions in Greenplum 7.
+
 ## <a id="prune"></a>About Partition Pruning
 
 *Partition pruning* is a query optimization technique that improves performance for declaratively partitioned tables.

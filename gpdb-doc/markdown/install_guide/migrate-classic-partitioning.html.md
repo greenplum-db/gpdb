@@ -6,7 +6,7 @@ This topic provides guidance on migrating partition maintenance scripts that you
 
 ## <a id="about_removed"></a> About the Greenplum 6 and 7 Partitioning Catalogs
 
-The following partitioning-related catalog tables, views, and functions that are available in Greenplum 6 are removed in Greenplum 7:
+The following partitioning-related catalog tables, views, and functions available in Greenplum 6 are removed in Greenplum 7:
 
 - [pg_partition](https://docs.vmware.com/en/VMware-Greenplum/6/greenplum-database/ref_guide-system_catalogs-pg_partition.html)
 - [pg_partition_columns](https://docs.vmware.com/en/VMware-Greenplum/6/greenplum-database/ref_guide-system_catalogs-pg_partition_columns.html)
@@ -27,7 +27,7 @@ Greenplum 7 adds the following new catalog table and functions:
 
 ## <a id="why"></a> Why are Migration Tasks Required?
 
-Because partitioning-related system catalog, view, and function definitions have changed in Greenplum 7, you will be required to update any partition maintenance scripts that you have been using in Greenplum 6.
+Because partitioning-related system catalog, view, and function definitions have changed in Greenplum 7, you must update any partition maintenance scripts that you have been using in Greenplum 6.
 
 The following sections identify, for each Greenplum 6 partitioning catalog column, how to obtain similar information in Greenplum 7. These mappings should help ease your partition maintenance migration effort.
 
@@ -47,7 +47,7 @@ The Greenplum 6 [pg_partitions](https://docs.vmware.com/en/VMware-Greenplum/6/gr
 | parentpartitiontablename | The table name of the parent table of this partition. | Get the parent object identifier via [pg_inherits](../ref_guide/system_catalogs/pg_inherits.html) and then query [pg_class](../ref_guide/system_catalogs/pg_class.html). |
 | parentpartitionname | The partition name of the parent table of this partition. | N/A |
 | partitiontype | The type of partition (range or list). | Get the parent object identifier via [pg_inherits](../ref_guide/system_catalogs/pg_inherits.html) and then query [pg_partitioned_table](../ref_guide/system_catalogs/pg_partitioned_table.html). |
-| partitionlevel | The level of this partition in the partition hierarchy. | Get the level from `pg_partition_tree() `using the parent object identifier. |
+| partitionlevel | The level of this partition in the partition hierarchy. | Get the level from `pg_partition_tree()` using the root object identifier.</br>Note that the level differs in Greenplum 6 and 7. In Greenplum 6, the level of the immediate child of a partitioned table is 0. In Greenplum 7, the level of the partitioned table itself is 0, and the level of its immediate child is 1. |
 | partitionrank | For range partitions, the rank of the partition compared to other partitions at the same level. | N/A |
 | partitionposition | The rule order position of this partition. | N/A |
 | partitionlistvalues | For list partitions, the list value(s) associated with this partition. | Get the partition boundary via `pg_get_expr()` and then filter the text. |
@@ -56,14 +56,14 @@ The Greenplum 6 [pg_partitions](https://docs.vmware.com/en/VMware-Greenplum/6/gr
 | partitionrangeend | For range partitions, the end value of this partition. | Get the partition boundary via `pg_get_expr()` and then filter the text. |
 | partitionendinclusive | Whether or not the end value is included in this partition. `true` if the end value is included. | always exclusive |
 | partitioneveryclause | The `EVERY` clause (interval) of this partition. | N/A |
-| partitionisdefault | Whether or not this is a default partition. `true` if this is the default, otherwise `false`. | Get the partition boundary via `pg_get_expr()` and check if it is `DEFAULT`. |
+| partitionisdefault | Whether or not this is a default partition. `true` if this is the default, otherwise `false`. | Get the partition boundary via `pg_get_expr()` and check if it is `DEFAULT`. Alternatively, use `pg_partitioned_table.partdefid`.  |
 | partitionboundary | The entire partition specification for this partition. | `pg_get_expr()`, but note that it is returned in modern syntax. |
 | parenttablespace | The tablespace of the parent table of this partition. | Get the parent object identifier via [pg_inherits](../ref_guide/system_catalogs/pg_inherits.html) and then query [pg_tablespace](../ref_guide/system_catalogs/pg_tablespace.html). |
 | partitiontablespace | The tablespace of this partition. | [pg_tablespace](../ref_guide/system_catalogs/pg_tablespace.html) |
 
 ### <a id="pgparts_retrieve"></a> Examples Retrieving Similar Information in Greenplum 7
 
-Some of the information is quite trivial to retrieve in Greenplum 7, other information is not. The following sections provide examples for specific Greenplum 6 system catalog columns.
+Some of the information is quite trivial to retrieve in Greenplum 7, while other information is not. The following sections provide examples for specific Greenplum 6 system catalog columns.
 
 #### <a id="pnppn"></a> partitionname / parentpartitionname
 
