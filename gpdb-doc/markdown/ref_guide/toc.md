@@ -177,6 +177,7 @@ Doc Index
         - [diskquota](./modules/diskquota.md)
         - [fuzzystrmatch](./modules/fuzzystrmatch.md)
         - [gp\_array\_agg](./modules/gp_array_agg.md)
+        - [gp\_check\_functions](./modules/gp_check_functions.md)
         - [gp\_legacy\_string\_agg](./modules/gp_legacy_string_agg.md)
         - [gp\_parallel\_retrieve\_cursor (Beta)](./modules/gp_parallel_retrieve_cursor.md)
         - [gp\_percentile\_agg](./modules/gp_percentile_agg.md)

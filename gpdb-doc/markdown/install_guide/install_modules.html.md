@@ -29,15 +29,16 @@ You can register the following modules in this manner:
 <li class="li"><a class="xref" href="../ref_guide/modules/diskquota.html">diskquota</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/fuzzystrmatch.html">fuzzystrmatch</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/gp_array_agg.html">gp_array_agg</a></li>
+<li class="li"><a class="xref" href="../ref_guide/modules/gp_check_functions.html">gp_check_functions</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/gp_parallel_retrieve_cursor.html">gp_parallel_retrieve_cursor</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/gp_percentile_agg.html">gp_percentile_agg</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/gp_sparse_vector.html">gp_sparse_vector</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/greenplum_fdw.html">greenplum_fdw</a></li>
+<li class="li"><a class="xref" href="../ref_guide/modules/hstore.html">hstore</a></li>
 </ul>
 </td>
 <td style="vertical-align:top;">
 <ul class="ul">
-<li class="li"><a class="xref" href="../ref_guide/modules/hstore.html">hstore</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/ip4r.html">ip4r</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/ltree.html">ltree</a></li>
 <li class="li"><a class="xref" href="../ref_guide/modules/orafce_ref.html">orafce</a> (VMware Greenplum only)</li>
