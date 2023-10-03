@@ -187,7 +187,7 @@ IGNORE EXTERNAL PARTITIONS
 
 ## <a id="sectiono"></a>Outputs
 
-On successful completion, a `COPY` command returns a command tag of the form, where `<count>` identifies is the number of rows copied:
+On successful completion, a `COPY` command returns a command tag of the form, where `<count>` identifies the number of rows copied:
 
 ```
 COPY <count>
