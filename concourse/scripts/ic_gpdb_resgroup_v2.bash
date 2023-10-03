@@ -102,6 +102,11 @@ run_binary_swap_test() {
 EOF
 }
 
+# FIXME: this (sleep) is a temporary fix to work arouond systemd reloading.
+# we shouldn't change cgroup while the systemd is still doing work.
+# A daemon-reload will cause our cgroup changes to disappear if we have
+# not yet used cgroup for Greenplum.
+sleep 180
 enable_cgroup_subtree_control ccp-${CLUSTER_NAME}-0
 enable_cgroup_subtree_control ccp-${CLUSTER_NAME}-1
 run_resgroup_test cdw
