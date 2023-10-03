@@ -98,7 +98,7 @@ class GpRecoverSegmentProgram:
 
     def getRecoveryActionsBasedOnOptions(self, gpEnv, gpArray):
         if self.__options.rebalanceSegments:
-            return GpSegmentRebalanceOperation(gpEnv, gpArray, self.__options.parallelDegree, self.__options.parallelPerHost)
+            return GpSegmentRebalanceOperation(gpEnv, gpArray, self.__options.parallelDegree, self.__options.parallelPerHost, self.__options.disableReplayLag, self.__options.replayLag)
         else:
             instance = RecoveryTripletsFactory.instance(gpArray, self.__options.recoveryConfigFile, self.__options.newRecoverHosts, self.__options.parallelDegree)
             segs = [GpMirrorToBuild(t.failed, t.live, t.failover, self.__options.forceFullResynchronization, self.__options.differentialResynchronization)
@@ -252,6 +252,9 @@ class GpRecoverSegmentProgram:
         # verify differential supported options
         if self.__options.differentialResynchronization and self.__options.outputSampleConfigFile:
             raise ProgramArgumentValidationException("Invalid -o provided with --differential argument")
+
+        if self.__options.disableReplayLag and not self.__options.rebalanceSegments:
+            raise ProgramArgumentValidationException("--disable-replay-lag should be used only with -r")
 
         faultProberInterface.getFaultProber().initializeProber(gpEnv.getMasterPort())
 
@@ -461,6 +464,11 @@ class GpRecoverSegmentProgram:
 
         addTo.add_option("-r", None, default=False, action='store_true',
                          dest='rebalanceSegments', help='Rebalance synchronized segments.')
+        addTo.add_option("--replay-lag", None, type="float", default=gp.ALLOWED_REPLAY_LAG,
+                         dest="replayLag",
+                         metavar="<replayLag>", help='Allowed replay lag on mirror, lag should be provided in GBs')
+        addTo.add_option("--disable-replay-lag", None, default=False, action='store_true',
+                         dest='disableReplayLag', help='Disable replay lag check when rebalancing segments')
         addTo.add_option('', '--hba-hostnames', action='store_true', dest='hba_hostnames',
                          help='use hostnames instead of CIDR in pg_hba.conf')
 

@@ -2883,6 +2883,20 @@ def impl(context, command, target):
     if target not in contents:
         raise Exception("cannot find %s in %s" % (target, filename))
 
+
+@then('{command} should print "{target}" regex to logfile')
+def impl(context, command, target):
+    log_dir = _get_gpAdminLogs_directory()
+    filename = glob.glob('%s/%s_*.log' % (log_dir, command))[0]
+    contents = ''
+    with open(filename) as fr:
+        for line in fr:
+            contents += line
+
+    pat = re.compile(target)
+    if not pat.search(contents):
+        raise Exception("cannot find %s in %s" % (target, filename))
+
 @given('verify that a role "{role_name}" exists in database "{dbname}"')
 @then('verify that a role "{role_name}" exists in database "{dbname}"')
 def impl(context, role_name, dbname):

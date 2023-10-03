@@ -24,6 +24,8 @@ class Options:
         self.recoveryConfigFile = None
         self.outputSpareDataDirectoryFile = None
         self.rebalanceSegments = None
+        self.disableReplayLag = None
+        self.replayLag = None
 
         self.outputSampleConfigFile = None
         self.parallelDegree = 1

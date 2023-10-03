@@ -10,7 +10,7 @@ gprecoverseg [[-p <new_recover_host>[,...]] | -i <recover_config_file>] [-d <coo
 	           [--hba-hostnames <boolean>] 
              [--no-progress] [-l <logfile_directory>]
 
-gprecoverseg -r 
+gprecoverseg -r [--replay-lag <replay_lag>] [--disable-replay-lag]
 
 gprecoverseg -o <output_recover_config_file> 
              [-p <new_recover_host>[,...]]
@@ -167,6 +167,12 @@ The recovery process marks the segment as up again in the Greenplum Database sys
 
 -r \(rebalance segments\)
 :   After a segment recovery, segment instances may not be returned to the preferred role that they were given at system initialization time. This can leave the system in a potentially unbalanced state, as some segment hosts may have more active segments than is optimal for top system performance. This option rebalances primary and mirror segments by returning them to their preferred roles. All segments must be valid and resynchronized before running `gprecoverseg -r`. If there are any in progress queries, they will be cancelled and rolled back.
+
+--replay-lag
+:   Replay lag(in GBs) allowed on mirror when rebalancing the segments. Default is 10 GB. If the replay_lag (flush_lsn-replay_lsn) is more than the value provided with this option then rebalance will be aborted.
+
+--disable-replay-lag
+:   Disable replay lag check when rebalancing segments
 
 -s \(sequential progress\)
 :   Show `pg_basebackup` or `pg_rewind` progress sequentially instead of in-place. Useful when writing to a file, or if a tty does not support escape sequences. The default is to show progress in-place.
