@@ -181,8 +181,8 @@ CXformMinMax2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 				CLogicalLimit *popLimit =
 					CLogicalLimit::PopConvert(pexprLimit->Pop());
 				// Compute the required OrderSpec for first index key
-				CXformUtils::PosForIndexKey(pmdindex, scan_direction,
-											agg_colref, popLimit->Pos(), 0);
+				CXformUtils::ComputeOrderSpecForIndexKey(
+					pmdindex, scan_direction, agg_colref, popLimit->Pos(), 0);
 
 				popAgg->AddRef();
 				pexprScalarPrjList->AddRef();

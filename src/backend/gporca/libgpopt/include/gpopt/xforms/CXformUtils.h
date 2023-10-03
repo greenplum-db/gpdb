@@ -571,10 +571,11 @@ public:
 							CTableDescriptor *ptabdesc,
 							CColRefArray *pdrgpcrOutput);
 
-	static void PosForIndexKey(const IMDIndex *pmdindex,
-							   EIndexScanDirection scan_direction,
-							   const CColRef *colref, COrderSpec *pos,
-							   ULONG key_position);
+	static void ComputeOrderSpecForIndexKey(const IMDIndex *pmdindex,
+											EIndexScanDirection scan_direction,
+											const CColRef *colref,
+											COrderSpec *pos,
+											ULONG key_position);
 
 };	// class CXformUtils
 

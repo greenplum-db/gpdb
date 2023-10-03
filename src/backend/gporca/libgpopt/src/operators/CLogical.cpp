@@ -189,7 +189,8 @@ CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 		CColRef *colref = (*colref_array)[ulPosTabDesc];
 
 		// Compute OrderSpec for Index key
-		CXformUtils::PosForIndexKey(pmdindex, scan_direction, colref, pos, ul);
+		CXformUtils::ComputeOrderSpecForIndexKey(pmdindex, scan_direction,
+												 colref, pos, ul);
 	}
 
 	return pos;

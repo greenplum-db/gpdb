@@ -4163,16 +4163,17 @@ CXformUtils::FCoverIndex(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
 }
 
 //---------------------------------------------------------------------------
-// CXformUtils::PosForIndexKey
+// CXformUtils::ComputeOrderSpecForIndexKey
 //
 // Determine the OrderSpec Expression for an index key based on the
-// direction of the index scan and the position of the index key.
+// direction of the index scan and the position of the index key. This
+// function updates the passed COrderSpec argument.
 //---------------------------------------------------------------------------
 void
-CXformUtils::PosForIndexKey(const IMDIndex *pmdindex,
-							EIndexScanDirection scan_direction,
-							const CColRef *colref, COrderSpec *pos,
-							ULONG key_position)
+CXformUtils::ComputeOrderSpecForIndexKey(const IMDIndex *pmdindex,
+										 EIndexScanDirection scan_direction,
+										 const CColRef *colref, COrderSpec *pos,
+										 ULONG key_position)
 {
 	IMDId *mdid = nullptr;
 	COrderSpec::ENullTreatment ent = COrderSpec::EntLast;
