@@ -14,6 +14,16 @@
 #ifndef CDBAPPENDONLYSTORAGEFORMAT_H
 #define CDBAPPENDONLYSTORAGEFORMAT_H
 
+#include "port/pg_crc32c.h"
+
+extern pg_crc32 AppendOnlyStorageFormat_ComputeHeaderChecksum(
+	uint8 			*headerPtr,
+	int32 			headerLen);
+extern pg_crc32 AppendOnlyStorageFormat_ComputeBlockChecksum(
+	uint8 			*headerPtr,
+	int32 			headerLen,
+	int32 			overallBlockLen);
+
 extern int32 AppendOnlyStorageFormat_RegularHeaderLenNeeded(
 	bool			usingChecksum);
 
