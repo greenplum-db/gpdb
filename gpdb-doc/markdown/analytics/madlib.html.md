@@ -83,10 +83,10 @@ Before you install the MADlib package, make sure that your Greenplum database is
     $ tar xzvf madlib-1.21.0+1-gp6-rhel7-x86_64.tar.gz
     ```
 
-    To unpack version 2.0.0:
+    To unpack version 2.1.0:
 
     ```
-    $ tar xzvf madlib-2.0.0-gp6-rhel8-x86_64.tar.gz
+    $ tar xzvf madlib-2.1.0-gp6-rhel8-x86_64.tar.gz
     ```
 
 5.  Install the software package by running the `gppkg` command. For example:
@@ -97,10 +97,10 @@ Before you install the MADlib package, make sure that your Greenplum database is
     $ gppkg -i ./madlib-1.21.0+1-gp6-rhel7-x86_64/madlib-1.21.0+1-gp6-rhel7-x86_64.gppkg
     ```
 
-    To install version 2.0.0:
+    To install version 2.1.0:
 
     ```
-    $ gppkg -i ./madlib-2.0.0-gp6-rhel8-x86_64/madlib-2.0.0-gp6-rhel8-x86_64.gppkg
+    $ gppkg -i ./madlib-2.1.0-gp6-rhel8-x86_64/madlib-2.1.0-gp6-rhel8-x86_64.gppkg
     ```
 
 ### <a id="topic5"></a>Adding MADlib Functions to a Database 
@@ -131,13 +131,13 @@ $ madpack -s madlib -p greenplum -c gpadmin@mdw:5432/testdb install-check
 
 > **Important** Greenplum Database does not support directly upgrading from MADlib 1.x to version 2.x. You must back up your MADlib models, uninstall version 1.x, install version 2.x, and reload the models.
 
-You upgrade an installed MADlib version 1.x package with the Greenplum Database `gppkg` utility and the MADlib `madpack` command.
+You upgrade an installed MADlib version 1.x or 2.x package with the Greenplum Database `gppkg` utility and the MADlib `madpack` command.
 
 For information about the upgrade paths that MADlib supports, see the MADlib support and upgrade matrix in the [MADlib FAQ page](https://cwiki.apache.org/confluence/display/MADLIB/FAQ#FAQ-Q1-2WhatdatabaseplatformsdoesMADlibsupportandwhatistheupgradematrix?).
 
 ### <a id="topic_tb3_2gd_3w"></a>Upgrading a MADlib 1.x Package
 
-> **Important** Greenplum Database does not support upgrading from MADlib version 1.x to version 2.x.
+> **Important** Greenplum Database does not support upgrading from MADlib version 1.x to version 2.x. Use this procedure to upgrade from an older MADlib version 1.x release to a newer version 1.x release.
 
 To upgrade MADlib, run the `gppkg` utility with the `-u` option. This command upgrades an installed MADlib 1.x package to MADlib 1.21.0+1.
 
@@ -145,11 +145,21 @@ To upgrade MADlib, run the `gppkg` utility with the `-u` option. This command up
 $ gppkg -u madlib-1.21.0+1-gp6-rhel7-x86_64.gppkg
 ```
 
+### <a id="topic_tb3_2gd_3xx"></a>Upgrading a MADlib 2.x Package
+
+> **Important** Greenplum Database does not support upgrading from MADlib version 1.x to version 2.x. Use this procedure to upgrade from an older MADlib version 2.x release to a newer version 2.x release.
+
+To upgrade MADlib, run the `gppkg` utility with the `-u` option. This command upgrades an installed MADlib 2.0.x package to MADlib 2.1.0:
+
+```
+$ gppkg -u madlib-2.1.0-gp6-rhel8-x86_64.gppkg
+```
+
 ### <a id="topic_bql_bgd_3w"></a>Upgrading MADlib Functions 
 
 After you upgrade the MADlib package from one minor version to another, run `madpack upgrade` to upgrade the MADlib functions in a database schema.
 
-> **Note** Use `madpack upgrade` only if you upgraded a minor MADlib package version, for example from 1.19.0 to 1.21.0. You do not need to update the functions within a patch version upgrade, for example from 1.16+1 to 1.16+3.
+> **Note** Use `madpack upgrade` only if you upgraded a minor MADlib package version, for example from 1.19.0 to 1.21.0, or from 2.0.0 to 2.1.0. You do not need to update the functions within a patch version upgrade, for example from 1.16+1 to 1.16+3.
 
 This example command upgrades the MADlib functions in the schema `madlib` of the Greenplum Database `test`.
 
@@ -182,10 +192,10 @@ To uninstall MADlib package version 1.21.0:
 $ gppkg -r madlib-1.21.0+1-gp6-rhel7-x86_64
 ```
 
-To uninstall MADlib package version 2.0.0:
+To uninstall MADlib package version 2.1.0:
 
 ```
-$ gppkg -r madlib-2.0.0-gp6-rhel8-x86_64
+$ gppkg -r madlib-2.1.0-gp6-rhel8-x86_64
 ```
 
 You can run the `gppkg` utility with the options `-q --all` to list the installed extensions and their versions.
