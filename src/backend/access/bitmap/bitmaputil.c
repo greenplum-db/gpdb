@@ -405,32 +405,36 @@ _bitmap_catchup_to_next_tid(BMBatchWords *words, BMIterateResult *result)
 				/* reset next tid to skip all empty words */
 				if (words->firstTid > result->nextTid)
 					result->nextTid = words->firstTid;
+
 				continue;
 			}
-			else
+
+			if (fillLength > 0)
 			{
-				while (fillLength > 0 && words->firstTid < result->nextTid)
-				{
-					/* update fill word to reflect expansion */
-					words->cwords[result->lastScanWordNo]--;
-					words->firstTid += BM_HRL_WORD_SIZE;
-					fillLength--;
-				}
+				/* update fill word to reflect expansion */
 
-				/* comsume all the fill words, try to fetch next words */
-				if (fillLength == 0)
-				{
-					words->nwords--;
-					continue;
-				}
+				uint64 fillToUse = (result->nextTid - words->firstTid) / BM_HRL_WORD_SIZE + 1;
+				if (fillToUse > fillLength)
+					fillToUse = fillLength;
 
-				/*
-				* Catch up the next tid to search, but there still fill words.
-				* Return current state.
-				*/
-				if (words->firstTid >= result->nextTid)
-					return;
+				words->cwords[result->lastScanWordNo] -= fillToUse;
+				words->firstTid += fillToUse * BM_HRL_WORD_SIZE;
+				fillLength -= fillToUse;
 			}
+
+			/* comsume all the fill words, try to fetch next words */
+			if (fillLength == 0)
+			{
+				words->nwords--;
+				continue;
+			}
+
+			/*
+			 * Catch up the next tid to search, but there still fill words.
+			 * Return current state.
+			 */
+			if (words->firstTid >= result->nextTid)
+				return;
 		}
 		else
 		{
