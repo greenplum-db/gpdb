@@ -123,7 +123,7 @@ ok(compare($primary_wal_file_path, $mirror_wal_file_path) eq 0, "wal file compar
 my $total_bytes_cmd = 'pg_controldata ' . $node_wal_compare_standby_datadir .  ' | grep "Bytes per WAL segment:" |  awk \'{print $5}\'';
 my $total_allocated_bytes = `$total_bytes_cmd`;
 
-my $current_lsn_cmd = 'pg_xlogdump -f ' . $primary_wal_file_path . ' | grep "xlog switch" | awk \'{print $10}\' | sed "s/,//"';
+my $current_lsn_cmd = 'pg_xlogdump ' . $primary_wal_file_path . ' | grep "xlog switch" | awk \'{print $10}\' | sed "s/,//"';
 my $current_lsn = `$current_lsn_cmd`;
 chomp($current_lsn);
 
