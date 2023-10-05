@@ -427,6 +427,7 @@ ATAOEntries(Form_pg_class relform1, Form_pg_class relform2)
 					 * follow suit.
 					 */
 					TransferAppendonlyEntries(relform1->oid, relform2->oid);
+					RemoveAttributeEncodingsByRelid(relform1->oid);
 					break;
 				case AO_ROW_TABLE_AM_OID:
 					SwapAppendonlyEntries(relform1->oid, relform2->oid);

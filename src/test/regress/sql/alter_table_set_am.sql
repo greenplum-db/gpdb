@@ -2,6 +2,10 @@
 
 \set HIDE_TABLEAM off
 
+PREPARE attribute_encoding_check AS
+SELECT c.relname, a.attname, e.filenum, e.attoptions, e.lastrownums FROM pg_attribute_encoding e, pg_class c, pg_attribute a
+WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE $1;
+
 -- Scenario 1: Changing to the same AM: it should have no effect but
 -- make sure it doesn't rewrite table or blow up existing reloptions:
 CREATE TABLE sameam_heap(a int, b int) WITH (fillfactor=70) DISTRIBUTED BY (a);
@@ -890,3 +894,45 @@ SELECT relname, a.amname, relkind, reloptions FROM pg_class c
 SELECT c.relname, a.attnum, attoptions
     FROM pg_attribute_encoding a JOIN pg_class c ON a.attrelid = c.oid
     WHERE c.relname LIKE 'at_part_w_external%' OR c.relname = 'at_external';
+
+-- ALTER TABLE ao_row with pg_attribute_encoding entries to ao_column
+CREATE TABLE at_with_addedcols(a int, b int) USING ao_row;
+INSERT INTO at_with_addedcols SELECT i,i FROM generate_series(1,3)i;
+ALTER TABLE at_with_addedcols ADD COLUMN c int DEFAULT 4;
+INSERT INTO at_with_addedcols SELECT i,i FROM generate_series(1,3)i;
+SELECT * FROM at_with_addedcols;
+-- pg_attribute_encoding should have entries for just column c
+EXECUTE attribute_encoding_check ('at_with_addedcols');
+ALTER TABLE at_with_addedcols SET ACCESS METHOD ao_column;
+-- check data is intact
+SELECT * FROM at_with_addedcols;
+-- pg_attribute_encoding should have entries for all columns
+EXECUTE attribute_encoding_check ('at_with_addedcols');
+
+ALTER TABLE at_with_addedcols SET ACCESS METHOD ao_row;
+-- check data is intact
+SELECT * FROM at_with_addedcols;
+-- pg_attribute_encoding should not have any entries
+EXECUTE attribute_encoding_check ('at_with_addedcols');
+DROP TABLE at_with_addedcols;
+
+-- ALTER TABLE ao_row with pg_attribute_encoding entries to heap
+CREATE TABLE at_with_addedcols(a int, b int) USING ao_row;
+INSERT INTO at_with_addedcols SELECT i,i FROM generate_series(1,3)i;
+ALTER TABLE at_with_addedcols ADD COLUMN c int DEFAULT 4;
+INSERT INTO at_with_addedcols SELECT i,i FROM generate_series(1,3)i;
+SELECT * FROM at_with_addedcols;
+-- pg_attribute_encoding should have entries for just column c
+EXECUTE attribute_encoding_check ('at_with_addedcols');
+ALTER TABLE at_with_addedcols SET ACCESS METHOD heap;
+-- check data is intact
+SELECT * FROM at_with_addedcols;
+-- pg_attribute_encoding should not have any entries
+EXECUTE attribute_encoding_check ('at_with_addedcols');
+
+ALTER TABLE at_with_addedcols SET ACCESS METHOD ao_row;
+-- check data is intact
+SELECT * FROM at_with_addedcols;
+-- pg_attribute_encoding should not have any entries
+EXECUTE attribute_encoding_check ('at_with_addedcols');
+DROP TABLE at_with_addedcols;

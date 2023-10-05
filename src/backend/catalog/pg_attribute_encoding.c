@@ -36,6 +36,7 @@
 #include "utils/relcache.h"
 #include "utils/syscache.h"
 
+static void check_attribute_encoding_entry_exist(Oid relid, bool *attnum_entry_present);
 
 /*
  * Transform the lastrownums int64 array into datum 
@@ -159,18 +160,21 @@ update_attribute_encoding_entry(Oid relid, AttrNumber attnum, FileNumber newfile
 	if (newfilenum != InvalidFileNumber)
 	{
 		values[Anum_pg_attribute_encoding_filenum - 1] = newfilenum;
+		nulls[Anum_pg_attribute_encoding_filenum - 1] = false;
 		repl[Anum_pg_attribute_encoding_filenum - 1] = true;
 	}
 
 	if (newlastrownums)
 	{
 		values[Anum_pg_attribute_encoding_lastrownums - 1] = newlastrownums;
+		nulls[Anum_pg_attribute_encoding_lastrownums - 1] = false;
 		repl[Anum_pg_attribute_encoding_lastrownums - 1] = true;
 	}
 
 	if (newattoptions)
 	{
 		values[Anum_pg_attribute_encoding_attoptions - 1] = newattoptions;
+		nulls[Anum_pg_attribute_encoding_attoptions - 1] = false;
 		repl[Anum_pg_attribute_encoding_attoptions - 1] = true;
 	}
 
@@ -247,11 +251,10 @@ get_rel_attoptions(Oid relid, AttrNumber max_attno)
 
 		attoptions = heap_getattr(tuple, Anum_pg_attribute_encoding_attoptions,
 								  RelationGetDescr(pgae), &isnull);
-		Assert(!isnull);
-
-		dats[attnum - 1] = datumCopy(attoptions,
-									 attform->attbyval,
-									 attform->attlen);
+		if (!isnull)
+			dats[attnum - 1] = datumCopy(attoptions,
+										 attform->attbyval,
+										 attform->attlen);
 	}
 
 	systable_endscan(scan);
@@ -405,9 +408,11 @@ UpdateAttributeEncodings(Oid relid, List *new_attr_encodings)
 /*
  * Similar to UpdateAttributeEncodings, but add the entry if it's not
  * existed in pg_attribute_encoding.
+ * AO tables could have existing pg_attribute_encoding entry
+ * when we want to populate the entries during AO->CO
  */
 void
-UpdateOrAddAttributeEncodings(Relation rel, List *new_attr_encodings)
+UpdateOrAddAttributeEncodingsAttoptionsOnly(Relation rel, List *new_attr_encodings)
 {
 	ListCell 	*lc;
 	List 		*current_encodings;
@@ -547,6 +552,89 @@ AddCOAttributeEncodings(Oid relid, List *attr_encodings)
 	}
 	list_free(filenums);
 }
+
+void
+AddOrUpdateCOAttributeEncodings(Oid relid, List *attr_encodings)
+{
+	ListCell *lc;
+	ListCell *lc_filenum;
+	List *filenums = NIL;
+	bool attnumsWithEntries[MaxHeapAttributeNumber];
+
+	check_attribute_encoding_entry_exist(relid, attnumsWithEntries);
+
+	if (attr_encodings)
+	{
+		filenums = GetNextNAvailableFilenums(relid, attr_encodings->length);
+
+		if (filenums->length != attr_encodings->length)
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+						errmsg("filenums exhausted for relid %u", relid),
+						errhint("recreate the table")));
+	}
+
+	forboth(lc, attr_encodings, lc_filenum, filenums)
+	{
+		Datum attoptions;
+		ColumnReferenceStorageDirective *c = lfirst(lc);
+		List *encoding;
+		AttrNumber attnum;
+		HeapTuple	tuple;
+		Form_pg_attribute att_tup;
+
+		Assert(IsA(c, ColumnReferenceStorageDirective));
+
+		tuple = SearchSysCache2(ATTNAME,
+								ObjectIdGetDatum(relid),
+								CStringGetDatum(c->column));
+
+		if (!HeapTupleIsValid(tuple))
+			elog(ERROR, "column \"%s\" does not exist", c->column);
+
+		att_tup = (Form_pg_attribute) GETSTRUCT(tuple);
+		attnum = att_tup->attnum;
+		Assert(attnum != InvalidAttrNumber);
+
+		ReleaseSysCache(tuple);
+
+		if (attnum < 0)
+			elog(ERROR, "column \"%s\" is a system column", c->column);
+
+		encoding = c->encoding;
+
+		if (!encoding)
+			continue;
+
+		attoptions = transformRelOptions(PointerGetDatum(NULL),
+										 encoding,
+										 NULL,
+										 NULL,
+										 true,
+										 false);
+
+		if (attnumsWithEntries[attnum-1])
+			update_attribute_encoding_entry(relid,
+											attnum,
+											lfirst_int(lc_filenum),
+											0/*lastrownums*/,
+											attoptions);
+		else
+			add_attribute_encoding_entry(relid,
+										 attnum,
+										 lfirst_int(lc_filenum),
+										 0 /* lastrownums*/,
+										 attoptions);
+
+	}
+	/*
+	 * Increment command counter to make sure we don't use these
+	 * assigned filenums in other subcommands
+	 */
+	CommandCounterIncrement();
+	list_free(filenums);
+}
+
 
 void
 RemoveAttributeEncodingsByRelid(Oid relid)
@@ -763,4 +851,44 @@ GetAttnumToLastrownumMapping(Oid relid, int natts)
 	heap_close(rel, AccessShareLock);
 
 	return attnum_to_lastrownum;
+}
+
+/*
+ * Determine which attnums have an entry present in pg_attribute_encoding
+ */
+void
+check_attribute_encoding_entry_exist(Oid relid, bool *attnum_entry_present)
+{
+	Relation    	rel;
+	SysScanDesc 	scan;
+	ScanKeyData 	skey[1];
+	HeapTuple		tup;
+	bool 			isnull;
+
+	Assert(OidIsValid(relid));
+
+	MemSet(attnum_entry_present, false, sizeof(attnum_entry_present));
+
+	rel = heap_open(AttributeEncodingRelationId, AccessShareLock);
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_attribute_encoding_attrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	scan = systable_beginscan(rel, AttributeEncodingAttrelidIndexId, true,
+							  NULL, 1, skey);
+
+	while (HeapTupleIsValid(tup = systable_getnext(scan)))
+	{
+		int 		attnum;
+
+		attnum = heap_getattr(tup, Anum_pg_attribute_encoding_attnum,
+							  RelationGetDescr(rel), &isnull);
+		Assert(!isnull); /* have to have a valid attnum */
+
+		attnum_entry_present[attnum - 1] = true;
+	}
+
+	systable_endscan(scan);
+	heap_close(rel, AccessShareLock);
 }

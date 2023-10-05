@@ -4408,9 +4408,10 @@ static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOpti
 	int 		attno;
 	List 		*colDefs = NIL;
 	TupleDesc 	tupdesc = RelationGetDescr(rel);
-	List 		*current_encodings = rel_get_column_encodings(rel);
+	List 		*current_encodings = NIL;
 	List		*new_encodings;
 
+	current_encodings = rel_get_column_encodings(rel);
 	/* Figure out the column definition list. */
 	for (attno = 0; attno < tupdesc->natts; attno++)
 	{
@@ -4448,7 +4449,8 @@ static void populate_rel_col_encodings(Relation rel, List *stenc, List *withOpti
 							NULL /*parent encoding*/,
 							false /*explicitOnly*/,
 							false /*errorOnEncodingClause*/);
-	AddCOAttributeEncodings(RelationGetRelid(rel), new_encodings);
+
+	AddOrUpdateCOAttributeEncodings(RelationGetRelid(rel), new_encodings);
 }
 
 /*
@@ -7910,7 +7912,7 @@ ATExecSetColumnEncoding(List **wqueue, AlteredTableInfo *tab, Relation rel, Alte
 		 * Note that we could be altering AM from non-CO to CO as well, so the table may
 		 * not have any existing pg_attribute_encoding entry. Do update-or-add here.
 		 */
-		UpdateOrAddAttributeEncodings(rel, lappend(NIL, new_crsd));
+		UpdateOrAddAttributeEncodingsAttoptionsOnly(rel, lappend(NIL, new_crsd));
 	}
 	else if (rel->rd_rel->relkind == RELKIND_RELATION)
 	{
