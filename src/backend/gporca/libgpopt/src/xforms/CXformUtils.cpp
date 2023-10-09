@@ -2462,7 +2462,7 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 	}
 
 	if (!FIndexApplicable(mp, pmdindex, pmdrel, pdrgpcrOutput, pcrsScalarExpr,
-						  IMDIndex::EmdindBtree))
+						  pmdindex->IndexType()))
 	{
 		GPOS_DELETE(alias);
 

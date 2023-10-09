@@ -46,6 +46,7 @@ public:
 		EmdindGist,	   // gist using btree or bitmap
 		EmdindGin,	   // gin using btree or bitmap
 		EmdindBrin,	   // brin
+		EmdindIVFFlat, // IVFFlat index on vectors
 		EmdindSentinel
 	};
 

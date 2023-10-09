@@ -2174,6 +2174,11 @@ CPredicateUtils::ExtractIndexPredicates(
 			CExpression *pexprLookupPred = PexprIndexLookup(
 				mp, md_accessor, pexprCond, pmdindex, pdrgpcrIndex,
 				pcrsAcceptedOuterRefs, allowArrayCmpIndexQual);
+
+			// we need to change 'PexprIndexLookup' to generate the predicate
+			// condition for lookup. Currently it coming as NULL
+			pexprLookupPred =pexprCond;
+
 			if (nullptr != pexprLookupPred)
 			{
 				pexprCond->Release();

@@ -67,7 +67,8 @@ CMDIndexGPDB::CMDIndexGPDB(
 						IMDIndex::EmdindGist == index_type ||
 						IMDIndex::EmdindGin == index_type ||
 						IMDIndex::EmdindBrin == index_type ||
-						IMDIndex::EmdindHash == index_type);
+						IMDIndex::EmdindHash == index_type ||
+						IMDIndex::EmdindIVFFlat == index_type);
 	GPOS_ASSERT_IMP(IMDIndex::EmdindBitmap == index_type,
 					nullptr != mdid_item_type && mdid_item_type->IsValid());
 	GPOS_ASSERT(nullptr != mdid_opfamilies_array);

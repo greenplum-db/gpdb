@@ -2089,7 +2089,9 @@ gpdb::IndexOpProperties(Oid opno, Oid opfamily, StrategyNumber *strategynumber,
 		Oid lefttype;
 		INT strategy;
 
-		get_op_opfamily_properties(opno, opfamily, false, &strategy, &lefttype,
+		// based on index, we need to decide the value of ordering_op. currently
+		// it is fixed to false but for this case, true is the correct value .
+		get_op_opfamily_properties(opno, opfamily, true, &strategy, &lefttype,
 								   righttype);
 
 		// Ensure the value of strategy doesn't get truncated when converted to StrategyNumber

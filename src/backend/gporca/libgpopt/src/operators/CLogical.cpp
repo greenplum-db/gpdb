@@ -160,10 +160,14 @@ CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 	COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
 
 	// GiST, GIN, BRIN and Hash indexes have no order, so return an empty order spec
+	// Access method for EmdindIVFFlat has 'false' for 'amcanorder' so included
+	// the condition here. Checked the data in GetIndexAmRoutine(Oid amhandler)
+	// need to re-check ..
 	if (pmdindex->IndexType() == IMDIndex::EmdindGist ||
 		pmdindex->IndexType() == IMDIndex::EmdindGin ||
 		pmdindex->IndexType() == IMDIndex::EmdindBrin ||
-		pmdindex->IndexType() == IMDIndex::EmdindHash)
+		pmdindex->IndexType() == IMDIndex::EmdindHash ||
+		pmdindex->IndexType() == IMDIndex::EmdindIVFFlat)
 	{
 		return pos;
 	}

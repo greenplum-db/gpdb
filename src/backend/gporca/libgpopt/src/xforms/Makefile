@@ -103,6 +103,7 @@ OBJS        = CDecorrelator.o \
               CXformLeftSemiJoin2InnerJoinUnderGb.o \
               CXformLeftSemiJoin2NLJoin.o \
               CXformLimit2IndexGet.o \
+              CXformLimit2IndexGetForVector.o \
               CXformMaxOneRow2Assert.o \
               CXformDynamicForeignGet2DynamicForeignScan.o \
               CXformProject2Apply.o \
