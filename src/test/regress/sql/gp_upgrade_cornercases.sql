@@ -56,16 +56,15 @@ ALTER TABLE no_cols_left DROP COLUMN a;
 ALTER TABLE no_cols_left DROP COLUMN b;
 ALTER TABLE no_cols_left DROP COLUMN c;
 
--- Test a database with a recreated "public" schema.
+-- Test a database with a recreated "public" schema for upgrade test later.
+-- Note that the public schema should be as vanilla as possible, so should expect no dependency on it for a new database.
 -- If you are adding tests, you most likely want to add them BEFORE this, since
 -- we connect to a different database.
 DROP DATABASE IF EXISTS upgrade_recreated_public;
 CREATE DATABASE upgrade_recreated_public;
 \c upgrade_recreated_public
 
--- Some extensions are pre-baked into template1, hence the new database has
--- them under public. Remove them too by cascade.
-DROP SCHEMA public CASCADE;
+DROP SCHEMA public;
 CREATE SCHEMA public;
 
 CREATE TABLE public.t();

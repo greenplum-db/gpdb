@@ -1740,6 +1740,15 @@ selectDumpableNamespace(NamespaceInfo *nsinfo, Archive *fout)
 	 * If specific tables are being dumped, do not dump any complete
 	 * namespaces. If specific namespaces are being dumped, dump just those
 	 * namespaces. Otherwise, dump all non-system namespaces.
+	 *
+	 * GPDB: dump the gp_toolkit schema only in binary upgrade, where the
+	 * new cluster expects the schema of an extension to exist before it
+	 * creates the *empty* extension and copy the objects from old cluster. 
+	 * In non-binary-upgrade cases, gp_toolkit schema should be created when
+	 * creating the extension itself, so no need to dump it; in fact, 
+	 * dumping it could result in error during replaying the script on a new
+	 * database, because new database would inherit the gp_toolkit schema 
+	 * and extension from 'template1' already.
 	 */
 	if (table_include_oids.head != NULL)
 		nsinfo->dobj.dump_contains = nsinfo->dobj.dump = DUMP_COMPONENT_NONE;
@@ -1760,7 +1769,7 @@ selectDumpableNamespace(NamespaceInfo *nsinfo, Archive *fout)
 	}
 	else if (strncmp(nsinfo->dobj.name, "pg_", 3) == 0 ||
 			 strcmp(nsinfo->dobj.name, "information_schema") == 0 ||
-			 strcmp(nsinfo->dobj.name, "gp_toolkit") == 0)
+			 (!dopt->binary_upgrade && strcmp(nsinfo->dobj.name, "gp_toolkit") == 0))
 	{
 		/* Other system schemas don't get dumped */
 		nsinfo->dobj.dump_contains = nsinfo->dobj.dump = DUMP_COMPONENT_NONE;
