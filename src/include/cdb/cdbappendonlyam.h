@@ -268,6 +268,8 @@ typedef struct AppendOnlyScanDescData
 	 */
 	int64		totalBytesRead;
 
+	/* sampleSlot: Holds tuple last read as part of a sample scan */
+	TupleTableSlot *sampleSlot;
 }	AppendOnlyScanDescData;
 
 typedef AppendOnlyScanDescData *AppendOnlyScanDesc;

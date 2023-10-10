@@ -1824,6 +1824,12 @@ appendonly_beginrangescan_internal(Relation relation,
 
 	scan->totalBytesRead = 0;
 
+	if ((flags & SO_TYPE_SAMPLESCAN) != 0)
+		scan->sampleSlot = MakeSingleTupleTableSlot(RelationGetDescr(relation),
+													table_slot_callbacks(relation));
+	else
+		scan->sampleSlot = NULL;
+
 	return scan;
 }
 
@@ -1920,8 +1926,7 @@ appendonly_beginscan(Relation relation,
  * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: When doing an initial rescan with `table_rescan`,
  * the values for the new flags (introduced by Table AM API) are
  * set to false. This means that whichever ScanOptions flags that were initially set will be
- * used for the rescan. However with TABLESAMPLE, which is currently not
- * supported for AO/CO, the new flags may be modified.
+ * used for the rescan. However with TABLESAMPLE, the new flags may be modified.
  * Additionally, allow_sync, allow_strat, and allow_pagemode may
  * need to be implemented for AO/CO in order to properly use them.
  * You may view `syncscan.c` as an example to see how heap added scan
@@ -1949,6 +1954,14 @@ appendonly_rescan(TableScanDesc scan, ScanKey key,
 	 * reinitialize scan descriptor
 	 */
 	initscan(aoscan, key);
+
+	/*
+	 * The sample slot should already have been cleaned up when the end of the
+	 * relation was reached in the earlier iteration. Clean it up anyway, as it
+	 * doesn't hurt to.
+	 */
+	if (aoscan->sampleSlot)
+		ExecClearTuple(aoscan->sampleSlot);
 }
 
 /*
@@ -2034,6 +2047,12 @@ appendonly_endscan(TableScanDesc scan)
 	pfree(aoscan->aos_filenamepath);
 
 	pfree(aoscan->title);
+
+	if (aoscan->sampleSlot)
+	{
+		ExecDropSingleTupleTableSlot(aoscan->sampleSlot);
+		aoscan->sampleSlot = NULL;
+	}
 
 	pfree(aoscan);
 }

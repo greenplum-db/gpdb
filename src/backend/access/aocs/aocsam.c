@@ -649,6 +649,12 @@ aocs_beginscan_internal(Relation relation,
 		}
 	}
 
+	if ((flags & SO_TYPE_SAMPLESCAN) != 0)
+		scan->sampleSlot = MakeSingleTupleTableSlot(RelationGetDescr(relation),
+													table_slot_callbacks(relation));
+	else
+		scan->sampleSlot = NULL;
+
 	return scan;
 }
 
@@ -659,6 +665,14 @@ aocs_rescan(AOCSScanDesc scan)
 	if (scan->columnScanInfo.ds)
 		close_ds_read(scan->columnScanInfo.ds, scan->columnScanInfo.relationTupleDesc->natts);
 	initscan_with_colinfo(scan);
+
+	/*
+	 * The sample slot should already have been cleaned up when the end of the
+	 * relation was reached in the earlier iteration. Clean it up anyway, as it
+	 * doesn't hurt to.
+	 */
+	if (scan->sampleSlot)
+		ExecClearTuple(scan->sampleSlot);
 }
 
 /*
@@ -762,6 +776,12 @@ aocs_endscan(AOCSScanDesc scan)
 		aocs_blkdirscan_finish(scan);
 
 	RelationDecrementReferenceCount(scan->rs_base.rs_rd);
+
+	if (scan->sampleSlot)
+	{
+		ExecDropSingleTupleTableSlot(scan->sampleSlot);
+		scan->sampleSlot = NULL;
+	}
 
 	pfree(scan);
 }

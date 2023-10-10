@@ -1,0 +1,533 @@
+-- Test Bernoulli sampling
+
+CREATE TABLE tsample_@amname@(i int) USING @amname@;
+CREATE TABLE
+
+-- Case 0: Empty table
+SELECT count(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 0     
+(1 row)
+SELECT * FROM tsample_@amname@ TABLESAMPLE BERNOULLI(10);
+ i 
+---
+(0 rows)
+
+-- Case 1: Single partially populated logical heap block on each QE
+INSERT INTO tsample_@amname@ SELECT generate_series(1, 100);
+INSERT 0 100
+
+SELECT * FROM tsample_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(0);
+ i  
+----
+ 15 
+ 26 
+ 57 
+ 69 
+ 78 
+ 87 
+ 98 
+ 9  
+ 13 
+ 63 
+ 85 
+ 4  
+ 16 
+ 51 
+ 59 
+ 75 
+ 84 
+ 97 
+(18 rows)
+SELECT * FROM tsample_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(0);
+ i  
+----
+ 4  
+ 16 
+ 51 
+ 59 
+ 75 
+ 84 
+ 97 
+ 15 
+ 26 
+ 57 
+ 69 
+ 78 
+ 87 
+ 98 
+ 9  
+ 13 
+ 63 
+ 85 
+(18 rows)
+SELECT * FROM tsample_@amname@ TABLESAMPLE BERNOULLI(20) REPEATABLE(5);
+ i   
+-----
+ 6   
+ 14  
+ 56  
+ 67  
+ 100 
+ 3   
+ 18  
+ 41  
+ 53  
+ 65  
+ 12  
+ 30  
+ 48  
+ 61  
+ 72  
+(15 rows)
+SELECT * FROM tsample_@amname@ TABLESAMPLE BERNOULLI(20) REPEATABLE(5);
+ i   
+-----
+ 6   
+ 14  
+ 56  
+ 67  
+ 100 
+ 3   
+ 18  
+ 41  
+ 53  
+ 65  
+ 12  
+ 30  
+ 48  
+ 61  
+ 72  
+(15 rows)
+
+SELECT count(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 100   
+(1 row)
+
+-- Case 2: Multiple full logical heap blocks on a single QE
+CREATE TABLE tsample2_@amname@(i int) USING @amname@;
+CREATE TABLE
+INSERT INTO tsample2_@amname@ SELECT 1 FROM generate_series(1, 32767 + 32768 + 32768);
+INSERT 0 98303
+SELECT right(split_part(ctid::text, ',', 1), -1) as blknum, count(*) FROM tsample2_@amname@ GROUP BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 32767 
+ 33554433 | 32768 
+ 33554434 | 32768 
+(3 rows)
+SELECT count(DISTINCT ctid) FROM tsample2_@amname@;
+ count 
+-------
+ 98303 
+(1 row)
+
+SELECT ctid FROM tsample2_@amname@ TABLESAMPLE BERNOULLI(0.0005) REPEATABLE(5);
+ ctid             
+------------------
+ (33554432,8375)  
+ (33554434,26251) 
+(2 rows)
+SELECT ctid FROM tsample2_@amname@ TABLESAMPLE BERNOULLI(0.0005) REPEATABLE(5);
+ ctid             
+------------------
+ (33554432,8375)  
+ (33554434,26251) 
+(2 rows)
+
+SELECT count(DISTINCT ctid) FROM tsample2_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 98303 
+(1 row)
+
+-- Case 3: Multiple full logical heap blocks + a final partial block on a single QE
+CREATE TABLE tsample3_@amname@(i int) USING @amname@;
+CREATE TABLE
+INSERT INTO tsample3_@amname@ SELECT 1 FROM generate_series(1, 32767 + 32768 + 100);
+INSERT 0 65635
+SELECT right(split_part(ctid::text, ',', 1), -1) as blknum, count(*) FROM tsample3_@amname@ GROUP BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 32767 
+ 33554433 | 32768 
+ 33554434 | 100   
+(3 rows)
+SELECT count(DISTINCT ctid) FROM tsample3_@amname@;
+ count 
+-------
+ 65635 
+(1 row)
+
+SELECT ctid FROM tsample3_@amname@ TABLESAMPLE BERNOULLI(0.0001) REPEATABLE(5);
+ ctid 
+------
+(0 rows)
+SELECT ctid FROM tsample3_@amname@ TABLESAMPLE BERNOULLI(0.0001) REPEATABLE(5);
+ ctid 
+------
+(0 rows)
+
+SELECT count(DISTINCT ctid) FROM tsample3_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 65635 
+(1 row)
+
+-- Case 4: Logical heap block with hole in the beginning on a single QE
+CREATE TABLE tsample4_@amname@(i int) USING @amname@;
+CREATE TABLE
+BEGIN;
+BEGIN
+INSERT INTO tsample4_@amname@ SELECT 1 FROM generate_series(1, 50);
+INSERT 0 50
+ABORT;
+ROLLBACK
+INSERT INTO tsample4_@amname@ SELECT 1 FROM generate_series(1, 32800);
+INSERT 0 32800
+SELECT right(split_part(ctid::text, ',', 1), -1) as blknum, count(*) FROM tsample4_@amname@ GROUP BY 1;
+ blknum   | count 
+----------+-------
+ 33554433 | 133   
+ 33554432 | 32667 
+(2 rows)
+SELECT count(DISTINCT ctid) FROM tsample4_@amname@;
+ count 
+-------
+ 32800 
+(1 row)
+
+SELECT ctid FROM tsample4_@amname@ TABLESAMPLE BERNOULLI(0.0001) REPEATABLE(5);
+ ctid 
+------
+(0 rows)
+SELECT ctid FROM tsample4_@amname@ TABLESAMPLE BERNOULLI(0.0001) REPEATABLE(5);
+ ctid 
+------
+(0 rows)
+
+SELECT count(DISTINCT ctid) FROM tsample4_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 32800 
+(1 row)
+
+-- Case 5: Logical heap block with hole in the middle on a single QE
+CREATE TABLE tsample5_@amname@(i int) USING @amname@;
+CREATE TABLE
+INSERT INTO tsample5_@amname@ SELECT 1 FROM generate_series(1, 50);
+INSERT 0 50
+INSERT INTO tsample5_@amname@ SELECT 1 FROM generate_series(1, 32800);
+INSERT 0 32800
+SELECT right(split_part(ctid::text, ',', 1), -1) as blknum, count(*) FROM tsample5_@amname@ GROUP BY 1;
+ blknum   | count 
+----------+-------
+ 33554433 | 133   
+ 33554432 | 32717 
+(2 rows)
+SELECT count(DISTINCT ctid) FROM tsample5_@amname@;
+ count 
+-------
+ 32850 
+(1 row)
+
+SELECT ctid FROM tsample5_@amname@ TABLESAMPLE BERNOULLI(0.01) REPEATABLE(1);
+ ctid             
+------------------
+ (33554432,13824) 
+ (33554432,14962) 
+(2 rows)
+SELECT ctid FROM tsample5_@amname@ TABLESAMPLE BERNOULLI(0.01) REPEATABLE(1);
+ ctid             
+------------------
+ (33554432,13824) 
+ (33554432,14962) 
+(2 rows)
+
+SELECT count(DISTINCT ctid) FROM tsample5_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 32850 
+(1 row)
+
+-- Case 6: Logical heap block with hole at the end on a single QE
+CREATE TABLE tsample6_@amname@(i int) USING @amname@;
+CREATE TABLE
+INSERT INTO tsample6_@amname@ SELECT 1 FROM generate_series(1, 32700);
+INSERT 0 32700
+INSERT INTO tsample6_@amname@ SELECT 1 FROM generate_series(1, 200);
+INSERT 0 200
+SELECT right(split_part(ctid::text, ',', 1), -1) as blknum, count(*) FROM tsample6_@amname@ GROUP BY 1;
+ blknum   | count 
+----------+-------
+ 33554433 | 200   
+ 33554432 | 32700 
+(2 rows)
+SELECT count(DISTINCT ctid) FROM tsample6_@amname@;
+ count 
+-------
+ 32900 
+(1 row)
+
+SELECT ctid FROM tsample6_@amname@ TABLESAMPLE BERNOULLI(0.01) REPEATABLE(1);
+ ctid             
+------------------
+ (33554432,13824) 
+ (33554432,14962) 
+(2 rows)
+SELECT ctid FROM tsample6_@amname@ TABLESAMPLE BERNOULLI(0.01) REPEATABLE(1);
+ ctid             
+------------------
+ (33554432,13824) 
+ (33554432,14962) 
+(2 rows)
+
+SELECT count(DISTINCT ctid) FROM tsample6_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 32900 
+(1 row)
+
+-- Case 7: Multiple full logical heap blocks across 2 aosegs on a single QE
+CREATE TABLE tsample7_@amname@(i int) USING @amname@;
+CREATE TABLE
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: INSERT INTO tsample7_@amname@ SELECT 1 FROM generate_series(1, 32767 + 32768);
+INSERT 0 65535
+2: INSERT INTO tsample7_@amname@ SELECT 20 FROM generate_series(1, 32767 + 32768);
+INSERT 0 65535
+1: COMMIT;
+COMMIT
+2: COMMIT;
+COMMIT
+
+SELECT right(split_part(ctid::text, ',', 1), -1) as blknum, count(*) FROM tsample7_@amname@ GROUP BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 32767 
+ 33554433 | 32768 
+ 67108864 | 32767 
+ 67108865 | 32768 
+(4 rows)
+SELECT count(DISTINCT ctid) FROM tsample7_@amname@;
+ count  
+--------
+ 131070 
+(1 row)
+
+SELECT ctid FROM tsample7_@amname@ TABLESAMPLE BERNOULLI(0.01) REPEATABLE(1);
+ ctid             
+------------------
+ (33554432,13824) 
+ (33554432,14962) 
+ (33554433,2096)  
+ (33554433,5866)  
+ (33554433,15922) 
+ (33554433,28588) 
+ (33554433,30496) 
+ (67108864,22419) 
+ (67108864,24501) 
+ (67108864,30450) 
+ (67108865,10043) 
+ (67108865,12536) 
+ (67108865,15619) 
+ (67108865,25530) 
+(14 rows)
+SELECT ctid FROM tsample7_@amname@ TABLESAMPLE BERNOULLI(0.01) REPEATABLE(1);
+ ctid             
+------------------
+ (33554432,13824) 
+ (33554432,14962) 
+ (33554433,2096)  
+ (33554433,5866)  
+ (33554433,15922) 
+ (33554433,28588) 
+ (33554433,30496) 
+ (67108864,22419) 
+ (67108864,24501) 
+ (67108864,30450) 
+ (67108865,10043) 
+ (67108865,12536) 
+ (67108865,15619) 
+ (67108865,25530) 
+(14 rows)
+
+SELECT count(DISTINCT ctid) FROM tsample7_@amname@ TABLESAMPLE BERNOULLI(100);
+ count  
+--------
+ 131070 
+(1 row)
+
+-- Case 8: Logical heap blocks with holes across 2 aosegs on a single QE
+CREATE TABLE tsample8_@amname@(i int) USING @amname@;
+CREATE TABLE
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: INSERT INTO tsample8_@amname@ SELECT 1 FROM generate_series(1, 5);
+INSERT 0 5
+2: INSERT INTO tsample8_@amname@ SELECT 20 FROM generate_series(1, 10);
+INSERT 0 10
+1: COMMIT;
+COMMIT
+2: ABORT;
+ROLLBACK
+1: INSERT INTO tsample8_@amname@ SELECT 1 FROM generate_series(1, 15);
+INSERT 0 15
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: INSERT INTO tsample8_@amname@ SELECT 1 FROM generate_series(1, 20);
+INSERT 0 20
+2: INSERT INTO tsample8_@amname@ SELECT 20 FROM generate_series(1, 25);
+INSERT 0 25
+1: ABORT;
+ROLLBACK
+2: COMMIT;
+COMMIT
+SELECT right(split_part(ctid::text, ',', 1), -1) as blknum, count(*) FROM tsample8_@amname@ GROUP BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 5     
+ 67108864 | 40    
+(2 rows)
+SELECT count(DISTINCT ctid) FROM tsample8_@amname@;
+ count 
+-------
+ 45    
+(1 row)
+
+SELECT ctid FROM tsample8_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(1);
+ ctid           
+----------------
+ (33554432,6)   
+ (67108864,103) 
+ (67108864,107) 
+ (67108864,203) 
+ (67108864,209) 
+ (67108864,215) 
+ (67108864,216) 
+ (67108864,223) 
+(8 rows)
+SELECT ctid FROM tsample8_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(1);
+ ctid           
+----------------
+ (33554432,6)   
+ (67108864,103) 
+ (67108864,107) 
+ (67108864,203) 
+ (67108864,209) 
+ (67108864,215) 
+ (67108864,216) 
+ (67108864,223) 
+(8 rows)
+
+SELECT count(DISTINCT ctid) FROM tsample8_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 45    
+(1 row)
+
+-- Case 9: Logical heap blocks with deleted tuples on each QE
+CREATE TABLE tsample9_@amname@(i int, j int) USING @amname@;
+CREATE TABLE
+INSERT INTO tsample9_@amname@ SELECT 1, j FROM generate_series(1, 32767 + 32768 + 100) j;
+INSERT 0 65635
+DELETE FROM tsample9_@amname@ WHERE j < 32767/2;
+DELETE 16382
+DELETE FROM tsample9_@amname@ WHERE j > 65535;
+DELETE 100
+SELECT right(split_part(ctid::text, ',', 1), -1) as blknum, count(*) FROM tsample9_@amname@ GROUP BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 16385 
+ 33554433 | 32768 
+(2 rows)
+SELECT count(*) FROM tsample9_@amname@;
+ count 
+-------
+ 49153 
+(1 row)
+
+SELECT ctid FROM tsample9_@amname@ TABLESAMPLE BERNOULLI(0.01) REPEATABLE(1);
+ ctid             
+------------------
+ (33554433,2096)  
+ (33554433,5866)  
+ (33554433,15922) 
+ (33554433,28588) 
+ (33554433,30496) 
+(5 rows)
+SELECT ctid FROM tsample9_@amname@ TABLESAMPLE BERNOULLI(0.01) REPEATABLE(1);
+ ctid             
+------------------
+ (33554433,2096)  
+ (33554433,5866)  
+ (33554433,15922) 
+ (33554433,28588) 
+ (33554433,30496) 
+(5 rows)
+
+SELECT count(*) FROM tsample9_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 49153 
+(1 row)
+
+-- Case 10: Test rescans (similar to upstream test in regress/tablesample.sql)
+
+CREATE TABLE ttr1 (a int, b int) USING @amname@ DISTRIBUTED BY (a);
+CREATE TABLE
+CREATE TABLE ttr2 (a int, b int) USING @amname@ DISTRIBUTED BY (a);
+CREATE TABLE
+INSERT INTO ttr1 VALUES (1, 1), (12, 1), (31, 1), (NULL, NULL);
+INSERT 0 4
+INSERT INTO ttr2 VALUES (1, 2), (12, 2), (31, 2), (NULL, 6);
+INSERT 0 4
+ANALYZE ttr1;
+ANALYZE
+ANALYZE ttr2;
+ANALYZE
+SET enable_hashjoin TO OFF;
+SET
+SET enable_mergejoin TO OFF;
+SET
+SET enable_nestloop TO ON;
+SET
+
+EXPLAIN (COSTS OFF) SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (50) REPEATABLE (2), ttr2 TABLESAMPLE BERNOULLI (50) REPEATABLE (2) WHERE ttr1.a = ttr2.a;
+ QUERY PLAN                                                                        
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)                                          
+   ->  Nested Loop                                                                 
+         Join Filter: (ttr1.a = ttr2.a)                                            
+         ->  Sample Scan on ttr1                                                   
+               Sampling: bernoulli ('50'::real) REPEATABLE ('2'::double precision) 
+         ->  Sample Scan on ttr2                                                   
+               Sampling: bernoulli ('50'::real) REPEATABLE ('2'::double precision) 
+ Optimizer: Postgres-based planner                                                 
+(8 rows)
+SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (50) REPEATABLE (2), ttr2 TABLESAMPLE BERNOULLI (50) REPEATABLE (2) WHERE ttr1.a = ttr2.a;
+ a  | b | a  | b 
+----+---+----+---
+ 31 | 1 | 31 | 2 
+(1 row)
+
+RESET enable_hashjoin;
+RESET
+RESET enable_mergejoin;
+RESET
+RESET enable_nestloop;
+RESET
+DROP TABLE ttr1;
+DROP TABLE
+DROP TABLE ttr2;
+DROP TABLE

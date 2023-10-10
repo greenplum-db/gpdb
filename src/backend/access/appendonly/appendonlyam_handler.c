@@ -21,6 +21,7 @@
 #include "access/heapam.h"
 #include "access/multixact.h"
 #include "access/tableam.h"
+#include "access/tsmapi.h"
 #include "access/tuptoaster.h"
 #include "access/xact.h"
 #include "catalog/aoseg.h"
@@ -2262,26 +2263,158 @@ appendonly_scan_bitmap_next_tuple(TableScanDesc scan,
 static bool
 appendonly_scan_sample_next_block(TableScanDesc scan, SampleScanState *scanstate)
 {
+	TsmRoutine *tsm = scanstate->tsmroutine;
 	/*
 	 * GPDB_95_MERGE_FIXME: Add support for AO tables
 	 */
-	ereport(ERROR,
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 errmsg("invalid relation type"),
-			 errhint("Sampling is only supported in heap tables.")));
+	if (tsm->NextSampleBlock)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("invalid relation type"),
+				 errhint("SYSTEM sampling is only supported in heap tables.")));
+	else
+	{
+		/* scanning table sequentially */
+		AppendOnlyScanDesc aoscan = (AppendOnlyScanDesc) scan;
+		ItemPointer        currtid = &aoscan->sampleSlot->tts_tid;
+
+		if (aoscan->aos_done_all_segfiles)
+		{
+			/* no more items in relation, exit */
+			ExecClearTuple(aoscan->sampleSlot);
+			return false;
+		}
+
+		/* First time in this function */
+		if (!ItemPointerIsValid(currtid))
+		{
+			/*
+			 * We must scan the first tuple into the sample slot, so that the
+			 * entry criteria for appendonly_scan_sample_next_tuple() is met.
+			 */
+			if (!appendonly_getnextslot(scan, ForwardScanDirection, aoscan->sampleSlot))
+			{
+				ExecClearTuple(aoscan->sampleSlot);
+				return false;
+			}
+		}
+	}
+
+	return true;
 }
 
 static bool
 appendonly_scan_sample_next_tuple(TableScanDesc scan, SampleScanState *scanstate,
 							  TupleTableSlot *slot)
 {
+	TsmRoutine 			*tsm = scanstate->tsmroutine;
+	AppendOnlyScanDesc 	aoscan = (AppendOnlyScanDesc) scan;
+	TupleTableSlot      *sampleslot = aoscan->sampleSlot;
+	BlockNumber  		targetblk;
+	OffsetNumber 		currrownum;
+
 	/*
-	 * GPDB_95_MERGE_FIXME: Add support for AO tables
+	 * Entry criteria:
+	 *
+	 * (1) If we are switching to a new "next" logical block:
+	 * We currently expect that the 1st tuple in the "next" logical block has
+	 * already been read and has been stored in the scan's sample slot. This
+	 * will be the next tuple considered for sampling.
+	 *
+	 * (2) If we are in the  "next" tuple in the current logical block:
+	 * We currently expect that the previously sampled tuple (from the same
+	 * block) is present in the scan's sample slot. The tuple after this one
+	 * will be the next tuple considered for sampling.
 	 */
-	ereport(ERROR,
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 errmsg("invalid relation type"),
-			 errhint("Sampling is only supported in heap tables.")));
+	Assert(!TTS_EMPTY(sampleslot));
+	Assert(ItemPointerIsValid(&sampleslot->tts_tid));
+	targetblk  = ItemPointerGetBlockNumber(&sampleslot->tts_tid);
+	currrownum = ItemPointerGetOffsetNumber(&sampleslot->tts_tid);
+
+	for (;;)
+	{
+		OffsetNumber targetrownum;
+		BlockNumber  currblk;
+
+		CHECK_FOR_INTERRUPTS();
+
+		/* Ask the tablesample method which rows to scan on this logical page. */
+		targetrownum = tsm->NextSampleTuple(scanstate,
+											targetblk,
+											AO_MAX_TUPLES_PER_HEAP_BLOCK);
+		if (targetrownum != InvalidOffsetNumber)
+		{
+			/* Seek to the targetrownum in the targetblk by scanning sequentially */
+			while (currrownum < targetrownum)
+			{
+				if (!appendonly_getnextslot(&aoscan->rs_base, ForwardScanDirection, sampleslot))
+					goto end_of_rel;
+
+				currblk = ItemPointerGetBlockNumber(&sampleslot->tts_tid);
+				currrownum = ItemPointerGetOffsetNumber(&sampleslot->tts_tid);
+
+				if (currblk > targetblk)
+				{
+					/*
+					 * The target row number fell into a hole at the end of the
+					 * target logical heap block, and we have scanned our way to
+					 * the next one.
+					 *
+					 * We should move on to sampling from this next one (in the
+					 * current aoseg or a subsequent one). We invoke
+					 * NextSampleTuple() with the current tuple offset, to mimic
+					 * an end-of-block sampler reset.
+					 */
+					targetrownum = tsm->NextSampleTuple(scanstate,
+														targetblk,
+														targetrownum);
+					Assert(targetrownum == InvalidOffsetNumber);
+					ExecClearTuple(slot);
+					return false;
+				}
+			}
+
+			if (currrownum == targetrownum)
+			{
+				/*
+				 * We "seeked" our way to the target row number. Copy the tuple
+				 * from the sample slot into the output slot, and move on to
+				 * the next tuple.
+				 */
+				ExecCopySlot(slot, sampleslot);
+				ItemPointerCopy(&sampleslot->tts_tid, &slot->tts_tid);
+				/* Count successfully-fetched tuples as heap fetches */
+				pgstat_count_heap_getnext(scan->rs_rd);
+
+				return true;
+			}
+		}
+		else
+		{
+			/*
+			 * If we get here, it means that we have considered all tuples in
+			 * the current logical heap block, and it's time to move to the
+			 * next. We do so by scanning until we hit the next block (in the
+			 * current aoseg or a subsequent one).
+			 */
+			do
+			{
+				if (!appendonly_getnextslot(&aoscan->rs_base, ForwardScanDirection, sampleslot))
+					goto end_of_rel;
+				currblk = ItemPointerGetBlockNumber(&sampleslot->tts_tid);
+			} while (currblk <= targetblk);
+
+			ExecClearTuple(slot);
+			return false;
+		}
+	}
+
+end_of_rel:
+	/* no more items in relation, exit */
+	Assert(aoscan->aos_done_all_segfiles);
+	ExecClearTuple(slot);
+	ExecClearTuple(sampleslot);
+	return false;
 }
 
 /* ------------------------------------------------------------------------

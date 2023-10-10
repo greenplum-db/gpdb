@@ -257,6 +257,9 @@ typedef struct AOCSScanDescData
 	 * across all columns projected, so far. It is used for scan progress reporting.
 	 */
 	int64		totalBytesRead;
+
+	/* sampleSlot: Holds tuple last read as part of a sample scan */
+	TupleTableSlot *sampleSlot;
 } AOCSScanDescData;
 
 typedef AOCSScanDescData *AOCSScanDesc;
