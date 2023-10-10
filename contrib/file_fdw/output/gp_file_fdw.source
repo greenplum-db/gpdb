@@ -29,6 +29,18 @@ CREATE FOREIGN TABLE text_csv_all (
     word1 text, word2 text
 ) SERVER file_server
 OPTIONS (format 'csv', filename '@abs_srcdir@/data/text<SEGID>.csv', mpp_execute 'all segments');
+EXPLAIN SELECT * FROM text_csv_all ORDER BY word1;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=562.71..710.61 rows=10440 width=64)
+   Merge Key: word1
+   ->  Sort  (cost=562.71..571.41 rows=3480 width=64)
+         Sort Key: word1
+         ->  Foreign Scan on text_csv_all  (cost=0.00..358.00 rows=3480 width=64)
+               Foreign File: @abs_srcdir@/data/text<SEGID>.csv
+ Optimizer: Postgres-based planner
+(7 rows)
+
 SELECT * FROM text_csv_all ORDER BY word1;
  word1 | word2 
 -------+-------
@@ -59,7 +71,7 @@ explain select word1 from text_csv_coordinator union all select word1 from text_
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..497.20 rows=10440 width=32)
          ->  Foreign Scan on text_csv_all  (cost=0.00..358.00 rows=3480 width=32)
                Foreign File: @abs_srcdir@/data/text<SEGID>.csv
- Optimizer: Postgres query optimizer
+ Optimizer: Postgres-based planner
 (8 rows)
 
 select word1 from text_csv_coordinator union all select word1 from text_csv_all;
@@ -85,7 +97,7 @@ explain select word1 from text_csv_all union all select word1 from text_csv_coor
    ->  Foreign Scan on text_csv_coordinator  (cost=0.00..1.15 rows=2 width=32)
          Foreign File: @abs_srcdir@/file_fdw/data/text.csv
          Foreign File Size: 86 b
- Optimizer: Postgres query optimizer
+ Optimizer: Postgres-based planner
 (8 rows)
 
 select word1 from text_csv_all union all select word1 from text_csv_coordinator;
@@ -120,7 +132,7 @@ explain  select word1 from text_csv_coordinator ft1, bar where ft1.word1 = bar.a
                      Foreign File Size: 86 b
          ->  Hash  (cost=1.01..1.01 rows=1 width=4)
                ->  Seq Scan on bar  (cost=0.00..1.01 rows=1 width=4)
- Optimizer: Postgres query optimizer
+ Optimizer: Postgres-based planner
 (11 rows)
 
 select word1 from text_csv_coordinator ft1, bar where ft1.word1 = bar.a;

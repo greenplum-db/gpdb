@@ -102,22 +102,15 @@ GetAppendOnlyEntryAttributes(Oid relid,
 {
 	Relation	ao_rel;
 	StdRdOptions *relopts;
-	HeapTuple	tuple;
-	Datum reloptions;
-	bool		isNull;
 
 	ao_rel = table_open(relid, AccessShareLock);
 
-	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
-	if (!HeapTupleIsValid(tuple))
-		elog(ERROR, "cache lookup failed for relation %u", relid);
-
-	reloptions = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_reloptions,
-								 &isNull);
-	if (isNull)
-		reloptions = (Datum) 0;
-
-	relopts = (StdRdOptions *) default_reloptions(reloptions, false, RELOPT_KIND_APPENDOPTIMIZED);
+	/* construct deafult options */
+	if (ao_rel->rd_options == NULL)
+		relopts = (StdRdOptions *) default_reloptions((Datum) 0,
+				false, RELOPT_KIND_APPENDOPTIMIZED);
+	else
+		relopts = (StdRdOptions *) ao_rel->rd_options;
 
 	if (blocksize != NULL)
 		*blocksize = relopts->blocksize;
@@ -131,59 +124,7 @@ GetAppendOnlyEntryAttributes(Oid relid,
 	if (checksum != NULL)
 		*checksum = relopts->checksum;
 
-	ReleaseSysCache(tuple);
 	table_close(ao_rel, AccessShareLock);
-}
-
-/*
- * Get the OIDs of the auxiliary relations and their indexes for an appendonly
- * relation. This should only be called on tables with pg_appendonly entries,
- * which currently are just non-partitioned AO/CO tables.
- *
- * The OIDs will be retrieved only when the corresponding output variable is
- * not NULL.
- */
-void
-GetAppendOnlyEntryAuxOids(Relation rel,
-						  Oid *segrelid,
-						  Oid *blkdirrelid,
-						  Oid *visimaprelid)
-{
-	Form_pg_appendonly	aoForm;
-
-	/* the relation has to be a non-partitioned AO/CO table */
-	Assert(RelationIsAppendOptimized(rel));
-
-	aoForm = rel->rd_appendonly;
-
-	if (segrelid != NULL)
-		*segrelid = aoForm->segrelid;
-
-	if (blkdirrelid != NULL)
-		*blkdirrelid = aoForm->blkdirrelid;
-
-	if (visimaprelid != NULL)
-		*visimaprelid = aoForm->visimaprelid;
-}
-
-/*
- * Get the pg_appendonly entry for the relation. This should only be called on 
- * tables with pg_appendonly entries, which currently are just non-partitioned
- * AO/CO tables. The pg_appendonly data is copied into the Form_pg_appendonly
- * pointer which should be valid.
- */
-void
-GetAppendOnlyEntry(Relation rel, Form_pg_appendonly aoEntry)
-{
-	Form_pg_appendonly	aoForm;
-
-	/* the relation has to be a non-partitioned AO/CO table and the aoEntry is valid */
-	Assert(RelationIsAppendOptimized(rel));
-	Assert(aoEntry);
-
-	aoForm = rel->rd_appendonly;
-
-	memcpy(aoEntry, aoForm, APPENDONLY_TUPLE_SIZE);
 }
 
 /*
@@ -308,7 +249,7 @@ RemoveAppendonlyEntry(Oid relid)
 	}
 
 	/* Piggyback here to remove gp_fastsequence entries */
-	RemoveFastSequenceEntry(aosegrelid);
+	RemoveFastSequenceEntry(relid, aosegrelid);
 
 	/*
 	 * Delete the appendonly table entry from the catalog (pg_appendonly).

@@ -24,18 +24,19 @@ using namespace gpos;
 //		Message initialization for GPOPT exceptions
 //
 //---------------------------------------------------------------------------
-GPOS_RESULT
+void
 gpopt::EresExceptionInit(CMemoryPool *mp)
 {
 	//---------------------------------------------------------------------------
 	// Basic DXL messages in English
 	//---------------------------------------------------------------------------
 	CMessage rgmsg[ExmiSentinel] = {
-		CMessage(CException(gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound),
-				 CException::ExsevError,
-				 GPOS_WSZ_WSZLEN(
-					 "No plan has been computed for required properties"),
-				 0, GPOS_WSZ_WSZLEN("No plan found")),
+		CMessage(
+			CException(gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound),
+			CException::ExsevError,
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA"),
+			0, GPOS_WSZ_WSZLEN("No plan found")),
 
 		CMessage(
 			CException(gpopt::ExmaGPOPT, gpopt::ExmiInvalidPlanAlternative),
@@ -68,27 +69,30 @@ gpopt::EresExceptionInit(CMemoryPool *mp)
 					   gpopt::ExmiUnsupportedCompositePartKey),
 			CException::ExsevNotice,
 			GPOS_WSZ_WSZLEN(
-				"Feature not supported by the Pivotal Query Optimizer: composite partitioning keys"),
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: composite partitioning keys"),
 			0,
 			GPOS_WSZ_WSZLEN(
-				"Feature not supported by the Pivotal Query Optimizer: composite partitioning keys")),
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: composite partitioning keys")),
 
 		CMessage(
 			CException(gpopt::ExmaGPOPT,
 					   gpopt::ExmiUnsupportedNonDeterministicUpdate),
 			CException::ExsevNotice,
 			GPOS_WSZ_WSZLEN(
-				"Feature not supported by the Pivotal Query Optimizer: non-deterministic DML statements"),
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: non-deterministic DML statements"),
 			0,
 			GPOS_WSZ_WSZLEN(
-				"Feature not supported by the Pivotal Query Optimizer: non-deterministic DML statements")),
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: non-deterministic DML statements")),
 
-		CMessage(CException(gpopt::ExmaGPOPT,
-							gpopt::ExmiUnsatisfiedRequiredProperties),
-				 CException::ExsevError,
-				 GPOS_WSZ_WSZLEN("Plan does not satisfy required properties"),
-				 0,
-				 GPOS_WSZ_WSZLEN("Plan does not satisfy required properties")),
+		CMessage(
+			CException(gpopt::ExmaGPOPT,
+					   gpopt::ExmiUnsatisfiedRequiredProperties),
+			CException::ExsevError,
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because plan does not satisfy required properties in GPORCA"),
+			0,
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because plan does not satisfy required properties in GPORCA")),
 
 		CMessage(
 			CException(gpopt::ExmaGPOPT, gpopt::ExmiEvalUnsupportedScalarExpr),
@@ -113,30 +117,15 @@ gpopt::EresExceptionInit(CMemoryPool *mp)
 				 GPOS_WSZ_WSZLEN("Missing group stats")),
 	};
 
-	GPOS_RESULT eres = GPOS_FAILED;
+	// copy exception array into heap
+	CMessage *rgpmsg[gpopt::ExmiSentinel];
+	CMessageRepository *pmr = CMessageRepository::GetMessageRepository();
 
-	GPOS_TRY
+	for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgpmsg); i++)
 	{
-		// copy exception array into heap
-		CMessage *rgpmsg[gpopt::ExmiSentinel];
-		CMessageRepository *pmr = CMessageRepository::GetMessageRepository();
-
-		for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgpmsg); i++)
-		{
-			rgpmsg[i] = GPOS_NEW(mp) CMessage(rgmsg[i]);
-			pmr->AddMessage(ElocEnUS_Utf8, rgpmsg[i]);
-		}
-
-		eres = GPOS_OK;
+		rgpmsg[i] = GPOS_NEW(mp) CMessage(rgmsg[i]);
+		pmr->AddMessage(ElocEnUS_Utf8, rgpmsg[i]);
 	}
-	GPOS_CATCH_EX(ex)
-	{
-		return GPOS_FAILED;
-	}
-
-	GPOS_CATCH_END;
-
-	return eres;
 }
 
 

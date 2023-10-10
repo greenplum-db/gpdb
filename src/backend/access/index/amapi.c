@@ -141,3 +141,22 @@ amvalidate(PG_FUNCTION_ARGS)
 
 	PG_RETURN_BOOL(result);
 }
+
+/*
+ * GetAmName
+ *		Retrieve the name of a relation's access method
+ */
+char *
+GetAmName(Oid amoid)
+{
+	Form_pg_am	amform;
+	HeapTuple	tuple;
+
+	tuple = SearchSysCache1(AMOID, ObjectIdGetDatum(amoid));
+	if (!HeapTupleIsValid(tuple))
+		elog(ERROR, "cache lookup failed for relam object %u", amoid);
+
+	amform = (Form_pg_am) GETSTRUCT(tuple);
+	ReleaseSysCache(tuple);
+	return NameStr(amform->amname);
+}

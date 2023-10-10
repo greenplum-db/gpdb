@@ -10,7 +10,7 @@ An entry's `amopmethod` must match the `opfmethod` of its containing operator fa
 |`amopfamily`|oid|pg\_opfamily.oid|The operator family that this entry is for|
 |`amoplefttype`|oid|pg\_type.oid|Left-hand input data type of operator|
 |`amoprighttype`|oid|pg\_type.oid|Right-hand input data type of operator|
-|`amopstrategy`|int2| |Operator strategy number|
+|`amopstrategy`|smallint| |Operator strategy number|
 |`amoppurpose`|char| |Operator purpose, either `s` for search or `o` for ordering|
 |`amopopr`|oid|pg\_operator.oid|OID of the operator|
 |`amopmethod`|oid|pg\_am.oid|Index access method for the operator family|

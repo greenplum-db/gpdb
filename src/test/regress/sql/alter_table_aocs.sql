@@ -203,10 +203,10 @@ WHERE relname='addcol6'));
 alter table addcol6 add column d serial;
 
 -- select, insert, update after 'add column'
-select c,d from addcol6 where d > 15 order by d;
+select count(*) from addcol6 where d > 4;
 insert into addcol6 select i, i, 71/i from generate_series(21,30)i;
 select count(*) from addcol6;
-update addcol6 set b = 0, c = 0 where d > 15;
+update addcol6 set b = 0, c = 0 where d > 4;
 select count(*) from addcol6 where b = 0 and c = 0;
 
 -- partitioned table tests

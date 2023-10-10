@@ -1,0 +1,93 @@
+-- Test case for the scenario which ic-proxy peer listener port has been occupied
+
+-- start_matchsubs
+-- m/ic_tcp.c:\d+/
+-- s/ic_tcp.c:\d+/ic_tcp.c:LINE/
+-- end_matchsubs
+
+1:create table PR_16438 (i int);
+CREATE TABLE
+1:insert into PR_16438 select generate_series(1,100);
+INSERT 0 100
+1q: ... <quitting>
+
+-- get one port and occupy it (start_py_httpserver.sh), then restart cluster
+-- start_ignore
+! ic_proxy_port=`psql postgres -Atc "show gp_interconnect_proxy_addresses;" | awk -F ',' '{print $1}' | awk -F ':' '{print $4}'` && gpstop -ai && ./script/start_py_httpserver.sh $ic_proxy_port;
+20230917:16:14:48:484878 gpstop:gpdb:ubuntu-[INFO]:-Starting gpstop with args: -ai
+20230917:16:14:48:484878 gpstop:gpdb:ubuntu-[INFO]:-Gathering information and validating the environment...
+20230917:16:14:48:484878 gpstop:gpdb:ubuntu-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20230917:16:14:48:484878 gpstop:gpdb:ubuntu-[INFO]:-Obtaining Segment details from coordinator...
+20230917:16:14:48:484878 gpstop:gpdb:ubuntu-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.19124.g5c36a44ab0 build dev'
+20230917:16:14:48:484878 gpstop:gpdb:ubuntu-[INFO]:-Commencing Coordinator instance shutdown with mode='immediate'
+20230917:16:14:48:484878 gpstop:gpdb:ubuntu-[INFO]:-Coordinator segment instance directory=/home/ubuntu/gp/data7/master/gpseg-1
+20230917:16:14:49:484878 gpstop:gpdb:ubuntu-[INFO]:-Attempting forceful termination of any leftover coordinator process
+20230917:16:14:49:484878 gpstop:gpdb:ubuntu-[INFO]:-Terminating processes for segment /home/ubuntu/gp/data7/master/gpseg-1
+20230917:16:14:52:484878 gpstop:gpdb:ubuntu-[INFO]:-No standby coordinator host configured
+20230917:16:14:52:484878 gpstop:gpdb:ubuntu-[INFO]:-Targeting dbid [2, 5, 3, 6, 4, 7] for shutdown
+20230917:16:14:52:484878 gpstop:gpdb:ubuntu-[INFO]:-Commencing parallel primary segment instance shutdown, please wait...
+20230917:16:14:52:484878 gpstop:gpdb:ubuntu-[INFO]:-0.00% of jobs completed
+20230917:16:14:56:484878 gpstop:gpdb:ubuntu-[INFO]:-100.00% of jobs completed
+20230917:16:14:56:484878 gpstop:gpdb:ubuntu-[INFO]:-Commencing parallel mirror segment instance shutdown, please wait...
+20230917:16:14:56:484878 gpstop:gpdb:ubuntu-[INFO]:-0.00% of jobs completed
+20230917:16:14:58:484878 gpstop:gpdb:ubuntu-[INFO]:-100.00% of jobs completed
+20230917:16:14:58:484878 gpstop:gpdb:ubuntu-[INFO]:-----------------------------------------------------
+20230917:16:14:58:484878 gpstop:gpdb:ubuntu-[INFO]:-   Segments stopped successfully      = 6
+20230917:16:14:58:484878 gpstop:gpdb:ubuntu-[INFO]:-   Segments with errors during stop   = 0
+20230917:16:14:58:484878 gpstop:gpdb:ubuntu-[INFO]:-----------------------------------------------------
+20230917:16:14:58:484878 gpstop:gpdb:ubuntu-[INFO]:-Successfully shutdown 6 of 6 segment instances 
+20230917:16:14:58:484878 gpstop:gpdb:ubuntu-[INFO]:-Database successfully shutdown with no errors reported
+started a http server
+
+! sleep 2 && gpstart -a;
+20230917:16:15:00:488914 gpstart:gpdb:ubuntu-[INFO]:-Starting gpstart with args: -a
+20230917:16:15:00:488914 gpstart:gpdb:ubuntu-[INFO]:-Gathering information and validating the environment...
+20230917:16:15:00:488914 gpstart:gpdb:ubuntu-[INFO]:-Greenplum Binary Version: 'postgres (Greenplum Database) 7.0.0-alpha.0+dev.19124.g5c36a44ab0 build dev'
+20230917:16:15:00:488914 gpstart:gpdb:ubuntu-[INFO]:-Greenplum Catalog Version: '302307241'
+20230917:16:15:00:488914 gpstart:gpdb:ubuntu-[INFO]:-Starting Coordinator instance in admin mode
+20230917:16:15:00:488914 gpstart:gpdb:ubuntu-[INFO]:-CoordinatorStart pg_ctl cmd is env GPSESSID=0000000000 GPERA=None $GPHOME/bin/pg_ctl -D /home/ubuntu/gp/data7/master/gpseg-1 -l /home/ubuntu/gp/data7/master/gpseg-1/log/startup.log -w -t 600 -o " -c gp_role=utility " start
+20230917:16:15:01:488914 gpstart:gpdb:ubuntu-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20230917:16:15:01:488914 gpstart:gpdb:ubuntu-[INFO]:-Obtaining Segment details from coordinator...
+20230917:16:15:01:488914 gpstart:gpdb:ubuntu-[INFO]:-Setting new coordinator era
+20230917:16:15:01:488914 gpstart:gpdb:ubuntu-[INFO]:-Coordinator Started...
+20230917:16:15:01:488914 gpstart:gpdb:ubuntu-[INFO]:-Shutting down coordinator
+20230917:16:15:04:488914 gpstart:gpdb:ubuntu-[INFO]:-Commencing parallel primary and mirror segment instance startup, please wait...
+.
+20230917:16:15:05:488914 gpstart:gpdb:ubuntu-[INFO]:-Process results...
+20230917:16:15:05:488914 gpstart:gpdb:ubuntu-[INFO]:-
+20230917:16:15:05:488914 gpstart:gpdb:ubuntu-[INFO]:-----------------------------------------------------
+20230917:16:15:05:488914 gpstart:gpdb:ubuntu-[INFO]:-   Successful segment starts                                            = 6
+20230917:16:15:05:488914 gpstart:gpdb:ubuntu-[INFO]:-   Failed segment starts                                                = 0
+20230917:16:15:05:488914 gpstart:gpdb:ubuntu-[INFO]:-   Skipped segment starts (segments are marked down in configuration)   = 0
+20230917:16:15:05:488914 gpstart:gpdb:ubuntu-[INFO]:-----------------------------------------------------
+20230917:16:15:05:488914 gpstart:gpdb:ubuntu-[INFO]:-Successfully started 6 of 6 segment instances 
+20230917:16:15:05:488914 gpstart:gpdb:ubuntu-[INFO]:-----------------------------------------------------
+20230917:16:15:05:488914 gpstart:gpdb:ubuntu-[INFO]:-Starting Coordinator instance gpdb directory /home/ubuntu/gp/data7/master/gpseg-1 
+20230917:16:15:05:488914 gpstart:gpdb:ubuntu-[INFO]:-CoordinatorStart pg_ctl cmd is env GPSESSID=0000000000 GPERA=c25b3b36b0fe1320_230917161501 $GPHOME/bin/pg_ctl -D /home/ubuntu/gp/data7/master/gpseg-1 -l /home/ubuntu/gp/data7/master/gpseg-1/log/startup.log -w -t 600 -o " -c gp_role=dispatch " start
+20230917:16:15:05:488914 gpstart:gpdb:ubuntu-[INFO]:-Command pg_ctl reports Coordinator gpdb instance active
+20230917:16:15:05:488914 gpstart:gpdb:ubuntu-[INFO]:-Connecting to db template1 on host localhost
+20230917:16:15:05:488914 gpstart:gpdb:ubuntu-[INFO]:-No standby coordinator configured.  skipping...
+20230917:16:15:05:488914 gpstart:gpdb:ubuntu-[INFO]:-Database successfully started
+
+-- end_ignore
+
+-- execute a query (should failed)
+2&:select count(*) from PR_16438;  <waiting ...>
+FAILED:  Forked command is not blocking; got output: ERROR:  SetupInterconnect: We are in IC_PROXY mode, but IC-Proxy Listener failed, please check. (ic_tcp.c:1296)
+2<:  <... completed>
+FAILED:  Execution failed
+
+-- kill the script to release port and execute query again (should successfully)
+-- start_ignore
+! ps aux | grep http.server | grep -v grep | awk '{print $2}' | xargs kill;
+
+! sleep 2;
+
+-- end_ignore
+3:select count(*) from PR_16438;
+ count 
+-------
+ 100   
+(1 row)
+3:drop table PR_16438;
+DROP TABLE

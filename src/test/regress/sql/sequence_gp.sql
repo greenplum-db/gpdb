@@ -41,7 +41,8 @@ DROP SEQUENCE tmp_seq;
 
 DROP TABLE tmp_table;
 
-CREATE TABLE mytable (size INTEGER, gid bigserial NOT NULL);
+CREATE SEQUENCE mytable_gid_seq CACHE 1;
+CREATE TABLE mytable (size INTEGER, gid BIGINT NOT NULL DEFAULT nextval('mytable_gid_seq'));
 ALTER SEQUENCE mytable_gid_seq RESTART WITH 9223372036854775805;
 /* Consume rest of serial sequence column values */
 INSERT INTO mytable VALUES (1), (2), (3);

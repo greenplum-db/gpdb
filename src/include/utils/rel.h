@@ -107,10 +107,15 @@ typedef struct RelationData
 	List	   *rd_fkeylist;	/* list of ForeignKeyCacheInfo (see below) */
 	bool		rd_fkeyvalid;	/* true if list has been computed */
 
-	struct PartitionKeyData *rd_partkey;	/* partition key, or NULL */
+	/* data managed by RelationRetrievePartitionKey: */
+	PartitionKey rd_partkey;	/* partition key, or NULL */
 	MemoryContext rd_partkeycxt;	/* private context for rd_partkey, if any */
-	struct PartitionDescData *rd_partdesc;	/* partitions, or NULL */
+
+	/* data managed by RelationRetrievePartitionDesc: */
+	PartitionDesc rd_partdesc;	/* partition descriptor, or NULL */
 	MemoryContext rd_pdcxt;		/* private context for rd_partdesc, if any */
+
+	/* data managed by RelationGetPartitionQual: */
 	List	   *rd_partcheck;	/* partition CHECK quals */
 	bool		rd_partcheckvalid;	/* true if list has been computed */
 	MemoryContext rd_partcheckcxt;	/* private cxt for rd_partcheck, if any */
@@ -437,6 +442,10 @@ typedef struct ViewOptions
 #define RelationIsAoRows(relation) \
 	((relation)->rd_rel->relam == AO_ROW_TABLE_AM_OID)
 
+#define RelationStorageIsAoRows(relation) \
+	((relation)->rd_rel->relam == AO_ROW_TABLE_AM_OID && \
+		(relation)->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+
 /*
  * CAUTION: this macro is a violation of the absraction that table AM and
  * index AM interfaces provide.  Use of this macro is discouraged.  If
@@ -449,6 +458,10 @@ typedef struct ViewOptions
 #define RelationIsAoCols(relation) \
 	((relation)->rd_rel->relam == AO_COLUMN_TABLE_AM_OID)
 
+#define RelationStorageIsAoCols(relation) \
+	((relation)->rd_rel->relam == AO_COLUMN_TABLE_AM_OID && \
+		(relation)->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+
 /*
  * CAUTION: this macro is a violation of the absraction that table AM and
  * index AM interfaces provide.  Use of this macro is discouraged.  If
@@ -459,17 +472,11 @@ typedef struct ViewOptions
  * 		True iff relation has append only storage (can be row or column orientation)
  */
 #define RelationIsAppendOptimized(relation) \
-	((RelationIsAoRows(relation) || RelationIsAoCols(relation)) && \
-		relation->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
+	(RelationIsAoRows(relation) || RelationIsAoCols(relation))
 
-/*
- * Convenient macro for checking AO AMs
- *
- * RelationAMIsAO
- * 		True iff relam is ao_row or or ao_column.
- */
-#define RelationAMIsAO(relation) \
-	IsAccessMethodAO((relation)->rd_rel->relam)
+#define RelationStorageIsAO(relation) \
+	((RelationIsAoRows(relation) || RelationIsAoCols(relation)) && \
+		(relation)->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
 
 /*
  * RelationIsBitmapIndex
@@ -564,7 +571,7 @@ typedef struct ViewOptions
 			smgrsetowner(&((relation)->rd_smgr), \
 						 smgropen((relation)->rd_node, \
 								  (relation)->rd_backend, \
-								  RelationIsAppendOptimized(relation)?SMGR_AO:SMGR_MD)); \
+								  RelationStorageIsAO(relation)?SMGR_AO:SMGR_MD)); \
 	} while (0)
 
 /*
@@ -702,12 +709,20 @@ typedef struct ViewOptions
 /*
  * RelationGetPartitionKey
  *		Returns the PartitionKey of a relation
+ *
+ * GPDB: This should not be used anymore. It is superceded by
+ * RelationRetrievePartionKey, and is kept around only to prevent ABI 
+ * breakage. See comments on that function for more details.
  */
 #define RelationGetPartitionKey(relation) ((relation)->rd_partkey)
 
 /*
  * RelationGetPartitionDesc
  *		Returns partition descriptor for a relation.
+ *
+ * GPDB: This should not be used anymore. It is superceded by
+ * RelationRetrievePartionDesc, and is kept around only to prevent ABI 
+ * breakage. See comments on that function for more details.
  */
 #define RelationGetPartitionDesc(relation) ((relation)->rd_partdesc)
 

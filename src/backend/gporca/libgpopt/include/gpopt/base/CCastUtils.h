@@ -50,6 +50,9 @@ public:
 	// check whether the given expression is a cast of something
 	static BOOL FScalarCast(CExpression *pexpr);
 
+	// check whether the given expression is a cast of ident
+	static BOOL FScalarCastIdent(CExpression *pexpr);
+
 	// return the given expression without any binary coercible casts
 	// that exist on the top
 	static CExpression *PexprWithoutBinaryCoercibleCasts(CExpression *pexpr);

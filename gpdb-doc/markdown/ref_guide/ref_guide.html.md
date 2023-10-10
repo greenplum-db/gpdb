@@ -14,6 +14,8 @@ Reference information for Greenplum Database systems including SQL commands, sys
 
 -   **[Server Configuration Parameters](config_params/guc_config.html)**  
 
+-   **[Database Utilities](../utility_guide/utility_guide.html)**
+
 -   **[System Catalogs](system_catalogs/catalog_ref.html)**  
 
 -   **[The gp\_toolkit Administrative Schema](gp_toolkit.html)**  
@@ -21,7 +23,5 @@ Reference information for Greenplum Database systems including SQL commands, sys
 -   **[Server Programmatic Interfaces](extensions/srvapi_intro.html)**  
 
 -   **[SQL Features, Reserved and Key Words, and Compliance](misc.html)**  
-
--   **[Objects Removed in Greenplum 6](removed-objects.html)**  
 
 

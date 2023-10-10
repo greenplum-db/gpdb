@@ -258,7 +258,7 @@
       <dxl:ColumnStatistics Mdid="1.904881.1.1.14" Name="ss_ext_discount_amt" Width="5.000000"/>
       <dxl:ColumnStatistics Mdid="1.904881.1.1.7" Name="ss_store_sk" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.904881.1.1.6" Name="ss_addr_sk" Width="4.000000"/>
-      <dxl:GPDBFunc Mdid="0.6084.1.0" Name="gp_partition_selection" ReturnsSet="false" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6084.1.0" Name="gp_partition_selection" ReturnsSet="false" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.29.1.0" Name="cid" IsRedistributable="false" IsHashable="true" IsMergeJoinable="false" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -645,10 +645,10 @@
       <dxl:ColumnStatistics Mdid="1.904881.1.1.12" Name="ss_list_price" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.904881.1.1.5" Name="ss_hdemo_sk" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.904881.1.1.4" Name="ss_cdemo_sk" Width="4.000000"/>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.897052.1.1.29" Name="xmin" Width="4.000000"/>
@@ -679,94 +679,64 @@
       <dxl:Relation Mdid="6.904881.1.1" Name="store_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;29,23" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_sold_time_sk" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_item_sk" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_customer_sk" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_cdemo_sk" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_hdemo_sk" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_addr_sk" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_store_sk" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_promo_sk" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ticket_number" Attno="10" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_quantity" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_wholesale_cost" Attno="12" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_list_price" Attno="13" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_sales_price" Attno="14" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_discount_amt" Attno="15" Mdid="0.1700.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_sales_price" Attno="16" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_wholesale_cost" Attno="17" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_list_price" Attno="18" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_tax" Attno="19" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_coupon_amt" Attno="20" Mdid="0.1700.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_paid" Attno="21" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_paid_inc_tax" Attno="22" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_profit" Attno="23" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -782,94 +752,64 @@
       <dxl:Relation Mdid="6.904881001.1.1" Name="store_sales_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_sold_time_sk" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_item_sk" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_customer_sk" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_cdemo_sk" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_hdemo_sk" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_addr_sk" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_store_sk" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_promo_sk" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ticket_number" Attno="10" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_quantity" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_wholesale_cost" Attno="12" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_list_price" Attno="13" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_sales_price" Attno="14" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_discount_amt" Attno="15" Mdid="0.1700.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_sales_price" Attno="16" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_wholesale_cost" Attno="17" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_list_price" Attno="18" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_tax" Attno="19" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_coupon_amt" Attno="20" Mdid="0.1700.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_paid" Attno="21" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_paid_inc_tax" Attno="22" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_profit" Attno="23" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -893,94 +833,64 @@
       <dxl:Relation Mdid="6.904881002.1.1" Name="store_sales_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_sold_time_sk" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_item_sk" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_customer_sk" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_cdemo_sk" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_hdemo_sk" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_addr_sk" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_store_sk" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_promo_sk" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ticket_number" Attno="10" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_quantity" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_wholesale_cost" Attno="12" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_list_price" Attno="13" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_sales_price" Attno="14" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_discount_amt" Attno="15" Mdid="0.1700.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_sales_price" Attno="16" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_wholesale_cost" Attno="17" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_list_price" Attno="18" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_tax" Attno="19" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_coupon_amt" Attno="20" Mdid="0.1700.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_paid" Attno="21" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_paid_inc_tax" Attno="22" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_profit" Attno="23" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -1004,94 +914,64 @@
       <dxl:Relation Mdid="6.904881003.1.1" Name="store_sales_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_sold_time_sk" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_item_sk" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_customer_sk" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_cdemo_sk" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_hdemo_sk" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_addr_sk" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_store_sk" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_promo_sk" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ticket_number" Attno="10" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_quantity" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_wholesale_cost" Attno="12" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_list_price" Attno="13" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_sales_price" Attno="14" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_discount_amt" Attno="15" Mdid="0.1700.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_sales_price" Attno="16" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_wholesale_cost" Attno="17" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_list_price" Attno="18" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_tax" Attno="19" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_coupon_amt" Attno="20" Mdid="0.1700.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_paid" Attno="21" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_paid_inc_tax" Attno="22" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_profit" Attno="23" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -1115,94 +995,64 @@
       <dxl:Relation Mdid="6.904881004.1.1" Name="store_sales_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_sold_time_sk" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_item_sk" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_customer_sk" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_cdemo_sk" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_hdemo_sk" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_addr_sk" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_store_sk" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_promo_sk" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ticket_number" Attno="10" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_quantity" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_wholesale_cost" Attno="12" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_list_price" Attno="13" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_sales_price" Attno="14" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_discount_amt" Attno="15" Mdid="0.1700.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_sales_price" Attno="16" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_wholesale_cost" Attno="17" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_list_price" Attno="18" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_tax" Attno="19" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_coupon_amt" Attno="20" Mdid="0.1700.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_paid" Attno="21" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_paid_inc_tax" Attno="22" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_profit" Attno="23" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -1226,94 +1076,64 @@
       <dxl:Relation Mdid="6.904881005.1.1" Name="store_sales_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_sold_time_sk" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_item_sk" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_customer_sk" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_cdemo_sk" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_hdemo_sk" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_addr_sk" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_store_sk" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_promo_sk" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ticket_number" Attno="10" Mdid="0.20.1.0" Nullable="false" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_quantity" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_wholesale_cost" Attno="12" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_list_price" Attno="13" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_sales_price" Attno="14" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_discount_amt" Attno="15" Mdid="0.1700.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_sales_price" Attno="16" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_wholesale_cost" Attno="17" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_list_price" Attno="18" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_tax" Attno="19" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_coupon_amt" Attno="20" Mdid="0.1700.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_paid" Attno="21" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_paid_inc_tax" Attno="22" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_profit" Attno="23" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -1338,109 +1158,74 @@
       <dxl:Relation Mdid="6.897052.1.1" Name="date_dim" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28" PartitionColumns="6" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_date_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_month_seq" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_week_seq" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_quarter_seq" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_year" Attno="7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_dow" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_moy" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_dom" Attno="10" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_qoy" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_year" Attno="12" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_quarter_seq" Attno="13" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_week_seq" Attno="14" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_day_name" Attno="15" Mdid="0.1042.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_quarter_name" Attno="16" Mdid="0.1042.1.0" Nullable="true" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_holiday" Attno="17" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_weekend" Attno="18" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_following_holiday" Attno="19" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_first_dom" Attno="20" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_last_dom" Attno="21" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_same_day_ly" Attno="22" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_same_day_lq" Attno="23" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_day" Attno="24" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_week" Attno="25" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_month" Attno="26" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_quarter" Attno="27" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_year" Attno="28" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -1456,109 +1241,74 @@
       <dxl:Relation Mdid="6.897052001.1.1" Name="date_dim_prt_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_date_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_month_seq" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_week_seq" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_quarter_seq" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_year" Attno="7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_dow" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_moy" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_dom" Attno="10" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_qoy" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_year" Attno="12" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_quarter_seq" Attno="13" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_week_seq" Attno="14" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_day_name" Attno="15" Mdid="0.1042.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_quarter_name" Attno="16" Mdid="0.1042.1.0" Nullable="true" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_holiday" Attno="17" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_weekend" Attno="18" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_following_holiday" Attno="19" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_first_dom" Attno="20" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_last_dom" Attno="21" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_same_day_ly" Attno="22" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_same_day_lq" Attno="23" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_day" Attno="24" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_week" Attno="25" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_month" Attno="26" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_quarter" Attno="27" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_year" Attno="28" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -1582,109 +1332,74 @@
       <dxl:Relation Mdid="6.897052002.1.1" Name="date_dim_prt_2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_date_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_month_seq" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_week_seq" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_quarter_seq" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_year" Attno="7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_dow" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_moy" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_dom" Attno="10" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_qoy" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_year" Attno="12" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_quarter_seq" Attno="13" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_week_seq" Attno="14" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_day_name" Attno="15" Mdid="0.1042.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_quarter_name" Attno="16" Mdid="0.1042.1.0" Nullable="true" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_holiday" Attno="17" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_weekend" Attno="18" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_following_holiday" Attno="19" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_first_dom" Attno="20" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_last_dom" Attno="21" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_same_day_ly" Attno="22" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_same_day_lq" Attno="23" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_day" Attno="24" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_week" Attno="25" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_month" Attno="26" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_quarter" Attno="27" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_year" Attno="28" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -1708,109 +1423,74 @@
       <dxl:Relation Mdid="6.897052003.1.1" Name="date_dim_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_date_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_month_seq" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_week_seq" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_quarter_seq" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_year" Attno="7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_dow" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_moy" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_dom" Attno="10" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_qoy" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_year" Attno="12" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_quarter_seq" Attno="13" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_week_seq" Attno="14" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_day_name" Attno="15" Mdid="0.1042.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_quarter_name" Attno="16" Mdid="0.1042.1.0" Nullable="true" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_holiday" Attno="17" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_weekend" Attno="18" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_following_holiday" Attno="19" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_first_dom" Attno="20" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_last_dom" Attno="21" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_same_day_ly" Attno="22" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_same_day_lq" Attno="23" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_day" Attno="24" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_week" Attno="25" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_month" Attno="26" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_quarter" Attno="27" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_year" Attno="28" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -1834,109 +1514,74 @@
       <dxl:Relation Mdid="6.897052004.1.1" Name="date_dim_prt_4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_date_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_month_seq" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_week_seq" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_quarter_seq" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_year" Attno="7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_dow" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_moy" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_dom" Attno="10" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_qoy" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_year" Attno="12" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_quarter_seq" Attno="13" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_week_seq" Attno="14" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_day_name" Attno="15" Mdid="0.1042.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_quarter_name" Attno="16" Mdid="0.1042.1.0" Nullable="true" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_holiday" Attno="17" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_weekend" Attno="18" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_following_holiday" Attno="19" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_first_dom" Attno="20" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_last_dom" Attno="21" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_same_day_ly" Attno="22" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_same_day_lq" Attno="23" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_day" Attno="24" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_week" Attno="25" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_month" Attno="26" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_quarter" Attno="27" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_year" Attno="28" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -1960,109 +1605,74 @@
       <dxl:Relation Mdid="6.897052005.1.1" Name="date_dim_prt_5" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_date_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_month_seq" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_week_seq" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_quarter_seq" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_year" Attno="7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_dow" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_moy" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_dom" Attno="10" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_qoy" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_year" Attno="12" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_quarter_seq" Attno="13" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_fy_week_seq" Attno="14" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_day_name" Attno="15" Mdid="0.1042.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_quarter_name" Attno="16" Mdid="0.1042.1.0" Nullable="true" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_holiday" Attno="17" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_weekend" Attno="18" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_following_holiday" Attno="19" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_first_dom" Attno="20" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_last_dom" Attno="21" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_same_day_ly" Attno="22" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_same_day_lq" Attno="23" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_day" Attno="24" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_week" Attno="25" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_month" Attno="26" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_quarter" Attno="27" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="d_current_year" Attno="28" Mdid="0.1042.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -2554,10 +2164,10 @@
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="261">
+    <dxl:Plan Id="0" SpaceSize="187">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="23478.203110" Rows="12277684.984527" Width="246"/>
+          <dxl:Cost StartupCost="0" TotalCost="23460.637588" Rows="12277684.984527" Width="246"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="ss_sold_date_sk">
@@ -2718,7 +2328,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="9917.008937" Rows="12277684.984527" Width="246"/>
+            <dxl:Cost StartupCost="0" TotalCost="9899.443415" Rows="12277684.984527" Width="246"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="ss_sold_date_sk">
@@ -3003,7 +2613,7 @@
           </dxl:DynamicTableScan>
           <dxl:PartitionSelector RelationMdid="6.904881.1.1" SelectorId="0" ScanId="1" Partitions="0,1,2,3,4">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="456.101758" Rows="24.329392" Width="107"/>
+              <dxl:Cost StartupCost="0" TotalCost="438.536236" Rows="24.329392" Width="107"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="30" Alias="d_date_sk">
@@ -3097,9 +2707,9 @@
                 <dxl:Ident ColId="30" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
               </dxl:Comparison>
             </dxl:PartFilterExpr>
-            <dxl:BroadcastMotion InputSegments="-1" OutputSegments="0,1">
+            <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="456.101758" Rows="24.329392" Width="107"/>
+                <dxl:Cost StartupCost="0" TotalCost="438.536236" Rows="24.329392" Width="107"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="30" Alias="d_date_sk">
@@ -3191,7 +2801,7 @@
               <dxl:SortingColumnList/>
               <dxl:HashJoin JoinType="Inner">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="456.033618" Rows="12.164696" Width="107"/>
+                  <dxl:Cost StartupCost="0" TotalCost="438.502166" Rows="12.164696" Width="107"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="30" Alias="d_date_sk">
@@ -3287,9 +2897,9 @@
                     <dxl:Ident ColId="66" ColName="bla" TypeMdid="0.23.1.0"/>
                   </dxl:Comparison>
                 </dxl:HashCondList>
-                <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
+                <dxl:DynamicTableScan SelectorIds="">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="449.046463" Rows="29219.600000" Width="107"/>
+                    <dxl:Cost StartupCost="0" TotalCost="432.100848" Rows="29219.600000" Width="107"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="30" Alias="d_date_sk">
@@ -3378,146 +2988,53 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:SortingColumnList/>
-                  <dxl:DynamicTableScan SelectorIds="">
-                    <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="432.100848" Rows="29219.600000" Width="107"/>
-                    </dxl:Properties>
-                    <dxl:ProjList>
-                      <dxl:ProjElem ColId="30" Alias="d_date_sk">
-                        <dxl:Ident ColId="30" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="31" Alias="d_date_id">
-                        <dxl:Ident ColId="31" ColName="d_date_id" TypeMdid="0.1042.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="32" Alias="d_date">
-                        <dxl:Ident ColId="32" ColName="d_date" TypeMdid="0.1082.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="33" Alias="d_month_seq">
-                        <dxl:Ident ColId="33" ColName="d_month_seq" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="34" Alias="d_week_seq">
-                        <dxl:Ident ColId="34" ColName="d_week_seq" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="35" Alias="d_quarter_seq">
-                        <dxl:Ident ColId="35" ColName="d_quarter_seq" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="36" Alias="d_year">
-                        <dxl:Ident ColId="36" ColName="d_year" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="37" Alias="d_dow">
-                        <dxl:Ident ColId="37" ColName="d_dow" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="38" Alias="d_moy">
-                        <dxl:Ident ColId="38" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="39" Alias="d_dom">
-                        <dxl:Ident ColId="39" ColName="d_dom" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="40" Alias="d_qoy">
-                        <dxl:Ident ColId="40" ColName="d_qoy" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="41" Alias="d_fy_year">
-                        <dxl:Ident ColId="41" ColName="d_fy_year" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="42" Alias="d_fy_quarter_seq">
-                        <dxl:Ident ColId="42" ColName="d_fy_quarter_seq" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="43" Alias="d_fy_week_seq">
-                        <dxl:Ident ColId="43" ColName="d_fy_week_seq" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="44" Alias="d_day_name">
-                        <dxl:Ident ColId="44" ColName="d_day_name" TypeMdid="0.1042.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="45" Alias="d_quarter_name">
-                        <dxl:Ident ColId="45" ColName="d_quarter_name" TypeMdid="0.1042.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="46" Alias="d_holiday">
-                        <dxl:Ident ColId="46" ColName="d_holiday" TypeMdid="0.1042.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="47" Alias="d_weekend">
-                        <dxl:Ident ColId="47" ColName="d_weekend" TypeMdid="0.1042.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="48" Alias="d_following_holiday">
-                        <dxl:Ident ColId="48" ColName="d_following_holiday" TypeMdid="0.1042.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="49" Alias="d_first_dom">
-                        <dxl:Ident ColId="49" ColName="d_first_dom" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="50" Alias="d_last_dom">
-                        <dxl:Ident ColId="50" ColName="d_last_dom" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="51" Alias="d_same_day_ly">
-                        <dxl:Ident ColId="51" ColName="d_same_day_ly" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="52" Alias="d_same_day_lq">
-                        <dxl:Ident ColId="52" ColName="d_same_day_lq" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="53" Alias="d_current_day">
-                        <dxl:Ident ColId="53" ColName="d_current_day" TypeMdid="0.1042.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="54" Alias="d_current_week">
-                        <dxl:Ident ColId="54" ColName="d_current_week" TypeMdid="0.1042.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="55" Alias="d_current_month">
-                        <dxl:Ident ColId="55" ColName="d_current_month" TypeMdid="0.1042.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="56" Alias="d_current_quarter">
-                        <dxl:Ident ColId="56" ColName="d_current_quarter" TypeMdid="0.1042.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="57" Alias="d_current_year">
-                        <dxl:Ident ColId="57" ColName="d_current_year" TypeMdid="0.1042.1.0"/>
-                      </dxl:ProjElem>
-                    </dxl:ProjList>
-                    <dxl:Filter/>
-                    <dxl:Partitions>
-                      <dxl:Partition Mdid="6.897052001.1.1"/>
-                      <dxl:Partition Mdid="6.897052002.1.1"/>
-                      <dxl:Partition Mdid="6.897052003.1.1"/>
-                      <dxl:Partition Mdid="6.897052004.1.1"/>
-                      <dxl:Partition Mdid="6.897052005.1.1"/>
-                    </dxl:Partitions>
-                    <dxl:TableDescriptor Mdid="6.897052.1.1" TableName="date_dim">
-                      <dxl:Columns>
-                        <dxl:Column ColId="30" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="31" Attno="2" ColName="d_date_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
-                        <dxl:Column ColId="32" Attno="3" ColName="d_date" TypeMdid="0.1082.1.0"/>
-                        <dxl:Column ColId="33" Attno="4" ColName="d_month_seq" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="34" Attno="5" ColName="d_week_seq" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="35" Attno="6" ColName="d_quarter_seq" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="36" Attno="7" ColName="d_year" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="37" Attno="8" ColName="d_dow" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="38" Attno="9" ColName="d_moy" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="39" Attno="10" ColName="d_dom" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="40" Attno="11" ColName="d_qoy" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="41" Attno="12" ColName="d_fy_year" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="42" Attno="13" ColName="d_fy_quarter_seq" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="43" Attno="14" ColName="d_fy_week_seq" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="44" Attno="15" ColName="d_day_name" TypeMdid="0.1042.1.0" ColWidth="9"/>
-                        <dxl:Column ColId="45" Attno="16" ColName="d_quarter_name" TypeMdid="0.1042.1.0" ColWidth="6"/>
-                        <dxl:Column ColId="46" Attno="17" ColName="d_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                        <dxl:Column ColId="47" Attno="18" ColName="d_weekend" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                        <dxl:Column ColId="48" Attno="19" ColName="d_following_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                        <dxl:Column ColId="49" Attno="20" ColName="d_first_dom" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="50" Attno="21" ColName="d_last_dom" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="51" Attno="22" ColName="d_same_day_ly" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="52" Attno="23" ColName="d_same_day_lq" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="53" Attno="24" ColName="d_current_day" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                        <dxl:Column ColId="54" Attno="25" ColName="d_current_week" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                        <dxl:Column ColId="55" Attno="26" ColName="d_current_month" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                        <dxl:Column ColId="56" Attno="27" ColName="d_current_quarter" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                        <dxl:Column ColId="57" Attno="28" ColName="d_current_year" TypeMdid="0.1042.1.0" ColWidth="1"/>
-                        <dxl:Column ColId="58" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                        <dxl:Column ColId="59" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                        <dxl:Column ColId="60" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                        <dxl:Column ColId="61" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                        <dxl:Column ColId="62" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                        <dxl:Column ColId="63" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                        <dxl:Column ColId="64" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                      </dxl:Columns>
-                    </dxl:TableDescriptor>
-                  </dxl:DynamicTableScan>
-                </dxl:GatherMotion>
+                  <dxl:Partitions>
+                    <dxl:Partition Mdid="6.897052001.1.1"/>
+                    <dxl:Partition Mdid="6.897052002.1.1"/>
+                    <dxl:Partition Mdid="6.897052003.1.1"/>
+                    <dxl:Partition Mdid="6.897052004.1.1"/>
+                    <dxl:Partition Mdid="6.897052005.1.1"/>
+                  </dxl:Partitions>
+                  <dxl:TableDescriptor Mdid="6.897052.1.1" TableName="date_dim">
+                    <dxl:Columns>
+                      <dxl:Column ColId="30" Attno="1" ColName="d_date_sk" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="31" Attno="2" ColName="d_date_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
+                      <dxl:Column ColId="32" Attno="3" ColName="d_date" TypeMdid="0.1082.1.0"/>
+                      <dxl:Column ColId="33" Attno="4" ColName="d_month_seq" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="34" Attno="5" ColName="d_week_seq" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="35" Attno="6" ColName="d_quarter_seq" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="36" Attno="7" ColName="d_year" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="37" Attno="8" ColName="d_dow" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="38" Attno="9" ColName="d_moy" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="39" Attno="10" ColName="d_dom" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="40" Attno="11" ColName="d_qoy" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="41" Attno="12" ColName="d_fy_year" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="42" Attno="13" ColName="d_fy_quarter_seq" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="43" Attno="14" ColName="d_fy_week_seq" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="44" Attno="15" ColName="d_day_name" TypeMdid="0.1042.1.0" ColWidth="9"/>
+                      <dxl:Column ColId="45" Attno="16" ColName="d_quarter_name" TypeMdid="0.1042.1.0" ColWidth="6"/>
+                      <dxl:Column ColId="46" Attno="17" ColName="d_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="47" Attno="18" ColName="d_weekend" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="48" Attno="19" ColName="d_following_holiday" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="49" Attno="20" ColName="d_first_dom" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="50" Attno="21" ColName="d_last_dom" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="51" Attno="22" ColName="d_same_day_ly" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="52" Attno="23" ColName="d_same_day_lq" TypeMdid="0.23.1.0"/>
+                      <dxl:Column ColId="53" Attno="24" ColName="d_current_day" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="54" Attno="25" ColName="d_current_week" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="55" Attno="26" ColName="d_current_month" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="56" Attno="27" ColName="d_current_quarter" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="57" Attno="28" ColName="d_current_year" TypeMdid="0.1042.1.0" ColWidth="1"/>
+                      <dxl:Column ColId="58" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                      <dxl:Column ColId="59" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                      <dxl:Column ColId="60" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                      <dxl:Column ColId="61" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                      <dxl:Column ColId="62" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                      <dxl:Column ColId="63" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                      <dxl:Column ColId="64" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                    </dxl:Columns>
+                  </dxl:TableDescriptor>
+                </dxl:DynamicTableScan>
                 <dxl:Result>
                   <dxl:Properties>
                     <dxl:Cost StartupCost="0" TotalCost="0.000005" Rows="1.000000" Width="4"/>

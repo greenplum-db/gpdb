@@ -47,7 +47,7 @@
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.1067.1.0" Name="generate_series" ReturnsSet="true" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1067.1.0" Name="generate_series" ReturnsSet="true" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0"/>
@@ -112,7 +112,7 @@
     <dxl:Plan Id="0" SpaceSize="476">
       <dxl:HashJoin JoinType="Inner">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="0.000504" Rows="1.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="0.000594" Rows="1.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="1" Alias="?column?">
@@ -131,7 +131,7 @@
         </dxl:HashCondList>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.000011" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000057" Rows="1.000000" Width="4"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="1"/>
@@ -144,7 +144,7 @@
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.000005" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000050" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="1" Alias="?column?">
@@ -185,7 +185,7 @@
         </dxl:Aggregate>
         <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.000111" Rows="1.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="0.000157" Rows="1.000000" Width="4"/>
           </dxl:Properties>
           <dxl:GroupingColumns>
             <dxl:GroupingColumn ColId="3"/>
@@ -198,7 +198,7 @@
           <dxl:Filter/>
           <dxl:Sort SortDiscardDuplicates="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.000105" Rows="1.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="0.000150" Rows="1.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="3" Alias="generate_series">
@@ -217,7 +217,7 @@
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="3" Alias="generate_series">
-                  <dxl:FuncExpr FuncId="0.1067.1.0" FuncRetSet="true" TypeMdid="0.23.1.0">
+                  <dxl:FuncExpr FuncId="0.1067.1.0" FuncRetSet="true" TypeMdid="0.23.1.0" FuncVariadic="false">
                     <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
                     <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
                   </dxl:FuncExpr>

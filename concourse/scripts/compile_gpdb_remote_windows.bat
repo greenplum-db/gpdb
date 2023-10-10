@@ -14,14 +14,6 @@ cmake -DCMAKE_PREFIX_PATH:PATH=C:\windows\system32\ext -DCMAKE_INSTALL_PREFIX:PA
 cmake --build . --config Release --target ALL_BUILD
 cmake --build . --config Release --target INSTALL
 
-REM build pygresql
-cd %WORK_DIR%\gpdb_src\gpMgmt\bin\pythonSrc\PyGreSQL
-mkdir build
-cd build
-cmake -DCMAKE_PREFIX_PATH=%WORK_DIR%\greenplum-db-devel -DCMAKE_INSTALL_PREFIX:PATH=%WORK_DIR%\greenplum-db-devel -G "Visual Studio 15 2017 Win64" ..
-cmake --build . --config Release --target ALL_BUILD
-cmake --build . --config Release --target INSTALL
-
 REM create msi package
 cd %WORK_DIR%\gpdb_src\gpAux\client\install\src\windows\
 @call CopyDependencies.bat C:\windows\system32\ext %WORK_DIR%\greenplum-db-devel

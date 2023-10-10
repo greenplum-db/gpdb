@@ -12,6 +12,7 @@ import pwd
 import socket
 import signal
 import uuid
+import pipes
 
 from gppylib.gplog import get_default_logger
 from gppylib.commands.base import *
@@ -29,44 +30,6 @@ OPENBSD = "openbsd"
 platform_list = [LINUX, DARWIN, FREEBSD, OPENBSD]
 
 curr_platform = platform.uname()[0].lower()
-
-GPHOME = os.environ.get('GPHOME', None)
-
-# ---------------command path--------------------
-CMDPATH = ['/usr/kerberos/bin', '/usr/sfw/bin', '/opt/sfw/bin', '/bin', '/usr/local/bin',
-           '/usr/bin', '/sbin', '/usr/sbin', '/usr/ucb', '/sw/bin', '/opt/Navisphere/bin']
-
-if GPHOME:
-    CMDPATH.append(GPHOME)
-
-CMD_CACHE = {}
-
-
-# ----------------------------------
-class CommandNotFoundException(Exception):
-    def __init__(self, cmd, paths):
-        self.cmd = cmd
-        self.paths = paths
-
-    def __str__(self):
-        return "Could not locate command: '%s' in this set of paths: %s" % (self.cmd, repr(self.paths))
-
-
-def findCmdInPath(cmd):
-    global CMD_CACHE
-
-    if cmd not in CMD_CACHE:
-        for p in CMDPATH:
-            f = os.path.join(p, cmd)
-            if os.path.exists(f):
-                CMD_CACHE[cmd] = f
-                return f
-
-        logger.critical('Command %s not found' % cmd)
-        search_path = CMDPATH[:]
-        raise CommandNotFoundException(cmd, search_path)
-    else:
-        return CMD_CACHE[cmd]
 
 
 # For now we'll leave some generic functions outside of the Platform framework
@@ -171,6 +134,52 @@ def kill_sequence(pid):
     # all else failed - try SIGABRT
     logandkill(pid, signal.SIGABRT)
 
+"""
+Terminate a process tree (including grandchildren) with signal 'sig'.
+'on_terminate', if specified, is a callback function which is
+called as soon as a child terminates.
+"""
+def terminate_proc_tree(pid, sig=signal.SIGTERM, include_parent=True, timeout=None, on_terminate=None):
+    parent = psutil.Process(pid)
+
+    children = list()
+    terminated = set()
+
+    if include_parent:
+        children.append(parent)
+
+    children.extend(parent.children(recursive=True))
+    while children:
+        process = children.pop()
+        
+        try:
+            # Update the list with any new process spawned after the initial list creation
+            children.extend(process.children(recursive=True))
+            process.send_signal(sig)
+            terminated.add(process)
+        except psutil.NoSuchProcess:
+            pass
+
+    _, alive = psutil.wait_procs(terminated, timeout=timeout, callback=on_terminate)
+
+    # Forcefully terminate any remaining processes
+    for process in alive:
+        process.kill()
+
+
+def get_remote_link_path(path, host):
+    """
+      Function to get symlink target path for a given path on given host.
+      :param  path: path for which symlink has to be found
+      :param  host: host on which the given path is available
+      :return: returns symlink target path
+    """
+
+    cmdStr = """python3 -c 'import os; print(os.readlink("%s"))'""" % path
+    cmd = Command('get remote link path', cmdStr=cmdStr, ctxt=REMOTE,
+                       remoteHost=host)
+    cmd.run(validateAfter=True)
+    return cmd.get_stdout()
 
 # ---------------Platform Framework--------------------
 
@@ -481,22 +490,108 @@ def canonicalize(addr):
 
 
 class Rsync(Command):
-    def __init__(self, name, srcFile, dstFile, srcHost=None, dstHost=None, recursive=False, ctxt=LOCAL,
-                 remoteHost=None):
-        cmdStr = findCmdInPath('rsync') + " "
+    def __init__(self, name, srcFile, dstFile, srcHost=None, dstHost=None, recursive=False,
+                 verbose=True, archive_mode=True, checksum=False, delete=False, progress=False,
+                 stats=False, dry_run=False, bwlimit=None, exclude_list={}, ctxt=LOCAL,
+                 remoteHost=None, compress=False, progress_file=None, ignore_times=False, whole_file=False):
+
+        """
+            rsync options:
+                srcFile: source datadir/file
+                        If source is a directory, make sure you add a '/' at the end of its path. When using "/" at the
+                        end of source, rsync will copy the content of the last directory. When not using "/" at the end
+                        of source, rsync will copy the last directory and the content of the directory.
+                dstFile: destination datadir or file that needs to be synced
+                srcHost: source host
+                exclude_list: to exclude specified files and directories to copied or synced with target
+                delete: delete the files on target which do not exist on source
+                checksum: to skip files being synced based on checksum, not modification time and size
+                bwlimit: to control the I/O bandwidth
+                stats: give some file-transfer stats
+                dry_run: perform a trial run with no changes made
+                compress: compress file data during the transfer
+                progress: to show the progress of rsync execution, like % transferred
+                ignore_times: Not skip files that match modification time and size
+                whole_file: Copy file without rsync's delta-transfer algorithm
+        """
+
+        cmd_tokens = [findCmdInPath('rsync')]
 
         if recursive:
-            cmdStr = cmdStr + "-r "
+            cmd_tokens.append('-r')
+
+        if verbose:
+            cmd_tokens.append('-v')
+
+        if archive_mode:
+            cmd_tokens.append('-a')
+
+        # To skip the files based on checksum, not modification time and size
+        if checksum:
+            cmd_tokens.append('-c')
+
+        # To not skip files that match modification time and size
+        if ignore_times:
+            cmd_tokens.append('--ignore-times')
+
+        # Copy file without rsync's delta-transfer algorithm
+        if whole_file:
+            cmd_tokens.append('--whole-file')
+
+        if progress:
+            cmd_tokens.append('--progress')
+
+        # To show file transfer stats
+        if stats:
+            cmd_tokens.append('--stats')
+
+        if bwlimit is not None:
+            cmd_tokens.append('--bwlimit')
+            cmd_tokens.append(bwlimit)
+
+        if dry_run:
+            cmd_tokens.append('--dry-run')
+
+        if delete:
+            cmd_tokens.append('--delete')
+
+        if compress:
+            cmd_tokens.append('--compress')
 
         if srcHost:
-            cmdStr = cmdStr + canonicalize(srcHost) + ":"
-        cmdStr = cmdStr + srcFile + " "
+            cmd_tokens.append(canonicalize(srcHost) + ":" + srcFile)
+        else:
+            cmd_tokens.append(srcFile)
 
         if dstHost:
-            cmdStr = cmdStr + canonicalize(dstHost) + ":"
-        cmdStr = cmdStr + dstFile
+            cmd_tokens.append(canonicalize(dstHost) + ":" + dstFile)
+        else:
+            cmd_tokens.append(dstFile)
+
+        exclude_str = ["--exclude={} ".format(pattern) for pattern in exclude_list]
+
+        cmd_tokens.extend(exclude_str)
+
+        if progress_file:
+            cmd_tokens.append('> %s 2>&1' % pipes.quote(progress_file))
+
+        cmdStr = ' '.join(cmd_tokens)
+
+        self.command_tokens = cmd_tokens
 
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
+
+    # Overriding validate() of Command class to handle few specific return codes of rsync which can be ignored
+    def validate(self, expected_rc=0):
+        """
+            During differential recovery, pg_wal is synced using rsync. During pg_wal sync, some of the xlogtemp files
+            are present on source when rsync builds the list of files to be transferred but are vanished before
+            transferring. In this scenario rsync gives warning "some files vanished before they could be transferred
+            (code 24)". This return code can be ignored in case of rsync command.
+        """
+        if self.results.rc != 24 and self.results.rc != expected_rc:
+            self.logger.debug(self.results)
+            raise ExecutionError("non-zero rc: %d" % self.results.rc, self)
 
 
 class RsyncFromFileList(Command):
@@ -656,6 +751,6 @@ elif curr_platform == DARWIN:
 elif curr_platform == FREEBSD:
     SYSTEM = FreeBsdPlatform()
 elif curr_platform == OPENBSD:
-    SYSTEM = OpenBSDPlatform();
+    SYSTEM = OpenBSDPlatform()
 else:
     raise Exception("Platform %s is not supported.  Supported platforms are: %s", SYSTEM, str(platform_list))

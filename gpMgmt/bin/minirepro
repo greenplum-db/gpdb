@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 '''
+Copyright (c) 2007 - 2016 Pivotal
+Copyright (c) 2023 VMware, Inc. or its affiliates. All Rights Reserved.
+
 minirepro utility
 
 USAGE
@@ -61,10 +64,10 @@ minirepro gptest -h locahost -U gpadmin -p 4444 -q ~/in.sql -f ~/out.sql
 
 import pwd
 import os, sys, re, json, platform, subprocess
-import pgdb
+import psycopg2
 from optparse import OptionParser
 from datetime import datetime
-from gppylib.utils import formatInsertValuesList, Escape
+from gppylib.utils import formatInsertValuesList, escape_string
 
 version = '1.13'
 PATH_PREFIX = '/tmp/'
@@ -97,7 +100,7 @@ def get_server_version(cursor):
     query = "select version()"
     try:
         cursor.execute(query)
-    except pgdb.DatabaseError as e:
+    except psycopg2.DatabaseError as e:
         sys.stderr.write('\nError while trying to find GPDB version.\n\n' + str(e) + '\n\n')
         sys.exit(1)
     vals = cursor.fetchone()
@@ -107,7 +110,7 @@ def get_num_segments(cursor):
     query = "select count(*) from gp_segment_configuration where role='p' and content >=0;"
     try:
         cursor.execute(query)
-    except pgdb.DatabaseError as e:
+    except psycopg2.DatabaseError as e:
         sys.stderr.write('\nError while trying to retrieve number of segments.\n\n' + str(e) + '\n\n')
         sys.exit(1)
     vals = cursor.fetchone()
@@ -136,7 +139,7 @@ def dump_query(connectionInfo, query_file):
 
     with open(query_file, 'r') as query_f:
         sql_text = query_f.read()
-    query = "select pg_catalog.gp_dump_query_oids('%s')" % Escape(sql_text)
+    query = "select pg_catalog.gp_dump_query_oids('%s')" % escape_string(sql_text)
 
     toolkit_sql = PATH_PREFIX + 'toolkit.sql'
     with open(toolkit_sql, 'w') as toolkit_f:
@@ -187,7 +190,7 @@ def pg_dump_object(mr_query, connectionInfo, envOpts):
     out_file = PATH_PREFIX + PGDUMP_FILE
     dmp_cmd = 'pg_dump -h %s -p %s -U %s -sxO %s' % connectionInfo
     dmp_cmd = "%s --relation-oids %s --function-oids %s -f %s" % \
-        (dmp_cmd, mr_query.relids, mr_query.funcids, Escape(out_file))
+        (dmp_cmd, mr_query.relids, mr_query.funcids, escape_string(out_file))
     print(dmp_cmd)
     p = subprocess.Popen(dmp_cmd, shell=True, stderr=subprocess.PIPE, env=envOpts)
     _, errormsg = p.communicate()
@@ -213,11 +216,17 @@ def dump_tuple_count(cur, oid_str, f_out):
         for col, val, typ in zip(columns[2:], vals[2:], types):
             # i.e. relpages = 1::int, reltuples = 1.0::real
             lines.append('\t%s = %s::%s' % (col, val, typ))
-        updateStmt = templateStmt.format(Escape(',\n'.join(lines)), Escape(vals[0]), Escape(vals[1]))
+        updateStmt = templateStmt.format(escape_string(',\n'.join(lines)), escape_string(vals[0]), escape_string(vals[1]))
         f_out.writelines(updateStmt)
 
 def dump_stats(cur, oid_str, f_out, inclHLL):
-    query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgtn.nspname, pgt.typname, pgs.* ' \
+    query = 'SELECT pgc.relname, pgn.nspname, pga.attname, pgtn.nspname, pgt.typname, ' \
+        'pgs.starelid, pgs.staattnum, pgs.stainherit, pgs.stanullfrac, pgs.stawidth, pgs.stadistinct, ' \
+        'pgs.stakind1, pgs.stakind2, pgs.stakind3, pgs.stakind4, pgs.stakind5, ' \
+        'pgs.staop1, pgs.staop2, pgs.staop3, pgs.staop4, pgs.staop5, ' \
+        'pgs.stacoll1, pgs.stacoll2, pgs.stacoll3, pgs.stacoll4, pgs.stacoll5, ' \
+        'pgs.stanumbers1, pgs.stanumbers2, pgs.stanumbers3, pgs.stanumbers4, pgs.stanumbers5, ' \
+        'pgs.stavalues1::text::text[], pgs.stavalues2::text::text[], pgs.stavalues3::text::text[], pgs.stavalues4::text::text[], pgs.stavalues5::text::text[] ' \
         'FROM pg_class pgc, pg_statistic pgs, pg_namespace pgn, pg_attribute pga, pg_type pgt, pg_namespace pgtn ' \
         'WHERE pgc.relnamespace = pgn.oid and pgc.oid in (%s) ' \
         'and pgn.nspname NOT LIKE \'pg_temp_%%\' ' \
@@ -239,7 +248,7 @@ def dump_stats(cur, oid_str, f_out, inclHLL):
 
     for vals in result_iter(cur):
         schemaname = vals[1]
-        starelid = "'%s.%s'::regclass" % (Escape(vals[1]), Escape(vals[0]))
+        starelid = "'%s.%s'::regclass" % (escape_string(vals[1]), escape_string(vals[0]))
         rowVals = formatInsertValuesList(vals, starelid, inclHLL)
 
         # For non-catalog tables we don't need to delete stats first
@@ -248,7 +257,7 @@ def dump_stats(cur, oid_str, f_out, inclHLL):
         if schemaname != 'pg_catalog':
             linecomment = '-- ' # This will comment out the DELETE query
 
-        f_out.writelines(pstring.format(Escape(vals[0]), Escape(vals[2]), linecomment, starelid, vals[6], ',\n'.join(rowVals)))
+        f_out.writelines(pstring.format(escape_string(vals[0]), escape_string(vals[2]), linecomment, starelid, vals[6], ',\n'.join(rowVals)))
 
 def dump_extstats(cur, oid_str, f_out):
     # dunp pg_statistics_ext data on a per table basis
@@ -335,7 +344,7 @@ def main():
             }
 
     print("Connecting to database: host=%s, port=%s, user=%s, db=%s ..." % connectionInfo)
-    conn = pgdb.connect(**connectionDict)
+    conn = psycopg2.connect(**connectionDict)
     cursor = conn.cursor()
 
     # get server version, which is dumped to minirepro output file
@@ -368,7 +377,6 @@ def main():
     f_out = open(output_file, 'w')
     ts = datetime.today()
     f_out.writelines(['-- MiniRepro ' + version,
-                           '\n-- Copyright (C) 2007 - 2016 Pivotal'
                            '\n-- Database: ' + db,
                            '\n-- Date:     ' + ts.date().isoformat(),
                            '\n-- Time:     ' + ts.time().isoformat(),
@@ -382,7 +390,7 @@ def main():
 
     # first create schema DDLs
     print("Writing schema DDLs ...")
-    table_schemas = ["CREATE SCHEMA %s;\n" % Escape(schema) for schema in mr_query.schemas if schema != 'public']
+    table_schemas = ["CREATE SCHEMA %s;\n" % escape_string(schema) for schema in mr_query.schemas if schema != 'public']
     f_out.writelines(table_schemas)
 
     # write relation and function DDLs
@@ -432,4 +440,4 @@ def main():
     print('Please review output file to ensure it is within corporate policy to transport the output file.')
 
 if __name__ == "__main__":
-        main()
+    main()

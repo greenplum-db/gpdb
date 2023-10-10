@@ -58,6 +58,7 @@ CREATE INDEX grect2ind ON fast_emp4000 USING gist (home_base);
 CREATE INDEX gpolygonind ON polygon_tbl USING gist (f1);
 CREATE INDEX gcircleind ON circle_tbl USING gist (f1);
 INSERT INTO POINT_TBL(f1) VALUES (NULL);
+ANALYZE POINT_TBL;
 CREATE INDEX gpointind ON point_tbl USING gist (f1);
 CREATE TEMP TABLE gpolygon_tbl AS
     SELECT polygon(home_base) AS f1 FROM slow_emp4000;
@@ -415,7 +416,7 @@ SELECT count(*) FROM point_tbl WHERE f1 <@ box '(0,0,100,100)';
          ->  Index Scan using gpointind on point_tbl
                Index Cond: (f1 <@ '(100,100),(0,0)'::box)
                Filter: (f1 <@ '(100,100),(0,0)'::box)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 SELECT count(*) FROM point_tbl WHERE f1 <@ box '(0,0,100,100)';
@@ -433,7 +434,7 @@ SELECT count(*) FROM point_tbl WHERE box '(0,0,100,100)' @> f1;
          ->  Index Scan using gpointind on point_tbl
                Index Cond: (f1 <@ '(100,100),(0,0)'::box)
                Filter: (f1 <@ '(100,100),(0,0)'::box)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 SELECT count(*) FROM point_tbl WHERE box '(0,0,100,100)' @> f1;
@@ -451,7 +452,7 @@ SELECT count(*) FROM point_tbl WHERE f1 <@ polygon '(0,0),(0,100),(100,100),(50,
          ->  Index Scan using gpointind on point_tbl
                Index Cond: (f1 <@ '((0,0),(0,100),(100,100),(50,50),(100,0),(0,0))'::polygon)
                Filter: (f1 <@ '((0,0),(0,100),(100,100),(50,50),(100,0),(0,0))'::polygon)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 SELECT count(*) FROM point_tbl WHERE f1 <@ polygon '(0,0),(0,100),(100,100),(50,50),(100,0),(0,0)';
@@ -469,7 +470,7 @@ SELECT count(*) FROM point_tbl WHERE f1 <@ circle '<(50,50),50>';
          ->  Index Scan using gpointind on point_tbl
                Index Cond: (f1 <@ '<(50,50),50>'::circle)
                Filter: (f1 <@ '<(50,50),50>'::circle)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 SELECT count(*) FROM point_tbl WHERE f1 <@ circle '<(50,50),50>';
@@ -487,7 +488,7 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 << '(0.0, 0.0)';
          ->  Index Scan using gpointind on point_tbl
                Index Cond: (f1 << '(0,0)'::point)
                Filter: (f1 << '(0,0)'::point)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 SELECT count(*) FROM point_tbl p WHERE p.f1 << '(0.0, 0.0)';
@@ -505,7 +506,7 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 >> '(0.0, 0.0)';
          ->  Index Scan using gpointind on point_tbl
                Index Cond: (f1 >> '(0,0)'::point)
                Filter: (f1 >> '(0,0)'::point)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 SELECT count(*) FROM point_tbl p WHERE p.f1 >> '(0.0, 0.0)';
@@ -523,7 +524,7 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 <^ '(0.0, 0.0)';
          ->  Index Scan using gpointind on point_tbl
                Index Cond: (f1 <^ '(0,0)'::point)
                Filter: (f1 <^ '(0,0)'::point)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 SELECT count(*) FROM point_tbl p WHERE p.f1 <^ '(0.0, 0.0)';
@@ -541,7 +542,7 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 >^ '(0.0, 0.0)';
          ->  Index Scan using gpointind on point_tbl
                Index Cond: (f1 >^ '(0,0)'::point)
                Filter: (f1 >^ '(0,0)'::point)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 SELECT count(*) FROM point_tbl p WHERE p.f1 >^ '(0.0, 0.0)';
@@ -559,7 +560,7 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 ~= '(-5, -12)';
          ->  Index Scan using gpointind on point_tbl
                Index Cond: (f1 ~= '(-5,-12)'::point)
                Filter: (f1 ~= '(-5,-12)'::point)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 SELECT count(*) FROM point_tbl p WHERE p.f1 ~= '(-5, -12)';
@@ -1979,18 +1980,14 @@ explain (costs off)
 SELECT unique1 FROM tenk1
 WHERE unique1 IN (1,42,7)
 ORDER BY unique1;
-                               QUERY PLAN
--------------------------------------------------------------------------
+                         QUERY PLAN                          
+-------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: unique1
-   ->  Sort
-         Sort Key: unique1
-         ->  Bitmap Heap Scan on tenk1
-               Recheck Cond: (unique1 = ANY ('{1,42,7}'::integer[]))
-               ->  Bitmap Index Scan on tenk1_unique1
-                     Index Cond: (unique1 = ANY ('{1,42,7}'::integer[]))
- Optimizer: Pivotal Optimizer (GPORCA) version 3.82.0
-(9 rows)
+   ->  Index Only Scan using tenk1_unique1 on tenk1
+         Index Cond: (unique1 = ANY ('{1,42,7}'::integer[]))
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
 
 SELECT unique1 FROM tenk1
 WHERE unique1 IN (1,42,7)
@@ -2078,9 +2075,8 @@ explain (costs off)
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: b, i
-         ->  Limit
-               ->  Index Scan using boolindex_b_i_key on boolindex
- Optimizer: Postgres query optimizer
+         ->  Index Scan using boolindex_b_i_key on boolindex
+ Optimizer: Pivotal Optimizer (GPORCA)
 (6 rows)
 
 -- In PostgreSQL, this uses an Index Scan. In GPDB, the logic to deduce

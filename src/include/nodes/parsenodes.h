@@ -56,7 +56,7 @@ typedef enum SortByDir
 	SORTBY_DEFAULT,
 	SORTBY_ASC,
 	SORTBY_DESC,
-	SORTBY_USING				/* not allowed in CREATE INDEX ... */
+	SORTBY_USING				/* not allowed in CREATE INDEX or AT REPACK */
 } SortByDir;
 
 typedef enum SortByNulls
@@ -746,6 +746,9 @@ typedef enum TableLikeOption
 	CREATE_TABLE_LIKE_INDEXES = 1 << 5,
 	CREATE_TABLE_LIKE_STATISTICS = 1 << 6,
 	CREATE_TABLE_LIKE_STORAGE = 1 << 7,
+	CREATE_TABLE_LIKE_ENCODING = 1 << 8,
+	CREATE_TABLE_LIKE_RELOPT = 1 << 9,
+	CREATE_TABLE_LIKE_AM = 1 << 10,
 	CREATE_TABLE_LIKE_ALL = PG_INT32_MAX
 } TableLikeOption;
 
@@ -2013,7 +2016,10 @@ typedef enum AlterTableType
 	AT_PartRename,				/* Rename */
 	AT_PartSetTemplate,			/* Set Subpartition Template */
 	AT_PartSplit,				/* Split */
-	AT_PartTruncate				/* Truncate */
+	AT_PartTruncate,			/* Truncate */
+
+	/* kept at end for ABI hygiene */
+	AT_RepackTable				/* REPACK TABLE */
 } AlterTableType;
 
 typedef struct ReplicaIdentityStmt
@@ -2273,7 +2279,7 @@ typedef struct CopyStmt
 	List	   *options;		/* List of DefElem nodes */
 	Node	   *whereClause;	/* WHERE condition (or NULL) */
 
-	Node	   *sreh;			/* Single row error handling info */
+	List	   *sreh;			/* Single row error handling info */
 } CopyStmt;
 
 /* ----------------------

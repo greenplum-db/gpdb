@@ -23,6 +23,11 @@
             0::oid,
             0::oid,
             0::oid,
+            0::oid,
+            0::oid,
+            0::oid,
+            0::oid,
+            0::oid,
             NULL::real[],
             NULL::real[],
             NULL::real[],
@@ -57,16 +62,12 @@
       <dxl:Relation Mdid="6.212992.1.0" Name="mytable" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -134,7 +135,7 @@
           <dxl:UpperBound Closed="true" TypeMdid="0.20.1.0" Value="5200000000000097561"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.213016.1.0" Name="idx_mytable_a" IsClustered="false" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3">
+      <dxl:Index Mdid="0.213016.1.0" Name="idx_mytable_a" IsClustered="false" AmCanOrder="true" IndexType="B-tree" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="" ReturnableColumns="0">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1976.1.0"/>
         </dxl:Opfamilies>
@@ -212,10 +213,10 @@
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="2">
+    <dxl:Plan Id="0" SpaceSize="3">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="391.714832" Rows="1683.942093" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="15.320238" Rows="1683.942093" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -224,9 +225,9 @@
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
-        <dxl:BitmapTableScan>
+        <dxl:IndexOnlyScan IndexScanDirection="Forward">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="391.656275" Rows="1683.942093" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="15.261682" Rows="1683.942093" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -234,21 +235,14 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:RecheckCond>
+          <dxl:IndexCondList>
             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.410.1.0">
               <dxl:Ident ColId="0" ColName="a" TypeMdid="0.20.1.0"/>
               <dxl:ConstValue TypeMdid="0.20.1.0" Value="5100000000133138764"/>
             </dxl:Comparison>
-          </dxl:RecheckCond>
-          <dxl:BitmapIndexProbe>
-            <dxl:IndexCondList>
-              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.410.1.0">
-                <dxl:Ident ColId="0" ColName="a" TypeMdid="0.20.1.0"/>
-                <dxl:ConstValue TypeMdid="0.20.1.0" Value="5100000000133138764"/>
-              </dxl:Comparison>
-            </dxl:IndexCondList>
-            <dxl:IndexDescriptor Mdid="0.213016.1.0" IndexName="idx_mytable_a"/>
-          </dxl:BitmapIndexProbe>
+          </dxl:IndexCondList>
+          <dxl:Partitions/>
+          <dxl:IndexDescriptor Mdid="0.213016.1.0" IndexName="idx_mytable_a"/>
           <dxl:TableDescriptor Mdid="6.212992.1.0" TableName="mytable">
             <dxl:Columns>
               <dxl:Column ColId="0" Attno="1" ColName="a" TypeMdid="0.20.1.0" ColWidth="8"/>
@@ -257,7 +251,7 @@
               <dxl:Column ColId="3" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
             </dxl:Columns>
           </dxl:TableDescriptor>
-        </dxl:BitmapTableScan>
+        </dxl:IndexOnlyScan>
       </dxl:GatherMotion>
       <dxl:DirectDispatchInfo>
         <dxl:KeyValue>

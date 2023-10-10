@@ -2217,15 +2217,6 @@ LockRelease(const LOCKTAG *locktag, LOCKMODE lockmode, bool sessionLock)
 	 */
 	locallock->lockCleared = false;
 
-	/*
-	 * At this point we can no longer suppose we are clear of invalidation
-	 * messages related to this lock.  Although we'll delete the LOCALLOCK
-	 * object before any intentional return from this routine, it seems worth
-	 * the trouble to explicitly reset lockCleared right now, just in case
-	 * some error prevents us from deleting the LOCALLOCK.
-	 */
-	locallock->lockCleared = false;
-
 	/* Attempt fast release of any lock eligible for the fast path. */
 	if (EligibleForRelationFastPath(locktag, lockmode) &&
 		FastPathLocalUseCount > 0)
@@ -2410,6 +2401,8 @@ LockReleaseAll(LOCKMETHODID lockmethodid, bool allLocks)
 	int			partition;
 	bool		have_fast_path_lwlock = false;
 
+	Assert(lockmethodid != RESOURCE_LOCKMETHOD);
+
 	if (lockmethodid <= 0 || lockmethodid >= lengthof(LockMethods))
 		elog(ERROR, "unrecognized lock method: %d", lockmethodid);
 	lockMethodTable = LockMethods[lockmethodid];
@@ -2446,11 +2439,21 @@ LockReleaseAll(LOCKMETHODID lockmethodid, bool allLocks)
 		 * If the LOCALLOCK entry is unused, we must've run out of shared
 		 * memory while trying to set up this lock.  Just forget the local
 		 * entry.
+		 *
+		 * GPDB: Add an exception for resource queue based locallocks. Neither
+		 * do we maintain nLocks for them, nor do we use the resource owner
+		 * mechanism for them.
 		 */
 		if (locallock->nLocks == 0)
 		{
-			RemoveLocalLock(locallock);
-			continue;
+			if (locallock->lock &&
+				locallock->lock->tag.locktag_type == LOCKTAG_RESOURCE_QUEUE)
+				Assert(locallock->numLockOwners == 0);
+			else
+			{
+				RemoveLocalLock(locallock);
+				continue;
+			}
 		}
 
 		/* Ignore items that are not of the lockmethod to be removed */

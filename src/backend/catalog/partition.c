@@ -146,6 +146,25 @@ get_partition_ancestors_worker(Relation inhRel, Oid relid, List **ancestors)
 }
 
 /*
+ * Get the top-level partition root of a given relation. This is a convenience
+ * wrapper around get_partition_ancestors.
+ *
+ * This assumes that the given relation is a partition (i.e. relispartition is
+ * true). If no parent partition is found, returns InvalidOid.
+ *
+ * Note: we depend on the order of results returned by get_partition_ancestors
+ */
+Oid
+get_top_level_partition_root(Oid relid)
+{
+	List *ancestors;
+
+	Assert(OidIsValid(relid));
+	ancestors = get_partition_ancestors(relid);
+	return list_length(ancestors) > 0 ? llast_oid(ancestors) : InvalidOid;
+}
+
+/*
  * index_get_partition
  *		Return the OID of index of the given partition that is a child
  *		of the given index, or InvalidOid if there isn't one.
@@ -249,7 +268,7 @@ has_partition_attrs(Relation rel, Bitmapset *attnums, bool *used_in_expr)
 	if (attnums == NULL || rel->rd_rel->relkind != RELKIND_PARTITIONED_TABLE)
 		return false;
 
-	key = RelationGetPartitionKey(rel);
+	key = RelationRetrievePartitionKey(rel);
 	partnatts = get_partition_natts(key);
 	partexprs = get_partition_exprs(key);
 

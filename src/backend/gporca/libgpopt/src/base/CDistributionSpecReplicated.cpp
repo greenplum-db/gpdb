@@ -35,11 +35,17 @@ using namespace gpopt;
 //	| singleton & segment     | T                | T                 |
 //	| ANY                     | T                | T                 |
 //	| others not Singleton    | T                |(default) F        |
+//	| Non-Replicated          | F                | F                 |
 //	+-------------------------+------------------+-------------------+
 BOOL
 CDistributionSpecReplicated::FSatisfies(const CDistributionSpec *pdss) const
 {
 	GPOS_ASSERT(Edt() != CDistributionSpec::EdtReplicated);
+
+	if (CDistributionSpec::EdtNonReplicated == pdss->Edt())
+	{
+		return false;
+	}
 
 	if (Edt() == CDistributionSpec::EdtTaintedReplicated)
 	{

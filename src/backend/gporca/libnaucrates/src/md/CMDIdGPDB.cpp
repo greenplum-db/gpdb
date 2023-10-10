@@ -133,9 +133,6 @@ CMDIdGPDB::CMDIdGPDB(CSystemId sysid, OID oid)
 		// construct an invalid mdid 0.0.0
 		m_major_version = 0;
 	}
-
-	// serialize mdid into static string
-	Serialize();
 }
 
 CMDIdGPDB::CMDIdGPDB(EMDIdType mdIdType, OID oid, ULONG version_major,
@@ -154,8 +151,6 @@ CMDIdGPDB::CMDIdGPDB(EMDIdType mdIdType, OID oid, ULONG version_major,
 		// construct an invalid mdid 0.0.0
 		m_major_version = 0;
 	}
-	// serialize mdid into static string
-	Serialize();
 }
 
 //---------------------------------------------------------------------------
@@ -174,8 +169,6 @@ CMDIdGPDB::CMDIdGPDB(const CMDIdGPDB &mdid_source)
 	  m_minor_version(mdid_source.VersionMinor()),
 	  m_str(m_mdid_array, GPOS_ARRAY_SIZE(m_mdid_array))
 {
-	// serialize mdid into static string
-	Serialize();
 }
 
 //---------------------------------------------------------------------------
@@ -187,8 +180,13 @@ CMDIdGPDB::CMDIdGPDB(const CMDIdGPDB &mdid_source)
 //
 //---------------------------------------------------------------------------
 void
-CMDIdGPDB::Serialize()
+CMDIdGPDB::Serialize() const
 {
+	if (m_str.Length() > 0)
+	{
+		return;
+	}
+
 	m_str.Reset();
 	// serialize mdid as SystemType.Oid.Major.Minor
 	m_str.AppendFormat(GPOS_WSZ_LIT("%d.%d.%d.%d"), MdidType(), m_oid,
@@ -206,6 +204,7 @@ CMDIdGPDB::Serialize()
 const WCHAR *
 CMDIdGPDB::GetBuffer() const
 {
+	Serialize();
 	return m_str.GetBuffer();
 }
 
@@ -220,6 +219,7 @@ CMDIdGPDB::GetBuffer() const
 OID
 CMDIdGPDB::Oid() const
 {
+	Serialize();
 	return m_oid;
 }
 
@@ -307,6 +307,7 @@ void
 CMDIdGPDB::Serialize(CXMLSerializer *xml_serializer,
 					 const CWStringConst *attribute_str) const
 {
+	Serialize();
 	xml_serializer->AddAttribute(attribute_str, &m_str);
 }
 
@@ -321,7 +322,7 @@ CMDIdGPDB::Serialize(CXMLSerializer *xml_serializer,
 IOstream &
 CMDIdGPDB::OsPrint(IOstream &os) const
 {
-	os << "(" << m_str.GetBuffer() << ")";
+	os << "(" << GetBuffer() << ")";
 	return os;
 }
 

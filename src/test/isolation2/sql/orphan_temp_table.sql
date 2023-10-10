@@ -12,6 +12,8 @@
 
 -- we should not see the temp table on the coordinator
 1: SELECT oid, relname, relnamespace FROM pg_class where relname = 'test_temp_table_cleanup';
+-- we should not see the temp namespace on the coordinator
+1: SELECT count(*) FROM pg_namespace where (nspname like '%pg_temp_%' or nspname like '%pg_toast_temp_%') and oid > 16386;
 
 
 -- the temp table is left on segment 0, it should be dropped by autovacuum later

@@ -6516,7 +6516,7 @@ StartupXLOG(void)
 	XLogCtlInsert *Insert;
 	CheckPoint	checkPoint;
 	bool		wasShutdown;
-	bool		reachedStopPoint = false;
+	bool		reachedRecoveryTarget = false;
 	bool		haveBackupLabel = false;
 	bool		haveTblspcMap = false;
 	XLogRecPtr	RecPtr,
@@ -7475,7 +7475,7 @@ StartupXLOG(void)
 				 */
 				if (recoveryStopsBefore(xlogreader))
 				{
-					reachedStopPoint = true;	/* see below */
+					reachedRecoveryTarget = true;
 					break;
 				}
 
@@ -7655,7 +7655,7 @@ StartupXLOG(void)
 				/* Exit loop if we reached inclusive recovery target */
 				if (recoveryStopsAfter(xlogreader))
 				{
-					reachedStopPoint = true;
+					reachedRecoveryTarget = true;
 					break;
 				}
 
@@ -7667,7 +7667,7 @@ StartupXLOG(void)
 			 * end of main redo apply loop
 			 */
 
-			if (reachedStopPoint)
+			if (reachedRecoveryTarget)
 			{
 				if (!reachedConsistency)
 					ereport(FATAL,
@@ -7724,7 +7724,18 @@ StartupXLOG(void)
 			/* there are no WAL records following the checkpoint */
 			ereport(LOG,
 					(errmsg("redo is not required")));
+
 		}
+
+		/*
+		 * This check is intentionally after the above log messages that
+		 * indicate how far recovery went.
+		 */
+		if (ArchiveRecoveryRequested &&
+			recoveryTarget != RECOVERY_TARGET_UNSET &&
+			!reachedRecoveryTarget)
+			ereport(FATAL,
+					(errmsg("recovery ended before configured recovery target was reached")));
 	}
 
 	/*
@@ -8260,6 +8271,37 @@ StartupXLOG(void)
 	 */
 	if (standbyState != STANDBY_DISABLED)
 		ShutdownRecoveryTransactionEnvironment();
+
+	/*
+	 * GPDB: A timeline history file is only marked as ready for archival if
+	 * WAL archiving was already enabled when a new timeline id is created
+	 * during promotion.  Thus it's possible to get into a state where the
+	 * timeline history file is not archived yet due to WAL archiving being
+	 * disabled during the timeline switch.  As such, we need to guarantee
+	 * that the current timeline history file is archived.  This will make
+	 * sure downstream operations that require the timeline history file
+	 * succeed (e.g. creating a standby with recovery_target_timeline
+	 * explicitly set to the control file's timeline id or when creating a
+	 * streaming replication standby).  Skip if the current timeline ID is 1
+	 * since there's no timeline history file for it.
+	 */
+	if (XLogArchivingActive() && ThisTimeLineID > 1)
+	{
+		char		histfname[MAXFNAMELEN];
+
+		TLHistoryFileName(histfname, ThisTimeLineID);
+
+		/*
+		 * Timeline history .done files do not get removed automatically so
+		 * this check should be valid to make sure we don't archive the
+		 * timeline history file again on restart.  However, if the timeline
+		 * history .done file was manually removed for some reason, then we
+		 * make the assumption that the archive_command is set up properly to
+		 * gracefully handle the re-archiving attempt.
+		 */
+		if (!XLogArchiveIsReadyOrDone(histfname))
+			XLogArchiveNotify(histfname);
+	}
 
 	/*
 	 * If there were cascading standby servers connected to us, nudge any wal
@@ -13500,10 +13542,11 @@ initialize_wal_bytes_written(void)
  * WAL generation and move at sustained speed with network and mirrors.
  *
  * NB: This function should never be called from inside a critical section,
- * meaning caller should never have MyPgXact->delayChkpt set to true. Otherwise,
- * if mirror is down, we will end up in a deadlock situation between the primary
- * and the checkpointer process, because if MyPgXact->delayChkpt is set,
- * checkpointer cannot proceed to unset WalSndCtl->sync_standbys_defined.
+ * meaning caller should never have MyPgXact->delayChkpt set to true, or
+ * holding an exclusive buffer lock. Otherwise, if mirror is down, we will end
+ * up in a deadlock situation between the primary and the checkpointer process,
+ * because if MyPgXact->delayChkpt is set, checkpointer cannot proceed to unset
+ * WalSndCtl->sync_standbys_defined.
  */
 void
 wait_to_avoid_large_repl_lag(void)

@@ -29,6 +29,7 @@ typedef struct PartitionDescData
 	PartitionBoundInfo boundinfo;	/* collection of partition bounds */
 } PartitionDescData;
 
+extern PartitionDesc RelationRetrievePartitionDesc(Relation rel);
 extern void RelationBuildPartitionDesc(Relation rel);
 
 extern PartitionDirectory CreatePartitionDirectory(MemoryContext mcxt);

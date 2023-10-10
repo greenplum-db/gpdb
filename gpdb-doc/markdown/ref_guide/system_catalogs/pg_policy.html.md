@@ -4,6 +4,7 @@ The catalog `pg_policy` stores row level security policies for tables. A policy 
 
 |Column Name|Type|References|Description|
 |------|----|----------|-----------|
+|`oid`|oid| |The object ID|
 |`polname`|name| |The name of the policy|
 |`polerelid`|oid|pg\_class.oid|The table to which the policy applies|
 |`polcmd`|char| |The command type to which the policy is applied: `r` for `SELECT`, `a` for `INSERT`, `w` for `UPDATE`, `d` for `DELETE`, or `*` for all|

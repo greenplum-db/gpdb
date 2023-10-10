@@ -1882,22 +1882,18 @@ and smallt.d = '2011-01-04'::date;
 
 -- IndexOnlyScan
 explain analyze select *, exists(select 1 from pg_class where oid = c.oid) as dummy from pg_class c;
-                                                                           QUERY PLAN                                                                            
------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Seq Scan on pg_class c  (cost=10000000000.00..10003029725.25 rows=15124 width=206) (actual time=24.734..41.952 rows=6569 loops=1)
-   SubPlan 1
-     ->  Index Only Scan using pg_class_oid_index on pg_class  (cost=0.29..200.30 rows=1 width=0) (never executed)
-           Index Cond: (oid = c.oid)
-           Heap Fetches: 0
+                                                                  QUERY PLAN                                                                   
+-----------------------------------------------------------------------------------------------------------------------------------------------
+ Seq Scan on pg_class c  (cost=10000000000.00..10000002329.69 rows=556 width=266) (actual time=0.595..1.472 rows=630 loops=1)
    SubPlan 2
-     ->  Index Only Scan using pg_class_oid_index on pg_class pg_class_1  (cost=0.29..21127.15 rows=15124 width=4) (actual time=0.075..18.903 rows=6569 loops=1)
-           Heap Fetches: 20272
- Planning time: 5.919 ms
-   (slice0)    Executor memory: 937K bytes.
- Memory used:  128000kB
+     ->  Index Only Scan using pg_class_oid_index on pg_class  (cost=0.15..16.49 rows=556 width=4) (actual time=0.020..0.331 rows=630 loops=1)
+           Heap Fetches: 368
  Optimizer: Postgres query optimizer
- Execution time: 43.318 ms
-(13 rows)
+ Planning Time: 2.737 ms
+   (slice0)    Executor memory: 178K bytes.
+ Memory used:  128000kB
+ Execution Time: 1.809 ms
+(9 rows)
 
 -- BitmapScan
 -- start_ignore

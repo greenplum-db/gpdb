@@ -157,7 +157,7 @@ WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
                                  ->  Broadcast Motion 3:3  (slice9; segments: 3)
                                        ->  Seq Scan on keo2
  Optimizer: Pivotal Optimizer (GPORCA)
-(37 rows)
+(38 rows)
 
 UPDATE keo1 SET user_vie_act_cntr_marg_cum = 234.682 FROM
     ( SELECT a.user_vie_project_code_pk FROM keo1 a INNER JOIN keo2 b

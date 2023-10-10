@@ -50,19 +50,11 @@ CXform::EXformPromise
 CXformIndexGet2IndexOnlyScan::Exfp(CExpressionHandle &exprhdl) const
 {
 	CLogicalIndexGet *popGet = CLogicalIndexGet::PopConvert(exprhdl.Pop());
-
-	CTableDescriptor *ptabdesc = popGet->Ptabdesc();
 	CIndexDescriptor *pindexdesc = popGet->Pindexdesc();
-	BOOL possible_ao_table = ptabdesc->IsAORowOrColTable() ||
-							 ptabdesc->RetrieveRelStorageType() ==
-								 IMDRelation::ErelstorageMixedPartitioned;
+	CTableDescriptor *ptabdesc = popGet->Ptabdesc();
 
-	if ((pindexdesc->IndexType() == IMDIndex::EmdindBtree &&
-		 possible_ao_table) ||
-		!pindexdesc->SupportsIndexOnlyScan())
+	if (!pindexdesc->SupportsIndexOnlyScan(ptabdesc))
 	{
-		// we don't support btree index scans on AO tables
-		// FIXME: relax btree requirement. GiST and SP-GiST indexes can support some operator classes, but Gin cannot
 		return CXform::ExfpNone;
 	}
 
@@ -95,56 +87,15 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 	CMemoryPool *mp = pxfctxt->Pmp();
 	CIndexDescriptor *pindexdesc = pop->Pindexdesc();
 	CTableDescriptor *ptabdesc = pop->Ptabdesc();
+	CColRefArray *pdrgpcrOutput = pop->PdrgpcrOutput();
 
 	// extract components
 	CExpression *pexprIndexCond = (*pexpr)[0];
-	if (pexprIndexCond->DeriveHasSubquery())
+	if (pexprIndexCond->DeriveHasSubquery() ||
+		!CXformUtils::FCoverIndex(mp, pindexdesc, ptabdesc, pdrgpcrOutput))
 	{
 		return;
 	}
-
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	const IMDRelation *pmdrel = md_accessor->RetrieveRel(ptabdesc->MDId());
-	const IMDIndex *pmdindex = md_accessor->RetrieveIndex(pindexdesc->MDId());
-
-	CColRefArray *pdrgpcrOutput = pop->PdrgpcrOutput();
-	GPOS_ASSERT(nullptr != pdrgpcrOutput);
-	pdrgpcrOutput->AddRef();
-
-	CColRefSet *matched_cols =
-		CXformUtils::PcrsIndexKeys(mp, pdrgpcrOutput, pmdindex, pmdrel);
-	CColRefSet *output_cols = GPOS_NEW(mp) CColRefSet(mp);
-
-	// An index only scan is allowed iff each used output column reference also
-	// exists as a column in the index.
-	for (ULONG i = 0; i < pdrgpcrOutput->Size(); i++)
-	{
-		CColRef *col = (*pdrgpcrOutput)[i];
-
-		// In most cases we want to treat system columns unconditionally as
-		// used. This is because certain transforms like those for DML or
-		// CXformPushGbBelowJoin use unique keys in the derived properties,
-		// even if they are not referenced in the query. Those keys are system
-		// columns gp_segment_id and ctid. We also treat distribution columns
-		// as used, since they appear in the CDistributionSpecHashed of
-		// physical properties and therefore might be used in the plan.
-		if (col->GetUsage(true /*check_system_cols*/,
-						  true /*check_distribution_col*/) == CColRef::EUsed)
-		{
-			output_cols->Include(col);
-		}
-	}
-
-	if (!matched_cols->ContainsAll(output_cols))
-	{
-		matched_cols->Release();
-		output_cols->Release();
-		pdrgpcrOutput->Release();
-		return;
-	}
-
-	matched_cols->Release();
-	output_cols->Release();
 
 	pindexdesc->AddRef();
 	ptabdesc->AddRef();
@@ -153,17 +104,16 @@ CXformIndexGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 	GPOS_ASSERT(nullptr != pos);
 	pos->AddRef();
 
-
-
 	// addref all children
 	pexprIndexCond->AddRef();
 
-	CExpression *pexprAlt = GPOS_NEW(mp) CExpression(
-		mp,
-		GPOS_NEW(mp) CPhysicalIndexOnlyScan(
-			mp, pindexdesc, ptabdesc, pexpr->Pop()->UlOpId(),
-			GPOS_NEW(mp) CName(mp, pop->NameAlias()), pdrgpcrOutput, pos),
-		pexprIndexCond);
+	CExpression *pexprAlt = GPOS_NEW(mp)
+		CExpression(mp,
+					GPOS_NEW(mp) CPhysicalIndexOnlyScan(
+						mp, pindexdesc, ptabdesc, pexpr->Pop()->UlOpId(),
+						GPOS_NEW(mp) CName(mp, pop->NameAlias()), pdrgpcrOutput,
+						pos, pop->ScanDirection()),
+					pexprIndexCond);
 	pxfres->Add(pexprAlt);
 }
 

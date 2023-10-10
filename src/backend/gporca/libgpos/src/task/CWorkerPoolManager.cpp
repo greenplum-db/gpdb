@@ -59,37 +59,15 @@ CWorkerPoolManager::CWorkerPoolManager(CMemoryPool *mp)
 //		Initializer for global worker pool manager
 //
 //---------------------------------------------------------------------------
-GPOS_RESULT
+void
 CWorkerPoolManager::Init()
 {
-	GPOS_ASSERT(nullptr == WorkerPoolManager());
+	GPOS_ASSERT(nullptr == m_worker_pool_manager);
 
-	CMemoryPool *mp =
-		CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
+	CMemoryPool *mp = CMemoryPoolManager::CreateMemoryPool();
 
-	GPOS_TRY
-	{
-		// create worker pool
-		CWorkerPoolManager::m_worker_pool_manager =
-			GPOS_NEW(mp) CWorkerPoolManager(mp);
-	}
-	GPOS_CATCH_EX(ex)
-	{
-		// turn in memory pool in case of failure
-		CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
-
-		CWorkerPoolManager::m_worker_pool_manager = nullptr;
-
-		if (GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiOOM))
-		{
-			return GPOS_OOM;
-		}
-
-		return GPOS_FAILED;
-	}
-	GPOS_CATCH_END;
-
-	return GPOS_OK;
+	// create worker pool
+	m_worker_pool_manager = GPOS_NEW(mp) CWorkerPoolManager(mp);
 }
 
 
@@ -104,8 +82,7 @@ CWorkerPoolManager::Init()
 void
 CWorkerPoolManager::Shutdown()
 {
-	CWorkerPoolManager *worker_pool_manager =
-		CWorkerPoolManager::m_worker_pool_manager;
+	CWorkerPoolManager *worker_pool_manager = m_worker_pool_manager;
 
 	GPOS_ASSERT(nullptr != worker_pool_manager &&
 				"Worker pool has not been initialized");
@@ -119,11 +96,11 @@ CWorkerPoolManager::Shutdown()
 	CMemoryPool *mp = worker_pool_manager->m_mp;
 
 	// destroy worker pool
-	CWorkerPoolManager::m_worker_pool_manager = nullptr;
+	m_worker_pool_manager = nullptr;
 	GPOS_DELETE(worker_pool_manager);
 
 	// release allocated memory pool
-	CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
+	CMemoryPoolManager::Destroy(mp);
 }
 
 

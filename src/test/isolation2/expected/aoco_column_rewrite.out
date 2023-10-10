@@ -1,0 +1,1690 @@
+--------------------------------------------------------------------------------
+-- Tests for various scenarios with the column rewrite optimization
+-- for AT on AOCO tables
+--------------------------------------------------------------------------------
+
+PREPARE attribute_encoding_check AS SELECT c.relname, a.attname, e.filenum, e.attoptions FROM pg_attribute_encoding e, pg_class c, pg_attribute a WHERE e.attrelid = c.oid AND e.attnum = a.attnum and e.attrelid = a.attrelid AND c.relname LIKE $1;
+PREPARE
+
+CREATE TABLE if not exists relfilenodecheck(segid int, relname text, relfilenodebefore int, relfilenodeafter int, casename text);
+CREATE TABLE
+
+PREPARE capturerelfilenodebefore AS INSERT INTO relfilenodecheck SELECT -1 segid, relname, pg_relation_filenode(relname::text) as relfilenode, NULL::int, $1 as casename FROM pg_class WHERE relname LIKE $2 UNION SELECT gp_segment_id segid, relname, pg_relation_filenode(relname::text) as relfilenode, NULL::int, $1 as casename  FROM gp_dist_random('pg_class') WHERE relname LIKE $2 ORDER BY segid;
+PREPARE
+
+PREPARE checkrelfilenodediff AS SELECT a.segid, b.casename, b.relname, (relfilenodebefore != a.relfilenode) rewritten FROM ( SELECT -1 segid, relname, pg_relation_filenode(relname::text) as relfilenode FROM pg_class WHERE relname LIKE $2 UNION SELECT gp_segment_id segid, relname, pg_relation_filenode(relname::text) as relfilenode FROM gp_dist_random('pg_class') WHERE relname LIKE $2 ORDER BY segid )a, relfilenodecheck b WHERE b.casename LIKE $1 and b.relname LIKE $2 and a.segid = b.segid;
+PREPARE
+
+--------------------------------------------------------------------------------
+-- Test if ALTER COLUMN TYPE and ADD COLUMN on AOCO doesn't rewrite the entire table
+--------------------------------------------------------------------------------
+
+CREATE TABLE alter_type_aoco(a int, b int, c int) using ao_column;
+CREATE TABLE
+INSERT INTO alter_type_aoco VALUES (20,1,2);
+INSERT 0 1
+EXECUTE attribute_encoding_check ('alter_type_aoco');
+ relname         | attname | filenum | attoptions                                                  
+-----------------+---------+---------+-------------------------------------------------------------
+ alter_type_aoco | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_type_aoco | b       | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_type_aoco | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(3 rows)
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco') ORDER BY segment_id, column_num;
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 1     | 0          | 1              | 1        | 48  | 48               | 1        | 3             | 1     
+ 1          | 1     | 1          | 129            | 1        | 48  | 48               | 1        | 3             | 1     
+ 1          | 1     | 2          | 257            | 1        | 48  | 48               | 1        | 3             | 1     
+(3 rows)
+EXECUTE capturerelfilenodebefore ('alter_column', 'alter_type_aoco');
+INSERT 0 4
+SELECT * FROM alter_type_aoco;
+ a  | b | c 
+----+---+---
+ 20 | 1 | 2 
+(1 row)
+
+ALTER TABLE alter_type_aoco ALTER COLUMN b TYPE text;
+ALTER TABLE
+
+EXECUTE attribute_encoding_check ('alter_type_aoco');
+ relname         | attname | filenum | attoptions                                                  
+-----------------+---------+---------+-------------------------------------------------------------
+ alter_type_aoco | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_type_aoco | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_type_aoco | b       | 1602    | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(3 rows)
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco') ORDER BY segment_id, column_num;
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 1     | 0          | 1              | 1        | 48  | 48               | 2        | 3             | 1     
+ 1          | 1     | 1          | 204929         | 1        | 48  | 48               | 2        | 3             | 1     
+ 1          | 1     | 2          | 257            | 1        | 48  | 48               | 2        | 3             | 1     
+(3 rows)
+EXECUTE checkrelfilenodediff ('alter_column', 'alter_type_aoco');
+ segid | casename     | relname         | rewritten 
+-------+--------------+-----------------+-----------
+ 0     | alter_column | alter_type_aoco | f         
+ 1     | alter_column | alter_type_aoco | f         
+ -1    | alter_column | alter_type_aoco | f         
+ 2     | alter_column | alter_type_aoco | f         
+(4 rows)
+-- data is intact
+SELECT * FROM alter_type_aoco;
+ a  | b | c 
+----+---+---
+ 20 | 1 | 2 
+(1 row)
+INSERT INTO alter_type_aoco VALUES (20,'1',2);
+INSERT 0 1
+-- data is intact
+SELECT * FROM alter_type_aoco;
+ a  | b | c 
+----+---+---
+ 20 | 1 | 2 
+ 20 | 1 | 2 
+(2 rows)
+
+ALTER TABLE alter_type_aoco ADD COLUMN d int;
+ALTER TABLE
+
+INSERT INTO alter_type_aoco VALUES (20,'1',2, 3);
+INSERT 0 1
+-- check if we chose correct filenum for newly added column
+EXECUTE attribute_encoding_check ('alter_type_aoco');
+ relname         | attname | filenum | attoptions                                                  
+-----------------+---------+---------+-------------------------------------------------------------
+ alter_type_aoco | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_type_aoco | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_type_aoco | b       | 1602    | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_type_aoco | d       | 4       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(4 rows)
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco') ORDER BY segment_id, column_num;
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 1     | 0          | 1              | 3        | 144 | 144              | 5        | 3             | 1     
+ 1          | 1     | 1          | 204929         | 3        | 144 | 144              | 5        | 3             | 1     
+ 1          | 1     | 2          | 257            | 3        | 144 | 144              | 5        | 3             | 1     
+ 1          | 1     | 3          | 385            | 3        | 144 | 144              | 5        | 3             | 1     
+(4 rows)
+DROP TABLE alter_type_aoco;
+DROP TABLE
+-- check if all files are dropped correctly
+SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_type_aoco');
+ count 
+-------
+ 0     
+(1 row)
+
+--------------------------------------------------------------------------------
+-- Test if column rewrite handles deleted rows in blockdirectory correctly for
+-- more than 1 minipage
+
+-- We create a table and its blkdir and insert enough data to have more than one
+-- minipage in the block directory, and check if the column rewrite rewrites the
+-- blockdirectory correctly
+--------------------------------------------------------------------------------
+CREATE TABLE alter_type_aoco_delete(a int, b int, c int) USING ao_column;
+CREATE TABLE
+CREATE INDEX at_aoco_idx on alter_type_aoco_delete(c);
+CREATE INDEX
+INSERT INTO alter_type_aoco_delete SELECT 1,i,i FROM generate_series(1,10000)i;
+INSERT 0 10000
+DELETE FROM alter_type_aoco_delete WHERE b%3 = 1;
+DELETE 3334
+EXECUTE capturerelfilenodebefore ('alter_column', 'alter_type_aoco_delete');
+INSERT 0 4
+SELECT count(*) FROM alter_type_aoco_delete;
+ count 
+-------
+ 6666  
+(1 row)
+
+-- test both ALTER COLUMN TYPE and ALTER COLUMN SET ENCODING together
+ALTER TABLE alter_type_aoco_delete ALTER COLUMN b TYPE text, ALTER COLUMN c SET ENCODING (compresstype=rle_type, compresslevel=4);
+ALTER TABLE
+
+EXECUTE attribute_encoding_check ('alter_type_aoco_delete');
+ relname                | attname | filenum | attoptions                                                      
+------------------------+---------+---------+-----------------------------------------------------------------
+ alter_type_aoco_delete | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0']     
+ alter_type_aoco_delete | c       | 1603    | ['compresstype=rle_type', 'blocksize=32768', 'compresslevel=4'] 
+ alter_type_aoco_delete | b       | 1602    | ['compresstype=none', 'blocksize=32768', 'compresslevel=0']     
+(3 rows)
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco_delete') ORDER BY segment_id, column_num;
+ segment_id | segno | column_num | physical_segno | tupcount | eof   | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-------+------------------+----------+---------------+-------
+ 1          | 1     | 0          | 1              | 10000    | 40088 | 40088            | 3        | 3             | 1     
+ 1          | 1     | 1          | 204929         | 10000    | 48984 | 48984            | 3        | 3             | 1     
+ 1          | 1     | 2          | 205057         | 10000    | 88    | 40047            | 3        | 3             | 1     
+(3 rows)
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('alter_type_aoco_delete')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------------+---------+-------+----------------+----------+--------------+-------------+-----------
+ 1             | (0,1)   | 1     | 0              | 0        | 1            | 0           | 8181      
+ 1             | (0,1)   | 1     | 0              | 1        | 8182         | 32768       | 1819      
+ 1             | (0,4)   | 1     | 1              | 0        | 1            | 0           | 6766      
+ 1             | (0,4)   | 1     | 1              | 1        | 6767         | 32768       | 3234      
+ 1             | (0,5)   | 1     | 2              | 0        | 1            | 0           | 10000     
+(5 rows)
+EXECUTE checkrelfilenodediff ('alter_column', 'alter_type_aoco_delete');
+ segid | casename     | relname                | rewritten 
+-------+--------------+------------------------+-----------
+ 2     | alter_column | alter_type_aoco_delete | f         
+ 0     | alter_column | alter_type_aoco_delete | f         
+ 1     | alter_column | alter_type_aoco_delete | f         
+ -1    | alter_column | alter_type_aoco_delete | f         
+(4 rows)
+SELECT count(b) FROM alter_type_aoco_delete;
+ count 
+-------
+ 6666  
+(1 row)
+SELECT count(*) FROM alter_type_aoco_delete;
+ count 
+-------
+ 6666  
+(1 row)
+
+--------------------------------------------------------------------------------
+-- Test if column rewrite handles blockdirectory and visimap
+-- for deleted rows correctly with multiple blocks in same segfile
+
+-- Here, we insert data into two different blocks and delete all rows from first
+-- block. We test if that block is still replicated in the rewritten col
+--------------------------------------------------------------------------------
+CREATE TABLE alter_type_aoco_delete1(a int, b int, c int) USING ao_column;
+CREATE TABLE
+CREATE INDEX at_aoco_idx1 on alter_type_aoco_delete1(c);
+CREATE INDEX
+INSERT INTO alter_type_aoco_delete1 VALUES (1,2,2);
+INSERT 0 1
+INSERT INTO alter_type_aoco_delete1 VALUES (1,3,3);
+INSERT 0 1
+DELETE FROM alter_type_aoco_delete1 WHERE b = 2;
+DELETE 1
+EXECUTE attribute_encoding_check ('alter_type_aoco_delete1');
+ relname                 | attname | filenum | attoptions                                                  
+-------------------------+---------+---------+-------------------------------------------------------------
+ alter_type_aoco_delete1 | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_type_aoco_delete1 | b       | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_type_aoco_delete1 | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(3 rows)
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco_delete1') ORDER BY segment_id, column_num;
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 1     | 0          | 1              | 2        | 96  | 96               | 3        | 3             | 1     
+ 1          | 1     | 1          | 129            | 2        | 96  | 96               | 3        | 3             | 1     
+ 1          | 1     | 2          | 257            | 2        | 96  | 96               | 3        | 3             | 1     
+(3 rows)
+SELECT (gp_toolkit.__gp_aovisimap('alter_type_aoco_delete1')).* FROM gp_dist_random('gp_id');
+ tid          | segno | row_num 
+--------------+-------+---------
+ (33554432,2) | 1     | 1       
+(1 row)
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('alter_type_aoco_delete1')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------------+---------+-------+----------------+----------+--------------+-------------+-----------
+ 1             | (0,4)   | 1     | 0              | 0        | 1            | 0           | 1         
+ 1             | (0,4)   | 1     | 0              | 1        | 101          | 48          | 1         
+ 1             | (0,5)   | 1     | 1              | 0        | 1            | 0           | 1         
+ 1             | (0,5)   | 1     | 1              | 1        | 101          | 48          | 1         
+ 1             | (0,6)   | 1     | 2              | 0        | 1            | 0           | 1         
+ 1             | (0,6)   | 1     | 2              | 1        | 101          | 48          | 1         
+(6 rows)
+EXECUTE capturerelfilenodebefore ('alter_column', 'alter_type_aoco_delete1');
+INSERT 0 4
+SELECT * FROM alter_type_aoco_delete1;
+ a | b | c 
+---+---+---
+ 1 | 3 | 3 
+(1 row)
+
+-- test both ALTER COLUMN TYPE and ALTER COLUMN SET ENCODING together
+ALTER TABLE alter_type_aoco_delete1 ALTER COLUMN b TYPE text, ALTER COLUMN c SET ENCODING (compresstype=rle_type, compresslevel=4);
+ALTER TABLE
+
+EXECUTE attribute_encoding_check ('alter_type_aoco_delete1');
+ relname                 | attname | filenum | attoptions                                                      
+-------------------------+---------+---------+-----------------------------------------------------------------
+ alter_type_aoco_delete1 | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0']     
+ alter_type_aoco_delete1 | c       | 1603    | ['compresstype=rle_type', 'blocksize=32768', 'compresslevel=4'] 
+ alter_type_aoco_delete1 | b       | 1602    | ['compresstype=none', 'blocksize=32768', 'compresslevel=0']     
+(3 rows)
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco_delete1') ORDER BY segment_id, column_num;
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 1     | 0          | 1              | 2        | 96  | 96               | 4        | 3             | 1     
+ 1          | 1     | 1          | 204929         | 2        | 96  | 96               | 4        | 3             | 1     
+ 1          | 1     | 2          | 205057         | 2        | 96  | 96               | 4        | 3             | 1     
+(3 rows)
+SELECT (gp_toolkit.__gp_aovisimap('alter_type_aoco_delete1')).* FROM gp_dist_random('gp_id');
+ tid          | segno | row_num 
+--------------+-------+---------
+ (33554432,2) | 1     | 1       
+(1 row)
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('alter_type_aoco_delete1')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------------+---------+-------+----------------+----------+--------------+-------------+-----------
+ 1             | (0,4)   | 1     | 0              | 0        | 1            | 0           | 1         
+ 1             | (0,4)   | 1     | 0              | 1        | 101          | 48          | 1         
+ 1             | (0,7)   | 1     | 1              | 0        | 1            | 0           | 1         
+ 1             | (0,7)   | 1     | 1              | 1        | 101          | 48          | 1         
+ 1             | (0,8)   | 1     | 2              | 0        | 1            | 0           | 1         
+ 1             | (0,8)   | 1     | 2              | 1        | 101          | 48          | 1         
+(6 rows)
+EXECUTE checkrelfilenodediff ('alter_column', 'alter_type_aoco_delete1');
+ segid | casename     | relname                 | rewritten 
+-------+--------------+-------------------------+-----------
+ 2     | alter_column | alter_type_aoco_delete1 | f         
+ -1    | alter_column | alter_type_aoco_delete1 | f         
+ 0     | alter_column | alter_type_aoco_delete1 | f         
+ 1     | alter_column | alter_type_aoco_delete1 | f         
+(4 rows)
+SELECT b FROM alter_type_aoco_delete1;
+ b 
+---
+ 3 
+(1 row)
+SELECT * FROM alter_type_aoco_delete1;
+ a | b | c 
+---+---+---
+ 1 | 3 | 3 
+(1 row)
+
+--------------------------------------------------------------------------------
+-- Test if column rewrite handles blockdirectory and visimap
+-- for deleted rows correctly with multiple blocks in same segfile
+
+-- Here, we insert data into two different blocks and delete all rows from second
+-- block. We test if that block is still replicated in the rewritten col
+--------------------------------------------------------------------------------
+CREATE TABLE alter_type_aoco_delete2(a int, b int, c int) USING ao_column;
+CREATE TABLE
+CREATE INDEX at_aoco_idx2 on alter_type_aoco_delete2(c);
+CREATE INDEX
+INSERT INTO alter_type_aoco_delete2 VALUES (1,2,2);
+INSERT 0 1
+INSERT INTO alter_type_aoco_delete2 VALUES (1,3,3);
+INSERT 0 1
+DELETE FROM alter_type_aoco_delete2 WHERE b = 3;
+DELETE 1
+EXECUTE attribute_encoding_check ('alter_type_aoco_delete2');
+ relname                 | attname | filenum | attoptions                                                  
+-------------------------+---------+---------+-------------------------------------------------------------
+ alter_type_aoco_delete2 | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_type_aoco_delete2 | b       | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_type_aoco_delete2 | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(3 rows)
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco_delete2') ORDER BY segment_id, column_num;
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 1     | 0          | 1              | 2        | 96  | 96               | 3        | 3             | 1     
+ 1          | 1     | 1          | 129            | 2        | 96  | 96               | 3        | 3             | 1     
+ 1          | 1     | 2          | 257            | 2        | 96  | 96               | 3        | 3             | 1     
+(3 rows)
+SELECT (gp_toolkit.__gp_aovisimap('alter_type_aoco_delete2')).* FROM gp_dist_random('gp_id');
+ tid            | segno | row_num 
+----------------+-------+---------
+ (33554432,102) | 1     | 101     
+(1 row)
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('alter_type_aoco_delete2')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------------+---------+-------+----------------+----------+--------------+-------------+-----------
+ 1             | (0,4)   | 1     | 0              | 0        | 1            | 0           | 1         
+ 1             | (0,4)   | 1     | 0              | 1        | 101          | 48          | 1         
+ 1             | (0,5)   | 1     | 1              | 0        | 1            | 0           | 1         
+ 1             | (0,5)   | 1     | 1              | 1        | 101          | 48          | 1         
+ 1             | (0,6)   | 1     | 2              | 0        | 1            | 0           | 1         
+ 1             | (0,6)   | 1     | 2              | 1        | 101          | 48          | 1         
+(6 rows)
+EXECUTE capturerelfilenodebefore ('alter_column', 'alter_type_aoco_delete2');
+INSERT 0 4
+SELECT * FROM alter_type_aoco_delete2;
+ a | b | c 
+---+---+---
+ 1 | 2 | 2 
+(1 row)
+
+-- test both ALTER COLUMN TYPE and ALTER COLUMN SET ENCODING together
+ALTER TABLE alter_type_aoco_delete2 ALTER COLUMN b TYPE text, ALTER COLUMN c SET ENCODING (compresstype=rle_type, compresslevel=4);
+ALTER TABLE
+
+EXECUTE attribute_encoding_check ('alter_type_aoco_delete2');
+ relname                 | attname | filenum | attoptions                                                      
+-------------------------+---------+---------+-----------------------------------------------------------------
+ alter_type_aoco_delete2 | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0']     
+ alter_type_aoco_delete2 | c       | 1603    | ['compresstype=rle_type', 'blocksize=32768', 'compresslevel=4'] 
+ alter_type_aoco_delete2 | b       | 1602    | ['compresstype=none', 'blocksize=32768', 'compresslevel=0']     
+(3 rows)
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco_delete2') ORDER BY segment_id, column_num;
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 1     | 0          | 1              | 2        | 96  | 96               | 4        | 3             | 1     
+ 1          | 1     | 1          | 204929         | 2        | 96  | 96               | 4        | 3             | 1     
+ 1          | 1     | 2          | 205057         | 2        | 96  | 96               | 4        | 3             | 1     
+(3 rows)
+SELECT (gp_toolkit.__gp_aovisimap('alter_type_aoco_delete2')).* FROM gp_dist_random('gp_id');
+ tid            | segno | row_num 
+----------------+-------+---------
+ (33554432,102) | 1     | 101     
+(1 row)
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('alter_type_aoco_delete2')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------------+---------+-------+----------------+----------+--------------+-------------+-----------
+ 1             | (0,4)   | 1     | 0              | 0        | 1            | 0           | 1         
+ 1             | (0,4)   | 1     | 0              | 1        | 101          | 48          | 1         
+ 1             | (0,7)   | 1     | 1              | 0        | 1            | 0           | 1         
+ 1             | (0,7)   | 1     | 1              | 1        | 101          | 48          | 1         
+ 1             | (0,8)   | 1     | 2              | 0        | 1            | 0           | 1         
+ 1             | (0,8)   | 1     | 2              | 1        | 101          | 48          | 1         
+(6 rows)
+EXECUTE checkrelfilenodediff ('alter_column', 'alter_type_aoco_delete2');
+ segid | casename     | relname                 | rewritten 
+-------+--------------+-------------------------+-----------
+ 0     | alter_column | alter_type_aoco_delete2 | f         
+ 1     | alter_column | alter_type_aoco_delete2 | f         
+ -1    | alter_column | alter_type_aoco_delete2 | f         
+ 2     | alter_column | alter_type_aoco_delete2 | f         
+(4 rows)
+SELECT b FROM alter_type_aoco_delete2;
+ b 
+---
+ 2 
+(1 row)
+SELECT * FROM alter_type_aoco_delete2;
+ a | b | c 
+---+---+---
+ 1 | 2 | 2 
+(1 row)
+
+--------------------------------------------------------------------------------
+-- Test if AT ALTER COLUMN TYPE works fine when we need a full table rewrite.
+
+-- We perform a AT subcmd which requires a full table rewrite, and check results
+-- for the AT ALTER COLUMN TYPE after the table is fully rewritten
+--------------------------------------------------------------------------------
+
+
+CREATE TABLE alter_type_aoco_fullrewrite(a int, b int, c int) using ao_column;
+CREATE TABLE
+INSERT INTO alter_type_aoco_fullrewrite VALUES (20,1,2);
+INSERT 0 1
+EXECUTE attribute_encoding_check ('alter_type_aoco_fullrewrite');
+ relname                     | attname | filenum | attoptions                                                  
+-----------------------------+---------+---------+-------------------------------------------------------------
+ alter_type_aoco_fullrewrite | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_type_aoco_fullrewrite | b       | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_type_aoco_fullrewrite | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(3 rows)
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco_fullrewrite') ORDER BY segment_id, column_num;
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 1     | 0          | 1              | 1        | 48  | 48               | 1        | 3             | 1     
+ 1          | 1     | 1          | 129            | 1        | 48  | 48               | 1        | 3             | 1     
+ 1          | 1     | 2          | 257            | 1        | 48  | 48               | 1        | 3             | 1     
+(3 rows)
+EXECUTE capturerelfilenodebefore ('alter_column', 'alter_type_aoco_fullrewrite');
+INSERT 0 4
+SELECT * FROM alter_type_aoco_fullrewrite;
+ a  | b | c 
+----+---+---
+ 20 | 1 | 2 
+(1 row)
+
+ALTER TABLE alter_type_aoco_fullrewrite ALTER COLUMN b TYPE text, SET UNLOGGED;
+ALTER TABLE
+
+EXECUTE attribute_encoding_check ('alter_type_aoco_fullrewrite');
+ relname                     | attname | filenum | attoptions                                                  
+-----------------------------+---------+---------+-------------------------------------------------------------
+ alter_type_aoco_fullrewrite | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_type_aoco_fullrewrite | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_type_aoco_fullrewrite | b       | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(3 rows)
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco_fullrewrite') ORDER BY segment_id, column_num;
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 0     | 0          | 0              | 1        | 48  | 48               | 1        | 3             | 1     
+ 1          | 0     | 1          | 128            | 1        | 48  | 48               | 1        | 3             | 1     
+ 1          | 0     | 2          | 256            | 1        | 48  | 48               | 1        | 3             | 1     
+(3 rows)
+EXECUTE checkrelfilenodediff ('alter_column', 'alter_type_aoco_fullrewrite');
+ segid | casename     | relname                     | rewritten 
+-------+--------------+-----------------------------+-----------
+ 0     | alter_column | alter_type_aoco_fullrewrite | t         
+ 1     | alter_column | alter_type_aoco_fullrewrite | t         
+ 2     | alter_column | alter_type_aoco_fullrewrite | t         
+ -1    | alter_column | alter_type_aoco_fullrewrite | t         
+(4 rows)
+-- data is intact
+SELECT * FROM alter_type_aoco_fullrewrite;
+ a  | b | c 
+----+---+---
+ 20 | 1 | 2 
+(1 row)
+INSERT INTO alter_type_aoco_fullrewrite VALUES (20,'1',2);
+INSERT 0 1
+-- data is intact
+SELECT * FROM alter_type_aoco_fullrewrite;
+ a  | b | c 
+----+---+---
+ 20 | 1 | 2 
+ 20 | 1 | 2 
+(2 rows)
+
+--------------------------------------------------------------------------------
+-- Test if AT ALTER COLUMN TYPE reindexes rewrite-affected indexes
+
+-- We create indexes on columns and test if these indexes are rewritten
+-- when any of the columns are rewritten on which the indexes depend on
+-- but other indexes are unaffected
+--------------------------------------------------------------------------------
+
+CREATE TABLE alter_type_aoco(a int, b int, c int, d int) using ao_column;
+CREATE TABLE
+
+INSERT INTO alter_type_aoco VALUES (20, 1, 2, 3);
+INSERT 0 1
+
+CREATE UNIQUE INDEX idx1 on alter_type_aoco(a,b);
+CREATE INDEX
+CREATE INDEX idx2 on alter_type_aoco using btree(c);
+CREATE INDEX
+CREATE INDEX idx3 on alter_type_aoco using bitmap(a,b,c,d);
+CREATE INDEX
+
+EXECUTE capturerelfilenodebefore ('alter_column_b', 'idx1');
+INSERT 0 4
+EXECUTE capturerelfilenodebefore ('alter_column_b', 'idx2');
+INSERT 0 4
+EXECUTE capturerelfilenodebefore ('alter_column_b', 'idx3');
+INSERT 0 4
+
+ALTER TABLE alter_type_aoco ALTER COLUMN b TYPE text;
+ALTER TABLE
+
+EXECUTE checkrelfilenodediff ('alter_column_b', 'idx1');
+ segid | casename       | relname | rewritten 
+-------+----------------+---------+-----------
+ 2     | alter_column_b | idx1    | t         
+ -1    | alter_column_b | idx1    | t         
+ 0     | alter_column_b | idx1    | t         
+ 1     | alter_column_b | idx1    | t         
+(4 rows)
+EXECUTE checkrelfilenodediff ('alter_column_b', 'idx2');
+ segid | casename       | relname | rewritten 
+-------+----------------+---------+-----------
+ 2     | alter_column_b | idx2    | f         
+ 0     | alter_column_b | idx2    | f         
+ 1     | alter_column_b | idx2    | f         
+ -1    | alter_column_b | idx2    | f         
+(4 rows)
+EXECUTE checkrelfilenodediff ('alter_column_b', 'idx3');
+ segid | casename       | relname | rewritten 
+-------+----------------+---------+-----------
+ 2     | alter_column_b | idx3    | t         
+ -1    | alter_column_b | idx3    | t         
+ 0     | alter_column_b | idx3    | t         
+ 1     | alter_column_b | idx3    | t         
+(4 rows)
+INSERT INTO alter_type_aoco VALUES (20, '2', 3, 4);
+INSERT 0 1
+EXECUTE capturerelfilenodebefore ('alter_column_c', 'idx1');
+INSERT 0 4
+EXECUTE capturerelfilenodebefore ('alter_column_c', 'idx2');
+INSERT 0 4
+EXECUTE capturerelfilenodebefore ('alter_column_c', 'idx3');
+INSERT 0 4
+
+ALTER TABLE alter_type_aoco ALTER COLUMN c TYPE text;
+ALTER TABLE
+
+EXECUTE checkrelfilenodediff ('alter_column_c', 'idx1');
+ segid | casename       | relname | rewritten 
+-------+----------------+---------+-----------
+ -1    | alter_column_c | idx1    | f         
+ 2     | alter_column_c | idx1    | f         
+ 0     | alter_column_c | idx1    | f         
+ 1     | alter_column_c | idx1    | f         
+(4 rows)
+EXECUTE checkrelfilenodediff ('alter_column_c', 'idx2');
+ segid | casename       | relname | rewritten 
+-------+----------------+---------+-----------
+ 2     | alter_column_c | idx2    | t         
+ 0     | alter_column_c | idx2    | t         
+ 1     | alter_column_c | idx2    | t         
+ -1    | alter_column_c | idx2    | t         
+(4 rows)
+EXECUTE checkrelfilenodediff ('alter_column_c', 'idx3');
+ segid | casename       | relname | rewritten 
+-------+----------------+---------+-----------
+ 0     | alter_column_c | idx3    | t         
+ 1     | alter_column_c | idx3    | t         
+ -1    | alter_column_c | idx3    | t         
+ 2     | alter_column_c | idx3    | t         
+(4 rows)
+INSERT INTO alter_type_aoco VALUES (20, '3', '4', 5);
+INSERT 0 1
+EXECUTE capturerelfilenodebefore ('alter_column_d', 'idx1');
+INSERT 0 4
+EXECUTE capturerelfilenodebefore ('alter_column_d', 'idx2');
+INSERT 0 4
+EXECUTE capturerelfilenodebefore ('alter_column_d', 'idx3');
+INSERT 0 4
+
+ALTER TABLE alter_type_aoco ALTER COLUMN d TYPE text;
+ALTER TABLE
+
+EXECUTE checkrelfilenodediff ('alter_column_d', 'idx1');
+ segid | casename       | relname | rewritten 
+-------+----------------+---------+-----------
+ 2     | alter_column_d | idx1    | f         
+ 0     | alter_column_d | idx1    | f         
+ 1     | alter_column_d | idx1    | f         
+ -1    | alter_column_d | idx1    | f         
+(4 rows)
+EXECUTE checkrelfilenodediff ('alter_column_d', 'idx2');
+ segid | casename       | relname | rewritten 
+-------+----------------+---------+-----------
+ 0     | alter_column_d | idx2    | f         
+ 1     | alter_column_d | idx2    | f         
+ 2     | alter_column_d | idx2    | f         
+ -1    | alter_column_d | idx2    | f         
+(4 rows)
+EXECUTE checkrelfilenodediff ('alter_column_d', 'idx3');
+ segid | casename       | relname | rewritten 
+-------+----------------+---------+-----------
+ 0     | alter_column_d | idx3    | t         
+ 1     | alter_column_d | idx3    | t         
+ -1    | alter_column_d | idx3    | t         
+ 2     | alter_column_d | idx3    | t         
+(4 rows)
+INSERT INTO alter_type_aoco VALUES (20, '4', '5', '6');
+INSERT 0 1
+-- data is intact
+SELECT * FROM alter_type_aoco;
+ a  | b | c | d 
+----+---+---+---
+ 20 | 1 | 2 | 3 
+ 20 | 2 | 3 | 4 
+ 20 | 3 | 4 | 5 
+ 20 | 4 | 5 | 6 
+(4 rows)
+
+
+--------------------------------------------------------------------------------
+-- Test if AT ALTER COLUMN TYPE for partitioned table
+
+-- create 2 level partitions with same schema (regular case) and create index on some column
+-- alter column on the partition table root and on the partitions and we check rewrite status and data status
+-- filenum for partition roots
+--------------------------------------------------------------------------------
+CREATE TABLE part_alter_col(a int, b int, c int) PARTITION BY RANGE (A) (partition aa start (1) end (5) every (1)) USING ao_column;
+CREATE TABLE
+INSERT INTO part_alter_col VALUES (1,2,3);
+INSERT 0 1
+CREATE INDEX part_alter_col_idx1 on part_alter_col(b);
+CREATE INDEX
+CREATE INDEX part_alter_col_idx2 on part_alter_col(c);
+CREATE INDEX
+EXECUTE capturerelfilenodebefore ('alter_column_b', 'part_alter_col_1_prt_aa_1');
+INSERT 0 4
+EXECUTE capturerelfilenodebefore ('alter_column_b', 'part_alter_col_1_prt_aa_1_b_idx');
+INSERT 0 4
+EXECUTE capturerelfilenodebefore ('alter_column_b', 'part_alter_col_1_prt_aa_1_c_idx');
+INSERT 0 4
+EXECUTE attribute_encoding_check ('part_alter_col');
+ relname        | attname | filenum | attoptions                                                  
+----------------+---------+---------+-------------------------------------------------------------
+ part_alter_col | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ part_alter_col | b       | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ part_alter_col | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(3 rows)
+
+ALTER TABLE part_alter_col ALTER COLUMN b TYPE text;
+ALTER TABLE
+
+EXECUTE attribute_encoding_check ('part_alter_col');
+ relname        | attname | filenum | attoptions                                                  
+----------------+---------+---------+-------------------------------------------------------------
+ part_alter_col | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ part_alter_col | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ part_alter_col | b       | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(3 rows)
+EXECUTE checkrelfilenodediff ('alter_column_b', 'part_alter_col_1_prt_aa_1');
+ segid | casename       | relname                   | rewritten 
+-------+----------------+---------------------------+-----------
+ 2     | alter_column_b | part_alter_col_1_prt_aa_1 | f         
+ -1    | alter_column_b | part_alter_col_1_prt_aa_1 | f         
+ 0     | alter_column_b | part_alter_col_1_prt_aa_1 | f         
+ 1     | alter_column_b | part_alter_col_1_prt_aa_1 | f         
+(4 rows)
+EXECUTE checkrelfilenodediff ('alter_column_b', 'part_alter_col_1_prt_aa_1_b_idx');
+ segid | casename       | relname                         | rewritten 
+-------+----------------+---------------------------------+-----------
+ 2     | alter_column_b | part_alter_col_1_prt_aa_1_b_idx | t         
+ -1    | alter_column_b | part_alter_col_1_prt_aa_1_b_idx | t         
+ 0     | alter_column_b | part_alter_col_1_prt_aa_1_b_idx | t         
+ 1     | alter_column_b | part_alter_col_1_prt_aa_1_b_idx | t         
+(4 rows)
+EXECUTE checkrelfilenodediff ('alter_column_b', 'part_alter_col_1_prt_aa_1_c_idx');
+ segid | casename       | relname                         | rewritten 
+-------+----------------+---------------------------------+-----------
+ -1    | alter_column_b | part_alter_col_1_prt_aa_1_c_idx | f         
+ 2     | alter_column_b | part_alter_col_1_prt_aa_1_c_idx | f         
+ 0     | alter_column_b | part_alter_col_1_prt_aa_1_c_idx | f         
+ 1     | alter_column_b | part_alter_col_1_prt_aa_1_c_idx | f         
+(4 rows)
+SELECT * FROM part_alter_col;
+ a | b | c 
+---+---+---
+ 1 | 2 | 3 
+(1 row)
+DROP TABLE part_alter_col;
+DROP TABLE
+-- check if all files are dropped correctly
+SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'part_alter_col');
+ count 
+-------
+ 0     
+(1 row)
+--------------------------------------------------------------------------------
+-- Test if column rewrite works when AT ALTER COLUMN TYPE for a column
+-- and then alter it back to the original type
+
+-- Check reloptions, pg_attribute_encoding, visimap, blkdirectory alongside the rewrite
+--------------------------------------------------------------------------------
+CREATE TABLE alter_column_back(a int, b int ENCODING (compresstype='zlib', compresslevel=5), c int) using ao_column with (compresstype='zlib', compresslevel=2);
+CREATE TABLE
+INSERT INTO alter_column_back VALUES (1,2,3), (1,2,4), (1,2,5);
+INSERT 0 3
+CREATE INDEX alter_column_back_idx1 ON alter_column_back(a,c);
+CREATE INDEX
+DELETE FROM alter_column_back WHERE c=5;
+DELETE 1
+EXECUTE capturerelfilenodebefore ('alter_column', 'alter_column_back');
+INSERT 0 4
+SELECT atttypid::regtype FROM pg_attribute WHERE attrelid='alter_column_back'::regclass AND attname='b';
+ atttypid 
+----------
+ integer  
+(1 row)
+
+ALTER TABLE alter_column_back ALTER COLUMN b TYPE text;
+ALTER TABLE
+
+SELECT c.relname, c.reloptions FROM pg_class c WHERE c.relname LIKE 'alter_column_back';
+ relname           | reloptions                                                                   
+-------------------+------------------------------------------------------------------------------
+ alter_column_back | ['compresstype=zlib', 'compresslevel=2', 'blocksize=32768', 'checksum=true'] 
+(1 row)
+EXECUTE checkrelfilenodediff ('alter_column', 'alter_column_back');
+ segid | casename     | relname           | rewritten 
+-------+--------------+-------------------+-----------
+ 2     | alter_column | alter_column_back | f         
+ 0     | alter_column | alter_column_back | f         
+ 1     | alter_column | alter_column_back | f         
+ -1    | alter_column | alter_column_back | f         
+(4 rows)
+SELECT atttypid::regtype FROM pg_attribute WHERE attrelid='alter_column_back'::regclass AND attname='b';
+ atttypid 
+----------
+ text     
+(1 row)
+INSERT INTO alter_column_back VALUES (1,'2',3);
+INSERT 0 1
+DELETE FROM alter_column_back where c=4;
+DELETE 1
+EXECUTE capturerelfilenodebefore ('alter_column_back', 'alter_column_back');
+INSERT 0 4
+
+ALTER TABLE alter_column_back ALTER COLUMN b TYPE int using b::int;
+ALTER TABLE
+
+SELECT c.relname, c.reloptions FROM pg_class c WHERE c.relname LIKE 'alter_column_back';
+ relname           | reloptions                                                                   
+-------------------+------------------------------------------------------------------------------
+ alter_column_back | ['compresstype=zlib', 'compresslevel=2', 'blocksize=32768', 'checksum=true'] 
+(1 row)
+EXECUTE attribute_encoding_check ('alter_column_back');
+ relname           | attname | filenum | attoptions                                                  
+-------------------+---------+---------+-------------------------------------------------------------
+ alter_column_back | a       | 1       | ['compresstype=zlib', 'compresslevel=2', 'blocksize=32768'] 
+ alter_column_back | c       | 3       | ['compresstype=zlib', 'compresslevel=2', 'blocksize=32768'] 
+ alter_column_back | b       | 2       | ['compresstype=zlib', 'compresslevel=5', 'blocksize=32768'] 
+(3 rows)
+SELECT (gp_toolkit.__gp_aovisimap('alter_column_back')).* FROM gp_dist_random('gp_id');
+ tid          | segno | row_num 
+--------------+-------+---------
+ (33554432,3) | 1     | 2       
+ (33554432,4) | 1     | 3       
+(2 rows)
+SELECT gp_segment_id, (gp_toolkit.__gp_aoblkdir('alter_column_back')).* FROM gp_dist_random('gp_id');
+ gp_segment_id | tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------------+---------+-------+----------------+----------+--------------+-------------+-----------
+ 1             | (0,5)   | 1     | 0              | 0        | 1            | 0           | 3         
+ 1             | (0,5)   | 1     | 0              | 1        | 101          | 48          | 1         
+ 1             | (0,7)   | 1     | 2              | 0        | 1            | 0           | 3         
+ 1             | (0,7)   | 1     | 2              | 1        | 101          | 48          | 1         
+ 1             | (0,8)   | 1     | 1              | 0        | 1            | 0           | 3         
+ 1             | (0,8)   | 1     | 1              | 1        | 101          | 48          | 1         
+(6 rows)
+EXECUTE checkrelfilenodediff ('alter_column_back', 'alter_column_back');
+ segid | casename          | relname           | rewritten 
+-------+-------------------+-------------------+-----------
+ 2     | alter_column_back | alter_column_back | f         
+ 0     | alter_column_back | alter_column_back | f         
+ 1     | alter_column_back | alter_column_back | f         
+ -1    | alter_column_back | alter_column_back | f         
+(4 rows)
+SELECT atttypid::regtype FROM pg_attribute WHERE attrelid='alter_column_back'::regclass AND attname='b';
+ atttypid 
+----------
+ integer  
+(1 row)
+SELECT * FROM alter_column_back;
+ a | b | c 
+---+---+---
+ 1 | 2 | 3 
+ 1 | 2 | 3 
+(2 rows)
+DROP TABLE alter_column_back;
+DROP TABLE
+-- check if all files are dropped correctly
+SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_back');
+ count 
+-------
+ 0     
+(1 row)
+
+--------------------------------------------------------------------------------
+-- Test if ALTER COLUMN TYPE and SET ACCESS METHOD can be done in the same command
+-- Verify if we rewrite the table
+--------------------------------------------------------------------------------
+CREATE TABLE alter_column_set_am(a int, b int, c int) using ao_column;
+CREATE TABLE
+INSERT INTO alter_column_set_am VALUES (1,2,3);
+INSERT 0 1
+EXECUTE capturerelfilenodebefore ('alter_column_set_am_aorow', 'alter_column_set_am');
+INSERT 0 4
+EXECUTE attribute_encoding_check ('alter_column_set_am');
+ relname             | attname | filenum | attoptions                                                  
+---------------------+---------+---------+-------------------------------------------------------------
+ alter_column_set_am | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_column_set_am | b       | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_column_set_am | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(3 rows)
+
+ALTER TABLE alter_column_set_am SET ACCESS METHOD ao_row, ALTER COLUMN b TYPE text;
+ALTER TABLE
+
+EXECUTE attribute_encoding_check ('alter_column_set_am');
+ relname | attname | filenum | attoptions 
+---------+---------+---------+------------
+(0 rows)
+EXECUTE checkrelfilenodediff ('alter_column_set_am_aorow', 'alter_column_set_am');
+ segid | casename                  | relname             | rewritten 
+-------+---------------------------+---------------------+-----------
+ -1    | alter_column_set_am_aorow | alter_column_set_am | t         
+ 2     | alter_column_set_am_aorow | alter_column_set_am | t         
+ 0     | alter_column_set_am_aorow | alter_column_set_am | t         
+ 1     | alter_column_set_am_aorow | alter_column_set_am | t         
+(4 rows)
+SELECT * FROM alter_column_set_am;
+ a | b | c 
+---+---+---
+ 1 | 2 | 3 
+(1 row)
+INSERT INTO alter_column_set_am VALUES (1,'2',3);
+INSERT 0 1
+EXECUTE capturerelfilenodebefore ('alter_column_set_am_aocol', 'alter_column_set_am');
+INSERT 0 4
+EXECUTE attribute_encoding_check ('alter_column_set_am');
+ relname | attname | filenum | attoptions 
+---------+---------+---------+------------
+(0 rows)
+
+ALTER TABLE alter_column_set_am SET ACCESS METHOD ao_column, ALTER COLUMN c TYPE text;
+ALTER TABLE
+
+EXECUTE attribute_encoding_check ('alter_column_set_am');
+ relname             | attname | filenum | attoptions                                                  
+---------------------+---------+---------+-------------------------------------------------------------
+ alter_column_set_am | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_column_set_am | b       | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_column_set_am | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(3 rows)
+EXECUTE checkrelfilenodediff ('alter_column_set_am_aocol', 'alter_column_set_am');
+ segid | casename                  | relname             | rewritten 
+-------+---------------------------+---------------------+-----------
+ -1    | alter_column_set_am_aocol | alter_column_set_am | t         
+ 2     | alter_column_set_am_aocol | alter_column_set_am | t         
+ 0     | alter_column_set_am_aocol | alter_column_set_am | t         
+ 1     | alter_column_set_am_aocol | alter_column_set_am | t         
+(4 rows)
+SELECT * FROM alter_column_set_am;
+ a | b | c 
+---+---+---
+ 1 | 2 | 3 
+ 1 | 2 | 3 
+(2 rows)
+
+--------------------------------------------------------------------------------
+-- Test if ALTER COLUMN TYPE and ADD COLUMN can be done in the same command
+-- Verify if we don't rewrite the table
+--------------------------------------------------------------------------------
+CREATE TABLE alter_column_add_col(a int, b int, c int) using ao_column;
+CREATE TABLE
+INSERT INTO alter_column_add_col VALUES (1,2,3);
+INSERT 0 1
+EXECUTE capturerelfilenodebefore ('alter_col_add_col', 'alter_column_add_col');
+INSERT 0 4
+EXECUTE attribute_encoding_check ('alter_column_add_col');
+ relname              | attname | filenum | attoptions                                                  
+----------------------+---------+---------+-------------------------------------------------------------
+ alter_column_add_col | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_column_add_col | b       | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_column_add_col | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(3 rows)
+
+ALTER TABLE alter_column_add_col ADD COLUMN d int, ALTER COLUMN b TYPE text;
+ALTER TABLE
+
+EXECUTE attribute_encoding_check ('alter_column_add_col');
+ relname              | attname | filenum | attoptions                                                  
+----------------------+---------+---------+-------------------------------------------------------------
+ alter_column_add_col | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_column_add_col | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_column_add_col | b       | 1602    | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_column_add_col | d       | 4       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(4 rows)
+EXECUTE checkrelfilenodediff ('alter_column_add_col', 'alter_column_add_col');
+ segid | casename | relname | rewritten 
+-------+----------+---------+-----------
+(0 rows)
+SELECT * FROM alter_column_add_col;
+ a | b | c | d 
+---+---+---+---
+ 1 | 2 | 3 |   
+(1 row)
+INSERT INTO alter_column_add_col VALUES (1,'2',3, 4);
+INSERT 0 1
+SELECT * FROM alter_column_add_col;
+ a | b | c | d 
+---+---+---+---
+ 1 | 2 | 3 |   
+ 1 | 2 | 3 | 4 
+(2 rows)
+
+--------------------------------------------------------------------------------
+-- Test if ALTER COLUMN TYPE and other AT commands can be done in the same command
+-- Verify if we rewrite the table
+--------------------------------------------------------------------------------
+CREATE TABLE alter_column_other(a int, b int, c int) using ao_column;
+CREATE TABLE
+INSERT INTO alter_column_other VALUES (1,2,3);
+INSERT 0 1
+EXECUTE capturerelfilenodebefore ('alter_column_other', 'alter_column_other');
+INSERT 0 4
+EXECUTE attribute_encoding_check ('alter_column_other');
+ relname            | attname | filenum | attoptions                                                  
+--------------------+---------+---------+-------------------------------------------------------------
+ alter_column_other | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_column_other | b       | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_column_other | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(3 rows)
+
+ALTER TABLE alter_column_other ALTER COLUMN b TYPE text, ALTER COLUMN c SET DEFAULT 5;
+ALTER TABLE
+
+EXECUTE attribute_encoding_check ('alter_column_other');
+ relname            | attname | filenum | attoptions                                                  
+--------------------+---------+---------+-------------------------------------------------------------
+ alter_column_other | b       | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_column_other | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_column_other | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(3 rows)
+EXECUTE checkrelfilenodediff ('alter_column_other', 'alter_column_other');
+ segid | casename           | relname            | rewritten 
+-------+--------------------+--------------------+-----------
+ 2     | alter_column_other | alter_column_other | t         
+ -1    | alter_column_other | alter_column_other | t         
+ 0     | alter_column_other | alter_column_other | t         
+ 1     | alter_column_other | alter_column_other | t         
+(4 rows)
+SELECT * FROM alter_column_other;
+ a | b | c 
+---+---+---
+ 1 | 2 | 3 
+(1 row)
+INSERT INTO alter_column_other VALUES (1,'2');
+INSERT 0 1
+SELECT * FROM alter_column_other;
+ a | b | c 
+---+---+---
+ 1 | 2 | 3 
+ 1 | 2 | 5 
+(2 rows)
+
+--------------------------------------------------------------------------------
+-- Test if column rewrite works after vacuum on deleted rows
+--------------------------------------------------------------------------------
+CREATE TABLE alter_column_vacuum(a int, b int) using ao_column;
+CREATE TABLE
+INSERT INTO alter_column_vacuum SELECT 1,i FROM generate_series(1,1000)i;
+INSERT 0 1000
+DELETE FROM alter_column_vacuum WHERE b>10;
+DELETE 990
+VACUUM alter_column_vacuum;
+VACUUM
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_column_vacuum');
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 1     | 0          | 1              | 0        | 0   | 0                | 2        | 3             | 1     
+ 1          | 1     | 1          | 129            | 0        | 0   | 0                | 2        | 3             | 1     
+ 1          | 2     | 0          | 2              | 10       | 80  | 80               | 0        | 3             | 1     
+ 1          | 2     | 1          | 130            | 10       | 80  | 80               | 0        | 3             | 1     
+(4 rows)
+-- should succeed
+ALTER TABLE alter_column_vacuum ALTER COLUMN b TYPE text;
+ALTER TABLE
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_column_vacuum');
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 1     | 0          | 1              | 0        | 0   | 0                | 2        | 3             | 1     
+ 1          | 1     | 1          | 204929         | 0        | 0   | 0                | 2        | 3             | 1     
+ 1          | 2     | 0          | 2              | 10       | 80  | 80               | 1        | 3             | 1     
+ 1          | 2     | 1          | 204930         | 10       | 64  | 64               | 1        | 3             | 1     
+(4 rows)
+
+--------------------------------------------------------------------------------
+-- Test if ALTER COLUMN TYPE works correctly when constraints are involved
+--------------------------------------------------------------------------------
+CREATE TABLE alter_column_constraints(a int, b int check (b > 0)) USING ao_column;
+CREATE TABLE
+INSERT INTO alter_column_constraints SELECT i,i FROM generate_series(1,10)i;
+INSERT 0 10
+-- should error
+ALTER TABLE alter_column_constraints ALTER COLUMN b TYPE text;
+ERROR:  operator does not exist: text > integer
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+-- should succeed, and constraint remains
+EXECUTE capturerelfilenodebefore ('alter_column_constraints_col_rewrite', 'alter_column_constraints');
+INSERT 0 4
+ALTER TABLE alter_column_constraints ALTER COLUMN b TYPE bigint;
+ALTER TABLE
+EXECUTE checkrelfilenodediff ('alter_column_constraints_col_rewrite', 'alter_column_constraints');
+ segid | casename                             | relname                  | rewritten 
+-------+--------------------------------------+--------------------------+-----------
+ 2     | alter_column_constraints_col_rewrite | alter_column_constraints | f         
+ -1    | alter_column_constraints_col_rewrite | alter_column_constraints | f         
+ 0     | alter_column_constraints_col_rewrite | alter_column_constraints | f         
+ 1     | alter_column_constraints_col_rewrite | alter_column_constraints | f         
+(4 rows)
+
+EXECUTE capturerelfilenodebefore ('alter_column_constraints_fullrewrite', 'alter_column_constraints');
+INSERT 0 4
+-- should succeed and relfile changed (not using the column rewrite optimization because there's other command)
+ALTER TABLE alter_column_constraints ADD CONSTRAINT checkb2 CHECK (b < 100), ALTER COLUMN b TYPE int;
+ALTER TABLE
+EXECUTE checkrelfilenodediff ('alter_column_constraints_fullrewrite', 'alter_column_constraints');
+ segid | casename                             | relname                  | rewritten 
+-------+--------------------------------------+--------------------------+-----------
+ -1    | alter_column_constraints_fullrewrite | alter_column_constraints | t         
+ 0     | alter_column_constraints_fullrewrite | alter_column_constraints | t         
+ 1     | alter_column_constraints_fullrewrite | alter_column_constraints | t         
+ 2     | alter_column_constraints_fullrewrite | alter_column_constraints | t         
+(4 rows)
+
+--------------------------------------------------------------------------------
+-- Test if ALTER COLUMN TYPE works correctly when seg0 has some data
+-- Check if we handle rewrite on seg0
+--------------------------------------------------------------------------------
+CREATE TABLE alter_column_seg0(a int, b int) USING ao_column;
+CREATE TABLE
+1: BEGIN;
+BEGIN
+1: ALTER TABLE alter_column_seg0 ADD COLUMN c int;
+ALTER TABLE
+1: INSERT INTO alter_column_seg0 SELECT 1,i,i FROM generate_series(1,10)i;
+INSERT 0 10
+1: COMMIT;
+COMMIT
+-- gp_toolkit.gp_check_orphaned_files later requires that there's no concurrent sessions
+1q: ... <quitting>
+INSERT INTO alter_column_seg0 SELECT 1,i,i FROM generate_series(1,10)i;
+INSERT 0 10
+ALTER TABLE alter_column_seg0 ALTER COLUMN b TYPE text;
+ALTER TABLE
+SELECT count(*) FROM alter_column_seg0;
+ count 
+-------
+ 20    
+(1 row)
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_column_seg0');
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 0     | 0          | 0              | 10       | 80  | 80               | 2        | 3             | 1     
+ 1          | 0     | 1          | 204928         | 10       | 64  | 64               | 2        | 3             | 1     
+ 1          | 0     | 2          | 256            | 10       | 80  | 80               | 2        | 3             | 1     
+ 1          | 1     | 0          | 1              | 10       | 80  | 80               | 2        | 3             | 1     
+ 1          | 1     | 1          | 204929         | 10       | 64  | 64               | 2        | 3             | 1     
+ 1          | 1     | 2          | 257            | 10       | 80  | 80               | 2        | 3             | 1     
+(6 rows)
+DROP TABLE alter_column_seg0;
+DROP TABLE
+SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_seg0');
+ count 
+-------
+ 0     
+(1 row)
+
+--------------------------------------------------------------------------------
+-- Test if ALTER COLUMN TYPE works correctly multiple segfiles are created
+-- due to multiple concurrency
+-- Check if we handle rewrite on each segfile correctly
+--------------------------------------------------------------------------------
+CREATE TABLE alter_column_multiple_concurrency(a int, b int) USING ao_column;
+CREATE TABLE
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: INSERT INTO alter_column_multiple_concurrency SELECT 1,i FROM generate_series(1,10)i;
+INSERT 0 10
+2: INSERT INTO alter_column_multiple_concurrency SELECT 1,i FROM generate_series(1,10)i;
+INSERT 0 10
+1: COMMIT;
+COMMIT
+2: COMMIT;
+COMMIT
+1q: ... <quitting>
+2q: ... <quitting>
+ALTER TABLE alter_column_multiple_concurrency ALTER COLUMN b TYPE text;
+ALTER TABLE
+SELECT count(*) FROM alter_column_multiple_concurrency;
+ count 
+-------
+ 20    
+(1 row)
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_column_multiple_concurrency');
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 1     | 0          | 1              | 10       | 80  | 80               | 2        | 3             | 1     
+ 1          | 1     | 1          | 204929         | 10       | 64  | 64               | 2        | 3             | 1     
+ 1          | 2     | 0          | 2              | 10       | 80  | 80               | 2        | 3             | 1     
+ 1          | 2     | 1          | 204930         | 10       | 64  | 64               | 2        | 3             | 1     
+(4 rows)
+DROP TABLE alter_column_multiple_concurrency;
+DROP TABLE
+SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_multiple_concurrency');
+ count 
+-------
+ 0     
+(1 row)
+
+--------------------------------------------------------------------------------
+-- Test if ALTER COLUMN TYPE works correctly when a segfile is in AWAITING_DROP state
+-- Check if we handle rewrite on each segfile correctly
+--------------------------------------------------------------------------------
+CREATE TABLE alter_column_awaiting_drop(a int, b int) USING ao_column;
+CREATE TABLE
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: INSERT INTO alter_column_awaiting_drop SELECT 1,i FROM generate_series(1,10)i;
+INSERT 0 10
+2: INSERT INTO alter_column_awaiting_drop SELECT 1,i FROM generate_series(11,20)i;
+INSERT 0 10
+1: COMMIT;
+COMMIT
+2: COMMIT;
+COMMIT
+1q: ... <quitting>
+2q: ... <quitting>
+DELETE FROM alter_column_awaiting_drop WHERE b > 10;
+DELETE 10
+VACUUM alter_column_awaiting_drop;
+VACUUM
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_column_awaiting_drop');
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 1     | 0          | 1              | 10       | 80  | 80               | 2        | 3             | 1     
+ 1          | 1     | 1          | 129            | 10       | 80  | 80               | 2        | 3             | 1     
+ 1          | 2     | 0          | 2              | 0        | 0   | 0                | 1        | 3             | 1     
+ 1          | 2     | 1          | 130            | 0        | 0   | 0                | 1        | 3             | 1     
+ 1          | 3     | 0          | 3              | 0        | 0   | 0                | 0        | 3             | 1     
+ 1          | 3     | 1          | 131            | 0        | 0   | 0                | 0        | 3             | 1     
+(6 rows)
+ALTER TABLE alter_column_awaiting_drop ALTER COLUMN b TYPE text;
+ALTER TABLE
+SELECT count(*) FROM alter_column_awaiting_drop;
+ count 
+-------
+ 10    
+(1 row)
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_column_awaiting_drop');
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 1     | 0          | 1              | 10       | 80  | 80               | 3        | 3             | 1     
+ 1          | 1     | 1          | 204929         | 10       | 64  | 64               | 3        | 3             | 1     
+ 1          | 2     | 0          | 2              | 0        | 0   | 0                | 1        | 3             | 1     
+ 1          | 2     | 1          | 204930         | 0        | 0   | 0                | 1        | 3             | 1     
+ 1          | 3     | 0          | 3              | 0        | 0   | 0                | 0        | 3             | 1     
+ 1          | 3     | 1          | 204931         | 0        | 0   | 0                | 0        | 3             | 1     
+(6 rows)
+DROP TABLE alter_column_awaiting_drop;
+DROP TABLE
+-- VACUUM seems to incur some left-over session, wait a little while for that to go away to placate gp_check_orphaned_files
+SELECT pg_sleep(3);
+ pg_sleep 
+----------
+          
+(1 row)
+SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_awaiting_drop');
+ count 
+-------
+ 0     
+(1 row)
+
+--------------------------------------------------------------------------------
+-- Test if ALTER COLUMN TYPE works correctly for 0 inserted rows
+--------------------------------------------------------------------------------
+CREATE TABLE alter_column_zero_tupcount(a int, b int) USING ao_column;
+CREATE TABLE
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: INSERT INTO alter_column_zero_tupcount SELECT 1,i FROM generate_series(1,10)i;
+INSERT 0 10
+2: INSERT INTO alter_column_zero_tupcount SELECT 1,i FROM generate_series(1,10)i;
+INSERT 0 10
+1: ABORT;
+ROLLBACK
+2: ABORT;
+ROLLBACK
+1q: ... <quitting>
+2q: ... <quitting>
+ALTER TABLE alter_column_zero_tupcount ALTER COLUMN b TYPE text;
+ALTER TABLE
+SELECT count(*) FROM alter_column_zero_tupcount;
+ count 
+-------
+ 0     
+(1 row)
+SELECT * FROM gp_toolkit.__gp_aocsseg('alter_column_zero_tupcount');
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+ 1          | 1     | 0          | 1              | 0        | 0   | 0                | 0        | 3             | 1     
+ 1          | 1     | 1          | 204929         | 0        | 0   | 0                | 0        | 3             | 1     
+ 1          | 2     | 0          | 2              | 0        | 0   | 0                | 0        | 3             | 1     
+ 1          | 2     | 1          | 204930         | 0        | 0   | 0                | 0        | 3             | 1     
+(4 rows)
+DROP TABLE alter_column_zero_tupcount;
+DROP TABLE
+SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_zero_tupcount');
+ count 
+-------
+ 0     
+(1 row)
+
+--------------------------------------------------------------------------------
+-- Test if ALTER COLUMN TYPE works correctly for generated columns.
+-- Check if we error out on ALTERing type columns that have dependent generated columns
+--------------------------------------------------------------------------------
+CREATE TABLE alter_column_generated_cols(a int, b int, c int GENERATED ALWAYS AS (a+b) STORED, d int GENERATED ALWAYS AS (tableoid::regclass) STORED) USING ao_column;
+CREATE TABLE
+INSERT INTO alter_column_generated_cols SELECT 1,i FROM generate_series(1,5)i;
+INSERT 0 5
+SELECT attname, atttypid::regtype FROM pg_attribute WHERE attrelid='alter_column_generated_cols'::regclass and attname in ('b','c','d');
+ attname | atttypid 
+---------+----------
+ b       | integer  
+ c       | integer  
+ d       | integer  
+(3 rows)
+-- b shouldn't be allowed for alter type
+ALTER TABLE alter_column_generated_cols ALTER COLUMN b TYPE text;
+ERROR:  cannot alter type of a column used by a generated column
+DETAIL:  Column "b" is used by generated column "c".
+SELECT attname, atttypid::regtype FROM pg_attribute WHERE attrelid='alter_column_generated_cols'::regclass and attname in ('b','c','d');
+ attname | atttypid 
+---------+----------
+ b       | integer  
+ c       | integer  
+ d       | integer  
+(3 rows)
+ALTER TABLE alter_column_generated_cols ALTER COLUMN c TYPE text;
+ALTER TABLE
+SELECT attname, atttypid::regtype FROM pg_attribute WHERE attrelid='alter_column_generated_cols'::regclass and attname in ('b','c','d');
+ attname | atttypid 
+---------+----------
+ b       | integer  
+ c       | text     
+ d       | integer  
+(3 rows)
+ALTER TABLE alter_column_generated_cols ALTER COLUMN d TYPE text;
+ALTER TABLE
+SELECT attname, atttypid::regtype FROM pg_attribute WHERE attrelid='alter_column_generated_cols'::regclass and attname in ('b','c','d');
+ attname | atttypid 
+---------+----------
+ b       | integer  
+ c       | text     
+ d       | text     
+(3 rows)
+
+--------------------------------------------------------------------------------
+-- Test if ALTER COLUMN TYPE blocks concurrent INSERT, and vice versa
+--------------------------------------------------------------------------------
+CREATE TABLE aoco_concurrent_inserts(a int, b int, c int) USING ao_column;
+CREATE TABLE
+INSERT INTO aoco_concurrent_inserts SELECT i,i,i FROM generate_series(1,10)i;
+INSERT 0 10
+1: BEGIN;
+BEGIN
+1: INSERT INTO aoco_concurrent_inserts SELECT i,i,i FROM generate_series(1,10)i;
+INSERT 0 10
+2&: ALTER TABLE aoco_concurrent_inserts ALTER COLUMN b TYPE text;  <waiting ...>
+1: END;
+COMMIT
+2<:  <... completed>
+ALTER TABLE
+-- should see 20 rows
+SELECT count(*) FROM aoco_concurrent_inserts;
+ count 
+-------
+ 20    
+(1 row)
+1: BEGIN;
+BEGIN
+1: ALTER TABLE aoco_concurrent_inserts ALTER COLUMN c TYPE text;
+ALTER TABLE
+2&: INSERT INTO aoco_concurrent_inserts SELECT i,i,i FROM generate_series(1,10)i;  <waiting ...>
+1: END;
+COMMIT
+2<:  <... completed>
+INSERT 0 10
+1q: ... <quitting>
+2q: ... <quitting>
+-- should see 30 rows
+SELECT count(*) FROM aoco_concurrent_inserts;
+ count 
+-------
+ 30    
+(1 row)
+
+--------------------------------------------------------------------------------
+-- Tests for ALTER COLUMN SET ENCODING
+--------------------------------------------------------------------------------
+
+--
+-- Basic testing
+--
+create table atsetenc(c1 int, c2 int) using ao_column distributed replicated;
+CREATE TABLE
+-- first check an empty table
+-- check the initial encoding settings
+execute attribute_encoding_check('atsetenc');
+ relname  | attname | filenum | attoptions                                                  
+----------+---------+---------+-------------------------------------------------------------
+ atsetenc | c1      | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ atsetenc | c2      | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(2 rows)
+-- no table rewrite
+execute capturerelfilenodebefore('set encoding - empty', 'atsetenc');
+INSERT 0 4
+alter table atsetenc alter column c1 set encoding (compresstype=zlib,compresslevel=9);
+ALTER TABLE
+execute checkrelfilenodediff('set encoding - empty', 'atsetenc');
+ segid | casename             | relname  | rewritten 
+-------+----------------------+----------+-----------
+ 0     | set encoding - empty | atsetenc | f         
+ 1     | set encoding - empty | atsetenc | f         
+ 2     | set encoding - empty | atsetenc | f         
+ -1    | set encoding - empty | atsetenc | f         
+(4 rows)
+execute attribute_encoding_check('atsetenc');
+ relname  | attname | filenum | attoptions                                                  
+----------+---------+---------+-------------------------------------------------------------
+ atsetenc | c1      | 1601    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+ atsetenc | c2      | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(2 rows)
+select * from atsetenc;
+ c1 | c2 
+----+----
+(0 rows)
+
+-- now insert some data and check
+insert into atsetenc values(1,2);
+INSERT 0 1
+-- no table rewrite setting encoding
+execute capturerelfilenodebefore('set encoding - basic', 'atsetenc');
+INSERT 0 4
+alter table atsetenc alter column c2 set encoding (compresstype=zlib,compresslevel=9);
+ALTER TABLE
+-- result intact
+select * from atsetenc;
+ c1 | c2 
+----+----
+ 1  | 2  
+(1 row)
+execute checkrelfilenodediff('set encoding - basic', 'atsetenc');
+ segid | casename             | relname  | rewritten 
+-------+----------------------+----------+-----------
+ 0     | set encoding - basic | atsetenc | f         
+ 1     | set encoding - basic | atsetenc | f         
+ -1    | set encoding - basic | atsetenc | f         
+ 2     | set encoding - basic | atsetenc | f         
+(4 rows)
+execute attribute_encoding_check('atsetenc');
+ relname  | attname | filenum | attoptions                                                  
+----------+---------+---------+-------------------------------------------------------------
+ atsetenc | c1      | 1601    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+ atsetenc | c2      | 1602    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+(2 rows)
+
+-- check if the encoding takes actual effect
+alter table atsetenc add column c3 text default 'a';
+ALTER TABLE
+insert into atsetenc values (1,2,repeat('a',10000));
+INSERT 0 1
+-- before alter encoding, no compression by default
+execute attribute_encoding_check('atsetenc');
+ relname  | attname | filenum | attoptions                                                  
+----------+---------+---------+-------------------------------------------------------------
+ atsetenc | c1      | 1601    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+ atsetenc | c2      | 1602    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+ atsetenc | c3      | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(3 rows)
+select relname, attnum, size, compression_ratio from gp_toolkit.gp_column_size where relid::regclass::text = 'atsetenc' and gp_segment_id = 0 and attnum = 3;
+ relname  | attnum | size  | compression_ratio 
+----------+--------+-------+-------------------
+ atsetenc | 3      | 10096 | 1.00              
+(1 row)
+execute capturerelfilenodebefore('set encoding - compress effect', 'atsetenc');
+INSERT 0 4
+alter table atsetenc alter column c3 set encoding (compresstype=zlib,compresslevel=9);
+ALTER TABLE
+execute capturerelfilenodebefore('set encoding - compress effect', 'atsetenc');
+INSERT 0 4
+-- after alter encoding, size is reduced
+execute attribute_encoding_check('atsetenc');
+ relname  | attname | filenum | attoptions                                                  
+----------+---------+---------+-------------------------------------------------------------
+ atsetenc | c1      | 1601    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+ atsetenc | c2      | 1602    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+ atsetenc | c3      | 1603    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+(3 rows)
+select relname,attnum,size,compression_ratio from gp_toolkit.gp_column_size where relid::regclass::text = 'atsetenc' and gp_segment_id = 0 and attnum = 3;
+ relname  | attnum | size | compression_ratio 
+----------+--------+------+-------------------
+ atsetenc | 3      | 120  | 84.13             
+(1 row)
+select length(c3) from atsetenc;
+ length 
+--------
+ 1      
+ 10000  
+(2 rows)
+
+-- check if we'll re-index the index for the rewritten column, and not others
+create index atsetenc_idx2 on atsetenc(c2);
+CREATE INDEX
+create index atsetenc_idx3 on atsetenc(c3);
+CREATE INDEX
+execute capturerelfilenodebefore ('alter_column_c2', 'atsetenc_idx2');
+INSERT 0 4
+execute capturerelfilenodebefore ('alter_column_c2', 'atsetenc_idx3');
+INSERT 0 4
+alter table atsetenc alter column c2 set encoding (compresstype=zlib,compresslevel=1);
+ALTER TABLE
+execute checkrelfilenodediff('alter_column_c2', 'atsetenc_idx2');
+ segid | casename        | relname       | rewritten 
+-------+-----------------+---------------+-----------
+ -1    | alter_column_c2 | atsetenc_idx2 | t         
+ 2     | alter_column_c2 | atsetenc_idx2 | t         
+ 0     | alter_column_c2 | atsetenc_idx2 | t         
+ 1     | alter_column_c2 | atsetenc_idx2 | t         
+(4 rows)
+execute checkrelfilenodediff('alter_column_c2', 'atsetenc_idx3');
+ segid | casename        | relname       | rewritten 
+-------+-----------------+---------------+-----------
+ 2     | alter_column_c2 | atsetenc_idx3 | f         
+ -1    | alter_column_c2 | atsetenc_idx3 | f         
+ 0     | alter_column_c2 | atsetenc_idx3 | f         
+ 1     | alter_column_c2 | atsetenc_idx3 | f         
+(4 rows)
+
+--
+-- mixed AT commands
+--
+-- 1. with ALTER COLUMN TYPE
+alter table atsetenc add column c4 int default 4, add column c5 int default 5;
+ALTER TABLE
+execute capturerelfilenodebefore('set encoding - withaltercoltype', 'atsetenc');
+INSERT 0 4
+-- alter column type + alter column set encoding. The subcommands' order shouldn't matter.
+alter table atsetenc alter column c4 type text, alter column c4 set encoding (compresstype=zlib,compresslevel=9);
+ALTER TABLE
+alter table atsetenc alter column c5 set encoding (compresstype=zlib,compresslevel=9), alter column c5 type text;
+ALTER TABLE
+-- no rewrite
+execute checkrelfilenodediff('set encoding - withaltercoltype', 'atsetenc');
+ segid | casename                        | relname  | rewritten 
+-------+---------------------------------+----------+-----------
+ 2     | set encoding - withaltercoltype | atsetenc | f         
+ 0     | set encoding - withaltercoltype | atsetenc | f         
+ 1     | set encoding - withaltercoltype | atsetenc | f         
+ -1    | set encoding - withaltercoltype | atsetenc | f         
+(4 rows)
+execute attribute_encoding_check('atsetenc');
+ relname  | attname | filenum | attoptions                                                  
+----------+---------+---------+-------------------------------------------------------------
+ atsetenc | c1      | 1601    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+ atsetenc | c2      | 2       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=1'] 
+ atsetenc | c3      | 1603    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+ atsetenc | c4      | 1604    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+ atsetenc | c5      | 1605    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+(5 rows)
+select c4, c5 from atsetenc;
+ c4 | c5 
+----+----
+ 4  | 5  
+ 4  | 5  
+(2 rows)
+
+-- 2. with ADD COLUMN
+execute capturerelfilenodebefore('set encoding - withaddcol', 'atsetenc');
+INSERT 0 4
+alter table atsetenc add column c6 int default 6, alter column c5 set encoding (compresstype=zlib,compresslevel=1);
+ALTER TABLE
+-- no rewrite
+execute checkrelfilenodediff('set encoding - withaddcol', 'atsetenc');
+ segid | casename                  | relname  | rewritten 
+-------+---------------------------+----------+-----------
+ 0     | set encoding - withaddcol | atsetenc | f         
+ 1     | set encoding - withaddcol | atsetenc | f         
+ 2     | set encoding - withaddcol | atsetenc | f         
+ -1    | set encoding - withaddcol | atsetenc | f         
+(4 rows)
+execute attribute_encoding_check('atsetenc');
+ relname  | attname | filenum | attoptions                                                  
+----------+---------+---------+-------------------------------------------------------------
+ atsetenc | c1      | 1601    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+ atsetenc | c2      | 2       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=1'] 
+ atsetenc | c3      | 1603    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+ atsetenc | c4      | 1604    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+ atsetenc | c5      | 5       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=1'] 
+ atsetenc | c6      | 6       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+(6 rows)
+select c5, c6 from atsetenc;
+ c5 | c6 
+----+----
+ 5  | 6  
+ 5  | 6  
+(2 rows)
+
+-- 3. with DROP COLUMN
+alter table atsetenc add column c7 int default 7;
+ALTER TABLE
+execute capturerelfilenodebefore('set encoding - withdropcol', 'atsetenc');
+INSERT 0 4
+-- alter and drop the same column, should complaint
+alter table atsetenc alter column c7 set encoding (compresstype=zlib,compresslevel=9), drop column c7;
+ERROR:  column "c7" of relation "atsetenc" does not exist
+-- alter and drop different columns, should work and no rewrite
+alter table atsetenc alter column c7 set encoding (compresstype=zlib,compresslevel=9), drop column c3;
+ALTER TABLE
+execute checkrelfilenodediff('set encoding - withdropcol', 'atsetenc');
+ segid | casename                   | relname  | rewritten 
+-------+----------------------------+----------+-----------
+ 0     | set encoding - withdropcol | atsetenc | f         
+ 1     | set encoding - withdropcol | atsetenc | f         
+ 2     | set encoding - withdropcol | atsetenc | f         
+ -1    | set encoding - withdropcol | atsetenc | f         
+(4 rows)
+execute attribute_encoding_check('atsetenc');
+ relname  | attname                      | filenum | attoptions                                                  
+----------+------------------------------+---------+-------------------------------------------------------------
+ atsetenc | c1                           | 1601    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+ atsetenc | c2                           | 2       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=1'] 
+ atsetenc | c4                           | 1604    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+ atsetenc | c5                           | 5       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=1'] 
+ atsetenc | c6                           | 6       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ atsetenc | c7                           | 1607    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+ atsetenc | ........pg.dropped.3........ | 1603    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+(7 rows)
+-- should error out
+select c3 from atsetenc;
+ERROR:  column "c3" does not exist
+LINE 1: select c3 from atsetenc;
+               ^
+select c7 from atsetenc;
+ c7 
+----
+ 7  
+ 7  
+(2 rows)
+
+-- 4. with AT commands that rewrite table
+alter table atsetenc add column c8 int default 8;
+ALTER TABLE
+-- changing to another AM, should complaint
+alter table atsetenc set access method heap, alter column c8 set encoding (compresstype=zlib,compresslevel=9);
+ERROR:  ALTER COLUMN SET ENCODING operation is only applicable to AOCO tables
+DETAIL:  New access method for "atsetenc" is not ao_column
+
+-- 5. multiple SET ENCODING commands
+-- not rewrite
+execute capturerelfilenodebefore('set encoding - multiple', 'atsetenc');
+INSERT 0 4
+alter table atsetenc alter column c7 set encoding (compresstype=rle_type,compresslevel=3), alter column c8 set encoding (compresstype=rle_type,compresslevel=4);
+ALTER TABLE
+execute checkrelfilenodediff('set encoding - multiple', 'atsetenc');
+ segid | casename                | relname  | rewritten 
+-------+-------------------------+----------+-----------
+ 0     | set encoding - multiple | atsetenc | f         
+ 1     | set encoding - multiple | atsetenc | f         
+ -1    | set encoding - multiple | atsetenc | f         
+ 2     | set encoding - multiple | atsetenc | f         
+(4 rows)
+execute attribute_encoding_check('atsetenc');
+ relname  | attname                      | filenum | attoptions                                                      
+----------+------------------------------+---------+-----------------------------------------------------------------
+ atsetenc | c1                           | 1601    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9']     
+ atsetenc | c2                           | 2       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=1']     
+ atsetenc | c4                           | 1604    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9']     
+ atsetenc | c5                           | 5       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=1']     
+ atsetenc | c6                           | 6       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0']     
+ atsetenc | c7                           | 7       | ['compresstype=rle_type', 'blocksize=32768', 'compresslevel=3'] 
+ atsetenc | ........pg.dropped.3........ | 1603    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9']     
+ atsetenc | c8                           | 1608    | ['compresstype=rle_type', 'blocksize=32768', 'compresslevel=4'] 
+(8 rows)
+
+-- results all good
+select * from atsetenc;
+ c1 | c2 | c4 | c5 | c6 | c7 | c8 
+----+----+----+----+----+----+----
+ 1  | 2  | 4  | 5  | 6  | 7  | 8  
+ 1  | 2  | 4  | 5  | 6  | 7  | 8  
+(2 rows)
+
+--
+-- partition table
+--
+create table atsetencpart (a int, b int) using ao_column partition by range(b);
+CREATE TABLE
+create table atsetencpart_p1 partition of atsetencpart for values from (0) to (10);
+CREATE TABLE
+create table atsetencpart_p2 partition of atsetencpart for values from (10) to (20);
+CREATE TABLE
+create table atsetencpart_def partition of atsetencpart default;
+CREATE TABLE
+insert into atsetencpart select 1,i from generate_series(1,100)i;
+INSERT 0 100
+execute capturerelfilenodebefore('set enc', 'atsetencpart_p1');
+INSERT 0 4
+execute capturerelfilenodebefore('set enc', 'atsetencpart_p2');
+INSERT 0 4
+execute capturerelfilenodebefore('set enc', 'atsetencpart_def');
+INSERT 0 4
+-- alter root table will alter all children
+alter table atsetencpart alter column b set encoding (compresstype=zlib,compresslevel=9);
+ALTER TABLE
+-- alter a child partition just alter that partition
+alter table atsetencpart_p2 alter column b set encoding (compresslevel=1);
+ALTER TABLE
+-- no table rewrite and the options are changed
+execute checkrelfilenodediff('set enc', 'atsetencpart_p1');
+ segid | casename | relname         | rewritten 
+-------+----------+-----------------+-----------
+ 2     | set enc  | atsetencpart_p1 | f         
+ -1    | set enc  | atsetencpart_p1 | f         
+ 0     | set enc  | atsetencpart_p1 | f         
+ 1     | set enc  | atsetencpart_p1 | f         
+(4 rows)
+execute checkrelfilenodediff('set enc', 'atsetencpart_p2');
+ segid | casename | relname         | rewritten 
+-------+----------+-----------------+-----------
+ 2     | set enc  | atsetencpart_p2 | f         
+ -1    | set enc  | atsetencpart_p2 | f         
+ 0     | set enc  | atsetencpart_p2 | f         
+ 1     | set enc  | atsetencpart_p2 | f         
+(4 rows)
+execute checkrelfilenodediff('set enc', 'atsetencpart_def');
+ segid | casename | relname          | rewritten 
+-------+----------+------------------+-----------
+ 2     | set enc  | atsetencpart_def | f         
+ -1    | set enc  | atsetencpart_def | f         
+ 0     | set enc  | atsetencpart_def | f         
+ 1     | set enc  | atsetencpart_def | f         
+(4 rows)
+execute attribute_encoding_check('atsetencpart_p1');
+ relname         | attname | filenum | attoptions                                                  
+-----------------+---------+---------+-------------------------------------------------------------
+ atsetencpart_p1 | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ atsetencpart_p1 | b       | 1602    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+(2 rows)
+execute attribute_encoding_check('atsetencpart_p2');
+ relname         | attname | filenum | attoptions                                                  
+-----------------+---------+---------+-------------------------------------------------------------
+ atsetencpart_p2 | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ atsetencpart_p2 | b       | 2       | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=1'] 
+(2 rows)
+execute attribute_encoding_check('atsetencpart_def');
+ relname          | attname | filenum | attoptions                                                  
+------------------+---------+---------+-------------------------------------------------------------
+ atsetencpart_def | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ atsetencpart_def | b       | 1602    | ['compresstype=zlib', 'blocksize=32768', 'compresslevel=9'] 
+(2 rows)
+-- results are expected
+select sum(a), sum(b) from atsetencpart;
+ sum | sum  
+-----+------
+ 100 | 5050 
+(1 row)
+

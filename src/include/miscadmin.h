@@ -238,6 +238,7 @@ extern bool ConvertCoordinatorDataDirToSegment;
 extern PGDLLIMPORT bool ExitOnAnyError;
 
 extern PGDLLIMPORT char *DataDir;
+extern PGDLLIMPORT char *Log_directory;
 extern PGDLLIMPORT int data_directory_mode;
 
 extern PGDLLIMPORT int NBuffers;

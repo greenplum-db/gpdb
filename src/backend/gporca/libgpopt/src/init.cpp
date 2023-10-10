@@ -13,7 +13,6 @@
 #include "gpopt/init.h"
 
 #include "gpos/_api.h"
-#include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/task/CWorker.h"
 
 #include "gpopt/exception.h"
@@ -41,21 +40,11 @@ static CMemoryPool *mp = nullptr;
 void
 gpopt_init()
 {
-	{
-		CAutoMemoryPool amp;
-		mp = amp.Pmp();
+	mp = CMemoryPoolManager::CreateMemoryPool();
 
-		// add standard exception messages
-		(void) gpopt::EresExceptionInit(mp);
+	gpopt::EresExceptionInit(mp);
 
-		// detach safety
-		(void) amp.Detach();
-	}
-
-	if (GPOS_OK != gpopt::CXformFactory::Init())
-	{
-		return;
-	}
+	CXformFactory::Init();
 }
 
 //---------------------------------------------------------------------------
@@ -72,7 +61,7 @@ gpopt_terminate()
 #ifdef GPOS_DEBUG
 	CMDCache::Shutdown();
 
-	CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
+	CMemoryPoolManager::Destroy(mp);
 
 	CXformFactory::Shutdown();
 #endif	// GPOS_DEBUG

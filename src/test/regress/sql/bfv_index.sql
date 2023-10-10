@@ -465,6 +465,81 @@ DROP TABLE hash_prt_tbl;
 
 RESET enable_seqscan;
 RESET optimizer_enable_dynamictablescan;
+
+--
+-- Test ORCA generates Bitmap/IndexScan alternative for ScalarArrayOpExpr ANY only
+--
+
+CREATE TABLE bitmap_alt (id int, bitmap_idx_col int, btree_idx_col int, hash_idx_col int);
+CREATE INDEX bitmap_alt_idx1 on bitmap_alt using bitmap(bitmap_idx_col);
+CREATE INDEX bitmap_alt_idx2 on bitmap_alt using btree(btree_idx_col);
+CREATE INDEX bitmap_alt_idx3 on bitmap_alt using hash(hash_idx_col);
+INSERT INTO bitmap_alt SELECT i, i, i, i from generate_series(1,10)i;
+ANALYZE bitmap_alt;
+
+-- ORCA should generate bitmap index scan plans for the following
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col IN (3, 5);
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col IN (3, 5);
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE btree_idx_col IN (3, 5);
+SELECT * FROM bitmap_alt WHERE btree_idx_col IN (3, 5);
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE hash_idx_col IN (3, 5);
+SELECT * FROM bitmap_alt WHERE hash_idx_col IN (3, 5);
+
+-- ORCA should generate seq scan plans for the following
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col=ALL(ARRAY[3, 5]);
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col=ALL(ARRAY[3, 5]);
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE btree_idx_col=ALL(ARRAY[3, 5]);
+SELECT * FROM bitmap_alt WHERE btree_idx_col=ALL(ARRAY[3, 5]);
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE hash_idx_col=ALL(ARRAY[3, 5]);
+SELECT * FROM bitmap_alt WHERE hash_idx_col=ALL(ARRAY[3, 5]);
+
+--
+-- Test ORCA considers ScalarArrayOp in indexqual for partitioned table
+-- with multikey indexes only when predicate key is the first index key
+-- (similar test for non-partitioned tables in create_index)
+--
+CREATE TABLE pt_with_multikey_index (a int, key1 char(6), key2 char(1))
+PARTITION BY list(key2)
+(PARTITION p1 VALUES ('R'), PARTITION p2 VALUES ('G'), DEFAULT PARTITION other);
+
+CREATE INDEX multikey_idx on pt_with_multikey_index (key1, key2);
+INSERT INTO pt_with_multikey_index SELECT i, 'KEY'||i, 'R' from generate_series(1,500)i;
+INSERT INTO pt_with_multikey_index SELECT i, 'KEY'||i, 'G' from generate_series(1,500)i;
+INSERT INTO pt_with_multikey_index SELECT i, 'KEY'||i, 'B' from generate_series(1,500)i;
+
+explain (costs off)
+SELECT key1 FROM pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65', 'KEY5')
+ORDER BY key1;
+
+SELECT key1 FROM pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65', 'KEY5')
+ORDER BY key1;
+
+EXPLAIN (costs off)
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 = 'KEY55' AND key2 IN ('R', 'G')
+ORDER BY key2;
+
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 = 'KEY55' AND key2 IN ('R', 'G')
+ORDER BY key2;
+
+EXPLAIN (costs off)
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65') AND key2 = 'R'
+ORDER BY key1;
+
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65') AND key2 = 'R'
+ORDER BY key1;
+
 --
 -- Enable the index only scan in append only table.
 -- Note: expect ORCA to use seq scan rather than index only scan like planner,
@@ -489,3 +564,60 @@ explain select count(*) from bfv_index_only_aocs where a < 100;
 select count(*) from bfv_index_only_aocs where a < 100;
 explain select count(*) from bfv_index_only_aocs where a < 1000;
 select count(*) from bfv_index_only_aocs where a < 1000;
+
+-- The following tests are to verify a fix that allows ORCA to
+-- choose the bitmap index scan alternative when the predicate
+-- is in the form of `value operator cast(column)`. The fix
+-- converts the scalar comparison expression to the more common 
+-- form of `cast(column) operator value` in the preprocessor.
+
+-- Each test includes two queries. One query's predicate has 
+-- the column on the left side, and the other has the column
+-- on the right side. We expect the two queries to generate
+-- identical plans with bitmap index scan.
+
+-- Index only scan will probably be selected once index only
+-- scan in enabled for AO tables in ORCA. To prevent retain
+-- the bitmap scan alternative, turn off index only scan.
+set optimizer_enable_indexonlyscan=off;
+set enable_indexonlyscan=off;
+-- Test AO table
+-- Index scan is disabled in AO table, so bitmap scan is the
+-- most performant
+create table ao_tbl (
+    path_hash character varying(10)
+) with (appendonly='true');
+create index ao_idx on ao_tbl using btree (path_hash);
+insert into ao_tbl select 'abc' from generate_series(1,20) i;
+analyze ao_tbl;
+-- identical plans
+explain select * from ao_tbl where path_hash = 'ABC'; 
+explain select * from ao_tbl where 'ABC' = path_hash;
+
+-- Test AO partition table
+-- Dynamic index scan is disabled in AO table, so dynamic bitmap
+-- scan is the most performant
+create table part_tbl (
+    path_hash character varying(10)
+) partition by list(path_hash) 
+          (partition pics values('a') , 
+          default partition other with (appendonly='true'));
+create index part_idx on part_tbl using btree (path_hash);
+insert into part_tbl select 'abc' from generate_series(1,20) i;
+analyze part_tbl;
+-- identical plans
+explain select * from part_tbl where path_hash = 'ABC'; 
+explain select * from part_tbl where 'ABC' = path_hash; 
+
+-- Test table indexed on two columns
+-- Two indices allow ORCA to generate the bitmap scan alternative
+create table two_idx_tbl (x varchar(10), y varchar(10));
+create index x_idx on two_idx_tbl using btree (x);
+create index y_idx on two_idx_tbl using btree (y);
+insert into two_idx_tbl select 'aa', 'bb' from generate_series(1,10000) i;
+analyze two_idx_tbl;
+-- encourage bitmap scan by discouraging index scan
+set optimizer_enable_indexscan=off;
+-- identical plans
+explain select * from two_idx_tbl where x = 'cc' or y = 'dd';
+explain select * from two_idx_tbl where 'cc' = x or 'dd' = y;

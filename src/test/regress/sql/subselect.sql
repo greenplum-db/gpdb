@@ -516,6 +516,35 @@ select * from int8_tbl where q1 in (select c1 from inner_text);
 rollback;  -- to get rid of the bogus operator
 
 --
+-- Test resolution of hashed vs non-hashed implementation of EXISTS subplan
+--
+explain (costs off)
+select count(*) from tenk1 t
+where (exists(select 1 from tenk1 k where k.unique1 = t.unique2) or ten < 0);
+select count(*) from tenk1 t
+where (exists(select 1 from tenk1 k where k.unique1 = t.unique2) or ten < 0);
+
+explain (costs off)
+select count(*) from tenk1 t
+where (exists(select 1 from tenk1 k where k.unique1 = t.unique2) or ten < 0)
+  and thousand = 1;
+select count(*) from tenk1 t
+where (exists(select 1 from tenk1 k where k.unique1 = t.unique2) or ten < 0)
+  and thousand = 1;
+
+-- It's possible for the same EXISTS to get resolved both ways
+create temp table exists_tbl (c1 int, c2 int, c3 int) partition by list (c1);
+create temp table exists_tbl_null partition of exists_tbl for values in (null);
+create temp table exists_tbl_def partition of exists_tbl default;
+insert into exists_tbl select x, x/2, x+1 from generate_series(0,1000) x;
+analyze exists_tbl;
+explain (costs off)
+select count(*) from exists_tbl t1
+  where (exists(select 1 from exists_tbl t2 where t1.c1 = t2.c2) or c3 < 0);
+select count(*) from exists_tbl t1
+  where (exists(select 1 from exists_tbl t2 where t1.c1 = t2.c2) or c3 < 0);
+
+--
 -- Test case for planner bug with nested EXISTS handling
 --
 -- GPDB_92_MERGE_FIXME: ORCA cannot decorrelate this query, and generates
@@ -943,3 +972,57 @@ with x as (select * from subselect_tbl)
 select * from x for update;
 
 set gp_cte_sharing to off;
+
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink, which contains attributes referenced in query's GROUP BY clause.
+-- Due to presence of non-grouping columns in targetList, ORCA performs query
+-- normalization, during which ORCA establishes a correspondence between vars
+-- from targetlist entries to grouping attributes. And this process should
+-- correctly handle nested structures. The inner part of SubPlan in the test
+-- should contain only t.j.
+-- start_ignore
+drop table if exists t;
+-- end_ignore
+create table t (i int, j int) distributed by (i);
+insert into t values (1, 2);
+
+explain (verbose, costs off)
+select j,
+(select j from (select j) q2)
+from t
+group by i, j;
+
+select j,
+(select j from (select j) q2)
+from t
+group by i, j;
+
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink when this SubLink is inside the GROUP BY clause. Attribute, which is
+-- not grouping column (1 as c), is added to query targetList to make ORCA
+-- perform query normalization. During normalization ORCA modifies the vars of
+-- the grouping elements of targetList in order to produce a new Query tree.
+-- The modification of vars inside nested part of SubLinks should be handled
+-- correctly. ORCA shouldn't fall back due to missing variable entry as a result
+-- of incorrect query normalization.
+explain (verbose, costs off)
+select j, 1 as c,
+(select j from (select j) q2) q1
+from t
+group by j, q1;
+
+select j, 1 as c,
+(select j from (select j) q2) q1
+from t
+group by j, q1;
+
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink, and this SubLink is under aggregation. ORCA shouldn't fall back due
+-- to missing variable entry as a result of incorrect query normalization. ORCA
+-- should correctly process args of the aggregation during normalization.
+explain (verbose, costs off)
+select (select max((select t.i))) from t;
+
+select (select max((select t.i))) from t;
+
+drop table t;

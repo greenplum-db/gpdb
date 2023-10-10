@@ -23,7 +23,6 @@ set enable_indexscan=false;
 set enable_seqscan=false;
 -- Lower work_mem to trigger use of lossy bitmaps
 set work_mem = 64;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 -- Test bitmap-and.
 SELECT count(*) FROM bmscantest WHERE a = 1 AND b = 1;
  count 
@@ -51,21 +50,21 @@ CREATE INDEX i_bmtest2_a ON bmscantest2 USING BITMAP(a);
 CREATE INDEX i_bmtest2_b ON bmscantest2 USING BITMAP(b);
 CREATE INDEX i_bmtest2_c ON bmscantest2(c);
 CREATE INDEX i_bmtest2_d ON bmscantest2(d);
-EXPLAIN SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
-                                             QUERY PLAN                                              
------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=31.38..31.39 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=31.35..31.38 rows=1 width=8)
-         ->  Partial Aggregate  (cost=31.35..31.36 rows=1 width=8)
-               ->  Bitmap Heap Scan on bmscantest2  (cost=27.22..31.24 rows=15 width=0)
-                     Recheck Cond: ((b = 1) AND (a = 1) AND (c = 1))
-                     ->  BitmapAnd  (cost=27.22..27.22 rows=1 width=0)
-                           ->  Bitmap Index Scan on i_bmtest2_b  (cost=0.00..4.29 rows=396 width=0)
-                                 Index Cond: (b = 1)
-                           ->  Bitmap Index Scan on i_bmtest2_a  (cost=0.00..4.33 rows=441 width=0)
+EXPLAIN (COSTS OFF) SELECT count(*) FROM bmscantest2 WHERE a = 1 AND b = 1 AND c = 1;
+                             QUERY PLAN                              
+---------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Bitmap Heap Scan on bmscantest2
+                     Recheck Cond: ((a = 1) AND (c = 1) AND (b = 1))
+                     ->  BitmapAnd
+                           ->  Bitmap Index Scan on i_bmtest2_a
                                  Index Cond: (a = 1)
-                           ->  Bitmap Index Scan on i_bmtest2_c  (cost=0.00..18.07 rows=441 width=0)
+                           ->  Bitmap Index Scan on i_bmtest2_c
                                  Index Cond: (c = 1)
+                           ->  Bitmap Index Scan on i_bmtest2_b
+                                 Index Cond: (b = 1)
  Optimizer: Postgres query optimizer
 (13 rows)
 
@@ -81,20 +80,20 @@ SELECT count(*) FROM bmscantest2 WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
     23
 (1 row)
 
-EXPLAIN SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
-                                             QUERY PLAN                                              
------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=442.67..442.68 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=442.64..442.67 rows=1 width=8)
-         ->  Partial Aggregate  (cost=442.64..442.65 rows=1 width=8)
-               ->  Bitmap Heap Scan on bmscantest2  (cost=29.23..433.24 rows=1254 width=0)
+EXPLAIN (COSTS OFF) SELECT count(*) FROM bmscantest2 WHERE a = 1 OR b = 1 OR c = 1;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Bitmap Heap Scan on bmscantest2
                      Recheck Cond: ((a = 1) OR (b = 1) OR (c = 1))
-                     ->  BitmapOr  (cost=29.23..29.23 rows=1277 width=0)
-                           ->  Bitmap Index Scan on i_bmtest2_a  (cost=0.00..4.19 rows=441 width=0)
+                     ->  BitmapOr
+                           ->  Bitmap Index Scan on i_bmtest2_a
                                  Index Cond: (a = 1)
-                           ->  Bitmap Index Scan on i_bmtest2_b  (cost=0.00..4.15 rows=396 width=0)
+                           ->  Bitmap Index Scan on i_bmtest2_b
                                  Index Cond: (b = 1)
-                           ->  Bitmap Index Scan on i_bmtest2_c  (cost=0.00..18.07 rows=441 width=0)
+                           ->  Bitmap Index Scan on i_bmtest2_c
                                  Index Cond: (c = 1)
  Optimizer: Postgres query optimizer
 (13 rows)
@@ -123,21 +122,21 @@ CREATE INDEX i_bmtest_ao_a ON bmscantest_ao USING BITMAP(a);
 CREATE INDEX i_bmtest_ao_b ON bmscantest_ao USING BITMAP(b);
 CREATE INDEX i_bmtest_ao_c ON bmscantest_ao(c);
 CREATE INDEX i_bmtest_ao_d ON bmscantest_ao(d);
-EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND b = 1 AND c = 1;
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=31.38..31.39 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=31.35..31.38 rows=1 width=8)
-         ->  Partial Aggregate  (cost=31.35..31.36 rows=1 width=8)
-               ->  Bitmap Heap Scan on bmscantest_ao  (cost=27.22..31.24 rows=15 width=0)
-                     Recheck Cond: ((b = 1) AND (a = 1) AND (c = 1))
-                     ->  BitmapAnd  (cost=27.22..27.22 rows=1 width=0)
-                           ->  Bitmap Index Scan on i_bmtest_ao_b  (cost=0.00..4.29 rows=396 width=0)
-                                 Index Cond: (b = 1)
-                           ->  Bitmap Index Scan on i_bmtest_ao_a  (cost=0.00..4.33 rows=441 width=0)
+EXPLAIN (COSTS OFF) SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND b = 1 AND c = 1;
+                             QUERY PLAN                              
+---------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Bitmap Heap Scan on bmscantest_ao
+                     Recheck Cond: ((a = 1) AND (c = 1) AND (b = 1))
+                     ->  BitmapAnd
+                           ->  Bitmap Index Scan on i_bmtest_ao_a
                                  Index Cond: (a = 1)
-                           ->  Bitmap Index Scan on i_bmtest_ao_c  (cost=0.00..18.07 rows=441 width=0)
+                           ->  Bitmap Index Scan on i_bmtest_ao_c
                                  Index Cond: (c = 1)
+                           ->  Bitmap Index Scan on i_bmtest_ao_b
+                                 Index Cond: (b = 1)
  Optimizer: Postgres query optimizer
 (13 rows)
 
@@ -150,18 +149,18 @@ SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND b = 1 AND c = 1;
 EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
                                                  QUERY PLAN                                                  
 -------------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=74.60..74.61 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=74.54..74.59 rows=3 width=8)
-         ->  Partial Aggregate  (cost=74.54..74.55 rows=1 width=8)
-               ->  Bitmap Heap Scan on bmscantest_ao  (cost=70.47..74.49 rows=18 width=0)
+ Finalize Aggregate  (cost=78.60..78.61 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=78.54..78.59 rows=3 width=8)
+         ->  Partial Aggregate  (cost=78.54..78.55 rows=1 width=8)
+               ->  Bitmap Heap Scan on bmscantest_ao  (cost=74.47..78.49 rows=18 width=0)
                      Recheck Cond: ((d = 1) AND (a = 1) AND ((b = 1) OR (c = 1)))
-                     ->  BitmapAnd  (cost=70.47..70.47 rows=1 width=0)
-                           ->  Bitmap Index Scan on i_bmtest_ao_d  (cost=0.00..17.07 rows=396 width=0)
+                     ->  BitmapAnd  (cost=74.47..74.47 rows=1 width=0)
+                           ->  Bitmap Index Scan on i_bmtest_ao_d  (cost=0.00..13.07 rows=396 width=0)
                                  Index Cond: (d = 1)
                            ->  Bitmap Index Scan on i_bmtest_ao_a  (cost=0.00..17.91 rows=440 width=0)
                                  Index Cond: (a = 1)
-                           ->  BitmapOr  (cost=34.99..34.99 rows=836 width=0)
-                                 ->  Bitmap Index Scan on i_bmtest_ao_b  (cost=0.00..16.90 rows=396 width=0)
+                           ->  BitmapOr  (cost=42.99..42.99 rows=836 width=0)
+                                 ->  Bitmap Index Scan on i_bmtest_ao_b  (cost=0.00..24.90 rows=396 width=0)
                                        Index Cond: (b = 1)
                                  ->  Bitmap Index Scan on i_bmtest_ao_c  (cost=0.00..18.07 rows=440 width=0)
                                        Index Cond: (c = 1)
@@ -174,20 +173,20 @@ SELECT count(*) FROM bmscantest_ao WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
     23
 (1 row)
 
-EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR b = 1 OR c = 1;
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=401.67..401.68 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=401.64..401.67 rows=1 width=8)
-         ->  Partial Aggregate  (cost=401.64..401.65 rows=1 width=8)
-               ->  Bitmap Heap Scan on bmscantest_ao  (cost=29.23..392.24 rows=1254 width=0)
+EXPLAIN (COSTS OFF) SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR b = 1 OR c = 1;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Bitmap Heap Scan on bmscantest_ao
                      Recheck Cond: ((a = 1) OR (b = 1) OR (c = 1))
-                     ->  BitmapOr  (cost=29.23..29.23 rows=1277 width=0)
-                           ->  Bitmap Index Scan on i_bmtest_ao_a  (cost=0.00..4.19 rows=441 width=0)
+                     ->  BitmapOr
+                           ->  Bitmap Index Scan on i_bmtest_ao_a
                                  Index Cond: (a = 1)
-                           ->  Bitmap Index Scan on i_bmtest_ao_b  (cost=0.00..4.15 rows=396 width=0)
+                           ->  Bitmap Index Scan on i_bmtest_ao_b
                                  Index Cond: (b = 1)
-                           ->  Bitmap Index Scan on i_bmtest_ao_c  (cost=0.00..18.07 rows=441 width=0)
+                           ->  Bitmap Index Scan on i_bmtest_ao_c
                                  Index Cond: (c = 1)
  Optimizer: Postgres query optimizer
 (13 rows)
@@ -201,20 +200,20 @@ SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR b = 1 OR c = 1;
 EXPLAIN SELECT count(*) FROM bmscantest_ao WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
                                                  QUERY PLAN                                                  
 -------------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=399.87..399.88 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=399.84..399.87 rows=1 width=8)
-         ->  Partial Aggregate  (cost=399.84..399.85 rows=1 width=8)
-               ->  Bitmap Heap Scan on bmscantest_ao  (cost=46.63..393.23 rows=881 width=0)
-                     Recheck Cond: ((a = 1) OR ((b = 1) AND (c = 1)) OR (d = 1))
-                     ->  BitmapOr  (cost=46.63..46.63 rows=844 width=0)
-                           ->  Bitmap Index Scan on i_bmtest_ao_a  (cost=0.00..4.19 rows=441 width=0)
+ Finalize Aggregate  (cost=10407.92..10407.93 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=10407.86..10407.91 rows=3 width=8)
+         ->  Partial Aggregate  (cost=10407.86..10407.87 rows=1 width=8)
+               ->  Bitmap Heap Scan on bmscantest_ao  (cost=75.34..10405.66 rows=881 width=0)
+                     Recheck Cond: ((a = 1) OR ((c = 1) AND (b = 1)) OR (d = 1))
+                     ->  BitmapOr  (cost=75.34..75.34 rows=843 width=0)
+                           ->  Bitmap Index Scan on i_bmtest_ao_a  (cost=0.00..17.91 rows=440 width=0)
                                  Index Cond: (a = 1)
-                           ->  BitmapAnd  (cost=23.80..23.80 rows=8 width=0)
-                                 ->  Bitmap Index Scan on i_bmtest_ao_b  (cost=0.00..4.15 rows=396 width=0)
-                                       Index Cond: (b = 1)
-                                 ->  Bitmap Index Scan on i_bmtest_ao_c  (cost=0.00..18.07 rows=441 width=0)
+                           ->  BitmapAnd  (cost=43.67..43.67 rows=7 width=0)
+                                 ->  Bitmap Index Scan on i_bmtest_ao_c  (cost=0.00..18.07 rows=440 width=0)
                                        Index Cond: (c = 1)
-                           ->  Bitmap Index Scan on i_bmtest_ao_d  (cost=0.00..17.07 rows=396 width=0)
+                                 ->  Bitmap Index Scan on i_bmtest_ao_b  (cost=0.00..24.90 rows=396 width=0)
+                                       Index Cond: (b = 1)
+                           ->  Bitmap Index Scan on i_bmtest_ao_d  (cost=0.00..13.07 rows=396 width=0)
                                  Index Cond: (d = 1)
  Optimizer: Postgres query optimizer
 (16 rows)
@@ -237,21 +236,21 @@ CREATE INDEX i_bmtest_aocs_a ON bmscantest_aocs USING BITMAP(a);
 CREATE INDEX i_bmtest_aocs_b ON bmscantest_aocs USING BITMAP(b);
 CREATE INDEX i_bmtest_aocs_c ON bmscantest_aocs(c);
 CREATE INDEX i_bmtest_aocs_d ON bmscantest_aocs(d);
-EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND b = 1 AND c = 1;
-                                               QUERY PLAN                                                
----------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=31.38..31.39 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=31.35..31.38 rows=1 width=8)
-         ->  Partial Aggregate  (cost=31.35..31.36 rows=1 width=8)
-               ->  Bitmap Heap Scan on bmscantest_aocs  (cost=27.22..31.24 rows=15 width=0)
-                     Recheck Cond: ((b = 1) AND (a = 1) AND (c = 1))
-                     ->  BitmapAnd  (cost=27.22..27.22 rows=1 width=0)
-                           ->  Bitmap Index Scan on i_bmtest_aocs_b  (cost=0.00..4.29 rows=396 width=0)
-                                 Index Cond: (b = 1)
-                           ->  Bitmap Index Scan on i_bmtest_aocs_a  (cost=0.00..4.33 rows=441 width=0)
+EXPLAIN (COSTS OFF) SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND b = 1 AND c = 1;
+                             QUERY PLAN                              
+---------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Bitmap Heap Scan on bmscantest_aocs
+                     Recheck Cond: ((a = 1) AND (c = 1) AND (b = 1))
+                     ->  BitmapAnd
+                           ->  Bitmap Index Scan on i_bmtest_aocs_a
                                  Index Cond: (a = 1)
-                           ->  Bitmap Index Scan on i_bmtest_aocs_c  (cost=0.00..18.07 rows=441 width=0)
+                           ->  Bitmap Index Scan on i_bmtest_aocs_c
                                  Index Cond: (c = 1)
+                           ->  Bitmap Index Scan on i_bmtest_aocs_b
+                                 Index Cond: (b = 1)
  Optimizer: Postgres query optimizer
 (13 rows)
 
@@ -264,18 +263,18 @@ SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND b = 1 AND c = 1;
 EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
                                                   QUERY PLAN                                                   
 ---------------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=74.60..74.61 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=74.54..74.59 rows=3 width=8)
-         ->  Partial Aggregate  (cost=74.54..74.55 rows=1 width=8)
-               ->  Bitmap Heap Scan on bmscantest_aocs  (cost=70.47..74.49 rows=18 width=0)
+ Finalize Aggregate  (cost=78.60..78.61 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=78.54..78.59 rows=3 width=8)
+         ->  Partial Aggregate  (cost=78.54..78.55 rows=1 width=8)
+               ->  Bitmap Heap Scan on bmscantest_aocs  (cost=74.47..78.49 rows=18 width=0)
                      Recheck Cond: ((d = 1) AND (a = 1) AND ((b = 1) OR (c = 1)))
-                     ->  BitmapAnd  (cost=70.47..70.47 rows=1 width=0)
-                           ->  Bitmap Index Scan on i_bmtest_aocs_d  (cost=0.00..17.07 rows=396 width=0)
+                     ->  BitmapAnd  (cost=74.47..74.47 rows=1 width=0)
+                           ->  Bitmap Index Scan on i_bmtest_aocs_d  (cost=0.00..13.07 rows=396 width=0)
                                  Index Cond: (d = 1)
                            ->  Bitmap Index Scan on i_bmtest_aocs_a  (cost=0.00..17.91 rows=440 width=0)
                                  Index Cond: (a = 1)
-                           ->  BitmapOr  (cost=34.99..34.99 rows=836 width=0)
-                                 ->  Bitmap Index Scan on i_bmtest_aocs_b  (cost=0.00..16.90 rows=396 width=0)
+                           ->  BitmapOr  (cost=42.99..42.99 rows=836 width=0)
+                                 ->  Bitmap Index Scan on i_bmtest_aocs_b  (cost=0.00..24.90 rows=396 width=0)
                                        Index Cond: (b = 1)
                                  ->  Bitmap Index Scan on i_bmtest_aocs_c  (cost=0.00..18.07 rows=440 width=0)
                                        Index Cond: (c = 1)
@@ -288,20 +287,20 @@ SELECT count(*) FROM bmscantest_aocs WHERE a = 1 AND (b = 1 OR c = 1) AND d = 1;
     23
 (1 row)
 
-EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR b = 1 OR c = 1;
-                                               QUERY PLAN                                                
----------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=371.67..371.68 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=371.64..371.67 rows=1 width=8)
-         ->  Partial Aggregate  (cost=371.64..371.65 rows=1 width=8)
-               ->  Bitmap Heap Scan on bmscantest_aocs  (cost=29.23..362.24 rows=1254 width=0)
+EXPLAIN (COSTS OFF) SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR b = 1 OR c = 1;
+                             QUERY PLAN                             
+--------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Bitmap Heap Scan on bmscantest_aocs
                      Recheck Cond: ((a = 1) OR (b = 1) OR (c = 1))
-                     ->  BitmapOr  (cost=29.23..29.23 rows=1277 width=0)
-                           ->  Bitmap Index Scan on i_bmtest_aocs_a  (cost=0.00..4.19 rows=441 width=0)
+                     ->  BitmapOr
+                           ->  Bitmap Index Scan on i_bmtest_aocs_a
                                  Index Cond: (a = 1)
-                           ->  Bitmap Index Scan on i_bmtest_aocs_b  (cost=0.00..4.15 rows=396 width=0)
+                           ->  Bitmap Index Scan on i_bmtest_aocs_b
                                  Index Cond: (b = 1)
-                           ->  Bitmap Index Scan on i_bmtest_aocs_c  (cost=0.00..18.07 rows=441 width=0)
+                           ->  Bitmap Index Scan on i_bmtest_aocs_c
                                  Index Cond: (c = 1)
  Optimizer: Postgres query optimizer
 (13 rows)
@@ -312,23 +311,23 @@ SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR b = 1 OR c = 1;
   2485
 (1 row)
 
-EXPLAIN SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
-                                                  QUERY PLAN                                                   
----------------------------------------------------------------------------------------------------------------
- Finalize Aggregate  (cost=369.87..369.88 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=369.84..369.87 rows=1 width=8)
-         ->  Partial Aggregate  (cost=369.84..369.85 rows=1 width=8)
-               ->  Bitmap Heap Scan on bmscantest_aocs  (cost=46.63..363.23 rows=881 width=0)
-                     Recheck Cond: ((a = 1) OR ((b = 1) AND (c = 1)) OR (d = 1))
-                     ->  BitmapOr  (cost=46.63..46.63 rows=844 width=0)
-                           ->  Bitmap Index Scan on i_bmtest_aocs_a  (cost=0.00..4.19 rows=441 width=0)
+EXPLAIN (COSTS OFF) SELECT count(*) FROM bmscantest_aocs WHERE a = 1 OR (b = 1 AND c = 1) OR d = 1;
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Bitmap Heap Scan on bmscantest_aocs
+                     Recheck Cond: ((a = 1) OR ((c = 1) AND (b = 1)) OR (d = 1))
+                     ->  BitmapOr
+                           ->  Bitmap Index Scan on i_bmtest_aocs_a
                                  Index Cond: (a = 1)
-                           ->  BitmapAnd  (cost=23.80..23.80 rows=8 width=0)
-                                 ->  Bitmap Index Scan on i_bmtest_aocs_b  (cost=0.00..4.15 rows=396 width=0)
-                                       Index Cond: (b = 1)
-                                 ->  Bitmap Index Scan on i_bmtest_aocs_c  (cost=0.00..18.07 rows=441 width=0)
+                           ->  BitmapAnd
+                                 ->  Bitmap Index Scan on i_bmtest_aocs_c
                                        Index Cond: (c = 1)
-                           ->  Bitmap Index Scan on i_bmtest_aocs_d  (cost=0.00..17.07 rows=396 width=0)
+                                 ->  Bitmap Index Scan on i_bmtest_aocs_b
+                                       Index Cond: (b = 1)
+                           ->  Bitmap Index Scan on i_bmtest_aocs_d
                                  Index Cond: (d = 1)
  Optimizer: Postgres query optimizer
 (16 rows)

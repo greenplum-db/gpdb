@@ -10,18 +10,6 @@ The foreign-data wrappers included in the Greenplum Database open source github 
 
 > **Note** The SQL standard specifies an interface for writing foreign-data wrappers. Greenplum Database does not implement that API, however, because the effort to accommodate it into Greenplum would be large, and the standard API hasn't yet gained wide adoption.
 
-This topic includes the following sections:
-
--   [Requirements](#reqs)
--   [Known Issues and Limitations](#limits)
--   [Header Files](#includes)
--   [Foreign Data Wrapper Functions](#topic2)
--   [Foreign Data Wrapper Callback Functions](#topic3)
--   [Foreign Data Wrapper Helper Functions](#helper)
--   [Greenplum Database Considerations](#topic5)
--   [Building a Foreign Data Wrapper Extension with PGXS](#pkg)
--   [Deployment Considerations](#deployconsider)
-
 **Parent topic:** [Accessing External Data with Foreign Tables](../external/g-foreign.html)
 
 ## <a id="reqs"></a>Requirements 
@@ -35,18 +23,18 @@ When you develop with the Greenplum Database foreign-data wrapper API:
 
 ## <a id="limits"></a>Known Issues and Limitations 
 
-The Greenplum Database 6 foreign-data wrapper implementation has the following known issues and limitations:
+The Greenplum Database 7 foreign-data wrapper implementation has the following known issues and limitations:
 
 -   Greenplum Database supports all values of the `mpp_execute` option value for foreign table scans only. Greenplum supports parallel write operations only when `mpp_execute` is set to `'all segments'`; Greenplum initiates write operations through the coordinator for all other `mpp_execute` settings. See [Greenplum Database Considerations](#topic5).
 
 ## <a id="includes"></a>Header Files 
 
-The Greenplum Database header files that you may use when you develop a foreign-data wrapper are located in the `greenplum-db/src/include/` directory \(when developing against the Greenplum Database open source github repository\), or installed in the `$GPHOME/include/postgresql/server/` directory \(when developing against a Greenplum installation\):
+The Greenplum Database header files that you may use when you develop a foreign-data wrapper are located in the `gpdb/src/include/` directory \(when developing against the Greenplum Database open source github repository\), or installed in the `$GPHOME/include/postgresql/server/` directory \(when developing against a Greenplum installation\):
 
--   foreign/fdwapi.h - FDW API structures and callback function signatures
--   foreign/foreign.h - foreign-data wrapper helper structs and functions
--   catalog/pg\_foreign\_table.h - foreign table definition
--   catalog/pg\_foreign\_server.h - foreign server definition
+-   `foreign/fdwapi.h` - FDW API structures and callback function signatures
+-   `foreign/foreign.h` - foreign-data wrapper helper structs and functions
+-   `catalog/pg_foreign_table.h` - foreign table definition
+-   `catalog/pg_foreign_server.h` - foreign server definition
 
 Your FDW code may also be dependent on header files and libraries required to access the remote data store.
 
@@ -342,7 +330,7 @@ GetForeignColumnOptions(Oid relid, AttrNumber attnum);</code></pre></td>
 
 ## <a id="topic5"></a>Greenplum Database Considerations 
 
-A Greenplum Database user can specify the `mpp_execute` option when they create or alter a foreign table, foreign server, or foreign data wrapper. A Greenplum Database-compatible foreign-data wrapper examines the `mpp_execute` option value and uses it to determine where to request or send data - from the `master` \(the default\), `any` \(master or any one segment\), or `all segments` (parallel read/write).
+A Greenplum Database user can specify the `mpp_execute` option when they create or alter a foreign table, foreign server, or foreign data wrapper. A Greenplum Database-compatible foreign-data wrapper examines the `mpp_execute` option value and uses it to determine where to request or send data - from the `coordinator` \(the default\), `any` \(coordinator or any one segment\), or `all segments` (parallel read/write).
 
 Greenplum Database supports all `mpp_execute` settings for a scan.
 
@@ -368,7 +356,7 @@ else if (table->exec_location == FTEXECLOCATION_COORDINATOR)
 } 
 ```
 
-If the foreign table was not created with an `mpp_execute` option setting, the `mpp_execute` setting of the foreign server, and then the foreign data wrapper, is probed and used. If none of the foreign-data-related objects has an `mpp_execute` setting, the default setting is `master`.
+If the foreign table was not created with an `mpp_execute` option setting, the `mpp_execute` setting of the foreign server, and then the foreign data wrapper, is probed and used. If none of the foreign-data-related objects has an `mpp_execute` setting, the default setting is `coordinator`.
 
 If a foreign-data wrapper supports `mpp_execute 'all'`, it will implement a policy that matches Greenplum segments to data. So as not to duplicate data retrieved from the remote, the FDW on each segment must be able to establish which portion of the data is their responsibility. An FDW may use the segment identifier and the number of segments to help make this determination. The following code snippet demonstrates how a foreign-data wrapper may retrieve the segment number and total number of segments:
 

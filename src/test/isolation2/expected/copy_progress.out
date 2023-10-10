@@ -2,16 +2,16 @@
 
 -- setup replicated table and data files for COPY
 CREATE TABLE t_copy_repl (a INT, b INT) DISTRIBUTED REPLICATED;
-CREATE
+CREATE TABLE
 INSERT INTO t_copy_repl VALUES (2, 2), (0, 0), (5, 5);
-INSERT 3
+INSERT 0 3
 COPY t_copy_repl TO '/tmp/t_copy_relp<SEGID>' ON SEGMENT;
 COPY 9
 -- setup DISTRIBUTED table and data files for COPY
 CREATE TABLE t_copy_d (a INT, b INT);
-CREATE
+CREATE TABLE
 INSERT INTO t_copy_d select i, i from generate_series(1, 12) i;
-INSERT 12
+INSERT 0 12
 COPY t_copy_d TO '/tmp/t_copy_d<SEGID>' ON SEGMENT;
 COPY 12
 
@@ -158,9 +158,9 @@ COPY 9
 6<:  <... completed>
 COPY 9
 7<:  <... completed>
-COPY
+
 8<:  <... completed>
-COPY
+
 9<:  <... completed>
 COPY 12
 10<:  <... completed>
@@ -218,12 +218,12 @@ SELECT gp_inject_fault('copy_processed_two_tuples', 'reset', dbid) FROM gp_segme
  Success:        
 (1 row)
 1<:  <... completed>
-COPY
+
 2<:  <... completed>
-COPY
+
 
 -- teardown
 DROP TABLE t_copy_repl;
-DROP
+DROP TABLE
 DROP TABLE t_copy_d;
-DROP
+DROP TABLE

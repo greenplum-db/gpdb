@@ -3566,6 +3566,10 @@ OverrideSearchPathMatchesCurrent(OverrideSearchPath *path)
 /*
  * PushOverrideSearchPath - temporarily override the search path
  *
+ * Do not use this function; almost any usage introduces a security
+ * vulnerability.  It exists for the benefit of legacy code running in
+ * non-security-sensitive environments.
+ *
  * We allow nested overrides, hence the push/pop terminology.  The GUC
  * search_path variable is ignored while an override is active.
  *
@@ -4235,6 +4239,28 @@ DropTempTableNamespaceForResetSession(Oid namespaceOid)
 	StartTransactionCommand();
 
 	RemoveTempRelations(namespaceOid);
+
+	CommitTransactionCommand();
+}
+
+/*
+ * Remove temp namespace entry from pg_namespace.
+ */
+void
+DropTempTableNamespaceEntryForResetSession(Oid namespaceOid, Oid toastNamespaceOid)
+{
+	if (IsTransactionOrTransactionBlock())
+		elog(ERROR, "Called within a transaction");
+
+	StartTransactionCommand();
+
+	/* Make sure the temp namespace is valid. */
+	if (SearchSysCacheExists1(NAMESPACEOID,
+							  ObjectIdGetDatum(namespaceOid)))
+	{
+		RemoveSchemaById(namespaceOid);
+		RemoveSchemaById(toastNamespaceOid);
+	}
 
 	CommitTransactionCommand();
 }

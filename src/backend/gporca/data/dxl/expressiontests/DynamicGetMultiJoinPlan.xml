@@ -112,7 +112,7 @@
                   </dxl:Not>
                 </dxl:Filter>
                 <dxl:OneTimeFilter/>
-                <dxl:DynamicTableScan PartIndexId="0">
+                <dxl:DynamicTableScan>
                   <dxl:Properties>
                     <dxl:Cost StartupCost="10" TotalCost="100" Rows="1000" Width="8"/>
                   </dxl:Properties>

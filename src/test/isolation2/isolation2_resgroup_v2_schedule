@@ -14,20 +14,22 @@ test: resgroup/resgroup_transaction
 test: resgroup/resgroup_name_convention
 
 # fault injection tests
+test: resgroup/resgroup_bypass
 test: resgroup/resgroup_assign_slot_fail
 test: resgroup/resgroup_unassign_entrydb
 test: resgroup/resgroup_seg_down_2pc
 
 # functions
 test: resgroup/resgroup_concurrency
-test: resgroup/resgroup_bypass
+test: resgroup/resgroup_wait_time
 test: resgroup/resgroup_alter_concurrency
-test: resgroup/resgroup_cpu_hard_quota
+test: resgroup/resgroup_cpu_max_percent
 test: resgroup/resgroup_cpuset
 test: resgroup/resgroup_cpuset_empty_default
 test: resgroup/resgroup_cancel_terminate_concurrency
 test: resgroup/resgroup_memory_limit
 test: resgroup/resgroup_move_query
+test: resgroup/resgroup_io_limit
 
 # regression tests
 test: resgroup/resgroup_recreate

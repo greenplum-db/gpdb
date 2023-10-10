@@ -1,0 +1,336 @@
+--
+-- targetlist set returning function tests
+--
+-- SRF is not under any other expression --
+explain verbose select generate_series(1,4) as x;
+                   QUERY PLAN                   
+------------------------------------------------
+ ProjectSet  (cost=0.00..0.04 rows=4 width=4)
+   Output: generate_series(1, 4)
+   ->  Result  (cost=0.00..0.01 rows=1 width=0)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(5 rows)
+
+select generate_series(1,4) as x;
+ x 
+---
+ 1
+ 2
+ 3
+ 4
+(4 rows)
+
+-- SRF is present under a FUNCEXPR which is not a SRF
+explain verbose select abs(generate_series(-5,-1)) as absolute;
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Result  (cost=0.00..0.12 rows=5 width=4)
+   Output: abs((generate_series('-5'::integer, '-1'::integer)))
+   ->  ProjectSet  (cost=0.00..0.04 rows=5 width=4)
+         Output: generate_series('-5'::integer, '-1'::integer)
+         ->  Result  (cost=0.00..0.01 rows=1 width=0)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(7 rows)
+
+select abs(generate_series(-5,-1)) as absolute;
+ absolute 
+----------
+        5
+        4
+        3
+        2
+        1
+(5 rows)
+
+-- SRF is present under a OPEXPR(+)
+explain verbose select generate_series(1,4)+1 as output;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Result  (cost=0.00..0.10 rows=4 width=4)
+   Output: ((generate_series(1, 4)) + 1)
+   ->  ProjectSet  (cost=0.00..0.04 rows=4 width=4)
+         Output: generate_series(1, 4)
+         ->  Result  (cost=0.00..0.01 rows=1 width=0)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(7 rows)
+
+select generate_series(1,4)+1 as output;
+ output 
+--------
+      2
+      3
+      4
+      5
+(4 rows)
+
+-- SRF is present under an SRF expression
+explain verbose select generate_series(generate_series(1,3),4);
+                      QUERY PLAN                       
+-------------------------------------------------------
+ ProjectSet  (cost=0.00..15.06 rows=3000 width=4)
+   Output: generate_series((generate_series(1, 3)), 4)
+   ->  ProjectSet  (cost=0.00..0.03 rows=3 width=4)
+         Output: generate_series(1, 3)
+         ->  Result  (cost=0.00..0.01 rows=1 width=0)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(7 rows)
+
+select generate_series(generate_series(1,3),4) as output;
+ output 
+--------
+      1
+      2
+      3
+      4
+      2
+      3
+      4
+      3
+      4
+(9 rows)
+
+-- The inner SRF is present under an OPEXPR which in turn is under an SRF
+explain verbose select generate_series(generate_series(1,2)+1,4) as output;
+                         QUERY PLAN                          
+-------------------------------------------------------------
+ ProjectSet  (cost=0.00..10.05 rows=2000 width=4)
+   Output: generate_series(((generate_series(1, 2)) + 1), 4)
+   ->  ProjectSet  (cost=0.00..0.03 rows=2 width=4)
+         Output: generate_series(1, 2)
+         ->  Result  (cost=0.00..0.01 rows=1 width=0)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(7 rows)
+
+select generate_series(generate_series(1,2)+1,4) as output;
+ output 
+--------
+      2
+      3
+      4
+      3
+      4
+(5 rows)
+
+-- The outer SRF is present under an OPEXPR
+explain verbose select generate_series(generate_series(1,2),4)+1 as output;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Result  (cost=0.00..45.05 rows=2000 width=4)
+   Output: ((generate_series((generate_series(1, 2)), 4)) + 1)
+   ->  ProjectSet  (cost=0.00..10.05 rows=2000 width=4)
+         Output: generate_series((generate_series(1, 2)), 4)
+         ->  ProjectSet  (cost=0.00..0.03 rows=2 width=4)
+               Output: generate_series(1, 2)
+               ->  Result  (cost=0.00..0.01 rows=1 width=0)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(9 rows)
+
+select generate_series(generate_series(1,2),4)+1 as output;
+ output 
+--------
+      2
+      3
+      4
+      5
+      3
+      4
+      5
+(7 rows)
+
+-- Both inner and outer SRF are present under OPEXPR
+explain verbose select generate_series(generate_series(1,2)+1,4)+1 as output;
+                             QUERY PLAN                              
+---------------------------------------------------------------------
+ Result  (cost=0.00..50.05 rows=2000 width=4)
+   Output: ((generate_series(((generate_series(1, 2)) + 1), 4)) + 1)
+   ->  ProjectSet  (cost=0.00..10.05 rows=2000 width=4)
+         Output: generate_series(((generate_series(1, 2)) + 1), 4)
+         ->  ProjectSet  (cost=0.00..0.03 rows=2 width=4)
+               Output: generate_series(1, 2)
+               ->  Result  (cost=0.00..0.01 rows=1 width=0)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(9 rows)
+
+select generate_series(generate_series(1,2)+1,4)+1 as output;
+ output 
+--------
+      3
+      4
+      5
+      4
+      5
+(5 rows)
+
+explain verbose select generate_series(1,3)+1 as x from (select generate_series(1, 3)) as y;
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Result  (cost=0.00..0.27 rows=9 width=4)
+   Output: ((generate_series(1, 3)) + 1)
+   ->  ProjectSet  (cost=0.00..0.13 rows=9 width=4)
+         Output: generate_series(1, 3)
+         ->  ProjectSet  (cost=0.00..0.03 rows=3 width=4)
+               Output: generate_series(1, 3)
+               ->  Result  (cost=0.00..0.01 rows=1 width=0)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(9 rows)
+
+select generate_series(1,3)+1 as x from (select generate_series(1, 3)) as y;
+ x 
+---
+ 2
+ 3
+ 4
+ 2
+ 3
+ 4
+ 2
+ 3
+ 4
+(9 rows)
+
+create table test_srf(a int,b int,c int) distributed by (a);
+insert into test_srf values(2,2,2);
+insert into test_srf values(3,2,2);
+explain verbose select generate_series(1,a) as output,b,c from test_srf;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1168988.42 rows=77900000 width=12)
+   Output: (generate_series(1, a)), b, c
+   ->  ProjectSet  (cost=0.00..130321.75 rows=25966667 width=12)
+         Output: generate_series(1, a), b, c
+         ->  Seq Scan on public.test_srf  (cost=0.00..293.67 rows=25967 width=12)
+               Output: a, b, c
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(8 rows)
+
+select generate_series(1,a) as output,b,c from test_srf;
+ output | b | c 
+--------+---+---
+      1 | 2 | 2
+      2 | 2 | 2
+      1 | 2 | 2
+      2 | 2 | 2
+      3 | 2 | 2
+(5 rows)
+
+explain verbose select generate_series(1,a+1),b+generate_series(1,4),c from test_srf;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1688451.58 rows=77900000 width=12)
+   Output: (generate_series(1, (a + 1))), ((b + (generate_series(1, 4)))), c
+   ->  Result  (cost=0.00..649784.92 rows=25966667 width=12)
+         Output: (generate_series(1, (a + 1))), (b + (generate_series(1, 4))), c
+         ->  ProjectSet  (cost=0.00..130451.58 rows=25966667 width=16)
+               Output: generate_series(1, (a + 1)), generate_series(1, 4), b, c
+               ->  Seq Scan on public.test_srf  (cost=0.00..293.67 rows=25967 width=12)
+                     Output: a, b, c
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(10 rows)
+
+select generate_series(1,a+1),b+generate_series(1,4),c from test_srf;
+ generate_series | ?column? | c 
+-----------------+----------+---
+               1 |        3 | 2
+               2 |        4 | 2
+               3 |        5 | 2
+                 |        6 | 2
+               1 |        3 | 2
+               2 |        4 | 2
+               3 |        5 | 2
+               4 |        6 | 2
+(8 rows)
+
+drop table test_srf;
+-- Test that the preprocessor step where
+-- IN subquery is converted to EXIST subquery with a predicate,
+-- is not happening if inner sub query is SRF
+-- Fixed as part of github issue #15644
+explain verbose SELECT a IN (SELECT generate_series(1,a)) AS x FROM (SELECT generate_series(1, 3) AS a) AS s;
+                       QUERY PLAN                        
+---------------------------------------------------------
+ Subquery Scan on s  (cost=0.00..11.35 rows=3 width=1)
+   Output: (SubPlan 1)
+   ->  ProjectSet  (cost=0.00..0.03 rows=3 width=4)
+         Output: generate_series(1, 3)
+         ->  Result  (cost=0.00..0.01 rows=1 width=0)
+   SubPlan 1
+     ->  ProjectSet  (cost=0.00..5.02 rows=1000 width=4)
+           Output: generate_series(1, s.a)
+           ->  Result  (cost=0.00..0.01 rows=1 width=0)
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(11 rows)
+
+SELECT a IN (SELECT generate_series(1,a)) AS x FROM (SELECT generate_series(1, 3) AS a) AS s;
+ x 
+---
+ t
+ t
+ t
+(3 rows)
+
+SELECT a FROM (values(1),(2),(3)) as t(a) where a IN (SELECT generate_series(1,a));
+ a 
+---
+ 1
+ 2
+ 3
+(3 rows)
+
+EXPLAIN (VERBOSE, COSTS OFF)
+  SELECT a FROM (values(1),(2),(3)) as t(a) where a IN (SELECT generate_series(1,a));
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Values Scan on "*VALUES*"
+   Output: "*VALUES*".column1
+   Filter: (SubPlan 1)
+   SubPlan 1
+     ->  ProjectSet
+           Output: generate_series(1, "*VALUES*".column1)
+           ->  Result
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(9 rows)
+
+CREATE TABLE t_outer (a int, b int) DISTRIBUTED BY (a);
+INSERT INTO t_outer SELECT i, i+1 FROM generate_series(1,3) as i;  
+CREATE TABLE t_inner (a int, b int) DISTRIBUTED BY (a);
+INSERT INTO t_inner SELECT i, i+1 FROM generate_series(1,3) as i;
+SELECT * FROM t_outer WHERE t_outer.b IN (SELECT generate_series(1, t_outer.b) FROM t_inner);
+ a | b 
+---+---
+ 2 | 3
+ 3 | 4
+ 1 | 2
+(3 rows)
+
+EXPLAIN (VERBOSE, COSTS OFF)
+  SELECT * FROM t_outer WHERE t_outer.b IN (SELECT generate_series(1, t_outer.b)  FROM t_inner);
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: t_outer.a, t_outer.b
+   ->  Seq Scan on public.t_outer
+         Output: t_outer.a, t_outer.b
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  ProjectSet
+                 Output: generate_series(1, t_outer.b)
+                 ->  Materialize
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                             ->  Seq Scan on public.t_inner
+ Optimizer: Postgres query optimizer
+ Settings: optimizer = 'off'
+(13 rows)
+
+DROP TABLE t_outer, t_inner;

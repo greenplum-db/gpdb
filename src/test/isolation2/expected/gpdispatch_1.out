@@ -11,7 +11,7 @@
 -- end_matchignore
 
 create extension if not exists gp_inject_fault;
-CREATE
+CREATE EXTENSION
 
 1: select gp_inject_fault('make_dispatch_result_error', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
  gp_inject_fault 
@@ -49,9 +49,9 @@ select gp_inject_fault('make_dispatch_result_error', 'reset', dbid) from gp_segm
 --
 
 create table test_waitevent(i int);
-CREATE
+CREATE TABLE
 insert into test_waitevent select generate_series(1,1000);
-INSERT 1000
+INSERT 0 1000
 
 1: select gp_inject_fault_infinite('send_qe_details_init_backend', 'suspend', 2);
  gp_inject_fault_infinite 
@@ -178,13 +178,13 @@ COPY 9
 
 -- Case for cdbgang_createGang_async
 1: create table t_12703(a int);
-CREATE
+CREATE TABLE
 
 1:begin;
 BEGIN
 -- make a cursor so that we have a named portal
 1: declare cur12703 cursor for select * from t_12703;
-DECLARE
+DECLARE CURSOR
 
 -- next, trigger a segment down so the existing session will be reset
 2: select gp_inject_fault('start_prepare', 'panic', dbid) from gp_segment_configuration where role = 'p' AND content = 0;
@@ -200,7 +200,7 @@ ERROR:  fault triggered, fault name:'start_prepare' fault type:'panic'  (seg0 12
 -- with a named portal existing.
 1: select * from t_12703;
 1: abort;
-ABORT
+ROLLBACK
 
 1q: ... <quitting>
 2q: ... <quitting>
@@ -208,7 +208,7 @@ ABORT
 -- Case for cdbCopyEndInternal
 -- Provide some data to copy in
 4: insert into t_12703 select * from generate_series(1, 10)i;
-INSERT 10
+INSERT 0 10
 4: copy t_12703 to '/tmp/t_12703';
 COPY 10
 -- make copy in statement hang at the entry point of cdbCopyEndInternal
@@ -250,7 +250,7 @@ ERROR:  MPP detected 1 segment failures, system is reconnected
  1        
 (1 row)
 2: end;
-END
+COMMIT
 2q: ... <quitting>
 
 

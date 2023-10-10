@@ -214,24 +214,16 @@
       <dxl:Relation Mdid="6.16434.1.0" Name="ix_test" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,3">
         <dxl:Columns>
           <dxl:Column Name="message_id" Attno="1" Mdid="0.25.1.0" Nullable="false" ColWidth="33">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="message" Attno="2" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="insert_ts" Attno="3" Mdid="0.1184.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue>
-              <dxl:FuncExpr FuncId="0.1299.1.0" FuncRetSet="false" TypeMdid="0.1184.1.0"/>
-            </dxl:DefaultValue>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -244,7 +236,7 @@
         <dxl:ResultType Mdid="0.20.1.0"/>
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
-      <dxl:Index Mdid="0.16445.1.0" Name="ix_test_ix01" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="0,1,2,3,4,5">
+      <dxl:Index Mdid="0.16445.1.0" Name="ix_test_ix01" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="0" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1994.1.0"/>
         </dxl:Opfamilies>
@@ -318,7 +310,7 @@
     <dxl:Plan Id="0" SpaceSize="154">
       <dxl:GatherMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="831.034094" Rows="10.000000" Width="66"/>
+          <dxl:Cost StartupCost="0" TotalCost="831.034374" Rows="10.000000" Width="66"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="message_id">
@@ -332,7 +324,7 @@
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="true">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="831.032623" Rows="10.000000" Width="66"/>
+            <dxl:Cost StartupCost="0" TotalCost="831.032903" Rows="10.000000" Width="66"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="message_id">
@@ -346,9 +338,9 @@
           <dxl:JoinFilter>
             <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
           </dxl:JoinFilter>
-          <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
+          <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="441.907091" Rows="10.000000" Width="33"/>
+              <dxl:Cost StartupCost="0" TotalCost="441.907372" Rows="10.000000" Width="33"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="6"/>
@@ -359,9 +351,9 @@
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:Sort SortDiscardDuplicates="false">
+            <dxl:RedistributeMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="441.907040" Rows="10.000000" Width="33"/>
+                <dxl:Cost StartupCost="0" TotalCost="441.907230" Rows="10.000000" Width="33"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="6" Alias="message_id">
@@ -369,58 +361,48 @@
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:SortingColumnList>
-                <dxl:SortingColumn ColId="6" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-              </dxl:SortingColumnList>
-              <dxl:LimitCount/>
-              <dxl:LimitOffset/>
-              <dxl:RedistributeMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159">
+              <dxl:SortingColumnList/>
+              <dxl:HashExprList>
+                <dxl:HashExpr>
+                  <dxl:Ident ColId="6" ColName="message_id" TypeMdid="0.25.1.0"/>
+                </dxl:HashExpr>
+              </dxl:HashExprList>
+              <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="441.907040" Rows="10.000000" Width="33"/>
+                  <dxl:Cost StartupCost="0" TotalCost="441.907198" Rows="10.000000" Width="33"/>
                 </dxl:Properties>
+                <dxl:GroupingColumns>
+                  <dxl:GroupingColumn ColId="6"/>
+                </dxl:GroupingColumns>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="6" Alias="message_id">
                     <dxl:Ident ColId="6" ColName="message_id" TypeMdid="0.25.1.0"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
-                <dxl:SortingColumnList/>
-                <dxl:HashExprList>
-                  <dxl:HashExpr>
-                    <dxl:Ident ColId="6" ColName="message_id" TypeMdid="0.25.1.0"/>
-                  </dxl:HashExpr>
-                </dxl:HashExprList>
-                <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
+                <dxl:RandomMotion InputSegments="-1" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="441.907009" Rows="10.000000" Width="33"/>
+                    <dxl:Cost StartupCost="0" TotalCost="441.907005" Rows="10.000000" Width="33"/>
                   </dxl:Properties>
-                  <dxl:GroupingColumns>
-                    <dxl:GroupingColumn ColId="6"/>
-                  </dxl:GroupingColumns>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="6" Alias="message_id">
                       <dxl:Ident ColId="6" ColName="message_id" TypeMdid="0.25.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:Sort SortDiscardDuplicates="false">
+                  <dxl:SortingColumnList/>
+                  <dxl:Limit>
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="441.907005" Rows="10.000000" Width="33"/>
+                      <dxl:Cost StartupCost="0" TotalCost="441.906235" Rows="10.000000" Width="33"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="6" Alias="message_id">
                         <dxl:Ident ColId="6" ColName="message_id" TypeMdid="0.25.1.0"/>
                       </dxl:ProjElem>
                     </dxl:ProjList>
-                    <dxl:Filter/>
-                    <dxl:SortingColumnList>
-                      <dxl:SortingColumn ColId="6" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                    </dxl:SortingColumnList>
-                    <dxl:LimitCount/>
-                    <dxl:LimitOffset/>
-                    <dxl:RandomMotion InputSegments="-1" OutputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159">
+                    <dxl:GatherMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159" OutputSegments="-1">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="441.907005" Rows="10.000000" Width="33"/>
+                        <dxl:Cost StartupCost="0" TotalCost="441.905905" Rows="10.000000" Width="33"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="6" Alias="message_id">
@@ -431,16 +413,16 @@
                       <dxl:SortingColumnList/>
                       <dxl:Limit>
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="441.906235" Rows="10.000000" Width="33"/>
+                          <dxl:Cost StartupCost="0" TotalCost="441.894138" Rows="10.000000" Width="33"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="6" Alias="message_id">
                             <dxl:Ident ColId="6" ColName="message_id" TypeMdid="0.25.1.0"/>
                           </dxl:ProjElem>
                         </dxl:ProjList>
-                        <dxl:GatherMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159" OutputSegments="-1">
+                        <dxl:TableScan>
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="441.905905" Rows="10.000000" Width="33"/>
+                            <dxl:Cost StartupCost="0" TotalCost="435.803012" Rows="15877726.000000" Width="33"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="6" Alias="message_id">
@@ -448,43 +430,15 @@
                             </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter/>
-                          <dxl:SortingColumnList/>
-                          <dxl:Limit>
-                            <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="441.894138" Rows="10.000000" Width="33"/>
-                            </dxl:Properties>
-                            <dxl:ProjList>
-                              <dxl:ProjElem ColId="6" Alias="message_id">
-                                <dxl:Ident ColId="6" ColName="message_id" TypeMdid="0.25.1.0"/>
-                              </dxl:ProjElem>
-                            </dxl:ProjList>
-                            <dxl:TableScan>
-                              <dxl:Properties>
-                                <dxl:Cost StartupCost="0" TotalCost="435.803012" Rows="15877726.000000" Width="33"/>
-                              </dxl:Properties>
-                              <dxl:ProjList>
-                                <dxl:ProjElem ColId="6" Alias="message_id">
-                                  <dxl:Ident ColId="6" ColName="message_id" TypeMdid="0.25.1.0"/>
-                                </dxl:ProjElem>
-                              </dxl:ProjList>
-                              <dxl:Filter/>
-                              <dxl:TableDescriptor Mdid="6.16434.1.0" TableName="ix_test">
-                                <dxl:Columns>
-                                  <dxl:Column ColId="6" Attno="1" ColName="message_id" TypeMdid="0.25.1.0" ColWidth="33"/>
-                                  <dxl:Column ColId="9" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                                  <dxl:Column ColId="10" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                                  <dxl:Column ColId="11" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                                </dxl:Columns>
-                              </dxl:TableDescriptor>
-                            </dxl:TableScan>
-                            <dxl:LimitCount>
-                              <dxl:ConstValue TypeMdid="0.20.1.0" Value="10"/>
-                            </dxl:LimitCount>
-                            <dxl:LimitOffset>
-                              <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
-                            </dxl:LimitOffset>
-                          </dxl:Limit>
-                        </dxl:GatherMotion>
+                          <dxl:TableDescriptor Mdid="6.16434.1.0" TableName="ix_test">
+                            <dxl:Columns>
+                              <dxl:Column ColId="6" Attno="1" ColName="message_id" TypeMdid="0.25.1.0" ColWidth="33"/>
+                              <dxl:Column ColId="9" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                              <dxl:Column ColId="10" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                              <dxl:Column ColId="11" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                            </dxl:Columns>
+                          </dxl:TableDescriptor>
+                        </dxl:TableScan>
                         <dxl:LimitCount>
                           <dxl:ConstValue TypeMdid="0.20.1.0" Value="10"/>
                         </dxl:LimitCount>
@@ -492,11 +446,17 @@
                           <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
                         </dxl:LimitOffset>
                       </dxl:Limit>
-                    </dxl:RandomMotion>
-                  </dxl:Sort>
-                </dxl:Aggregate>
-              </dxl:RedistributeMotion>
-            </dxl:Sort>
+                    </dxl:GatherMotion>
+                    <dxl:LimitCount>
+                      <dxl:ConstValue TypeMdid="0.20.1.0" Value="10"/>
+                    </dxl:LimitCount>
+                    <dxl:LimitOffset>
+                      <dxl:ConstValue TypeMdid="0.20.1.0" Value="0"/>
+                    </dxl:LimitOffset>
+                  </dxl:Limit>
+                </dxl:RandomMotion>
+              </dxl:Aggregate>
+            </dxl:RedistributeMotion>
           </dxl:Aggregate>
           <dxl:BitmapTableScan>
             <dxl:Properties>

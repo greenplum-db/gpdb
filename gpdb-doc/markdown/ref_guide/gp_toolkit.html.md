@@ -12,29 +12,31 @@ This documentation describes the most useful views in `gp_toolkit`. You may noti
 
 These are the categories for views in the `gp_toolkit` schema.
 
--   **[Checking for Tables that Need Routine Maintenance](gp_toolkit.html)**  
+-   **[Checking for Tables that Need Routine Maintenance](gp_toolkit.html#topic2)**  
 
--   **[Checking for Locks](gp_toolkit.html)**  
+-   **[Checking for Locks](gp_toolkit.html#topic5)**  
 
--   **[Checking Append-Optimized Tables](gp_toolkit.html)**  
+-   **[Checking Append-Optimized Tables](gp_toolkit.html#topic8)**  
 
--   **[Viewing Greenplum Database Server Log Files](gp_toolkit.html)**  
+-   **[Viewing Greenplum Database Server Log Files](gp_toolkit.html#topic16)**  
 
--   **[Checking Server Configuration Files](gp_toolkit.html)**  
+-   **[Checking Server Configuration Files](gp_toolkit.html#topic21)**  
 
--   **[Checking for Failed Segments](gp_toolkit.html)**  
+-   **[Checking for Failed Segments](gp_toolkit.html#topic24)**  
 
--   **[Checking Resource Group Activity and Status](gp_toolkit.html)**  
+-   **[Checking Resource Group Activity and Status](gp_toolkit.html#topic26x)**  
 
--   **[Checking Resource Queue Activity and Status](gp_toolkit.html)**  
+-   **[Checking Resource Queue Activity and Status](gp_toolkit.html#topic26)**  
 
--   **[Checking Query Disk Spill Space Usage](gp_toolkit.html)**  
+-   **[Checking Query Disk Spill Space Usage](gp_toolkit.html#topic32)**  
 
--   **[Viewing Users and Groups \(Roles\)](gp_toolkit.html)**  
+-   **[Viewing Users and Groups \(Roles\)](gp_toolkit.html#topic36)**  
 
--   **[Checking Database Object Sizes and Disk Space](gp_toolkit.html)**  
+-   **[Checking Database Object Sizes and Disk Space](gp_toolkit.html#topic38)**  
 
--   **[Checking for Uneven Data Distribution](gp_toolkit.html)**  
+-   **[Checking for Missing and Orphaned Data Files](gp_toolkit.html#missingfiles)**  
+
+-   **[Checking for Uneven Data Distribution](gp_toolkit.html#topic49)**  
 
 
 **Parent topic:** [Greenplum Database Reference Guide](ref_guide.html)
@@ -350,7 +352,7 @@ Each component of a Greenplum Database system \(coordinator, standby coordinator
 
 -   [gp\_log\_command\_timings](#topic17)
 -   [gp\_log\_database](#topic18)
--   [gp\_log\_master\_concise](#topic19)
+-   [gp\_log\_coordinator\_concise](#topic19)
 -   [gp\_log\_system](#topic20)
 
 **Parent topic:** [The gp\_toolkit Administrative Schema](gp_toolkit.html)
@@ -407,7 +409,7 @@ This view uses an external table to read the server log files of the entire Gree
 |logline|The line in the log file in which this message is generated.|
 |logstack|Full text of the stack trace associated with this message.|
 
-### <a id="topic19"></a>gp\_log\_master\_concise 
+### <a id="topic19"></a>gp\_log\_coordinator\_concise 
 
 This view uses an external table to read a subset of the log fields from the coordinator log file. The use of this view requires superuser permissions.
 
@@ -519,9 +521,9 @@ Resource groups manage transactions to avoid exhausting system CPU and memory re
 You can use the `gp_resgroup_config` view to check the configuration of each resource group. You can use the `gp_resgroup_status*` views to display the current transaction status and resource usage of each resource group.
 
 -   [gp\_resgroup\_config](#topic27x)
+-   [gp_resgroup_role](#role)
 -   [gp\_resgroup\_status](#topic31x)
 -   [gp\_resgroup\_status\_per\_host](#perhost)
--   [gp\_resgroup\_status\_per\_segment](#perseg)
 
 **Parent topic:** [The gp\_toolkit Administrative Schema](gp_toolkit.html)
 
@@ -536,12 +538,23 @@ This view is accessible to all users.
 |groupid|The ID of the resource group.|
 |groupname|The name of the resource group.|
 |concurrency|The concurrency \(`CONCURRENCY`\) value specified for the resource group.|
-|cpu\_rate\_limit|The CPU limit \(`cpu_hard_quota_limit`\) value specified for the resource group, or -1.|
+|cpu\_rate\_limit|The CPU limit \(`CPU_MAX_PERCENT`\) value specified for the resource group, or -1.|
 |memory\_limit|The memory limit \(`MEMORY_LIMIT`\) value specified for the resource group.|
 |memory\_shared\_quota|The shared memory quota \(`MEMORY_SHARED_QUOTA`\) value specified for the resource group.|
 |memory\_spill\_ratio|The memory spill ratio \(`MEMORY_SPILL_RATIO`\) value specified for the resource group.|
 |memory\_auditor|The memory auditor for the resource group.|
 |cpuset|The CPU cores reserved for the resource group on the coordinator host and segment hosts, or -1.|
+
+### <a id="role"></a>gp\_resgroup\_role
+
+The `gp_resgroup_role` view allows administrators to see the resource group assigned to every role.
+
+This view is accessible to all users.
+
+|Column|Description|
+|------|-----------|
+|rrrolname|The name of the role|
+|rrrsgname|The name of the resource group|
 
 ### <a id="topic31x"></a>gp\_resgroup\_status 
 
@@ -560,58 +573,41 @@ This view is accessible to all users.
 |num\_queued|The total number of queued transactions for the resource group since the Greenplum Database cluster was last started, excluding the num\_queueing.|
 |num\_executed|The total number of transactions run in the resource group since the Greenplum Database cluster was last started, excluding the num\_running.|
 |total\_queue\_duration|The total time any transaction was queued since the Greenplum Database cluster was last started.|
-|cpu\_usage|A set of key-value pairs. For each segment instance \(the key\), the value is the real-time, per-segment instance CPU core usage by a resource group. The value is the sum of the percentages \(as a decimal value\) of CPU cores that are used by the resource group for the segment instance.|
-|memory\_usage|The real-time memory usage of the resource group on each Greenplum Database segment's host.|
 
-The `cpu_usage` field is a JSON-formatted, key:value string that identifies, for each resource group, the per-segment instance CPU core usage. The key is the segment id. The value is the sum of the percentages \(as a decimal value\) of the CPU cores used by the segment instance's resource group on the segment host; the maximum value is 1.00. The total CPU usage of all segment instances running on a host should not exceed the `gp_resource_group_cpu_limit`. Example `cpu_usage` column output:
+Sample output for the `gp_resgroup_status` view:
 
 ```
-
-{"-1":0.01, "0":0.31, "1":0.31}
+select * from gp_toolkit.gp_resgroup_status;
+ rsgname       | groupid | num_running | num_queueing | num_queued | num_executed | total_queue_duration |
+---------------+---------+-------------+--------------+------------+------------------------------------------------------------------------
+ default_group | 6437    | 0           | 0            | 0          | 0            | @ 0                  |
+ admin_group   | 6438    | 1           | 0            | 0          | 13           | @ 0                  |
+ system_group  | 6441    | 0           | 0            | 0          | 0            | @ 0                  |
+(3 rows)
 ```
-
-In the example, segment `0` and segment `1` are running on the same host; their CPU usage is the same.
-
-The `memory_usage` field is also a JSON-formatted, key:value string. The string contents differ depending upon the type of resource group. For each resource group that you assign to a role \(default memory auditor `vmtracker`\), this string identifies the used and available fixed and shared memory quota allocations on each segment. The key is segment id. The values are memory values displayed in MB units. The following example shows `memory_usage` column output for a single segment for a resource group that you assign to a role:
-
-```
-
-"0":{"used":0, "available":76, "quota_used":-1, "quota_available":60, "shared_used":0, "shared_available":16}
-```
-
-For each resource group that you assign to an external component, the `memory_usage` JSON-formatted string identifies the memory used and the memory limit on each segment. The following example shows `memory_usage` column output for an external component resource group for a single segment:
-
-```
-"1":{"used":11, "limit_granted":15}
-```
-
-> **Note** See the `gp_resgroup_status_per_host` view, described below, for more user-friendly display of CPU and memory usage.
 
 ### <a id="perhost"></a>gp\_resgroup\_status\_per\_host 
 
-The [gp\_resgroup\_status\_per\_host](system_catalogs/gp_resgroup_status_per_host.html) view displays the real-time CPU and memory usage \(MBs\) for each resource group on a per-host basis. The view also displays available and granted group fixed and shared memory for each resource group on a host.
+The [gp\_resgroup\_status\_per\_host](system_catalogs/catalog_ref-views.html#gp_resgroup_status_per_host) view displays the real-time CPU and memory usage \(MBs\) for each resource group on a per-host basis. The view also displays available and granted group fixed and shared memory for each resource group on a host.
 
 |Column|Description|
 |------|-----------|
 |`rsgname`|The name of the resource group.|
 |`groupid`|The ID of the resource group.|
 |`hostname`|The hostname of the segment host.|
-|`cpu`|The real-time CPU core usage by the resource group on a host. The value is the sum of the percentages \(as a decimal value\) of the CPU cores that are used by the resource group on the host.|
-|`memory_used`|The real-time memory usage of the resource group on the host. This total includes resource group fixed and shared memory. It also includes global shared memory used by the resource group.|
-|`memory_available`|The unused fixed and shared memory for the resource group that is available on the host. This total does not include available resource group global shared memory.|
-|`memory_quota_used`|The real-time fixed memory usage for the resource group on the host.|
-|`memory_quota_available`|The fixed memory available to the resource group on the host.|
-|`memory_shared_used`|The group shared memory used by the resource group on the host. If any global shared memory is used by the resource group, this amount is included in the total as well.|
-|`memory_shared_available`|The amount of group shared memory available to the resource group on the host. Resource group global shared memory is not included in this total.|
+|`cpu_usage`|The real-time CPU core usage by the resource group on a host. The value is the sum of the percentages (as a float value) of the CPU cores that are used by the resource group on the host.|
+|`memory_usage`|The real-time memory usage of the resource group on each Greenplum Database segment's host, in MB.|
 
 Sample output for the `gp_resgroup_status_per_host` view:
 
 ```
- rsgname       | groupid | hostname   | cpu  | memory_used | memory_available | memory_quota_used | memory_quota_available | memory_shared_used | memory_shared_available 
----------------+---------+------------+------+-------------+------------------+-------------------+------------------------+---------------------+---------------------
- admin_group   | 6438    | my-desktop | 0.84 | 1           | 271              | 68                | 68                     | 0                  | 136                     
- default_group | 6437    | my-desktop | 0.00 | 0           | 816              | 0                 | 400                    | 0                  | 416                     
-(2 rows)
+select * from gp_toolkit.gp_resgroup_status_per_host;
+ rsgname       | groupid | hostname | cpu_usage | memory_usage
+---------------+---------+----------+-----------+--------------
+ admin_group   | 6438    | zero     | 0.07      | 91.92
+ default_group | 6437    | zero     | 0.00      | 0.00
+ system_group  | 6441    | zero     | 0.02      | 53.04
+(3 rows)
 ```
 
 ## <a id="topic26"></a>Checking Resource Queue Activity and Status 
@@ -774,7 +770,6 @@ The `gp_size_*` family of views can be used to determine the disk space usage fo
 -   [gp\_size\_of\_all\_table\_indexes](#topic39)
 -   [gp\_size\_of\_database](#topic40)
 -   [gp\_size\_of\_index](#topic41)
--   [gp\_size\_of\_partition\_and\_indexes\_disk](#topic42)
 -   [gp\_size\_of\_schema\_disk](#topic43)
 -   [gp\_size\_of\_table\_and\_indexes\_disk](#topic44)
 -   [gp\_size\_of\_table\_and\_indexes\_licensing](#topic45)
@@ -826,21 +821,6 @@ This view shows the total size of an index. This view is accessible to all users
 |soiindexname|The name of the index|
 |soitableschemaname|The name of the table schema|
 |soitablename|The name of the table|
-
-### <a id="topic42"></a>gp\_size\_of\_partition\_and\_indexes\_disk 
-
-This view shows the size on disk of partitioned child tables and their indexes. This view is accessible to all users, however non-superusers will only be able to see relations that they have permission to access.
-
-|Column|Description|
-|------|-----------|
-|sopaidparentoid|The object ID of the parent table|
-|sopaidpartitionoid|The object ID of the partition table|
-|sopaidpartitiontablesize|The partition table size in bytes|
-|sopaidpartitionindexessize|The total size of all indexes on this partition|
-|Sopaidparentschemaname|The name of the parent schema|
-|Sopaidparenttablename|The name of the parent table|
-|Sopaidpartitionschemaname|The name of the partition schema|
-|sopaidpartitiontablename|The name of the partition table|
 
 ### <a id="topic43"></a>gp\_size\_of\_schema\_disk 
 
@@ -911,6 +891,58 @@ This external table runs the `df` \(disk free\) command on the active segment ho
 |dfhostname|The hostname of the segment host|
 |dfdevice|The device name|
 |dfspace|Free disk space in the segment file system in kilobytes|
+
+## <a id="missingfiles"></a>Checking for Missing and Orphaned Data Files
+
+Greenplum Database considers a relation data file that is present in the catalog, but not on disk, to be missing. Conversely, when Greenplum encounters an unexpected data file on disk that is not referenced in any relation, it considers that file to be orphaned.
+
+Greenplum Database provides the following views to help identify if missing or orphaned files exist in the current database:
+
+- [gp_check_orphaned_files](#mf_orphaned)
+- [gp_check_missing_files](#mf_missing)
+- [gp_check_missing_files_ext](#mf_missing_ext)
+
+Consider it a best practice to check for these conditions prior to expanding the cluster or before offline maintenance.
+
+By default, the views identified in this section are available to `PUBLIC`.
+
+### <a id="mf_orphaned"></a>gp_check_orphaned_files
+
+The `gp_check_orphaned_files` view scans the default and user-defined tablespaces for orphaned data files. Greenplum Database considers normal data files, files with an underscore (`_`) in the name, and extended numbered files (files that contain a `.<N>` in the name) in this check. `gp_check_orphaned_files` gathers results from the Greenplum Database coordinator and all segments.
+
+|Column|Description|
+|------|-----------|
+| gp_segment_id | The Greenplum Database segment identifier. |
+| tablespace | The identifier of the tablespace in which the orphaned file resides. |
+| filename | The file name of the orphaned data file. |
+| filepath | The file system path of the orphaned data file, relative to `$COORDINATOR_DATA_DIRECTORY`. |
+
+> **Caution** Use this view as one of many data points to identify orphaned data files. Do not delete files based solely on results from querying this view.
+
+
+### <a id="mf_missing"></a>gp_check_missing_files
+
+The `gp_check_missing_files` view scans heap and append-optimized, column-oriented tables for missing data files. Greenplum considers only normal data files (files that do not contain a `.` or an `_` in the name) in this check. `gp_check_missing_files` gathers results from the Greenplum Database coordinator and all segments.
+
+|Column|Description|
+|------|-----------|
+| gp_segment_id | The Greenplum Database segment identifier. |
+| tablespace | The identifier of the tablespace in which the table resides. |
+| relname | The name of the table that has a missing data file(s). |
+| filename | The file name of the missing data file. |
+
+
+### <a id="mf_missing_ext"></a>gp_check_missing_files_ext
+
+The `gp_check_missing_files_ext` view scans only append-optimized, column-oriented tables for missing extended data files. Greenplum Database considers both normal data files and extended numbered files (files that contain a `.<N>` in the name) in this check. Files that contain an `_` in the name are not considered. `gp_check_missing_files_ext` gathers results from the Greenplum Database segments only.
+
+|Column|Description|
+|------|-----------|
+| gp_segment_id | The Greenplum Database segment identifier. |
+| tablespace | The identifier of the tablespace in which the table resides. |
+| relname | The name of the table that has a missing extended data file(s). |
+| filename | The file name of the missing extended data file. |
+
 
 ## <a id="topic49"></a>Checking for Uneven Data Distribution 
 

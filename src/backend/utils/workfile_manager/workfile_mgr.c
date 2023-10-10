@@ -420,6 +420,12 @@ UpdateWorkFileSize(File file, uint64 newsize)
 	perquery->total_bytes += diff;
 	workfile_shared->total_bytes += diff;
 
+	if (newsize > work_set->max_file_size)
+		work_set->max_file_size = newsize;
+	if (work_set->min_file_size == 0 ||
+		newsize < work_set->min_file_size)
+		work_set->min_file_size = newsize;
+
 	/* also update the local entry */
 	localEntry->size = newsize;
 
@@ -637,6 +643,10 @@ workfile_mgr_create_set_internal(const char *operator_name, const char *prefix)
 	work_set->total_bytes = 0;
 	work_set->active = true;
 	work_set->pinned = false;
+	work_set->max_file_size = 0;
+	work_set->min_file_size = 0;
+	work_set->compression_buf_total = 0;
+	work_set->num_files_compressed = 0;
 
 	/* Track all workfile_sets created in current process */
 	if (!localCtl.initialized)

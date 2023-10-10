@@ -119,28 +119,34 @@ InsertAppendOnlyEntry(Oid relid,
 					  Oid visimaprelid,
 					  int16 version);
 
-void
+extern void 
 GetAppendOnlyEntryAttributes(Oid relid,
 							 int32 *blocksize,
 							 int16 *compresslevel,
 							 bool *checksum,
 							 NameData *compresstype);
-
 /*
- * Get the OIDs of the auxiliary relations and their indexes for an appendonly
- * relation.
+ * Get the OIDs of the auxiliary relations for an appendonly relation. This 
+ * should only be called on tables with pg_appendonly entries, which currently 
+ * are just non-partitioned AO/CO tables.
  *
  * The OIDs will be retrieved only when the corresponding output variable is
  * not NULL.
  */
-void
-GetAppendOnlyEntryAuxOids(Relation rel,
-						  Oid *segrelid,
-						  Oid *blkdirrelid,
-						  Oid *visimaprelid);
-
-void
-GetAppendOnlyEntry(Relation rel, Form_pg_appendonly aoEntry);
+#define GetAppendOnlyEntryAuxOids(rel, \
+						  segrelid_ptr, \
+						  blkdirrelid_ptr, \
+						  visimaprelid_ptr) \
+do { \
+	Form_pg_appendonly aoForm = (rel)->rd_appendonly; \
+	Assert(RelationStorageIsAO(rel)); \
+	if ((segrelid_ptr) != NULL) \
+		*((Oid*)segrelid_ptr) = aoForm->segrelid; \
+	if ((blkdirrelid_ptr) != NULL) \
+		*((Oid*)blkdirrelid_ptr) = aoForm->blkdirrelid; \
+	if ((visimaprelid_ptr) != NULL) \
+		*((Oid*)visimaprelid_ptr) = aoForm->visimaprelid; \
+} while (0)
 
 /*
  * Update the segrelid and/or blkdirrelid if the input new values

@@ -95,34 +95,24 @@ select * from t full join s on t1 = s1;
       <dxl:Relation Mdid="6.25359.1.1" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="t1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="t2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="t3" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -136,34 +126,24 @@ select * from t full join s on t1 = s1;
       <dxl:Relation Mdid="6.25382.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="s1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s3" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -219,7 +199,7 @@ select * from t full join s on t1 = s1;
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="227">
+    <dxl:Plan Id="0" SpaceSize="573">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="2586.001789" Rows="3.000000" Width="16"/>
@@ -330,7 +310,6 @@ select * from t full join s on t1 = s1;
                 <dxl:TableDescriptor Mdid="6.25359.1.1" TableName="t">
                   <dxl:Columns>
                     <dxl:Column ColId="20" Attno="1" ColName="t1" TypeMdid="0.23.1.0"/>
-                    <dxl:Column ColId="29" Attno="2" ColName="t2" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="21" Attno="3" ColName="t3" TypeMdid="0.23.1.0"/>
                     <dxl:Column ColId="22" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
                     <dxl:Column ColId="23" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
@@ -426,7 +405,6 @@ select * from t full join s on t1 = s1;
                     <dxl:Columns>
                       <dxl:Column ColId="30" Attno="1" ColName="s1" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="31" Attno="2" ColName="s2" TypeMdid="0.23.1.0"/>
-                      <dxl:Column ColId="39" Attno="3" ColName="s3" TypeMdid="0.23.1.0"/>
                       <dxl:Column ColId="32" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
                       <dxl:Column ColId="33" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
                       <dxl:Column ColId="34" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>

@@ -33,7 +33,9 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 create external table p1_e (a int, b int) location ('file://@hostname@@abs_srcdir@/data/part1.csv') format 'csv';
 create external table p2_e (a int, b int) location ('file://@hostname@@abs_srcdir@/data/part2.csv') format 'csv';
 alter table part attach partition p1_e for values from (0) to (10);
+NOTICE:  partition constraints are not validated when attaching a readable external table
 alter table part attach partition p2_e for values from (10) to (19);
+NOTICE:  partition constraints are not validated when attaching a readable external table
 analyze part;
 WARNING:  skipping "p2_e" --- cannot analyze this foreign table
 WARNING:  skipping "p1_e" --- cannot analyze this foreign table
@@ -403,3 +405,44 @@ explain select * from part where b > 22;
  Optimizer: Postgres query optimizer
 (14 rows)
 
+--
+-- exchange & attach partition
+--
+alter table part add partition exch1 start(60) end (70);
+alter table part add partition exch2 start(70) end (80);
+-- exchange with external tables
+create external web table p3_e (a int, b int) execute 'cat > @abs_srcdir@/data/part-ext.csv' format 'csv' (delimiter as '|' null as 'null' escape as ' ');
+create writable external web table p4_e (a int, b int) execute 'cat > @abs_srcdir@/data/part-ext.csv' format 'csv' (delimiter as '|' null as 'null' escape as ' ');
+-- allow exchange readable external table
+alter table part exchange partition exch1 with table p3_e;
+NOTICE:  partition constraints are not validated when attaching a readable external table
+-- should disallow writable external table
+alter table part exchange partition exch1 with table p4_e;
+ERROR:  cannot attach a WRITABLE external table
+-- exchange with foreign tables
+CREATE SERVER file_server3 FOREIGN DATA WRAPPER file_fdw;
+CREATE FOREIGN TABLE ft3 (
+	a int,
+	b int
+) SERVER file_server3
+OPTIONS ( filename '/does/not/exist.csv', format 'csv');
+-- exchange works, but no error checking like for external tables
+alter table part exchange partition exch2 with table ft3;
+-- same tests for attach partition
+create external web table p5_e (a int, b int) execute 'cat > @abs_srcdir@/data/part-ext.csv' format 'csv' (delimiter as '|' null as 'null' escape as ' ');
+create writable external web table p6_e (a int, b int) execute 'cat > @abs_srcdir@/data/part-ext.csv' format 'csv' (delimiter as '|' null as 'null' escape as ' ');
+-- allow attach readable external table
+alter table part attach partition p5_e for values from (80) to (90);
+NOTICE:  partition constraints are not validated when attaching a readable external table
+-- should disallow writable external table
+alter table part attach partition p6_e for values from (90) to (100);
+ERROR:  cannot attach a WRITABLE external table
+-- attach foreign table
+CREATE SERVER file_server4 FOREIGN DATA WRAPPER file_fdw;
+CREATE FOREIGN TABLE ft4 (
+	a int,
+	b int
+) SERVER file_server4
+OPTIONS ( filename '/does/not/exist.csv', format 'csv');
+-- exchange works, but no error checking like for external tables
+alter table part attach partition ft4 for values from (100) to (110);

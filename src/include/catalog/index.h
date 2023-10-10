@@ -164,6 +164,7 @@ extern void SerializeReindexState(Size maxsize, char *start_address);
 extern void RestoreReindexState(void *reindexstate);
 
 extern void IndexSetParentIndex(Relation idx, Oid parentOid);
+extern bool IsIndexOnAORel(Relation idx);
 
 
 /*

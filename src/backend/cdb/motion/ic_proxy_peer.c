@@ -164,7 +164,7 @@ ic_proxy_peer_unregister(ICProxyPeer *peer)
 		/* keep the peer as a placeholder */
 
 		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
-			   "ic-proxy %s: unregistered", peer->name);
+			   "ic-proxy: %s: unregistered", peer->name);
 
 		/* reset the state */
 		peer->state = 0;
@@ -323,7 +323,7 @@ ic_proxy_peer_on_data(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 	if (unlikely(nread < 0))
 	{
 		if (nread != UV_EOF)
-			elog(WARNING, "ic-proxy: %s: fail to receive DATA: %s",
+			elog(WARNING, "ic-proxy: %s: failed to receive DATA: %s",
 						 peer->name, uv_strerror(nread));
 		else
 			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
@@ -421,7 +421,7 @@ ic_proxy_peer_on_close(uv_handle_t *handle)
 	ICProxyPeer *peer = CONTAINER_OF((void *) handle, ICProxyPeer, tcp);
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
-		   "%s: closed", peer->name);
+		   "ic-proxy: %s: closed", peer->name);
 
 	/* reset the state */
 	peer->state = 0;
@@ -462,7 +462,7 @@ ic_proxy_peer_on_shutdown(uv_shutdown_t *req, int status)
 	ic_proxy_free(req);
 
 	if (status < 0)
-		elog(WARNING, "ic-proxy: %s: fail to shutdown: %s",
+		elog(WARNING, "ic-proxy: %s: failed to shutdown: %s",
 					 peer->name, uv_strerror(status));
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
@@ -599,7 +599,7 @@ ic_proxy_peer_on_hello_data(uv_stream_t *stream,
 	if (unlikely(nread < 0))
 	{
 		if (nread != UV_EOF)
-			elog(WARNING, "ic-proxy: %s: fail to receive HELLO: %s",
+			elog(WARNING, "ic-proxy: %s: failed to receive HELLO: %s",
 						 peer->name, uv_strerror(nread));
 		else
 			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
@@ -636,7 +636,7 @@ ic_proxy_peer_read_hello(ICProxyPeer *peer)
 		return;
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
-		   "%s: waiting for HELLO", peer->name);
+		   "ic-proxy: %s: waiting for HELLO", peer->name);
 
 	peer->state |= IC_PROXY_PEER_STATE_RECEIVING_HELLO;
 
@@ -728,7 +728,7 @@ ic_proxy_peer_on_hello_ack_data(uv_stream_t *stream,
 	if (unlikely(nread < 0))
 	{
 		if (nread != UV_EOF)
-			elog(WARNING, "%s: fail to recv HELLO ACK: %s",
+			elog(WARNING, "ic-proxy: %s: failed to recv HELLO ACK: %s",
 						 peer->name, uv_strerror(nread));
 		else
 			elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
@@ -797,7 +797,7 @@ ic_proxy_peer_on_connected(uv_connect_t *conn, int status)
 	{
 		/* the peer might just not get ready yet, retry later */
 		elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
-			   "ic-proxy: %s: fail to connect: %s",
+			   "ic-proxy: %s: failed to connect: %s",
 					 peer->name, uv_strerror(status));
 		ic_proxy_peer_close(peer);
 		return;
@@ -851,7 +851,7 @@ ic_proxy_peer_connect(ICProxyPeer *peer, struct sockaddr_in *dest)
 
 	uv_ip4_name(dest, name, sizeof(name));
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
-		   "%s: connecting to %s:%d",
+		   "ic-proxy: %s: connecting to %s:%d",
 				 peer->name, name, ntohs(dest->sin_port));
 
 	/* reinit the tcp handle */
@@ -882,7 +882,7 @@ ic_proxy_peer_disconnect(ICProxyPeer *peer)
 		return;
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
-		   "%s: disconnecting", peer->name);
+		   "ic-proxy: %s: disconnecting", peer->name);
 	ic_proxy_peer_shutdown(peer);
 }
 
@@ -970,7 +970,7 @@ ic_proxy_peer_handle_out_cache(ICProxyPeer *peer)
 	}
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG, DEBUG3,
-		   "%s: consumed %d cached pkts",
+		   "ic-proxy: %s: consumed %d cached pkts",
 				 peer->name, list_length(reqs) - list_length(peer->reqs));
 
 	/*

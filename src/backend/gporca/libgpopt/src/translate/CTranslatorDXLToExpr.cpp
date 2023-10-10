@@ -58,6 +58,7 @@
 #include "gpopt/operators/CScalarCoalesce.h"
 #include "gpopt/operators/CScalarCoerceToDomain.h"
 #include "gpopt/operators/CScalarCoerceViaIO.h"
+#include "gpopt/operators/CScalarFieldSelect.h"
 #include "gpopt/operators/CScalarIdent.h"
 #include "gpopt/operators/CScalarIf.h"
 #include "gpopt/operators/CScalarIsDistinctFrom.h"
@@ -105,6 +106,7 @@
 #include "naucrates/dxl/operators/CDXLScalarCoerceToDomain.h"
 #include "naucrates/dxl/operators/CDXLScalarCoerceViaIO.h"
 #include "naucrates/dxl/operators/CDXLScalarDistinctComp.h"
+#include "naucrates/dxl/operators/CDXLScalarFieldSelect.h"
 #include "naucrates/dxl/operators/CDXLScalarFuncExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarIdent.h"
 #include "naucrates/dxl/operators/CDXLScalarIfStmt.h"
@@ -2139,11 +2141,16 @@ CTranslatorDXLToExpr::Ptabdesc(CDXLTableDescr *table_descr)
 	IMDRelation::Erelstoragetype rel_storage_type =
 		pmdrel->RetrieveRelStorageType();
 
+	// get append only table version
+	IMDRelation::Erelaoversion rel_ao_version = pmdrel->GetRelAOVersion();
+
 	mdid->AddRef();
 	CTableDescriptor *ptabdesc = GPOS_NEW(m_mp) CTableDescriptor(
 		m_mp, mdid, CName(m_mp, &strName), pmdrel->ConvertHashToRandom(),
-		rel_distr_policy, rel_storage_type, table_descr->GetExecuteAsUserId(),
-		table_descr->LockMode(), table_descr->GetAssignedQueryIdForTargetRel());
+		rel_distr_policy, rel_storage_type, rel_ao_version,
+		table_descr->GetExecuteAsUserId(), table_descr->LockMode(),
+		table_descr->GetAclMode(),
+		table_descr->GetAssignedQueryIdForTargetRel());
 
 	const ULONG ulColumns = table_descr->Arity();
 	for (ULONG ul = 0; ul < ulColumns; ul++)
@@ -2248,9 +2255,7 @@ CTranslatorDXLToExpr::RegisterMDRelationCtas(CDXLLogicalCTAS *pdxlopCTAS)
 			GPOS_NEW(m_mp) CMDName(m_mp, pdxlcd->MdName()->GetMDName()),
 			pdxlcd->AttrNum(), pdxlcd->MdidType(), pdxlcd->TypeModifier(),
 			true,  // is_nullable,
-			pdxlcd->IsDropped(),
-			nullptr,  // pdxlnDefaultValue,
-			pdxlcd->Width());
+			pdxlcd->IsDropped(), pdxlcd->Width());
 		mdcol_array->Append(pmdcol);
 	}
 
@@ -2340,9 +2345,10 @@ CTranslatorDXLToExpr::PtabdescFromCTAS(CDXLLogicalCTAS *pdxlopCTAS)
 	mdid->AddRef();
 	CTableDescriptor *ptabdesc = GPOS_NEW(m_mp) CTableDescriptor(
 		m_mp, mdid, CName(m_mp, &strName), pmdrel->ConvertHashToRandom(),
-		rel_distr_policy, rel_storage_type,
+		rel_distr_policy, rel_storage_type, IMDRelation::GetCurrentAOVersion(),
 		0,	// ulExecuteAsUser, use permissions of current user
-		3,	// CTEs always use a RowExclusiveLock on the table. See createas.c
+		3,	// CTAS always uses a RowExclusiveLock on the table. See createas.c
+		2,	// CTAS always requires SELECT and SELECT only privilege
 		UNASSIGNED_QUERYID);
 
 	// populate column information from the dxl table descriptor
@@ -2656,6 +2662,8 @@ CTranslatorDXLToExpr::PexprScalar(const CDXLNode *dxlnode)
 			return CTranslatorDXLToExpr::PexprValuesList(dxlnode);
 		case EdxlopScalarSortGroupClause:
 			return CTranslatorDXLToExpr::PexprSortGroupClause(dxlnode);
+		case EdxlopScalarFieldSelect:
+			return CTranslatorDXLToExpr::PexprFieldSelect(dxlnode);
 		default:
 			GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
 					   dxl_op->GetOpNameStr()->GetBuffer());
@@ -3324,6 +3332,35 @@ CTranslatorDXLToExpr::PexprValuesList(const CDXLNode *dxlnode)
 
 	return GPOS_NEW(m_mp)
 		CExpression(m_mp, popScalarValuesList, pdrgpexprChildren);
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToExpr::PexprFieldSelect
+//
+//	@doc:
+// 		Create a scalar FieldSelect operator expression from a DXL FieldSelect node
+//
+//---------------------------------------------------------------------------
+CExpression *
+CTranslatorDXLToExpr::PexprFieldSelect(const CDXLNode *dxlnode)
+{
+	CDXLScalarFieldSelect *dxl_op =
+		CDXLScalarFieldSelect::Cast(dxlnode->GetOperator());
+
+	IMDId *field_type = dxl_op->GetDXLFieldType();
+	field_type->AddRef();
+	IMDId *field_collation = dxl_op->GetDXLFieldCollation();
+	field_collation->AddRef();
+	INT type_modifier = dxl_op->GetDXLTypeModifier();
+	SINT field_number = dxl_op->GetDXLFieldNumber();
+
+	CScalarFieldSelect *popFieldSelect = GPOS_NEW(m_mp) CScalarFieldSelect(
+		m_mp, field_type, field_collation, type_modifier, field_number);
+	CExpressionArray *pdrgpexprChildren = PdrgpexprChildren(dxlnode);
+
+	return GPOS_NEW(m_mp) CExpression(m_mp, popFieldSelect, pdrgpexprChildren);
 }
 
 //---------------------------------------------------------------------------

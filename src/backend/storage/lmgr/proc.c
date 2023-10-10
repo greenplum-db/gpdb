@@ -480,8 +480,10 @@ InitProcess(void)
 	MyProc->waitLock = NULL;
 	MyProc->waitProcLock = NULL;
 	MyProc->resSlot = NULL;
+	SpinLockInit(&MyProc->movetoMutex);
 	MyProc->movetoResSlot = NULL;
 	MyProc->movetoGroupId = InvalidOid;
+	MyProc->movetoCallerPid = InvalidPid;
 
     /* 
      * mppLocalProcessSerial uniquely identifies this backend process among
@@ -870,7 +872,10 @@ LockErrorCleanup(void)
 	/* Don't try to cancel resource locks.*/
 	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled() &&
 		LOCALLOCK_LOCKMETHOD(*lockAwaited) == RESOURCE_LOCKMETHOD)
+	{
+		RESUME_INTERRUPTS();
 		return;
+	}
 
 	/*
 	 * Turn off the deadlock and lock timeout timers, if they are still

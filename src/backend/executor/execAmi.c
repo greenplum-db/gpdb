@@ -61,6 +61,7 @@
 #include "executor/nodeAssertOp.h"
 #include "executor/nodeDynamicSeqscan.h"
 #include "executor/nodeDynamicIndexscan.h"
+#include "executor/nodeDynamicIndexOnlyscan.h"
 #include "executor/nodeDynamicForeignscan.h"
 #include "executor/nodeMotion.h"
 #include "executor/nodeSequence.h"
@@ -220,9 +221,10 @@ ExecReScan(PlanState *node)
 			break;
 
 		case T_DynamicIndexScanState:
+		case T_DynamicIndexOnlyScanState:
 			ExecReScanDynamicIndex((DynamicIndexScanState *) node);
 			break;
-			
+
 		case T_IndexOnlyScanState:
 			ExecReScanIndexOnlyScan((IndexOnlyScanState *) node);
 			break;
@@ -777,6 +779,7 @@ ExecSquelchNode(PlanState *node)
 		case T_IndexScanState:
 		case T_DynamicSeqScanState:
 		case T_DynamicIndexScanState:
+		case T_DynamicIndexOnlyScanState:
 		case T_IndexOnlyScanState:
 		case T_DynamicBitmapIndexScanState:
 		case T_BitmapIndexScanState:

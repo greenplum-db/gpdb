@@ -1,6 +1,6 @@
 -- start_ignore
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
+CREATE EXTENSION
 -- end_ignore
 
 -- Test: free remapper's memory correctly in FATAL
@@ -19,11 +19,11 @@ CREATE
 
 -- create udt type
 1:create table tbl_pr15340 as select i as id from generate_series(1,8) i;
-CREATE 8
+SELECT 8
 1:drop type if exists myudt;
-DROP
+DROP TYPE
 1:create type myudt as (i int, c char);
-CREATE
+CREATE TYPE
 
 -- should encounter the inject fatal rather than SIGSEGV
 1:select gp_inject_fault_infinite('handled_typmodmap', 'fatal', 1);
@@ -45,8 +45,8 @@ FAILED:  Execution failed
  Success:                 
 (1 row)
 2:drop table tbl_pr15340;
-DROP
+DROP TABLE
 2:drop type if exists myudt;
-DROP
+DROP TYPE
 2<:  <... completed>
 FAILED:  Execution failed

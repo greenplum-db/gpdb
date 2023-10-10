@@ -704,7 +704,7 @@ COPY (SELECT * FROM segment_reject_limit_from) TO '/tmp/segment_reject_limit<SEG
 -- 'COPY (SELECT ...) TO' on utility mode
 CREATE EXTERNAL WEB TABLE copy_cmd_utility(a text, b int)
   EXECUTE E'PGOPTIONS="-c gp_role=utility" \\
-    psql -p $GP_MASTER_PORT $GP_DATABASE $GP_USER -c \\
+    psql -X -p $GP_MASTER_PORT $GP_DATABASE $GP_USER -c \\
       "COPY (SELECT * FROM pg_class) TO \'/dev/null\'"'
   ON COORDINATOR FORMAT 'text' (DELIMITER ' ');
 SELECT a FROM copy_cmd_utility;
@@ -1434,6 +1434,7 @@ COPY 26
 CREATE EXTERNAL WEB TABLE ext_dec17(LIKE sales_1_prt_dec17) EXECUTE 'printf "12\t2017-12-01\t21.00\n"' ON COORDINATOR FORMAT 'text';
 CREATE EXTERNAL TABLE
 ALTER TABLE sales EXCHANGE PARTITION dec17 WITH TABLE ext_dec17;
+NOTICE:  partition constraints are not validated when attaching a readable external table
 ALTER TABLE
 DROP TABLE ext_dec17;
 DROP TABLE
@@ -1699,3 +1700,18 @@ COPY issue_14353_multi_dist FROM '/tmp/issue_14353_multi_dist_<SEGID>.csv' WITH 
 COPY issue_14353_multi_dist FROM '/tmp/issue_14353_multi_dist_<SEGID>.csv' WITH CSV DELIMITER ',' ON SEGMENT;
 ERROR:  value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1  (seg0 127.0.0.1:7002 pid=21933)
 CONTEXT:  COPY issue_14353_multi_dist, line 11: "1,1,a"
+-- special case about distributed replicated table, please refer to issue-14126 and issue-16250
+\set QUIET off
+CREATE TABLE replicated_issue_16250(c1 int, c2 text) distributed replicated;
+CREATE TABLE
+COPY replicated_issue_16250 FROM '@abs_srcdir@/data/empty.data';
+COPY 0
+DROP TABLE replicated_issue_16250;
+DROP TABLE
+CREATE TABLE replicated_issue_14126(c1 int, c2 text) distributed replicated;
+CREATE TABLE
+COPY replicated_issue_14126 FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
+COPY 1
+DROP TABLE replicated_issue_14126;
+DROP TABLE
+\set QUIET on

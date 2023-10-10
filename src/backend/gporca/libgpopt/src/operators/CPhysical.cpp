@@ -22,6 +22,7 @@
 #include "gpopt/base/CDistributionSpecRandom.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
+#include "gpopt/base/CDistributionSpecUniversal.h"
 #include "gpopt/base/CDrvdPropPlan.h"
 #include "gpopt/base/CReqdPropPlan.h"
 #include "gpopt/operators/CExpression.h"
@@ -262,6 +263,10 @@ CPhysical::PdsCompute(CMemoryPool *mp, const CTableDescriptor *ptabdesc,
 				CDistributionSpecSingleton::EstCoordinator);
 			break;
 
+		case IMDRelation::EreldistrUniversal:
+			pds = GPOS_NEW(mp) CDistributionSpecUniversal();
+			break;
+
 		case IMDRelation::EreldistrRandom:
 		{
 			// We calculate gp_segment_id directly through ptabdesc by
@@ -396,7 +401,7 @@ CPhysical::PdsRequireSingletonOrReplicated(CMemoryPool *mp,
 										   CDistributionSpec *pdsRequired,
 										   ULONG child_index, ULONG ulOptReq)
 {
-	GPOS_ASSERT(2 > ulOptReq);
+	GPOS_ASSERT(3 > ulOptReq);
 
 	// if expression has to execute on a single host then we need a gather motion
 	if (exprhdl.NeedsSingletonExecution())

@@ -8,6 +8,8 @@ TODO: docs!
 """
 import json
 import os, time
+import base64
+import pickle
 import shlex
 import os.path
 import pipes
@@ -51,6 +53,11 @@ DEFAULT_COORDINATOR_NUM_WORKERS=16
 
 #max batch size of thread pool on coordinator
 MAX_COORDINATOR_NUM_WORKERS=64
+
+# Maximum replay lag (in GBs) allowed on mirror when rebalancing the segments
+# The default value for ALLOWED_REPLAY_LAG has been decided to be 10 GBs as mirror
+# took 5 mins to replay 10 GB lag on a local demo cluster.
+ALLOWED_REPLAY_LAG = 10
 
 # Application name used by the pg_rewind instance that gprecoverseg starts
 # during incremental recovery. gpstate uses this to figure out when incremental
@@ -336,7 +343,7 @@ class CoordinatorStart(Command):
 
         # build pg_ctl command
         c = PgCtlStartArgs(dataDir, b, era, wrapper, wrapper_args, wait, timeout)
-        logger.info("CoordinatorStart pg_ctl cmd is %s", c);
+        logger.info("CoordinatorStart pg_ctl cmd is %s", c)
         self.cmdStr = str(c)
 
         Command.__init__(self, name, self.cmdStr, ctxt, remoteHost)
@@ -393,7 +400,7 @@ class SegmentStart(Command):
 
         # build pg_ctl command
         c = PgCtlStartArgs(datadir, b, era, wrapper, wrapper_args, pg_ctl_wait, timeout)
-        logger.info("SegmentStart pg_ctl cmd is %s", c);
+        logger.info("SegmentStart pg_ctl cmd is %s", c)
         self.cmdStr = str(c) + ' 2>&1'
 
         Command.__init__(self, name, self.cmdStr, ctxt, remoteHost)
@@ -999,7 +1006,7 @@ class GpSegSetupRecovery(Command):
     """
     def __init__(self, name, confinfo, logdir, batchSize, verbose, remoteHost, forceoverwrite):
         cmdStr = _get_cmd_for_recovery_wrapper('gpsegsetuprecovery', confinfo, logdir, batchSize, verbose,forceoverwrite)
-        Command.__init__(self, name, cmdStr, REMOTE, remoteHost)
+        Command.__init__(self, name, cmdStr, REMOTE, remoteHost, start_new_session=True)
 
 
 class GpSegRecovery(Command):
@@ -1008,7 +1015,7 @@ class GpSegRecovery(Command):
     """
     def __init__(self, name, confinfo, logdir, batchSize, verbose, remoteHost, forceoverwrite, era):
         cmdStr = _get_cmd_for_recovery_wrapper('gpsegrecovery', confinfo, logdir, batchSize, verbose, forceoverwrite, era)
-        Command.__init__(self, name, cmdStr, REMOTE, remoteHost)
+        Command.__init__(self, name, cmdStr, REMOTE, remoteHost, start_new_session=True)
 
 
 def _get_cmd_for_recovery_wrapper(wrapper_filename, confinfo, logdir, batchSize, verbose, forceoverwrite, era=None):
@@ -1035,11 +1042,11 @@ class GpVersion(Command):
 
         self.gphome=gphome
         #self.cmdStr="%s/bin/postgres --gp-version" % gphome
-        self.cmdStr="$GPHOME/bin/postgres --gp-version"
+        self.cmdStr="echo 'START_CMD_OUTPUT';$GPHOME/bin/postgres --gp-version"
         Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
 
     def get_version(self):
-        return self.results.stdout.strip()
+        return self.results.stdout.strip().split('START_CMD_OUTPUT\n')[1]
 
     @staticmethod
     def local(name,gphome):
@@ -1102,7 +1109,7 @@ class GpConfigHelper(Command):
 
         addParameter = (not getParameter) and (not removeParameter)
         if addParameter:
-            args = "--add-parameter %s --value %s " % (name, shlex.quote(value))
+            args = "--add-parameter %s --value %s " % (name, base64.urlsafe_b64encode(pickle.dumps(value)).decode())
         if getParameter:
             args = "--get-parameter %s" % name
         if removeParameter:
@@ -1116,7 +1123,8 @@ class GpConfigHelper(Command):
 
     # FIXME: figure out how callers of this can handle exceptions here
     def get_value(self):
-        return self.get_results().stdout
+        raw_value = self.get_results().stdout
+        return pickle.loads(base64.urlsafe_b64decode(raw_value))
 
 
 #-----------------------------------------------
@@ -1167,7 +1175,7 @@ def distribute_tarball(queue,list,tarball):
             hostname = db.getSegmentHostName()
             datadir = db.getSegmentDataDirectory()
             (head,tail)=os.path.split(datadir)
-            rsync_cmd=Rsync(name="copy coordinator",srcFile=tarball,dstHost=hostname,dstFile=head)
+            rsync_cmd=Rsync(name="copy coordinator",srcFile=tarball,dstHost=hostname,dstFile=head, ignore_times=True, whole_file=True)
             queue.addCommand(rsync_cmd)
         queue.join()
         queue.check_results()
@@ -1185,16 +1193,31 @@ def get_gphome():
         raise GpError('Environment Variable GPHOME not set')
     return gphome
 
+'''
+gprecoverseg, gpstart, gpstate, gpstop, gpaddmirror have -d option to give the coordinator data directory.
+but its value was not used throughout the utilities. to fix this the best possible way is
+to set and retrieve that set coordinator dir when we call get_coordinatordatadir().
+'''
+option_coordinator_datadir = None
+def set_coordinatordatadir(coordinator_datadir=None):
+    global option_coordinator_datadir
+    option_coordinator_datadir = coordinator_datadir
 
 ######
 # Support both COORDINATOR_DATA_DIRECTORY and MASTER_DATA_DIRECTORY for backwards compatibility.
 # If both are set, the former is used and the latter is ignored.
+# if -d <coordinator_datadir> is provided with utility, it will be prioritiese over other options.
 def get_coordinatordatadir():
-    coordinator_datadir = os.environ.get('COORDINATOR_DATA_DIRECTORY')
-    if not coordinator_datadir:
-        coordinator_datadir = os.environ.get('MASTER_DATA_DIRECTORY')
+    if option_coordinator_datadir is not None:
+        coordinator_datadir = option_coordinator_datadir
+    else:
+        coordinator_datadir = os.environ.get('COORDINATOR_DATA_DIRECTORY')
+        if not coordinator_datadir:
+            coordinator_datadir = os.environ.get('MASTER_DATA_DIRECTORY')
+
     if not coordinator_datadir:
         raise GpError("Environment Variable COORDINATOR_DATA_DIRECTORY not set!")
+
     return coordinator_datadir
 
 ######
@@ -1625,6 +1648,21 @@ def createTempDirectoryName(coordinatorDataDirectory, tempDirPrefix):
                                 tempDirPrefix,
                                 datetime.datetime.now().strftime('%m%d%Y'),
                                 os.getpid())
+
+"""
+Check if gprecoverseg process is running or not by
+reading the PID file inside gprecoverseg.lock directory.
+Returns True if the process is running or False otherwise.
+"""
+def is_gprecoverseg_running():
+    gprecoverseg_pidfile = os.path.join(get_coordinatordatadir(), 'gprecoverseg.lock', 'PID')
+    try:
+        with open(gprecoverseg_pidfile) as pidfile:
+            gprecoverseg_pid = pidfile.read()
+    except Exception:
+        return False
+
+    return check_pid(gprecoverseg_pid)
 
 #-------------------------------------------------------------------------
 class GpRecoverSeg(Command):

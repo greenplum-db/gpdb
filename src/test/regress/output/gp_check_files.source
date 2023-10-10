@@ -7,6 +7,32 @@
 -- m/aovisimap_\d+/
 -- s/aovisimap_\d+/aovisimap_xxx/g
 -- end_matchsubs
+-- helper function to repeatedly run gp_toolkit.gp_check_orphaned_files for up to 10 minutes,
+-- in case any flakiness happens (like background worker makes LOCK pg_class unsuccessful etc.)
+CREATE OR REPLACE FUNCTION run_orphaned_files_view()
+RETURNS TABLE(gp_segment_id INT, filename TEXT) AS $$
+DECLARE
+    retry_counter INT := 0;
+BEGIN
+    WHILE retry_counter < 120 LOOP
+        BEGIN
+            RETURN QUERY SELECT q.gp_segment_id, q.filename FROM gp_toolkit.gp_check_orphaned_files q;
+            RETURN; -- If successful
+        EXCEPTION
+            WHEN OTHERS THEN
+                RAISE LOG 'attempt failed % with error: %', retry_counter + 1, SQLERRM;
+                -- When an exception occurs, wait for 5 seconds and then retry
+                PERFORM pg_sleep(5);
+                -- Refresh to get the latest pg_stat_activity
+                PERFORM pg_stat_clear_snapshot();
+                retry_counter := retry_counter + 1;
+        END;
+    END LOOP;
+
+    -- all retries failed
+    RAISE EXCEPTION 'failed to retrieve orphaned files after 10 minutes of retries.';
+END;
+$$ LANGUAGE plpgsql;
 -- we'll use a specific tablespace to test
 CREATE TABLESPACE checkfile_ts LOCATION '@testtablespace@';
 set default_tablespace = checkfile_ts;
@@ -21,6 +47,22 @@ select get_tablespace_version_directory_name() as version_dir \gset
 \cd :version_dir
 select oid from pg_database where datname = current_database() \gset
 \cd :oid
+-- create some orphaned files
+\! touch 987654
+\! touch 987654.3
+-- check orphaned files, note that this forces a checkpoint internally.
+set client_min_messages = ERROR;
+select gp_segment_id, filename from run_orphaned_files_view();
+ gp_segment_id | filename 
+---------------+----------
+             1 | 987654
+             1 | 987654.3
+(2 rows)
+
+reset client_min_messages;
+-- remove the orphaned files so not affect subsequent tests
+\! rm 987654
+\! rm 987654.3
 -- Now remove the data file for the table we just created.
 -- But check to see if the working directory is what we expect (under
 -- the test tablespace). Also just delete one and only one file that
@@ -36,9 +78,6 @@ insert into checkmissing_co select i,i,i from generate_series(1,100)i;
 -- delete exact two '.1' files.
 \! if pwd | grep -q "^@testtablespace@/.*$"; then find . -maxdepth 1 -type f -regex '.*\/[0-9]+\.1' -exec rm {} \; -quit; fi
 \! if pwd | grep -q "^@testtablespace@/.*$"; then find . -maxdepth 1 -type f -regex '.*\/[0-9]+\.1' -exec rm {} \; -quit; fi
--- create some orphaned files
-\! touch 987654
-\! touch 987654.3
 -- create some normal tables
 CREATE TABLE checknormal_heap(a int, b int, c int);
 CREATE TABLE checknormal_ao(a int, b int, c int) using ao_row;
@@ -46,13 +85,7 @@ CREATE TABLE checknormal_co(a int, b int, c int) using ao_column;
 insert into checknormal_heap select i,i,i from generate_series(1,100)i;
 insert into checknormal_ao select i,i,i from generate_series(1,100)i;
 insert into checknormal_co select i,i,i from generate_series(1,100)i;
--- check non-extended files
-select gp_segment_id, filename from gp_toolkit.gp_check_orphaned_files;
- gp_segment_id | filename 
----------------+----------
-             1 | 987654
-(1 row)
-
+-- check non-extended missing files
 select gp_segment_id, regexp_replace(filename, '\d+', 'x'), relname from gp_toolkit.gp_check_missing_files;
  gp_segment_id | regexp_replace |      relname      
 ---------------+----------------+-------------------
@@ -61,13 +94,6 @@ select gp_segment_id, regexp_replace(filename, '\d+', 'x'), relname from gp_tool
 
 SET client_min_messages = ERROR;
 -- check extended files
-select gp_segment_id, filename from gp_toolkit.gp_check_orphaned_files_ext;
- gp_segment_id | filename 
----------------+----------
-             1 | 987654
-             1 | 987654.3
-(2 rows)
-
 select gp_segment_id, regexp_replace(filename, '\d+', 'x'), relname from gp_toolkit.gp_check_missing_files_ext;
  gp_segment_id | regexp_replace |      relname      
 ---------------+----------------+-------------------

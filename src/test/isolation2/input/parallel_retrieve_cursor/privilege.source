@@ -60,13 +60,14 @@ RESET SESSION AUTHORIZATION;
 1: SELECT SESSION_USER, CURRENT_USER;
 1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 2: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c3';
---- uu1 can not see u1's endpoints.
+1: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
+--- u1 can not see uu1's endpoints.
+1: SET ROLE u1;
 1: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
 2: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
 
 3: @pre_run 'export RETRIEVE_USER="uu1"; echo $RAW_STR ' : SELECT 1;
---- Login as uu1 and retrieve, only u1 can retrieve
-3R: SELECT SESSION_USER, CURRENT_USER;
+--- Login as uu1 and retrieve
 3R: @pre_run 'set_endpoint_variable @ENDPOINT3': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT3";
 
 --- Retrieve c2(which belongs to u1) but current user is uu1.

@@ -129,9 +129,4 @@ extern void SendStopMessage(MotionLayerState *mlStates,
 extern void UpdateMotionExpectedReceivers(MotionLayerState *mlStates,
 										  struct SliceTable *sliceTable);
 
-/*
- * Return a pointer to the internal "end-of-stream" message
- */
-extern TupleChunkListItem get_eos_tuplechunklist(void);
-
 #endif   /* CDBMOTION_H */

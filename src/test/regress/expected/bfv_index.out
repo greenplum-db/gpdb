@@ -1047,6 +1047,214 @@ DROP TABLE hash_prt_tbl;
 RESET enable_seqscan;
 RESET optimizer_enable_dynamictablescan;
 --
+-- Test ORCA generates Bitmap/IndexScan alternative for ScalarArrayOpExpr ANY only
+--
+CREATE TABLE bitmap_alt (id int, bitmap_idx_col int, btree_idx_col int, hash_idx_col int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX bitmap_alt_idx1 on bitmap_alt using bitmap(bitmap_idx_col);
+CREATE INDEX bitmap_alt_idx2 on bitmap_alt using btree(btree_idx_col);
+CREATE INDEX bitmap_alt_idx3 on bitmap_alt using hash(hash_idx_col);
+INSERT INTO bitmap_alt SELECT i, i, i, i from generate_series(1,10)i;
+ANALYZE bitmap_alt;
+-- ORCA should generate bitmap index scan plans for the following
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col IN (3, 5);
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Bitmap Heap Scan on bitmap_alt
+         Recheck Cond: (bitmap_idx_col = ANY ('{3,5}'::integer[]))
+         ->  Bitmap Index Scan on bitmap_alt_idx1
+               Index Cond: (bitmap_idx_col = ANY ('{3,5}'::integer[]))
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col IN (3, 5);
+ id | bitmap_idx_col | btree_idx_col | hash_idx_col 
+----+----------------+---------------+--------------
+  3 |              3 |             3 |            3
+  5 |              5 |             5 |            5
+(2 rows)
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE btree_idx_col IN (3, 5);
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Scan using bitmap_alt_idx2 on bitmap_alt
+         Index Cond: (btree_idx_col = ANY ('{3,5}'::integer[]))
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+SELECT * FROM bitmap_alt WHERE btree_idx_col IN (3, 5);
+ id | bitmap_idx_col | btree_idx_col | hash_idx_col 
+----+----------------+---------------+--------------
+  5 |              5 |             5 |            5
+  3 |              3 |             3 |            3
+(2 rows)
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE hash_idx_col IN (3, 5);
+                             QUERY PLAN                              
+---------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Bitmap Heap Scan on bitmap_alt
+         Recheck Cond: (hash_idx_col = ANY ('{3,5}'::integer[]))
+         ->  Bitmap Index Scan on bitmap_alt_idx3
+               Index Cond: (hash_idx_col = ANY ('{3,5}'::integer[]))
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+SELECT * FROM bitmap_alt WHERE hash_idx_col IN (3, 5);
+ id | bitmap_idx_col | btree_idx_col | hash_idx_col 
+----+----------------+---------------+--------------
+  3 |              3 |             3 |            3
+  5 |              5 |             5 |            5
+(2 rows)
+
+-- ORCA should generate seq scan plans for the following
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col=ALL(ARRAY[3, 5]);
+             QUERY PLAN              
+-------------------------------------
+ Result
+   One-Time Filter: false
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+SELECT * FROM bitmap_alt WHERE bitmap_idx_col=ALL(ARRAY[3, 5]);
+ id | bitmap_idx_col | btree_idx_col | hash_idx_col 
+----+----------------+---------------+--------------
+(0 rows)
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE btree_idx_col=ALL(ARRAY[3, 5]);
+             QUERY PLAN              
+-------------------------------------
+ Result
+   One-Time Filter: false
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+SELECT * FROM bitmap_alt WHERE btree_idx_col=ALL(ARRAY[3, 5]);
+ id | bitmap_idx_col | btree_idx_col | hash_idx_col 
+----+----------------+---------------+--------------
+(0 rows)
+
+EXPLAIN (COSTS OFF)
+SELECT * FROM bitmap_alt WHERE hash_idx_col=ALL(ARRAY[3, 5]);
+             QUERY PLAN              
+-------------------------------------
+ Result
+   One-Time Filter: false
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+SELECT * FROM bitmap_alt WHERE hash_idx_col=ALL(ARRAY[3, 5]);
+ id | bitmap_idx_col | btree_idx_col | hash_idx_col 
+----+----------------+---------------+--------------
+(0 rows)
+
+--
+-- Test ORCA considers ScalarArrayOp in indexqual for partitioned table
+-- with multikey indexes only when predicate key is the first index key
+-- (similar test for non-partitioned tables in create_index)
+--
+CREATE TABLE pt_with_multikey_index (a int, key1 char(6), key2 char(1))
+PARTITION BY list(key2)
+(PARTITION p1 VALUES ('R'), PARTITION p2 VALUES ('G'), DEFAULT PARTITION other);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE INDEX multikey_idx on pt_with_multikey_index (key1, key2);
+INSERT INTO pt_with_multikey_index SELECT i, 'KEY'||i, 'R' from generate_series(1,500)i;
+INSERT INTO pt_with_multikey_index SELECT i, 'KEY'||i, 'G' from generate_series(1,500)i;
+INSERT INTO pt_with_multikey_index SELECT i, 'KEY'||i, 'B' from generate_series(1,500)i;
+explain (costs off)
+SELECT key1 FROM pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65', 'KEY5')
+ORDER BY key1;
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: pt_with_multikey_index_1_prt_p2.key1
+   ->  Merge Append
+         Sort Key: pt_with_multikey_index_1_prt_p2.key1
+         ->  Index Only Scan using pt_with_multikey_index_1_prt_p2_key1_key2_idx on pt_with_multikey_index_1_prt_p2
+               Index Cond: (key1 = ANY ('{KEY55,KEY65,KEY5}'::bpchar[]))
+         ->  Index Only Scan using pt_with_multikey_index_1_prt_p1_key1_key2_idx on pt_with_multikey_index_1_prt_p1
+               Index Cond: (key1 = ANY ('{KEY55,KEY65,KEY5}'::bpchar[]))
+         ->  Index Only Scan using pt_with_multikey_index_1_prt_other_key1_key2_idx on pt_with_multikey_index_1_prt_other
+               Index Cond: (key1 = ANY ('{KEY55,KEY65,KEY5}'::bpchar[]))
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+SELECT key1 FROM pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65', 'KEY5')
+ORDER BY key1;
+  key1  
+--------
+ KEY5  
+ KEY5  
+ KEY5  
+ KEY55 
+ KEY55 
+ KEY55 
+ KEY65 
+ KEY65 
+ KEY65 
+(9 rows)
+
+EXPLAIN (costs off)
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 = 'KEY55' AND key2 IN ('R', 'G')
+ORDER BY key2;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: pt_with_multikey_index_1_prt_p2.key2
+   ->  Sort
+         Sort Key: pt_with_multikey_index_1_prt_p2.key2
+         ->  Append
+               ->  Index Scan using pt_with_multikey_index_1_prt_p2_key1_key2_idx on pt_with_multikey_index_1_prt_p2
+                     Index Cond: ((key1 = 'KEY55'::bpchar) AND (key2 = ANY ('{R,G}'::bpchar[])))
+               ->  Index Scan using pt_with_multikey_index_1_prt_p1_key1_key2_idx on pt_with_multikey_index_1_prt_p1
+                     Index Cond: ((key1 = 'KEY55'::bpchar) AND (key2 = ANY ('{R,G}'::bpchar[])))
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 = 'KEY55' AND key2 IN ('R', 'G')
+ORDER BY key2;
+ a  |  key1  | key2 
+----+--------+------
+ 55 | KEY55  | G
+ 55 | KEY55  | R
+(2 rows)
+
+EXPLAIN (costs off)
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65') AND key2 = 'R'
+ORDER BY key1;
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: pt_with_multikey_index_1_prt_p1.key1
+   ->  Index Scan using pt_with_multikey_index_1_prt_p1_key1_key2_idx on pt_with_multikey_index_1_prt_p1
+         Index Cond: ((key1 = ANY ('{KEY55,KEY65}'::bpchar[])) AND (key2 = 'R'::bpchar))
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+SELECT * FROM  pt_with_multikey_index
+WHERE key1 IN ('KEY55', 'KEY65') AND key2 = 'R'
+ORDER BY key1;
+ a  |  key1  | key2 
+----+--------+------
+ 55 | KEY55  | R
+ 65 | KEY65  | R
+(2 rows)
+
+--
 -- Enable the index only scan in append only table.
 -- Note: expect ORCA to use seq scan rather than index only scan like planner,
 -- because ORCA hasn't yet implemented index only scan for AO/CO tables.
@@ -1124,4 +1332,122 @@ select count(*) from bfv_index_only_aocs where a < 1000;
 -------
    999
 (1 row)
+
+-- The following tests are to verify a fix that allows ORCA to
+-- choose the bitmap index scan alternative when the predicate
+-- is in the form of `value operator cast(column)`. The fix
+-- converts the scalar comparison expression to the more common 
+-- form of `cast(column) operator value` in the preprocessor.
+-- Each test includes two queries. One query's predicate has 
+-- the column on the left side, and the other has the column
+-- on the right side. We expect the two queries to generate
+-- identical plans with bitmap index scan.
+-- Index only scan will probably be selected once index only
+-- scan in enabled for AO tables in ORCA. To prevent retain
+-- the bitmap scan alternative, turn off index only scan.
+set optimizer_enable_indexonlyscan=off;
+set enable_indexonlyscan=off;
+-- Test AO table
+-- Index scan is disabled in AO table, so bitmap scan is the
+-- most performant
+create table ao_tbl (
+    path_hash character varying(10)
+) with (appendonly='true');
+create index ao_idx on ao_tbl using btree (path_hash);
+insert into ao_tbl select 'abc' from generate_series(1,20) i;
+analyze ao_tbl;
+-- identical plans
+explain select * from ao_tbl where path_hash = 'ABC'; 
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=4.14..8.17 rows=1 width=4)
+   ->  Bitmap Heap Scan on ao_tbl  (cost=4.14..8.15 rows=1 width=4)
+         Recheck Cond: ((path_hash)::text = 'ABC'::text)
+         ->  Bitmap Index Scan on ao_idx  (cost=0.00..4.14 rows=1 width=0)
+               Index Cond: ((path_hash)::text = 'ABC'::text)
+ Optimizer: Postgres-based planner
+(6 rows)
+
+explain select * from ao_tbl where 'ABC' = path_hash;
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=4.14..8.17 rows=1 width=4)
+   ->  Bitmap Heap Scan on ao_tbl  (cost=4.14..8.15 rows=1 width=4)
+         Recheck Cond: ('ABC'::text = (path_hash)::text)
+         ->  Bitmap Index Scan on ao_idx  (cost=0.00..4.14 rows=1 width=0)
+               Index Cond: ((path_hash)::text = 'ABC'::text)
+ Optimizer: Postgres-based planner
+(6 rows)
+
+-- Test AO partition table
+-- Dynamic index scan is disabled in AO table, so dynamic bitmap
+-- scan is the most performant
+create table part_tbl (
+    path_hash character varying(10)
+) partition by list(path_hash) 
+          (partition pics values('a') , 
+          default partition other with (appendonly='true'));
+create index part_idx on part_tbl using btree (path_hash);
+insert into part_tbl select 'abc' from generate_series(1,20) i;
+analyze part_tbl;
+-- identical plans
+explain select * from part_tbl where path_hash = 'ABC'; 
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=4.14..8.17 rows=1 width=4)
+   ->  Bitmap Heap Scan on part_tbl_1_prt_other  (cost=4.14..8.15 rows=1 width=4)
+         Recheck Cond: ((path_hash)::text = 'ABC'::text)
+         ->  Bitmap Index Scan on part_tbl_1_prt_other_path_hash_idx  (cost=0.00..4.14 rows=1 width=0)
+               Index Cond: ((path_hash)::text = 'ABC'::text)
+ Optimizer: Postgres-based planner
+(6 rows)
+
+explain select * from part_tbl where 'ABC' = path_hash; 
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=4.14..8.17 rows=1 width=4)
+   ->  Bitmap Heap Scan on part_tbl_1_prt_other  (cost=4.14..8.15 rows=1 width=4)
+         Recheck Cond: ('ABC'::text = (path_hash)::text)
+         ->  Bitmap Index Scan on part_tbl_1_prt_other_path_hash_idx  (cost=0.00..4.14 rows=1 width=0)
+               Index Cond: ((path_hash)::text = 'ABC'::text)
+ Optimizer: Postgres-based planner
+(6 rows)
+
+-- Test table indexed on two columns
+-- Two indices allow ORCA to generate the bitmap scan alternative
+create table two_idx_tbl (x varchar(10), y varchar(10));
+create index x_idx on two_idx_tbl using btree (x);
+create index y_idx on two_idx_tbl using btree (y);
+insert into two_idx_tbl select 'aa', 'bb' from generate_series(1,10000) i;
+analyze two_idx_tbl;
+-- encourage bitmap scan by discouraging index scan
+set optimizer_enable_indexscan=off;
+-- identical plans
+explain select * from two_idx_tbl where x = 'cc' or y = 'dd';
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=8.34..12.37 rows=1 width=6)
+   ->  Bitmap Heap Scan on two_idx_tbl  (cost=8.34..12.35 rows=1 width=6)
+         Recheck Cond: (((x)::text = 'cc'::text) OR ((y)::text = 'dd'::text))
+         ->  BitmapOr  (cost=8.34..8.34 rows=1 width=0)
+               ->  Bitmap Index Scan on x_idx  (cost=0.00..4.17 rows=1 width=0)
+                     Index Cond: ((x)::text = 'cc'::text)
+               ->  Bitmap Index Scan on y_idx  (cost=0.00..4.17 rows=1 width=0)
+                     Index Cond: ((y)::text = 'dd'::text)
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain select * from two_idx_tbl where 'cc' = x or 'dd' = y;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=8.34..12.37 rows=1 width=6)
+   ->  Bitmap Heap Scan on two_idx_tbl  (cost=8.34..12.35 rows=1 width=6)
+         Recheck Cond: (('cc'::text = (x)::text) OR ('dd'::text = (y)::text))
+         ->  BitmapOr  (cost=8.34..8.34 rows=1 width=0)
+               ->  Bitmap Index Scan on x_idx  (cost=0.00..4.17 rows=1 width=0)
+                     Index Cond: ((x)::text = 'cc'::text)
+               ->  Bitmap Index Scan on y_idx  (cost=0.00..4.17 rows=1 width=0)
+                     Index Cond: ((y)::text = 'dd'::text)
+ Optimizer: Postgres query optimizer
+(9 rows)
 

@@ -270,6 +270,11 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] = {
 	 false,	 // m_negate_param
 	 GPOS_WSZ_LIT(
 		 "Enable Eager Agg transform for pushing aggregate below an innerjoin.")},
+
+	{EopttraceDisableOrderedAgg, &optimizer_enable_orderedagg,
+	 true,	// m_negate_param
+	 GPOS_WSZ_LIT("Disable ordered aggregate plans.")},
+
 	{EopttraceExpandFullJoin, &optimizer_expand_fulljoin,
 	 false,	 // m_negate_param
 	 GPOS_WSZ_LIT(
@@ -278,9 +283,6 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] = {
 	 true,	// m_negate_param
 	 GPOS_WSZ_LIT(
 		 "Penalize a hash join with a skewed redistribute as a child.")},
-	{EopttraceTranslateUnusedColrefs, &optimizer_prune_unused_columns,
-	 true,	// m_negate_param
-	 GPOS_WSZ_LIT("Prune unused columns from the query.")},
 	{EopttraceAllowGeneralPredicatesforDPE,
 	 &optimizer_enable_range_predicate_dpe,
 	 false,	 // m_negate_param
@@ -414,6 +416,16 @@ CConfigParamMapping::PackConfigParamInBitset(
 			GPOPT_DISABLE_XFORM_TF(CXform::ExfGet2TableScan));
 	}
 
+	if (!optimizer_enable_push_join_below_union_all)
+	{
+		// disable push join below union all transform if
+		// the corresponding GUC is turned off
+		traceflag_bitset->ExchangeSet(
+			GPOPT_DISABLE_XFORM_TF(CXform::ExfPushJoinBelowLeftUnionAll));
+		traceflag_bitset->ExchangeSet(
+			GPOPT_DISABLE_XFORM_TF(CXform::ExfPushJoinBelowRightUnionAll));
+	}
+
 	if (!optimizer_enable_indexscan)
 	{
 		// disable index scan if the corresponding GUC is turned off
@@ -426,6 +438,13 @@ CConfigParamMapping::PackConfigParamInBitset(
 		// disable index only scan if the corresponding GUC is turned off
 		traceflag_bitset->ExchangeSet(
 			GPOPT_DISABLE_XFORM_TF(CXform::ExfIndexGet2IndexOnlyScan));
+	}
+
+	if (!optimizer_enable_dynamicindexonlyscan)
+	{
+		// disable dynamic index only scan if the corresponding GUC is turned off
+		traceflag_bitset->ExchangeSet(GPOPT_DISABLE_XFORM_TF(
+			CXform::ExfDynamicIndexGet2DynamicIndexOnlyScan));
 	}
 
 	if (!optimizer_enable_hashagg)

@@ -8,7 +8,7 @@ Greenplum is developed on GitHub, and anybody wishing to contribute to it will h
 
 Once you have your GitHub account, fork this repository so that you can have your private copy to start hacking on and to use as source of pull requests.
 
-Anybody contributing to Greenplum has to be covered by either the Corporate or the Individual Contributor License Agreement. If you have not previously done so, please fill out and submit the Contributor License Agreement. Note that we do allow for really trivial changes to be contributed without a CLA if they fall under the rubric of obvious fixes. However, since our GitHub workflow checks for CLA by default you may find it easier to submit one instead of claiming an "obvious fix" exception.
+Anybody contributing to Greenplum has to be covered by either the Corporate or the Individual Contributor License Agreement. If you have not previously done so, please fill out and submit the [Contributor License Agreement](https://cla.vmware.com/cla/1/preview). Note that we do allow for really trivial changes to be contributed without a CLA if they fall under the rubric of obvious fixes. However, since our GitHub workflow checks for CLA by default you may find it easier to submit one instead of claiming an "obvious fix" exception.
 
 ## Licensing of Greenplum contributions
 

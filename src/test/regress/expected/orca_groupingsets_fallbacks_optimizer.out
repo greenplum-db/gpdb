@@ -19,8 +19,8 @@ insert into gstest1 values (2, 42, 40, 53, 400);
 -- [1] https://www.postgresql.org/message-id/flat/CAHnPFjSdFx_TtNpQturPMkRSJMYaD5rGP2=8iFH9V24-OjHGiQ@mail.gmail.com
 -- [2] https://www.postgresql.org/message-id/flat/830269.1656693747@sss.pgh.pa.us
 select a as alias1, a as alias2 from gstest1 group by alias1, rollup(alias2);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multiple grouping sets specifications with duplicate aliased columns
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple grouping sets specifications with duplicate aliased columns
  alias1 | alias2 
 --------+--------
       1 |      1
@@ -30,8 +30,8 @@ DETAIL:  Feature not supported: Multiple grouping sets specifications with dupli
 (4 rows)
 
 select a as alias1, a as alias2 from gstest1 group by alias1, cube(alias2);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Multiple grouping sets specifications with duplicate aliased columns
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple grouping sets specifications with duplicate aliased columns
  alias1 | alias2 
 --------+--------
       2 |      2
@@ -51,8 +51,8 @@ select a as alias1, a as alias2 from gstest1 group by alias1, alias2;
 
 -- Orca falls back due to nested grouping sets
 select sum(v), b, a, c, d from gstest1 group by grouping sets(a, b, rollup(c, d));
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: nested grouping set
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: nested grouping set
  sum  | b  | a | c  | d  
 ------+----+---+----+----
  1000 |    |   |    |   
@@ -76,7 +76,7 @@ create temp table gstest2 (a int primary key, b int, c int, d int, v int);
 insert into gstest2 values (1, 1, 1, 1, 1);
 insert into gstest2 values (2, 2, 2, 2, 1);
 select d from gstest2 group by grouping sets ((a,b), (a));
-INFO:  GPORCA failed to produce a plan, falling back to planner
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Query-to-DXL Translation: No attribute entry found due to incorrect normalization of query
  d 
 ---
@@ -88,8 +88,8 @@ DETAIL:  Query-to-DXL Translation: No attribute entry found due to incorrect nor
 
 -- Orca falls back due to HAVING clause with outer references
 select v.c, (select count(*) from gstest1 group by () having v.c) from (values (false),(true)) v(c);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: {TARGETENTRY :expr {VAR :varno 1 :varattno 2 :vartype 20 :vartypmod -1 :varcollid 0 :varlevelsup 0 :varnoold 1 :varoattno 2 :location -1} :resno 1 :resname count :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false} not supported in DXL
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: {TARGETENTRY :expr {VAR :varno 1 :varattno 2 :vartype 20 :vartypmod -1 :varcollid 0 :varlevelsup 0 :varnoold 1 :varoattno 2 :location -1} :resno 1 :resname count :ressortgroupref 0 :resorigtbl 0 :resorigcol 0 :resjunk false}
  c | count 
 ---+-------
  f |      
@@ -98,8 +98,8 @@ DETAIL:  GPDB Expression type: {TARGETENTRY :expr {VAR :varno 1 :varattno 2 :var
 
 -- Orca falls back due to grouping function with multiple arguments
 select a, b, grouping(a,b), sum(v), count(*), max(v) from gstest1 group by rollup (a,b);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping function with multiple arguments
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Grouping function with multiple arguments
  a | b  | grouping | sum  | count | max 
 ---+----+----------+------+-------+-----
  1 |  5 |        0 |  100 |     1 | 100
@@ -113,8 +113,8 @@ DETAIL:  Feature not supported: Grouping function with multiple arguments
 
 -- Orca falls back due to grouping function with outer references
 select (select grouping(a) from (values(1)) v2(c)) from (values(1, 2)) v1(a, b) group by (a, b);
-INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported: Grouping function with outer references
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Grouping function with outer references
  grouping 
 ----------
         0

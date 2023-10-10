@@ -25,16 +25,15 @@ from contextlib import closing
 import pipes  # for shell-quoting, pipes.quote()
 import fcntl
 import itertools
-
+import psycopg2
 try:
-    import pg
-
     from gppylib import gplog, pgconf, userinput
     from gppylib.commands.base import Command, WorkerPool, Worker
     from gppylib.operations import Operation
     from gppylib.gpversion import GpVersion
     from gppylib.db import dbconn
     from gppylib.operations.unix import CheckDir, CheckFile, MakeDir
+    from gppylib.utils import escape_string
 
 except ImportError as e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
@@ -52,14 +51,14 @@ NUM_REPORTS_TO_SAVE = 3
 GET_ALL_DATA_TABLES_SQL = """
 select n.nspname as schemaname, c.relname as tablename
 from pg_class c, pg_namespace n
-where c.relnamespace = n.oid and c.relkind='r'::char
+where c.relnamespace = n.oid and (c.relkind='r'::char or c.relkind = 'm'::char)
 and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog')
 and c.oid not in (select ftrelid from pg_foreign_table)
 """
 
 GET_VALID_DATA_TABLES_SQL = """
 select n.nspname as schemaname, c.relname as tablename from pg_class c, pg_namespace n where
-c.relnamespace = n.oid and c.oid in (%s) and c.relkind='r'::char and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog') and c.oid not in (select ftrelid from pg_foreign_table)
+c.relnamespace = n.oid and c.oid in (%s) and (c.relkind='r'::char or c.relkind = 'm'::char) and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog') and c.oid not in (select ftrelid from pg_foreign_table)
 """
 
 GET_REQUESTED_AO_DATA_TABLE_INFO_SQL = """
@@ -86,7 +85,7 @@ GET_REQUESTED_LAST_OP_INFO_SQL = """
 GET_ALL_DATA_TABLES_IN_SCHEMA_SQL = """
 select n.nspname as schemaname, c.relname as tablename
 from pg_class c, pg_namespace n
-where c.relnamespace = n.oid and c.relkind='r'::char
+where c.relnamespace = n.oid and (c.relkind='r'::char or c.relkind = 'm'::char)
  and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog')
 and c.oid not in (select ftrelid from pg_foreign_table)
 and n.nspname = '%s'
@@ -112,7 +111,7 @@ and c.relkind = 'p' and c.relispartition
 GET_REQUESTED_NON_AO_TABLES_SQL = """
 select n.nspname as schemaname, c.relname as tablename
 from pg_class c, pg_namespace n
-where c.relnamespace = n.oid and c.relkind='r'::char
+where c.relnamespace = n.oid and (c.relkind='r'::char or c.relkind = 'm'::char)
 and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog')
 and c.oid not in (select ftrelid from pg_foreign_table)
 and c.oid not in (select relid from pg_appendonly)
@@ -121,6 +120,12 @@ and c.oid in (%s)
 
 GET_COLUMN_NAMES_SQL = """
 SELECT attname FROM pg_attribute WHERE attrelid = %s AND attnum > 0 AND NOT attisdropped
+"""
+
+GET_SCHEMA_WITH_TEMP_TABLE_SQL = """
+SELECT n.nspname
+FROM pg_class c, pg_namespace n
+WHERE c.relnamespace = n.oid AND c.relpersistence = 't';
 """
 
 GET_INCLUDED_COLUMNS_FROM_EXCLUDE_SQL = """
@@ -166,7 +171,7 @@ def validate_schema_exists(pg_port, dbname, schema):
     try:
         dburl = dbconn.DbURL(port=pg_port, dbname=dbname)
         conn = dbconn.connect(dburl)
-        count = dbconn.querySingleton(conn, "select count(*) from pg_namespace where nspname='%s';" % pg.escape_string(schema))
+        count = dbconn.querySingleton(conn, "select count(*) from pg_namespace where nspname='%s';" % escape_string(schema))
         if count == 0:
             raise ExceptionNoStackTraceNeeded("Schema %s does not exist in database %s." % (schema, dbname))
     finally:
@@ -213,7 +218,7 @@ def get_partition_state_tuples(pg_port, dbname, catalog_schema, partition_info):
             try:
                 modcount_sql = "select to_char(coalesce(sum(modcount::bigint), 0), '999999999999999999999') from gp_dist_random('%s.%s')" % (catalog_schema, tupletable)
                 modcount = dbconn.querySingleton(conn, modcount_sql)
-            except pg.DatabaseError as e:
+            except psycopg2.DatabaseError as e:
                 if "does not exist" in str(e):
                     logger.info("Table %s.%s (%s) no longer exists and will not be analyzed", schemaname, partition_name, tupletable)
                 else:
@@ -548,7 +553,7 @@ class AnalyzeDb(Operation):
         At the same time, parse the requested columns and populate the col_dict.
         If a requested table is partitioned, expand all the leaf partitions.
         """
-        logger.info("Getting and verifying input tables...")
+        logger.info("Getting and verifying input tables and materialized views...")
         if self.single_table:
 
             # Check that the table name given on the command line is schema-qualified.
@@ -576,7 +581,7 @@ class AnalyzeDb(Operation):
             tablenames = parse_tables_from_file(self.conn, self.config_file)
             canonical_tables = validate_tables(self.conn, tablenames)
             all_root_partitions = run_sql(self.conn, GET_ALL_ROOT_PARTITION_TABLES_SQL)
-            cfg_file = open(self.config_file, 'rU')
+            cfg_file = open(self.config_file, 'r')
             for line in cfg_file:
                 # XXX: The file format does not allow listing tables with spaces in the name,
                 # even when quoted
@@ -628,10 +633,15 @@ class AnalyzeDb(Operation):
             tup = (schema_tbl[0], schema_tbl[1])
             mid_level_partitions.add(tup)
 
+        qresult = run_sql(self.conn, GET_SCHEMA_WITH_TEMP_TABLE_SQL)
+        temp_schema_set = set([x[0] for x in qresult])
+
         ret = set()
         for can in candidates:
             schema = can[0]
             table = can[1]
+            if schema in temp_schema_set:
+                continue
             if '\n' in schema or ',' in schema or ':' in schema:
                 raise Exception('Schema name has an invalid character "\\n", ":", "," : "%s"' % schema)
             if '\n' in table or ',' in table or ':' in table:
@@ -971,7 +981,7 @@ def get_oid_str(table_list):
 def regclass_schema_tbl(schema, tbl):
     schema_tbl = "%s.%s" % (escape_identifier(schema), escape_identifier(tbl))
 
-    return "to_regclass('%s')" % (pg.escape_string(schema_tbl))
+    return "to_regclass('%s')" % (escape_string(schema_tbl))
 
 
 # Escape double-quotes in a string, so that the resulting string is suitable for
@@ -1196,7 +1206,7 @@ def validate_dir(path):
 
 # Parse a list of tables from the config file.
 def parse_tables_from_file(conn, include_file):
-    in_file = open(include_file, 'rU')
+    in_file = open(include_file, 'r')
     line_no = 1
     tables = []
     for line in in_file:
@@ -1239,7 +1249,7 @@ def validate_tables(conn, tablenames):
     while curr_batch < nbatches:
         batch = tablenames[curr_batch * batch_size:(curr_batch + 1) * batch_size]
 
-        oid_str = ','.join(map((lambda x: "('%s')" % pg.escape_string(x)), batch))
+        oid_str = ','.join(map((lambda x: "('%s')" % escape_string(x)), batch))
         if not oid_str:
             break
 
@@ -1255,7 +1265,7 @@ def get_include_cols_from_exclude(conn, schema, table, exclude_cols):
     """
     Given a list of excluded columns of a table, get the list of included columns
     """
-    quoted_exclude_cols = ','.join(["'%s'" % pg.escape_string(x) for x in exclude_cols])
+    quoted_exclude_cols = ','.join(["'%s'" % escape_string(x) for x in exclude_cols])
 
     oid_str = regclass_schema_tbl(schema, table)
     cols = run_sql(conn, GET_INCLUDED_COLUMNS_FROM_EXCLUDE_SQL % (oid_str, quoted_exclude_cols))
@@ -1271,7 +1281,7 @@ def validate_columns(conn, schema, table, column_list):
         return
 
     sql = VALIDATE_COLUMN_NAMES_SQL % (regclass_schema_tbl(schema, table),
-                                       ','.join(["'%s'" % pg.escape_string(x) for x in column_list]))
+                                       ','.join(["'%s'" % escape_string(x) for x in column_list]))
     valid_col_count = dbconn.querySingleton(conn, sql)
 
     if int(valid_col_count) != len(column_list):
@@ -1327,7 +1337,6 @@ def create_parser():
     parser.add_option('-v', '--verbose', action='store_true', dest='verbose', help='Print debug messages.')
     parser.add_option('-a', action='store_true', dest='silent', default=False,
                       help="Quiet mode. Do not prompt for user confirmation.")
-
     return parser
 
 

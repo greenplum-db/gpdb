@@ -370,11 +370,21 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 		if (gp_log_optimization_time)
 			INSTR_TIME_SET_CURRENT(starttime);
 
+#ifdef USE_ORCA
 		result = optimize_query(parse, cursorOptions, boundParams);
+#else
+		/* Make sure this branch is not taken in builds using --disable-orca. */
+		Assert(false);
+		/* Keep compilers quiet in case the build used --disable-orca. */
+		result = NULL;
+#endif
 
 		/* decide jit state */
 		if (result)
 		{
+			/*
+			 * Setting Jit flags for Optimizer
+			 */
 			compute_jit_flags(result);
 		}
 
@@ -845,6 +855,8 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	Assert(config);
 	root->config = config;
 
+	root->hasPseudoConstantQuals = false;
+	root->hasAlternativeSubPlans = false;
 	root->hasRecursion = hasRecursion;
 	if (hasRecursion)
 		root->wt_param_id = assign_special_exec_param(root);
@@ -1001,9 +1013,6 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	 * an empty qual list ... but "HAVING TRUE" is not a semantic no-op.
 	 */
 	root->hasHavingQual = (parse->havingQual != NULL);
-
-	/* Clear this flag; might get set in distribute_qual_to_rels */
-	root->hasPseudoConstantQuals = false;
 
 	/*
 	 * Do expression preprocessing on targetlist and quals, as well as other
@@ -2759,28 +2768,9 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 		 * The conflict with UPDATE|DELETE is implemented by locking the entire
 		 * table in ExclusiveMode. More details please refer docs.
 		 */
-		/*
-		 * GPDB_96_MERGE_FIXME: since we now process this in the path
-		 * context, it's much simpler than before, please kindly
-		 * revisit this, I'm not quite sure here.
-		 */
 		if (parse->rowMarks)
 		{
-			ListCell   *lc;
-			List   *newmarks = NIL;
-
 			if (parse->canOptSelectLockingClause)
-			{
-				foreach(lc, root->rowMarks)
-				{
-					PlanRowMark *rc = (PlanRowMark *) lfirst(lc);
-
-					rc->canOptSelectLockingClause = true;
-					newmarks = lappend(newmarks, rc);
-				}
-			}
-
-			if (newmarks)
 			{
 				/*
 				 * Greenplum specific behavior:
@@ -3014,11 +3004,63 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 	 * If there is an FDW that's responsible for all baserels of the query,
 	 * let it consider adding ForeignPaths.
 	 */
-	if (final_rel->fdwroutine &&
-		final_rel->fdwroutine->GetForeignUpperPaths)
-		final_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_FINAL,
-													current_rel, final_rel,
-													&extra);
+	if (final_rel->fdwroutine && final_rel->fdwroutine->GetForeignUpperPaths)
+	{
+		/* If FDW need MPP plan, we need to create two-phase limit path. */
+		if (final_rel->exec_location == FTEXECLOCATION_ALL_SEGMENTS &&
+			final_rel->fdwroutine->IsMPPPlanNeeded && final_rel->fdwroutine->IsMPPPlanNeeded() == 1)
+		{
+			RelOptInfo *pre_final_rel = makeNode(RelOptInfo);
+			pre_final_rel->reloptkind = RELOPT_UPPER_REL;
+			pre_final_rel->relids = bms_copy(final_rel->relids);
+
+			/* cheap startup cost is interesting iff not all tuples to be retrieved */
+			pre_final_rel->consider_startup = final_rel->consider_startup;
+			pre_final_rel->consider_param_startup = false;
+			pre_final_rel->consider_parallel = false;	/* might get changed later */
+			pre_final_rel->reltarget = create_empty_pathtarget();
+			pre_final_rel->pathlist = NIL;
+			pre_final_rel->cheapest_startup_path = NULL;
+			pre_final_rel->cheapest_total_path = NULL;
+			pre_final_rel->cheapest_unique_path = NULL;
+			pre_final_rel->cheapest_parameterized_paths = NIL;
+
+			pre_final_rel->serverid = final_rel->serverid;
+			pre_final_rel->userid = final_rel->userid;
+			pre_final_rel->useridiscurrent = final_rel->useridiscurrent;
+			pre_final_rel->fdwroutine = final_rel->fdwroutine;
+			pre_final_rel->exec_location = final_rel->exec_location;
+
+			pre_final_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_FINAL,
+															current_rel, pre_final_rel,
+															&extra);
+
+			foreach(lc, pre_final_rel->pathlist)
+			{
+				/*
+				 * If there is a LIMIT/OFFSET clause, add the LIMIT node.
+				 */
+				if (limit_needed(parse))
+				{
+					Path	   *path = (Path *) lfirst(lc);
+					CdbPathLocus locus;
+					CdbPathLocus_MakeSingleQE(&locus, path->locus.numsegments);
+					path = cdbpath_create_motion_path(root, path, path->pathkeys, false, locus);
+					path = create_limit_path(root, final_rel, path,
+											 parse->limitOffset,
+											 parse->limitCount,
+											 offset_est, count_est);
+					add_path(final_rel, path);
+				}
+			}
+		}
+		else
+		{
+			final_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_FINAL,
+														current_rel, final_rel,
+														&extra);
+		}
+	}
 
 	/* Let extensions possibly add some more paths */
 	if (create_upper_paths_hook)
@@ -4798,9 +4840,15 @@ create_ordinary_grouping_paths(PlannerInfo *root, RelOptInfo *input_rel,
 	 */
 	if (grouped_rel->fdwroutine &&
 		grouped_rel->fdwroutine->GetForeignUpperPaths)
-		grouped_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_GROUP_AGG,
-													  input_rel, grouped_rel,
-													  extra);
+	{
+		if(grouped_rel->exec_location != FTEXECLOCATION_ALL_SEGMENTS ||
+		   !grouped_rel->fdwroutine->IsMPPPlanNeeded || grouped_rel->fdwroutine->IsMPPPlanNeeded() == 0)
+		{
+			grouped_rel->fdwroutine->GetForeignUpperPaths(root, UPPERREL_GROUP_AGG,
+														  input_rel, grouped_rel,
+														  extra);
+		}
+	}
 
 	/* Let extensions possibly add some more paths */
 	if (create_upper_paths_hook)
@@ -7621,7 +7669,8 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 										   &extra->agg_final_costs,
 										   gd ? gd->rollups : NIL,
 										   new_rollups,
-										   strat);
+										   strat,
+										   extra);
 	}
 }
 
@@ -8612,26 +8661,63 @@ make_new_rollups_for_hash_grouping_set(PlannerInfo        *root,
  * planner and ORCA. Please move any future code added to standard_planner() too.
  *
  * Decide JIT settings for the given plan and record them in PlannedStmt.jitFlags.
+ *
+ * Since the costing model of ORCA and Planner are different
+ * (Planner cost usually higher), setting the JIT flags based on the
+ * common JIT costing GUCs could lead to false triggering of JIT.
+ *
+ * To prevent this situation, separate  costing GUCs are created
+ * for Optimizer and used here for setting the JIT flags.
+ *
  */
 static void compute_jit_flags(PlannedStmt* pstmt)
 {
 	Plan* top_plan = pstmt->planTree;
-
 	pstmt->jitFlags = PGJIT_NONE;
 
-	if (jit_enabled && jit_above_cost >= 0 &&
-		top_plan->total_cost > jit_above_cost)
+	/*
+	 * Common variables to hold values for optimizer or planner
+	 * based on function call.
+	 */
+	double above_cost;
+	double inline_above_cost;
+	double optimize_above_cost;
+
+	if (pstmt->planGen == PLANGEN_OPTIMIZER)
+	{
+
+		/*
+		 * Setting values for ORCA.
+		 */
+		above_cost = optimizer_jit_above_cost;
+		inline_above_cost = optimizer_jit_inline_above_cost;
+		optimize_above_cost = optimizer_jit_optimize_above_cost;
+	}
+	else
+	{
+
+		/*
+		 * Setting values for Planner.
+		 */
+		above_cost = jit_above_cost;
+		inline_above_cost = jit_inline_above_cost;
+		optimize_above_cost = jit_optimize_above_cost;
+
+	}
+
+	if (jit_enabled && above_cost >= 0 &&
+		top_plan->total_cost > above_cost)
 	{
 		pstmt->jitFlags |= PGJIT_PERFORM;
 
 		/*
 		 * Decide how much effort should be put into generating better code.
 		 */
-		if (jit_optimize_above_cost >= 0 &&
-			top_plan->total_cost > jit_optimize_above_cost)
+		if (optimize_above_cost >= 0 &&
+			top_plan->total_cost > optimize_above_cost)
 			pstmt->jitFlags |= PGJIT_OPT3;
-		if (jit_inline_above_cost >= 0 &&
-			top_plan->total_cost > jit_inline_above_cost)
+		if (inline_above_cost >= 0 &&
+			top_plan->total_cost > inline_above_cost)
 			pstmt->jitFlags |= PGJIT_INLINE;
 
 		/*

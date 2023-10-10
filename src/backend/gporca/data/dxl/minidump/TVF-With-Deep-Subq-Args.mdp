@@ -94,7 +94,7 @@ SELECT generate_series((
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="3"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:GPDBFunc Mdid="0.1068.1.0" Name="generate_series" ReturnsSet="true" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.1068.1.0" Name="generate_series" ReturnsSet="true" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.20.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.29.1.0" Name="cid" IsRedistributable="false" IsHashable="true" IsMergeJoinable="false" IsComposite="false" IsFixedLength="true" Length="4" PassByValue="true">
@@ -174,34 +174,24 @@ SELECT generate_series((
       <dxl:Relation Mdid="6.156718.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="k" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -429,8 +419,6 @@ SELECT generate_series((
                             <dxl:TableDescriptor Mdid="6.156718.1.1" TableName="x">
                               <dxl:Columns>
                                 <dxl:Column ColId="54" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
-                                <dxl:Column ColId="55" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
-                                <dxl:Column ColId="56" Attno="3" ColName="k" TypeMdid="0.23.1.0"/>
                                 <dxl:Column ColId="57" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
                                 <dxl:Column ColId="58" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
                                 <dxl:Column ColId="59" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
@@ -487,8 +475,6 @@ SELECT generate_series((
                           <dxl:TableDescriptor Mdid="6.156718.1.1" TableName="x">
                             <dxl:Columns>
                               <dxl:Column ColId="65" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
-                              <dxl:Column ColId="66" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
-                              <dxl:Column ColId="67" Attno="3" ColName="k" TypeMdid="0.23.1.0"/>
                               <dxl:Column ColId="68" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
                               <dxl:Column ColId="69" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
                               <dxl:Column ColId="70" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
@@ -642,8 +628,6 @@ SELECT generate_series((
                             <dxl:TableDescriptor Mdid="6.156718.1.1" TableName="x">
                               <dxl:Columns>
                                 <dxl:Column ColId="54" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
-                                <dxl:Column ColId="55" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
-                                <dxl:Column ColId="56" Attno="3" ColName="k" TypeMdid="0.23.1.0"/>
                                 <dxl:Column ColId="57" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
                                 <dxl:Column ColId="58" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
                                 <dxl:Column ColId="59" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
@@ -700,8 +684,6 @@ SELECT generate_series((
                           <dxl:TableDescriptor Mdid="6.156718.1.1" TableName="x">
                             <dxl:Columns>
                               <dxl:Column ColId="65" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
-                              <dxl:Column ColId="66" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
-                              <dxl:Column ColId="67" Attno="3" ColName="k" TypeMdid="0.23.1.0"/>
                               <dxl:Column ColId="68" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
                               <dxl:Column ColId="69" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
                               <dxl:Column ColId="70" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>

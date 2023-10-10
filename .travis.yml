@@ -228,7 +228,6 @@ script:
             --with-ldap \
             --with-libcurl \
             --with-libxml \
-            --enable-mapreduce \
             --enable-orafce \
             --enable-ic-proxy \
             $C
@@ -263,7 +262,6 @@ script:
             --with-ldap \
             --with-libcurl \
             --with-libxml \
-            --enable-mapreduce \
             --enable-orafce \
             --enable-ic-proxy \
             $C

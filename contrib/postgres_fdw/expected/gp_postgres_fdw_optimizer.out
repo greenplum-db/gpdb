@@ -1,0 +1,1559 @@
+-- ===================================================================
+-- Greenplum-specific features for postgres_fdw
+-- ===================================================================
+-- ===================================================================
+-- Create source tables and populate with data
+-- ===================================================================
+CREATE SCHEMA postgres_fdw_gp;
+set search_path=postgres_fdw_gp;
+CREATE EXTENSION IF NOT EXISTS postgres_fdw;
+DO $d$
+    BEGIN
+        EXECUTE $$CREATE SERVER loopback FOREIGN DATA WRAPPER postgres_fdw
+            OPTIONS (dbname '$$||current_database()||$$',
+                     port '$$||current_setting('port')||$$'
+            )$$;
+    END;
+$d$;
+CREATE USER MAPPING IF NOT EXISTS FOR CURRENT_USER SERVER loopback;
+CREATE TABLE table_dist_rand
+(
+	f1 int,
+	f2 text,
+	f3 text
+) DISTRIBUTED RANDOMLY;
+CREATE TABLE table_dist_repl
+(
+	f1 int,
+	f2 text,
+	f3 text
+) DISTRIBUTED REPLICATED;
+CREATE TABLE table_dist_int
+(
+	f1 int,
+	f2 text,
+	f3 text
+) DISTRIBUTED BY (f1);
+CREATE TABLE table_dist_text
+(
+	f1 int,
+	f2 text,
+	f3 text
+) DISTRIBUTED BY (f2);
+CREATE TABLE table_dist_int_text
+(
+	f1 int,
+	f2 text,
+	f3 text
+) DISTRIBUTED BY (f1, f2);
+INSERT INTO table_dist_rand
+VALUES (1, 'a', 'aa'),
+	   (2, 'b', 'bb'),
+	   (3, 'c', 'cc'),
+	   (4, 'd', 'dd'),
+	   (5, 'e', 'ee'),
+	   (6, 'f', 'ff'),
+	   (7, 'g', 'gg'),
+	   (8, 'h', 'hh'),
+	   (9, 'i', 'ii'),
+	   (10, 'j', 'jj'),
+	   (11, 'k', 'kk'),
+	   (12, 'l', 'll');
+INSERT INTO table_dist_repl     SELECT * FROM table_dist_rand;
+INSERT INTO table_dist_int      SELECT * FROM table_dist_rand;
+INSERT INTO table_dist_text     SELECT * FROM table_dist_rand;
+INSERT INTO table_dist_int_text SELECT * FROM table_dist_rand;
+-- ===================================================================
+-- create target table
+-- ===================================================================
+CREATE TABLE postgres_fdw_gp."GP 1" (
+	f1 int,
+	f2 text,
+	f3 text
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- ===================================================================
+-- create foreign tables
+-- ===================================================================
+CREATE FOREIGN TABLE gp_ft1 (
+	f1 int,
+	f2 text,
+	f3 text
+) SERVER loopback OPTIONS (schema_name 'postgres_fdw_gp', table_name 'GP 1', mpp_execute 'all segments');
+CREATE FOREIGN TABLE gp_ft2 ( f1 int ) SERVER loopback OPTIONS (num_segments '3');
+ERROR:  invalid option "num_segments"
+HINT:  Valid options in this context are: schema_name, table_name, use_remote_estimate, updatable, fetch_size
+-- ===================================================================
+-- validate parallel writes (mpp_execute set to all segments)
+-- ===================================================================
+EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: f1, f2, f3
+   ->  Foreign Scan on postgres_fdw_gp.gp_ft1
+         Output: f1, f2, f3
+         Remote SQL: SELECT f1, f2, f3 FROM postgres_fdw_gp."GP 1"
+ Optimizer: Pivotal Optimizer (GPORCA)
+(6 rows)
+
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+             QUERY PLAN              
+-------------------------------------
+ Insert on gp_ft1
+   ->  Seq Scan on table_dist_rand
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+\c
+set search_path=postgres_fdw_gp;
+alter server loopback options(add num_segments '4');
+EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 4:1  (slice1; segments: 4)
+   Output: f1, f2, f3
+   ->  Foreign Scan on postgres_fdw_gp.gp_ft1
+         Output: f1, f2, f3
+         Remote SQL: SELECT f1, f2, f3 FROM postgres_fdw_gp."GP 1"
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+EXPLAIN ANALYZE SELECT * FROM gp_ft1;
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 4:1  (slice1; segments: 4)  (cost=100.00..2872.00 rows=133600 width=68) (actual time=25.301..25.303 rows=0 loops=1)
+   ->  Foreign Scan on gp_ft1  (cost=100.00..1202.00 rows=33400 width=68) (actual time=0.000..9.830 rows=0 loops=1)
+ Optimizer: Postgres query optimizer
+ Planning Time: 6.631 ms
+   (slice0)    Executor memory: 42K bytes.
+   (slice1)    Executor memory: 42K bytes avg x 4 workers, 42K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 45.320 ms
+(8 rows)
+
+EXPLAIN (VERBOSE, COSTS FALSE) SELECT count(*) FROM gp_ft1;
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Finalize Aggregate
+   Output: count(*)
+   ->  Gather Motion 4:1  (slice1; segments: 4)
+         Output: (PARTIAL count(*))
+         ->  Foreign Scan
+               Output: (PARTIAL count(*))
+               Relations: Aggregate on (postgres_fdw_gp.gp_ft1)
+               Remote SQL: SELECT count(*) FROM postgres_fdw_gp."GP 1"
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1 t1 INNER JOIN gp_ft1 t2 ON t1.f1 = t2.f1 LIMIT 3;
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Limit
+   Output: t1.f1, t1.f2, t1.f3, t2.f1, t2.f2, t2.f3
+   ->  Gather Motion 4:1  (slice1; segments: 4)
+         Output: t1.f1, t1.f2, t1.f3, t2.f1, t2.f2, t2.f3
+         ->  Limit
+               Output: t1.f1, t1.f2, t1.f3, t2.f1, t2.f2, t2.f3
+               ->  Hash Join
+                     Output: t1.f1, t1.f2, t1.f3, t2.f1, t2.f2, t2.f3
+                     Hash Cond: (t1.f1 = t2.f1)
+                     ->  Redistribute Motion 4:4  (slice2; segments: 4)
+                           Output: t1.f1, t1.f2, t1.f3
+                           Hash Key: t1.f1
+                           ->  Foreign Scan on postgres_fdw_gp.gp_ft1 t1
+                                 Output: t1.f1, t1.f2, t1.f3
+                                 Remote SQL: SELECT f1, f2, f3 FROM postgres_fdw_gp."GP 1"
+                     ->  Hash
+                           Output: t2.f1, t2.f2, t2.f3
+                           ->  Redistribute Motion 4:4  (slice3; segments: 4)
+                                 Output: t2.f1, t2.f2, t2.f3
+                                 Hash Key: t2.f1
+                                 ->  Foreign Scan on postgres_fdw_gp.gp_ft1 t2
+                                       Output: t2.f1, t2.f2, t2.f3
+                                       Remote SQL: SELECT f1, f2, f3 FROM postgres_fdw_gp."GP 1"
+ Optimizer: Postgres query optimizer
+(24 rows)
+
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Insert on gp_ft1
+   ->  Redistribute Motion 3:4  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_rand
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+alter server loopback options(set num_segments '2');
+EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM gp_ft1;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)
+   Output: f1, f2, f3
+   ->  Foreign Scan on postgres_fdw_gp.gp_ft1
+         Output: f1, f2, f3
+         Remote SQL: SELECT f1, f2, f3 FROM postgres_fdw_gp."GP 1"
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Insert on gp_ft1
+   ->  Redistribute Motion 3:2  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_rand
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+alter server loopback options(drop num_segments);
+\c
+set search_path=postgres_fdw_gp;
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_repl;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Insert on gp_ft1
+   ->  Redistribute Motion 1:3  (slice1; segments: 1)
+         ->  Seq Scan on table_dist_repl
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_repl;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_int;
+             QUERY PLAN              
+-------------------------------------
+ Insert on gp_ft1
+   ->  Seq Scan on table_dist_int
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_int;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_text;
+             QUERY PLAN              
+-------------------------------------
+ Insert on gp_ft1
+   ->  Seq Scan on table_dist_text
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_text;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_int_text;
+              QUERY PLAN               
+---------------------------------------
+ Insert on gp_ft1
+   ->  Seq Scan on table_dist_int_text
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_int_text;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1
+SELECT id,
+	   'AAA' || to_char(id, 'FM000'),
+	   'BBB' || to_char(id, 'FM000')
+FROM generate_series(1, 100) id;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Insert on gp_ft1
+   ->  Redistribute Motion 1:3  (slice1; segments: 1)
+         ->  Function Scan on generate_series id
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1
+SELECT id,
+       'AAA' || to_char(id, 'FM000'),
+       'BBB' || to_char(id, 'FM000')
+FROM generate_series(1, 100) id;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1  |   f2   |   f3   
+-----+--------+--------
+   1 | AAA001 | BBB001
+   2 | AAA002 | BBB002
+   3 | AAA003 | BBB003
+   4 | AAA004 | BBB004
+   5 | AAA005 | BBB005
+   6 | AAA006 | BBB006
+   7 | AAA007 | BBB007
+   8 | AAA008 | BBB008
+   9 | AAA009 | BBB009
+  10 | AAA010 | BBB010
+  11 | AAA011 | BBB011
+  12 | AAA012 | BBB012
+  13 | AAA013 | BBB013
+  14 | AAA014 | BBB014
+  15 | AAA015 | BBB015
+  16 | AAA016 | BBB016
+  17 | AAA017 | BBB017
+  18 | AAA018 | BBB018
+  19 | AAA019 | BBB019
+  20 | AAA020 | BBB020
+  21 | AAA021 | BBB021
+  22 | AAA022 | BBB022
+  23 | AAA023 | BBB023
+  24 | AAA024 | BBB024
+  25 | AAA025 | BBB025
+  26 | AAA026 | BBB026
+  27 | AAA027 | BBB027
+  28 | AAA028 | BBB028
+  29 | AAA029 | BBB029
+  30 | AAA030 | BBB030
+  31 | AAA031 | BBB031
+  32 | AAA032 | BBB032
+  33 | AAA033 | BBB033
+  34 | AAA034 | BBB034
+  35 | AAA035 | BBB035
+  36 | AAA036 | BBB036
+  37 | AAA037 | BBB037
+  38 | AAA038 | BBB038
+  39 | AAA039 | BBB039
+  40 | AAA040 | BBB040
+  41 | AAA041 | BBB041
+  42 | AAA042 | BBB042
+  43 | AAA043 | BBB043
+  44 | AAA044 | BBB044
+  45 | AAA045 | BBB045
+  46 | AAA046 | BBB046
+  47 | AAA047 | BBB047
+  48 | AAA048 | BBB048
+  49 | AAA049 | BBB049
+  50 | AAA050 | BBB050
+  51 | AAA051 | BBB051
+  52 | AAA052 | BBB052
+  53 | AAA053 | BBB053
+  54 | AAA054 | BBB054
+  55 | AAA055 | BBB055
+  56 | AAA056 | BBB056
+  57 | AAA057 | BBB057
+  58 | AAA058 | BBB058
+  59 | AAA059 | BBB059
+  60 | AAA060 | BBB060
+  61 | AAA061 | BBB061
+  62 | AAA062 | BBB062
+  63 | AAA063 | BBB063
+  64 | AAA064 | BBB064
+  65 | AAA065 | BBB065
+  66 | AAA066 | BBB066
+  67 | AAA067 | BBB067
+  68 | AAA068 | BBB068
+  69 | AAA069 | BBB069
+  70 | AAA070 | BBB070
+  71 | AAA071 | BBB071
+  72 | AAA072 | BBB072
+  73 | AAA073 | BBB073
+  74 | AAA074 | BBB074
+  75 | AAA075 | BBB075
+  76 | AAA076 | BBB076
+  77 | AAA077 | BBB077
+  78 | AAA078 | BBB078
+  79 | AAA079 | BBB079
+  80 | AAA080 | BBB080
+  81 | AAA081 | BBB081
+  82 | AAA082 | BBB082
+  83 | AAA083 | BBB083
+  84 | AAA084 | BBB084
+  85 | AAA085 | BBB085
+  86 | AAA086 | BBB086
+  87 | AAA087 | BBB087
+  88 | AAA088 | BBB088
+  89 | AAA089 | BBB089
+  90 | AAA090 | BBB090
+  91 | AAA091 | BBB091
+  92 | AAA092 | BBB092
+  93 | AAA093 | BBB093
+  94 | AAA094 | BBB094
+  95 | AAA095 | BBB095
+  96 | AAA096 | BBB096
+  97 | AAA097 | BBB097
+  98 | AAA098 | BBB098
+  99 | AAA099 | BBB099
+ 100 | AAA100 | BBB100
+(100 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+-- ===================================================================
+-- validate writes on any segment (mpp_execute set to any)
+-- ===================================================================
+ALTER FOREIGN TABLE gp_ft1 OPTIONS ( SET mpp_execute 'any' );
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_rand
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_repl;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on table_dist_repl
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_repl;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_int;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_int
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_int;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_text;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_text
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_text;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_int_text;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_int_text
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_int_text;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1
+SELECT id,
+	   'AAA' || to_char(id, 'FM000'),
+	   'BBB' || to_char(id, 'FM000')
+FROM generate_series(1, 100) id;
+                QUERY PLAN                 
+-------------------------------------------
+ Insert on gp_ft1
+   ->  Function Scan on generate_series id
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+INSERT INTO gp_ft1
+SELECT id,
+       'AAA' || to_char(id, 'FM000'),
+       'BBB' || to_char(id, 'FM000')
+FROM generate_series(1, 100) id;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1  |   f2   |   f3   
+-----+--------+--------
+   1 | AAA001 | BBB001
+   2 | AAA002 | BBB002
+   3 | AAA003 | BBB003
+   4 | AAA004 | BBB004
+   5 | AAA005 | BBB005
+   6 | AAA006 | BBB006
+   7 | AAA007 | BBB007
+   8 | AAA008 | BBB008
+   9 | AAA009 | BBB009
+  10 | AAA010 | BBB010
+  11 | AAA011 | BBB011
+  12 | AAA012 | BBB012
+  13 | AAA013 | BBB013
+  14 | AAA014 | BBB014
+  15 | AAA015 | BBB015
+  16 | AAA016 | BBB016
+  17 | AAA017 | BBB017
+  18 | AAA018 | BBB018
+  19 | AAA019 | BBB019
+  20 | AAA020 | BBB020
+  21 | AAA021 | BBB021
+  22 | AAA022 | BBB022
+  23 | AAA023 | BBB023
+  24 | AAA024 | BBB024
+  25 | AAA025 | BBB025
+  26 | AAA026 | BBB026
+  27 | AAA027 | BBB027
+  28 | AAA028 | BBB028
+  29 | AAA029 | BBB029
+  30 | AAA030 | BBB030
+  31 | AAA031 | BBB031
+  32 | AAA032 | BBB032
+  33 | AAA033 | BBB033
+  34 | AAA034 | BBB034
+  35 | AAA035 | BBB035
+  36 | AAA036 | BBB036
+  37 | AAA037 | BBB037
+  38 | AAA038 | BBB038
+  39 | AAA039 | BBB039
+  40 | AAA040 | BBB040
+  41 | AAA041 | BBB041
+  42 | AAA042 | BBB042
+  43 | AAA043 | BBB043
+  44 | AAA044 | BBB044
+  45 | AAA045 | BBB045
+  46 | AAA046 | BBB046
+  47 | AAA047 | BBB047
+  48 | AAA048 | BBB048
+  49 | AAA049 | BBB049
+  50 | AAA050 | BBB050
+  51 | AAA051 | BBB051
+  52 | AAA052 | BBB052
+  53 | AAA053 | BBB053
+  54 | AAA054 | BBB054
+  55 | AAA055 | BBB055
+  56 | AAA056 | BBB056
+  57 | AAA057 | BBB057
+  58 | AAA058 | BBB058
+  59 | AAA059 | BBB059
+  60 | AAA060 | BBB060
+  61 | AAA061 | BBB061
+  62 | AAA062 | BBB062
+  63 | AAA063 | BBB063
+  64 | AAA064 | BBB064
+  65 | AAA065 | BBB065
+  66 | AAA066 | BBB066
+  67 | AAA067 | BBB067
+  68 | AAA068 | BBB068
+  69 | AAA069 | BBB069
+  70 | AAA070 | BBB070
+  71 | AAA071 | BBB071
+  72 | AAA072 | BBB072
+  73 | AAA073 | BBB073
+  74 | AAA074 | BBB074
+  75 | AAA075 | BBB075
+  76 | AAA076 | BBB076
+  77 | AAA077 | BBB077
+  78 | AAA078 | BBB078
+  79 | AAA079 | BBB079
+  80 | AAA080 | BBB080
+  81 | AAA081 | BBB081
+  82 | AAA082 | BBB082
+  83 | AAA083 | BBB083
+  84 | AAA084 | BBB084
+  85 | AAA085 | BBB085
+  86 | AAA086 | BBB086
+  87 | AAA087 | BBB087
+  88 | AAA088 | BBB088
+  89 | AAA089 | BBB089
+  90 | AAA090 | BBB090
+  91 | AAA091 | BBB091
+  92 | AAA092 | BBB092
+  93 | AAA093 | BBB093
+  94 | AAA094 | BBB094
+  95 | AAA095 | BBB095
+  96 | AAA096 | BBB096
+  97 | AAA097 | BBB097
+  98 | AAA098 | BBB098
+  99 | AAA099 | BBB099
+ 100 | AAA100 | BBB100
+(100 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+-- ===================================================================
+-- validate writes on coordinator (mpp_execute set to coordinator)
+-- ===================================================================
+ALTER FOREIGN TABLE gp_ft1 OPTIONS ( SET mpp_execute 'coordinator' );
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_rand
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_rand;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_repl;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on table_dist_repl
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_repl;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_int;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_int
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_int;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_text;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_text
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_text;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1 SELECT * FROM table_dist_int_text;
+                   QUERY PLAN                   
+------------------------------------------------
+ Insert on gp_ft1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on table_dist_int_text
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+INSERT INTO gp_ft1 SELECT * FROM table_dist_int_text;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1 | f2 | f3 
+----+----+----
+  1 | a  | aa
+  2 | b  | bb
+  3 | c  | cc
+  4 | d  | dd
+  5 | e  | ee
+  6 | f  | ff
+  7 | g  | gg
+  8 | h  | hh
+  9 | i  | ii
+ 10 | j  | jj
+ 11 | k  | kk
+ 12 | l  | ll
+(12 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+EXPLAIN (COSTS FALSE) INSERT INTO gp_ft1
+SELECT id,
+	   'AAA' || to_char(id, 'FM000'),
+	   'BBB' || to_char(id, 'FM000')
+FROM generate_series(1, 100) id;
+                QUERY PLAN                 
+-------------------------------------------
+ Insert on gp_ft1
+   ->  Function Scan on generate_series id
+ Optimizer: Postgres query optimizer
+(3 rows)
+
+INSERT INTO gp_ft1
+SELECT id,
+       'AAA' || to_char(id, 'FM000'),
+       'BBB' || to_char(id, 'FM000')
+FROM generate_series(1, 100) id;
+SELECT * FROM postgres_fdw_gp."GP 1" ORDER BY f1;
+ f1  |   f2   |   f3   
+-----+--------+--------
+   1 | AAA001 | BBB001
+   2 | AAA002 | BBB002
+   3 | AAA003 | BBB003
+   4 | AAA004 | BBB004
+   5 | AAA005 | BBB005
+   6 | AAA006 | BBB006
+   7 | AAA007 | BBB007
+   8 | AAA008 | BBB008
+   9 | AAA009 | BBB009
+  10 | AAA010 | BBB010
+  11 | AAA011 | BBB011
+  12 | AAA012 | BBB012
+  13 | AAA013 | BBB013
+  14 | AAA014 | BBB014
+  15 | AAA015 | BBB015
+  16 | AAA016 | BBB016
+  17 | AAA017 | BBB017
+  18 | AAA018 | BBB018
+  19 | AAA019 | BBB019
+  20 | AAA020 | BBB020
+  21 | AAA021 | BBB021
+  22 | AAA022 | BBB022
+  23 | AAA023 | BBB023
+  24 | AAA024 | BBB024
+  25 | AAA025 | BBB025
+  26 | AAA026 | BBB026
+  27 | AAA027 | BBB027
+  28 | AAA028 | BBB028
+  29 | AAA029 | BBB029
+  30 | AAA030 | BBB030
+  31 | AAA031 | BBB031
+  32 | AAA032 | BBB032
+  33 | AAA033 | BBB033
+  34 | AAA034 | BBB034
+  35 | AAA035 | BBB035
+  36 | AAA036 | BBB036
+  37 | AAA037 | BBB037
+  38 | AAA038 | BBB038
+  39 | AAA039 | BBB039
+  40 | AAA040 | BBB040
+  41 | AAA041 | BBB041
+  42 | AAA042 | BBB042
+  43 | AAA043 | BBB043
+  44 | AAA044 | BBB044
+  45 | AAA045 | BBB045
+  46 | AAA046 | BBB046
+  47 | AAA047 | BBB047
+  48 | AAA048 | BBB048
+  49 | AAA049 | BBB049
+  50 | AAA050 | BBB050
+  51 | AAA051 | BBB051
+  52 | AAA052 | BBB052
+  53 | AAA053 | BBB053
+  54 | AAA054 | BBB054
+  55 | AAA055 | BBB055
+  56 | AAA056 | BBB056
+  57 | AAA057 | BBB057
+  58 | AAA058 | BBB058
+  59 | AAA059 | BBB059
+  60 | AAA060 | BBB060
+  61 | AAA061 | BBB061
+  62 | AAA062 | BBB062
+  63 | AAA063 | BBB063
+  64 | AAA064 | BBB064
+  65 | AAA065 | BBB065
+  66 | AAA066 | BBB066
+  67 | AAA067 | BBB067
+  68 | AAA068 | BBB068
+  69 | AAA069 | BBB069
+  70 | AAA070 | BBB070
+  71 | AAA071 | BBB071
+  72 | AAA072 | BBB072
+  73 | AAA073 | BBB073
+  74 | AAA074 | BBB074
+  75 | AAA075 | BBB075
+  76 | AAA076 | BBB076
+  77 | AAA077 | BBB077
+  78 | AAA078 | BBB078
+  79 | AAA079 | BBB079
+  80 | AAA080 | BBB080
+  81 | AAA081 | BBB081
+  82 | AAA082 | BBB082
+  83 | AAA083 | BBB083
+  84 | AAA084 | BBB084
+  85 | AAA085 | BBB085
+  86 | AAA086 | BBB086
+  87 | AAA087 | BBB087
+  88 | AAA088 | BBB088
+  89 | AAA089 | BBB089
+  90 | AAA090 | BBB090
+  91 | AAA091 | BBB091
+  92 | AAA092 | BBB092
+  93 | AAA093 | BBB093
+  94 | AAA094 | BBB094
+  95 | AAA095 | BBB095
+  96 | AAA096 | BBB096
+  97 | AAA097 | BBB097
+  98 | AAA098 | BBB098
+  99 | AAA099 | BBB099
+ 100 | AAA100 | BBB100
+(100 rows)
+
+TRUNCATE TABLE postgres_fdw_gp."GP 1";
+-- Validate queries on different execution locations
+create table t1(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table t2(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table t3(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE FOREIGN TABLE gp_all (
+	a int,
+	b int
+) SERVER loopback OPTIONS (schema_name 'postgres_fdw_gp', table_name 't1', mpp_execute 'all segments');
+CREATE FOREIGN TABLE gp_any (
+	a int,
+	b int
+) SERVER loopback OPTIONS (schema_name 'postgres_fdw_gp', table_name 't2', mpp_execute 'any');
+CREATE FOREIGN TABLE gp_coord (
+	a int,
+	b int
+) SERVER loopback OPTIONS (schema_name 'postgres_fdw_gp', table_name 't3', mpp_execute 'coordinator');
+create table part_mixed (a int, b int) partition by range (b);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+alter table part_mixed attach partition gp_all for values from (0) to (5);
+alter table part_mixed attach partition gp_any for values from (5) to (10);
+alter table part_mixed attach partition gp_coord for values from (10) to (15);
+insert into part_mixed select i,i from generate_series(0,14)i;
+analyze part_mixed;
+explain select * from gp_all;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+   ->  Foreign Scan on gp_all  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(3 rows)
+
+select * from gp_all;
+ a | b 
+---+---
+ 2 | 2
+ 3 | 3
+ 4 | 4
+ 0 | 0
+ 1 | 1
+ 2 | 2
+ 3 | 3
+ 4 | 4
+ 0 | 0
+ 1 | 1
+ 2 | 2
+ 3 | 3
+ 4 | 4
+ 0 | 0
+ 1 | 1
+(15 rows)
+
+explain select * from gp_any;
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Foreign Scan on gp_any  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(2 rows)
+
+select * from gp_any;
+ a | b 
+---+---
+ 7 | 7
+ 8 | 8
+ 5 | 5
+ 6 | 6
+ 9 | 9
+(5 rows)
+
+explain select * from gp_coord;
+                          QUERY PLAN                          
+--------------------------------------------------------------
+ Foreign Scan on gp_coord  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(2 rows)
+
+select * from gp_coord;
+ a  | b  
+----+----
+ 12 | 12
+ 10 | 10
+ 11 | 11
+ 13 | 13
+ 14 | 14
+(5 rows)
+
+-- validate partition with different execution locations
+explain select * from part_mixed;
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1293.00 rows=1 width=8)
+   ->  Append  (cost=0.00..1293.00 rows=1 width=8)
+         ->  Dynamic Foreign Scan on part_mixed  (cost=0.00..431.00 rows=1 width=8)
+               Number of partitions to scan: 1 (out of 3)
+         ->  Result  (cost=0.00..431.00 rows=1 width=8)
+               One-Time Filter: (gp_execution_segment() = 1)
+               ->  Dynamic Foreign Scan on part_mixed part_mixed_1  (cost=0.00..431.00 rows=1 width=8)
+                     Number of partitions to scan: 1 (out of 3)
+         ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=8)
+               ->  Dynamic Foreign Scan on part_mixed part_mixed_2  (cost=0.00..431.00 rows=1 width=8)
+                     Number of partitions to scan: 1 (out of 3)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(12 rows)
+
+select * from part_mixed;
+ a  | b  
+----+----
+  2 |  2
+  3 |  3
+  4 |  4
+  0 |  0
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  0 |  0
+  1 |  1
+  2 |  2
+  3 |  3
+  4 |  4
+  0 |  0
+  1 |  1
+  5 |  5
+  6 |  6
+  9 |  9
+  7 |  7
+  8 |  8
+ 12 | 12
+ 10 | 10
+ 11 | 11
+ 13 | 13
+ 14 | 14
+(25 rows)
+
+-- validate joins on different execution locations
+create table non_part (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into non_part select i, i from generate_series(8,12)i;
+analyze non_part;
+explain select * from part_mixed join non_part on part_mixed.a=non_part.a;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1724.00 rows=1 width=16)
+   ->  Hash Join  (cost=0.00..1724.00 rows=1 width=16)
+         Hash Cond: (a = non_part.a)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1293.00 rows=1 width=8)
+               Hash Key: a
+               ->  Append  (cost=0.00..1293.00 rows=1 width=8)
+                     ->  Dynamic Foreign Scan on part_mixed  (cost=0.00..431.00 rows=1 width=8)
+                           Number of partitions to scan: 1 (out of 3)
+                     ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                           One-Time Filter: (gp_execution_segment() = 2)
+                           ->  Dynamic Foreign Scan on part_mixed  (cost=0.00..431.00 rows=1 width=8)
+                                 Number of partitions to scan: 1 (out of 3)
+                     ->  Redistribute Motion 1:3  (slice3)  (cost=0.00..431.00 rows=1 width=8)
+                           ->  Dynamic Foreign Scan on part_mixed  (cost=0.00..431.00 rows=1 width=8)
+                                 Number of partitions to scan: 1 (out of 3)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+               ->  Seq Scan on non_part  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(18 rows)
+
+select * from part_mixed join non_part on part_mixed.a=non_part.a;
+ a  | b  | a  | b  
+----+----+----+----
+  9 |  9 |  9 |  9
+ 10 | 10 | 10 | 10
+ 11 | 11 | 11 | 11
+ 12 | 12 | 12 | 12
+  8 |  8 |  8 |  8
+(5 rows)
+
+explain select * from part_mixed left join non_part on part_mixed.a=non_part.a;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1724.00 rows=2 width=16)
+   ->  Hash Left Join  (cost=0.00..1724.00 rows=1 width=16)
+         Hash Cond: (a = non_part.a)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1293.00 rows=1 width=8)
+               Hash Key: a
+               ->  Append  (cost=0.00..1293.00 rows=1 width=8)
+                     ->  Dynamic Foreign Scan on part_mixed  (cost=0.00..431.00 rows=1 width=8)
+                           Number of partitions to scan: 1 (out of 3)
+                     ->  Result  (cost=0.00..431.00 rows=1 width=8)
+                           One-Time Filter: (gp_execution_segment() = 0)
+                           ->  Dynamic Foreign Scan on part_mixed  (cost=0.00..431.00 rows=1 width=8)
+                                 Number of partitions to scan: 1 (out of 3)
+                     ->  Redistribute Motion 1:3  (slice3)  (cost=0.00..431.00 rows=1 width=8)
+                           ->  Dynamic Foreign Scan on part_mixed  (cost=0.00..431.00 rows=1 width=8)
+                                 Number of partitions to scan: 1 (out of 3)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+               ->  Seq Scan on non_part  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(18 rows)
+
+select * from part_mixed left join non_part on part_mixed.a=non_part.a;
+ a  | b  | a  | b  
+----+----+----+----
+  5 |  5 |    |   
+  6 |  6 |    |   
+  9 |  9 |  9 |  9
+ 10 | 10 | 10 | 10
+ 11 | 11 | 11 | 11
+ 13 | 13 |    |   
+ 14 | 14 |    |   
+  2 |  2 |    |   
+  3 |  3 |    |   
+  4 |  4 |    |   
+  2 |  2 |    |   
+  3 |  3 |    |   
+  4 |  4 |    |   
+  2 |  2 |    |   
+  3 |  3 |    |   
+  4 |  4 |    |   
+  7 |  7 |    |   
+  8 |  8 |  8 |  8
+  0 |  0 |    |   
+  1 |  1 |    |   
+  0 |  0 |    |   
+  1 |  1 |    |   
+  0 |  0 |    |   
+  1 |  1 |    |   
+ 12 | 12 | 12 | 12
+(25 rows)
+
+explain select * from part_mixed right join non_part on part_mixed.a=non_part.a;
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1724.00 rows=16 width=16)
+   ->  Hash Right Join  (cost=0.00..1724.00 rows=6 width=16)
+         Hash Cond: (a = non_part.a)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1293.00 rows=5 width=8)
+               Hash Key: a
+               ->  Append  (cost=0.00..1293.00 rows=5 width=8)
+                     ->  Dynamic Foreign Scan on part_mixed  (cost=0.00..431.00 rows=5 width=8)
+                           Number of partitions to scan: 1 (out of 3)
+                     ->  Result  (cost=0.00..431.00 rows=5 width=8)
+                           One-Time Filter: (gp_execution_segment() = 1)
+                           ->  Dynamic Foreign Scan on part_mixed  (cost=0.00..431.00 rows=5 width=8)
+                                 Number of partitions to scan: 1 (out of 3)
+                     ->  Redistribute Motion 1:3  (slice3)  (cost=0.00..431.00 rows=5 width=8)
+                           ->  Dynamic Foreign Scan on part_mixed  (cost=0.00..431.00 rows=15 width=8)
+                                 Number of partitions to scan: 1 (out of 3)
+         ->  Hash  (cost=431.00..431.00 rows=2 width=8)
+               ->  Seq Scan on non_part  (cost=0.00..431.00 rows=2 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(18 rows)
+
+select * from part_mixed right join non_part on part_mixed.a=non_part.a;
+ a  | b  | a  | b  
+----+----+----+----
+ 12 | 12 | 12 | 12
+ 11 | 11 | 11 | 11
+ 10 | 10 | 10 | 10
+  9 |  9 |  9 |  9
+  8 |  8 |  8 |  8
+(5 rows)
+
+-- validate join is on segments for distributed table
+explain select * from gp_any, table_dist_int where gp_any.a=table_dist_int.f1;
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=28)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=28)
+         Hash Cond: (a = table_dist_int.f1)
+         ->  Result  (cost=0.00..431.00 rows=2 width=8)
+               ->  Foreign Scan on gp_any  (cost=0.00..431.00 rows=2 width=8)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=20)
+               ->  Seq Scan on table_dist_int  (cost=0.00..431.00 rows=1 width=20)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+select * from gp_any, table_dist_int where gp_any.a=table_dist_int.f1;
+ a | b | f1 | f2 | f3 
+---+---+----+----+----
+ 5 | 5 |  5 | e  | ee
+ 6 | 6 |  6 | f  | ff
+ 9 | 9 |  9 | i  | ii
+ 7 | 7 |  7 | g  | gg
+ 8 | 8 |  8 | h  | hh
+(5 rows)
+
+-- validate join is on segments for replicated table
+explain select * from gp_any, table_dist_repl where gp_any.a=table_dist_repl.f1;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=28)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=28)
+         Hash Cond: (a = table_dist_repl.f1)
+         ->  Result  (cost=0.00..431.00 rows=2 width=8)
+               One-Time Filter: (gp_execution_segment() = 0)
+               ->  Foreign Scan on gp_any  (cost=0.00..431.00 rows=2 width=8)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=20)
+               ->  Seq Scan on table_dist_repl  (cost=0.00..431.00 rows=1 width=20)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(9 rows)
+
+select * from gp_any, table_dist_repl where gp_any.a=table_dist_repl.f1;
+ a | b | f1 | f2 | f3 
+---+---+----+----+----
+ 5 | 5 |  5 | e  | ee
+ 6 | 6 |  6 | f  | ff
+ 9 | 9 |  9 | i  | ii
+ 7 | 7 |  7 | g  | gg
+ 8 | 8 |  8 | h  | hh
+(5 rows)
+
+create table part_mixed_dpe(a int, b int) partition by range(b);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+alter table part_mixed detach partition gp_any;
+alter table part_mixed_dpe attach partition gp_any for values from (5) to (10);
+insert into part_mixed_dpe select 6,6 from generate_series(1,10);
+analyze part_mixed_dpe;
+explain select * from part_mixed_dpe, non_part where part_mixed_dpe.b=non_part.b;
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.01 rows=15 width=16)
+   ->  Hash Join  (cost=0.00..862.00 rows=5 width=16)
+         Hash Cond: (b = non_part.b)
+         ->  Result  (cost=0.00..431.00 rows=5 width=8)
+               One-Time Filter: (gp_execution_segment() = 0)
+               ->  Dynamic Foreign Scan on part_mixed_dpe  (cost=0.00..431.00 rows=5 width=8)
+                     Number of partitions to scan: 1 (out of 1)
+         ->  Hash  (cost=431.00..431.00 rows=5 width=8)
+               ->  Partition Selector (selector id: $0)  (cost=0.00..431.00 rows=5 width=8)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=5 width=8)
+                           ->  Seq Scan on non_part  (cost=0.00..431.00 rows=2 width=8)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(12 rows)
+
+select * from part_mixed_dpe, non_part where part_mixed_dpe.b=non_part.b;
+ a | b | a | b 
+---+---+---+---
+ 8 | 8 | 8 | 8
+ 9 | 9 | 9 | 9
+(2 rows)
+
+-- compare difference plans among when mpp_execute set to 'all segments', 'coordinator' and 'any'
+explain (costs false) update t1 set b = b + 1 where b in (select a from gp_all where gp_all.a > 10);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Update on t1
+   ->  Hash Semi Join
+         Hash Cond: (t1.b = a)
+         ->  Seq Scan on t1
+         ->  Hash
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                     ->  Foreign Scan on gp_all
+ Optimizer: Pivotal Optimizer (GPORCA)
+(8 rows)
+
+explain (costs false) update t1 set b = b + 1 where b in (select a from gp_any where gp_any.a > 10);
+                               QUERY PLAN
+------------------------------------------------------------------------
+ Update on t1
+   ->  Hash Semi Join
+         Hash Cond: (t1.b = a)
+         ->  Seq Scan on t1
+         ->  Hash
+               ->  Foreign Scan on gp_any
+ Optimizer: Pivotal Optimizer (GPORCA)
+(7 rows)
+
+explain (costs false) update t1 set b = b + 1 where b in (select a from gp_coord where gp_coord.a > 10);
+                                          QUERY PLAN                                           
+-----------------------------------------------------------------------------------------------
+ Update on t1
+   ->  Result
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Hash Key: t1.a
+               ->  Hash Join
+                     Hash Cond: (t1.b = a)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: t1.b
+                           ->  Seq Scan on t1
+                     ->  Hash
+                           ->  GroupAggregate
+                                 Group Key: a
+                                 ->  Sort
+                                       Sort Key: a
+                                       ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                             Hash Key: a
+                                             ->  GroupAggregate
+                                                   Group Key: a
+                                                   ->  Sort
+                                                         Sort Key: a
+                                                         ->  Redistribute Motion 1:3  (slice4)
+                                                               ->  Foreign Scan on gp_coord
+ Optimizer: Pivotal Optimizer (GPORCA)
+(23 rows)
+
+---
+--- Test for #16376 of multi-level partition table with foreign table
+---
+CREATE TABLE sub_part (
+                          a int,
+                          b int,
+                          c int)
+    DISTRIBUTED BY (a)
+partition by range(b) subpartition by list(c) 
+ SUBPARTITION TEMPLATE 
+  (
+   SUBPARTITION one values (1),
+   SUBPARTITION two values (2)
+  )
+(
+   START (0) INCLUSIVE END (5) EXCLUSIVE EVERY (1)
+);
+-- Create foreign tables
+CREATE FOREIGN TABLE sub_part_1_prt_1_2_prt_one_foreign (
+    a int,
+    b int,
+    c int)
+SERVER loopback;
+CREATE FOREIGN TABLE sub_part_1_prt_1_2_prt_two_foreign (
+    a int,
+    b int,
+    c int)
+SERVER loopback;
+-- change a sub partition's all leaf table to foreign table
+ALTER TABLE sub_part_1_prt_1 EXCHANGE PARTITION for(1) WITH TABLE sub_part_1_prt_1_2_prt_one_foreign;
+ALTER TABLE sub_part_1_prt_1 EXCHANGE PARTITION for(2) WITH TABLE sub_part_1_prt_1_2_prt_two_foreign;
+-- explain with ORCA should fall back to planner, rather than raise ERROR
+explain select * from sub_part;
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Append  (cost=100.00..14631.81 rows=641404 width=12)
+   ->  Foreign Scan on sub_part_1_prt_1_2_prt_one  (cost=100.00..383.06 rows=9102 width=12)
+   ->  Foreign Scan on sub_part_1_prt_1_2_prt_two  (cost=100.00..383.06 rows=9102 width=12)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1332.33 rows=77900 width=12)
+         ->  Seq Scan on sub_part_1_prt_2_2_prt_one  (cost=0.00..293.67 rows=25967 width=12)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1332.33 rows=77900 width=12)
+         ->  Seq Scan on sub_part_1_prt_2_2_prt_two  (cost=0.00..293.67 rows=25967 width=12)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1332.33 rows=77900 width=12)
+         ->  Seq Scan on sub_part_1_prt_3_2_prt_one  (cost=0.00..293.67 rows=25967 width=12)
+   ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..1332.33 rows=77900 width=12)
+         ->  Seq Scan on sub_part_1_prt_3_2_prt_two  (cost=0.00..293.67 rows=25967 width=12)
+   ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1332.33 rows=77900 width=12)
+         ->  Seq Scan on sub_part_1_prt_4_2_prt_one  (cost=0.00..293.67 rows=25967 width=12)
+   ->  Gather Motion 3:1  (slice6; segments: 3)  (cost=0.00..1332.33 rows=77900 width=12)
+         ->  Seq Scan on sub_part_1_prt_4_2_prt_two  (cost=0.00..293.67 rows=25967 width=12)
+   ->  Gather Motion 3:1  (slice7; segments: 3)  (cost=0.00..1332.33 rows=77900 width=12)
+         ->  Seq Scan on sub_part_1_prt_5_2_prt_one  (cost=0.00..293.67 rows=25967 width=12)
+   ->  Gather Motion 3:1  (slice8; segments: 3)  (cost=0.00..1332.33 rows=77900 width=12)
+         ->  Seq Scan on sub_part_1_prt_5_2_prt_two  (cost=0.00..293.67 rows=25967 width=12)
+ Optimizer: Postgres query optimizer
+(20 rows)
+
+--- Clean up
+DROP TABLE sub_part;
+DROP TABLE sub_part_1_prt_1_2_prt_one_foreign;
+DROP TABLE sub_part_1_prt_1_2_prt_two_foreign;
+-- GPDB #16219: validate scram-sha-256 in postgres_fdw
+alter system set password_encryption = 'scram-sha-256';
+-- add created user to pg_hba.conf
+\! echo "host    all    u16219  0.0.0.0/0 scram-sha-256" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
+\! echo "host    all    u16219   ::1/128  scram-sha-256" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
+\! echo "local    all    u16219   scram-sha-256" >> $COORDINATOR_DATA_DIRECTORY/pg_hba.conf
+select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
+\c postgres
+create user u16219 password '123456';
+create database database_16219;
+\c database_16219
+create extension postgres_fdw;
+grant usage on FOREIGN DATA WRAPPER postgres_fdw to public;
+set role u16219;
+create table t1 (a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into t1 values(generate_series(1,10),generate_series(11,20));
+DO $d$
+    BEGIN
+        EXECUTE $$CREATE SERVER database_16219 FOREIGN DATA WRAPPER postgres_fdw
+            OPTIONS (dbname '$$||current_database()||$$',
+                     port '$$||current_setting('port')||$$',
+                     host 'localhost'
+            )$$;
+    END;
+$d$;
+CREATE USER MAPPING FOR CURRENT_USER SERVER database_16219
+    OPTIONS (user 'u16219', password '123456');
+CREATE FOREIGN TABLE f_t1(a int, b int) 
+	server database_16219 options(schema_name 'public', table_name 't1');
+select count(*) from f_t1;
+ count 
+-------
+    10
+(1 row)
+
+DO $d$
+    BEGIN
+        EXECUTE $$ALTER SERVER database_16219
+            OPTIONS (SET port '$$||current_setting('port')||$$')$$;
+    END;
+$d$;
+select count(*) from f_t1;
+ count 
+-------
+    10
+(1 row)
+
+\c postgres
+drop database database_16219;
+drop user u16219;
+alter system reset password_encryption;
+select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+

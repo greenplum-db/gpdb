@@ -8,8 +8,8 @@ Each row of `pg_largeobject` holds data for one page of a large object, beginnin
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`loid`|oid| |Identifier of the large object that includes this page.|
-|`pageno`|int4| |Page number of this page within its large object \(counting from zero\).|
+|`loid`|oid| |Identifier of the large object that includes this page|
+|`pageno`|integer| |Page number of this page within its large object \(counting from zero\)|
 |`data`|bytea| |Actual data stored in the large object. This will never be more than `LOBLKSIZE` bytes and may be less.|
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)

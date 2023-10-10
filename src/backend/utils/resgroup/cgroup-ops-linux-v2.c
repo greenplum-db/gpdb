@@ -14,6 +14,7 @@
 
 #include "postgres.h"
 
+
 #include <limits.h>
 
 #include "cdb/cdbvars.h"
@@ -27,6 +28,8 @@
 #error  cgroup is only available on linux
 #endif
 
+#include "utils/cgroup_io_limit.h"
+
 #include <fcntl.h>
 #include <unistd.h>
 #include <sched.h>
@@ -34,9 +37,12 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/sysinfo.h>
+#include <sys/types.h>
+#include <sys/sysmacros.h>
 #include <stdio.h>
 #include <mntent.h>
 #include <regex.h>
+#include <libgen.h>
 
 static CGroupSystemInfo cgroupSystemInfoV2 = {
 		0,
@@ -59,9 +65,9 @@ static CGroupSystemInfo cgroupSystemInfoV2 = {
  */
 #define CGROUP_CPUSET_IS_OPTIONAL (GP_VERSION_NUM < 60000)
 
+
 /* The functions current file used */
 static void dump_component_dir_v2(void);
-
 
 static void init_subtree_control(void);
 static void init_cpu_v2(void);
@@ -101,6 +107,12 @@ static const PermItem perm_items_cpuset[] =
 	{ CGROUP_COMPONENT_UNKNOWN, NULL, 0 }
 };
 
+static const PermItem perm_items_io[] =
+{
+	{ CGROUP_COMPONENT_PLAIN, "io.max", R_OK | W_OK },
+	{ CGROUP_COMPONENT_UNKNOWN, NULL, 0 }
+};
+
 /*
  * just for cpuset check, same as the cpuset Permlist in permlists
  */
@@ -129,6 +141,8 @@ static const PermList permlists[] =
 	{ perm_items_cpuset, CGROUP_CPUSET_IS_OPTIONAL,
 		&gp_resource_group_enable_cgroup_cpuset},
 
+	{ perm_items_io, false, NULL},
+
 	{ NULL, false, NULL }
 };
 
@@ -148,6 +162,12 @@ static int64 getcpuusage_v2(Oid group);
 static void getcpuset_v2(Oid group, char *cpuset, int len);
 static void setcpuset_v2(Oid group, const char *cpuset);
 static float convertcpuusage_v2(int64 usage, int64 duration);
+static List *parseio_v2(const char *io_limit);
+static void setio_v2(Oid group, List *limit_list);
+static void freeio_v2(List *limit_list);
+static List	*getiostat_v2(Oid group, List *io_limit);
+static char *dumpio_v2(List *limit_list);
+static void cleario_v2(Oid groupid);
 
 /*
  * Dump component dir to the log.
@@ -175,6 +195,7 @@ init_subtree_control(void)
 	writeStr(CGROUP_ROOT_ID, BASEDIR_GPDB, component, "cgroup.subtree_control", "+cpu");
 	writeStr(CGROUP_ROOT_ID, BASEDIR_GPDB, component, "cgroup.subtree_control", "+memory");
 	writeStr(CGROUP_ROOT_ID, BASEDIR_GPDB, component, "cgroup.subtree_control", "+pids");
+	writeStr(CGROUP_ROOT_ID, BASEDIR_GPDB, component, "cgroup.subtree_control", "+io");
 }
 
 /*
@@ -269,9 +290,6 @@ probecgroup_v2(void)
 	 * probed, the error will be reported in checkcgroup() later.
 	 */
 	if (!getCgroupMountDir())
-		return false;
-
-	if (!normalPermissionCheck(permlists, CGROUP_ROOT_ID, false))
 		return false;
 
 	return true;
@@ -643,7 +661,7 @@ unlockcgroup_v2(int fd)
 /*
  * Set the cpu hard limit for the OS group.
  *
- * cpu_hard_quota_limit should be within [-1, 100].
+ * cpu_max_percent should be within [-1, 100].
  */
 static void
 setcpulimit_v2(Oid group, int cpu_hard_limit)
@@ -653,7 +671,7 @@ setcpulimit_v2(Oid group, int cpu_hard_limit)
 	if (cpu_hard_limit > 0)
 	{
 		writeInt64(group, BASEDIR_GPDB, component, "cpu.max",
-				   system_cfs_quota_us * cpu_hard_limit / 100);
+				   system_cfs_quota_us * cpu_hard_limit * gp_resource_group_cpu_limit / 100);
 	}
 	else
 	{
@@ -662,16 +680,16 @@ setcpulimit_v2(Oid group, int cpu_hard_limit)
 }
 
 /*
- * Set the cpu soft priority for the OS group.
+ * Set the cpu weight for the OS group.
  *
  * For version 1, the default value of cpu.shares is 1024, corresponding to
- * our cpu_soft_priority, which default value is 100, so we need to adjust it.
+ * our cpu_weight, which default value is 100, so we need to adjust it.
  *
- * The weight in the range [1, 10000], so the cpu_soft_priority is in range [1, 976.5625].
+ * The weight in the range [1, 10000], so the cpu_weight is in range [1, 976.5625].
  * In Greenplum, we define the range [1, 500].
  */
 static void
-setcpupriority_v2(Oid group, int shares)
+setcpuweight_v2(Oid group, int shares)
 {
 	CGroupComponentType component = CGROUP_COMPONENT_PLAIN;
 	writeInt64(group, BASEDIR_GPDB, component,
@@ -800,6 +818,99 @@ getmemoryusage_v2(Oid group)
 	return readInt64(group, BASEDIR_GPDB, component, "memory.current");
 }
 
+
+static List *
+parseio_v2(const char *io_limit)
+{
+	List *result;
+	if (io_limit == NULL)
+		return NIL;
+
+	if (strcmp(io_limit, DefaultIOLimit) == 0)
+		return NIL;
+
+	result = io_limit_parse(io_limit);
+	io_limit_validate(result);
+
+	return result;
+}
+
+static void
+setio_v2(Oid group, List *limit_list)
+{
+	CGroupComponentType component = CGROUP_COMPONENT_PLAIN;
+
+	char rbps_str[64] = {0};
+	char wbps_str[64] = {0};
+	char riops_str[64] = {0};
+	char wiops_str[64] = {0};
+
+	ListCell *tblspc_cell;
+	ListCell *bdi_cell;
+
+	if (limit_list == NIL)
+		return;
+
+	foreach (tblspc_cell, limit_list)
+	{
+		TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(tblspc_cell);
+
+		if (limit->ioconfig->rbps == IO_LIMIT_MAX || limit->ioconfig->rbps == IO_LIMIT_EMPTY)
+			sprintf(rbps_str, "rbps=max");
+		else
+			sprintf(rbps_str, "rbps=%lu", limit->ioconfig->rbps * 1024 * 1024);
+
+		if (limit->ioconfig->wbps == IO_LIMIT_MAX || limit->ioconfig->wbps == IO_LIMIT_EMPTY)
+			sprintf(wbps_str, "wbps=max");
+		else
+			sprintf(wbps_str, "wbps=%lu", limit->ioconfig->wbps * 1024 * 1024);
+
+		if (limit->ioconfig->riops == IO_LIMIT_MAX || limit->ioconfig->riops == IO_LIMIT_EMPTY)
+			sprintf(riops_str, "riops=max");
+		else
+			sprintf(riops_str, "riops=%u", (uint32)limit->ioconfig->riops);
+
+		if (limit->ioconfig->wiops == IO_LIMIT_MAX || limit->ioconfig->wiops == IO_LIMIT_EMPTY)
+			sprintf(wiops_str, "wiops=max");
+		else
+			sprintf(wiops_str, "wiops=%u", (uint32)limit->ioconfig->wiops);
+
+		/* through bdi */
+		foreach (bdi_cell, limit->bdi_list)
+		{
+			bdi_t bdi = *((bdi_t *)lfirst(bdi_cell));
+			char io_max[1024];
+			sprintf(io_max, "%d:%d %s %s %s %s", bdi_major(bdi), bdi_minor(bdi), rbps_str, wbps_str, riops_str, wiops_str);
+			writeStr(group, BASEDIR_GPDB, component, "io.max", io_max);
+		}
+
+	}
+}
+
+static void
+freeio_v2(List *limit_list)
+{
+	io_limit_free(limit_list);
+}
+
+static List *
+getiostat_v2(Oid groupid, List *io_limit)
+{
+	return get_iostat(groupid, io_limit);
+}
+
+static char *
+dumpio_v2(List *limit_list)
+{
+	return io_limit_dump(limit_list);
+}
+
+static void
+cleario_v2(Oid groupid)
+{
+	clear_io_max(groupid);
+}
+
 static CGroupOpsRoutine cGroupOpsRoutineV2 = {
 		.getcgroupname = getcgroupname_v2,
 		.probecgroup = probecgroup_v2,
@@ -817,13 +928,20 @@ static CGroupOpsRoutine cGroupOpsRoutineV2 = {
 
 		.setcpulimit = setcpulimit_v2,
 		.getcpuusage = getcpuusage_v2,
-		.setcpupriority = setcpupriority_v2,
+		.setcpuweight = setcpuweight_v2,
 		.getcpuset = getcpuset_v2,
 		.setcpuset = setcpuset_v2,
 
 		.convertcpuusage = convertcpuusage_v2,
 
-		.getmemoryusage = getmemoryusage_v2
+		.getmemoryusage = getmemoryusage_v2,
+
+		.parseio = parseio_v2,
+		.setio = setio_v2,
+		.freeio = freeio_v2,
+		.getiostat = getiostat_v2,
+		.dumpio = dumpio_v2,
+		.cleario = cleario_v2
 };
 
 CGroupOpsRoutine *get_group_routine_v2(void)

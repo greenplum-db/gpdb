@@ -169,7 +169,7 @@ ic_proxy_addr_on_getaddrinfo(uv_getaddrinfo_t *req,
 		}
 		else
 			elog(WARNING,
-						 "ic-proxy: seg%d,dbid%d: fail to resolve the hostname \"%s\":%s: %s",
+						 "ic-proxy: seg%d,dbid%d: failed to resolve the hostname \"%s\":%s: %s",
 						 addr->content, addr->dbid,
 						 addr->hostname, addr->service,
 						 uv_strerror(status));
@@ -203,7 +203,7 @@ ic_proxy_addr_on_getaddrinfo(uv_getaddrinfo_t *req,
 								 name, port, family);
 				else
 					elog(LOG,
-								 "ic-proxy: seg%d,dbid%d: resolved address %s:%s -> %s:%d family=%d (fail to extract the address: %s)",
+								 "ic-proxy: seg%d,dbid%d: resolved address %s:%s -> %s:%d family=%d (failed to extract the address: %s)",
 								 addr->content, addr->dbid,
 								 addr->hostname, addr->service,
 								 name, port, family,
@@ -347,25 +347,6 @@ ic_proxy_get_my_addr(void)
 
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG, "ic-proxy: cannot get my addr");
 	return NULL;
-}
-
-/*
- * Get the port from an address.
- *
- * Return -1 if cannot find the port.
- */
-int
-ic_proxy_addr_get_port(const ICProxyAddr *addr)
-{
-	if (addr->sockaddr.ss_family == AF_INET)
-		return ntohs(((struct sockaddr_in *) addr)->sin_port);
-	else if (addr->sockaddr.ss_family == AF_INET6)
-		return ntohs(((struct sockaddr_in6 *) addr)->sin6_port);
-
-	elog(WARNING,
-				 "ic-proxy: invalid address family %d for seg%d,dbid%d",
-				 addr->sockaddr.ss_family, addr->content, addr->dbid);
-	return -1;
 }
 
 /*

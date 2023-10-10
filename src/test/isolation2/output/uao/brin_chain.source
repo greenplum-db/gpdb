@@ -1,0 +1,130 @@
+-- Tests for BRIN chaining for AO/CO tables
+-- These are in a separate file as they take longer and deal with more data.
+
+-- All tests insert rows into content=1.
+
+-- We create an append-optimized table with the following characteristics:
+-- * seg0: 1000 committed rows -> 1 revmap page with pagenum=1. (filled by ALTER TABLE)
+-- * seg1: 180000000 committed rows -> 2 revmap pages with pagenums=1,2.
+--   REVMAP_PAGE_MAXITEMS = 5454. About 32768 chars fit in one logical heap
+--   block. So we need at least 32768 * 5454 + 1 = 178716673 rows to have 2
+--   revmap pages.
+-- * seg2: 2000 aborted rows -> No revmap pages.
+-- * seg3: 32768 aborted rows (1 logical heap block), 3000 committed rows -> 1 revmap page.
+
+CREATE TABLE brin_chain_@amname@(i character(1)) USING heap;
+CREATE TABLE
+INSERT INTO brin_chain_@amname@ SELECT '2' FROM generate_series(1, 1000);
+INSERT 0 1000
+ALTER TABLE brin_chain_@amname@ SET ACCESS METHOD @amname@;
+ALTER TABLE
+
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+3: BEGIN;
+BEGIN
+
+-- Insert 180000000 rows into seg1. Use COPY for speed.
+!\retcode yes 2 | head -n 180000000 > /tmp/brin_chain_@amname@_seg1.csv;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+1: COPY brin_chain_@amname@ FROM '/tmp/brin_chain_@amname@_seg1.csv';
+COPY 180000000
+!\retcode rm /tmp/brin_chain_@amname@_seg1.csv;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+2: INSERT INTO brin_chain_@amname@ SELECT '2' FROM generate_series(1, 2000);
+INSERT 0 2000
+3: INSERT INTO brin_chain_@amname@ SELECT '2' FROM generate_series(1, 32768);
+INSERT 0 32768
+3: ABORT;
+ROLLBACK
+3: BEGIN;
+BEGIN
+3: INSERT INTO brin_chain_@amname@ SELECT '2' FROM generate_series(1, 3000);
+INSERT 0 3000
+
+1: COMMIT;
+COMMIT
+2: ABORT;
+ROLLBACK
+3: COMMIT;
+COMMIT
+
+-- Create the index.
+CREATE INDEX ON brin_chain_@amname@ USING brin(i) WITH (pages_per_range=1);
+CREATE INDEX
+
+-- Sanity: Inspect the revmap chain information (limit to first 5 segments)
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_chain_@amname@_i_idx', blkno)) FROM generate_series(0, nblocks('brin_chain_@amname@_i_idx') - 1) blkno;
+ blkno | brin_page_type 
+-------+----------------
+ 0     | meta           
+ 1     | revmap         
+ 2     | regular        
+ 3     | revmap         
+ 4     | regular        
+ 5     | regular        
+ 6     | regular        
+ 7     | revmap         
+ 8     | revmap         
+(9 rows)
+1U: SELECT firstrevmappages[:5] FROM brin_metapage_info(get_raw_page('brin_chain_@amname@_i_idx', 0));
+ firstrevmappages  
+-------------------
+ [1, 3, -1, 8, -1] 
+(1 row)
+1U: SELECT lastrevmappages[:5] FROM brin_metapage_info(get_raw_page('brin_chain_@amname@_i_idx', 0));
+ lastrevmappages   
+-------------------
+ [1, 7, -1, 8, -1] 
+(1 row)
+1U: SELECT lastrevmappagenums[:5] FROM brin_metapage_info(get_raw_page('brin_chain_@amname@_i_idx', 0));
+ lastrevmappagenums 
+--------------------
+ [1, 2, 0, 1, 0]    
+(1 row)
+1U: SELECT segnum, brin_revmap_chain('brin_chain_@amname@_i_idx', segnum) AS chain FROM generate_series(0, 3) segnum;
+ segnum | chain  
+--------+--------
+ 0      | [1]    
+ 1      | [3, 7] 
+ 2      |        
+ 3      | [8]    
+(4 rows)
+
+-- Now test index retrieval. We should be able to:
+-- * Iterate through all segfiles.
+-- * Iterate through the revmap chain for segfile 1, containing multiple revmap pages.
+-- * Handle cases where there is no revmap chain for a block sequence, like when
+--   all tuples are deleted from a segment file (segfile 2).
+-- * Handle missing logical heap blocks inside a block sequence due to aborted
+--   inserts, such as for segfile 3.
+
+SET enable_seqscan TO off;
+SET
+SET optimizer TO off;
+SET
+EXPLAIN SELECT count(*) FROM brin_chain_@amname@ WHERE i > '1' and i < '3';
+ QUERY PLAN                                                                                                   
+--------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=862.37..862.38 rows=1 width=8)                                                     
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=862.31..862.36 rows=3 width=8)                         
+         ->  Partial Aggregate  (cost=862.31..862.32 rows=1 width=8)                                          
+               ->  Bitmap Heap Scan on brin_chain_@amname@  (cost=397.10..861.60 rows=287 width=0)              
+                     Recheck Cond: ((i > '1'::bpchar) AND (i < '3'::bpchar))                                  
+                     ->  Bitmap Index Scan on brin_chain_@amname@_i_idx  (cost=0.00..397.02 rows=28700 width=0) 
+                           Index Cond: ((i > '1'::bpchar) AND (i < '3'::bpchar))                              
+ Optimizer: Postgres query optimizer                                                                          
+(8 rows)
+SELECT count(*) FROM brin_chain_@amname@ WHERE i > '1' and i < '3';
+ count     
+-----------
+ 180004000 
+(1 row)

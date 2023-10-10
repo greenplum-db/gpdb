@@ -7,12 +7,12 @@ Defines a cursor.
 ``` {#sql_command_synopsis}
 DECLARE <name> [BINARY] [INSENSITIVE] [NO SCROLL] [PARALLEL RETRIEVE] CURSOR 
      [{WITH | WITHOUT} HOLD] 
-     FOR <query> [FOR READ ONLY]
+     FOR <query>
 ```
 
 ## <a id="section3"></a>Description 
 
-`DECLARE` allows a user to create a cursor, which can be used to retrieve a small number of rows at a time out of a larger query. Cursors can return data either in text or in binary format using [FETCH](FETCH.html).
+`DECLARE` allows a user to create a cursor, which can be used to retrieve a small number of rows at a time out of a larger query. Cursors can return data using [FETCH](FETCH.html).
 
 > **Note** This page describes usage of cursors at the SQL command level. If you are trying to use cursors inside a PL/pgSQL function, the rules are different, see [PL/pgSQL](../../analytics/pl_sql.html).
 
@@ -20,15 +20,15 @@ Normal cursors return data in text format, the same as a `SELECT` would produce.
 
 As an example, if a query returns a value of one from an integer column, you would get a string of 1 with a default cursor whereas with a binary cursor you would get a 4-byte field containing the internal representation of the value \(in big-endian byte order\).
 
-Binary cursors should be used carefully. Many applications, including psql, are not prepared to handle binary cursors and expect data to come back in the text format.
+Binary cursors should be used carefully. Many applications, including `psql`, are not prepared to handle binary cursors and expect data to come back in the text format.
 
 > **Note** When the client application uses the 'extended query' protocol to issue a `FETCH` command, the Bind protocol message specifies whether data is to be retrieved in text or binary format. This choice overrides the way that the cursor is defined. The concept of a binary cursor as such is thus obsolete when using extended query protocol — any cursor can be treated as either text or binary.
 
-A cursor can be specified in the `WHERE CURRENT OF` clause of the [UPDATE](UPDATE.html) or [DELETE](DELETE.html) statement to update or delete table data. The `UPDATE` or `DELETE` statement can only be run on the server, for example in an interactive psql session or a script. Language extensions such as PL/pgSQL do not have support for updatable cursors.
+A cursor can be specified in the `WHERE CURRENT OF` clause of the [UPDATE](UPDATE.html) or [DELETE](DELETE.html) statement to update or delete table data. The `UPDATE` or `DELETE` statement can only be run on the server, for example in an interactive `psql` session or a script.
 
 **Parallel Retrieve Cursors**
 
-Greenplum Database supports a special type of cursor, a parallel retrieve cursor. You can use a parallel retrieve cursor to retrieve query results, in parallel, directly from the Greenplum Database segments, bypassing the Greenplum coordinator.
+Greenplum Database supports a special type of cursor, a *parallel retrieve cursor*. You can use a parallel retrieve cursor to retrieve query results, in parallel, directly from the Greenplum Database segments, bypassing the Greenplum coordinator.
 
 Parallel retrieve cursors do not support the `WITH HOLD` clause. Greenplum Database ignores the `BINARY` clause when you declare a parallel retrieve cursor.
 
@@ -45,10 +45,10 @@ BINARY
     > **Note** Greenplum Database ignores the `BINARY` clause when you declare a `PARALLEL RETRIEVE` cursor.
 
 INSENSITIVE
-:   Indicates that data retrieved from the cursor should be unaffected by updates to the tables underlying the cursor while the cursor exists. In Greenplum Database, all cursors are insensitive. This key word currently has no effect and is present for compatibility with the SQL standard.
+:   Indicates that data retrieved from the cursor should be unaffected by updates to the table\(s\) underlying the cursor that occur after the cursor is created. In Greenplum Database, all cursors are insensitive. This key word currently has no effect and is present only for compatibility with the SQL standard.
 
 NO SCROLL
-:   A cursor cannot be used to retrieve rows in a nonsequential fashion. This is the default behavior in Greenplum Database, since scrollable cursors \(`SCROLL`\) are not supported.
+:   The cursor cannot be used to retrieve rows in a nonsequential fashion. This is the default behavior in Greenplum Database; scrollable cursors \(`SCROLL`\) are not supported.
 
 PARALLEL RETRIEVE
 :   Declare a parallel retrieve cursor. A parallel retrieve cursor is a special type of cursor that you can use to retrieve results directly from Greenplum Database segments, in parallel.
@@ -62,11 +62,11 @@ WITHOUT HOLD
 query
 :   A [SELECT](SELECT.html) or [VALUES](VALUES.html) command which will provide the rows to be returned by the cursor.
 
-    If the cursor is used in the `WHERE CURRENT OF` clause of the [UPDATE](UPDATE.html) or [DELETE](DELETE.html) command, the `SELECT` command must satisfy the following conditions:
+:   If the cursor is used in the `WHERE CURRENT OF` clause of the [UPDATE](UPDATE.html) or [DELETE](DELETE.html) command, the `SELECT` command must satisfy the following conditions:
 
     -   Cannot reference a view or external table.
     -   References only one table.
-        <br/><br/>The table must be updatable. For example, the following are not updatable: table functions, set-returning functions, append-only tables, columnar tables.
+        <br/><br/>The table must be a heap table, and it must not be replicated-distributed (must not be a view, external table, or append-optimized column-oriented table).
 
     -   Cannot contain any of the following:
         -   A grouping clause
@@ -77,9 +77,7 @@ query
         <br/><br/>Specifying the `FOR UPDATE` clause in the `SELECT` command prevents other sessions from changing the rows between the time they are fetched and the time they are updated. Without the `FOR UPDATE` clause, a subsequent use of the `UPDATE` or `DELETE` command with the `WHERE CURRENT OF` clause has no effect if the row was changed since the cursor was created.
         <br/><br/>> **Note** Specifying the `FOR UPDATE` clause in the `SELECT` command locks the entire table, not just the selected rows.
 
-
-FOR READ ONLY
-:   `FOR READ ONLY` indicates that the cursor is used in a read-only mode.
+The key words `BINARY`, `INSENSITIVE`, and `NO SCROLL` can appear in any order.
 
 ## <a id="section5"></a>Notes 
 
@@ -93,7 +91,7 @@ Scrollable cursors are not currently supported in Greenplum Database. You can on
 
 `DECLARE...FOR UPDATE` is not supported with append-optimized tables.
 
-You can see all available cursors by querying the [pg\_cursors](../system_catalogs/pg_cursors.html) system view.
+You can see all available cursors by querying the [pg\_cursors](../system_catalogs/catalog_ref-views.html#pg_cursors) system view.
 
 ## <a id="section6"></a>Examples 
 

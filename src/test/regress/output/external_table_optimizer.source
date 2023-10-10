@@ -578,7 +578,7 @@ create external table ret_too_many_uris(a text, b text) location(
 --------+------+-----------+----------+---------+-------------
  a      | text |           |          |         | 
  b      | text |           |          |         | 
-FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', format_type 't', location_uris 'gpfdist://foo.invalid:7070/ret.tbl1|gpfdist://foo.invalid:7070/ret.tbl2|gpfdist://foo.invalid:7070/ret.tbl3|gpfdist://foo.invalid:7070/ret.tbl4|gpfdist://foo.invalid:7070/ret.tbl5|gpfdist://foo.invalid:7070/ret.tbl6|gpfdist://foo.invalid:7070/ret.tbl7|gpfdist://foo.invalid:7070/ret.tbl8|gpfdist://foo.invalid:7070/ret.tbl9|gpfdist://foo.invalid:7070/ret.tbl10|gpfdist://foo.invalid:7070/ret.tbl11|gpfdist://foo.invalid:7070/ret.tbl12|gpfdist://foo.invalid:7070/ret.tbl13|gpfdist://foo.invalid:7070/ret.tbl14|gpfdist://foo.invalid:7070/ret.tbl15|gpfdist://foo.invalid:7070/ret.tbl16|gpfdist://foo.invalid:7070/ret.tbl17|gpfdist://foo.invalid:7070/ret.tbl18|gpfdist://foo.invalid:7070/ret.tbl19|gpfdist://foo.invalid:7070/ret.tbl20', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'text', delimiter '	', "null" E'\\N', escape E'\\', location_uris 'gpfdist://foo.invalid:7070/ret.tbl1|gpfdist://foo.invalid:7070/ret.tbl2|gpfdist://foo.invalid:7070/ret.tbl3|gpfdist://foo.invalid:7070/ret.tbl4|gpfdist://foo.invalid:7070/ret.tbl5|gpfdist://foo.invalid:7070/ret.tbl6|gpfdist://foo.invalid:7070/ret.tbl7|gpfdist://foo.invalid:7070/ret.tbl8|gpfdist://foo.invalid:7070/ret.tbl9|gpfdist://foo.invalid:7070/ret.tbl10|gpfdist://foo.invalid:7070/ret.tbl11|gpfdist://foo.invalid:7070/ret.tbl12|gpfdist://foo.invalid:7070/ret.tbl13|gpfdist://foo.invalid:7070/ret.tbl14|gpfdist://foo.invalid:7070/ret.tbl15|gpfdist://foo.invalid:7070/ret.tbl16|gpfdist://foo.invalid:7070/ret.tbl17|gpfdist://foo.invalid:7070/ret.tbl18|gpfdist://foo.invalid:7070/ret.tbl19|gpfdist://foo.invalid:7070/ret.tbl20', execute_on 'ALL_SEGMENTS', log_errors 'disable', encoding 'UTF8', is_writable 'false')
 
 select * from ret_too_many_uris;
 ERROR:  there are more external files (URLs) than primary segments that can read them
@@ -2679,7 +2679,7 @@ OPTIONS (hello 'world', bonjour 'again', nihao 'again and again' );
 --------+---------+-----------+----------+---------+-------------
  i      | integer |           |          |         | 
  j      | text    |           |          |         | 
-FDW options: (format 'text', delimiter '|', "null" E'\\N', escape E'\\', hello 'world', bonjour 'again', nihao 'again and again', format_type 't', location_uris 'file://@hostname@@abs_srcdir@/data/exttab_few_errors.data', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'text', delimiter '|', "null" E'\\N', escape E'\\', hello 'world', bonjour 'again', nihao 'again and again', location_uris 'file://@hostname@@abs_srcdir@/data/exttab_few_errors.data', execute_on 'ALL_SEGMENTS', log_errors 'disable', encoding 'UTF8', is_writable 'false')
 
 \d exttab_with_option_empty
          Foreign table "public.exttab_with_option_empty"
@@ -2687,7 +2687,7 @@ FDW options: (format 'text', delimiter '|', "null" E'\\N', escape E'\\', hello '
 --------+---------+-----------+----------+---------+-------------
  i      | integer |           |          |         | 
  j      | text    |           |          |         | 
-FDW options: (format 'text', delimiter '|', "null" E'\\N', escape E'\\', format_type 't', location_uris 'file://@hostname@@abs_srcdir@/data/exttab_few_errors.data', execute_on 'ALL_SEGMENTS', log_errors 'f', encoding '6', is_writable 'false')
+FDW options: (format 'text', delimiter '|', "null" E'\\N', escape E'\\', location_uris 'file://@hostname@@abs_srcdir@/data/exttab_few_errors.data', execute_on 'ALL_SEGMENTS', log_errors 'disable', encoding 'UTF8', is_writable 'false')
 
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_empty;
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_1;
@@ -4918,6 +4918,7 @@ INSERT INTO test_part_integrity_p1 VALUES (1,2),(1,3);
 CREATE EXTERNAL WEB TABLE test_part_integrity_p2 (LIKE test_part_integrity_p1) EXECUTE 'echo 2,2;echo 2,3' ON MASTER FORMAT 'CSV';
 ALTER TABLE test_part_integrity ATTACH PARTITION test_part_integrity_p1 FOR VALUES IN (1);
 ALTER TABLE test_part_integrity ATTACH PARTITION test_part_integrity_p2 FOR VALUES IN (2);
+NOTICE:  partition constraints are not validated when attaching a readable external table
 SELECT * FROM test_part_integrity;
  a | b 
 ---+---
@@ -4960,20 +4961,21 @@ ERROR:  cannot set distribution policy of readable external table "ext_r_dist"
 -- Testing external table as the partition child.
 CREATE TABLE part_root(a int) PARTITION BY RANGE(a);
 CREATE TABLE part_child (LIKE part_root);
-CREATE WRITABLE EXTERNAL WEB TABLE part_ext_w(a int) EXECUTE 'cat > @abs_srcdir@/data/part_ext.tbl' FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ') DISTRIBUTED BY (a);
+CREATE EXTERNAL WEB TABLE part_ext_r(a int) EXECUTE 'cat > @abs_srcdir@/data/part_ext.tbl' FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ');
+CREATE WRITABLE EXTERNAL WEB TABLE part_ext_w(a int, b int) EXECUTE 'cat > @abs_srcdir@/data/part_ext.tbl' FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ') DISTRIBUTED BY (a);
 ALTER TABLE part_root ATTACH PARTITION part_child FOR VALUES FROM (0) TO (10);
-ALTER TABLE part_root ATTACH PARTITION part_ext_w FOR VALUES FROM (10) TO (20);
--- Adding column should work fine
+ALTER TABLE part_root ATTACH PARTITION part_ext_r FOR VALUES FROM (10) TO (20);
+NOTICE:  partition constraints are not validated when attaching a readable external table
+-- Adding column on readable external table should work fine
 ALTER TABLE part_root ADD COLUMN b int;
-INSERT INTO part_root SELECT i,i FROM generate_series(1,19)i;
--- altering distribution policy should work fine 
+-- altering distribution policy on writable external table should work fine
 SELECT policytype, distkey FROM gp_distribution_policy WHERE localoid = 'part_ext_w'::regclass;
  policytype | distkey 
 ------------+---------
  p          | 1
 (1 row)
 
-ALTER TABLE part_root SET DISTRIBUTED BY (b);
+ALTER TABLE part_ext_w SET DISTRIBUTED BY (b);
 SELECT policytype, distkey FROM gp_distribution_policy WHERE localoid = 'part_ext_w'::regclass;
  policytype | distkey 
 ------------+---------
@@ -5013,3 +5015,167 @@ SELECT logerrors from pg_exttable a, pg_class b where a.reloid = b.oid and b.rel
 DROP EXTERNAL TABLE ext_false;
 DROP EXTERNAL TABLE ext_true;
 DROP EXTERNAL TABLE ext_persistently;
+-- test error handling for external table
+CREATE EXTERNAL TABLE ext_divzero (c INT) 
+location ('file://@hostname@@abs_srcdir@/data/eh_divzero.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 2;
+SELECT 6/(c-2) FROM ext_divzero;
+ERROR:  segment reject limit reached, aborting operation  (seg0 slice1 127.0.0.1:7000 pid=19880)
+DETAIL:  Last error was: division by zero
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_divzero') order by cmdtime;
+      errmsg      | rawdata 
+------------------+---------
+ division by zero | 2
+ division by zero | 2
+(2 rows)
+
+DROP EXTERNAL TABLE ext_divzero;
+CREATE EXTERNAL TABLE ext_divzero (c INT) 
+location ('file://@hostname@@abs_srcdir@/data/eh_divzero.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 10;
+SELECT 6/(c-2) FROM ext_divzero;
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
+ ?column? 
+----------
+       -6
+        6
+       -6
+        6
+       -6
+        6
+       -6
+        6
+(8 rows)
+
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_divzero') order by cmdtime;
+      errmsg      | rawdata 
+------------------+---------
+ division by zero | 2
+ division by zero | 2
+ division by zero | 2
+ division by zero | 2
+(4 rows)
+
+DROP EXTERNAL TABLE ext_divzero;
+CREATE EXTERNAL TABLE ext_jsonerror (c json) 
+location ('file://@hostname@@abs_srcdir@/data/eh_json.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 3;
+SELECT (c->>'ip')::inet FROM ext_jsonerror;
+ERROR:  segment reject limit reached, aborting operation  (seg0 slice1 127.0.0.1:7000 pid=19880)
+DETAIL:  Last error was: invalid input syntax for type inet: "12.3    4.56.78"
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_jsonerror') order by cmdtime;
+                          errmsg                          |           rawdata            
+----------------------------------------------------------+------------------------------
+ invalid input syntax for type inet: "54.    198.104.230" | {"ip": "54.    198.104.230"}
+ invalid input syntax for type inet: "33.7   8.125.1"     | {"ip": "33.7   8.125.1"}
+ invalid input syntax for type inet: "12.3    4.56.78"    | {"ip": "12.3    4.56.78"}
+(3 rows)
+
+DROP EXTERNAL TABLE ext_jsonerror;
+CREATE EXTERNAL TABLE ext_jsonerror (c json) 
+location ('file://@hostname@@abs_srcdir@/data/eh_json.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 10;
+SELECT (c->>'ip')::inet FROM ext_jsonerror;
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
+     inet      
+---------------
+ 192.168.1.2
+ 10.0.0.15
+ 172.25.12.10
+ 203.55.10.89
+ 157.230.122.5
+ 214.55.78.31
+(6 rows)
+
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_jsonerror') order by cmdtime;
+                          errmsg                          |           rawdata            
+----------------------------------------------------------+------------------------------
+ invalid input syntax for type inet: "54.    198.104.230" | {"ip": "54.    198.104.230"}
+ invalid input syntax for type inet: "33.7   8.125.1"     | {"ip": "33.7   8.125.1"}
+ invalid input syntax for type inet: "12.3    4.56.78"    | {"ip": "12.3    4.56.78"}
+ invalid input syntax for type inet: "255.255.255.0   "   | {"ip": "255.255.255.0   "}
+(4 rows)
+
+DROP EXTERNAL TABLE ext_jsonerror;
+CREATE EXTERNAL TABLE ext_badjson(a json) 
+location ('file://@hostname@@abs_srcdir@/data/eh_badjson.dat') 
+FORMAT 'text' LOG ERRORS SEGMENT REJECT LIMIT 5;
+SELECT (a->>'9') FROM ext_badjson;
+ERROR:  segment reject limit reached, aborting operation  (seg0 slice1 127.0.0.1:7000 pid=19880)
+DETAIL:  Last error was: unsupported Unicode escape sequence
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_badjson') order by cmdtime;
+               errmsg                |                                rawdata                                
+-------------------------------------+-----------------------------------------------------------------------
+ unsupported Unicode escape sequence | {"0": "\\u0000賖\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000鼣"}
+ unsupported Unicode escape sequence | {"1": "墠琦\\u0000\\u0000滯擿齽\\u0000\\u0000孝"}
+ unsupported Unicode escape sequence | {"2": "\\u0000\\u0000\\u0000\\u0000瀿\\u0000\\u0000\\u0000鯿\\u0000"}
+ unsupported Unicode escape sequence | {"3": "菸蛒\\u0000\\u0000衢\\u0000曰墩\\u0000摤"}
+ unsupported Unicode escape sequence | {"4": "冹\\u0000驞悵姴\\u0000刽牋\\u0000\\u0000"}
+(5 rows)
+
+DROP EXTERNAL TABLE ext_badjson;
+CREATE EXTERNAL TABLE ext_badjson(a json) 
+location ('file://@hostname@@abs_srcdir@/data/eh_badjson.dat') 
+FORMAT 'text' LOG ERRORS SEGMENT REJECT LIMIT 10;
+SELECT (a->>'9') FROM ext_badjson;
+NOTICE:  found 9 data formatting errors (9 or more input rows), rejected related input data
+ ?column? 
+----------
+ yes
+(1 row)
+
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_badjson') order by cmdtime;
+               errmsg                |                                rawdata                                
+-------------------------------------+-----------------------------------------------------------------------
+ unsupported Unicode escape sequence | {"0": "\\u0000賖\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000鼣"}
+ unsupported Unicode escape sequence | {"1": "墠琦\\u0000\\u0000滯擿齽\\u0000\\u0000孝"}
+ unsupported Unicode escape sequence | {"2": "\\u0000\\u0000\\u0000\\u0000瀿\\u0000\\u0000\\u0000鯿\\u0000"}
+ unsupported Unicode escape sequence | {"3": "菸蛒\\u0000\\u0000衢\\u0000曰墩\\u0000摤"}
+ unsupported Unicode escape sequence | {"4": "冹\\u0000驞悵姴\\u0000刽牋\\u0000\\u0000"}
+ unsupported Unicode escape sequence | {"5": "偘\\u0000\\u0000烶\\u0000\\u0000苵討\\u0000逻"}
+ unsupported Unicode escape sequence | {"6": "踀桮\\u0000\\u0000\\u0000\\u0000\\u0000\\u0000肳\\u0000"}
+ unsupported Unicode escape sequence | {"7": "囥\\u0000\\u0000\\u0000\\u0000熴\\u0000誤\\u0000懏"}
+ unsupported Unicode escape sequence | {"8": "\\u0000溓\\u0000屧朳\\u0000\\u0000蜅\\u0000艣"}
+(9 rows)
+
+DROP EXTERNAL TABLE ext_badjson;
+CREATE EXTERNAL TABLE ext_fixed_width_table (
+    id INTEGER,
+    name TEXT,
+    value FLOAT
+)
+LOCATION ('file://@hostname@@abs_srcdir@/data/eh_fixed_width.dat')
+FORMAT 'CUSTOM' (formatter=fixedwidth_in, id='3', name='12', value='7')
+LOG ERRORS SEGMENT REJECT LIMIT 5;
+SELECT * FROM ext_fixed_width_table;
+NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related input data
+ id |    name    | value  
+----+------------+--------
+  1 | JohnDoe    | 123.45
+  2 | JaneSmith  |  678.9
+  3 | AliceJohns |  246.8
+  4 | BobBrown   | 135.79
+(4 rows)
+
+SELECT errmsg, rawdata, rawbytes FROM gp_read_error_log('ext_fixed_width_table') order by cmdtime;
+                                errmsg                                 | rawdata | rawbytes 
+-----------------------------------------------------------------------+---------+----------
+ expected line size from the formatting string is 22, actual size is 0 |         | \x
+(1 row)
+
+select name::json from ext_fixed_width_table;
+ERROR:  segment reject limit reached, aborting operation  (seg0 slice1 127.0.0.1:7000 pid=19880)
+DETAIL:  Last error was: expected line size from the formatting string is 22, actual size is 0
+CONTEXT:  External table ext_fixed_width_table
+SELECT errmsg, rawdata, rawbytes FROM gp_read_error_log('ext_fixed_width_table') order by cmdtime;
+                                errmsg                                 | rawdata |                     rawbytes                     
+-----------------------------------------------------------------------+---------+--------------------------------------------------
+ expected line size from the formatting string is 22, actual size is 0 |         | \x
+ invalid input syntax for type json                                    |         | \x3030314a6f686e446f652020202020303132332e34350a
+ invalid input syntax for type json                                    |         | \x3030324a616e65536d697468202020303637382e39300a
+ invalid input syntax for type json                                    |         | \x303033416c6963654a6f686e732020303234362e38300a
+ invalid input syntax for type json                                    |         | \x303034426f6242726f776e20202020303133352e37390a
+ expected line size from the formatting string is 22, actual size is 0 |         | \x
+(6 rows)
+
+DROP EXTERNAL TABLE ext_fixed_width_table;

@@ -7,7 +7,7 @@ This tool collects Greenplum and system log files, along with the relevant confi
 ```
 gpsupport gp_log_collector [-failed-segs | -c <ID1,ID2,...>| -hostfile <file> | -h <host1, host2,...>]
 [ -start <YYYY-MM-DD> ] [ -end <YYYY-MM-DD> ]
-[ -dir <path> ] [ -segdir <path> ] [ -a ] [-skip-coordinator] [-with-gpbackup] [-with-gptext] [-with-gptext-only] [-with-gpcc] [-with-gpss] [-gpss_logdir <gpss_log_directory>] [-with-pxf] [-with-pxf-only] [-with-gpupgrade]
+[ -dir <path> ] [ -segdir <path> ] [ -a ] [-skip-coordinator] [-with-gpbackup] [-with-gptext] [-with-gptext-only] [-with-gpss] [-gpss_logdir <gpss_log_directory>] [-with-pxf] [-with-pxf-only] [-with-gpupgrade]
 ```
 
 ## <a id="opts"></a>Options 
@@ -72,15 +72,6 @@ Also, the `pg_log` file is collected from the coordinator and segment hosts.
 -with-gptext-only
 :   Collect only GPText logs.
 
--with-gpcc
-:   Collect log files related to Greenplum Command Center. Log files are collected from the following locations:
-
-- `$GPCC_HOME/logs/*`
-- `$GPCC_HOME/conf/app.conf`
-- `$HOME/gpmetrics/*` (Greenplum Command Center 6.8.0 and later on Greenplum Database 6.x or Greenplum Command Center 4.16.0 and later on Greenplum Database 5.x)
-- `$COORDINATOR_DATA_DIRECTORY/gpmetrics` (Greenplum Command Center 6.7.0 and earlier on Greenplum Database 6.x or Greenplum Command Center 4.15.0 and earlier on Greenplum Database 5.x)
-- The output of the `gppkg -q --all` command
-
 -with-gpss 
 :  Collect log files related to Greenplum Streaming Server. If you do not specify a directory with the `-gpsslogdir` option, gpsupport collects logs from the `gpAdminLogs` directory. Log files are of the format `gpss_<date>.log`.
 
@@ -128,6 +119,12 @@ Collect logs from host `sdw2.gpdb.local` between 2016-03-21 and 2016-03-23:
 
 ```
 gpsupport gp_log_collector -failed-segs -start 2016-03-21 -end 2016-03-21
+```
+
+Collect logs from host `sdw2.gpdb.local` between 2023-06-07 07:21 and 2023-06-07 07:24:
+
+```
+ gpsupport gp_log_collector -start 2023-06-07 07:21 -end 2023-06-07 07:24
 ```
 
 Collect only GPText logs for all segments, without any Greenplum logs:

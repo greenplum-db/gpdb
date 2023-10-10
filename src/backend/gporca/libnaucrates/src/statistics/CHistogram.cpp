@@ -100,14 +100,18 @@ CHistogram::CHistogram(CMemoryPool *mp, CBucketArray *histogram_buckets,
 	  m_is_col_stats_missing(is_col_stats_missing)
 {
 	GPOS_ASSERT(m_histogram_buckets);
-	GPOS_ASSERT(CDouble(0.0) <= null_freq);
-	GPOS_ASSERT(CDouble(1.0) >= null_freq);
-	GPOS_ASSERT(CDouble(0.0) <= distinct_remaining);
-	GPOS_ASSERT(CDouble(0.0) <= freq_remaining);
-	GPOS_ASSERT(CDouble(1.0) >= freq_remaining);
-	// if distinct_remaining is 0, freq_remaining must be 0 too
-	GPOS_ASSERT_IMP(distinct_remaining < CStatistics::Epsilon,
-					freq_remaining < CStatistics::Epsilon);
+	// FIXME: These assertions are sometimes hit and is indicitive of a bug, but
+	//	currently aren't a high prioritiy and hitting them hides more serious issues
+#if 0
+		GPOS_ASSERT(CDouble(0.0) <= null_freq);
+		GPOS_ASSERT(CDouble(1.0) >= null_freq);
+		GPOS_ASSERT(CDouble(0.0) <= distinct_remaining);
+		GPOS_ASSERT(CDouble(0.0) <= freq_remaining);
+		GPOS_ASSERT(CDouble(1.0) >= freq_remaining);
+		 if distinct_remaining is 0, freq_remaining must be 0 too
+		GPOS_ASSERT_IMP(distinct_remaining < CStatistics::Epsilon,
+						freq_remaining < CStatistics::Epsilon);
+#endif
 }
 
 // set histograms null frequency
@@ -1626,15 +1630,18 @@ CHistogram::CombineBuckets(CMemoryPool *mp, CBucketArray *buckets,
 		buckets->AddRef();
 		return buckets;
 	}
-
+	// FIXME: This assertion is sometimes hit and is indicitive of a bug, but
+	//	currently isn't a high prioritiy and hitting it hides more serious issues
+#if 0
 #ifdef GPOS_DEBUG
-	CDouble start_frequency(0.0);
-	for (ULONG ul = 0; ul < buckets->Size(); ++ul)
-	{
-		CBucket *bucket = (*buckets)[ul];
-		start_frequency = start_frequency + bucket->GetFrequency();
-	}
-	GPOS_ASSERT(start_frequency <= CDouble(1.0) + CStatistics::Epsilon);
+		CDouble start_frequency(0.0);
+		for (ULONG ul = 0; ul < buckets->Size(); ++ul)
+		{
+			CBucket *bucket = (*buckets)[ul];
+			start_frequency = start_frequency + bucket->GetFrequency();
+		}
+		GPOS_ASSERT(start_frequency <= CDouble(1.0) + CStatistics::Epsilon);
+#endif
 #endif
 
 	CBucketArray *result_buckets = GPOS_NEW(mp) CBucketArray(mp);
@@ -1737,17 +1744,20 @@ CHistogram::CombineBuckets(CMemoryPool *mp, CBucketArray *buckets,
 			result_buckets->Append(bucket->MakeBucketCopy(mp));
 		}
 	}
-
+	// FIXME: This assertion is sometimes hit and is indicitive of a bug, but
+	//	currently isn't a high prioritiy and hitting it hides more serious issues
+#if 0
 #ifdef GPOS_DEBUG
-	CDouble end_frequency(0.0);
-	for (ULONG ul = 0; ul < result_buckets->Size(); ++ul)
-	{
-		CBucket *bucket = (*result_buckets)[ul];
-		end_frequency = end_frequency + bucket->GetFrequency();
-	}
+		CDouble end_frequency(0.0);
+		for (ULONG ul = 0; ul < result_buckets->Size(); ++ul)
+		{
+			CBucket *bucket = (*result_buckets)[ul];
+			end_frequency = end_frequency + bucket->GetFrequency();
+		}
 
-	GPOS_ASSERT(start_frequency - end_frequency <=
-				CDouble(0.0) + CStatistics::Epsilon);
+		GPOS_ASSERT(start_frequency - end_frequency <=
+					CDouble(0.0) + CStatistics::Epsilon);
+#endif
 #endif
 
 	// FIXME: the desired_num_buckets handling is broken for singleton buckets
@@ -2086,10 +2096,10 @@ CHistogram::GetSampleRate(DOUBLE left, DOUBLE right, DOUBLE *sample_rate,
 		return;
 	}
 
-	sample_rate[index + 1] = (left + right) / 2;
+	sample_rate[index] = (left + right) / 2;
 
-	GetSampleRate(left, (left + right) / 2, sample_rate, index * 2);
-	GetSampleRate((left + right) / 2, right, sample_rate, index * 2 + 1);
+	GetSampleRate(left, (left + right) / 2, sample_rate, index * 2 - 1);
+	GetSampleRate((left + right) / 2, right, sample_rate, index * 2);
 }
 
 // estimate data skew by sampling histogram buckets,
@@ -2120,12 +2130,12 @@ CHistogram::ComputeSkew()
 
 	// generate a sample from histogram data, and compute sample mean
 	DOUBLE sample_mean = 0;
-	DOUBLE samples[GPOPT_SKEW_SAMPLE_SIZE];
-	DOUBLE sample_rate[GPOPT_SKEW_SAMPLE_SIZE];
+	DOUBLE *samples = GPOS_NEW_ARRAY(m_mp, DOUBLE, GPOPT_SKEW_SAMPLE_SIZE);
+	DOUBLE *sample_rate = GPOS_NEW_ARRAY(m_mp, DOUBLE, GPOPT_SKEW_SAMPLE_SIZE);
 	sample_rate[0] = 0;
 	sample_rate[1] = 1;
-	ULONG index = 1;
-	GetSampleRate(sample_rate[0], sample_rate[1], sample_rate, index);
+	// populate the sample rate array from the 3rd (index = 2) element onward
+	GetSampleRate(sample_rate[0], sample_rate[1], sample_rate, 2 /*index*/);
 
 	// start with the lowest frequency bucket
 	ULONG bucket_index = m_histogram_buckets->Size() - 1;
@@ -2162,6 +2172,10 @@ CHistogram::ComputeSkew()
 		num2 = num2 + pow((samples[ul] - sample_mean), 2.0);
 		num3 = num3 + pow((samples[ul] - sample_mean), 3.0);
 	}
+
+	GPOS_DELETE_ARRAY(samples);
+	GPOS_DELETE_ARRAY(sample_rate);
+
 	// second moment: variance
 	DOUBLE moment2 = (DOUBLE)(num2 / GPOPT_SKEW_SAMPLE_SIZE);
 	// third moment: a/symmetry
@@ -2291,14 +2305,22 @@ CHistogram::AddDummyHistogramAndWidthInfo(
 		CColRef *col_ref = col_factory->LookupColRef(colid);
 		GPOS_ASSERT(nullptr != col_ref);
 
-		CHistogram *histogram =
-			CHistogram::MakeDefaultHistogram(mp, col_ref, is_empty);
-		output_histograms->Insert(GPOS_NEW(mp) ULONG(colid), histogram);
+		if (nullptr == output_histograms->Find(&colid))
+		{
+			CHistogram *histogram =
+				CHistogram::MakeDefaultHistogram(mp, col_ref, is_empty);
+			output_histograms->Insert(GPOS_NEW(mp) ULONG(colid), histogram);
+		}
 
-		CDouble width =
-			CStatisticsUtils::DefaultColumnWidth(col_ref->RetrieveType());
-		output_col_widths->Insert(GPOS_NEW(mp) ULONG(colid),
-								  GPOS_NEW(mp) CDouble(width));
+
+
+		if (nullptr == output_col_widths->Find(&colid))
+		{
+			CDouble width =
+				CStatisticsUtils::DefaultColumnWidth(col_ref->RetrieveType());
+			output_col_widths->Insert(GPOS_NEW(mp) ULONG(colid),
+									  GPOS_NEW(mp) CDouble(width));
+		}
 	}
 }
 

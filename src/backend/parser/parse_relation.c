@@ -1305,7 +1305,7 @@ addRangeTableEntry(ParseState *pstate,
 		lockmode = pstate->p_canOptSelectLockingClause ? RowShareLock : ExclusiveLock;
 		if (lockmode == ExclusiveLock && locking->waitPolicy != LockWaitBlock)
 			ereport(WARNING,
-					(errmsg("Upgrade the lockmode to ExclusiveLock on table(%s) and ingore the wait policy.",
+					(errmsg("Upgrade the lockmode to ExclusiveLock on table(%s) and ignore the wait policy.",
 					 RelationGetRelationName(rel))));
 
 		heap_close(rel, NoLock);

@@ -24,7 +24,7 @@ else
 installcheck: gpdiff.pl gpstringsubs.pl
 	@echo "doing test in OS: "; echo $(TEST_OS)
 	@cd gpload && ./TEST.py
-	@cd gpload2 && PYTHONIOENCODING=utf-8 pytest TEST_local_*
+	@cd gpload2 && export PGSSLMODE=disable && PYTHONIOENCODING=utf-8 pytest TEST_local_*
 endif
 
 clean distclean:

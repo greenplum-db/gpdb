@@ -6,6 +6,7 @@ CREATE DATABASE reuse_gptest;
 
 CREATE SCHEMA test;
 CREATE SCHEMA "EXT_schema_test";
+CREATE SCHEMA "spiegelungssätze";
 
 set client_min_messages='warning';
 DROP EXTERNAL TABLE IF EXISTS temp_gpload_staging_table;

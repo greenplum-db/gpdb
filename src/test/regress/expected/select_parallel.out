@@ -1,7 +1,7 @@
 --
 -- PARALLEL
 --
--- GPDB_96_MERGE_FIXME: We don't support parallel query. These tests won't actually
+-- GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: We don't support parallel query. These tests won't actually
 -- generate any parallel plans. Should we pay attention to the parallel restrictions
 -- when creating MPP plans? For example, should we force parallel restricted functions
 -- to run in the QD?
@@ -535,7 +535,6 @@ BEGIN
 EXCEPTION WHEN invalid_parameter_value THEN
 END $$;
 set work_mem='64kB';  --set small work mem to force lossy pages
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 explain (costs off)
 	select count(*) from tenk1, tenk2 where tenk1.hundred > 1 and tenk2.thousand=0;
                                   QUERY PLAN                                  
@@ -595,7 +594,6 @@ explain (analyze, timing off, summary off, costs off)
 
 alter table tenk2 reset (parallel_workers);
 reset work_mem;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 create function explain_parallel_sort_stats() returns setof text
 language plpgsql as
 $$

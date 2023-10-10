@@ -13,7 +13,6 @@ class GpBuild:
         self.mode = 'on' if mode == 'orca' else 'off'
         self.configure_options =  [
                                     "--enable-gpcloud",
-                                    "--enable-mapreduce",
                                     "--enable-orafce",
                                     "--enable-tap-tests",
                                     "--with-gssapi",
@@ -78,12 +77,12 @@ class GpBuild:
                 fail_on_error(status)
 
         # set gucs if any were specified
-        self._run_cmd("source gpdb_src/gpAux/gpdemo/gpdemo-env.sh && cat gporca-commits-to-test/optional_gucs.txt >> $COORDINATOR_DATA_DIRECTORY/postgresql.conf", None)
+        status = self._run_cmd("source gpdb_src/gpAux/gpdemo/gpdemo-env.sh && cat gporca-commits-to-test/optional_gucs.txt >> $COORDINATOR_DATA_DIRECTORY/postgresql.conf", None)
         fail_on_error(status)
         # use 32 segments for explain tests (this number is fairly arbitrary, it might be better to make this dependent on the workload?)
-        self._run_cmd("source gpdb_src/gpAux/gpdemo/gpdemo-env.sh && echo 'optimizer_segments=32\ngp_segments_for_planner=32' >> $COORDINATOR_DATA_DIRECTORY/postgresql.conf", None)
+        status = self._run_cmd("source gpdb_src/gpAux/gpdemo/gpdemo-env.sh && echo 'optimizer_segments=32\ngp_segments_for_planner=32' >> $COORDINATOR_DATA_DIRECTORY/postgresql.conf", None)
         fail_on_error(status)
-        self._run_gpdb_command("gpstop -ar")
+        status = self._run_gpdb_command("gpstop -ar")
         fail_on_error(status)
 
         # Now run the queries !!

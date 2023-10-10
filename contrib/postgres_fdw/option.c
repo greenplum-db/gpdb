@@ -22,7 +22,7 @@
 #include "commands/extension.h"
 #include "utils/builtins.h"
 #include "utils/varlena.h"
-
+#include "cdb/cdbutil.h"
 
 /*
  * Describes the valid options for objects that this wrapper uses.
@@ -68,6 +68,7 @@ postgres_fdw_validator(PG_FUNCTION_ARGS)
 	List	   *options_list = untransformRelOptions(PG_GETARG_DATUM(0));
 	Oid			catalog = PG_GETARG_OID(1);
 	ListCell   *cell;
+	List		*host_list = NIL, *port_list = NIL;
 
 	/* Build our options lists if we didn't yet. */
 	InitPgFdwOptions();
@@ -146,7 +147,34 @@ postgres_fdw_validator(PG_FUNCTION_ARGS)
 						 errmsg("\"%s\" must be an integer value greater than zero",
 								def->defname)));
 		}
+		else if (strcmp(def->defname, "multi_hosts") == 0)
+		{
+			char *tokenizer = NULL;
+			char *multi_hosts = pstrdup(defGetString(def));
+			char *one_host = strtok_r(multi_hosts, " ", &tokenizer);
+			while (one_host)
+			{
+				host_list = lappend(host_list, makeString(one_host));
+				one_host = strtok_r(NULL, " ", &tokenizer);
+			}
+		}
+		else if (strcmp(def->defname, "multi_ports") == 0)
+		{
+			char *tokenizer = NULL;
+			char *multi_ports = pstrdup(defGetString(def));
+			char *one_port = strtok_r(multi_ports, " ", &tokenizer);
+			while (one_port != NULL)
+			{
+				port_list = lappend(port_list, makeString(one_port));
+				one_port = strtok_r(NULL, " ", &tokenizer);
+			}
+		}
 	}
+
+	if (list_length(host_list) != list_length(port_list))
+		ereport(ERROR,
+				(errcode(ERRCODE_FDW_INVALID_ATTRIBUTE_VALUE),
+				 errmsg("The number of hosts and ports don't match in option 'multi_hosts' and 'multi_ports'.")));
 
 	PG_RETURN_VOID();
 }
@@ -180,6 +208,9 @@ InitPgFdwOptions(void)
 		/* fetch_size is available on both server and table */
 		{"fetch_size", ForeignServerRelationId, false},
 		{"fetch_size", ForeignTableRelationId, false},
+		/* hosts and ports are avaiable on server only */
+		{"multi_hosts", ForeignServerRelationId, false},
+		{"multi_ports", ForeignServerRelationId, false},
 		{NULL, InvalidOid, false}
 	};
 

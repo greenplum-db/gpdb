@@ -50,6 +50,7 @@
 #include "nodes/plannodes.h"
 #include "nodes/readfuncs.h"
 
+#include "cdb/cdbaocsam.h"
 #include "cdb/cdbgang.h"
 #include "nodes/altertablenodes.h"
 #include "utils/builtins.h"
@@ -114,33 +115,6 @@
 
 /* Read an OID field (don't hard-wire assumption that OID is same as uint) */
 #define READ_OID_FIELD(fldname)     READ_SCALAR_FIELD(fldname, atooid(token))
-
-/*
- * extended_char
- *    In GPDB some structures have char fields with non-printing characters
- *    in them.  '\0' is problematic in particular because it ends debugging
- *    displays of nodes.  It is a bad practice, but hard to stem.  This
- *    function used in readfuncs.c READ_CHAR_FIELD is the inverse of the
- *    character output format in outfuncs.c WRITE_CHAR_FIELD.  A length
- *    one token is translated as before.  A longer token is taken as the
- *    decimal code of the desired character.  (The only zero length token,
- *    <>, should not appear in a character field.)
- */
-inline static char extended_char(char* token, size_t length)
-{
-	char c, *s;
-
-	if ( length == 1 )
-		return *token;
-
-	s = debackslash(token, length);
-	if ( strlen(s) == 1 )
-		c = s[0];
-	else
-		c = (char)strtoul(s, NULL, 10);
-	pfree(s);
-	return c;
-}
 
 /* Read a char field (ie, one ascii character) */
 #define READ_CHAR_FIELD(fldname) \
@@ -874,6 +848,7 @@ _readTruncateStmt(void)
 	READ_LOCALS(TruncateStmt);
 
 	READ_NODE_FIELD(relations);
+	READ_BOOL_FIELD(restart_seqs);
 	READ_ENUM_FIELD(behavior,DropBehavior);
 
 	READ_DONE();
@@ -983,6 +958,7 @@ _readAlteredTableInfo(void)
 
 	READ_STRING_FIELD(replicaIdentityIndex);
 	READ_STRING_FIELD(clusterOnIndex);
+	READ_NODE_FIELD(repack_cols);
 
 	READ_DONE();
 }
@@ -1012,6 +988,8 @@ _readNewColumnValue(void)
 	READ_NODE_FIELD(expr);
 	/* can't serialize exprstate */
 	READ_BOOL_FIELD(is_generated);
+	READ_NODE_FIELD(new_encoding);
+	READ_ENUM_FIELD(op, AOCSWriteColumnOperation);
 
 	READ_DONE();
 }
@@ -2794,10 +2772,22 @@ readIndexScanFields(IndexScan *local_node)
 /*
  * _readIndexOnlyScan
  */
+static void readIndexOnlyScanFields(IndexOnlyScan *local_node);
+
 static IndexOnlyScan *
 _readIndexOnlyScan(void)
 {
-	READ_LOCALS(IndexOnlyScan);
+	READ_LOCALS_NO_FIELDS(IndexOnlyScan);
+
+	readIndexOnlyScanFields(local_node);
+
+	READ_DONE();
+}
+
+static void
+readIndexOnlyScanFields(IndexOnlyScan *local_node)
+{
+	READ_TEMP_LOCALS();
 
 	ReadCommonScan(&local_node->scan);
 
@@ -2807,7 +2797,18 @@ _readIndexOnlyScan(void)
 	READ_NODE_FIELD(indexorderby);
 	READ_NODE_FIELD(indextlist);
 	READ_ENUM_FIELD(indexorderdir, ScanDirection);
+}
 
+static DynamicIndexOnlyScan *
+_readDynamicIndexOnlyScan(void)
+{
+	READ_LOCALS(DynamicIndexOnlyScan);
+
+	/* DynamicIndexScan has some content from IndexScan. */
+	readIndexOnlyScanFields(&local_node->indexscan);
+	READ_NODE_FIELD(partOids);
+	READ_NODE_FIELD(part_prune_info);
+	READ_NODE_FIELD(join_prune_paramids);
 	READ_DONE();
 }
 
@@ -3115,8 +3116,6 @@ ReadCommonJoin(Join *local_node)
 	ReadCommonPlan(&local_node->plan);
 
 	READ_BOOL_FIELD(prefetch_inner);
-	READ_BOOL_FIELD(prefetch_joinqual);
-	READ_BOOL_FIELD(prefetch_qual);
 
 	READ_ENUM_FIELD(jointype, JoinType);
 	READ_BOOL_FIELD(inner_unique);
@@ -3485,7 +3484,6 @@ _readPlanRowMark(void)
 	READ_ENUM_FIELD(strength, LockClauseStrength);
 	READ_ENUM_FIELD(waitPolicy, LockWaitPolicy);
 	READ_BOOL_FIELD(isParent);
-	READ_BOOL_FIELD(canOptSelectLockingClause);
 
 	READ_DONE();
 }
@@ -4633,6 +4631,8 @@ parseNodeString(void)
 		return_value = _readIndexScan();
 	else if (MATCH("DYNAMICINDEXSCAN", 16))
 		return_value = _readDynamicIndexScan();
+	else if (MATCH("DYNAMICINDEXONLYSCAN", 20))
+		return_value = _readDynamicIndexOnlyScan();
 	else if (MATCH("INDEXONLYSCAN", 13))
 		return_value = _readIndexOnlyScan();
 	else if (MATCH("BITMAPINDEXSCAN", 15))

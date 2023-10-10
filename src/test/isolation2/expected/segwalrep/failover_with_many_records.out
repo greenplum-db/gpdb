@@ -16,7 +16,7 @@
 (exited with code 0)
 
 1:CREATE TABLE t(a int, b int);
-CREATE
+CREATE TABLE
 
 1:SELECT gp_inject_fault_infinite('checkpoint_after_redo_calculated', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
  gp_inject_fault_infinite 
@@ -25,14 +25,14 @@ CREATE
 (1 row)
 2&:CHECKPOINT;  <waiting ...>
 3:INSERT INTO t VALUES (1, 0);
-INSERT 1
+INSERT 0 1
 
 -- Force WAL to switch wal files explicitly
 -- start_ignore
 1U:SELECT pg_switch_wal();
 -- end_ignore
 3:INSERT INTO t SELECT 0, i FROM generate_series(1, 25)i;
-INSERT 25
+INSERT 0 25
 
 1:SELECT gp_inject_fault_infinite('checkpoint_after_redo_calculated', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 1;
  gp_inject_fault_infinite 

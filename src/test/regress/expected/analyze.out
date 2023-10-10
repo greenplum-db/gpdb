@@ -1,6 +1,8 @@
 -- start_matchsubs
 -- m/Executing SQL: select pg_catalog.gp_acquire_sample_rows\(\d+, \d+, \'t\'\);/
 -- s/Executing SQL: select pg_catalog.gp_acquire_sample_rows\(\d+, \d+, \'t\'\);/Executing SQL: select pg_catalog.gp_acquire_sample_rows\(XXX, XXX, \'t\'\)/;
+-- m/Executing SQL: select pg_catalog.gp_acquire_sample_rows\(\d+, \d+, \'f\'\);/
+-- s/Executing SQL: select pg_catalog.gp_acquire_sample_rows\(\d+, \d+, \'f\'\);/Executing SQL: select pg_catalog.gp_acquire_sample_rows\(XXX, XXX, \'f\'\)/;
 -- end_matchsubs
 DROP DATABASE IF EXISTS testanalyze;
 CREATE DATABASE testanalyze;
@@ -1149,8 +1151,39 @@ SELECT correlation FROM pg_stats WHERE tablename ='analyze_table';
 (2 rows)
 
 -- test6: randomly table
+-- we use weighted mean algorithm to calculate correlations.
+-- the formula for calculating the weighted mean is:
+-- sum(correlationOnSeg[i] * (totalRowsOnSeg[i] / totalRows))
+-- i is from 0 to N. N is the number of segments.
+-- however, for randomly table the data in each segment may diff each time.
+-- it will affect the value of correlation.
+-- So ignore the results
 drop table analyze_table;
 create table analyze_table(tc1 int,tc2 int) distributed randomly;
+insert into analyze_table select i,i from generate_series(1,100) i;
+analyze analyze_table;
+-- start_ignore
+SELECT correlation FROM pg_stats WHERE tablename ='analyze_table';
+ correlation 
+-------------
+           1
+           1
+(2 rows)
+
+-- end_ignore
+alter table analyze_table drop column tc1;
+analyze analyze_table;
+-- start_ignore
+SELECT correlation FROM pg_stats WHERE tablename ='analyze_table';
+ correlation 
+-------------
+           1
+(1 row)
+
+-- end_ignore
+-- test7: replicated table
+drop table analyze_table;
+create table analyze_table(tc1 int,tc2 int) distributed replicated;
 insert into analyze_table select i,i from generate_series(1,100) i;
 analyze analyze_table;
 SELECT correlation FROM pg_stats WHERE tablename ='analyze_table';
@@ -1160,15 +1193,15 @@ SELECT correlation FROM pg_stats WHERE tablename ='analyze_table';
            1
 (2 rows)
 
-alter table analyze_table drop column tc1;
 analyze analyze_table;
 SELECT correlation FROM pg_stats WHERE tablename ='analyze_table';
  correlation 
 -------------
            1
-(1 row)
+           1
+(2 rows)
 
--- test7: inherit table
+-- test8: inherit table
 drop table analyze_parent cascade;
 ERROR:  table "analyze_parent" does not exist
 create table analyze_parent (tc1 int,tc2 int);
@@ -1191,7 +1224,7 @@ SELECT correlation,attname,inherited FROM pg_stats WHERE tablename ='analyze_chi
 -------------+---------+-----------
 (0 rows)
 
--- test8: partition table test
+-- test9: partition table test
 CREATE TABLE partition_table (
     tc1 int,
     tc2 int
@@ -1242,3 +1275,67 @@ SELECT correlation,attname,inherited FROM pg_stats WHERE tablename ='partition_t
            1 | tc2     | f
 (2 rows)
 
+--
+-- Test analyze for table with maximum float8 value 1.7976931348623157e+308
+-- There should be no "ERROR:  value out of range: overflow"
+--
+set extra_float_digits to 0;
+create table test_max_float8(a double precision);
+insert into test_max_float8 values(1.7976931348623157e+308);
+analyze test_max_float8;
+drop table test_max_float8;
+reset extra_float_digits;
+-- test analyze when table has large column
+create table ttt_large_column(tc1 int,tc2 char(1500),tc3 char(1500));
+insert into ttt_large_column select i,repeat('wwweereeer',150),repeat('ssddbbbbbb',150) from generate_series(1,5) i;
+analyze ttt_large_column;
+drop table ttt_large_column;
+--test analyze replicated table
+create table analyze_replicated(tc1 int,tc2 int) distributed replicated;
+insert into analyze_replicated select i, i from generate_series(1,1000) i;
+analyze analyze_replicated;
+drop table analyze_replicated;
+--
+-- Analyzing a leaf partition should not sample midlevel partition unless
+-- optimizer_analyze_midlevel_partition is set to On.
+--
+create table multipart(a int)  partition by range(a);
+create table part2(a int) partition by range(a);
+create table part3(a int) partition by range(a);
+create table p1(a int);
+create table p2(a int);
+create table p3(a int);
+create table p4(a int);
+alter table multipart attach partition part2 for values from (0) to (10);
+alter table multipart attach partition part3 for values from (10) to (20);
+alter table part2 attach partition p1 for values from (0) to (5);
+alter table part2 attach partition p2 for values from (5) to (10);
+alter table part3 attach partition p3 for values from (10) to (15);
+alter table part3 attach partition p4 for values from (15) to (20);
+insert into multipart select i%20 from generate_series(1,20)i;
+set optimizer_analyze_root_partition=on;
+set optimizer_analyze_midlevel_partition=off;
+analyze verbose p1;
+INFO:  analyzing "public.p1"
+INFO:  Executing SQL: select pg_catalog.gp_acquire_sample_rows(24981, 10000, 'f');
+analyze verbose p2;
+INFO:  analyzing "public.p2"
+INFO:  Executing SQL: select pg_catalog.gp_acquire_sample_rows(24984, 10000, 'f');
+select * from pg_stats where tablename like 'part2';
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
+(0 rows)
+
+set optimizer_analyze_midlevel_partition=on;
+analyze verbose p2;
+INFO:  analyzing "public.p2"
+INFO:  Executing SQL: select pg_catalog.gp_acquire_sample_rows(24984, 10000, 'f');
+INFO:  analyzing "public.part2" inheritance tree
+INFO:  Executing SQL: select pg_catalog.gp_acquire_sample_rows(24975, 10000, 't');
+select * from pg_stats where tablename like 'part2';
+ schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs |   histogram_bounds    | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
+------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+-----------------------+-------------+-------------------+------------------------+----------------------
+ public     | part2     | a       | t         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4,5,6,7,8,9} |  0.33333334 |                   |                        | 
+(1 row)
+
+drop table multipart cascade;

@@ -160,6 +160,13 @@ private:
 			m_fUsed = false;
 		}
 
+		// mark CTE as used
+		void
+		MarkUsed()
+		{
+			m_fUsed = true;
+		}
+
 		// add given columns to consumers column map
 		void AddConsumerCols(CColRefArray *colref_array);
 

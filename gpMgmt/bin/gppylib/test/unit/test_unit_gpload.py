@@ -33,8 +33,11 @@ class GpLoadTestCase(unittest.TestCase):
         print(gpload_param)
         gploader = gpload(gpload_param)
         gploader.read_config()
-        gploader.db = self
-        gploader.db.query = Mock(side_effect=self.mockQuery)
+        gploader.conn = Mock()
+        gploader.conn.cursor.return_value = Mock()
+        gploader.conn.cursor.return_value.__enter__ = Mock(return_value=Mock(spec=['fetchall', 'execute']))
+        gploader.conn.cursor.return_value.__exit__ = Mock(return_value=False)
+        gploader.conn.cursor.return_value.__enter__.return_value.execute = Mock(side_effect=self.mockQuery)
         gploader.do_method_merge = Mock(side_effect=self.mockDoNothing)
         gploader.do_method_update = Mock(side_effect=self.mockDoNothing)
         gploader.do_method_insert = Mock(side_effect=self.mockDoNothing)
@@ -70,13 +73,13 @@ class GpLoadTestCase(unittest.TestCase):
 
     def test_case_insert_transaction(self):
         self.help_test_with_config(['-f', os.path.join(os.path.dirname(__file__), 'gpload_insert.yml')],
-                              False,
-                              False)
+                              True,
+                              True)
 
     def test_case_insert_transaction_t(self):
         self.help_test_with_config(['-f', os.path.join(os.path.dirname(__file__), 'gpload_insert.yml')],
-                              False,
-                              False)
+                              True,
+                              True)
 
     def test_case_insert_without_transaction(self):
         self.help_test_with_config(['--no_auto_trans', '-f', os.path.join(os.path.dirname(__file__), 'gpload_insert.yml')],

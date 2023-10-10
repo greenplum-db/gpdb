@@ -321,6 +321,9 @@ private:
 
 	CExpression *PexprSortGroupClause(const CDXLNode *pdxlnSortGroupClause);
 
+	// translate a DXL FieldSelect node into a FieldSelect expression
+	CExpression *PexprFieldSelect(const CDXLNode *pdxlnConst);
+
 	// translate a DXL project list node into a project list expression
 	CExpression *PexprScalarProjList(const CDXLNode *proj_list_dxlnode);
 

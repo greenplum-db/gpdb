@@ -4,10 +4,10 @@ The `pg_attrdef` table stores column default values. The main information about 
 
 |column|type|references|description|
 |------|----|----------|-----------|
+|`oid`|oid||The object ID|
 |`adrelid`|oid|pg\_class.oid|The table this column belongs to|
-|`adnum`|int2|pg\_attribute.attnum|The number of the column|
-|`adbin`|text| |The internal representation of the column default value|
-|`adsrc`|text| |A human-readable representation of the default value. This field is historical, and is best not used.|
+|`adnum`|smallint|pg\_attribute.attnum|The number of the column|
+|`adbin`|pg_node_tree| |The internal representation of the column default value|
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

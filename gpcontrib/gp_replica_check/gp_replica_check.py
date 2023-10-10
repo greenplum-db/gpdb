@@ -39,8 +39,7 @@ import threading
 import pipes  # for shell-quoting, pipes.quote()
 import os
 from collections import defaultdict
-from pg import DB
-
+import psycopg2
 
 def run_sql(sql, host=None, port=None,
             dbname="postgres", is_query=True,
@@ -50,10 +49,15 @@ def run_sql(sql, host=None, port=None,
     if port is None:
         port = int(os.getenv("PGPORT"))
     opt = "-c gp_role=utility" if is_utility else None
-    with DB(dbname=dbname, host=host, port=port, opt=opt) as db:
-        r = db.query(sql)
-        if is_query:
-            return r.getresult()
+    try:
+        with psycopg2.connect(dbname=dbname, host=host, port=port, options=opt) as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                if is_query:
+                    resultList = cur.fetchall()
+                    return resultList
+    except Exception as e:
+        print('Exception: %s while running query %s dbname = %s' % (e, sql, dbname))
 
 
 class ReplicaCheck(threading.Thread):
@@ -66,7 +70,7 @@ class ReplicaCheck(threading.Thread):
         self.ploc = segrow[4]
         self.mloc = segrow[5]
         self.datname = datname
-        self.relation_types = relation_types;
+        self.relation_types = relation_types
         self.result = False
         self.lock = threading.Lock()
 
@@ -81,8 +85,8 @@ Mirror  Location: %s' % (self.getName(), self.host, self.port, self.datname,
             print("Primary segment for content %d is down" % self.content)
         else:
             try:
-                sql = "select * from gp_replica_check('%s', '%s', '%s')" % (self.ploc, self.mloc, self.relation_types)
-                res = run_sql(sql, host=self.host, port=self.port, is_utility=True)
+                sql = "select * from public.gp_replica_check('%s', '%s', '%s')" % (self.ploc, self.mloc, self.relation_types)
+                res = run_sql(sql, host=self.host, port=self.port, is_utility=True, dbname=self.datname)
                 self.result = True if res and res[0] and res[0][0] else False
                 with self.lock:
                     print(self)
@@ -101,6 +105,48 @@ def create_restartpoint_on_ckpt_record_replay(set):
         cmd = "gpconfig -c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation && gpstop -u"
     else:
         cmd = "gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation && gpstop -u"
+    print(cmd)
+    try:
+        res = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode()
+        print(res)
+    except subprocess.CalledProcessError as e:
+        print('returncode: (%s), cmd: (%s), output: (%s)' % (e.returncode, e.cmd, e.output))
+        if set:
+            print('''guc setting with gpconfig & then updating with "gpstop -u" failed.
+Probably there are some nodes could not be brought up and thus we
+can not run the test. That is probably because previous tests cause
+the instability of the cluster (indicate a bug usually) or because more time
+is needed for the cluster to be ready due to heavy load (consider increasing
+timeout configurations for this case). In any case we just fail and skip
+the test. Please check the server logs to find why.''')
+        sys.exit(2)
+
+def disable_autovacuum(set):
+    if set:
+        cmd = "gpconfig -c autovacuum -v off && gpstop -u"
+    else:
+        cmd = "gpconfig -r autovacuum && gpstop -u"
+    print(cmd)
+    try:
+        res = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode()
+        print(res)
+    except subprocess.CalledProcessError as e:
+        print('returncode: (%s), cmd: (%s), output: (%s)' % (e.returncode, e.cmd, e.output))
+        if set:
+            print('''guc setting with gpconfig & then updating with "gpstop -u" failed.
+Probably there are some nodes could not be brought up and thus we
+can not run the test. That is probably because previous tests cause
+the instability of the cluster (indicate a bug usually) or because more time
+is needed for the cluster to be ready due to heavy load (consider increasing
+timeout configurations for this case). In any case we just fail and skip
+the test. Please check the server logs to find why.''')
+        sys.exit(2)
+
+def disable_bgwriter(set):
+    if set:
+        cmd = "gpconfig -c bgwriter_lru_maxpages -v 0 --skipvalidation && gpstop -u"
+    else:
+        cmd = "gpconfig -r bgwriter_lru_maxpages --skipvalidation && gpstop -u"
     print(cmd)
     try:
         res = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).decode()
@@ -199,6 +245,10 @@ def defargs():
 if __name__ == '__main__':
     args = defargs()
     install_extension(args.databases)
+    disable_autovacuum(set=True)
+    disable_bgwriter(set=True)
     create_restartpoint_on_ckpt_record_replay(True)
     start_verification(get_segments(), get_databases(args.databases), args.relation_types)
+    disable_autovacuum(set=False)
+    disable_bgwriter(set=False)
     create_restartpoint_on_ckpt_record_replay(False)

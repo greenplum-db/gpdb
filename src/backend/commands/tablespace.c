@@ -95,8 +95,10 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
+#include "utils/resource_manager.h"
 #include "utils/tarrable.h"
 #include "utils/varlena.h"
+#include "utils/resgroup.h"
 
 #include "catalog/heap.h"
 #include "catalog/oid_dispatch.h"
@@ -357,12 +359,13 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 	 * Disallow creation of tablespaces named "pg_xxx"; we reserve this
 	 * namespace for system purposes.
 	 */
-	if (!allowSystemTableMods && IsReservedName(stmt->tablespacename))
+	if (!allowSystemTableMods && (IsReservedName(stmt->tablespacename) || IsReservedGpName(stmt->tablespacename)))
 		ereport(ERROR,
 				(errcode(ERRCODE_RESERVED_NAME),
 				 errmsg("unacceptable tablespace name \"%s\"",
 						stmt->tablespacename),
-				 errdetail("The prefix \"pg_\" is reserved for system tablespaces.")));
+				 errdetail("The prefix \"%s\" is reserved for system tablespaces.",
+						GetReservedPrefix(stmt->tablespacename))));
 
 	/*
 	 * If built with appropriate switch, whine when regression-testing
@@ -662,6 +665,9 @@ DropTableSpace(DropTableSpaceStmt *stmt)
 						tablespacename),
 				 errdetail_internal("%s", detail),
 				 errdetail_log("%s", detail_log)));
+
+	if (IsResGroupEnabled() && Gp_resource_manager_policy == RESOURCE_MANAGER_POLICY_GROUP_V2)
+		checkTablespaceInIOlimit(tablespaceoid, true);
 
 	/* DROP hook for the tablespace being removed */
 	InvokeObjectDropHook(TableSpaceRelationId, tablespaceoid, 0);
@@ -1364,7 +1370,7 @@ RenameTableSpace(const char *oldname, const char *newname)
 		aclcheck_error(ACLCHECK_NO_PRIV, OBJECT_TABLESPACE, oldname);
 
 	/* Validate new name */
-	if (!allowSystemTableMods && IsReservedName(newname))
+	if (!allowSystemTableMods && (IsReservedName(newname) || IsReservedGpName(newname)))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_RESERVED_NAME),

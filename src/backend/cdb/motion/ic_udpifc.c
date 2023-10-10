@@ -190,17 +190,6 @@ struct ConnHashTable
 								(a)->srcPid == (b)->srcPid &&			\
 								(a)->dstPid == (b)->dstPid && (a)->icId == (b)->icId))
 
-
-/*
- * Cursor IC table definition.
- *
- * For cursor case, there may be several concurrent interconnect
- * instances on QD. The table is used to track the status of the
- * instances, which is quite useful for "ACK the past and NAK the future" paradigm.
- *
- */
-#define CURSOR_IC_TABLE_SIZE (128)
-
 /*
  * CursorICHistoryEntry
  *
@@ -233,8 +222,9 @@ struct CursorICHistoryEntry
 typedef struct CursorICHistoryTable CursorICHistoryTable;
 struct CursorICHistoryTable
 {
+	uint32		size;
 	uint32		count;
-	CursorICHistoryEntry *table[CURSOR_IC_TABLE_SIZE];
+	CursorICHistoryEntry **table;
 };
 
 /*
@@ -284,6 +274,13 @@ struct ReceiveControlInfo
 
 	/* Cursor history table. */
 	CursorICHistoryTable cursorHistoryTable;
+
+	/*
+	 * Last distributed transaction id when SetupUDPInterconnect is called.
+	 * Coupled with cursorHistoryTable, it is used to handle multiple
+	 * concurrent cursor cases.
+	 */
+	DistributedTransactionId lastDXatId;
 };
 
 /*
@@ -641,6 +638,9 @@ typedef struct ICStatistics
 /* Statistics for UDP interconnect. */
 static ICStatistics ic_statistics;
 
+static struct addrinfo udp_dummy_packet_addrinfo;
+static struct sockaddr udp_dummy_packet_sockaddr;
+
 /*=========================================================================
  * STATIC FUNCTIONS declarations
  */
@@ -664,7 +664,8 @@ static void SendDummyPacket(void);
 
 static void getSockAddr(struct sockaddr_storage *peer, socklen_t *peer_len, const char *listenerAddr, int listenerPort);
 static uint32 setUDPSocketBufferSize(int ic_socket, int buffer_type);
-static void setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily);
+static void setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort,
+							int *txFamily, struct addrinfo *listenerAddrinfo, struct sockaddr *listenerSockaddr);
 static ChunkTransportStateEntry *startOutgoingUDPConnections(ChunkTransportState *transportStates,
 							ExecSlice *sendSlice,
 							int *pOutgoingCount);
@@ -924,8 +925,13 @@ dumpTransProtoStats()
 static void
 initCursorICHistoryTable(CursorICHistoryTable *t)
 {
+	MemoryContext old;
 	t->count = 0;
-	memset(t->table, 0, sizeof(t->table));
+	t->size = Gp_interconnect_cursor_ic_table_size;
+
+	old = MemoryContextSwitchTo(ic_control_info.memContext);
+	t->table = palloc0(sizeof(struct CursorICHistoryEntry *) * t->size);
+	MemoryContextSwitchTo(old);
 }
 
 /*
@@ -937,7 +943,7 @@ addCursorIcEntry(CursorICHistoryTable *t, uint32 icId, uint32 cid)
 {
 	MemoryContext old;
 	CursorICHistoryEntry *p;
-	uint32		index = icId % CURSOR_IC_TABLE_SIZE;
+	uint32		index = icId % t->size;
 
 	old = MemoryContextSwitchTo(ic_control_info.memContext);
 	p = palloc0(sizeof(struct CursorICHistoryEntry));
@@ -967,7 +973,7 @@ static void
 updateCursorIcEntry(CursorICHistoryTable *t, uint32 icId, uint8 status)
 {
 	struct CursorICHistoryEntry *p;
-	uint8		index = icId % CURSOR_IC_TABLE_SIZE;
+	uint8		index = icId % t->size;
 
 	for (p = t->table[index]; p; p = p->next)
 	{
@@ -988,7 +994,7 @@ static CursorICHistoryEntry *
 getCursorIcEntry(CursorICHistoryTable *t, uint32 icId)
 {
 	struct CursorICHistoryEntry *p;
-	uint8		index = icId % CURSOR_IC_TABLE_SIZE;
+	uint8		index = icId % t->size;
 
 	for (p = t->table[index]; p; p = p->next)
 	{
@@ -1010,7 +1016,7 @@ pruneCursorIcEntry(CursorICHistoryTable *t, uint32 icId)
 {
 	uint8		index;
 
-	for (index = 0; index < CURSOR_IC_TABLE_SIZE; index++)
+	for (index = 0; index < t->size; index++)
 	{
 		struct CursorICHistoryEntry *p,
 				   *q;
@@ -1059,7 +1065,7 @@ purgeCursorIcEntry(CursorICHistoryTable *t)
 {
 	uint8		index;
 
-	for (index = 0; index < CURSOR_IC_TABLE_SIZE; index++)
+	for (index = 0; index < t->size; index++)
 	{
 		struct CursorICHistoryEntry *trash;
 
@@ -1154,13 +1160,12 @@ resetRxThreadError()
 	pg_atomic_write_u32(&ic_control_info.eno, 0);
 }
 
-
 /*
  * setupUDPListeningSocket
  * 		Setup udp listening socket.
  */
 static void
-setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily)
+setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFamily, struct addrinfo *listenerAddrinfo, struct sockaddr *listenerSockaddr)
 {
 	struct addrinfo 		*addrs = NULL;
 	struct addrinfo 		*addr;
@@ -1280,6 +1285,16 @@ setupUDPListeningSocket(int *listenerSocketFd, uint16 *listenerPort, int *txFami
 
 	if (!addr || ic_socket == PGINVALID_SOCKET)
 		goto startup_failed;
+
+	/*
+	 * cache the successful addrinfo and sockaddr of the listening socket, so
+	 * we can use this information to connect to the listening socket.
+	 */
+	if (listenerAddrinfo != NULL && listenerSockaddr != NULL )
+	{
+		memcpy(listenerAddrinfo, addr, sizeof(udp_dummy_packet_addrinfo));
+		memcpy(listenerSockaddr, addr->ai_addr, sizeof(udp_dummy_packet_sockaddr));
+	}
 
 	/* Memorize the socket fd, kernel assigned port and address family */
 	*listenerSocketFd = ic_socket;
@@ -1426,14 +1441,16 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 	/*
 	 * setup listening socket and sending socket for Interconnect.
 	 */
-	setupUDPListeningSocket(listenerSocketFd, listenerPort, &txFamily);
-	setupUDPListeningSocket(&ICSenderSocket, &ICSenderPort, &ICSenderFamily);
+	setupUDPListeningSocket(listenerSocketFd, listenerPort, &txFamily,
+			&udp_dummy_packet_addrinfo, &udp_dummy_packet_sockaddr);
+	setupUDPListeningSocket(&ICSenderSocket, &ICSenderPort, &ICSenderFamily, NULL, NULL);
 
 	/* Initialize receive control data. */
 	resetMainThreadWaiting(&rx_control_info.mainWaitingState);
 
 	/* allocate a buffer for sending disorder messages */
 	rx_control_info.disorderBuffer = palloc0(MIN_PACKET_SIZE);
+	rx_control_info.lastDXatId = InvalidTransactionId;
 	rx_control_info.lastTornIcId = 0;
 	initCursorICHistoryTable(&rx_control_info.cursorHistoryTable);
 
@@ -1526,6 +1543,9 @@ CleanupMotionUDPIFC(void)
 	ICSenderSocket = -1;
 	ICSenderPort = 0;
 	ICSenderFamily = 0;
+
+	memset(&udp_dummy_packet_addrinfo, 0, sizeof(udp_dummy_packet_addrinfo));
+	memset(&udp_dummy_packet_sockaddr, 0, sizeof(udp_dummy_packet_sockaddr));
 
 #ifdef USE_ASSERT_CHECKING
 
@@ -3022,34 +3042,66 @@ SetupUDPIFCInterconnect_Internal(SliceTable *sliceTable)
 	set_test_mode();
 #endif
 
+	/* Prune the QD's history table if it is too large */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		/* 
-		 * Prune the history table if it is too large
-		 * 
-		 * We only keep history of constant length so that
-		 * - The history table takes only constant amount of memory.
-		 * - It is long enough so that it is almost impossible to receive 
-		 *   packets from an IC instance that is older than the first one 
-		 *   in the history.
-		 */
-		if (rx_control_info.cursorHistoryTable.count > (2 * CURSOR_IC_TABLE_SIZE))
-		{
-			uint32 prune_id = sliceTable->ic_instance_id - CURSOR_IC_TABLE_SIZE;
+		CursorICHistoryTable *ich_table = &rx_control_info.cursorHistoryTable;
+		DistributedTransactionId distTransId = getDistributedTransactionId();
 
-			/* 
-			 * Only prune if we didn't underflow -- also we want the prune id
-			 * to be newer than the limit (hysteresis)
+		if (ich_table->count > (2 * ich_table->size))
+		{
+			/*
+			 * distTransId != lastDXatId
+			 * Means the last transaction is finished, it's ok to make a prune.
 			 */
-			if (prune_id < sliceTable->ic_instance_id)
+			if (distTransId != rx_control_info.lastDXatId)
 			{
 				if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-					elog(DEBUG1, "prune cursor history table (count %d), icid %d", rx_control_info.cursorHistoryTable.count, sliceTable->ic_instance_id);
-				pruneCursorIcEntry(&rx_control_info.cursorHistoryTable, prune_id);
+					elog(DEBUG1, "prune cursor history table (count %d), icid %d, prune_id %d",
+						 ich_table->count, sliceTable->ic_instance_id, sliceTable->ic_instance_id);
+				pruneCursorIcEntry(ich_table, sliceTable->ic_instance_id);
+			}
+			/*
+			 * distTransId == lastDXatId and they are not InvalidTransactionId(0)
+			 * Means current (non Read-Only) transaction isn't finished, should not prune.
+			 */
+			else if (rx_control_info.lastDXatId != InvalidTransactionId)
+			{
+				;
+			}
+			/*
+			 * distTransId == lastDXatId and they are InvalidTransactionId(0)
+			 * Means they are the same transaction or different Read-Only transactions.
+			 *
+			 * For the latter, it's hard to get a perfect timepoint to prune: prune eagerly may
+			 * cause problems (pruned current Txn's Ic instances), but prune in low frequency
+			 * causes memory leak.
+			 *
+			 * So, we choose a simple algorithm to prune it here. And if it mistakenly prune out
+			 * the still-in-used Ic instance (with lower id), the query may hang forever.
+			 * Then user have to set a bigger gp_interconnect_cursor_ic_table_size value and
+			 * try the query again, it is a workaround.
+			 *
+			 * More backgrounds please see: https://github.com/greenplum-db/gpdb/pull/16458
+			 */
+			else
+			{
+				if (sliceTable->ic_instance_id > ich_table->size)
+				{
+					uint32 prune_id = sliceTable->ic_instance_id - ich_table->size;
+					Assert(prune_id < sliceTable->ic_instance_id);
+
+					if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+						elog(DEBUG1, "prune cursor history table (count %d), icid %d, prune_id %d",
+							ich_table->count, sliceTable->ic_instance_id, prune_id);
+					pruneCursorIcEntry(ich_table, prune_id);
+				}
 			}
 		}
 
-		addCursorIcEntry(&rx_control_info.cursorHistoryTable, sliceTable->ic_instance_id, gp_command_count);
+		addCursorIcEntry(ich_table, sliceTable->ic_instance_id, gp_command_count);
+		/* save the latest transaction id */
+		rx_control_info.lastDXatId = distTransId;
 	}
 
 	/* now we'll do some setup for each of our Receiving Motion Nodes. */
@@ -3615,8 +3667,8 @@ TeardownUDPIFCInterconnect_Internal(ChunkTransportState *transportStates,
 		pfree(transportStates);
 	}
 
-	if (gp_log_interconnect >= GPVARS_VERBOSITY_TERSE)
-		elog(DEBUG1, "TeardownUDPIFCInterconnect successful");
+	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+		elog(DEBUG4, "TeardownUDPIFCInterconnect successful");
 
 	RESUME_INTERRUPTS();
 }
@@ -6890,74 +6942,33 @@ WaitInterconnectQuitUDPIFC(void)
 static void
 SendDummyPacket(void)
 {
-	int			sockfd = -1;
-	int			ret;
-	struct addrinfo *addrs = NULL;
-	struct addrinfo *rp;
-	struct addrinfo hint;
-	uint16		udp_listener;
-	char		port_str[32] = {0};
-	char	   *dummy_pkt = "stop it";
-	int			counter;
-
+	int					ret;
+	in_port_t			udp_listener_port;
+	char				*dummy_pkt = "stop it";
+	int					counter;
+	struct sockaddr_in	*addr_in = NULL;
+	struct sockaddr_in	dest_addr;
 	/*
 	 * Get address info from interconnect udp listener port
 	 */
-	udp_listener = (Gp_listener_port >> 16) & 0x0ffff;
-	snprintf(port_str, sizeof(port_str), "%d", udp_listener);
+	udp_listener_port = (Gp_listener_port >> 16) & 0x0ffff;
 
-	MemSet(&hint, 0, sizeof(hint));
-	hint.ai_socktype = SOCK_DGRAM;
-	hint.ai_family = AF_UNSPEC; /* Allow for IPv4 or IPv6  */
-
-	/* Never do name resolution */
-#ifdef AI_NUMERICSERV
-	hint.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
-#else
-	hint.ai_flags = AI_NUMERICHOST;
-#endif
-
-	ret = pg_getaddrinfo_all(interconnect_address, port_str, &hint, &addrs);
-	if (ret || !addrs)
-	{
-		elog(LOG, "send dummy packet failed, pg_getaddrinfo_all(): %m");
-		goto send_error;
-	}
-
-	for (rp = addrs; rp != NULL; rp = rp->ai_next)
-	{
-		/* Create socket according to pg_getaddrinfo_all() */
-		sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		if (sockfd < 0)
-			continue;
-
-		if (!pg_set_noblock(sockfd))
-		{
-			if (sockfd >= 0)
-			{
-				closesocket(sockfd);
-				sockfd = -1;
-			}
-			continue;
-		}
-		break;
-	}
-
-	if (rp == NULL)
-	{
-		elog(LOG, "send dummy packet failed, create socket failed: %m");
-		goto send_error;
-	}
+	addr_in = (struct sockaddr_in *) &udp_dummy_packet_sockaddr;
+	memset(&dest_addr, 0, sizeof(dest_addr));
+	dest_addr.sin_family = addr_in->sin_family;
+	dest_addr.sin_port = htons(udp_listener_port);
+	dest_addr.sin_addr.s_addr = addr_in->sin_addr.s_addr;
 
 	/*
-	 * Send a dummy package to the interconnect listener, try 10 times
+	 * Send a dummy package to the interconnect listener, try 10 times.
+	 * We don't want to close the socket at the end of this function, since
+	 * the socket will eventually close during the motion layer cleanup.
 	 */
-
 	counter = 0;
 	while (counter < 10)
 	{
 		counter++;
-		ret = sendto(sockfd, dummy_pkt, strlen(dummy_pkt), 0, rp->ai_addr, rp->ai_addrlen);
+		ret = sendto(ICSenderSocket, dummy_pkt, strlen(dummy_pkt), 0, (struct sockaddr *) &dest_addr, sizeof(dest_addr));
 		if (ret < 0)
 		{
 			if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
@@ -6965,7 +6976,7 @@ SendDummyPacket(void)
 			else
 			{
 				elog(LOG, "send dummy packet failed, sendto failed: %m");
-				goto send_error;
+				return;
 			}
 		}
 		break;
@@ -6974,20 +6985,7 @@ SendDummyPacket(void)
 	if (counter >= 10)
 	{
 		elog(LOG, "send dummy packet failed, sendto failed with 10 times: %m");
-		goto send_error;
 	}
-
-	pg_freeaddrinfo_all(hint.ai_family, addrs);
-	closesocket(sockfd);
-	return;
-
-send_error:
-
-	if (addrs)
-		pg_freeaddrinfo_all(hint.ai_family, addrs);
-	if (sockfd != -1)
-		closesocket(sockfd);
-	return;
 }
 
 uint32

@@ -42,6 +42,7 @@
 #include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 #include "utils/pg_rusage.h"
+#include "utils/sampling.h"
 
 #define IS_BTREE(r) ((r)->rd_rel->relam == BTREE_AM_OID)
 
@@ -660,6 +661,20 @@ aoco_endscan(TableScanDesc scan)
 	pfree(aocsBitmapScan->bitmapScanDesc[RECHECK].proj);
 }
 
+/* ----------------
+ * aoco_rescan - restart a relation scan
+ *
+ * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: When doing an initial rescan with `table_rescan`,
+ * the values for the new flags (introduced by Table AM API) are
+ * set to false. This means that whichever ScanOptions flags that were initially set will be
+ * used for the rescan. However with TABLESAMPLE, which is currently not
+ * supported for AO/CO, the new flags may be modified.
+ * Additionally, allow_sync, allow_strat, and allow_pagemode may
+ * need to be implemented for AO/CO in order to properly use them.
+ * You may view `syncscan.c` as an example to see how heap added scan
+ * synchronization support.
+ * ----------------
+ */
 static void
 aoco_rescan(TableScanDesc scan, ScanKey key,
                   bool set_params, bool allow_strat,
@@ -1371,24 +1386,30 @@ aoco_vacuum_rel(Relation onerel, VacuumParams *params,
 }
 
 static void
-aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
-                                     Relation OldIndex, bool use_sort,
-                                     TransactionId OldestXmin,
-                                     TransactionId *xid_cutoff,
-                                     MultiXactId *multi_cutoff,
-                                     double *num_tuples,
-                                     double *tups_vacuumed,
-                                     double *tups_recently_dead)
+aoco_relation_add_columns(Relation rel, List *newvals, List *constraints, TupleDesc oldDesc)
 {
-	TupleDesc	oldTupDesc;
+	aocs_writecol_add(RelationGetRelid(rel), newvals, constraints, oldDesc);
+}
+
+static void
+aoco_relation_rewrite_columns(Relation rel, List *newvals, TupleDesc oldDesc)
+{
+	aocs_writecol_rewrite(RelationGetRelid(rel), newvals, oldDesc);
+}
+
+static void
+aoco_relation_cluster_internals(Relation OldHeap, Relation NewHeap, TupleDesc oldTupDesc, 
+						 TransactionId OldestXmin, TransactionId *xid_cutoff,
+						 MultiXactId *multi_cutoff, double *num_tuples,
+						 double *tups_vacuumed, double *tups_recently_dead, 
+						 Tuplesortstate *tuplesort)
+{
 	TupleDesc	newTupDesc;
 	int			natts;
 	Datum	   *values;
 	bool	   *isnull;
 	TransactionId FreezeXid;
 	MultiXactId MultiXactCutoff;
-	Tuplesortstate *tuplesort;
-	PGRUsage	ru0;
 
 	AOTupleId				aoTupleId;
 	AOCSInsertDesc			idesc = NULL;
@@ -1397,28 +1418,10 @@ aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	TupleTableSlot		   *slot;
 	double					n_tuples_written = 0;
 
-	pg_rusage_init(&ru0);
-
-	/*
-	 * Curently AO storage lacks cost model for IndexScan, thus IndexScan
-	 * is not functional. In future, probably, this will be fixed and CLUSTER
-	 * command will support this. Though, random IO over AO on TID stream
-	 * can be impractical anyway.
-	 * Here we are sorting data on on the lines of heap tables, build a tuple
-	 * sort state and sort the entire AO table using the index key, rewrite
-	 * the table, one tuple at a time, in order as returned by tuple sort state.
-	 */
-	if (OldIndex == NULL || !IS_BTREE(OldIndex))
-		ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("cannot cluster append-optimized table \"%s\"", RelationGetRelationName(OldHeap)),
-					errdetail("Append-optimized tables can only be clustered against a B-tree index")));
-
 	/*
 	 * Their tuple descriptors should be exactly alike, but here we only need
 	 * assume that they have the same number of columns.
 	 */
-	oldTupDesc = RelationGetDescr(OldHeap);
 	newTupDesc = RelationGetDescr(NewHeap);
 	Assert(newTupDesc->natts == oldTupDesc->natts);
 
@@ -1471,8 +1474,6 @@ aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 	*xid_cutoff = FreezeXid;
 	*multi_cutoff = MultiXactCutoff;
 
-	tuplesort = tuplesort_begin_cluster(oldTupDesc, OldIndex,
-											maintenance_work_mem, NULL, false);
 
 
 	/* Log what we're doing */
@@ -1578,16 +1579,94 @@ aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
 
 	/* Finish and deallocate insertion */
 	aocs_insert_finish(idesc);
+
+}
+
+static void
+aoco_relation_copy_for_repack(Relation OldHeap, Relation NewHeap, 
+									int nkeys, AttrNumber *attNums, 
+									Oid *sortOperators, Oid *sortCollations,
+									bool *nullsFirstFlags, TransactionId *frozenXid,
+									MultiXactId *cutoffMulti, TransactionId OldestXmin,
+									double *num_tuples)
+{
+	PGRUsage		ru0;
+	TupleDesc		oldTupDesc;
+	Tuplesortstate	*tuplesort;
+
+	/* These are thrown away, just here so we can share code with CLUSTER */
+	double tups_recently_dead = 0; 
+	double tups_vacuumed = 0;
+
+	pg_rusage_init(&ru0);
+	oldTupDesc = RelationGetDescr(OldHeap);
+
+	tuplesort = tuplesort_begin_repack(
+		oldTupDesc,
+		nkeys, 
+		attNums,
+		sortOperators, 
+		sortCollations,
+		nullsFirstFlags,
+		maintenance_work_mem, 
+		NULL, 
+		false);
+
+	aoco_relation_cluster_internals(OldHeap, NewHeap, oldTupDesc, OldestXmin, frozenXid,
+		cutoffMulti, num_tuples, &tups_vacuumed, &tups_recently_dead, tuplesort);
+}
+
+static void
+aoco_relation_copy_for_cluster(Relation OldHeap, Relation NewHeap,
+                                     Relation OldIndex, bool use_sort,
+                                     TransactionId OldestXmin,
+                                     TransactionId *xid_cutoff,
+                                     MultiXactId *multi_cutoff,
+                                     double *num_tuples,
+                                     double *tups_vacuumed,
+                                     double *tups_recently_dead)
+{
+	PGRUsage		ru0;
+	TupleDesc		oldTupDesc;
+	Tuplesortstate	*tuplesort;
+
+	pg_rusage_init(&ru0);
+
+	/*
+	 * Curently AO storage lacks cost model for IndexScan, thus IndexScan
+	 * is not functional. In future, probably, this will be fixed and CLUSTER
+	 * command will support this. Though, random IO over AO on TID stream
+	 * can be impractical anyway.
+	 * Here we are sorting data on on the lines of heap tables, build a tuple
+	 * sort state and sort the entire AO table using the index key, rewrite
+	 * the table, one tuple at a time, in order as returned by tuple sort state.
+	 */
+	if (OldIndex == NULL || !IS_BTREE(OldIndex))
+		ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					errmsg("cannot cluster append-optimized table \"%s\"", RelationGetRelationName(OldHeap)),
+					errdetail("Append-optimized tables can only be clustered against a B-tree index")));
+
+	oldTupDesc = RelationGetDescr(OldHeap);
+
+	tuplesort = tuplesort_begin_cluster(oldTupDesc, OldIndex,
+											maintenance_work_mem, NULL, false);
+
+	aoco_relation_cluster_internals(OldHeap, NewHeap, oldTupDesc, OldestXmin, xid_cutoff,
+		multi_cutoff, num_tuples, tups_vacuumed, tups_recently_dead, tuplesort);
 }
 
 static bool
 aoco_scan_analyze_next_block(TableScanDesc scan, BlockNumber blockno,
                                    BufferAccessStrategy bstrategy)
 {
-	AOCSScanDesc aoscan = (AOCSScanDesc) scan;
-	aoscan->targetTupleId = blockno;
-
-	return true;
+	/*
+	 * For append-optimized relations, we use a separate sampling
+	 * method. See table_relation_acquire_sample_rows().
+	 */
+	ereport(ERROR,
+			(errcode(ERRCODE_INTERNAL_ERROR),
+			 errmsg("API not supported for appendoptimized relations")));
 }
 
 static bool
@@ -1595,28 +1674,103 @@ aoco_scan_analyze_next_tuple(TableScanDesc scan, TransactionId OldestXmin,
                                    double *liverows, double *deadrows,
                                    TupleTableSlot *slot)
 {
-	AOCSScanDesc aoscan = (AOCSScanDesc) scan;
-	bool		ret = false;
+	/*
+	 * For append-optimized relations, we use a separate sampling
+	 * method. See table_relation_acquire_sample_rows().
+	 */
+	ereport(ERROR,
+			(errcode(ERRCODE_INTERNAL_ERROR),
+			 errmsg("API not supported for appendoptimized relations")));
+}
 
-	/* skip several tuples if they are not sampling target */
-	while (aoscan->targetTupleId > aoscan->nextTupleId)
+static int
+aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
+						 int targrows, double *totalrows, double *totaldeadrows)
+{
+	FileSegTotals	*fileSegTotals;
+	BlockNumber		totalBlocks;
+	BlockNumber     blksdone = 0;
+	int		        numrows = 0;	/* # rows now in reservoir */
+	double	        liverows = 0;	/* # live rows seen */
+	double	        deadrows = 0;	/* # dead rows seen */
+
+	Assert(targrows > 0);
+
+	TableScanDesc scan = table_beginscan_analyze(onerel);
+	TupleTableSlot *slot = table_slot_create(onerel, NULL);
+	AOCSScanDesc aocoscan = (AOCSScanDesc) scan;
+
+	int64 totaltupcount = AOCSScanDesc_TotalTupCount(aocoscan);
+	int64 totaldeadtupcount = 0;
+	if (aocoscan->total_seg > 0 )
+		totaldeadtupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&aocoscan->visibilityMap);
+
+	/*
+	 * Get the total number of blocks for the table
+	 */
+	fileSegTotals = GetAOCSSSegFilesTotals(onerel,
+											   aocoscan->appendOnlyMetaDataSnapshot);
+
+	totalBlocks = RelationGuessNumberOfBlocksFromSize(fileSegTotals->totalbytes);
+	pgstat_progress_update_param(PROGRESS_ANALYZE_BLOCKS_TOTAL,
+								 totalBlocks);
+	/*
+     * The conversion from int64 to double (53 significant bits) is safe as the
+	 * AOTupleId is 48bits, the max value of totalrows is never greater than
+	 * AOTupleId_MaxSegmentFileNum * AOTupleId_MaxRowNum (< 48 significant bits).
+	 */
+	*totalrows = (double) (totaltupcount - totaldeadtupcount);
+	*totaldeadrows = (double) totaldeadtupcount;
+
+	/* Prepare for sampling tuple numbers */
+	RowSamplerData rs;
+	RowSampler_Init(&rs, *totalrows, targrows, random());
+
+	while (RowSampler_HasMore(&rs))
 	{
-		aoco_getnextslot(scan, ForwardScanDirection, slot);
-		aoscan->nextTupleId++;
-	}
+		aocoscan->targrow = RowSampler_Next(&rs);
 
-	if (aoscan->targetTupleId == aoscan->nextTupleId)
-	{
-		ret = aoco_getnextslot(scan, ForwardScanDirection, slot);
-		aoscan->nextTupleId++;
+		vacuum_delay_point();
 
-		if (ret)
-			*liverows += 1;
+		if (aocs_get_target_tuple(aocoscan, aocoscan->targrow, slot))
+		{
+			rows[numrows++] = ExecCopySlotHeapTuple(slot);
+			liverows++;
+		}
 		else
-			*deadrows += 1; /* if return an invisible tuple */
+			deadrows++;
+
+		/*
+		 * Even though we now do row based sampling,
+		 * we can still report in terms of blocks processed using ratio of
+		 * rows scanned / target rows on totalblocks in the table.
+		 * For e.g., if we have 1000 blocks in the table and we are sampling 100 rows,
+		 * and if 10 rows are done, we can say that 100 blocks are done.
+		 */
+		blksdone = (totalBlocks * (double) (liverows + deadrows)) / targrows ;
+		pgstat_progress_update_param(PROGRESS_ANALYZE_BLOCKS_DONE,
+									 blksdone);
+		SIMPLE_FAULT_INJECTOR("analyze_block");
+
+		ExecClearTuple(slot);
 	}
 
-	return ret;
+	ExecDropSingleTupleTableSlot(slot);
+	table_endscan(scan);
+
+	/*
+	 * Emit some interesting relation info
+	 */
+	ereport(elevel,
+			(errmsg("\"%s\": scanned " INT64_FORMAT " rows, "
+					"containing %.0f live rows and %.0f dead rows; "
+					"%d rows in sample, %.0f accurate total live rows, "
+					"%.f accurate total dead rows",
+					RelationGetRelationName(onerel),
+					rs.m, liverows, deadrows, numrows,
+					*totalrows, *totaldeadrows)));
+
+	return numrows;
 }
 
 static double
@@ -1647,6 +1801,9 @@ aoco_index_build_range_scan(Relation heapRelation,
 	List	   *tlist = NIL;
 	List	   *qual = indexInfo->ii_Predicate;
 	Oid			blkdirrelid;
+	Relation 	blkdir;
+	AppendOnlyBlockDirectory existingBlkdir;
+	bool        partialScanWithBlkdir = false;
 	int64 		previous_blkno = -1;
 
 	/*
@@ -1693,7 +1850,7 @@ aoco_index_build_range_scan(Relation heapRelation,
 	GetAppendOnlyEntryAuxOids(heapRelation, NULL,
 							  &blkdirrelid, NULL);
 
-	Relation blkdir = relation_open(blkdirrelid, AccessShareLock);
+	blkdir = relation_open(blkdirrelid, AccessShareLock);
 
 	need_create_blk_directory = RelationGetNumberOfBlocks(blkdir) == 0;
 	relation_close(blkdir, NoLock);
@@ -1781,13 +1938,95 @@ aoco_index_build_range_scan(Relation heapRelation,
 	{
 		/*
 		 * Allocate blockDirectory in scan descriptor to let the access method
-		 * know that it needs to also build the block directory while
-		 * scanning.
+		 * know that it needs to also build the block directory while scanning.
 		 */
 		Assert(aocoscan->blockDirectory == NULL);
 		aocoscan->blockDirectory = palloc0(sizeof(AppendOnlyBlockDirectory));
 	}
+	else if (numblocks != InvalidBlockNumber)
+	{
+		/*
+		 * We are performing a partial scan of the base relation. We already
+		 * have a non-empty blkdir to help guide our partial scan.
+		 */
+		bool	*proj;
+		int		relnatts = RelationGetNumberOfAttributes(heapRelation);
+		AppendOnlyBlockDirectoryEntry dirEntry = {{0}};
 
+		/* The range is contained within one seg. */
+		Assert(AOSegmentGet_segno(start_blockno) ==
+				   AOSegmentGet_segno(start_blockno + numblocks - 1));
+
+		/* Reverse engineer a proj bool array from the scan proj info */
+		proj = palloc0(relnatts * sizeof(bool));
+		for (int i = 0; i < aocoscan->columnScanInfo.num_proj_atts; i++)
+		{
+			AttrNumber colno = aocoscan->columnScanInfo.proj_atts[i];
+			proj[colno] = true;
+		}
+
+		partialScanWithBlkdir = true;
+		AppendOnlyBlockDirectory_Init_forSearch(&existingBlkdir,
+												snapshot,
+												(FileSegInfo **) aocoscan->seginfo,
+												aocoscan->total_seg,
+												heapRelation,
+												relnatts,
+												true,
+												proj);
+
+		for (int colIdx = 0; colIdx < aocoscan->columnScanInfo.num_proj_atts; colIdx++)
+		{
+			int		fsInfoIdx;
+			int 	columnGroupNo = aocoscan->columnScanInfo.proj_atts[colIdx];
+
+			if (AppendOnlyBlockDirectory_GetEntryForPartialScan(&existingBlkdir,
+																start_blockno,
+																columnGroupNo,
+																&dirEntry,
+																&fsInfoIdx))
+			{
+				/*
+				 * Since we found a block directory entry near start_blockno, we
+				 * can use it to position our scan.
+				 */
+				if (!aocs_positionscan(aocoscan, &dirEntry, colIdx, fsInfoIdx))
+				{
+					/*
+					 * If we have failed to position our scan, that can mean that
+					 * the start_blockno does not exist in the segfile.
+					 *
+					 * This could be either because the segfile itself is
+					 * empty/awaiting-drop or the directory entry's fileOffset
+					 * is beyond the seg's eof.
+					 *
+					 * In such a case, we can bail early. There is no need to scan
+					 * this segfile or any others.
+					 */
+					reltuples = 0;
+					goto cleanup;
+				}
+			}
+			else
+			{
+				/*
+				 * We were unable to find a block directory row
+				 * encompassing/preceding the start block. This represents an
+				 * edge case where the start block of the range maps to a hole
+				 * at the very beginning of the segfile (and before the first
+				 * minipage entry of the first minipage corresponding to this
+				 * segfile).
+				 *
+				 * Do nothing in this case. The scan will start anyway from the
+				 * beginning of the segfile (offset = 0), i.e. from the first row
+				 * present in the segfile (see BufferedReadInit()).
+				 * This will ensure that we don't skip the other possibly extant
+				 * blocks in the range.
+				 */
+				break;
+			}
+		}
+	}
 
 	/* Publish number of blocks to scan */
 	if (progress)
@@ -1839,17 +2078,23 @@ aoco_index_build_range_scan(Relation heapRelation,
 	{
 		bool		tupleIsAlive;
 		AOTupleId 	*aoTupleId;
+		BlockNumber currblockno = ItemPointerGetBlockNumber(&slot->tts_tid);
 
 		CHECK_FOR_INTERRUPTS();
 
-		/*
-		 * GPDB_12_MERGE_FIXME: How to properly do a partial scan? Currently,
-		 * we scan the whole table, and throw away tuples that are not in the
-		 * range. That's clearly very inefficient.
-		 */
-		if (ItemPointerGetBlockNumber(&slot->tts_tid) < start_blockno ||
-			(numblocks != InvalidBlockNumber && ItemPointerGetBlockNumber(&slot->tts_tid) >= numblocks))
+		if (currblockno < start_blockno)
+		{
+			/*
+			 * If the scan returned some tuples lying before the start of our
+			 * desired range, ignore the current tuple, and keep scanning.
+			 */
 			continue;
+		}
+		else if (partialScanWithBlkdir && currblockno >= (start_blockno + numblocks))
+		{
+			/* The scan has gone beyond our range bound. Time to stop. */
+			break;
+		}
 
 		/* Report scan progress, if asked to. */
 		if (progress)
@@ -1924,7 +2169,11 @@ aoco_index_build_range_scan(Relation heapRelation,
 
 	}
 
+cleanup:
 	table_endscan(scan);
+
+	if (partialScanWithBlkdir)
+		AppendOnlyBlockDirectory_End_forSearch(&existingBlkdir);
 
 	ExecDropSingleTupleTableSlot(slot);
 
@@ -1955,6 +2204,8 @@ aoco_index_validate_scan(Relation heapRelation,
 /*
  * This pretends that the all the space is taken by the main fork.
  * Returns the compressed size.
+ * The size returned is logical in the sense that it is based on
+ * the sum of all eof values of all segs.
  */
 static uint64
 aoco_relation_size(Relation rel, ForkNumber forkNumber)
@@ -2317,10 +2568,14 @@ static const TableAmRoutine ao_column_methods = {
 	.relation_set_new_filenode = aoco_relation_set_new_filenode,
 	.relation_nontransactional_truncate = aoco_relation_nontransactional_truncate,
 	.relation_copy_data = aoco_relation_copy_data,
+	.relation_copy_for_repack = aoco_relation_copy_for_repack,
 	.relation_copy_for_cluster = aoco_relation_copy_for_cluster,
+	.relation_add_columns = aoco_relation_add_columns,
+	.relation_rewrite_columns = aoco_relation_rewrite_columns,
 	.relation_vacuum = aoco_vacuum_rel,
 	.scan_analyze_next_block = aoco_scan_analyze_next_block,
 	.scan_analyze_next_tuple = aoco_scan_analyze_next_tuple,
+	.relation_acquire_sample_rows = aoco_acquire_sample_rows,
 	.index_build_range_scan = aoco_index_build_range_scan,
 	.index_validate_scan = aoco_index_validate_scan,
 

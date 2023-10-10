@@ -401,16 +401,6 @@
 				</xsd:restriction>
 			</xsd:simpleType>
 		</xsd:attribute>
-		<xsd:attribute name="DataAccess" use="required">
-			<xsd:simpleType>
-				<xsd:restriction base="xsd:string">
-					<xsd:enumeration m_bytearray_value="NoSQL"/>
-					<xsd:enumeration m_bytearray_value="ContainsSQL"/>
-					<xsd:enumeration m_bytearray_value="ReadsSQLData"/>
-					<xsd:enumeration m_bytearray_value="ModifiesSQLData"/>
-				</xsd:restriction>
-			</xsd:simpleType>
-		</xsd:attribute>
 		<xsd:attribute name="IsStrict" type="xsd:boolean" use="required"/>
 	</xsd:complexType>	
 	

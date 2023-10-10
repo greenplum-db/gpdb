@@ -1,16 +1,16 @@
 create or replace function test_connect(text) RETURNS bool AS
- '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT NO SQL;
+ '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT;
 create or replace function test_disconnect() RETURNS bool AS
- '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT NO SQL;
+ '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT;
 create or replace function test_send() RETURNS bool AS
- '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT NO SQL;
+ '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT;
 create or replace function test_receive_and_verify(pg_lsn, pg_lsn) RETURNS bool AS
- '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT NO SQL;
+ '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT;
 create or replace function test_xlog_ao(IN text, IN pg_lsn, OUT xrecoff INT, OUT record_type TEXT, 
                                         OUT recordlen INT, OUT spcNode OID, OUT dbNode OID, 
                                         OUT relNode OID, OUT segment_filenum INT, OUT file_offset BIGINT)
  RETURNS SETOF record AS
- '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT NO SQL;
+ '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT;
 CREATE OR REPLACE FUNCTION test_xlog_ao_wrapper(IN startpoints pg_lsn[])
 RETURNS TABLE (gp_segment_id INT, oid OID, relname name, 
 	       xrecoff TEXT, record_type TEXT, recordlen INT,
@@ -25,7 +25,7 @@ myseg INT;
 BEGIN
 	myseg := gp_execution_segment();
 	startpoint := startpoints[myseg + 1];
-	select 'port=' || setting INTO port from pg_settings where name = 'port';
+	select 'host=localhost port=' || setting INTO port from pg_settings where name = 'port';
 	RAISE DEBUG 'port %, startpoint % current_wal_lsn %',
 	port, startpoint, pg_current_wal_lsn();
 

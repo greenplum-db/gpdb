@@ -17,6 +17,23 @@ Feature: gpinitsystem tests
         And gpconfig should print "Coordinator value: off" to stdout
         And gpconfig should print "Segment     value: off" to stdout
 
+    Scenario: gpinitsystem should import the system collations
+        Given the database is not running
+        And create demo cluster config
+        When the user runs command "gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile"
+        Then gpinitsystem should return a return code of 0
+        And the user runs "psql postgres -c "create table collationimport1 as select * from pg_collation where collnamespace = 'pg_catalog'::regnamespace""
+        # no more collation is imported
+        When the user runs "psql postgres -c "select pg_import_system_collations('pg_catalog')""
+        Then psql should return a return code of 0
+        And psql should print "0" to stdout
+        And psql should print "(1 row)" to stdout
+        And the user runs "psql postgres -c "create table collationimport2 as select * from pg_collation where collnamespace = 'pg_catalog'::regnamespace""
+        # no difference is before import and after import
+        When the user runs "psql postgres -c "select * from collationimport1 except select * from collationimport2""
+        Then psql should return a return code of 0
+        And psql should print "(0 rows)" to stdout
+
     Scenario: gpinitsystem creates a cluster when the user set LC_ALL env variable
         Given create demo cluster config
         And the environment variable "LC_ALL" is set to "en_US.UTF-8"
@@ -256,7 +273,7 @@ Feature: gpinitsystem tests
         When the user runs command "source $GPHOME/greenplum_path.sh; __DCA_VERSION_FILE__=/tmp/gpinitsystem/gpdb-appliance-version $GPHOME/bin/gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile"
         Then gpinitsystem should return a return code of 0
         # the log file must have the entry indicating that DCA specific configuration has been set
-        And the user runs command "egrep 'Setting DCA specific configuration values' ~/gpAdminLogs/gpinitsystem*log"
+        And the user runs command "grep -E 'Setting DCA specific configuration values' ~/gpAdminLogs/gpinitsystem*log"
 
     Scenario: gpinitsystem uses the system locale if no locale is specified
         Given the database is not running

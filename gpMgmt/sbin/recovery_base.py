@@ -19,6 +19,8 @@ class RecoveryBase(object):
         self.logger = None
         self.seg_recovery_info_list = None
         self.options = None
+        self.pool = None
+        self.termination_requested = False
         try:
             self.parseargs()
         except Exception as e:
@@ -63,19 +65,18 @@ class RecoveryBase(object):
             raise Exception('No segment configuration values found in --confinfo argument')
 
     def main(self, cmd_list):
-        pool = None
         try:
             # TODO: should we output the name of the exact file?
             self.logger.info("Starting recovery with args: %s" % ' '.join(sys.argv[1:]))
 
-            pool = WorkerPool(numWorkers=min(self.options.batch_size, len(cmd_list)))
-            self.run_cmd_list(cmd_list, self.logger, self.options, pool)
+            self.pool = WorkerPool(numWorkers=min(self.options.batch_size, len(cmd_list)))
+            self.run_cmd_list(cmd_list, self.logger, self.options, self.pool)
             sys.exit(0)
         except Exception as e:
             self._write_to_stderr_and_exit(e)
         finally:
-            if pool:
-                pool.haltWork()
+            if self.pool:
+                self.pool.haltWork()
 
     def _write_to_stderr_and_exit(self, e):
         if self.logger:
@@ -101,6 +102,9 @@ class RecoveryBase(object):
                 errors.append(error_obj)
         if not errors:
             sys.exit(0)
+
+        if self.termination_requested:
+            logger.warning("Recieved termination signal, stopping gpsegrecovery")
 
         str_error = recoveryinfo.serialize_list(errors)
         print(str_error, file=sys.stderr)

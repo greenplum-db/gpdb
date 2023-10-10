@@ -51,3 +51,6 @@ clean distclean:
 # so do not clean it in the clean/distclean rules
 maintainer-clean: distclean
 	rm -f psqlscan.c
+
+unittest-check:
+	$(MAKE) -C test check

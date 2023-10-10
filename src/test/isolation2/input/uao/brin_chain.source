@@ -1,0 +1,59 @@
+-- Tests for BRIN chaining for AO/CO tables
+-- These are in a separate file as they take longer and deal with more data.
+
+-- All tests insert rows into content=1.
+
+-- We create an append-optimized table with the following characteristics:
+-- * seg0: 1000 committed rows -> 1 revmap page with pagenum=1. (filled by ALTER TABLE)
+-- * seg1: 180000000 committed rows -> 2 revmap pages with pagenums=1,2.
+--   REVMAP_PAGE_MAXITEMS = 5454. About 32768 chars fit in one logical heap
+--   block. So we need at least 32768 * 5454 + 1 = 178716673 rows to have 2
+--   revmap pages.
+-- * seg2: 2000 aborted rows -> No revmap pages.
+-- * seg3: 32768 aborted rows (1 logical heap block), 3000 committed rows -> 1 revmap page.
+
+CREATE TABLE brin_chain_@amname@(i character(1)) USING heap;
+INSERT INTO brin_chain_@amname@ SELECT '2' FROM generate_series(1, 1000);
+ALTER TABLE brin_chain_@amname@ SET ACCESS METHOD @amname@;
+
+1: BEGIN;
+2: BEGIN;
+3: BEGIN;
+
+-- Insert 180000000 rows into seg1. Use COPY for speed.
+!\retcode yes 2 | head -n 180000000 > /tmp/brin_chain_@amname@_seg1.csv;
+1: COPY brin_chain_@amname@ FROM '/tmp/brin_chain_@amname@_seg1.csv';
+!\retcode rm /tmp/brin_chain_@amname@_seg1.csv;
+2: INSERT INTO brin_chain_@amname@ SELECT '2' FROM generate_series(1, 2000);
+3: INSERT INTO brin_chain_@amname@ SELECT '2' FROM generate_series(1, 32768);
+3: ABORT;
+3: BEGIN;
+3: INSERT INTO brin_chain_@amname@ SELECT '2' FROM generate_series(1, 3000);
+
+1: COMMIT;
+2: ABORT;
+3: COMMIT;
+
+-- Create the index.
+CREATE INDEX ON brin_chain_@amname@ USING brin(i) WITH (pages_per_range=1);
+
+-- Sanity: Inspect the revmap chain information (limit to first 5 segments)
+1U: SELECT blkno, brin_page_type(get_raw_page('brin_chain_@amname@_i_idx', blkno)) FROM
+	generate_series(0, nblocks('brin_chain_@amname@_i_idx') - 1) blkno;
+1U: SELECT firstrevmappages[:5] FROM brin_metapage_info(get_raw_page('brin_chain_@amname@_i_idx', 0));
+1U: SELECT lastrevmappages[:5] FROM brin_metapage_info(get_raw_page('brin_chain_@amname@_i_idx', 0));
+1U: SELECT lastrevmappagenums[:5] FROM brin_metapage_info(get_raw_page('brin_chain_@amname@_i_idx', 0));
+1U: SELECT segnum, brin_revmap_chain('brin_chain_@amname@_i_idx', segnum) AS chain FROM generate_series(0, 3) segnum;
+
+-- Now test index retrieval. We should be able to:
+-- * Iterate through all segfiles.
+-- * Iterate through the revmap chain for segfile 1, containing multiple revmap pages.
+-- * Handle cases where there is no revmap chain for a block sequence, like when
+--   all tuples are deleted from a segment file (segfile 2).
+-- * Handle missing logical heap blocks inside a block sequence due to aborted
+--   inserts, such as for segfile 3.
+
+SET enable_seqscan TO off;
+SET optimizer TO off;
+EXPLAIN SELECT count(*) FROM brin_chain_@amname@ WHERE i > '1' and i < '3';
+SELECT count(*) FROM brin_chain_@amname@ WHERE i > '1' and i < '3';

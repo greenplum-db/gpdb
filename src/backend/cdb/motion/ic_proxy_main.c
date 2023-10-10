@@ -18,6 +18,7 @@
 #include "storage/ipc.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
+#include "storage/shmem.h"
 
 #include "ic_proxy_server.h"
 #include "ic_proxy_addr.h"
@@ -39,6 +40,8 @@ static uv_timer_t	ic_proxy_server_timer;
 static uv_tcp_t		ic_proxy_peer_listener;
 static bool			ic_proxy_peer_listening;
 static bool			ic_proxy_peer_relistening;
+/* flag (in SHM) for incidaing if peer listener bind/listen failed */
+pg_atomic_uint32 	*ic_proxy_peer_listener_failed;
 
 static uv_pipe_t	ic_proxy_client_listener;
 static bool			ic_proxy_client_listening;
@@ -96,7 +99,7 @@ ic_proxy_server_on_new_peer(uv_stream_t *server, int status)
 	ret = uv_accept(server, (uv_stream_t *) &peer->tcp);
 	if (ret < 0)
 	{
-		elog(WARNING, "ic-proxy: fail to accept new peer: %s",
+		elog(WARNING, "ic-proxy: failed to accept new peer: %s",
 					 uv_strerror(ret));
 		ic_proxy_peer_free(peer);
 		return;
@@ -154,8 +157,12 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 	if (ic_proxy_addrs == NIL)
 		return;
 
+	Assert(ic_proxy_peer_listener_failed != NULL);
 	if (ic_proxy_peer_listening)
+	{
+		Assert(pg_atomic_read_u32(ic_proxy_peer_listener_failed) == 0);
 		return;
+	}
 
 	/* Get the addr from the gp_interconnect_proxy_addresses */
 	addr = ic_proxy_get_my_addr();
@@ -178,7 +185,7 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 						 addr->hostname, addr->service, name, port, family);
 		else
 			elog(WARNING,
-						 "ic-proxy: setting up peer listener on %s:%s (%s:%d family=%d) (fail to extract the address: %s)",
+						 "ic-proxy: setting up peer listener on %s:%s (%s:%d family=%d) (failed to extract the address: %s)",
 						 addr->hostname, addr->service, name, port, family,
 						 uv_strerror(ret));
 	}
@@ -193,8 +200,9 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 	ret = uv_tcp_bind(listener, (struct sockaddr *) &addr->sockaddr, 0);
 	if (ret < 0)
 	{
-		elog(WARNING, "ic-proxy: tcp: fail to bind: %s",
+		elog(WARNING, "ic-proxy: tcp: failed to bind: %s",
 					 uv_strerror(ret));
+		pg_atomic_exchange_u32(ic_proxy_peer_listener_failed, 1);
 		return;
 	}
 
@@ -202,8 +210,9 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 					IC_PROXY_BACKLOG, ic_proxy_server_on_new_peer);
 	if (ret < 0)
 	{
-		elog(WARNING, "ic-proxy: tcp: fail to listen: %s",
+		elog(WARNING, "ic-proxy: tcp: failed to listen: %s",
 					 uv_strerror(ret));
+		pg_atomic_exchange_u32(ic_proxy_peer_listener_failed, 1);
 		return;
 	}
 
@@ -211,6 +220,7 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE, LOG,
 		   "ic-proxy: tcp: listening on socket %d", fd);
 
+	pg_atomic_exchange_u32(ic_proxy_peer_listener_failed, 0);
 	ic_proxy_peer_listening = true;
 }
 
@@ -288,7 +298,7 @@ ic_proxy_server_on_new_client(uv_stream_t *server, int status)
 	ret = uv_accept(server, ic_proxy_client_get_stream(client));
 	if (ret < 0)
 	{
-		elog(WARNING, "ic-proxy: fail to accept new client: %s",
+		elog(WARNING, "ic-proxy: failed to accept new client: %s",
 					 uv_strerror(ret));
 		return;
 	}
@@ -328,7 +338,7 @@ ic_proxy_server_client_listener_init(uv_loop_t *loop)
 	if (ret < 0)
 	{
 		elog(WARNING,
-					 "ic-proxy: fail to init a client listener: %s",
+					 "ic-proxy: failed to init a client listener: %s",
 					 uv_strerror(ret));
 		return;
 	}
@@ -336,7 +346,7 @@ ic_proxy_server_client_listener_init(uv_loop_t *loop)
 	ret = uv_pipe_bind(listener, path);
 	if (ret < 0)
 	{
-		elog(WARNING, "ic-proxy: pipe: fail to bind(%s): %s",
+		elog(WARNING, "ic-proxy: pipe: failed to bind(%s): %s",
 					 path, uv_strerror(ret));
 		return;
 	}
@@ -345,7 +355,7 @@ ic_proxy_server_client_listener_init(uv_loop_t *loop)
 					IC_PROXY_BACKLOG, ic_proxy_server_on_new_client);
 	if (ret < 0)
 	{
-		elog(WARNING, "ic-proxy: pipe: fail to listen on path %s: %s",
+		elog(WARNING, "ic-proxy: pipe: failed to listen on path %s: %s",
 					 path, uv_strerror(ret));
 		return;
 	}
@@ -527,9 +537,18 @@ int
 ic_proxy_server_main(void)
 {
 	char		path[MAXPGPATH];
-
+	bool		found;
 	elogif(gp_log_interconnect >= GPVARS_VERBOSITY_TERSE,
 		   LOG, "ic-proxy: server setting up");
+
+	/* get and init failure flag */
+	ic_proxy_peer_listener_failed = ShmemInitStruct("IC_PROXY Listener Failure Flag",
+													sizeof(*ic_proxy_peer_listener_failed),
+													&found);
+	if (!found)
+		pg_atomic_init_u32(ic_proxy_peer_listener_failed, 0);
+	else
+		pg_atomic_exchange_u32(ic_proxy_peer_listener_failed, 0);
 
 	ic_proxy_pkt_cache_init(IC_PROXY_MAX_PKT_SIZE);
 
@@ -576,8 +595,7 @@ ic_proxy_server_main(void)
 	BackgroundWorkerUnblockSignals();
 
 	/*
-	 * return non-zero value so we are restarted by the postmaster, but this
-	 * behavior can be controled by calling ic_proxy_server_quit()
+	 * return non-zero value so we are restarted by the postmaster 
 	 */
 	ic_proxy_server_exit_code = 1;
 	uv_run(&ic_proxy_server_loop, UV_RUN_DEFAULT);

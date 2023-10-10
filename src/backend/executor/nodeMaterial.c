@@ -105,7 +105,7 @@ ExecMaterial(PlanState *pstate)
 		 *
 		 * See motion_sanity_walker() for details on how a deadlock may occur.
 		 */
-		if (((Material *) node->ss.ps.plan)->cdb_strict)
+		if (node->cdb_strict)
 		{
 			for (;;)
 			{
@@ -231,7 +231,10 @@ ExecInitMaterial(Material *node, EState *estate, int eflags)
 	matstate->ss.ps.ExecProcNode = ExecMaterial;
 
 	if (node->cdb_strict)
+	{
 		eflags |= EXEC_FLAG_REWIND;
+		matstate->cdb_strict = true;
+	}
 
 	/*
 	 * If the Material node was inserted to protect the child node from rescanning, don't

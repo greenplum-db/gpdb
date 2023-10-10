@@ -196,7 +196,7 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 		 * GPDB supports index-only scan on AO starting from AORelationVersion_GP7.
 		 */
 		bool enable_ios_ao = false;
-		if (RelationAMIsAO(relation) &&
+		if (RelationIsAppendOptimized(relation) &&
 			AORelationVersion_Validate(relation, AORelationVersion_GP7))
 			enable_ios_ao = true;
 
@@ -286,7 +286,7 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 				info->indexkeys[i] = index->indkey.values[i];
 
 				/* GPDB: This AO table might not have met the requirement for IOScan. */
-				if (RelationAMIsAO(relation) && !enable_ios_ao)
+				if (RelationIsAppendOptimized(relation) && !enable_ios_ao)
 					info->canreturn[i] = false;
 				else
 					info->canreturn[i] = index_can_return(indexRelation, i + 1);
@@ -628,7 +628,7 @@ cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
 	 * pages added since the last VACUUM are most likely not marked
 	 * all-visible.  But costsize.c wants it converted to a fraction.
 	 */
-	if (RelationAMIsAO(rel))
+	if (RelationIsAppendOptimized(rel))
 	{
 		/* see appendonly_estimate_rel_size()/aoco_estimate_rel_size() */
 		*allvisfrac = 1;
@@ -665,9 +665,12 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 	if (rel->rd_rel->reltuples > 0)
 		return rel->rd_rel->reltuples;
 
-	inheritors = find_all_inheritors(RelationGetRelid(rel),
-									 AccessShareLock,
-									 NULL);
+	// To avoid blocking concurrent transactions on leaf partitions
+	// throughout the entire transition, we refrain from acquiring locks on
+	// the leaf partitions. Instead, we acquire locks only on the
+	// partitions that need to be scanned when ORCA writes the plan,
+	// although it may lead to less accurate stats.
+	inheritors = find_all_inheritors(RelationGetRelid(rel), NoLock, NULL);
 	totaltuples = 0;
 	foreach(lc, inheritors)
 	{
@@ -676,9 +679,14 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 		double		childtuples;
 
 		if (childid != RelationGetRelid(rel))
-			childrel = try_table_open(childid, NoLock, false);
+			childrel = RelationIdGetRelation(childid);
 		else
 			childrel = rel;
+
+		// If childrel is NULL, continue by assuming the child relation
+		// has 0 tuples.
+		if (childrel == NULL)
+			continue;
 
 		childtuples = childrel->rd_rel->reltuples;
 
@@ -709,6 +717,57 @@ cdb_estimate_partitioned_numtuples(Relation rel)
 			heap_close(childrel, NoLock);
 	}
 	return totaltuples;
+}
+
+/*
+ * Get the total pages of a partitioned table, including all partitions.
+ *
+ * Only used with ORCA, currently.
+ */
+PageEstimate
+cdb_estimate_partitioned_numpages(Relation rel)
+{
+	List	   *inheritors;
+	ListCell   *lc;
+
+	PageEstimate estimate = {
+		.totalpages = rel->rd_rel->relpages,
+		.totalallvisiblepages = rel->rd_rel->relallvisible
+	};
+
+	if (estimate.totalpages > 0)
+		return estimate;
+
+	// To avoid blocking concurrent transactions on leaf partitions
+	// throughout the entire transition, we refrain from acquiring locks on
+	// the leaf partitions. Instead, we acquire locks only on the
+	// partitions that need to be scanned when ORCA writes the plan,
+	// although it may lead to less accurate stats.
+	inheritors = find_all_inheritors(RelationGetRelid(rel),
+									 NoLock,
+									 NULL);
+	foreach(lc, inheritors)
+	{
+		Oid			childid = lfirst_oid(lc);
+		Relation	childrel;
+
+		if (childid != RelationGetRelid(rel))
+			childrel = RelationIdGetRelation(childid);
+		else
+			childrel = rel;
+
+		// If childrel is NULL, continue by assuming the child relation
+		// has 0 pages.
+		if (childrel == NULL)
+			continue;
+
+		estimate.totalpages += childrel->rd_rel->relpages;
+		estimate.totalallvisiblepages += childrel->rd_rel->relallvisible;
+
+		if (childrel != rel)
+			heap_close(childrel, NoLock);
+	}
+	return estimate;
 }
 
 /*
@@ -2509,7 +2568,7 @@ set_relation_partition_info(PlannerInfo *root, RelOptInfo *rel,
 static PartitionScheme
 find_partition_scheme(PlannerInfo *root, Relation relation)
 {
-	PartitionKey partkey = RelationGetPartitionKey(relation);
+	PartitionKey partkey = RelationRetrievePartitionKey(relation);
 	ListCell   *lc;
 	int			partnatts,
 				i;
@@ -2618,7 +2677,7 @@ static void
 set_baserel_partition_key_exprs(Relation relation,
 								RelOptInfo *rel)
 {
-	PartitionKey partkey = RelationGetPartitionKey(relation);
+	PartitionKey partkey = RelationRetrievePartitionKey(relation);
 	int			partnatts;
 	int			cnt;
 	List	  **partexprs;

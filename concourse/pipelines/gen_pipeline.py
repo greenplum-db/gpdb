@@ -29,6 +29,7 @@ from __future__ import print_function
 
 import argparse
 import datetime
+import getpass
 import os
 import re
 import subprocess
@@ -97,12 +98,34 @@ def create_pipeline(args, git_remote, git_branch):
     os_username = {
         "rhel8" : "rhel",
         "rocky8" : "rocky",
-        "oel8" : "oel"
+        "oel8" : "oel",
+        "rhel9" : "rhel",
+        "rocky9" : "rocky",
+        "oel9" : "oel"
     }
     test_os = {
         "rhel8" : "centos",
         "rocky8": "centos",
-        "oel8" : "centos"
+        "oel8" : "centos",
+        "rhel9" : "centos",
+        "rocky9": "centos",
+        "oel9" : "centos"
+    }
+    compile_platform = {
+        "rhel8" : "rocky8",
+        "rocky8": "rocky8",
+        "oel8" : "rocky8",
+        "rhel9" : "rocky9",
+        "rocky9": "rocky9",
+        "oel9" : "rocky9"
+    }
+    dist = {
+        "rhel8" : "el8",
+        "rocky8" : "el8",
+        "oel8" : "el8",
+        "rhel9" : "el9",
+        "rocky9" : "el9",
+        "oel9": "el9"
     }
 
 
@@ -114,6 +137,8 @@ def create_pipeline(args, git_remote, git_branch):
         'default_os_type': default_os_type,
         'os_username': os_username[args.os_type],
         'test_os': test_os[args.os_type],
+        'compile_platform': compile_platform[args.os_type],
+        'dist': dist[args.os_type],
         'pipeline_target': args.pipeline_target,
         'test_sections': args.test_sections,
         'use_ICW_workers': args.use_ICW_workers,
@@ -149,7 +174,6 @@ def gen_pipeline(args, pipeline_name, variable_files, git_remote, git_branch):
 
     return '''fly --target {target} \
 set-pipeline \
---check-creds \
 --pipeline {name} \
 --config {output_path} \
 {variables} \
@@ -239,7 +263,7 @@ def main():
         action='store',
         dest='os_type',
         default=default_os_type,
-        choices=['rhel8', 'rocky8', 'oel8'],
+        choices=['rhel8', 'rocky8', 'oel8', 'rhel9', 'rocky9', 'oel9'],
         help='OS value to support'
     )
 
@@ -260,13 +284,13 @@ def main():
         action='store',
         dest='test_sections',
         choices=[
-            'ICW',
-            'CLI',
-            'Release',
+            'icw',
+            'cli',
+            'release',
         ],
         default=[],
         nargs='+',
-        help='Select tests sections to run, Release section should be specified with ICW and CLI, and will be ignored if os_type is not ' + default_os_type
+        help='Select tests sections to run, release section should be specified with icw and cli, and will be ignored if os_type is not ' + default_os_type
     )
 
     parser.add_argument(
@@ -274,7 +298,7 @@ def main():
         '--user',
         action='store',
         dest='user',
-        default=os.getlogin(),
+        default=getpass.getuser(),
         help='Developer userid to use for pipeline name and filename.'
     )
 
@@ -315,15 +339,15 @@ def main():
         raise Exception('--directed flag can be used only with prod target')
 
     output_path_is_set = os.path.basename(args.output_filepath) != default_output_filename
-    if (args.user != os.getlogin() and output_path_is_set):
+    if (args.user != getpass.getuser() and output_path_is_set):
         print("You can only use one of --output or --user.")
         exit(1)
 
     if args.pipeline_target == 'prod' and not args.directed_release:
         args.test_sections = [
-            'ICW',
-            'CLI',
-            'Release'
+            'icw',
+            'cli',
+            'release'
         ]
 
     # use_ICW_workers adds tags to the specified concourse definitions which
@@ -338,13 +362,15 @@ def main():
     # don't overwrite the main pipeline
     if args.pipeline_target != 'prod' and not output_path_is_set:
         pipeline_file_suffix = suggested_git_branch()
-        if args.user != os.getlogin():
+        if args.user != getpass.getuser():
             pipeline_file_suffix = args.user
+        pipeline_file_suffix = pipeline_file_suffix.replace("/", "_")
         default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '-' + args.os_type + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 
     if args.directed_release:
         pipeline_file_suffix = suggested_git_branch()
+        pipeline_file_suffix = pipeline_file_suffix.replace("/", "_")
         default_dev_output_filename = pipeline_file_suffix + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
 

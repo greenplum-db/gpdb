@@ -18,7 +18,9 @@
 extern "C" {
 #include "postgres.h"
 
+#include "access/amapi.h"
 #include "access/attnum.h"
+#include "optimizer/plancat.h"
 #include "parser/parse_coerce.h"
 #include "statistics/statistics.h"
 #include "utils/faultinjector.h"
@@ -208,9 +210,6 @@ void FreeAttrStatsSlot(AttStatsSlot *sslot);
 // attribute statistics
 HeapTuple GetAttStats(Oid relid, AttrNumber attnum);
 
-// attribute width
-int32 GetAttAvgWidth(Oid relid, AttrNumber attnum);
-
 List *GetExtStats(Relation rel);
 
 char *GetExtStatsName(Oid statOid);
@@ -230,9 +229,6 @@ bool IsFuncNDVPreserving(Oid funcid);
 
 // stability property of given function
 char FuncStability(Oid funcid);
-
-// data access property of given function
-char FuncDataAccess(Oid funcid);
 
 // exec location property of given function
 char FuncExecLocation(Oid funcid);
@@ -439,9 +435,6 @@ void GpdbEreportImpl(int xerrcode, int severitylevel, const char *xerrmsg,
 // string representation of a node
 char *NodeToString(void *obj);
 
-// node representation from a string
-Node *StringToNode(char *string);
-
 // return the default value of the type
 Node *GetTypeDefault(Oid typid);
 
@@ -502,6 +495,8 @@ GpPolicy *GetDistributionPolicy(Relation rel);
 gpos::BOOL IsChildPartDistributionMismatched(Relation rel);
 
 double CdbEstimatePartitionedNumTuples(Relation rel);
+
+PageEstimate CdbEstimatePartitionedNumPages(Relation rel);
 
 // close the given relation
 void CloseRelation(Relation rel);
@@ -577,6 +572,9 @@ bool HasUpdateTriggers(Oid relid);
 void IndexOpProperties(Oid opno, Oid opfamily, StrategyNumber *strategynumber,
 					   Oid *righttype);
 
+// check whether index column is returnable (for index-only scans)
+gpos::BOOL IndexCanReturn(Relation index, int attno);
+
 // get oids of families this operator belongs to
 List *GetOpFamiliesForScOp(Oid opno);
 
@@ -647,6 +645,36 @@ List *GetRelChildIndexes(Oid reloid);
 Oid GetForeignServerId(Oid reloid);
 
 void GPDBLockRelationOid(Oid reloid, int lockmode);
+
+char *GetRelFdwName(Oid reloid);
+
+PathTarget *MakePathtargetFromTlist(List *tlist);
+
+void SplitPathtargetAtSrfs(PlannerInfo *root, PathTarget *target,
+						   PathTarget *input_target, List **targets,
+						   List **targets_contain_srfs);
+
+List *MakeTlistFromPathtarget(PathTarget *target);
+
+Node *Expression_tree_mutator(Node *node, Node *(*mutator)(), void *context);
+
+TargetEntry *TlistMember(Expr *node, List *targetlist);
+
+Var *MakeVarFromTargetEntry(Index varno, TargetEntry *tle);
+
+TargetEntry *FlatCopyTargetEntry(TargetEntry *src_tle);
+
+bool IsTypeRange(Oid typid);
+
+char *GetRelAmName(Oid reloid);
+
+IndexAmRoutine *GetIndexAmRoutineFromAmHandler(Oid am_handler);
+
+PartitionDesc GPDBRelationRetrievePartitionDesc(Relation rel);
+
+PartitionKey GPDBRelationRetrievePartitionKey(Relation rel);
+
+bool TestexprIsHashable(Node *testexpr, List *param_ids);
 
 }  //namespace gpdb
 

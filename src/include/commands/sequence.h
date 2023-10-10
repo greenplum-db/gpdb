@@ -34,6 +34,13 @@ typedef struct FormData_pg_sequence_data
 typedef FormData_pg_sequence_data *Form_pg_sequence_data;
 
 /*
+ * PostgreSQL default value is 1, GPDB privately bump up to 20.
+ * If a sequence in UDF, QE executor need to apply sequence value from QD.
+ * Frequent sequence application is network bottleneck for query execution.
+ */
+#define SEQ_CACHE_DEFAULT 20
+
+/*
  * Columns of a sequence relation
  */
 

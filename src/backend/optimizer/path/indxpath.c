@@ -798,18 +798,25 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 
 		/*
 		 * Random access to Append-Only is slow because AO doesn't use the buffer
-		 * pool and we want to avoid decompressing blocks multiple times.  So,
-		 * only consider bitmap paths because they are processed in TID order.
-		 * The appendonlyam.c module will optimize fetches in TID order by keeping
-		 * the last decompressed block between fetch calls.
-		 * Index scan path on GPDB's bitmap index should works the same as bitmap paths.
+		 * pool and we want to avoid decompressing blocks multiple times.
 		 *
-		 * Enable index only scan on AO here, but the index scan is still disabled.
+		 * Bitmap scans on the other hand are processed in TID order and the
+		 * AO table AMs optimize fetches in TID order by keeping the last
+		 * decompressed block between fetch calls.
+		 *
+		 * Thus, we ban index scans on append-optimized tables, and generally
+		 * only pick bitmap index scans.
+		 *
+		 * Exceptions:
+		 * (1) Index-only scans as they don't need to access the base table.
+		 * (2) If the index AM does not support a bitmap index scan, like
+		 * pgvector's ivfflat or hsnw.
 		 */
 		if (index->amhasgettuple &&
 				((!IsAccessMethodAO(rel->relam) ||
 				 index->amcostestimate == bmcostestimate ||
-				 ipath->path.pathtype == T_IndexOnlyScan)))
+				 ipath->path.pathtype == T_IndexOnlyScan ||
+				 (!index->amhasgetbitmap))))
 			add_path(rel, (Path *) ipath);
 
 		if (index->amhasgetbitmap &&

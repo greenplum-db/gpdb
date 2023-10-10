@@ -94,6 +94,141 @@ WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
 
 DROP TABLE ao_blkdir_test;
 
+-- Test `tupcount` in pg_aoseg == sum of number of `row_count` across all
+-- aoblkdir entries for each segno. Test with commits, aborts and deletes.
+
+-- Case1: without VACUUM ANALYZE
+CREATE TABLE ao_blkdir_test_rowcount(i int, j int) USING ao_row DISTRIBUTED BY (j);
+1: BEGIN;
+2: BEGIN;
+3: BEGIN;
+4: BEGIN;
+1: INSERT INTO ao_blkdir_test_rowcount SELECT i, 2 FROM generate_series(1, 10) i;
+2: INSERT INTO ao_blkdir_test_rowcount SELECT i, 3 FROM generate_series(1, 20) i;
+3: INSERT INTO ao_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 30) i;
+3: ABORT;
+3: BEGIN;
+3: INSERT INTO ao_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 40) i;
+4: INSERT INTO ao_blkdir_test_rowcount SELECT i, 7 FROM generate_series(1, 50) i;
+1: COMMIT;
+2: COMMIT;
+3: COMMIT;
+4: COMMIT;
+DELETE FROM ao_blkdir_test_rowcount WHERE j = 7;
+
+CREATE INDEX ao_blkdir_test_rowcount_idx ON ao_blkdir_test_rowcount(i);
+
+SELECT segno, sum(row_count) AS totalrows FROM
+  (SELECT (gp_toolkit.__gp_aoblkdir('ao_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id')
+      WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno;
+SELECT segno, sum(tupcount) AS totalrows FROM
+  gp_toolkit.__gp_aoseg('ao_blkdir_test_rowcount') WHERE segment_id = 0 GROUP BY segno;
+
+-- Case2: with VACUUM ANALYZE
+DROP TABLE ao_blkdir_test_rowcount;
+CREATE TABLE ao_blkdir_test_rowcount(i int, j int) USING ao_row DISTRIBUTED BY (j);
+CREATE INDEX ao_blkdir_test_rowcount_idx ON ao_blkdir_test_rowcount(i);
+1: BEGIN;
+2: BEGIN;
+3: BEGIN;
+4: BEGIN;
+1: INSERT INTO ao_blkdir_test_rowcount SELECT i, 2 FROM generate_series(1, 10) i;
+1: INSERT INTO ao_blkdir_test_rowcount SELECT i, 2 FROM ao_blkdir_test_rowcount;
+1: INSERT INTO ao_blkdir_test_rowcount SELECT i, 2 FROM ao_blkdir_test_rowcount;
+2: INSERT INTO ao_blkdir_test_rowcount SELECT i, 3 FROM generate_series(1, 20) i;
+2: INSERT INTO ao_blkdir_test_rowcount SELECT i, 3 FROM ao_blkdir_test_rowcount;
+2: INSERT INTO ao_blkdir_test_rowcount SELECT i, 3 FROM ao_blkdir_test_rowcount;
+3: INSERT INTO ao_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 30) i;
+3: INSERT INTO ao_blkdir_test_rowcount SELECT i, 4 FROM ao_blkdir_test_rowcount;
+3: INSERT INTO ao_blkdir_test_rowcount SELECT i, 4 FROM ao_blkdir_test_rowcount;
+4: INSERT INTO ao_blkdir_test_rowcount SELECT i, 7 FROM generate_series(1, 50) i;
+4: INSERT INTO ao_blkdir_test_rowcount SELECT i, 7 FROM ao_blkdir_test_rowcount;
+4: INSERT INTO ao_blkdir_test_rowcount SELECT i, 7 FROM ao_blkdir_test_rowcount;
+1: COMMIT;
+2: COMMIT;
+3: ABORT;
+4: COMMIT;
+
+DELETE FROM ao_blkdir_test_rowcount WHERE j = 7;
+VACUUM ANALYZE ao_blkdir_test_rowcount;
+
+SELECT segno, sum(row_count) AS totalrows FROM
+  (SELECT (gp_toolkit.__gp_aoblkdir('ao_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id')
+      WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno;
+SELECT segno, sum(tupcount) AS totalrows FROM
+  gp_toolkit.__gp_aoseg('ao_blkdir_test_rowcount') WHERE segment_id = 0 GROUP BY segno;
+
+UPDATE ao_blkdir_test_rowcount SET i = i + 1;
+VACUUM ANALYZE ao_blkdir_test_rowcount;
+
+SELECT segno, sum(row_count) AS totalrows FROM
+  (SELECT (gp_toolkit.__gp_aoblkdir('ao_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id')
+      WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno;
+SELECT segno, sum(tupcount) AS totalrows FROM
+  gp_toolkit.__gp_aoseg('ao_blkdir_test_rowcount') WHERE segment_id = 0 GROUP BY segno;
+
+DROP TABLE ao_blkdir_test_rowcount;
+
+--
+-- Test tuple fetch with holes from ABORTs
+--
+CREATE TABLE ao_fetch_hole(i int, j int) USING ao_row;
+CREATE INDEX ON ao_fetch_hole(i);
+INSERT INTO ao_fetch_hole VALUES (2, 0);
+-- Create a hole after the last entry (of the last minipage) in the blkdir.
+BEGIN;
+INSERT INTO ao_fetch_hole SELECT 3, j FROM generate_series(1, 20) j;
+ABORT;
+SELECT (gp_toolkit.__gp_aoblkdir('ao_fetch_hole')).* FROM gp_dist_random('gp_id')
+  WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
+
+-- Ensure we will do an index scan.
+SET enable_seqscan TO off;
+SET enable_indexonlyscan TO off;
+SET optimizer TO off;
+EXPLAIN SELECT count(*) FROM ao_fetch_hole WHERE i = 3;
+
+SELECT gp_inject_fault_infinite('AppendOnlyBlockDirectory_GetEntry_sysscan', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT count(*) FROM ao_fetch_hole WHERE i = 3;
+-- Since the hole is at the end of the minipage, we can't avoid a sysscan for
+-- each tuple.
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+-- Now do 1 more insert, so that the hole is sandwiched between two successive
+-- minipage entries.
+INSERT INTO ao_fetch_hole VALUES (4, 21);
+SELECT (gp_toolkit.__gp_aoblkdir('ao_fetch_hole')).* FROM gp_dist_random('gp_id')
+  WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
+
+SELECT gp_inject_fault_infinite('AppendOnlyBlockDirectory_GetEntry_sysscan', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT gp_inject_fault_infinite('AppendOnlyBlockDirectory_GetEntry_inter_entry_hole', 'skip', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT count(*) FROM ao_fetch_hole WHERE i = 3;
+-- Since the hole is between two entries, we are always able to find the last
+-- entry in the minipage, determine that the target row doesn't lie within it
+-- and early return, thereby avoiding an expensive per-tuple sysscan. We only
+-- do 1 sysscan - for the first tuple fetch in the hole and avoid it for all
+-- subsequent fetches in the hole.
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_inter_entry_hole', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'reset', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_inter_entry_hole', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+RESET enable_seqscan;
+RESET enable_indexonlyscan;
+RESET optimizer;
+
 --------------------------------------------------------------------------------
 -- AOCO tables
 --------------------------------------------------------------------------------
@@ -199,3 +334,139 @@ FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
 4: INSERT INTO aoco_blkdir_test VALUES (2, 2);
 
 DROP TABLE aoco_blkdir_test;
+
+-- Test `tupcount` in pg_ao(cs)seg == sum of number of `row_count` across all
+-- aoblkdir entries for each <segno, columngroup_no>. Test with commits, aborts
+-- and deletes.
+
+-- Case1: without VACUUM ANALYZE
+CREATE TABLE aoco_blkdir_test_rowcount(i int, j int) USING ao_column DISTRIBUTED BY (j);
+1: BEGIN;
+2: BEGIN;
+3: BEGIN;
+4: BEGIN;
+1: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 2 FROM generate_series(1, 10) i;
+2: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 3 FROM generate_series(1, 20) i;
+3: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 30) i;
+3: ABORT;
+3: BEGIN;
+3: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 40) i;
+4: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 7 FROM generate_series(1, 50) i;
+1: COMMIT;
+2: COMMIT;
+3: COMMIT;
+4: COMMIT;
+DELETE FROM aoco_blkdir_test_rowcount WHERE j = 7;
+
+CREATE INDEX aoco_blkdir_test_rowcount_idx ON aoco_blkdir_test_rowcount(i);
+
+SELECT segno, columngroup_no, sum(row_count) AS totalrows FROM
+    (SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id')
+     WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno, columngroup_no;
+SELECT segno, column_num, sum(tupcount) AS totalrows FROM
+    gp_toolkit.__gp_aocsseg('aoco_blkdir_test_rowcount') WHERE segment_id = 0 GROUP BY segno, column_num;
+
+-- Case2: with VACUUM ANALYZE
+DROP TABLE aoco_blkdir_test_rowcount;
+CREATE TABLE aoco_blkdir_test_rowcount(i int, j int) USING ao_column DISTRIBUTED BY (j);
+CREATE INDEX aoco_blkdir_test_rowcount_idx ON aoco_blkdir_test_rowcount(i);
+1: BEGIN;
+2: BEGIN;
+3: BEGIN;
+4: BEGIN;
+1: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 2 FROM generate_series(1, 10) i;
+1: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 2 FROM aoco_blkdir_test_rowcount;
+1: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 2 FROM aoco_blkdir_test_rowcount;
+2: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 3 FROM generate_series(1, 20) i;
+2: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 3 FROM aoco_blkdir_test_rowcount;
+2: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 3 FROM aoco_blkdir_test_rowcount;
+3: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 4 FROM generate_series(1, 30) i;
+3: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 4 FROM aoco_blkdir_test_rowcount;
+3: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 4 FROM aoco_blkdir_test_rowcount;
+4: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 7 FROM generate_series(1, 50) i;
+4: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 7 FROM aoco_blkdir_test_rowcount;
+4: INSERT INTO aoco_blkdir_test_rowcount SELECT i, 7 FROM aoco_blkdir_test_rowcount;
+1: COMMIT;
+2: COMMIT;
+3: ABORT;
+4: COMMIT;
+
+DELETE FROM aoco_blkdir_test_rowcount WHERE j = 7;
+VACUUM ANALYZE aoco_blkdir_test_rowcount;
+
+SELECT segno, columngroup_no, sum(row_count) AS totalrows FROM
+    (SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id')
+     WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno, columngroup_no;
+SELECT segno, column_num, sum(tupcount) AS totalrows FROM
+    gp_toolkit.__gp_aocsseg('aoco_blkdir_test_rowcount') WHERE segment_id = 0 GROUP BY segno, column_num;
+
+UPDATE aoco_blkdir_test_rowcount SET i = i + 1;
+VACUUM ANALYZE aoco_blkdir_test_rowcount;
+
+SELECT segno, columngroup_no, sum(row_count) AS totalrows FROM
+    (SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id')
+     WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno, columngroup_no;
+SELECT segno, column_num, sum(tupcount) AS totalrows FROM
+    gp_toolkit.__gp_aocsseg('aoco_blkdir_test_rowcount') WHERE segment_id = 0 GROUP BY segno, column_num;
+
+DROP TABLE aoco_blkdir_test_rowcount;
+
+--
+-- Test tuple fetch with holes from ABORTs
+--
+CREATE TABLE aoco_fetch_hole(i int, j int) USING ao_row;
+CREATE INDEX ON aoco_fetch_hole(i);
+INSERT INTO aoco_fetch_hole VALUES (2, 0);
+-- Create a hole after the last entry (of the last minipage) in the blkdir.
+BEGIN;
+INSERT INTO aoco_fetch_hole SELECT 3, j FROM generate_series(1, 20) j;
+ABORT;
+SELECT (gp_toolkit.__gp_aoblkdir('aoco_fetch_hole')).* FROM gp_dist_random('gp_id')
+WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
+
+-- Ensure we will do an index scan.
+SET enable_seqscan TO off;
+SET enable_indexonlyscan TO off;
+SET optimizer TO off;
+EXPLAIN SELECT count(*) FROM aoco_fetch_hole WHERE i = 3;
+
+SELECT gp_inject_fault_infinite('AppendOnlyBlockDirectory_GetEntry_sysscan', 'skip', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT count(*) FROM aoco_fetch_hole WHERE i = 3;
+-- Since the hole is at the end of the minipage, we can't avoid a sysscan for
+-- each tuple.
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'status', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'reset', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+-- Now do 1 more insert, so that the hole is sandwiched between two successive
+-- minipage entries.
+INSERT INTO aoco_fetch_hole VALUES (4, 21);
+SELECT (gp_toolkit.__gp_aoblkdir('aoco_fetch_hole')).* FROM gp_dist_random('gp_id')
+WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
+
+SELECT gp_inject_fault_infinite('AppendOnlyBlockDirectory_GetEntry_sysscan', 'skip', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT gp_inject_fault_infinite('AppendOnlyBlockDirectory_GetEntry_inter_entry_hole', 'skip', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT count(*) FROM aoco_fetch_hole WHERE i = 3;
+-- Since the hole is between two entries, we are always able to find the last
+-- entry in the minipage, determine that the target row doesn't lie within it
+-- and early return, thereby avoiding an expensive per-tuple sysscan. We only
+-- do 1 sysscan - for the first tuple fetch in the hole and avoid it for all
+-- subsequent fetches in the hole.
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'status', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_inter_entry_hole', 'status', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'reset', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_inter_entry_hole', 'reset', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+RESET enable_seqscan;
+RESET enable_indexonlyscan;
+RESET optimizer;

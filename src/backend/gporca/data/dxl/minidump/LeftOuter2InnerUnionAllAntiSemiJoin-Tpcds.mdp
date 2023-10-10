@@ -2112,112 +2112,76 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
       <dxl:Relation Mdid="6.17281181.1.1" Name="store" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
         <dxl:Columns>
           <dxl:Column Name="s_store_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_store_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_rec_start_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_rec_end_date" Attno="4" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_closed_date_sk" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_store_name" Attno="6" Mdid="0.1043.1.0" Nullable="true" ColWidth="50">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_number_employees" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_floor_space" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_hours" Attno="9" Mdid="0.1042.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_manager" Attno="10" Mdid="0.1043.1.0" Nullable="true" ColWidth="40">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_market_id" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_geography_class" Attno="12" Mdid="0.1043.1.0" Nullable="true" ColWidth="100">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_market_desc" Attno="13" Mdid="0.1043.1.0" Nullable="true" ColWidth="100">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_market_manager" Attno="14" Mdid="0.1043.1.0" Nullable="true" ColWidth="40">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_division_id" Attno="15" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_division_name" Attno="16" Mdid="0.1043.1.0" Nullable="true" ColWidth="50">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_company_id" Attno="17" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_company_name" Attno="18" Mdid="0.1043.1.0" Nullable="true" ColWidth="50">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_street_number" Attno="19" Mdid="0.1043.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_street_name" Attno="20" Mdid="0.1043.1.0" Nullable="true" ColWidth="60">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_street_type" Attno="21" Mdid="0.1042.1.0" Nullable="true" ColWidth="15">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_suite_number" Attno="22" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_city" Attno="23" Mdid="0.1043.1.0" Nullable="true" ColWidth="60">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_county" Attno="24" Mdid="0.1043.1.0" Nullable="true" ColWidth="30">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_state" Attno="25" Mdid="0.1042.1.0" Nullable="true" ColWidth="2">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_zip" Attno="26" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_country" Attno="27" Mdid="0.1043.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_gmt_offset" Attno="28" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="s_tax_precentage" Attno="29" Mdid="0.1700.1.0" Nullable="true" ColWidth="7">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -3523,94 +3487,64 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
       <dxl:Relation Mdid="6.15668460.1.1" Name="store_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_sold_time_sk" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_item_sk" Attno="3" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_customer_sk" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_cdemo_sk" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_hdemo_sk" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_addr_sk" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_store_sk" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_promo_sk" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ticket_number" Attno="10" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_quantity" Attno="11" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_wholesale_cost" Attno="12" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_list_price" Attno="13" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_sales_price" Attno="14" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_discount_amt" Attno="15" Mdid="0.1700.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_sales_price" Attno="16" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_wholesale_cost" Attno="17" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_list_price" Attno="18" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_ext_tax" Attno="19" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_coupon_amt" Attno="20" Mdid="0.1700.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_paid" Attno="21" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_paid_inc_tax" Attno="22" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ss_net_profit" Attno="23" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -9150,91 +9084,62 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
       <dxl:Relation Mdid="6.17281135.1.1" Name="item" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;28,22">
         <dxl:Columns>
           <dxl:Column Name="i_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_item_id" Attno="2" Mdid="0.1042.1.0" Nullable="false" ColWidth="16">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_rec_start_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_rec_end_date" Attno="4" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_item_desc" Attno="5" Mdid="0.1043.1.0" Nullable="true" ColWidth="200">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_current_price" Attno="6" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_wholesale_cost" Attno="7" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_brand_id" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_brand" Attno="9" Mdid="0.1042.1.0" Nullable="true" ColWidth="50">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_class_id" Attno="10" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_class" Attno="11" Mdid="0.1042.1.0" Nullable="true" ColWidth="50">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_category_id" Attno="12" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_category" Attno="13" Mdid="0.1042.1.0" Nullable="true" ColWidth="50">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_manufact_id" Attno="14" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_manufact" Attno="15" Mdid="0.1042.1.0" Nullable="true" ColWidth="50">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_size" Attno="16" Mdid="0.1042.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_formulation" Attno="17" Mdid="0.1042.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_color" Attno="18" Mdid="0.1042.1.0" Nullable="true" ColWidth="20">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_units" Attno="19" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_container" Attno="20" Mdid="0.1042.1.0" Nullable="true" ColWidth="10">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_manager_id" Attno="21" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="i_product_name" Attno="22" Mdid="0.1042.1.0" Nullable="true" ColWidth="50">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -11628,7 +11533,7 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
         </dxl:LogicalCTEAnchor>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="85902">
+    <dxl:Plan Id="0" SpaceSize="147462">
       <dxl:Limit>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="5904.512295" Rows="5.000000" Width="8"/>
@@ -11728,29 +11633,8 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                     <dxl:Filter/>
                     <dxl:TableDescriptor Mdid="6.15668460.1.1" TableName="store_sales">
                       <dxl:Columns>
-                        <dxl:Column ColId="125" Attno="1" ColName="ss_sold_date_sk" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="126" Attno="2" ColName="ss_sold_time_sk" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="124" Attno="3" ColName="ss_item_sk" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="127" Attno="4" ColName="ss_customer_sk" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="128" Attno="5" ColName="ss_cdemo_sk" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="129" Attno="6" ColName="ss_hdemo_sk" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="130" Attno="7" ColName="ss_addr_sk" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="131" Attno="8" ColName="ss_store_sk" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="132" Attno="9" ColName="ss_promo_sk" TypeMdid="0.23.1.0"/>
                         <dxl:Column ColId="133" Attno="10" ColName="ss_ticket_number" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="134" Attno="11" ColName="ss_quantity" TypeMdid="0.23.1.0"/>
-                        <dxl:Column ColId="135" Attno="12" ColName="ss_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="136" Attno="13" ColName="ss_list_price" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="137" Attno="14" ColName="ss_sales_price" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="138" Attno="15" ColName="ss_ext_discount_amt" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="139" Attno="16" ColName="ss_ext_sales_price" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="140" Attno="17" ColName="ss_ext_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="141" Attno="18" ColName="ss_ext_list_price" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="142" Attno="19" ColName="ss_ext_tax" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="143" Attno="20" ColName="ss_coupon_amt" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="144" Attno="21" ColName="ss_net_paid" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="145" Attno="22" ColName="ss_net_paid_inc_tax" TypeMdid="0.1700.1.0"/>
-                        <dxl:Column ColId="146" Attno="23" ColName="ss_net_profit" TypeMdid="0.1700.1.0"/>
                         <dxl:Column ColId="147" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
                         <dxl:Column ColId="148" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
                         <dxl:Column ColId="149" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
@@ -11783,34 +11667,6 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                         <dxl:TableDescriptor Mdid="6.17281181.1.1" TableName="store">
                           <dxl:Columns>
                             <dxl:Column ColId="154" Attno="1" ColName="s_store_sk" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="155" Attno="2" ColName="s_store_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
-                            <dxl:Column ColId="156" Attno="3" ColName="s_rec_start_date" TypeMdid="0.1082.1.0"/>
-                            <dxl:Column ColId="157" Attno="4" ColName="s_rec_end_date" TypeMdid="0.1082.1.0"/>
-                            <dxl:Column ColId="158" Attno="5" ColName="s_closed_date_sk" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="159" Attno="6" ColName="s_store_name" TypeMdid="0.1043.1.0" ColWidth="50"/>
-                            <dxl:Column ColId="160" Attno="7" ColName="s_number_employees" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="161" Attno="8" ColName="s_floor_space" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="162" Attno="9" ColName="s_hours" TypeMdid="0.1042.1.0" ColWidth="20"/>
-                            <dxl:Column ColId="163" Attno="10" ColName="s_manager" TypeMdid="0.1043.1.0" ColWidth="40"/>
-                            <dxl:Column ColId="164" Attno="11" ColName="s_market_id" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="165" Attno="12" ColName="s_geography_class" TypeMdid="0.1043.1.0" ColWidth="100"/>
-                            <dxl:Column ColId="166" Attno="13" ColName="s_market_desc" TypeMdid="0.1043.1.0" ColWidth="100"/>
-                            <dxl:Column ColId="167" Attno="14" ColName="s_market_manager" TypeMdid="0.1043.1.0" ColWidth="40"/>
-                            <dxl:Column ColId="168" Attno="15" ColName="s_division_id" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="169" Attno="16" ColName="s_division_name" TypeMdid="0.1043.1.0" ColWidth="50"/>
-                            <dxl:Column ColId="170" Attno="17" ColName="s_company_id" TypeMdid="0.23.1.0"/>
-                            <dxl:Column ColId="171" Attno="18" ColName="s_company_name" TypeMdid="0.1043.1.0" ColWidth="50"/>
-                            <dxl:Column ColId="172" Attno="19" ColName="s_street_number" TypeMdid="0.1043.1.0" ColWidth="10"/>
-                            <dxl:Column ColId="173" Attno="20" ColName="s_street_name" TypeMdid="0.1043.1.0" ColWidth="60"/>
-                            <dxl:Column ColId="174" Attno="21" ColName="s_street_type" TypeMdid="0.1042.1.0" ColWidth="15"/>
-                            <dxl:Column ColId="175" Attno="22" ColName="s_suite_number" TypeMdid="0.1042.1.0" ColWidth="10"/>
-                            <dxl:Column ColId="176" Attno="23" ColName="s_city" TypeMdid="0.1043.1.0" ColWidth="60"/>
-                            <dxl:Column ColId="177" Attno="24" ColName="s_county" TypeMdid="0.1043.1.0" ColWidth="30"/>
-                            <dxl:Column ColId="178" Attno="25" ColName="s_state" TypeMdid="0.1042.1.0" ColWidth="2"/>
-                            <dxl:Column ColId="179" Attno="26" ColName="s_zip" TypeMdid="0.1042.1.0" ColWidth="10"/>
-                            <dxl:Column ColId="180" Attno="27" ColName="s_country" TypeMdid="0.1043.1.0" ColWidth="20"/>
-                            <dxl:Column ColId="181" Attno="28" ColName="s_gmt_offset" TypeMdid="0.1700.1.0"/>
-                            <dxl:Column ColId="182" Attno="29" ColName="s_tax_precentage" TypeMdid="0.1700.1.0"/>
                             <dxl:Column ColId="183" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
                             <dxl:Column ColId="184" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
                             <dxl:Column ColId="185" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
@@ -11838,27 +11694,6 @@ select * from v2 left outer join v1 on v2.i_item_sk = v1.ss_item_sk limit 5;
                 <dxl:TableDescriptor Mdid="6.17281135.1.1" TableName="item">
                   <dxl:Columns>
                     <dxl:Column ColId="95" Attno="1" ColName="i_item_sk" TypeMdid="0.23.1.0"/>
-                    <dxl:Column ColId="96" Attno="2" ColName="i_item_id" TypeMdid="0.1042.1.0" ColWidth="16"/>
-                    <dxl:Column ColId="97" Attno="3" ColName="i_rec_start_date" TypeMdid="0.1082.1.0"/>
-                    <dxl:Column ColId="98" Attno="4" ColName="i_rec_end_date" TypeMdid="0.1082.1.0"/>
-                    <dxl:Column ColId="99" Attno="5" ColName="i_item_desc" TypeMdid="0.1043.1.0" ColWidth="200"/>
-                    <dxl:Column ColId="100" Attno="6" ColName="i_current_price" TypeMdid="0.1700.1.0"/>
-                    <dxl:Column ColId="101" Attno="7" ColName="i_wholesale_cost" TypeMdid="0.1700.1.0"/>
-                    <dxl:Column ColId="102" Attno="8" ColName="i_brand_id" TypeMdid="0.23.1.0"/>
-                    <dxl:Column ColId="103" Attno="9" ColName="i_brand" TypeMdid="0.1042.1.0" ColWidth="50"/>
-                    <dxl:Column ColId="104" Attno="10" ColName="i_class_id" TypeMdid="0.23.1.0"/>
-                    <dxl:Column ColId="105" Attno="11" ColName="i_class" TypeMdid="0.1042.1.0" ColWidth="50"/>
-                    <dxl:Column ColId="106" Attno="12" ColName="i_category_id" TypeMdid="0.23.1.0"/>
-                    <dxl:Column ColId="107" Attno="13" ColName="i_category" TypeMdid="0.1042.1.0" ColWidth="50"/>
-                    <dxl:Column ColId="108" Attno="14" ColName="i_manufact_id" TypeMdid="0.23.1.0"/>
-                    <dxl:Column ColId="109" Attno="15" ColName="i_manufact" TypeMdid="0.1042.1.0" ColWidth="50"/>
-                    <dxl:Column ColId="110" Attno="16" ColName="i_size" TypeMdid="0.1042.1.0" ColWidth="20"/>
-                    <dxl:Column ColId="111" Attno="17" ColName="i_formulation" TypeMdid="0.1042.1.0" ColWidth="20"/>
-                    <dxl:Column ColId="112" Attno="18" ColName="i_color" TypeMdid="0.1042.1.0" ColWidth="20"/>
-                    <dxl:Column ColId="113" Attno="19" ColName="i_units" TypeMdid="0.1042.1.0" ColWidth="10"/>
-                    <dxl:Column ColId="114" Attno="20" ColName="i_container" TypeMdid="0.1042.1.0" ColWidth="10"/>
-                    <dxl:Column ColId="115" Attno="21" ColName="i_manager_id" TypeMdid="0.23.1.0"/>
-                    <dxl:Column ColId="116" Attno="22" ColName="i_product_name" TypeMdid="0.1042.1.0" ColWidth="50"/>
                     <dxl:Column ColId="117" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
                     <dxl:Column ColId="118" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
                     <dxl:Column ColId="119" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>

@@ -2,6 +2,8 @@
 
 Reloads Greenplum Database table data sorting the data based on specified columns.
 
+> **Note** The `gpreload` utility is deprecated and will be removed in the next major release of Greenplum Database. Use [ALTER TABLE REPACK BY COLUMNS](../../ref_guide/sql_commands/ALTER_TABLE.html) to physically reorder a table based on one or more columns. 
+
 ## <a id="section2"></a>Synopsis 
 
 ```
@@ -35,7 +37,7 @@ Running the `ANALYZE` command after reloading table data might query performance
 
 For each table, the utility copies table data to a temporary table, truncates the existing table data, and inserts data from the temporary table to the table in the specified sort order. Each table reload is performed in a single transaction.
 
-For a partitioned table, you can reload the data of a leaf child partition. However, data is inserted from the root partition table, which acquires a `ROW EXCLUSIVE` lock on the entire table.
+For a partitioned table, you can reload the data of a leaf partition. However, data is inserted from the root partitioned table, which acquires a `ROW EXCLUSIVE` lock on the entire table.
 
 ## <a id="section5"></a>Options 
 

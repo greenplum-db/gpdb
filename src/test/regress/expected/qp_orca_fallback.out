@@ -256,6 +256,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 create external web table p2_ext (like p1) EXECUTE 'cat something.txt' FORMAT 'TEXT';
 alter table ext_part attach partition p1 for values in (1);
 alter table ext_part attach partition p2_ext for values in (2);
+NOTICE:  partition constraints are not validated when attaching a readable external table
 explain insert into ext_part values (1);
                       QUERY PLAN                      
 ------------------------------------------------------
@@ -276,3 +277,12 @@ explain delete from ext_part where a=1;
 
 explain update ext_part set a=1;
 ERROR:  cannot update foreign table "p2_ext"
+set optimizer_enable_orderedagg=off;
+select array_agg(a order by b)
+  from (values (1,4),(2,3),(3,1),(4,2)) v(a,b);
+ array_agg 
+-----------
+ {3,4,2,1}
+(1 row)
+
+reset optimizer_enable_orderedagg;

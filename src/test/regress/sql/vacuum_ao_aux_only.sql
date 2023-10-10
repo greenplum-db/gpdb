@@ -5,11 +5,6 @@ CREATE DATABASE vac_ao_aux;
 
 CREATE EXTENSION gp_inject_fault;
 
-ALTER SYSTEM SET autovacuum = off;;
--- start_ignore
-\! gpstop -u;
--- end_ignore
-
 -- Test VACUUM AO_AUX_ONLY without providing a relation list
 CREATE TABLE vac_example_heap(i int, j int) DISTRIBUTED BY (i);
 INSERT INTO vac_example_heap SELECT j,j FROM generate_series(1, 1000000)j;

@@ -1,7 +1,7 @@
 -- Distributed snapshot tests
 
 create or replace function test_consume_xids(int4) returns void as '@abs_srcdir@/../regress/regress.so', 'test_consume_xids' language C;
-CREATE
+CREATE FUNCTION
 
 -- Scenario1: Test to validate GetSnapshotData()'s computation of globalXmin using
 -- distributed snapshot. It mainly uses a old read-only transaction to help
@@ -10,12 +10,12 @@ CREATE
 
 -- Setup
 CREATE TABLE distributed_snapshot_test1 (a int);
-CREATE
+CREATE TABLE
 
 1: BEGIN;
 BEGIN
 1: INSERT INTO distributed_snapshot_test1 values(1);
-INSERT 1
+INSERT 0 1
 -- Read transaction which helps to get lower globalXmin for session 3. As this
 -- will have MyProc->xmin set to transaction 1's xid.
 2: BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;
@@ -31,7 +31,7 @@ COMMIT
 
 -- Transaction to bump the latestCompletedXid
 1: INSERT INTO distributed_snapshot_test1 values(1);
-INSERT 1
+INSERT 0 1
 
 -- Hold after walking over ProcArray in GetSnpashotData(), right at start of
 -- DistributedLog_AdvanceOldestXmin()
@@ -51,7 +51,7 @@ COMMIT
 
 -- Transaction used to bump the distributed oldestXmin
 1: INSERT INTO distributed_snapshot_test1 values(1);
-INSERT 1
+INSERT 0 1
 -- let session 3 now move forward to compute distributed oldest xmin
 1: SELECT gp_inject_fault('distributedlog_advance_oldest_xmin', 'reset', dbid) from gp_segment_configuration where content = 0 and role = 'p';
  gp_inject_fault 
@@ -68,14 +68,14 @@ INSERT 1
 
 -- Setup
 CREATE TABLE distributed_snapshot_test2 (a int);
-CREATE
+CREATE TABLE
 
 -- start transaction assigns distributed xid.
 1: BEGIN ISOLATION LEVEL REPEATABLE READ;
 BEGIN
 -- this sets latestCompletedXid
 2: INSERT INTO distributed_snapshot_test2 VALUES(1);
-INSERT 1
+INSERT 0 1
 -- here, take distributed snapshot
 1: SELECT 123 AS "establish snapshot";
  establish snapshot 
@@ -83,7 +83,7 @@ INSERT 1
  123                
 (1 row)
 2: INSERT INTO distributed_snapshot_test2 VALUES(2);
-INSERT 1
+INSERT 0 1
 -- expected to see just VALUES(1)
 1: SELECT * FROM distributed_snapshot_test2;
  a 
@@ -94,7 +94,7 @@ INSERT 1
 COMMIT
 
 DROP TABLE distributed_snapshot_test2;
-DROP
+DROP TABLE
 
 -- Scenario3: Test the one-phase commit transactions don't break repeatable read isolation.
 --
@@ -110,7 +110,7 @@ DROP
 -- protocol. Repeatable read transactions may read (100), (100,100) or
 -- (100,100,300), but not (100, 300).
 CREATE TABLE distributed_snapshot_test3 (a int);
-CREATE
+CREATE TABLE
 10: BEGIN ISOLATION LEVEL REPEATABLE READ;
 BEGIN
 20: BEGIN ISOLATION LEVEL REPEATABLE READ;
@@ -118,21 +118,21 @@ BEGIN
 30: BEGIN ISOLATION LEVEL REPEATABLE READ;
 BEGIN
 40: INSERT INTO distributed_snapshot_test3 VALUES(100);
-INSERT 1
+INSERT 0 1
 10: SELECT gp_segment_id, * FROM distributed_snapshot_test3 where a = 100;
  gp_segment_id | a   
 ---------------+-----
  2             | 100 
 (1 row)
 40: INSERT INTO distributed_snapshot_test3 VALUES(100);
-INSERT 1
+INSERT 0 1
 30: SELECT 123 AS "establish snapshot";
  establish snapshot 
 --------------------
  123                
 (1 row)
 40: INSERT INTO distributed_snapshot_test3 VALUES(300);
-INSERT 1
+INSERT 0 1
 10: SELECT gp_segment_id, * FROM distributed_snapshot_test3;
  gp_segment_id | a   
 ---------------+-----
@@ -158,7 +158,7 @@ COMMIT
 30: COMMIT;
 COMMIT
 DROP TABLE distributed_snapshot_test3;
-DROP
+DROP TABLE
 
 -- The following test cases are to test that QEs can get
 -- latest distribute snapshot to scan normal tables (not catalog).
@@ -190,9 +190,9 @@ DROP
 
 -- Case 1: concurrently alter column type (will do rewrite heap)
 create table t_alter_snapshot_test(a int, b int, c int);
-CREATE
+CREATE TABLE
 insert into t_alter_snapshot_test values (1, 1, 1), (1, 1, 1);
-INSERT 2
+INSERT 0 2
 
 select * from t_alter_snapshot_test;
  a | b | c 
@@ -204,17 +204,17 @@ select * from t_alter_snapshot_test;
 1: begin;
 BEGIN
 1: alter table t_alter_snapshot_test alter column b type text;
-ALTER
+ALTER TABLE
 
 -- the following statement will hang
 2&: alter table t_alter_snapshot_test alter column c type text;  <waiting ...>
 
 1: end;
-END
+COMMIT
 -- after 1 commit, 2 can continue, it should use latest distributed
 -- snapshot so that the data will not be lost.
 2<:  <... completed>
-ALTER
+ALTER TABLE
 
 select * from t_alter_snapshot_test;
  a | b | c 
@@ -223,13 +223,13 @@ select * from t_alter_snapshot_test;
  1 | 1 | 1 
 (2 rows)
 drop table t_alter_snapshot_test;
-DROP
+DROP TABLE
 
 -- Case 2: concurrently add exclude constrain
 create table t_alter_snapshot_test(a int, b int);
-CREATE
+CREATE TABLE
 insert into t_alter_snapshot_test values (1, 1), (1, 1);
-INSERT 2
+INSERT 0 2
 
 select a from t_alter_snapshot_test;
  a 
@@ -241,26 +241,26 @@ select a from t_alter_snapshot_test;
 1: begin;
 BEGIN
 1: alter table t_alter_snapshot_test alter column b type int using b::int;
-ALTER
+ALTER TABLE
 
 2&: alter table t_alter_snapshot_test add exclude using btree (a WITH =);  <waiting ...>
 
 1: end;
-END
+COMMIT
 -- after 1 commit, 2 can go on and it should fail
 2<:  <... completed>
 ERROR:  could not create exclusion constraint "t_alter_snapshot_test_a_excl"  (seg1 127.0.1.1:7003 pid=39163)
 DETAIL:  Key (a)=(1) conflicts with key (a)=(1).
 
 drop table t_alter_snapshot_test;
-DROP
+DROP TABLE
 
 -- Case 3: concurrently split partition
 create table t_alter_snapshot_test(id int, rank int, year int) distributed by (id) partition by range (year) ( start (0) end (20) every (4), default partition extra );
-CREATE
+CREATE TABLE
 
 insert into t_alter_snapshot_test select i,i,i from generate_series(1, 100)i;
-INSERT 100
+INSERT 0 100
 select count(*) from t_alter_snapshot_test;
  count 
 -------
@@ -270,15 +270,15 @@ select count(*) from t_alter_snapshot_test;
 1: begin;
 BEGIN
 1: alter table t_alter_snapshot_test alter column rank type text;
-ALTER
+ALTER TABLE
 
 2&: alter table t_alter_snapshot_test split partition for (5) at (5)  into (partition pa,  partition pb);  <waiting ...>
 
 1: end;
-END
+COMMIT
 -- after 1 commit, 2 can go on and it should not lose data
 2<:  <... completed>
-ALTER
+ALTER TABLE
 
 select count(*) from t_alter_snapshot_test;
  count 
@@ -286,69 +286,69 @@ select count(*) from t_alter_snapshot_test;
  100   
 (1 row)
 drop table t_alter_snapshot_test;
-DROP
+DROP TABLE
 
 -- case 4: concurrently validate check
 create table t_alter_snapshot_test(a int, b int);
-CREATE
+CREATE TABLE
 insert into t_alter_snapshot_test values (1, 1), (2, 2);
-INSERT 2
+INSERT 0 2
 alter table t_alter_snapshot_test ADD CONSTRAINT mychk CHECK(a > 20) NOT VALID;
-ALTER
+ALTER TABLE
 
 1: begin;
 BEGIN
 1: alter table t_alter_snapshot_test alter column b type text;
-ALTER
+ALTER TABLE
 
 2&: alter table t_alter_snapshot_test validate CONSTRAINT mychk;  <waiting ...>
 
 1: end;
-END
+COMMIT
 -- after 1 commit, 2 can go on and it should fail
 2<:  <... completed>
 ERROR:  check constraint "mychk" is violated by some row  (seg1 127.0.1.1:7003 pid=39163)
 
 drop table t_alter_snapshot_test;
-DROP
+DROP TABLE
 
 -- case 5: concurrently domain check
 create domain domain_snapshot_test as int;
-CREATE
+CREATE DOMAIN
 create table t_alter_snapshot_test(i domain_snapshot_test, j int, k int);
-CREATE
+CREATE TABLE
 insert into t_alter_snapshot_test values(200,1,1);
-INSERT 1
+INSERT 0 1
 alter domain domain_snapshot_test ADD CONSTRAINT mychk CHECK(VALUE > 300)  NOT VALID;
-ALTER
+ALTER DOMAIN
 
 1: begin;
 BEGIN
 1: alter table t_alter_snapshot_test alter column k type text;
-ALTER
+ALTER TABLE
 
 2&: alter domain domain_snapshot_test validate CONSTRAINT mychk;  <waiting ...>
 
 1:end;
-END
+COMMIT
 -- after 1 commit, 2 can go on and it should fail
 2<:  <... completed>
 ERROR:  column "i" of table "t_alter_snapshot_test" contains values that violate the new constraint  (seg2 127.0.1.1:7004 pid=39164)
 
 drop table t_alter_snapshot_test;
-DROP
+DROP TABLE
 drop domain domain_snapshot_test;
-DROP
+DROP DOMAIN
 
 -- case 6: alter table expand table
 create table t_alter_snapshot_test(a int, b int);
-CREATE
+CREATE TABLE
 set allow_system_table_mods = on;
 SET
 update gp_distribution_policy set numsegments = 2 where localoid = 't_alter_snapshot_test'::regclass::oid;
 UPDATE 1
 insert into t_alter_snapshot_test select i,i from generate_series(1, 10)i;
-INSERT 10
+INSERT 0 10
 select gp_segment_id, * from t_alter_snapshot_test;
  gp_segment_id | a  | b  
 ---------------+----+----
@@ -367,15 +367,15 @@ select gp_segment_id, * from t_alter_snapshot_test;
 1: begin;
 BEGIN
 1: alter table t_alter_snapshot_test alter column b type text;
-ALTER
+ALTER TABLE
 
 2&: alter table t_alter_snapshot_test expand table;  <waiting ...>
 
 1: end;
-END
+COMMIT
 -- after 1 commit, 2 can go on and data should not be lost
 2<:  <... completed>
-ALTER
+ALTER TABLE
 
 select gp_segment_id, * from t_alter_snapshot_test;
  gp_segment_id | a  | b  
@@ -392,13 +392,13 @@ select gp_segment_id, * from t_alter_snapshot_test;
  2             | 5  | 5  
 (10 rows)
 drop table t_alter_snapshot_test;
-DROP
+DROP TABLE
 
 -- case 7: alter table set distributed by
 create table t_alter_snapshot_test(a int, b int) distributed randomly;
-CREATE
+CREATE TABLE
 insert into t_alter_snapshot_test select i,i from generate_series(1, 10)i;
-INSERT 10
+INSERT 0 10
 select count(*) from t_alter_snapshot_test;
  count 
 -------
@@ -408,15 +408,15 @@ select count(*) from t_alter_snapshot_test;
 1: begin;
 BEGIN
 1: alter table t_alter_snapshot_test alter column b type text;
-ALTER
+ALTER TABLE
 
 2&: alter table t_alter_snapshot_test set distributed by (a);  <waiting ...>
 
 1: end;
-END
+COMMIT
 -- after 1 commit, 2 can continue and data should not be lost
 2<:  <... completed>
-ALTER
+ALTER TABLE
 
 select count(*) from t_alter_snapshot_test;
  count 
@@ -424,23 +424,23 @@ select count(*) from t_alter_snapshot_test;
  10    
 (1 row)
 drop table t_alter_snapshot_test;
-DROP
+DROP TABLE
 
 -- case 8: DML concurrent with Alter Table
 create table t_alter_snapshot_test(a int, b int);
-CREATE
+CREATE TABLE
 
 ---- test for insert
 1: begin;
 BEGIN
 1: insert into t_alter_snapshot_test values (1, 1);
-INSERT 1
+INSERT 0 1
 2&: alter table t_alter_snapshot_test alter column b type text;  <waiting ...>
 1: end;
-END
+COMMIT
 -- 2 can continue, and we should not lose data
 2<:  <... completed>
-ALTER
+ALTER TABLE
 select * from t_alter_snapshot_test;
  a | b 
 ---+---
@@ -449,19 +449,19 @@ select * from t_alter_snapshot_test;
 
 ---- test for update
 truncate t_alter_snapshot_test;
-TRUNCATE
+TRUNCATE TABLE
 insert into t_alter_snapshot_test values (1, 1);
-INSERT 1
+INSERT 0 1
 1: begin;
 BEGIN
 1: update t_alter_snapshot_test set b = '3';
 UPDATE 1
 2&: alter table t_alter_snapshot_test alter column b type int using b::int;  <waiting ...>
 1: end;
-END
+COMMIT
 -- 2 can continue and we should see the data has been updated
 2<:  <... completed>
-ALTER
+ALTER TABLE
 select * from t_alter_snapshot_test;
  a | b 
 ---+---
@@ -470,35 +470,35 @@ select * from t_alter_snapshot_test;
 
 ---- test for delete
 truncate t_alter_snapshot_test;
-TRUNCATE
+TRUNCATE TABLE
 insert into t_alter_snapshot_test values (1, 1);
-INSERT 1
+INSERT 0 1
 1: begin;
 BEGIN
 1: delete from t_alter_snapshot_test;
 DELETE 1
 2&: alter table t_alter_snapshot_test alter column b type text;  <waiting ...>
 1: end;
-END
+COMMIT
 -- 2 can continue and we should see the data has been deleted
 2<:  <... completed>
-ALTER
+ALTER TABLE
 select * from t_alter_snapshot_test;
  a | b 
 ---+---
 (0 rows)
 drop table t_alter_snapshot_test;
-DROP
+DROP TABLE
 
 -- Case 9: Repeatable Read Isolation Level Test
 create table t_alter_snapshot_test(a int, b int);
-CREATE
+CREATE TABLE
 insert into t_alter_snapshot_test values (1, 1);
-INSERT 1
+INSERT 0 1
 1: begin;
 BEGIN
 1: insert into t_alter_snapshot_test values (1, 1);
-INSERT 1
+INSERT 0 1
 
 2: begin isolation level repeatable read;
 BEGIN
@@ -510,11 +510,11 @@ BEGIN
 2&: alter table t_alter_snapshot_test alter column b type text;  <waiting ...>
 
 1: end;
-END
+COMMIT
 -- 2 can continue and after its alter rewrite the heap
 -- it can see all the data even under repeatable read
 2<:  <... completed>
-ALTER
+ALTER TABLE
 2: select * from t_alter_snapshot_test;
  a | b 
 ---+---
@@ -522,7 +522,7 @@ ALTER
  1 | 1 
 (2 rows)
 2: end;
-END
+COMMIT
 
 select * from t_alter_snapshot_test;
  a | b 
@@ -531,7 +531,7 @@ select * from t_alter_snapshot_test;
  1 | 1 
 (2 rows)
 drop table t_alter_snapshot_test;
-DROP
+DROP TABLE
 
 ----------------------------------------
 -- Test for fixes
@@ -542,7 +542,7 @@ DROP
 -- have completed and no longer needed). And in that case, we
 -- should still be able to advance properly after restart.
 create table distributed_snapshot_fix1(a int);
-CREATE
+CREATE TABLE
 
 -- On a primary, burn xids until the next xid is the first one of a segment,
 -- which has 4096 (ENTRIES_PER_PAGE) * 32 (SLRU_PAGES_PER_SEGMENT) = 131072 xids.
@@ -559,9 +559,9 @@ BEGIN
                    
 (1 row)
 1U: end;
-END
+COMMIT
 1U: insert into distributed_snapshot_fix1 values(1);
-INSERT 1
+INSERT 0 1
 1Uq: ... <quitting>
 1q: ... <quitting>
 
@@ -613,33 +613,19 @@ select pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p'
 
 
 -- test the distributed snapshot in the situation of direct dispatch
-0: create or replace language plpython3u;
-CREATE
-
 0: create table direct_dispatch_snapshot_alpha(a int, b int);
-CREATE
+CREATE TABLE
 0: insert into direct_dispatch_snapshot_alpha select i, i from generate_series(1, 10) i;
-INSERT 10
+INSERT 0 10
 
-0: create function distributed_snapshot_test(is_direct_dispatch boolean) returns boolean as $$ import re from pg import DB from copy import deepcopy 
-dbname = plpy.execute("select current_database() db")[0]["db"] db = DB(dbname=dbname) 
-info_results = [] db.set_notice_receiver(lambda n: info_results.append(deepcopy(n.message))) 
-db.query("set Debug_print_full_dtm = on") db.query("set client_min_messages = log") 
-if is_direct_dispatch: # should not create distributed snapshot db.query("select * from direct_dispatch_snapshot_alpha where a = 6") else: # should create distributed snapshot db.query("select * from direct_dispatch_snapshot_alpha where b = 6") 
-info_string = ", ".join(info_results) res = re.findall(r"Got distributed snapshot from CreateDistributedSnapshot", info_string) 
-if (is_direct_dispatch and len(res) == 1) or (not is_direct_dispatch and len(res) == 2): return True 
-return False 
-$$ language plpython3u;
-CREATE
+-- Direct dispach doesn't support transaction block. Use multiple '-c' to avoid psql creating single transaction.
+-- direct dispatch, one log line is expected
+! psql -d isolation2test -c "set Debug_print_full_dtm = on;" -c "set client_min_messages = log;" -c "select * from direct_dispatch_snapshot_alpha where a = 6;" 2>&1 | grep "Got distributed snapshot from CreateDistributedSnapshot";
+LOG:  Got distributed snapshot from CreateDistributedSnapshot
 
-0: select distributed_snapshot_test(true);
- distributed_snapshot_test 
----------------------------
- t                         
-(1 row)
-0: select distributed_snapshot_test(false);
- distributed_snapshot_test 
----------------------------
- t                         
-(1 row)
+
+-- indirect dispatch, two log lines are expected
+! psql -d isolation2test -c "set Debug_print_full_dtm = on;" -c "set client_min_messages = log;" -c "select * from direct_dispatch_snapshot_alpha where b = 6;" 2>&1 | grep "Got distributed snapshot from CreateDistributedSnapshot";
+LOG:  Got distributed snapshot from CreateDistributedSnapshot
+LOG:  Got distributed snapshot from CreateDistributedSnapshot
 

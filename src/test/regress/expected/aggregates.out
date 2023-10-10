@@ -2731,6 +2731,7 @@ create aggregate my_half_sum(int4)
    sfunc = sum_transfn,
    finalfunc = halfsum_finalfn
 );
+discard plans;
 -- Agg state should be shared even though my_sum has no finalfn
 select my_sum(one),my_half_sum(one) from (values(1),(2),(3),(4)) t(one);
 NOTICE:  sum_transfn called with 1
@@ -2975,7 +2976,6 @@ explain (costs off)
 --
 set enable_sort=false;
 set work_mem='64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 select unique1, count(*), sum(twothousand) from tenk1
 group by unique1
 having sum(fivethous) > 4975
@@ -3033,14 +3033,12 @@ order by sum(twothousand);
 (48 rows)
 
 set work_mem to default;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 set enable_sort to default;
 --
 -- Compare results between plans using sorting and plans using hash
 -- aggregation. Force spilling in both cases by setting work_mem low.
 --
 set work_mem='64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 -- Produce results with sorting.
 set enable_hashagg = false;
 set jit_above_cost = 0;
@@ -3124,7 +3122,6 @@ select (g/2)::numeric as c1, array_agg(g::numeric) as c2, count(*) as c3
   group by g/2;
 set enable_sort = true;
 set work_mem to default;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 -- Compare group aggregation results to hash aggregation results
 (select * from agg_hash_1 except select * from agg_group_1)
   union all

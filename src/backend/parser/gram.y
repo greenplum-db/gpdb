@@ -304,7 +304,9 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 		CreateExternalStmt
 		CreateQueueStmt CreateResourceGroupStmt
 		DropQueueStmt DropResourceGroupStmt
-		ExtTypedesc OptSingleRowErrorHandling ExtSingleRowErrorHandling
+		ExtTypedesc ExtSingleRowErrorHandling
+
+%type<list> 	OptSingleRowErrorHandling
 
 %type <node>    deny_login_role deny_interval deny_point deny_day_specifier
 
@@ -706,7 +708,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 /* ordinary key words in alphabetical order */
 %token <keyword> ABORT_P ABSOLUTE_P ACCESS ACTION ADD_P ADMIN AFTER
-	AGGREGATE ALL ALSO ALTER ALWAYS ANALYSE ANALYZE AND ANY ARRAY AS ASC
+	AGGREGATE ALL ALSO ALTER ALWAYS AM ANALYSE ANALYZE AND ANY ARRAY AS ASC
 	ASSERTION ASSIGNMENT ASYMMETRIC AT ATTACH ATTRIBUTE AUTHORIZATION
 
 	BACKWARD BEFORE BEGIN_P BETWEEN BIGINT BINARY BIT
@@ -769,7 +771,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 	QUOTE
 
 	RANGE READ REAL REASSIGN RECHECK RECURSIVE REF REFERENCES REFERENCING
-	REFRESH REINDEX RELATIVE_P RELEASE RENAME REPEATABLE REPLACE REPLICA
+	REFRESH REINDEX RELATIVE_P RELEASE RELOPT RENAME REPEATABLE REPLACE REPLICA
 	RESET RESTART RESTRICT RETRIEVE RETURNING RETURNS REVOKE RIGHT ROLE ROLLBACK ROLLUP
 	ROUTINE ROUTINES ROW ROWS RULE
 
@@ -804,7 +806,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 %token <keyword>
 	ACTIVE AO_AUX_ONLY
 
-	CONTAINS COORDINATOR CPUSET CPU_HARD_QUOTA_LIMIT CPU_SOFT_PRIORITY
+	CONTAINS COORDINATOR CPUSET CPU_MAX_PERCENT CPU_WEIGHT
 
 	CREATEEXTTABLE
 
@@ -820,7 +822,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 	HASH HOST
 
-	IGNORE_P INCLUSIVE INITPLAN
+	IGNORE_P INCLUSIVE INITPLAN IO_LIMIT
 
 	LIST LOG_P
 
@@ -834,8 +836,8 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 
 	QUEUE
 
-	RANDOMLY READABLE READS REJECT_P REPLICATED RESOURCE
-	ROOTPARTITION
+	RANDOMLY READABLE READS REJECT_P REPACK REPLICATED
+	RESOURCE ROOTPARTITION
 
 	SCATTER SEGMENT SEGMENTS SPLIT SUBPARTITION
 
@@ -917,14 +919,17 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc AGGREGATE
 			%nonassoc ALSO
 			%nonassoc ALTER
-            %nonassoc AO_AUX_ONLY
+			%nonassoc AM
+			%nonassoc AO_AUX_ONLY
 			%nonassoc ASSERTION
 			%nonassoc ASSIGNMENT
+			%nonassoc ATTACH
 			%nonassoc BACKWARD
 			%nonassoc BEFORE
 			%nonassoc BEGIN_P
 			%nonassoc BY
 			%nonassoc CACHE
+			%nonassoc CALL
 			%nonassoc CALLED
 			%nonassoc CASCADE
 			%nonassoc CASCADED
@@ -934,6 +939,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc CLASS
 			%nonassoc CLOSE
 			%nonassoc CLUSTER
+			%nonassoc COLUMNS
 			%nonassoc COMMENT
 			%nonassoc COMMIT
 			%nonassoc COMMITTED
@@ -945,11 +951,12 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc CONTENT_P
 			%nonassoc CONTINUE_P
 			%nonassoc CONVERSION_P
+			%nonassoc COORDINATOR
 			%nonassoc COPY
 			%nonassoc COST
 			%nonassoc CPUSET
-			%nonassoc CPU_HARD_QUOTA_LIMIT
-			%nonassoc CPU_SOFT_PRIORITY
+			%nonassoc CPU_MAX_PERCENT
+			%nonassoc CPU_WEIGHT
 			%nonassoc CREATEEXTTABLE
 			%nonassoc CSV
 			%nonassoc CURRENT_P
@@ -966,6 +973,8 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc DELETE_P
 			%nonassoc DELIMITER
 			%nonassoc DELIMITERS
+			%nonassoc DEPENDS
+			%nonassoc DETACH
 			%nonassoc DISABLE_P
 			%nonassoc DOMAIN_P
 			%nonassoc DOUBLE_P
@@ -995,6 +1004,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc FUNCTION
 			%nonassoc GLOBAL
 			%nonassoc GRANTED
+			%nonassoc GROUPING
 			%nonassoc HANDLER
 			%nonassoc HASH
 			%nonassoc HEADER_P
@@ -1005,6 +1015,8 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc IMMEDIATE
 			%nonassoc IMMUTABLE
 			%nonassoc IMPLICIT_P
+			%nonassoc IMPORT_P
+			%nonassoc INCLUDE
 			%nonassoc INCLUDING
 			%nonassoc INCLUSIVE
 			%nonassoc INCREMENT
@@ -1028,11 +1040,14 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc LOAD
 			%nonassoc LOCAL
 			%nonassoc LOCATION
+			%nonassoc LOCKED
 			%nonassoc LOCK_P
+			%nonassoc LOGGED
 			%nonassoc MASTER
 			%nonassoc MATCH
 			%nonassoc MAXVALUE
 			%nonassoc MEMORY_LIMIT
+			%nonassoc METHOD
 			%nonassoc MIN_COST
 			%nonassoc MINUTE_P
 			%nonassoc MINVALUE
@@ -1043,6 +1058,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc MOVE
 			%nonassoc NAME_P
 			%nonassoc NAMES
+			%nonassoc NEW
 			%nonassoc NEWLINE
 			%nonassoc NEXT
 			%nonassoc NO
@@ -1055,11 +1071,13 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc OBJECT_P
 			%nonassoc OF
 			%nonassoc OIDS
+			%nonassoc OLD
 			%nonassoc OPTION
 			%nonassoc OPTIONS
 			%nonassoc OTHERS
 			%nonassoc OVER
 			%nonassoc OVERCOMMIT
+			%nonassoc OVERRIDING
 			%nonassoc OWNED
 			%nonassoc OWNER
 			%nonassoc PARALLEL
@@ -1068,13 +1086,16 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc PASSWORD
 			%nonassoc PERCENT
 			%nonassoc PERSISTENTLY
+			%nonassoc POLICY
 			%nonassoc PREPARE
 			%nonassoc PREPARED
 			%nonassoc PRIOR
 			%nonassoc PRIVILEGES
 			%nonassoc PROCEDURAL
 			%nonassoc PROCEDURE
+			%nonassoc PROCEDURES
 			%nonassoc PROTOCOL
+			%nonassoc PUBLICATION
 			%nonassoc QUEUE
 			%nonassoc QUOTE
 			%nonassoc RANDOMLY
@@ -1084,11 +1105,14 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc REASSIGN
 			%nonassoc RECHECK
 			%nonassoc RECURSIVE
+			%nonassoc REFERENCING
 			%nonassoc REINDEX
 			%nonassoc REJECT_P
 			%nonassoc RELATIVE_P
 			%nonassoc RELEASE
+			%nonassoc RELOPT
 			%nonassoc RENAME
+			%nonassoc REPACK
 			%nonassoc REPEATABLE
 			%nonassoc REPLACE
 			%nonassoc RESET
@@ -1100,9 +1124,12 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc REVOKE
 			%nonassoc ROLE
 			%nonassoc ROLLBACK
+			%nonassoc ROUTINE
+			%nonassoc ROUTINES
 			%nonassoc RULE
 			%nonassoc SAVEPOINT
 			%nonassoc SCHEMA
+			%nonassoc SCHEMAS
 			%nonassoc SCROLL
 			%nonassoc SEARCH
 			%nonassoc SECOND_P
@@ -1115,6 +1142,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc SHARE
 			%nonassoc SHOW
 			%nonassoc SIMPLE
+			%nonassoc SQL_P
 			%nonassoc SPLIT
 			%nonassoc STABLE
 			%nonassoc START
@@ -1123,10 +1151,13 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc STDIN
 			%nonassoc STDOUT
 			%nonassoc STORAGE
+			%nonassoc STORED
 			%nonassoc SUBPARTITION
+			%nonassoc SUPPORT
 			%nonassoc SYSID
 			%nonassoc SYSTEM_P
 			%nonassoc STRICT_P
+			%nonassoc TABLESAMPLE
 			%nonassoc TABLESPACE
 			%nonassoc TEMP
 			%nonassoc TEMPLATE
@@ -1134,6 +1165,7 @@ static void check_expressions_in_partition_key(PartitionSpec *spec, core_yyscan_
 			%nonassoc THRESHOLD
 			%nonassoc TIES
 			%nonassoc TRANSACTION
+			%nonassoc TRANSFORM
 			%nonassoc TRIGGER
 			%nonassoc TRUNCATE
 			%nonassoc TRUSTED
@@ -1607,13 +1639,13 @@ OptResourceGroupElem:
 					/* was "concurrency" */
 					$$ = makeDefElem("concurrency", (Node *) makeInteger($2), @1);
 				}
-			| CPU_HARD_QUOTA_LIMIT SignedIconst
+			| CPU_MAX_PERCENT SignedIconst
 				{
-					$$ = makeDefElem("cpu_hard_quota_limit", (Node *) makeInteger($2), @1);
+					$$ = makeDefElem("cpu_max_percent", (Node *) makeInteger($2), @1);
 				}
-			| CPU_SOFT_PRIORITY SignedIconst
+			| CPU_WEIGHT SignedIconst
 				{
-					$$ = makeDefElem("cpu_soft_priority", (Node *) makeInteger($2), @1);
+					$$ = makeDefElem("cpu_weight", (Node *) makeInteger($2), @1);
 				}
 			| CPUSET Sconst
 				{
@@ -1626,6 +1658,10 @@ OptResourceGroupElem:
 			| MIN_COST SignedIconst
 				{
 					$$ = makeDefElem("min_cost", (Node *) makeInteger($2), @1);
+				}
+			| IO_LIMIT Sconst
+				{
+					$$ = makeDefElem("io_limit", (Node *) makeString($2), @1);
 				}
 		;
 
@@ -3413,6 +3449,14 @@ alter_table_cmd:
 					n->subtype = AT_NoForceRowSecurity;
 					$$ = (Node *)n;
 				}
+			/* ALTER TABLE <name> REPACK BY COLUMNS (...) */
+			| REPACK BY COLUMNS '(' sortby_list ')'
+				{
+					AlterTableCmd *n = makeNode(AlterTableCmd);
+					n->subtype = AT_RepackTable;
+					n->def = (Node *) $5;
+					$$ = (Node *)n;
+				}
 			| alter_generic_options
 				{
 					AlterTableCmd *n = makeNode(AlterTableCmd);
@@ -3691,8 +3735,8 @@ opt_table_partition_exchange_validate:
 			{
 				$$ = +1;
 				ereport(NOTICE,
-						(errmsg("specifying \"WITH VALIDATION\" acts as no operation. "
-								"If the new partition is a regular table, validation is performed "
+						(errmsg("specifying \"WITH VALIDATION\" acts as no operation"),
+						 errdetail("If the new partition is a regular table, validation is performed "
 								"to make sure all the rows obey partition constraint. "
 								"If the new partition is external or foreign table, no validation is performed.")));
 			}
@@ -3700,8 +3744,8 @@ opt_table_partition_exchange_validate:
 			{
 				$$ = +0;
 				ereport(NOTICE,
-						(errmsg("specifying \"WITHOUT VALIDATION\" acts as no operation. "
-								"If the new partition is a regular table, validation is performed "
+						(errmsg("specifying \"WITHOUT VALIDATION\" acts as no operation"),
+						 errdetail("If the new partition is a regular table, validation is performed "
 								"to make sure all the rows obey partition constraint. "
 								"If the new partition is external or foreign table, no validation is performed.")));
 			}
@@ -4301,6 +4345,9 @@ CopyStmt:	COPY opt_binary qualified_name opt_column_list
 						n->options = lappend(n->options, $8);
 					if ($10)
 						n->options = list_concat(n->options, $10);
+					if ($12)
+						n->options = list_concat(n->options, $12);
+
 					$$ = (Node *)n;
 				}
 			| COPY '(' PreparableStmt ')' TO opt_program copy_file_name opt_with copy_options
@@ -5098,6 +5145,9 @@ TableLikeOption:
 				| INDEXES			{ $$ = CREATE_TABLE_LIKE_INDEXES; }
 				| STATISTICS		{ $$ = CREATE_TABLE_LIKE_STATISTICS; }
 				| STORAGE			{ $$ = CREATE_TABLE_LIKE_STORAGE; }
+				| ENCODING			{ $$ = CREATE_TABLE_LIKE_ENCODING; }
+				| RELOPT			{ $$ = CREATE_TABLE_LIKE_RELOPT; }
+				| AM				{ $$ = CREATE_TABLE_LIKE_AM; }
 				| ALL				{ $$ = CREATE_TABLE_LIKE_ALL; }
 		;
 
@@ -6451,7 +6501,7 @@ OptSingleRowErrorHandling:
 					   (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 						errmsg("invalid (ROWS) reject limit. Should be 2 or larger")));
 
-			$$ = (Node *)n;
+			$$ = lappend(NULL, makeDefElem("sreh", (Node *) n, @1));
 		}
 		| /*EMPTY*/		{ $$ = NULL; }
 		;
@@ -10473,18 +10523,30 @@ common_func_opt_item:
 			| NO SQL_P
 				{
 					$$ = makeDefElem("data_access", (Node *)makeString("none"), @1);
+					ereport(NOTICE,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("specifying \"NO SQL\" acts as no operation.")));
 				}
 			| CONTAINS SQL_P
 				{
 					$$ = makeDefElem("data_access", (Node *)makeString("contains"), @1);
+					ereport(NOTICE,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("specifying \"CONTAINS SQL DATA\" acts as no operation.")));
 				}
 			| READS SQL_P DATA_P
 				{
 					$$ = makeDefElem("data_access", (Node *)makeString("reads"), @1);
+					ereport(NOTICE,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("specifying \"READS SQL DATA\" acts as no operation.")));
 				}
 			| MODIFIES SQL_P DATA_P
 				{
 					$$ = makeDefElem("data_access", (Node *)makeString("modifies"), @1);
+					ereport(NOTICE,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("specifying \"MODIFIES SQL DATA\" acts as no operation.")));
 				}
 			| EXECUTE ON ANY
 				{
@@ -18010,6 +18072,7 @@ unreserved_keyword:
 			| ALSO
 			| ALTER
 			| ALWAYS
+			| AM
 			| ASSERTION
 			| ASSIGNMENT
 			| AT
@@ -18049,8 +18112,8 @@ unreserved_keyword:
 			| COPY
 			| COST
 			| CPUSET
-			| CPU_HARD_QUOTA_LIMIT
-			| CPU_SOFT_PRIORITY
+			| CPU_MAX_PERCENT
+			| CPU_WEIGHT
 			| CREATEEXTTABLE
 			| CSV
 			| CUBE
@@ -18140,6 +18203,7 @@ unreserved_keyword:
 			| INSERT
 			| INSTEAD
 			| INVOKER
+			| IO_LIMIT
 			| ISOLATION
 			| KEY
 			| LABEL
@@ -18155,6 +18219,7 @@ unreserved_keyword:
 			| LOCATION
 			| LOCK_P
 			| LOCKED
+			| LOG_P
 			| LOGGED
 			| MAPPING
 			| MASTER
@@ -18237,7 +18302,9 @@ unreserved_keyword:
 			| REJECT_P /* gp */
 			| RELATIVE_P
 			| RELEASE
+			| RELOPT
 			| RENAME
+			| REPACK
 			| REPEATABLE
 			| REPLACE
 			| REPLICA
@@ -18381,13 +18448,17 @@ PartitionIdentKeyword: ABORT_P
 			| AFTER
 			| AGGREGATE
 			| ALSO
+			| AM
+			| AO_AUX_ONLY
 			| ASSERTION
 			| ASSIGNMENT
+			| ATTACH
 			| BACKWARD
 			| BEFORE
 			| BEGIN_P
 			| BY
 			| CACHE
+			| CALL
 			| CALLED
 			| CASCADE
 			| CASCADED
@@ -18397,6 +18468,7 @@ PartitionIdentKeyword: ABORT_P
 			| CLASS
 			| CLOSE
 			| CLUSTER
+			| COLUMNS
 			| COMMENT
 			| COMMIT
 			| COMMITTED
@@ -18406,11 +18478,12 @@ PartitionIdentKeyword: ABORT_P
 			| CONTAINS
 			| CONTENT_P
 			| CONVERSION_P
+			| COORDINATOR
 			| COPY
 			| COST
 			| CPUSET
-			| CPU_HARD_QUOTA_LIMIT
-			| CPU_SOFT_PRIORITY
+			| CPU_MAX_PERCENT
+			| CPU_WEIGHT
 			| CREATEEXTTABLE
 			| CSV
 			| CUBE
@@ -18425,6 +18498,8 @@ PartitionIdentKeyword: ABORT_P
 			| DELETE_P
 			| DELIMITER
 			| DELIMITERS
+			| DEPENDS
+			| DETACH
 			| DISABLE_P
 			| DOMAIN_P
 			| DOUBLE_P
@@ -18451,8 +18526,11 @@ PartitionIdentKeyword: ABORT_P
 			| FORMAT
 			| FORWARD
 			| FUNCTION
+			| GENERATED
 			| GLOBAL
 			| GRANTED
+			| GROUPING
+			| GROUPS
 			| HANDLER
 			| HASH
 			| HEADER_P
@@ -18462,6 +18540,8 @@ PartitionIdentKeyword: ABORT_P
 			| IMMEDIATE
 			| IMMUTABLE
 			| IMPLICIT_P
+			| IMPORT_P
+			| INCLUDE
 			| INCLUDING
 			| INCLUSIVE
 			| INCREMENT
@@ -18485,11 +18565,14 @@ PartitionIdentKeyword: ABORT_P
 			| LOAD
 			| LOCAL
 			| LOCATION
+			| LOCKED
 			| LOCK_P
+			| LOGGED
 			| MASTER
 			| MATCH
 			| MAXVALUE
 			| MEMORY_LIMIT
+			| METHOD
 			| MINVALUE
 			| MISSING
 			| MODE
@@ -18497,6 +18580,7 @@ PartitionIdentKeyword: ABORT_P
 			| MOVE
 			| NAME_P
 			| NAMES
+			| NEW
 			| NEWLINE
 			| NEXT
 			| NO
@@ -18508,11 +18592,13 @@ PartitionIdentKeyword: ABORT_P
 			| OBJECT_P
 			| OF
 			| OIDS
+			| OLD
 			| OPERATOR
 			| OPTION
 			| OPTIONS
 			| OTHERS
 			| OVERCOMMIT
+			| OVERRIDING
 			| OWNED
 			| OWNER
 			| PARALLEL
@@ -18521,6 +18607,7 @@ PartitionIdentKeyword: ABORT_P
 			| PASSWORD
 			| PERCENT
 			| PERSISTENTLY
+			| POLICY
 			| PREPARE
 			| PREPARED
 			| PRESERVE
@@ -18528,32 +18615,41 @@ PartitionIdentKeyword: ABORT_P
 			| PRIVILEGES
 			| PROCEDURAL
 			| PROCEDURE
+			| PROCEDURES
 			| PROTOCOL
+			| PUBLICATION
 			| QUEUE
 			| QUOTE
 			| RANGE
 			| READ
 			| REASSIGN
 			| RECHECK
+			| REFERENCING
 			| REINDEX
 			| RELATIVE_P
 			| RELEASE
+			| RELOPT
 			| RENAME
+			| REPACK
 			| REPEATABLE
 			| REPLACE
 			| RESET
 			| RESOURCE
 			| RESTART
 			| RESTRICT
+			| RETRIEVE
 			| RETURNS
 			| REVOKE
 			| ROLE
 			| ROLLBACK
 			| ROLLUP
+			| ROUTINE
+			| ROUTINES
 			| ROWS
 			| RULE
 			| SAVEPOINT
 			| SCHEMA
+			| SCHEMAS
 			| SCROLL
 			| SEARCH
 			| SECURITY
@@ -18567,6 +18663,7 @@ PartitionIdentKeyword: ABORT_P
 			| SHOW
 			| SIMPLE
 			| SPLIT
+			| SQL_P
 			| STABLE
 			| START
 			| STATEMENT
@@ -18574,16 +18671,20 @@ PartitionIdentKeyword: ABORT_P
 			| STDIN
 			| STDOUT
 			| STORAGE
+			| STORED
 			| STRICT_P
 			| SUBPARTITION
+			| SUPPORT
 			| SYSID
 			| SYSTEM_P
+			| TABLESAMPLE
 			| TEMP
 			| TEMPLATE
 			| TEMPORARY
 			| THRESHOLD
 			| TIES
 			| TRANSACTION
+			| TRANSFORM
 			| TRIGGER
 			| TRUNCATE
 			| TRUSTED
@@ -18741,7 +18842,6 @@ type_func_name_keyword:
 			| JOIN
 			| LEFT
 			| LIKE
-			| LOG_P
 			| NATURAL
 			| NOTNULL
 			| OUTER_P
@@ -19748,7 +19848,6 @@ isSetWithReorganize(List **options)
 	}
 	return false;
 }
-
 
 /*
  * Greenplum: a thin wax off layer to keep compatibility with the legacy syntax

@@ -538,6 +538,9 @@ static void InitPostmasterDeathWatchHandle(void);
 
 static void setProcAffinity(int id);
 
+/* helper function */
+static void getLogDirectoryAbsolutePath(char *out_buf, size_t len);
+
 /*
  * Archiver is allowed to start up at the current postmaster state?
  *
@@ -1016,14 +1019,13 @@ PostmasterMain(int argc, char *argv[])
 	}
 
 	/*
-	 * If gp_role is not set, use utility role instead, and it could not be
-	 * changed by GUC commands because the source is PGC_S_OVERRIDE.
+	 * If gp_role is not set, use utility role instead.
 	 *
 	 * A single node coordinator or segment is set to utility, which is not
 	 * before Greenplum 7.
 	 */
 	if (Gp_role == GP_ROLE_UNDEFINED)
-		SetConfigOption("gp_role", "utility", PGC_POSTMASTER, PGC_S_OVERRIDE);
+		SetConfigOption("gp_role", "utility", PGC_POSTMASTER, PGC_S_DYNAMIC_DEFAULT);
 
 	/*
 	 * Locate the proper configuration files and data directory, and read
@@ -1763,6 +1765,17 @@ checkControlFile(void)
 	FreeFile(fp);
 }
 
+static void
+getLogDirectoryAbsolutePath(char *out_buf, size_t len)
+{
+	if (is_absolute_path(Log_directory))
+	{
+		snprintf(out_buf, len, "%s",  Log_directory);
+		return;
+	}
+
+	snprintf(out_buf, len, "%s/%s", DataDir, Log_directory);
+}
 
 /*
  * check if file or directory under "DataDir" exists and is accessible
@@ -1782,7 +1795,7 @@ checkPgDir(const char *dir)
 	if (stat(buf, &st) != 0)
 	{
 		/* check if log is there */
-		snprintf(buf, sizeof(buf), "%s%s", DataDir, "/log");
+		getLogDirectoryAbsolutePath(buf, sizeof(buf));
 		if (stat(buf, &st) == 0)
 			elog(LOG, "System file or directory missing (%s), shutting down segment", dir);
 
@@ -5827,6 +5840,9 @@ sigusr1_handler(SIGNAL_ARGS)
 		WalReceiverRequested = true;
 		MaybeStartWalReceiver();
 	}
+
+	if (CheckPostmasterSignal(PMSIGNAL_WALRCV_STREAMING) && WalReceiverPID != 0)
+		AddToDataDirLockFile(LOCK_FILE_LINE_PM_STATUS, PM_STATUS_WALRECV_STARTED_STREAMING);
 
 	if (CheckPostmasterSignal(PMSIGNAL_WAKEN_FTS) && FtsProbePID() != 0)
 	{

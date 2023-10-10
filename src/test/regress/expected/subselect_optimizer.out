@@ -930,6 +930,108 @@ select * from int8_tbl where q1 in (select c1 from inner_text);
 
 rollback;  -- to get rid of the bogus operator
 --
+-- Test resolution of hashed vs non-hashed implementation of EXISTS subplan
+--
+explain (costs off)
+select count(*) from tenk1 t
+where (exists(select 1 from tenk1 k where k.unique1 = t.unique2) or ten < 0);
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Result
+                     Filter: ((COALESCE((count()), '0'::bigint) > '0'::bigint) OR (tenk1.ten < 0))
+                     ->  Hash Left Join
+                           Hash Cond: (tenk1.unique2 = tenk1_1.unique1)
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                 Hash Key: tenk1.unique2
+                                 ->  Seq Scan on tenk1
+                           ->  Hash
+                                 ->  HashAggregate
+                                       Group Key: tenk1_1.unique1
+                                       ->  Seq Scan on tenk1 tenk1_1
+ Optimizer: Pivotal Optimizer (GPORCA)
+(15 rows)
+
+select count(*) from tenk1 t
+where (exists(select 1 from tenk1 k where k.unique1 = t.unique2) or ten < 0);
+ count 
+-------
+ 10000
+(1 row)
+
+explain (costs off)
+select count(*) from tenk1 t
+where (exists(select 1 from tenk1 k where k.unique1 = t.unique2) or ten < 0)
+  and thousand = 1;
+                                                                 QUERY PLAN                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  GroupAggregate
+               Group Key: tenk1_1.unique1, tenk1_1.unique2, tenk1_1.ten, tenk1_1.thousand, tenk1_1.ctid, tenk1_1.gp_segment_id, (true)
+               ->  Sort
+                     Sort Key: tenk1_1.unique1, tenk1_1.unique2, tenk1_1.ten, tenk1_1.thousand, tenk1_1.ctid, tenk1_1.gp_segment_id, (true)
+                     ->  Result
+                           Filter: (CASE WHEN (NOT ((true) IS NULL)) THEN true ELSE false END OR (tenk1_1.ten < 0))
+                           ->  Hash Right Join
+                                 Hash Cond: (tenk1.unique1 = tenk1_1.unique2)
+                                 ->  Seq Scan on tenk1
+                                 ->  Hash
+                                       ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                             Hash Key: tenk1_1.unique2
+                                             ->  Index Scan using tenk1_thous_tenthous on tenk1 tenk1_1
+                                                   Index Cond: (thousand = 1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(17 rows)
+
+select count(*) from tenk1 t
+where (exists(select 1 from tenk1 k where k.unique1 = t.unique2) or ten < 0)
+  and thousand = 1;
+ count 
+-------
+    10
+(1 row)
+
+-- It's possible for the same EXISTS to get resolved both ways
+create temp table exists_tbl (c1 int, c2 int, c3 int) partition by list (c1);
+create temp table exists_tbl_null partition of exists_tbl for values in (null);
+create temp table exists_tbl_def partition of exists_tbl default;
+insert into exists_tbl select x, x/2, x+1 from generate_series(0,1000) x;
+analyze exists_tbl;
+explain (costs off)
+select count(*) from exists_tbl t1
+  where (exists(select 1 from exists_tbl t2 where t1.c1 = t2.c2) or c3 < 0);
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Finalize Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Partial Aggregate
+               ->  Result
+                     Filter: ((COALESCE((count()), '0'::bigint) > '0'::bigint) OR (exists_tbl.c3 < 0))
+                     ->  Hash Left Join
+                           Hash Cond: (exists_tbl.c1 = exists_tbl_1.c2)
+                           ->  Dynamic Seq Scan on exists_tbl
+                                 Number of partitions to scan: 2 (out of 2)
+                           ->  Hash
+                                 ->  HashAggregate
+                                       Group Key: exists_tbl_1.c2
+                                       ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                             Hash Key: exists_tbl_1.c2
+                                             ->  Dynamic Seq Scan on exists_tbl exists_tbl_1
+                                                   Number of partitions to scan: 2 (out of 2)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(17 rows)
+
+select count(*) from exists_tbl t1
+  where (exists(select 1 from exists_tbl t2 where t1.c1 = t2.c2) or c3 < 0);
+ count 
+-------
+   501
+(1 row)
+
+--
 -- Test case for planner bug with nested EXISTS handling
 --
 -- GPDB_92_MERGE_FIXME: ORCA cannot decorrelate this query, and generates
@@ -963,7 +1065,6 @@ explain (verbose, costs off)
      ->  Result
            Output: 'regression'::name
  Optimizer: Postgres query optimizer
- Settings: optimizer=on
 (9 rows)
 
 explain (verbose, costs off)
@@ -1936,3 +2037,131 @@ select * from x for update;
 (6 rows)
 
 set gp_cte_sharing to off;
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink, which contains attributes referenced in query's GROUP BY clause.
+-- Due to presence of non-grouping columns in targetList, ORCA performs query
+-- normalization, during which ORCA establishes a correspondence between vars
+-- from targetlist entries to grouping attributes. And this process should
+-- correctly handle nested structures. The inner part of SubPlan in the test
+-- should contain only t.j.
+-- start_ignore
+drop table if exists t;
+NOTICE:  table "t" does not exist, skipping
+-- end_ignore
+create table t (i int, j int) distributed by (i);
+insert into t values (1, 2);
+explain (verbose, costs off)
+select j,
+(select j from (select j) q2)
+from t
+group by i, j;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: j, ((SubPlan 1))
+   ->  GroupAggregate
+         Output: j, (SubPlan 1)
+         Group Key: t.i, t.j
+         ->  Sort
+               Output: i, j
+               Sort Key: t.i, t.j
+               ->  Seq Scan on public.t
+                     Output: i, j
+         SubPlan 1
+           ->  Result
+                 Output: t.j
+                 ->  Result
+                       Output: true
+ Optimizer: GPORCA
+(16 rows)
+
+select j,
+(select j from (select j) q2)
+from t
+group by i, j;
+ j | j 
+---+---
+ 2 | 2
+(1 row)
+
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink when this SubLink is inside the GROUP BY clause. Attribute, which is
+-- not grouping column (1 as c), is added to query targetList to make ORCA
+-- perform query normalization. During normalization ORCA modifies the vars of
+-- the grouping elements of targetList in order to produce a new Query tree.
+-- The modification of vars inside nested part of SubLinks should be handled
+-- correctly. ORCA shouldn't fall back due to missing variable entry as a result
+-- of incorrect query normalization.
+explain (verbose, costs off)
+select j, 1 as c,
+(select j from (select j) q2) q1
+from t
+group by j, q1;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Result
+   Output: j, 1, ((SubPlan 1))
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: j, ((SubPlan 1))
+         ->  GroupAggregate
+               Output: j, ((SubPlan 1))
+               Group Key: t.j, ((SubPlan 1))
+               ->  Sort
+                     Output: j, ((SubPlan 1))
+                     Sort Key: t.j, ((SubPlan 1))
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Output: j, ((SubPlan 1))
+                           Hash Key: j, ((SubPlan 1))
+                           ->  Seq Scan on public.t
+                                 Output: j, (SubPlan 1)
+                                 SubPlan 1
+                                   ->  Result
+                                         Output: t.j
+                                         ->  Result
+                                               Output: true
+ Optimizer: GPORCA
+(21 rows)
+
+select j, 1 as c,
+(select j from (select j) q2) q1
+from t
+group by j, q1;
+ j | c | q1 
+---+---+----
+ 2 | 1 |  2
+(1 row)
+
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink, and this SubLink is under aggregation. ORCA shouldn't fall back due
+-- to missing variable entry as a result of incorrect query normalization. ORCA
+-- should correctly process args of the aggregation during normalization.
+explain (verbose, costs off)
+select (select max((select t.i))) from t;
+                   QUERY PLAN                   
+------------------------------------------------
+ Finalize Aggregate
+   Output: (SubPlan 2)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL max((SubPlan 1)))
+         ->  Partial Aggregate
+               Output: PARTIAL max((SubPlan 1))
+               ->  Seq Scan on public.t
+                     Output: i
+               SubPlan 1
+                 ->  Result
+                       Output: t.i
+   SubPlan 2
+     ->  Result
+           Output: max((SubPlan 1))
+           ->  Result
+                 Output: true
+ Optimizer: GPORCA
+(17 rows)
+
+select (select max((select t.i))) from t;
+ max 
+-----
+   1
+(1 row)
+
+drop table t;

@@ -20,14 +20,14 @@ The `pg_constraint` system catalog table stores check, primary key, unique, fore
 |`confdeltype`|char| |Foreign key deletion action code.|
 |`confmatchtype`|char| |Foreign key match type.|
 |`conislocal`|boolean| |This constraint is defined locally for the relation. Note that a constraint can be locally defined and inherited simultaneously.|
-|`coninhcount`|int4| |The number of direct inheritance ancestors this constraint has. A constraint with a nonzero number of ancestors cannot be dropped nor renamed.|
+|`coninhcount`|integer| |The number of direct inheritance ancestors this constraint has. A constraint with a nonzero number of ancestors cannot be dropped nor renamed.|
 |`connoinherit`|boolean| |This constraint is defined locally for the relation. It is a non-inheritable constraint.|
-|`conkey`|int2\[\]|[pg\_attribute](pg_attribute.html).attnum|If a table constraint, list of columns which the constraint constrains.|
-|`confkey`|int2\[\]|[pg\_attribute](pg_attribute.html).attnum|If a foreign key, list of the referenced columns.|
-|`conpfeqop`|oid\[\]|[pg\_operator](pg_operator.html).oid|If a foreign key, list of the equality operators for PK = FK comparisons.|
-|`conppeqop`|oid\[\]|[pg\_operator](pg_operator.html).oid|If a foreign key, list of the equality operators for PK = PK comparisons.|
-|`conffeqop`|oid\[\]|[pg\_operator](pg_operator.html).oid|If a foreign key, list of the equality operators for FK = FK comparisons.|
-|`conexclop`|oid\[\]|[pg\_operator](pg_operator.html).oid|If an exclusion constraint, list of the per-column exclusion operators.|
+|`conkey`|smallint[]|[pg\_attribute](pg_attribute.html).attnum|If a table constraint, list of columns which the constraint constrains.|
+|`confkey`|smallint[]|[pg\_attribute](pg_attribute.html).attnum|If a foreign key, list of the referenced columns.|
+|`conpfeqop`|oid\[]|[pg\_operator](pg_operator.html).oid|If a foreign key, list of the equality operators for PK = FK comparisons.|
+|`conppeqop`|oid\[]|[pg\_operator](pg_operator.html).oid|If a foreign key, list of the equality operators for PK = PK comparisons.|
+|`conffeqop`|oid\[]|[pg\_operator](pg_operator.html).oid|If a foreign key, list of the equality operators for FK = FK comparisons.|
+|`conexclop`|oid\[]|[pg\_operator](pg_operator.html).oid|If an exclusion constraint, list of the per-column exclusion operators.|
 |`conbin`|pg\_node\_tree| |If a check constraint, an internal representation of the expression. \(It is recommended to use `pg_get_constraintdef()` to extract the definition of a check constraint.\)|
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)

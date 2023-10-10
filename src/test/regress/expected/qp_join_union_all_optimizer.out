@@ -1,0 +1,1078 @@
+-- Test push join below union all feature
+--
+-- Generation of join below union all alternative can be verified
+-- using GUC optimizer_print_xform_results
+--
+-- This alternative is generated for all queries in this suite, 
+-- except for the join of two union all test, and cte test
+-- 
+-- ORCA's cost model determines whether to choose this alternative
+--
+-- Intuitively, join below union is desirable when (1) the union all
+-- children can benefit from physical join options not available 
+-- after the union all operation, such as indexed nested loop join;
+-- and (2) the cost of scanning the non-union all side is relatively
+-- low, such as a small table size, and existing distribution or
+-- duplication  
+--
+-- This is an ORCA feature. The plan shape is only verified for ORCA
+-- plans. Correctness of the plans can be verified by the # of output
+-- rows
+-- start_ignore
+drop schema if exists join_union_all cascade;
+NOTICE:  schema "join_union_all" does not exist, skipping
+-- end_ignore
+-- greenplum
+create schema join_union_all;
+set search_path=join_union_all;
+set optimizer_trace_fallback=on;
+-- GUC
+set optimizer_enable_push_join_below_union_all=on; -- default off
+-- distributed, 1 column, 1k rows
+create table dist_small_1(c1 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into dist_small_1 select generate_series(1,1000);
+-- distributed, 1 column, 1k rows
+create table dist_small_2(c1 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into dist_small_2 select generate_series(1,1000);
+-- distributed, 1 column, 100k rows
+create table dist_large_1(c1 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into dist_large_1 select generate_series(1,100000);
+-- distributed, 1 column, 100k rows
+create table dist_large_2(c1 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into dist_large_2 select generate_series(1,100000);
+-- distributed, 1 column, 100k rows
+create table dist_large_ao(c1 int) with (appendonly=true);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into dist_large_ao select generate_series(1,100000);
+-- distributed, 1 column, char(4), 1k rows
+create table char_small_1(c1 char(4));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into char_small_1 select generate_series(1,1000);
+-- distributed, 1 column, char(3), 100 rows
+create table char_small_2(c1 char(3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into char_small_2 select generate_series(1,100);
+-- distributed, 0 rows
+-- this is to minimize the cost of scanning inner_1 multiple times,
+-- as needed by this test suite to demonstrate the join below union
+-- all alternative
+create table inner_1(cc int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'cc' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- randomly, 10 rows
+create table inner_2(cc int) distributed randomly;
+insert into inner_2 select generate_series(1,10);
+-- distributed, 0 rows
+create table inner_3(cc varchar);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'cc' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- partition table, 2 columns, 100k rows, join on partition key
+CREATE TABLE part (c1 int, c2 int) partition by list(c2) (
+partition part1 VALUES (1, 2, 3, 4), 
+partition part2 VALUES (5, 6, 7), 
+partition part3 VALUES (8, 9, 0));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO part SELECT i, i%10 FROM generate_series(1, 100000) i;
+-- distribution table, 2 columns, 100k rows, join on distribution key
+CREATE TABLE dist (c1 int, c2 int) distributed by (c2);
+INSERT INTO dist SELECT i, i FROM generate_series(1, 100000) i;
+-- randomly distributed table, 2 columns, 100k rows
+CREATE TABLE rand (c1 int, c2 int) distributed randomly;
+INSERT INTO rand SELECT i, i FROM generate_series(1, 100000) i;
+-- built index for dist_small_1 and dist_large_1,
+-- but not for dist_small_2 or dist_large_2 (yet)
+create index dist_small_1_index on dist_small_1 using btree (c1);
+create index dist_large_1_index on dist_large_1 using btree (c1);
+-- build index for char_small_1
+-- but not for char_small_2
+create index char_small_1_index on char_small_1 using btree (c1);
+-- build index for dist and rand
+-- but not for part
+create index dist_index on dist using btree (c2);
+create index rand_index on rand using btree (c2);
+-- analyze
+analyze dist_small_1;
+analyze dist_small_2;
+analyze dist_large_1;
+analyze dist_large_2;
+analyze dist_large_ao;
+analyze char_small_1;
+analyze char_small_2;
+analyze inner_1;
+analyze inner_2;
+analyze inner_3;
+analyze part;
+analyze dist;
+analyze rand;
+-- view
+create view dist_view_small as
+select c1 from dist_small_1 union all
+select c1 from dist_small_2;
+create view dist_view_large as
+select c1 from dist_large_1 union all
+select c1 from dist_large_2;
+create view dist_view_large_uniq as
+select c1 from dist_large_1 union
+select c1 from dist_large_2;
+create view dist_view_large_filter as
+select c1 from dist_large_1 where c1 < 90000 union all
+select c1 from dist_large_2;
+create view dist_view_large_subquery as
+select c1 from dist_large_1 where c1 = (select count() from dist_small_1) union all
+select c1 from dist_large_2;
+create view dist_view_large_ao as
+select c1 from dist_large_1 union all
+select c1 from dist_large_ao;
+create view dist_view_join as
+select dist_small_1.c1 from dist_small_1 join dist_small_2
+ on dist_small_1.c1 = dist_small_2.c1 union all
+select c1 from dist_large_1; 
+create view char_view_small as
+select c1 from char_small_1 union all
+select c1 from char_small_2;
+create view part_dist_rand as
+select * from part union all
+select * from dist union all
+select * from rand;
+create view part_dist as
+select * from part union all
+select * from dist;
+create view part_dist_filter as
+select * from part where c1 < 100 and c2 in (1, 5, 8) union all
+select * from dist where c1 < 90000 and c2 > 90000;
+create view part_rand as
+select * from part union all
+select * from rand;
+-- equality join predicate 
+-- union all of small tables
+-- join below union all alternative generated, but not chosen
+-- Intuition: Hash join with small outer child is cheaper than
+-- pushing join condition down as the index condition
+explain analyze select c1 from dist_view_small join inner_1 on c1 = cc;
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1293.14 rows=1 width=4) (actual time=4.206..4.211 rows=0 loops=1)
+   ->  Hash Join  (cost=0.00..1293.14 rows=1 width=4) (actual time=0.000..3.506 rows=0 loops=1)
+         Hash Cond: (dist_small_1.c1 = inner_1.cc)
+         ->  Append  (cost=0.00..862.02 rows=667 width=4) (never executed)
+               ->  Seq Scan on dist_small_1  (cost=0.00..431.01 rows=334 width=4) (never executed)
+               ->  Seq Scan on dist_small_2  (cost=0.00..431.01 rows=334 width=4) (never executed)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..0.251 rows=0 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4096kB
+               ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.248 rows=0 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 14.936 ms
+   (slice0)    Executor memory: 43K bytes.
+   (slice1)    Executor memory: 4118K bytes avg x 3 workers, 4118K bytes max (seg0).  Work_mem: 4096K bytes max.
+ Memory used:  128000kB
+ Execution Time: 5.060 ms
+(15 rows)
+
+-- inequality join predicate 
+-- union all of small tables
+-- join below union all alternative chosen
+-- Intuition: Compared to the query above, hash join is not an option
+-- due to the inequality join condition. This time, join is pushed 
+-- below union all to leverage indexed nested loop join.
+explain analyze select c1 from dist_view_small join inner_1 on c1 < cc;
+                                                                 QUERY PLAN                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324501.58 rows=1 width=4) (actual time=7.125..7.127 rows=0 loops=1)
+   ->  Append  (cost=0.00..1324501.58 rows=1 width=4) (actual time=0.000..6.668 rows=0 loops=1)
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..6.511 rows=0 loops=1)
+               Join Filter: true
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..6.509 rows=0 loops=1)
+                     ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..1.354 rows=0 loops=1)
+               ->  Index Scan using dist_small_1_index on dist_small_1  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: (c1 < inner_1.cc)
+         ->  Nested Loop  (cost=0.00..1324064.58 rows=1 width=4) (actual time=0.000..0.161 rows=0 loops=1)
+               Join Filter: (dist_small_2.c1 < inner_1_1.cc)
+               ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.004 rows=0 loops=1)
+                     ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..2.053 rows=0 loops=1)
+               ->  Seq Scan on dist_small_2  (cost=0.00..431.01 rows=334 width=4) (actual time=0.145..0.145 rows=1 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 13.444 ms
+   (slice0)    Executor memory: 50K bytes.
+   (slice1)    Executor memory: 48K bytes avg x 3 workers, 48K bytes max (seg0).
+   (slice2)    Executor memory: 38K bytes avg x 3 workers, 38K bytes max (seg0).
+   (slice3)    Executor memory: 38K bytes avg x 3 workers, 38K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 80.120 ms
+(21 rows)
+
+-- union all of large tables
+-- join below union all alternative chosen
+-- Intuition: pushing join condition down as the index condition
+-- is cheaper than hash join with large outer child.
+explain analyze select c1 from dist_view_large join inner_1 on c1 = cc;
+                                                             QUERY PLAN                                                              
+-------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1305.75 rows=1 width=4) (actual time=3.818..3.820 rows=0 loops=1)
+   ->  Append  (cost=0.00..1305.75 rows=1 width=4) (actual time=0.000..3.394 rows=0 loops=1)
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..0.256 rows=0 loops=1)
+               Join Filter: true
+               ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.255 rows=0 loops=1)
+               ->  Index Scan using dist_large_1_index on dist_large_1  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: (c1 = inner_1.cc)
+         ->  Hash Join  (cost=0.00..868.75 rows=1 width=4) (actual time=0.000..3.136 rows=0 loops=1)
+               Hash Cond: (dist_large_2.c1 = inner_1_1.cc)
+               ->  Seq Scan on dist_large_2  (cost=0.00..431.62 rows=33334 width=4) (never executed)
+               ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..0.006 rows=0 loops=1)
+                     Buckets: 524288  Batches: 1  Memory Usage: 4096kB
+                     ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.005 rows=0 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 16.374 ms
+   (slice0)    Executor memory: 51K bytes.
+   (slice1)    Executor memory: 4130K bytes avg x 3 workers, 4130K bytes max (seg0).  Work_mem: 4096K bytes max.
+ Memory used:  128000kB
+ Execution Time: 4.618 ms
+(19 rows)
+
+-- union all of large tables
+-- join below union all alternative generated, but not chosen
+-- Intuition: Compared to the query above, join's inner child is larger,
+-- which has two implications. One, the cost of indexed nested loop join
+-- becomes higher. Two, the cost of scanning the inner side twice is
+-- higher. Both factors led ORCA to not push join below union all. 
+explain analyze select c1 from dist_view_large join inner_2 on c1 = cc;
+                                                                   QUERY PLAN                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1306.76 rows=21 width=4) (actual time=44.307..44.620 rows=20 loops=1)
+   ->  Hash Join  (cost=0.00..1306.76 rows=7 width=4) (actual time=7.293..44.257 rows=10 loops=1)
+         Hash Cond: (dist_large_1.c1 = inner_2.cc)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 5 of 524288 buckets.
+         ->  Append  (cost=0.00..864.01 rows=66667 width=4) (actual time=0.304..18.765 rows=66924 loops=1)
+               ->  Seq Scan on dist_large_1  (cost=0.00..431.62 rows=33334 width=4) (actual time=0.303..5.238 rows=33462 loops=1)
+               ->  Seq Scan on dist_large_2  (cost=0.00..431.62 rows=33334 width=4) (actual time=0.122..4.951 rows=33462 loops=1)
+         ->  Hash  (cost=431.00..431.00 rows=4 width=4) (actual time=6.174..6.175 rows=5 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=4 width=4) (actual time=5.850..6.157 rows=5 loops=1)
+                     Hash Key: inner_2.cc
+                     ->  Seq Scan on inner_2  (cost=0.00..431.00 rows=4 width=4) (actual time=2.269..2.271 rows=5 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 15.310 ms
+   (slice0)    Executor memory: 45K bytes.
+   (slice1)    Executor memory: 4155K bytes avg x 3 workers, 4155K bytes max (seg0).  Work_mem: 4097K bytes max.
+   (slice2)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 83.389 ms
+(19 rows)
+
+-- equality join predicate
+-- union all of large tables, one with a filter
+-- join below union all alternative generated, but not chosen
+explain analyze select c1 from dist_view_large_filter join inner_1 on c1 = cc;
+                                                          QUERY PLAN                                                           
+-------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..889.17 rows=1 width=4) (actual time=4.183..4.184 rows=0 loops=1)
+   ->  Hash Join  (cost=0.00..889.17 rows=1 width=4) (actual time=0.000..3.808 rows=0 loops=1)
+         Hash Cond: (dist_large_1.c1 = inner_1.cc)
+         ->  Append  (cost=0.00..447.02 rows=63289 width=4) (never executed)
+               ->  Index Scan using dist_large_1_index on dist_large_1  (cost=0.00..14.67 rows=29955 width=4) (never executed)
+                     Index Cond: (c1 < 90000)
+               ->  Seq Scan on dist_large_2  (cost=0.00..431.62 rows=33334 width=4) (never executed)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..0.254 rows=0 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4096kB
+               ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.253 rows=0 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 13.634 ms
+   (slice0)    Executor memory: 45K bytes.
+   (slice1)    Executor memory: 4119K bytes avg x 3 workers, 4119K bytes max (seg0).  Work_mem: 4096K bytes max.
+ Memory used:  128000kB
+ Execution Time: 4.964 ms
+(16 rows)
+
+-- inequality join predicate
+-- union all of large tables, one with a filter
+-- join below union all alternative chosen
+-- Intuition: Again, once the hash join option is ruled out by the inequality
+-- join condition, join is more likely to be pushed down to take advantage of
+-- indexed nested loop join.
+explain analyze select c1 from dist_view_large_filter join inner_1 on c1 < cc;
+                                                                 QUERY PLAN                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1327682.76 rows=1 width=4) (actual time=8.310..8.312 rows=0 loops=1)
+   ->  Append  (cost=0.00..1327682.76 rows=1 width=4) (actual time=0.000..7.956 rows=0 loops=1)
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..7.784 rows=0 loops=1)
+               Join Filter: true
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..7.782 rows=0 loops=1)
+                     ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..3.519 rows=0 loops=1)
+               ->  Index Scan using dist_large_1_index on dist_large_1  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: ((c1 < inner_1.cc) AND (c1 < 90000))
+         ->  Nested Loop  (cost=0.00..1327245.76 rows=1 width=4) (actual time=0.000..0.174 rows=0 loops=1)
+               Join Filter: (dist_large_2.c1 < inner_1_1.cc)
+               ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.004 rows=0 loops=1)
+                     ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..4.344 rows=0 loops=1)
+               ->  Seq Scan on dist_large_2  (cost=0.00..431.62 rows=33334 width=4) (actual time=0.161..0.161 rows=1 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 21.011 ms
+   (slice0)    Executor memory: 51K bytes.
+   (slice1)    Executor memory: 49K bytes avg x 3 workers, 49K bytes max (seg0).
+   (slice2)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
+   (slice3)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 9.609 ms
+(21 rows)
+
+-- equality join predicate
+-- union all of large tables, one child's filter is a subquery
+-- join below union all alternative generated, but not chosen
+explain analyze select c1 from dist_view_large_subquery join inner_1 on c1 = cc;
+                                                                         QUERY PLAN                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1322.26 rows=1 width=4) (actual time=5.108..5.110 rows=0 loops=1)
+   ->  Hash Join  (cost=0.00..1322.26 rows=1 width=4) (actual time=0.000..4.624 rows=0 loops=1)
+         Hash Cond: (dist_large_1.c1 = inner_1.cc)
+         ->  Append  (cost=0.00..879.51 rows=66667 width=4) (never executed)
+               ->  Nested Loop  (cost=0.00..447.37 rows=33334 width=4) (never executed)
+                     Join Filter: true
+                     ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.01 rows=1 width=8) (never executed)
+                           ->  Finalize Aggregate  (cost=0.00..431.01 rows=1 width=8) (actual time=11.339..11.339 rows=1 loops=1)
+                                 ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.01 rows=1 width=8) (actual time=8.341..11.310 rows=3 loops=1)
+                                       ->  Partial Aggregate  (cost=0.00..431.01 rows=1 width=8) (actual time=1.028..1.029 rows=1 loops=1)
+                                             ->  Seq Scan on dist_small_1  (cost=0.00..431.01 rows=334 width=1) (actual time=3.334..3.385 rows=340 loops=1)
+                     ->  Index Scan using dist_large_1_index on dist_large_1  (cost=0.00..15.65 rows=33334 width=4) (never executed)
+                           Index Cond: (c1 = (count()))
+               ->  Seq Scan on dist_large_2  (cost=0.00..431.62 rows=33334 width=4) (never executed)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..1.166 rows=0 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4096kB
+               ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..1.165 rows=0 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 20.073 ms
+   (slice0)    Executor memory: 71K bytes.
+   (slice1)    Executor memory: 4127K bytes avg x 3 workers, 4127K bytes max (seg0).  Work_mem: 4096K bytes max.
+   (slice2)    Executor memory: 44K bytes (entry db).
+   (slice3)    Executor memory: 44K bytes avg x 3 workers, 44K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 29.642 ms
+(25 rows)
+
+-- inequality join predicate
+-- union all of large tables, one child's filter is a subquery
+-- join below union all alternative generated, but not chosen
+explain analyze select c1 from dist_view_large_subquery join inner_1 on c1 < cc;
+                                                                            QUERY PLAN                                                                            
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1787946.75 rows=1 width=4) (actual time=9.368..9.371 rows=0 loops=1)
+   ->  Nested Loop  (cost=0.00..1787946.75 rows=1 width=4) (actual time=0.000..8.960 rows=0 loops=1)
+         Join Filter: (dist_large_1.c1 < inner_1.cc)
+         ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.005 rows=0 loops=1)
+               ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..1.707 rows=0 loops=1)
+         ->  Append  (cost=0.00..879.51 rows=66667 width=4) (actual time=8.369..8.369 rows=1 loops=1)
+               ->  Nested Loop  (cost=0.00..447.37 rows=33334 width=4) (actual time=8.368..8.368 rows=1 loops=1)
+                     Join Filter: true
+                     ->  Materialize  (cost=0.00..431.01 rows=1 width=8) (actual time=7.685..7.685 rows=1 loops=1)
+                           ->  Broadcast Motion 1:3  (slice2)  (cost=0.00..431.01 rows=1 width=8) (actual time=7.669..7.670 rows=1 loops=1)
+                                 ->  Finalize Aggregate  (cost=0.00..431.01 rows=1 width=8) (actual time=7.542..7.542 rows=1 loops=1)
+                                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.01 rows=1 width=8) (actual time=4.270..7.531 rows=3 loops=1)
+                                             ->  Partial Aggregate  (cost=0.00..431.01 rows=1 width=8) (actual time=1.539..1.540 rows=1 loops=1)
+                                                   ->  Seq Scan on dist_small_1  (cost=0.00..431.01 rows=334 width=1) (actual time=3.098..3.149 rows=340 loops=1)
+                     ->  Index Scan using dist_large_1_index on dist_large_1  (cost=0.00..15.65 rows=33334 width=4) (actual time=0.677..0.677 rows=1 loops=1)
+                           Index Cond: (c1 = (count()))
+               ->  Seq Scan on dist_large_2  (cost=0.00..431.62 rows=33334 width=4) (actual time=0.533..0.533 rows=1 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 34.170 ms
+   (slice0)    Executor memory: 72K bytes.
+   (slice1)    Executor memory: 107K bytes avg x 3 workers, 107K bytes max (seg0).  Work_mem: 17K bytes max.
+   (slice2)    Executor memory: 23K bytes (entry db).
+   (slice3)    Executor memory: 38K bytes avg x 3 workers, 38K bytes max (seg0).
+   (slice4)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 10.520 ms
+(26 rows)
+
+-- union all of large tables, one is append only 
+-- join below union all alternative chosen
+explain analyze select c1 from dist_view_large_ao join inner_1 on c1 = cc;
+                                                             QUERY PLAN                                                              
+-------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1305.75 rows=1 width=4) (actual time=2.515..2.517 rows=0 loops=1)
+   ->  Append  (cost=0.00..1305.75 rows=1 width=4) (actual time=0.000..1.884 rows=0 loops=1)
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..0.271 rows=0 loops=1)
+               Join Filter: true
+               ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.270 rows=0 loops=1)
+               ->  Index Scan using dist_large_1_index on dist_large_1  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: (c1 = inner_1.cc)
+         ->  Hash Join  (cost=0.00..868.75 rows=1 width=4) (actual time=0.000..1.632 rows=0 loops=1)
+               Hash Cond: (dist_large_ao.c1 = inner_1_1.cc)
+               ->  Seq Scan on dist_large_ao  (cost=0.00..431.62 rows=33334 width=4) (never executed)
+               ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..0.006 rows=0 loops=1)
+                     Buckets: 524288  Batches: 1  Memory Usage: 4096kB
+                     ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.005 rows=0 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 16.097 ms
+   (slice0)    Executor memory: 52K bytes.
+   (slice1)    Executor memory: 4130K bytes avg x 3 workers, 4130K bytes max (seg0).  Work_mem: 4096K bytes max.
+ Memory used:  128000kB
+ Execution Time: 3.366 ms
+(19 rows)
+
+-- union all of a join and table
+-- join below union all alternative chosen
+explain analyze select c1 from dist_view_join join inner_1 on c1 = cc;
+                                                          QUERY PLAN                                                           
+-------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1730.20 rows=1 width=4) (actual time=2.485..2.487 rows=0 loops=1)
+   ->  Append  (cost=0.00..1730.20 rows=1 width=4) (actual time=0.000..1.958 rows=0 loops=1)
+         ->  Hash Join  (cost=0.00..1293.20 rows=1 width=4) (actual time=0.000..1.951 rows=0 loops=1)
+               Hash Cond: (dist_small_1.c1 = inner_1.cc)
+               ->  Hash Join  (cost=0.00..862.14 rows=334 width=4) (never executed)
+                     Hash Cond: (dist_small_1.c1 = dist_small_2.c1)
+                     ->  Seq Scan on dist_small_1  (cost=0.00..431.01 rows=334 width=4) (never executed)
+                     ->  Hash  (cost=431.01..431.01 rows=334 width=4) (never executed)
+                           ->  Seq Scan on dist_small_2  (cost=0.00..431.01 rows=334 width=4) (never executed)
+               ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..0.286 rows=0 loops=1)
+                     Buckets: 262144  Batches: 1  Memory Usage: 2048kB
+                     ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.285 rows=0 loops=1)
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..0.006 rows=0 loops=1)
+               Join Filter: true
+               ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.005 rows=0 loops=1)
+               ->  Index Scan using dist_large_1_index on dist_large_1  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: (c1 = inner_1_1.cc)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 24.692 ms
+   (slice0)    Executor memory: 62K bytes.
+   (slice1)    Executor memory: 2087K bytes avg x 3 workers, 2087K bytes max (seg0).  Work_mem: 2048K bytes max.
+ Memory used:  128000kB
+ Execution Time: 3.569 ms
+(23 rows)
+
+-- subquery: union all
+-- join below union all alternative chosen
+explain analyze select c1 from (select c1 from dist_large_1 union all
+select c1 from dist_large_2) as inline join inner_1 on c1 = cc;
+                                                             QUERY PLAN                                                              
+-------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1305.75 rows=1 width=4) (actual time=2.485..2.509 rows=0 loops=1)
+   ->  Append  (cost=0.00..1305.75 rows=1 width=4) (actual time=0.000..1.945 rows=0 loops=1)
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..0.227 rows=0 loops=1)
+               Join Filter: true
+               ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.226 rows=0 loops=1)
+               ->  Index Scan using dist_large_1_index on dist_large_1  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: (c1 = inner_1.cc)
+         ->  Hash Join  (cost=0.00..868.75 rows=1 width=4) (actual time=0.000..1.715 rows=0 loops=1)
+               Hash Cond: (dist_large_2.c1 = inner_1_1.cc)
+               ->  Seq Scan on dist_large_2  (cost=0.00..431.62 rows=33334 width=4) (never executed)
+               ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..0.005 rows=0 loops=1)
+                     Buckets: 524288  Batches: 1  Memory Usage: 4096kB
+                     ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.004 rows=0 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 14.313 ms
+   (slice0)    Executor memory: 51K bytes.
+   (slice1)    Executor memory: 4130K bytes avg x 3 workers, 4130K bytes max (seg0).  Work_mem: 4096K bytes max.
+ Memory used:  128000kB
+ Execution Time: 3.328 ms
+(19 rows)
+
+-- subquery: aggregation
+-- join below union all alternative chosen
+explain analyze select c1 from dist_view_large join
+ (select distinct cc from inner_1) as inline on c1 = cc;
+                                                                   QUERY PLAN                                                                    
+-------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1305.75 rows=1 width=4) (actual time=1.470..1.472 rows=0 loops=1)
+   ->  Append  (cost=0.00..1305.75 rows=1 width=4) (actual time=0.000..0.776 rows=0 loops=1)
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..0.285 rows=0 loops=1)
+               Join Filter: true
+               ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.280 rows=0 loops=1)
+                     Group Key: inner_1.cc
+                     ->  Sort  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.256 rows=0 loops=1)
+                           Sort Key: inner_1.cc
+                           Sort Method:  quicksort  Memory: 75kB
+                           Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 0)
+                           ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.236 rows=0 loops=1)
+               ->  Index Scan using dist_large_1_index on dist_large_1  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: (c1 = inner_1.cc)
+         ->  Hash Join  (cost=0.00..868.75 rows=1 width=4) (actual time=0.000..0.489 rows=0 loops=1)
+               Hash Cond: (dist_large_2.c1 = inner_1_1.cc)
+               ->  Seq Scan on dist_large_2  (cost=0.00..431.62 rows=33334 width=4) (never executed)
+               ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..0.010 rows=0 loops=1)
+                     Buckets: 131072  Batches: 1  Memory Usage: 1024kB
+                     ->  GroupAggregate  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.010 rows=0 loops=1)
+                           Group Key: inner_1_1.cc
+                           ->  Sort  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.009 rows=0 loops=1)
+                                 Sort Key: inner_1_1.cc
+                                 Sort Method:  quicksort  Memory: 75kB
+                                 Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 0)
+                                 ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.003 rows=0 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 20.259 ms
+   (slice0)    Executor memory: 72K bytes.
+   (slice1)    Executor memory: 1078K bytes avg x 3 workers, 1078K bytes max (seg0).  Work_mem: 1024K bytes max.
+ Memory used:  128000kB
+ Execution Time: 2.292 ms
+(31 rows)
+
+-- subquery: join, equality predicate
+-- join below union all alternative chosen, after join order switch
+explain analyze select c1 from dist_view_large join
+ (select inner_2.cc from inner_1 join inner_2 on inner_1.cc = inner_2.cc) as inline on c1 = cc;
+                                                                   QUERY PLAN                                                                   
+------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1736.75 rows=10 width=4) (actual time=5.243..5.246 rows=0 loops=1)
+   ->  Hash Join  (cost=0.00..1736.75 rows=4 width=4) (actual time=0.000..4.523 rows=0 loops=1)
+         Hash Cond: (inner_1.cc = inner_2.cc)
+         ->  Append  (cost=0.00..1305.75 rows=1 width=8) (actual time=0.000..1.878 rows=0 loops=1)
+               ->  Nested Loop  (cost=0.00..437.00 rows=1 width=8) (actual time=0.000..0.325 rows=0 loops=1)
+                     Join Filter: true
+                     ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.324 rows=0 loops=1)
+                     ->  Index Scan using dist_large_1_index on dist_large_1  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                           Index Cond: (c1 = inner_1.cc)
+               ->  Hash Join  (cost=0.00..868.75 rows=1 width=8) (actual time=0.000..1.654 rows=0 loops=1)
+                     Hash Cond: (dist_large_2.c1 = inner_1_1.cc)
+                     ->  Seq Scan on dist_large_2  (cost=0.00..431.62 rows=33334 width=4) (never executed)
+                     ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..0.005 rows=0 loops=1)
+                           Buckets: 262144  Batches: 1  Memory Usage: 2048kB
+                           ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.004 rows=0 loops=1)
+         ->  Hash  (cost=431.00..431.00 rows=4 width=4) (actual time=1.634..1.634 rows=5 loops=1)
+               Buckets: 262144  Batches: 1  Memory Usage: 2049kB
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=4 width=4) (actual time=1.593..1.597 rows=5 loops=1)
+                     Hash Key: inner_2.cc
+                     ->  Seq Scan on inner_2  (cost=0.00..431.00 rows=4 width=4) (actual time=0.247..0.249 rows=6 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 42.763 ms
+   (slice0)    Executor memory: 59K bytes.
+   (slice1)    Executor memory: 4173K bytes avg x 3 workers, 4173K bytes max (seg2).  Work_mem: 2049K bytes max.
+   (slice2)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 5.966 ms
+(27 rows)
+
+-- subquery: join, inequality predicate
+-- join below union all alternative generated, but not chosen
+explain analyze select c1 from dist_view_large join
+ (select inner_2.cc from inner_1 join inner_2 on inner_1.cc < inner_2.cc) as inline on c1 = cc;
+                                                                       QUERY PLAN                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324908.51 rows=1 width=4) (actual time=10.610..10.612 rows=0 loops=1)
+   ->  Hash Join  (cost=0.00..1324908.51 rows=1 width=4) (actual time=0.000..10.319 rows=0 loops=1)
+         Hash Cond: (dist_large_1.c1 = inner_2.cc)
+         ->  Append  (cost=0.00..864.01 rows=66667 width=4) (never executed)
+               ->  Seq Scan on dist_large_1  (cost=0.00..431.62 rows=33334 width=4) (never executed)
+               ->  Seq Scan on dist_large_2  (cost=0.00..431.62 rows=33334 width=4) (never executed)
+         ->  Hash  (cost=1324032.76..1324032.76 rows=1 width=4) (actual time=0.000..8.180 rows=0 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4096kB
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1324032.76 rows=1 width=4) (actual time=0.000..8.178 rows=0 loops=1)
+                     Hash Key: inner_2.cc
+                     ->  Nested Loop  (cost=0.00..1324032.76 rows=1 width=4) (actual time=0.000..8.291 rows=0 loops=1)
+                           Join Filter: (inner_1.cc < inner_2.cc)
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..5.867 rows=0 loops=1)
+                                 ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..2.155 rows=0 loops=1)
+                           ->  Seq Scan on inner_2  (cost=0.00..431.00 rows=4 width=4) (actual time=0.802..0.802 rows=1 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 26.892 ms
+   (slice0)    Executor memory: 53K bytes.
+   (slice1)    Executor memory: 4115K bytes avg x 3 workers, 4115K bytes max (seg2).  Work_mem: 4096K bytes max.
+   (slice2)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
+   (slice3)    Executor memory: 38K bytes avg x 3 workers, 38K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 42.899 ms
+(23 rows)
+
+-- left join: union all of large tables
+-- join below union all alternative chosen
+explain analyze select c1 from inner_1 left join dist_view_large on c1 = cc;
+                                                             QUERY PLAN                                                              
+-------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1305.75 rows=2 width=4) (actual time=7.470..7.472 rows=0 loops=1)
+   ->  Append  (cost=0.00..1305.75 rows=1 width=4) (actual time=0.000..6.997 rows=0 loops=1)
+         ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..2.088 rows=0 loops=1)
+               Join Filter: true
+               ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=8) (actual time=0.000..2.070 rows=0 loops=1)
+               ->  Index Scan using dist_large_1_index on dist_large_1  (cost=0.00..6.00 rows=1 width=1) (never executed)
+                     Index Cond: (c1 = inner_1.cc)
+         ->  Hash Right Join  (cost=0.00..868.75 rows=1 width=4) (actual time=0.000..4.973 rows=0 loops=1)
+               Hash Cond: (dist_large_2.c1 = inner_1_1.cc)
+               ->  Seq Scan on dist_large_2  (cost=0.00..431.62 rows=33334 width=4) (never executed)
+               ->  Hash  (cost=431.00..431.00 rows=1 width=8) (actual time=0.000..0.010 rows=0 loops=1)
+                     Buckets: 524288  Batches: 1  Memory Usage: 4096kB
+                     ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=8) (actual time=0.000..0.009 rows=0 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 15.309 ms
+   (slice0)    Executor memory: 55K bytes.
+   (slice1)    Executor memory: 4134K bytes avg x 3 workers, 4134K bytes max (seg0).  Work_mem: 4096K bytes max.
+ Memory used:  128000kB
+ Execution Time: 8.823 ms
+(19 rows)
+
+-- right join: union all of large tables
+-- join below union all alternative chosen
+explain analyze select c1 from dist_view_large right join inner_1 on c1 = cc;
+                                                             QUERY PLAN                                                              
+-------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1305.75 rows=2 width=4) (actual time=5.338..5.340 rows=0 loops=1)
+   ->  Append  (cost=0.00..1305.75 rows=1 width=4) (actual time=0.000..4.862 rows=0 loops=1)
+         ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..0.182 rows=0 loops=1)
+               Join Filter: true
+               ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=8) (actual time=0.000..0.180 rows=0 loops=1)
+               ->  Index Scan using dist_large_1_index on dist_large_1  (cost=0.00..6.00 rows=1 width=1) (never executed)
+                     Index Cond: (c1 = inner_1.cc)
+         ->  Hash Right Join  (cost=0.00..868.75 rows=1 width=4) (actual time=0.000..4.677 rows=0 loops=1)
+               Hash Cond: (dist_large_2.c1 = inner_1_1.cc)
+               ->  Seq Scan on dist_large_2  (cost=0.00..431.62 rows=33334 width=4) (never executed)
+               ->  Hash  (cost=431.00..431.00 rows=1 width=8) (actual time=0.000..0.026 rows=0 loops=1)
+                     Buckets: 524288  Batches: 1  Memory Usage: 4096kB
+                     ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=8) (actual time=0.000..0.023 rows=0 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 15.783 ms
+   (slice0)    Executor memory: 55K bytes.
+   (slice1)    Executor memory: 4134K bytes avg x 3 workers, 4134K bytes max (seg0).  Work_mem: 4096K bytes max.
+ Memory used:  128000kB
+ Execution Time: 6.044 ms
+(19 rows)
+
+-- union all joined with union
+-- join below union all alternative generated, but not chosen
+explain analyze select dist_view_large.c1 from dist_view_large
+ join dist_view_large_uniq on dist_view_large.c1 = dist_view_large_uniq.c1;
+                                                                         QUERY PLAN                                                                          
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1758.15 rows=200000 width=4) (actual time=59.659..136.179 rows=200000 loops=1)
+   ->  Hash Join  (cost=0.00..1755.17 rows=66667 width=4) (actual time=57.989..120.647 rows=66924 loops=1)
+         Hash Cond: (dist_large_1.c1 = dist_large_1_1.c1)
+         Extra Text: (seg0)   Hash chain length 1.1 avg, 4 max, using 31436 of 262144 buckets.
+         ->  Append  (cost=0.00..864.01 rows=66667 width=4) (actual time=0.024..21.094 rows=66924 loops=1)
+               ->  Seq Scan on dist_large_1  (cost=0.00..431.62 rows=33334 width=4) (actual time=0.023..6.414 rows=33462 loops=1)
+               ->  Seq Scan on dist_large_2  (cost=0.00..431.62 rows=33334 width=4) (actual time=0.059..5.370 rows=33462 loops=1)
+         ->  Hash  (cost=872.11..872.11 rows=33334 width=4) (actual time=57.730..57.731 rows=33462 loops=1)
+               Buckets: 262144  Batches: 1  Memory Usage: 3225kB
+               ->  HashAggregate  (cost=0.00..872.11 rows=33334 width=4) (actual time=40.215..48.417 rows=33462 loops=1)
+                     Group Key: dist_large_1_1.c1
+                     Peak Memory Usage: 0 kB
+                     ->  Append  (cost=0.00..864.01 rows=66667 width=4) (actual time=0.185..16.464 rows=66924 loops=1)
+                           ->  Seq Scan on dist_large_1 dist_large_1_1  (cost=0.00..431.62 rows=33334 width=4) (actual time=0.184..4.493 rows=33462 loops=1)
+                           ->  Seq Scan on dist_large_2 dist_large_2_1  (cost=0.00..431.62 rows=33334 width=4) (actual time=0.201..4.498 rows=33462 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 36.447 ms
+   (slice0)    Executor memory: 1596K bytes.
+   (slice1)    Executor memory: 5992K bytes avg x 3 workers, 5996K bytes max (seg0).  Work_mem: 3601K bytes max.
+ Memory used:  128000kB
+ Execution Time: 149.880 ms
+(21 rows)
+
+-- union all joined with union all
+-- ORCA_FEATURE_NOT_SUPPORTED: push join below TWO union all
+explain analyze select dist_view_small.c1 from dist_view_small
+ join dist_view_large on dist_view_small.c1 = dist_view_large.c1;
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1737.98 rows=4000 width=4) (actual time=2.229..32.278 rows=4000 loops=1)
+   ->  Hash Join  (cost=0.00..1737.92 rows=1334 width=4) (actual time=3.041..31.402 rows=1360 loops=1)
+         Hash Cond: (dist_large_1.c1 = dist_small_1.c1)
+         Extra Text: (seg2)   Hash chain length 2.0 avg, 2 max, using 340 of 524288 buckets.
+         ->  Append  (cost=0.00..864.01 rows=66667 width=4) (actual time=0.179..15.990 rows=66924 loops=1)
+               ->  Seq Scan on dist_large_1  (cost=0.00..431.62 rows=33334 width=4) (actual time=0.179..4.347 rows=33462 loops=1)
+               ->  Seq Scan on dist_large_2  (cost=0.00..431.62 rows=33334 width=4) (actual time=0.192..4.259 rows=33462 loops=1)
+         ->  Hash  (cost=862.02..862.02 rows=667 width=4) (actual time=0.623..0.624 rows=680 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4120kB
+               ->  Append  (cost=0.00..862.02 rows=667 width=4) (actual time=0.163..0.472 rows=680 loops=1)
+                     ->  Seq Scan on dist_small_1  (cost=0.00..431.01 rows=334 width=4) (actual time=0.163..0.200 rows=340 loops=1)
+                     ->  Seq Scan on dist_small_2  (cost=0.00..431.01 rows=334 width=4) (actual time=0.160..0.198 rows=340 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 11.602 ms
+   (slice0)    Executor memory: 48K bytes.
+   (slice1)    Executor memory: 4172K bytes avg x 3 workers, 4172K bytes max (seg0).  Work_mem: 4120K bytes max.
+ Memory used:  128000kB
+ Execution Time: 33.189 ms
+(18 rows)
+
+-- cte: union all of large tables
+-- join below union all alternative chosen
+explain analyze with cte as (select c1 from dist_large_1 union all
+ select c1 from dist_large_2) select c1 from cte join inner_1 on c1 = cc;
+                                                             QUERY PLAN                                                              
+-------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1305.75 rows=1 width=4) (actual time=3.733..3.735 rows=0 loops=1)
+   ->  Append  (cost=0.00..1305.75 rows=1 width=4) (actual time=0.000..3.329 rows=0 loops=1)
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..0.209 rows=0 loops=1)
+               Join Filter: true
+               ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.208 rows=0 loops=1)
+               ->  Index Scan using dist_large_1_index on dist_large_1  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: (c1 = inner_1.cc)
+         ->  Hash Join  (cost=0.00..868.75 rows=1 width=4) (actual time=0.000..3.112 rows=0 loops=1)
+               Hash Cond: (dist_large_2.c1 = inner_1_1.cc)
+               ->  Seq Scan on dist_large_2  (cost=0.00..431.62 rows=33334 width=4) (never executed)
+               ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..0.006 rows=0 loops=1)
+                     Buckets: 524288  Batches: 1  Memory Usage: 4096kB
+                     ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.005 rows=0 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 14.795 ms
+   (slice0)    Executor memory: 51K bytes.
+   (slice1)    Executor memory: 4130K bytes avg x 3 workers, 4130K bytes max (seg0).  Work_mem: 4096K bytes max.
+ Memory used:  128000kB
+ Execution Time: 4.745 ms
+(19 rows)
+
+-- built index for dist_small_2 and dist_large_2,
+-- rerun queries that didn't choose the join below union all alternative
+create index dist_small_2_index on dist_small_2 using btree (c1);
+create index dist_large_2_index on dist_large_2 using btree (c1);
+-- union of small tables
+-- join below union all alternative chosen
+-- Intuition: Compared to the same query before index was built for
+-- dist_small_2, ORCA's cost model chooses to push join below union
+-- all because this allows both union all children to benefit from 
+-- indexed nested loop join (instead of just one child of the two).
+explain analyze select c1 from dist_view_small join inner_1 on c1 = cc;
+                                                          QUERY PLAN                                                           
+-------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..874.00 rows=1 width=4) (actual time=0.682..0.683 rows=0 loops=1)
+   ->  Append  (cost=0.00..874.00 rows=1 width=4) (actual time=0.000..0.278 rows=0 loops=1)
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..0.271 rows=0 loops=1)
+               Join Filter: true
+               ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.270 rows=0 loops=1)
+               ->  Index Scan using dist_small_1_index on dist_small_1  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: (c1 = inner_1.cc)
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..0.005 rows=0 loops=1)
+               Join Filter: true
+               ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.004 rows=0 loops=1)
+               ->  Index Scan using dist_small_2_index on dist_small_2  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: (c1 = inner_1_1.cc)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 24.928 ms
+   (slice0)    Executor memory: 51K bytes.
+   (slice1)    Executor memory: 51K bytes avg x 3 workers, 51K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 1.488 ms
+(18 rows)
+
+-- union all of large tables, one with a filter
+-- join below union all alternative chosen
+-- Intuition: Similarly, compared to the same query before index 
+-- was built for dist_large_2, ORCA's cost model chooses to push
+-- join below union all because this allows both union all children
+-- to benefit from indexed nested loop join.
+explain analyze select c1 from dist_view_large_filter join inner_1 on c1 = cc;
+                                                          QUERY PLAN                                                           
+-------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..874.00 rows=1 width=4) (actual time=0.718..0.719 rows=0 loops=1)
+   ->  Append  (cost=0.00..874.00 rows=1 width=4) (actual time=0.000..0.256 rows=0 loops=1)
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..0.250 rows=0 loops=1)
+               Join Filter: true
+               ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.249 rows=0 loops=1)
+               ->  Index Scan using dist_large_1_index on dist_large_1  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: ((c1 = inner_1.cc) AND (c1 < 90000))
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..0.026 rows=0 loops=1)
+               Join Filter: true
+               ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.025 rows=0 loops=1)
+               ->  Index Scan using dist_large_2_index on dist_large_2  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: (c1 = inner_1_1.cc)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 21.151 ms
+   (slice0)    Executor memory: 51K bytes.
+   (slice1)    Executor memory: 51K bytes avg x 3 workers, 51K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 1.391 ms
+(18 rows)
+
+-- subquery: aggregation of join, inequality predicate
+-- join below union all alternative chosen
+-- Intuition: This test is so constructed to have a deep (aggregation of join)
+-- yet small (deduplicated) inner child. Making it deep is to verify the inner
+-- child gets correctly "cloned" with all the columns correctly remapped when 
+-- join is pushed below union all. Making it small is to not induce a high cost
+-- of scanning it twice, which is necessary in pushing join below union all.
+-- The inequality predicate is to rule out the option of hash join, so that
+-- the join is more likely to be pushed down union all to leverage indexed nested
+-- loop joins.
+explain analyze select c1 from dist_view_large join
+ (select distinct inner_2.cc from inner_1 join inner_2 on inner_1.cc = inner_2.cc) as inline on c1 < cc;
+                                                                      QUERY PLAN                                                                       
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6944.01 rows=1 width=4) (actual time=5.434..5.437 rows=0 loops=1)
+   ->  Append  (cost=0.00..6944.01 rows=1 width=4) (actual time=0.000..3.292 rows=0 loops=1)
+         ->  Nested Loop  (cost=0.00..3472.01 rows=1 width=4) (actual time=0.000..2.958 rows=0 loops=1)
+               Join Filter: true
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..862.00 rows=1 width=4) (actual time=0.000..2.958 rows=0 loops=1)
+                     ->  HashAggregate  (cost=0.00..862.00 rows=1 width=4) (actual time=0.000..0.677 rows=0 loops=1)
+                           Group Key: inner_2.cc
+                           Peak Memory Usage: 0 kB
+                           ->  Hash Join  (cost=0.00..862.00 rows=1 width=4) (actual time=0.000..0.676 rows=0 loops=1)
+                                 Hash Cond: (inner_2.cc = inner_1.cc)
+                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=4 width=4) (never executed)
+                                       Hash Key: inner_2.cc
+                                       ->  Seq Scan on inner_2  (cost=0.00..431.00 rows=4 width=4) (actual time=0.327..0.328 rows=5 loops=1)
+                                 ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..0.211 rows=0 loops=1)
+                                       Buckets: 131072  Batches: 1  Memory Usage: 1024kB
+                                       ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.211 rows=0 loops=1)
+               ->  Index Scan using dist_large_1_index on dist_large_1  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: (c1 < inner_2.cc)
+         ->  Nested Loop  (cost=0.00..3472.01 rows=1 width=4) (actual time=0.000..0.341 rows=0 loops=1)
+               Join Filter: true
+               ->  Broadcast Motion 3:3  (slice4; segments: 3)  (cost=0.00..862.00 rows=1 width=4) (actual time=0.000..0.340 rows=0 loops=1)
+                     ->  HashAggregate  (cost=0.00..862.00 rows=1 width=4) (actual time=0.000..0.749 rows=0 loops=1)
+                           Group Key: inner_2_1.cc
+                           Peak Memory Usage: 0 kB
+                           ->  Hash Join  (cost=0.00..862.00 rows=1 width=4) (actual time=0.000..0.747 rows=0 loops=1)
+                                 Hash Cond: (inner_2_1.cc = inner_1_1.cc)
+                                 ->  Redistribute Motion 3:3  (slice5; segments: 3)  (cost=0.00..431.00 rows=4 width=4) (never executed)
+                                       Hash Key: inner_2_1.cc
+                                       ->  Seq Scan on inner_2 inner_2_1  (cost=0.00..431.00 rows=4 width=4) (actual time=0.411..0.413 rows=5 loops=1)
+                                 ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..0.387 rows=0 loops=1)
+                                       Buckets: 131072  Batches: 1  Memory Usage: 1024kB
+                                       ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.387 rows=0 loops=1)
+               ->  Index Scan using dist_large_2_index on dist_large_2  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: (c1 < inner_2_1.cc)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 21.893 ms
+   (slice0)    Executor memory: 97K bytes.
+   (slice1)    Executor memory: 53K bytes avg x 3 workers, 53K bytes max (seg0).
+   (slice2)    Executor memory: 1053K bytes avg x 3 workers, 1053K bytes max (seg0).  Work_mem: 1024K bytes max.
+   (slice3)    Executor memory: 38K bytes avg x 3 workers, 38K bytes max (seg0).
+   (slice4)    Executor memory: 1053K bytes avg x 3 workers, 1053K bytes max (seg0).  Work_mem: 1024K bytes max.
+   (slice5)    Executor memory: 38K bytes avg x 3 workers, 38K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 406.268 ms
+(44 rows)
+
+-- inequality join predicate 
+-- union all of small tables
+-- join below union all alternative chosen
+-- Intuition: This test is to verify the type cast in the join predicate gets
+-- correctly remapped when the join is pushed down union all. 
+explain analyze select c1 from char_view_small join inner_3 on c1 < cc;
+                                                                  QUERY PLAN                                                                   
+---------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324472.90 rows=1 width=5) (actual time=6.744..6.746 rows=0 loops=1)
+   ->  Append  (cost=0.00..1324472.90 rows=1 width=5) (actual time=0.000..6.287 rows=0 loops=1)
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=5) (actual time=0.000..5.638 rows=0 loops=1)
+               Join Filter: true
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8) (actual time=0.000..5.636 rows=0 loops=1)
+                     ->  Seq Scan on inner_3  (cost=0.00..431.00 rows=1 width=8) (actual time=0.000..1.226 rows=0 loops=1)
+               ->  Index Scan using char_small_1_index on char_small_1  (cost=0.00..6.00 rows=1 width=5) (never executed)
+                     Index Cond: (c1 < (inner_3.cc)::bpchar)
+         ->  Nested Loop  (cost=0.00..1324035.89 rows=1 width=4) (actual time=0.000..0.646 rows=0 loops=1)
+               Join Filter: (char_small_2.c1 < (inner_3_1.cc)::bpchar)
+               ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=8) (actual time=0.000..0.503 rows=0 loops=1)
+                     ->  Seq Scan on inner_3 inner_3_1  (cost=0.00..431.00 rows=1 width=8) (actual time=0.000..1.360 rows=0 loops=1)
+               ->  Seq Scan on char_small_2  (cost=0.00..431.00 rows=34 width=4) (actual time=0.365..0.365 rows=1 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 20.225 ms
+   (slice0)    Executor memory: 50K bytes.
+   (slice1)    Executor memory: 48K bytes avg x 3 workers, 48K bytes max (seg0).
+   (slice2)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
+   (slice3)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 7.501 ms
+(21 rows)
+
+-- union all of partition, distributed, and randomly distributed tables
+-- join below union all alternative generated, but not chosen
+explain analyze select c2 from part_dist_rand join inner_1 on c2 = cc;
+                                                                    QUERY PLAN                                                                     
+---------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1737.91 rows=1 width=4) (actual time=6.523..6.525 rows=0 loops=1)
+   ->  Hash Join  (cost=0.00..1737.91 rows=1 width=4) (actual time=0.000..5.848 rows=0 loops=1)
+         Hash Cond: (part.c2 = inner_1.cc)
+         ->  Append  (cost=0.00..1295.16 rows=66667 width=4) (never executed)
+               ->  Dynamic Seq Scan on part  (cost=0.00..431.00 rows=1 width=4) (never executed)
+                     Number of partitions to scan: 3 (out of 3)
+               ->  Seq Scan on dist  (cost=0.00..431.70 rows=33334 width=4) (never executed)
+               ->  Seq Scan on rand  (cost=0.00..431.70 rows=33334 width=4) (never executed)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..3.282 rows=0 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4096kB
+               ->  Partition Selector (selector id: $0)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..3.264 rows=0 loops=1)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..3.262 rows=0 loops=1)
+                           ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..1.168 rows=0 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 34.059 ms
+   (slice0)    Executor memory: 61K bytes.
+   (slice1)    Executor memory: 4131K bytes avg x 3 workers, 4131K bytes max (seg0).  Work_mem: 4096K bytes max.
+   (slice2)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 25.618 ms
+(20 rows)
+
+-- union all of partition and distributed tables
+-- join below union all alternative chosen
+explain analyze select c2 from part_dist join inner_1 on c2 = cc;
+                                                                       QUERY PLAN                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1299.00 rows=1 width=4) (actual time=5.903..5.905 rows=0 loops=1)
+   ->  Append  (cost=0.00..1299.00 rows=1 width=4) (actual time=0.000..5.405 rows=0 loops=1)
+         ->  Hash Join  (cost=0.00..862.00 rows=1 width=4) (actual time=0.000..5.153 rows=0 loops=1)
+               Hash Cond: (part.c2 = inner_1.cc)
+               ->  Dynamic Seq Scan on part  (cost=0.00..431.00 rows=1 width=4) (never executed)
+                     Number of partitions to scan: 3 (out of 3)
+               ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..3.641 rows=0 loops=1)
+                     Buckets: 524288  Batches: 1  Memory Usage: 4096kB
+                     ->  Partition Selector (selector id: $0)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..3.639 rows=0 loops=1)
+                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..3.638 rows=0 loops=1)
+                                 ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.698 rows=0 loops=1)
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..0.254 rows=0 loops=1)
+               Join Filter: true
+               ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.252 rows=0 loops=1)
+               ->  Index Scan using dist_index on dist  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: (c2 = inner_1_1.cc)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 22.947 ms
+   (slice0)    Executor memory: 68K bytes.
+   (slice1)    Executor memory: 4137K bytes avg x 3 workers, 4137K bytes max (seg2).  Work_mem: 4096K bytes max.
+   (slice2)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 6.842 ms
+(23 rows)
+
+-- union all of partition and distributed tables
+-- both union all children have multiple filters
+-- join below union all alternative chosen
+explain analyze select c2 from part_dist_filter join inner_1 on c2 < cc;
+                                                                 QUERY PLAN                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1327430.37 rows=1 width=4) (actual time=6.525..6.528 rows=0 loops=1)
+   ->  Append  (cost=0.00..1327430.37 rows=1 width=4) (actual time=0.000..6.099 rows=0 loops=1)
+         ->  Nested Loop  (cost=0.00..1326993.37 rows=1 width=4) (actual time=0.000..5.861 rows=0 loops=1)
+               Join Filter: (part.c2 < inner_1.cc)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..3.920 rows=0 loops=1)
+                     ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..2.583 rows=0 loops=1)
+               ->  Materialize  (cost=0.00..433.89 rows=18 width=4) (actual time=2.526..2.526 rows=1 loops=1)
+                     ->  Dynamic Seq Scan on part  (cost=0.00..433.89 rows=18 width=8) (actual time=2.517..2.517 rows=1 loops=1)
+                           Number of partitions to scan: 3 (out of 3)
+                           Filter: ((c1 < 100) AND (c2 = ANY ('{1,5,8}'::integer[])))
+                           Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..0.241 rows=0 loops=1)
+               Join Filter: true
+               ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.240 rows=0 loops=1)
+                     ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..2.056 rows=0 loops=1)
+               ->  Index Scan using dist_index on dist  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: ((c2 < inner_1_1.cc) AND (c2 > 90000))
+                     Filter: (c1 < 90000)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 20.562 ms
+   (slice0)    Executor memory: 58K bytes.
+   (slice1)    Executor memory: 79K bytes avg x 3 workers, 79K bytes max (seg0).  Work_mem: 17K bytes max.
+   (slice2)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
+   (slice3)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 7.696 ms
+(26 rows)
+
+-- union all of partition and randomly distributed tables
+-- join below union all alternative chosen
+explain analyze select c2 from part_rand join inner_1 on c2 = cc;
+                                                                       QUERY PLAN                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1299.00 rows=1 width=4) (actual time=7.198..7.201 rows=0 loops=1)
+   ->  Append  (cost=0.00..1299.00 rows=1 width=4) (actual time=0.000..6.828 rows=0 loops=1)
+         ->  Hash Join  (cost=0.00..862.00 rows=1 width=4) (actual time=0.000..6.439 rows=0 loops=1)
+               Hash Cond: (part.c2 = inner_1.cc)
+               ->  Dynamic Seq Scan on part  (cost=0.00..431.00 rows=1 width=4) (never executed)
+                     Number of partitions to scan: 3 (out of 3)
+               ->  Hash  (cost=431.00..431.00 rows=1 width=4) (actual time=0.000..4.686 rows=0 loops=1)
+                     Buckets: 524288  Batches: 1  Memory Usage: 4096kB
+                     ->  Partition Selector (selector id: $0)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..4.684 rows=0 loops=1)
+                           ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..4.683 rows=0 loops=1)
+                                 ->  Seq Scan on inner_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..2.245 rows=0 loops=1)
+         ->  Nested Loop  (cost=0.00..437.00 rows=1 width=4) (actual time=0.000..0.657 rows=0 loops=1)
+               Join Filter: true
+               ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.652 rows=0 loops=1)
+                     ->  Seq Scan on inner_1 inner_1_1  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..3.568 rows=0 loops=1)
+               ->  Index Scan using rand_index on rand  (cost=0.00..6.00 rows=1 width=4) (never executed)
+                     Index Cond: (c2 = inner_1_1.cc)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 21.308 ms
+   (slice0)    Executor memory: 71K bytes.
+   (slice1)    Executor memory: 4138K bytes avg x 3 workers, 4138K bytes max (seg0).  Work_mem: 4096K bytes max.
+   (slice2)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
+   (slice3)    Executor memory: 38K bytes avg x 3 workers, 38K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 31.869 ms
+(25 rows)
+
+-- union all of partition, distributed, and randomly distributed tables
+-- join below union all alternative generated, but not chosen
+explain analyze select c2 from part_dist_rand join inner_2 on c2 = cc;
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1744.86 rows=30 width=4) (actual time=4.009..73.015 rows=90020 loops=1)
+   ->  Hash Join  (cost=0.00..1744.86 rows=10 width=4) (actual time=2.792..66.687 rows=30145 loops=1)
+         Hash Cond: (part.c2 = inner_2.cc)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 10 of 524288 buckets.
+         ->  Append  (cost=0.00..1296.23 rows=100000 width=4) (actual time=0.340..36.071 rows=100272 loops=1)
+               ->  Dynamic Seq Scan on part  (cost=0.00..431.70 rows=33334 width=4) (actual time=0.339..10.143 rows=33462 loops=1)
+                     Number of partitions to scan: 3 (out of 3)
+                     Partitions scanned:  Avg 3.0 x 3 workers.  Max 3 parts (seg0).
+               ->  Seq Scan on dist  (cost=0.00..431.70 rows=33334 width=4) (actual time=0.176..6.914 rows=33462 loops=1)
+               ->  Seq Scan on rand  (cost=0.00..431.70 rows=33334 width=4) (actual time=0.193..6.449 rows=33381 loops=1)
+         ->  Hash  (cost=431.00..431.00 rows=10 width=4) (actual time=2.046..2.047 rows=10 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               ->  Partition Selector (selector id: $0)  (cost=0.00..431.00 rows=10 width=4) (actual time=1.746..2.038 rows=10 loops=1)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=10 width=4) (actual time=1.731..1.984 rows=10 loops=1)
+                           ->  Seq Scan on inner_2  (cost=0.00..431.00 rows=4 width=4) (actual time=0.343..0.345 rows=4 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 27.678 ms
+   (slice0)    Executor memory: 67K bytes.
+   (slice1)    Executor memory: 4210K bytes avg x 3 workers, 4210K bytes max (seg0).  Work_mem: 4097K bytes max.
+   (slice2)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 79.211 ms
+(22 rows)
+
+-- union all of partition and distributed tables
+-- join below union all alternative generated, but not chosen
+explain analyze select c2 from part_dist join inner_2 on c2 = cc;
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1306.91 rows=20 width=4) (actual time=4.619..57.480 rows=90010 loops=1)
+   ->  Hash Join  (cost=0.00..1306.91 rows=7 width=4) (actual time=3.230..50.703 rows=30143 loops=1)
+         Hash Cond: (part.c2 = inner_2.cc)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 10 of 524288 buckets.
+         ->  Append  (cost=0.00..864.16 rows=66667 width=4) (actual time=0.445..25.063 rows=66924 loops=1)
+               ->  Dynamic Seq Scan on part  (cost=0.00..431.70 rows=33334 width=4) (actual time=0.444..9.653 rows=33462 loops=1)
+                     Number of partitions to scan: 3 (out of 3)
+                     Partitions scanned:  Avg 3.0 x 3 workers.  Max 3 parts (seg0).
+               ->  Seq Scan on dist  (cost=0.00..431.70 rows=33334 width=4) (actual time=0.193..6.849 rows=33462 loops=1)
+         ->  Hash  (cost=431.00..431.00 rows=10 width=4) (actual time=2.372..2.372 rows=10 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               ->  Partition Selector (selector id: $0)  (cost=0.00..431.00 rows=10 width=4) (actual time=1.946..2.342 rows=10 loops=1)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=10 width=4) (actual time=1.941..2.286 rows=10 loops=1)
+                           ->  Seq Scan on inner_2  (cost=0.00..431.00 rows=4 width=4) (actual time=0.688..0.706 rows=4 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 15.506 ms
+   (slice0)    Executor memory: 64K bytes.
+   (slice1)    Executor memory: 4208K bytes avg x 3 workers, 4208K bytes max (seg0).  Work_mem: 4097K bytes max.
+   (slice2)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 63.197 ms
+(21 rows)
+
+-- union all of partition and randomly distributed tables
+-- join below union all alternative generated, but not chosen
+explain analyze select c2 from part_rand join inner_2 on c2 = cc;
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1306.91 rows=20 width=4) (actual time=4.138..55.637 rows=90010 loops=1)
+   ->  Hash Join  (cost=0.00..1306.91 rows=7 width=4) (actual time=2.992..49.002 rows=30140 loops=1)
+         Hash Cond: (part.c2 = inner_2.cc)
+         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 10 of 524288 buckets.
+         ->  Append  (cost=0.00..864.16 rows=66667 width=4) (actual time=0.329..24.439 rows=66810 loops=1)
+               ->  Dynamic Seq Scan on part  (cost=0.00..431.70 rows=33334 width=4) (actual time=0.313..9.462 rows=33462 loops=1)
+                     Number of partitions to scan: 3 (out of 3)
+                     Partitions scanned:  Avg 3.0 x 3 workers.  Max 3 parts (seg0).
+               ->  Seq Scan on rand  (cost=0.00..431.70 rows=33334 width=4) (actual time=0.200..6.483 rows=33381 loops=1)
+         ->  Hash  (cost=431.00..431.00 rows=10 width=4) (actual time=0.293..0.294 rows=10 loops=1)
+               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
+               ->  Partition Selector (selector id: $0)  (cost=0.00..431.00 rows=10 width=4) (actual time=0.031..0.257 rows=10 loops=1)
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=10 width=4) (actual time=0.027..0.224 rows=10 loops=1)
+                           ->  Seq Scan on inner_2  (cost=0.00..431.00 rows=4 width=4) (actual time=0.383..0.384 rows=4 loops=1)
+ Optimizer: Pivotal Optimizer (GPORCA)
+ Planning Time: 15.257 ms
+   (slice0)    Executor memory: 64K bytes.
+   (slice1)    Executor memory: 4207K bytes avg x 3 workers, 4207K bytes max (seg0).  Work_mem: 4097K bytes max.
+   (slice2)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
+ Memory used:  128000kB
+ Execution Time: 61.291 ms
+(21 rows)
+

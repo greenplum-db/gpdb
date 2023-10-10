@@ -47,7 +47,6 @@ struct ICProxyOBuf
 extern void ic_proxy_obuf_init(ICProxyOBuf *obuf, uint16 header_size,
 							   void (* set_packet_size) (void *data,
 														 uint16 size));
-extern void ic_proxy_obuf_init_b2c(ICProxyOBuf *obuf);
 extern void ic_proxy_obuf_init_p2p(ICProxyOBuf *obuf);
 extern void ic_proxy_obuf_uninit(ICProxyOBuf *obuf);
 extern void *ic_proxy_obuf_ensure_buffer(ICProxyOBuf *obuf);

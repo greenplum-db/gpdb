@@ -783,11 +783,9 @@ select * from qp_misc_jiras.tbl_694_1 join qp_misc_jiras.tbl_694_2 on qp_misc_ji
 drop table qp_misc_jiras.tbl_694_1;
 drop table qp_misc_jiras.tbl_694_2;
 
--- GPDB_10_MERGE_FIXME: Here we cast the unknown typed literal to text. After
--- we move past postgres 10 we can drop the cast.
-select * from ( select 'a'::text as a) x join (select 'a'::text as b) y on a=b;
-select * from ( ( select 'a'::text as a ) xx join (select 'a'::text as b) yy on a = b ) x join (select 'a'::text as c) y on a=c;
-select x.b from ( ( select 'a'::text as a ) xx join (select 'a'::text as b) yy on a = b ) x join (select 'a'::text as c) y on a=c;
+select * from ( select 'a' as a) x join (select 'a' as b) y on a=b;
+select * from ( ( select 'a' as a ) xx join (select 'a' as b) yy on a = b ) x join (select 'a' as c) y on a=c;
+select x.b from ( ( select 'a' as a ) xx join (select 'a' as b) yy on a = b ) x join (select 'a' as c) y on a=c;
 create table qp_misc_jiras.tbl6027_test (i int, j bigint, k int, l int, m int);
 insert into qp_misc_jiras.tbl6027_test select i, i%100, i%123, i%234, i%345 from generate_series(1, 500) i;
 select j, sum(k), row_number() over (partition by j order by sum(k)) from qp_misc_jiras.tbl6027_test group by j order by j limit 10; -- order 1

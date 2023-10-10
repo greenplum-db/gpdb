@@ -8,11 +8,13 @@ Feature: gpstart behave tests
           And a mirror has crashed
           And the database is not running
          When the user runs "gpstart -a"
+	  And pgpassfile is exists
          Then gpstart should return a return code of 0
           And gpstart should print "Skipping startup of segment marked down in configuration" to stdout
           And gpstart should print "Skipped segment starts \(segments are marked down in configuration\) += 1" to stdout
           And gpstart should print "Successfully started [0-9]+ of [0-9]+ segment instances, skipped 1 other segments" to stdout
           And gpstart should print "Number of segments not attempted to start: 1" to stdout
+	  And gpstart should not print "permissions should be" to stdout
 
     Scenario: gpstart starts even if the standby host is unreachable
         Given the database is running
@@ -25,6 +27,32 @@ Feature: gpstart behave tests
          Then gpstart should print "Continue only if you are certain that the standby is not acting as the coordinator." to stdout
           And gpstart should print "No standby coordinator configured" to stdout
           And gpstart should return a return code of 0
+          And all the segments are running
+
+    @demo_cluster
+    Scenario: gpstart runs with given coordinator data directory option
+        Given the database is running
+          And running postgres processes are saved in context
+          And the user runs "gpstop -a"
+          And gpstop should return a return code of 0
+          And verify no postgres process is running on all hosts
+          And "COORDINATOR_DATA_DIRECTORY" environment variable is not set
+         Then the user runs utility "gpstart" with coordinator data directory and "-a"
+          And gpstart should return a return code of 0
+          And "COORDINATOR_DATA_DIRECTORY" environment variable should be restored
+          And all the segments are running
+
+    @demo_cluster
+    Scenario: gpstart priorities given coordinator data directory over env option
+        Given the database is running
+          And running postgres processes are saved in context
+          And the user runs "gpstop -a"
+          And gpstop should return a return code of 0
+          And verify no postgres process is running on all hosts
+          And the environment variable "COORDINATOR_DATA_DIRECTORY" is set to "/tmp/"
+         Then the user runs utility "gpstart" with coordinator data directory and "-a"
+          And gpstart should return a return code of 0
+          And "COORDINATOR_DATA_DIRECTORY" environment variable should be restored
           And all the segments are running
 
     @concourse_cluster

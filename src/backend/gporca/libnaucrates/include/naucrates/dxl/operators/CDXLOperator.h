@@ -68,6 +68,7 @@ enum Edxlopid
 	EdxlopScalarHashCondList,
 	EdxlopScalarArray,
 	EdxlopScalarArrayRef,
+	EdxlopScalarFieldSelect,
 	EdxlopScalarArrayRefIndexList,
 
 	EdxlopScalarAssertConstraintList,
@@ -148,6 +149,7 @@ enum Edxlopid
 	EdxlopPhysicalSequence,
 	EdxlopPhysicalDynamicTableScan,
 	EdxlopPhysicalDynamicIndexScan,
+	EdxlopPhysicalDynamicIndexOnlyScan,
 	EdxlopPhysicalPartitionSelector,
 	EdxlopPhysicalTVF,
 	EdxlopPhysicalWindow,

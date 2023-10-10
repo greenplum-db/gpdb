@@ -1,0 +1,110 @@
+---
+title: System Catalog Changes between Greenplum 6 and Greenplum 7
+---
+
+This topic documents changes to existing system views, system catalogs, and functions between Greenplum 6 and Greenplum 7.
+
+## <a id="both"></a>Changes to Both System Views and System Tables
+
+The following changes pertain to both system views and system tables:
+
+- The `Unknown` datatype has been changed from a base type to a pseudo type.
+
+- Sequence for `SERIAL` columns now generate positive 32-bit wide values instead of 64-bit.
+
+- Prior to Greenplum 7, sequence metadata was stored in separate sequence relation table; each sequence created had its own table. In Greenplum 7, the new `pg_sequence` system table contains all sequence-related metadata.
+
+- The `gp_toolkit` schema is now an extension. 
+
+## <a id="tables"></a>System Table Changes
+
+This section describes changes to existing system tables. 
+
+- The `pg_appendonly` table no longer records append-only storage options. They are now listed in `pg_class` table's `reloptions` column instead. In addition, the following columns have been removed from the `pg_appendonly` table: `blocksize`,​ `safefswritesize`, ​​`compresslevel`, ​​`checksum`, `compresstype`, `columnstore`, ​​`blkdiridxid​​`, and `visimapidxid​`.
+
+- To identify the storage type of a table, search `pg_class_relam` your table. Previously, used the `relstorage` column in `pg_class`. 
+
+- In the `gp_configuration_history` table, the `desc` column has been renamed to `description`.
+
+- A new colum, `pg_proc.prokind`,  column replaces `pg_proc.proisagg` and `pg_proc.proiswindow`.
+
+- `pg_proc.protransform` has been renamed to `pg_proc.prosupport`.
+
+- The `pg_am` table now stores possible table access methods. 
+
+- The `relam` column of the `pg_class` table now stores per-table access method information.
+
+- To indicate that a table is of type external, set the `relkind` column in the `pg_class` table to `f`.
+
+- The `adsrc​` column has been removed from the `pg_attdref` table.
+
+## <a id="functions"></a>Changed Functions
+
+This section lists functions whose signatures have changed across their overloaded versions between Greenplum 6 and Greenplum 7:
+
+- gp_toolkit.__gp_aocsseg
+- gp_toolkit.__gp_aocsseg_history
+- gp_toolkit.__gp_aoseg
+- gp_toolkit.__gp_aoseg_history
+- pg_catalog.array_agg
+- pg_catalog.array_agg_finalfn
+- pg_catalog.array_agg_transfn
+- pg_catalog.date
+- pg_catalog.date_part
+- pg_catalog.gin_consistent_jsonb
+- pg_catalog.gin_consistent_jsonb_path
+- pg_catalog.gin_extract_jsonb
+- pg_catalog.gin_extract_jsonb_path
+- pg_catalog.gin_extract_jsonb_query
+- pg_catalog.gin_extract_jsonb_query_path
+- pg_catalog.gin_triconsistent_jsonb
+- pg_catalog.gin_triconsistent_jsonb_path
+- pg_catalog.gin_tsquery_triconsistent
+- pg_catalog.gist_box_consistent
+- pg_catalog.gist_circle_consistent
+- pg_catalog.gist_point_consistent
+- pg_catalog.gist_point_distance
+- pg_catalog.gist_poly_consistent
+- pg_catalog.gp_dist_wait_status
+- pg_catalog.gp_execution_segment
+- pg_catalog.gp_request_fts_probe_scan
+- pg_catalog.gp_tablespace_segment_location
+- pg_catalog.gtsquery_union
+- pg_catalog.gtsvector_union
+- pg_catalog.inet_gist_consistent
+- pg_catalog.inet_gist_union
+- pg_catalog.int4_pivot_accum
+- pg_catalog.intinterval
+- pg_catalog.isfinite
+- pg_catalog.max
+- pg_catalog.min
+- pg_catalog.pg_create_logical_replication_slot
+- pg_catalog.pg_create_physical_replication_slot
+- pg_catalog.pg_cursor
+- pg_catalog.pg_event_trigger_dropped_objects
+- pg_catalog.pg_get_replication_slots
+- pg_catalog.pg_identify_object
+- pg_catalog.pg_import_system_collations
+- pg_catalog.pg_logical_slot_get_binary_changes
+- pg_catalog.pg_logical_slot_get_changes
+- pg_catalog.pg_logical_slot_peek_binary_changes
+- pg_catalog.pg_logical_slot_peek_changes
+- pg_catalog.pg_resgroup_get_status
+- pg_catalog.pg_sequence_parameters
+- pg_catalog.pg_show_all_settings
+- pg_catalog.pg_start_backup
+- pg_catalog.pg_stat_file
+- pg_catalog.pg_stat_get_activity
+- pg_catalog.pg_stat_get_wal_senders
+- pg_catalog.pivot_sum
+- pg_catalog.range_gist_consistent
+- pg_catalog.range_gist_union
+- pg_catalog.time
+- pg_catalog.timestamp
+- pg_catalog.timestamptz
+- pg_catalog.to_regclass
+- pg_catalog.to_regoper
+- pg_catalog.to_regoperator
+- pg_catalog.to_regproc
+- pg_catalog.to_regprocedure
+- pg_catalog.to_regtype

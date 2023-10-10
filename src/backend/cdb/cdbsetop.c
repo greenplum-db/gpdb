@@ -129,15 +129,13 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 					case CdbLocusType_Hashed:
 					case CdbLocusType_HashedOJ:
 					case CdbLocusType_Strewn:
-						break;
 					case CdbLocusType_SingleQE:
 					case CdbLocusType_General:
 					case CdbLocusType_SegmentGeneral:
 						/*
-						 * The setop itself will run on an N-gang, so we need
-						 * to arrange for the singleton input to be separately
-						 * dispatched to a 1-gang and collect its result on
-						 * one of our N QEs. Hence ...
+						 * Collocate non-distinct tuples prior to sort or hash. We must
+						 * put the Redistribute nodes below the Append, otherwise we lose
+						 * the order of the firstFlags.
 						 */
 						adjusted_path = make_motion_hash_all_targets(root, subpath, subtlist);
 						break;

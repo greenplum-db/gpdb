@@ -115,7 +115,7 @@ Adding an exclusion constraint automatically creates an index of the type specif
 
 ### <a id="topic34"></a>Choosing the Table Distribution Policy 
 
-All Greenplum Database tables are distributed. When you create or alter a table, you optionally specify `DISTRIBUTED BY` \(hash distribution\), `DISTRIBUTED RANDOMLY` \(round-robin distribution\), or `DISTRIBUTED REPLICATED` \(fully distributed\) to determine the table row distribution.
+All Greenplum Database tables are distributed. When you create or alter a table, you optionally specify `DISTRIBUTED BY` \(hash distribution\), `DISTRIBUTED RANDOMLY` \(random distribution\), or `DISTRIBUTED REPLICATED` \(fully distributed\) to determine the table row distribution.
 
 > **Note** The Greenplum Database server configuration parameter `gp_create_table_random_default_distribution` controls the table distribution policy if the DISTRIBUTED BY clause is not specified when you create a table.
 
@@ -136,7 +136,7 @@ The replicated table distribution policy \(`DISTRIBUTED REPLICATED`\) should be 
 
 #### <a id="topic35"></a>Declaring Distribution Keys 
 
-`CREATE TABLE`'s optional clauses `DISTRIBUTED BY`, `DISTRIBUTED RANDOMLY`, and `DISTRIBUTED REPLICATED` specify the distribution policy for a table. The default is a hash distribution policy that uses either the `PRIMARY KEY` \(if the table has one\) or the first column of the table as the distribution key. Columns with geometric or user-defined data types are not eligible as Greenplum Database distribution key columns. If a table does not have an eligible column, Greenplum Database distributes the rows randomly or in round-robin fashion.
+`CREATE TABLE`'s optional clauses `DISTRIBUTED BY`, `DISTRIBUTED RANDOMLY`, and `DISTRIBUTED REPLICATED` specify the distribution policy for a table. The default is a hash distribution policy that uses either the `PRIMARY KEY` \(if the table has one\) or the first column of the table as the distribution key. Columns with geometric or user-defined data types are not eligible as Greenplum Database distribution key columns. If a table does not have an eligible column, Greenplum Database distributes the rows randomly.
 
 Replicated tables have no distribution key because every row is distributed to every Greenplum Database segment instance.
 
@@ -202,7 +202,7 @@ CREATE OPERATOR CLASS abs_int_hash_ops FOR TYPE int4
   FUNCTION 1 abshashfunc(int);
 ```
 
-Also, create less than and greater than operators, and a btree operator class for them. We don't need them for our queries, but the Postgres Planner will not consider co-location of joins without them.
+Also, create less than and greater than operators, and a btree operator class for them. We don't need them for our queries, but the Postgres-based planner will not consider co-location of joins without them.
 
 ```
 CREATE FUNCTION abslt(int, int) RETURNS BOOL AS
@@ -266,7 +266,7 @@ EXPLAIN (COSTS OFF) SELECT a, b FROM atab, btab WHERE a = b;
                ->  Redistribute Motion 4:4  (slice2; segments: 4)
                      Hash Key: btab.b
                      ->  Seq Scan on btab
- Optimizer: Postgres query optimizer
+ Optimizer: Postgres-based planner
 (11 rows)
 ```
 
@@ -282,7 +282,7 @@ EXPLAIN (COSTS OFF) SELECT a, b FROM atab, btab WHERE a |=| b;
          ->  Seq Scan on atab
          ->  Hash
                ->  Seq Scan on btab
- Optimizer: Postgres query optimizer
+ Optimizer: Postgres-based planner
 (7 rows)
 ```
 

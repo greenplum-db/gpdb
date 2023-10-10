@@ -1730,7 +1730,7 @@ where xx='dd';
 -----------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Result
-         Filter: ((text((SubPlan 1))) = 'dd'::text)
+         Filter: ((text((hashed SubPlan 1))) = 'dd'::text)
          ->  Nested Loop
                Join Filter: true
                ->  Seq Scan on subquery_nonpush_through_1
@@ -1754,6 +1754,58 @@ where xx='dd';
  xx | b 
 ----+---
 (0 rows)
+
+-- Ensure we produce a hashed subplan when there are no outer references
+CREATE TABLE a1 AS (
+    SELECT * FROM generate_series(1, 5) AS a1)
+    WITH data distributed replicated;
+CREATE TABLE a2 AS (
+    SELECT * FROM generate_series(1, 10) AS a1)
+    WITH data distributed BY (a1);
+CREATE TABLE a3 AS (
+	SELECT a1, row_to_json(a2) AS rj FROM a2)
+	WITH data distributed BY (a1);
+-- explain "verbose" is needed to show that the subplan is hashed
+explain (verbose, costs off) select a1,case when a2 in (select a1::text from a1 where a1 is not null) then 'true' else 'false' end as checkcol
+from (
+      select a1,rj->>'a1'::text as a2
+      from a3
+      )t;
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: a3.a1, (CASE WHEN (hashed SubPlan 1) THEN 'true'::text ELSE 'false'::text END)
+   ->  Seq Scan on qp_subquery.a3
+         Output: a3.a1, CASE WHEN (hashed SubPlan 1) THEN 'true'::text ELSE 'false'::text END
+         SubPlan 1
+           ->  Result
+                 Output: ((a1.a1)::text)
+                 ->  Result
+                       Output: (a1.a1)::text, true
+                       ->  Seq Scan on qp_subquery.a1
+                             Output: a1.a1
+                             Filter: (NOT (a1.a1 IS NULL))
+ Optimizer: GPORCA
+(13 rows)
+
+select a1,case when a2 in (select a1::text from a1 where a1 is not null) then 'true' else 'false' end as checkcol
+from (
+      select a1,rj->>'a1'::text as a2
+      from a3
+      )t;
+ a1 | checkcol 
+----+----------
+  2 | true
+  3 | true
+  4 | true
+  7 | false
+  8 | false
+  1 | true
+  5 | true
+  6 | false
+  9 | false
+ 10 | false
+(10 rows)
 
 set client_min_messages='warning';
 drop schema qp_subquery cascade;

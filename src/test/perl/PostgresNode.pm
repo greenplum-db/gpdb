@@ -848,7 +848,7 @@ sub start
 		# Note: We set the cluster_name here, not in postgresql.conf (in
 		# sub init) so that it does not get copied to standbys.
 		$ret = TestLib::system_log('pg_ctl', '-D', $self->data_dir, '-l',
-		$self->logfile, '-o', "--cluster-name=$name -c gp_role=utility --gp_dbid=$self->{_dbid} --gp_contentid=0",
+		$self->logfile, '-o', "--cluster-name=$name -c gp_role=utility --gp_dbid=$self->{_dbid} --gp_contentid=0 -c maintenance_mode=on",
 			'start');
 	}
 
@@ -1080,7 +1080,6 @@ restore_command = '$copy_command'
 }
 
 =pod
-
 
 =item $node->set_recovery_mode()
 

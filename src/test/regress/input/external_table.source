@@ -3637,17 +3637,17 @@ ALTER TABLE ext_r_dist SET DISTRIBUTED BY (a); -- should error out altering read
 -- Testing external table as the partition child.
 CREATE TABLE part_root(a int) PARTITION BY RANGE(a);
 CREATE TABLE part_child (LIKE part_root);
-CREATE WRITABLE EXTERNAL WEB TABLE part_ext_w(a int) EXECUTE 'cat > @abs_srcdir@/data/part_ext.tbl' FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ') DISTRIBUTED BY (a);
+CREATE EXTERNAL WEB TABLE part_ext_r(a int) EXECUTE 'cat > @abs_srcdir@/data/part_ext.tbl' FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ');
+CREATE WRITABLE EXTERNAL WEB TABLE part_ext_w(a int, b int) EXECUTE 'cat > @abs_srcdir@/data/part_ext.tbl' FORMAT 'TEXT' (DELIMITER AS '|' NULL AS 'null' ESCAPE AS ' ') DISTRIBUTED BY (a);
 ALTER TABLE part_root ATTACH PARTITION part_child FOR VALUES FROM (0) TO (10);
-ALTER TABLE part_root ATTACH PARTITION part_ext_w FOR VALUES FROM (10) TO (20);
+ALTER TABLE part_root ATTACH PARTITION part_ext_r FOR VALUES FROM (10) TO (20);
 
--- Adding column should work fine
+-- Adding column on readable external table should work fine
 ALTER TABLE part_root ADD COLUMN b int;
-INSERT INTO part_root SELECT i,i FROM generate_series(1,19)i;
 
--- altering distribution policy should work fine 
+-- altering distribution policy on writable external table should work fine
 SELECT policytype, distkey FROM gp_distribution_policy WHERE localoid = 'part_ext_w'::regclass;
-ALTER TABLE part_root SET DISTRIBUTED BY (b);
+ALTER TABLE part_ext_w SET DISTRIBUTED BY (b);
 SELECT policytype, distkey FROM gp_distribution_policy WHERE localoid = 'part_ext_w'::regclass;
 
 DROP TABLE part_root;
@@ -3672,3 +3672,82 @@ DROP EXTERNAL TABLE ext_false;
 DROP EXTERNAL TABLE ext_true;
 DROP EXTERNAL TABLE ext_persistently;
 
+-- test error handling for external table
+CREATE EXTERNAL TABLE ext_divzero (c INT) 
+location ('file://@hostname@@abs_srcdir@/data/eh_divzero.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 2;
+
+SELECT 6/(c-2) FROM ext_divzero;
+
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_divzero') order by cmdtime;
+
+DROP EXTERNAL TABLE ext_divzero;
+
+CREATE EXTERNAL TABLE ext_divzero (c INT) 
+location ('file://@hostname@@abs_srcdir@/data/eh_divzero.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 10;
+
+SELECT 6/(c-2) FROM ext_divzero;
+
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_divzero') order by cmdtime;
+
+DROP EXTERNAL TABLE ext_divzero;
+
+CREATE EXTERNAL TABLE ext_jsonerror (c json) 
+location ('file://@hostname@@abs_srcdir@/data/eh_json.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 3;
+
+SELECT (c->>'ip')::inet FROM ext_jsonerror;
+
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_jsonerror') order by cmdtime;
+
+DROP EXTERNAL TABLE ext_jsonerror;
+
+CREATE EXTERNAL TABLE ext_jsonerror (c json) 
+location ('file://@hostname@@abs_srcdir@/data/eh_json.dat')
+FORMAT 'text' (delimiter '|') LOG ERRORS SEGMENT REJECT LIMIT 10;
+
+SELECT (c->>'ip')::inet FROM ext_jsonerror;
+
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_jsonerror') order by cmdtime;
+
+DROP EXTERNAL TABLE ext_jsonerror;
+
+CREATE EXTERNAL TABLE ext_badjson(a json) 
+location ('file://@hostname@@abs_srcdir@/data/eh_badjson.dat') 
+FORMAT 'text' LOG ERRORS SEGMENT REJECT LIMIT 5;
+
+SELECT (a->>'9') FROM ext_badjson;
+
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_badjson') order by cmdtime;
+
+DROP EXTERNAL TABLE ext_badjson;
+
+CREATE EXTERNAL TABLE ext_badjson(a json) 
+location ('file://@hostname@@abs_srcdir@/data/eh_badjson.dat') 
+FORMAT 'text' LOG ERRORS SEGMENT REJECT LIMIT 10;
+
+SELECT (a->>'9') FROM ext_badjson;
+
+SELECT errmsg, rawdata FROM gp_read_error_log('ext_badjson') order by cmdtime;
+
+DROP EXTERNAL TABLE ext_badjson;
+
+CREATE EXTERNAL TABLE ext_fixed_width_table (
+    id INTEGER,
+    name TEXT,
+    value FLOAT
+)
+LOCATION ('file://@hostname@@abs_srcdir@/data/eh_fixed_width.dat')
+FORMAT 'CUSTOM' (formatter=fixedwidth_in, id='3', name='12', value='7')
+LOG ERRORS SEGMENT REJECT LIMIT 5;
+
+SELECT * FROM ext_fixed_width_table;
+
+SELECT errmsg, rawdata, rawbytes FROM gp_read_error_log('ext_fixed_width_table') order by cmdtime;
+
+select name::json from ext_fixed_width_table;
+
+SELECT errmsg, rawdata, rawbytes FROM gp_read_error_log('ext_fixed_width_table') order by cmdtime;
+
+DROP EXTERNAL TABLE ext_fixed_width_table;

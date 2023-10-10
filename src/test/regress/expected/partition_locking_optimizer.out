@@ -7,11 +7,6 @@
 -- runs out of lock space, you can work around that by simply bumping up
 -- max_locks_per_transactions.
 --
--- ORCA doesn't support DDL queries on partitioned tables and falls back to
--- planner. However, the locking pattern when ORCA falls back is be different
--- when ICG is run in assert vs non-assert modes.  Revisit this once DML
--- queries are supported by ORCA
-set optimizer = off;
 -- Show locks in master and in segments. Because the number of segments
 -- in the cluster depends on configuration, we print only summary information
 -- of the locks in segments. If a relation is locked only on one segment,
@@ -141,6 +136,34 @@ select * from locktest_segments where coalesce not like 'gp_%' and coalesce not 
 (28 rows)
 
 commit;
+-- select
+select * from partlockt where i = 1;
+ i | t 
+---+---
+(0 rows)
+
+-- check locks when the relation found in MD cache
+begin;
+select * from partlockt where i = 1;
+ i | t 
+---+---
+(0 rows)
+
+select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
+     coalesce      |      mode       | locktype |  node  
+-------------------+-----------------+----------+--------
+ partlockt         | AccessShareLock | relation | master
+ partlockt_1_prt_1 | AccessShareLock | relation | master
+(2 rows)
+
+select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
+     coalesce      |      mode       | locktype |   node    
+-------------------+-----------------+----------+-----------
+ partlockt         | AccessShareLock | relation | 1 segment
+ partlockt_1_prt_1 | AccessShareLock | relation | 1 segment
+(2 rows)
+
+commit;
 -- drop
 begin;
 drop table partlockt;
@@ -263,11 +286,12 @@ insert into partlockt values(1), (2), (3);
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
      coalesce      |       mode       | locktype |  node  
 -------------------+------------------+----------+--------
+ partlockt         | AccessShareLock  | relation | master
  partlockt         | RowExclusiveLock | relation | master
  partlockt_1_prt_1 | RowExclusiveLock | relation | master
  partlockt_1_prt_2 | RowExclusiveLock | relation | master
  partlockt_1_prt_3 | RowExclusiveLock | relation | master
-(4 rows)
+(5 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
      coalesce      |       mode       | locktype |    node    
@@ -402,30 +426,32 @@ select * from partlockt where i = 1;
 ---+---
 (0 rows)
 
--- Known_opt_diff: MPP-20936
--- start_ignore
--- GPDB_12_MERGE_FIXME Revisit this post merge and see if we have a chance to unlock the pruned partitions
--- end_ignore
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-        coalesce         |      mode       | locktype |  node  
--------------------------+-----------------+----------+--------
- partlockt               | AccessShareLock | relation | master
- partlockt_1_prt_1       | AccessShareLock | relation | master
- partlockt_1_prt_1_i_idx | AccessShareLock | relation | master
-(3 rows)
+     coalesce      |      mode       | locktype |  node  
+-------------------+-----------------+----------+--------
+ partlockt         | AccessShareLock | relation | master
+ partlockt_1_prt_1 | AccessShareLock | relation | master
+(2 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
         coalesce         |      mode       | locktype |   node    
 -------------------------+-----------------+----------+-----------
+ partlockt               | AccessShareLock | relation | 1 segment
  partlockt_1_prt_1       | AccessShareLock | relation | 1 segment
  partlockt_1_prt_1_i_idx | AccessShareLock | relation | 1 segment
-(2 rows)
+(3 rows)
 
 commit;
+-- In ORCA we are seeing discrepancy with 'AccessShareLock' on root partition table
+-- with-assert and without-assert modes of DML queries, because
+-- with-assert mode we are forced to release the cache, which leads to acquire
+-- 'AccessShareLock' always on master.  Since the AccessShareLock on root
+-- partition is redundant so we are skipping to evaluate.
 begin;
 -- insert locking
 insert into partlockt values(3, 'f');
-select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
+select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%' and
+                                    not(coalesce like 'partlockt' and mode like 'AccessShareLock');
      coalesce      |       mode       | locktype |  node  
 -------------------+------------------+----------+--------
  partlockt         | RowExclusiveLock | relation | master
@@ -452,30 +478,24 @@ commit;
 -- delete locking
 begin;
 delete from partlockt where i = 4;
--- Known_opt_diff: MPP-20936
--- start_ignore
--- GPDB_12_MERGE_FIXME Revisit this post merge and see if we have a chance to unlock the pruned partitions
--- end_ignore
-select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-        coalesce         |      mode       | locktype |  node  
--------------------------+-----------------+----------+--------
- partlockt               | AccessShareLock | relation | master
- partlockt               | ExclusiveLock   | relation | master
- partlockt_1_prt_4       | ExclusiveLock   | relation | master
- partlockt_1_prt_4_i_idx | ExclusiveLock   | relation | master
-(4 rows)
+select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%' and
+                                    not(coalesce like 'partlockt' and mode like 'AccessShareLock');
+     coalesce      |     mode      | locktype |  node  
+-------------------+---------------+----------+--------
+ partlockt         | ExclusiveLock | relation | master
+ partlockt_1_prt_4 | ExclusiveLock | relation | master
+(2 rows)
 
 -- start_ignore
--- GPDB_12_MERGE_FIXME Revisit this post merge and see if we have a chance to unlock the root table
+-- GPDB_12_MERGE_FIXME Revisit this post merge and see why the leaf acquires AccessShareLock instead ExclusiveLock
 -- end_ignore
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
         coalesce         |      mode       | locktype |   node    
 -------------------------+-----------------+----------+-----------
- partlockt               | AccessShareLock | relation | 1 segment
  partlockt               | ExclusiveLock   | relation | 1 segment
- partlockt_1_prt_4       | ExclusiveLock   | relation | 1 segment
+ partlockt_1_prt_4       | AccessShareLock | relation | 1 segment
  partlockt_1_prt_4_i_idx | ExclusiveLock   | relation | 1 segment
-(4 rows)
+(3 rows)
 
 commit;
 -- drop index
@@ -568,4 +588,3 @@ select * from locktest_segments where coalesce not like 'gp_%' and coalesce not 
 (38 rows)
 
 commit;
-reset optimizer;

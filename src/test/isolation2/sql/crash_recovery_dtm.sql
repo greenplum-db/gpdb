@@ -123,12 +123,18 @@ FROM gp_segment_configuration g1 where role = 'p';
     from gp_segment_configuration where role='p' and content=-1;
 11: SELECT gp_inject_fault('end_prepare_two_phase', 'infinite_loop', dbid)
     from gp_segment_configuration where role='p' and content=0;
+11: select gp_inject_fault_infinite('before_orphaned_check', 'suspend', dbid) FROM gp_segment_configuration WHERE content=-1 AND role='p';
 -- statement to trigger fault after writing prepare record
 12&: DELETE FROM QE_panic_test_table;
 11: SELECT gp_wait_until_triggered_fault('end_prepare_two_phase', 1, dbid)
     from gp_segment_configuration where role='p' and content=0;
 11: SELECT pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p' and content = 0;
 12<:
+
+11: SELECT gp_wait_until_triggered_fault('before_orphaned_check', 1, dbid) from gp_segment_configuration where role = 'p' and content = -1;
+11: select * from gp_stat_progress_dtx_recovery;
+11: SELECT gp_inject_fault_infinite('before_orphaned_check', 'reset', dbid) from gp_segment_configuration where role='p' and content=-1;
+
 13: SELECT count(*) from QE_panic_test_table;
 13: SELECT * FROM gp_dist_random('pg_prepared_xacts');
 13: SELECT gp_inject_fault('fts_probe', 'reset', dbid)
@@ -167,6 +173,8 @@ FROM gp_segment_configuration g1 where role = 'p';
    from gp_segment_configuration where role = 'p' and content = -1;
 19: SELECT gp_wait_until_triggered_fault('before_orphaned_check', 1, dbid)
    from gp_segment_configuration where role = 'p' and content = -1;
+19: SELECT gp_inject_fault_infinite('after_orphaned_check', 'suspend', dbid)
+   from gp_segment_configuration where role = 'p' and content = -1;
 
 -- let prepare finish else dtx recovery can not abort the prepared transaction.
 19: SELECT gp_inject_fault_infinite('before_xlog_xact_prepare', 'reset', dbid)
@@ -183,6 +191,12 @@ FROM gp_segment_configuration g1 where role = 'p';
 -- the orphaned prepared transaction holds lock of the table that conflicts
 -- with required lock of the drop operation.
 19: SELECT gp_inject_fault_infinite('before_orphaned_check', 'reset', dbid)
+   from gp_segment_configuration where role = 'p' and content = -1;
+-- verify orphaned prepared transacion is aborted
+19: SELECT gp_wait_until_triggered_fault('after_orphaned_check', 1, dbid)
+   from gp_segment_configuration where role = 'p' and content = -1;
+19: select * from gp_stat_progress_dtx_recovery;
+19: SELECT gp_inject_fault_infinite('after_orphaned_check', 'reset', dbid)
    from gp_segment_configuration where role = 'p' and content = -1;
 19: DROP TABLE coordinator_reset;
 19: ALTER SYSTEM RESET gp_dtx_recovery_interval;
@@ -209,6 +223,8 @@ FROM gp_segment_configuration g1 where role = 'p';
    from gp_segment_configuration where role = 'p' and content = -1;
 20: SELECT gp_inject_fault_infinite('finish_prepared_start_of_function', 'error', dbid)
    from gp_segment_configuration where role = 'p' and content = 0;
+20: SELECT gp_inject_fault_infinite('post_in_doubt_tx_in_progress', 'suspend', dbid)
+   from gp_segment_configuration where role = 'p' and content = -1;
 
 -- run two phase query.
 21: INSERT INTO test_retry_abort SELECT generate_series(1,10);
@@ -217,13 +233,19 @@ FROM gp_segment_configuration g1 where role = 'p';
 -- transaction on seg0.
 20: SELECT * from test_retry_abort;
 0U: SELECT count(*) from pg_prepared_xacts;
+-- verify in-doubt transaction is in progress
+20: SELECT gp_wait_until_triggered_fault('post_in_doubt_tx_in_progress', 1, dbid)
+   from gp_segment_configuration where role = 'p' and content = -1;
+20: select * from gp_stat_progress_dtx_recovery;
+19: SELECT gp_inject_fault_infinite('post_in_doubt_tx_in_progress', 'reset', dbid)
+   from gp_segment_configuration where role = 'p' and content = -1;
 
 -- dtx recovery ready to handle the orphaned prepared transaction.
 20: SELECT gp_inject_fault_infinite('before_orphaned_check', 'suspend', dbid)
    from gp_segment_configuration where role = 'p' and content = -1;
 20: SELECT gp_wait_until_triggered_fault('before_orphaned_check', 1, dbid)
    from gp_segment_configuration where role = 'p' and content = -1;
-20: SELECT gp_inject_fault_infinite('after_orphaned_check', 'skip', dbid)
+20: SELECT gp_inject_fault_infinite('after_orphaned_check', 'suspend', dbid)
    from gp_segment_configuration where role = 'p' and content = -1;
 
 -- kick off abort prepared on seg0 and then dtx recovery will abort that one.
@@ -236,6 +258,7 @@ FROM gp_segment_configuration g1 where role = 'p';
 20: SELECT gp_wait_until_triggered_fault('after_orphaned_check', 1, dbid)
    from gp_segment_configuration where role = 'p' and content = -1;
 0U: SELECT * from pg_prepared_xacts;
+20: select * from gp_stat_progress_dtx_recovery;
 
 -- cleanup
 20: ALTER SYSTEM RESET gp_dtx_recovery_interval;

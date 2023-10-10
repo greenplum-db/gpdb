@@ -18,7 +18,7 @@ As a best practice, the secondary \(mirror\) segment instance must always reside
 
 Two standard mirroring configurations are available when you initialize or expand a Greenplum system. The default configuration, called *group mirroring*, places all the mirrors for a host's primary segments on one other host in the cluster. The other standard configuration, *spread mirroring*, can be selected with a command-line option. Spread mirroring spreads each host's mirrors over the remaining hosts and requires that there are more hosts in the cluster than primary segments per host.
 
-[Figure 1](#iw157574) shows how table data is distributed across segments when spread mirroring is configured.
+This figure shows how table data is distributed across segments when spread mirroring is configured.
 
 ![Spread Mirroring in Greenplum Database](../graphics/spread-mirroring.png "Spread Mirroring in Greenplum Database")
 
@@ -38,7 +38,7 @@ If the primary coordinator fails, the log replication process stops, and the sta
 
 Since the coordinator does not contain any user data, only the system catalog tables need to be synchronized between the primary and backup copies. When these tables are updated, changes are automatically copied over to the standby coordinator to ensure synchronization with the primary coordinator.
 
-![Coordinator Mirroring in Greenplum Database](../graphics/standby_master.jpg "Coordinator Mirroring in Greenplum Database")
+![Coordinator Mirroring in Greenplum Database](../graphics/standby_coordinator.jpg "Coordinator Mirroring in Greenplum Database")
 
 ## <a id="interconnect_redundancy"></a>About Interconnect Redundancy 
 

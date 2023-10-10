@@ -196,11 +196,11 @@ SEGMENT REJECT LIMIT count \[ROWS \| PERCENT\]
 The limit for the number of initial rejected rows can be changed with the Greenplum Database server configuration parameter `gp_initial_bad_row_limit`. See [Server Configuration Parameters](../config_params/guc_config.html) for information about the parameter.
 
 IGNORE EXTERNAL PARTITIONS
-:   When copying data from partitioned tables, data are not copied from leaf child partitions that are external tables. A message is added to the log file when data are not copied.
+:   When copying data from partitioned tables, data are not copied from leaf partitions that are external tables. A message is added to the log file when data are not copied.
 
-:   If this clause is not specified and Greenplum Database attempts to copy data from a leaf child partition that is an external table, an error is returned.
+:   If this clause is not specified and Greenplum Database attempts to copy data from a leaf partition that is an external table, an error is returned.
 
-:   See the next section "Notes" for information about specifying an SQL query to copy data from leaf child partitions that are external tables.
+:   See the next section "Notes" for information about specifying an SQL query to copy data from leaf partitions that are external tables.
 
 ## <a id="section6"></a>Notes 
 
@@ -208,7 +208,7 @@ IGNORE EXTERNAL PARTITIONS
 
 `COPY` only deals with the specific table named; it does not copy data to or from child tables. Thus for example `COPY table TO` shows the same data as `SELECT * FROM ONLY `table``. But `COPY (SELECT * FROM table) TO ...` can be used to dump all of the data in an inheritance hierarchy.
 
-Similarly, to copy data from a partitioned table with a leaf child partition that is an external table, use an SQL query to select the data to copy. For example, if the table `my_sales` contains a leaf child partition that is an external table, this command `COPY my_sales TO stdout` returns an error. This command sends the data to `stdout`:
+Similarly, to copy data from a partitioned table with a leaf partition that is an external table, use an SQL query to select the data to copy. For example, if the table `my_sales` contains a leaf partition that is an external table, this command `COPY my_sales TO stdout` returns an error. This command sends the data to `stdout`:
 
 ```
 COPY (SELECT * from my_sales ) TO stdout

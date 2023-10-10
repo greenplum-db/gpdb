@@ -773,15 +773,15 @@ dumpResGroups(PGconn *conn)
 	PGresult   *res;
 	int		i;
 	int		i_groupname,
-			i_cpu_hard_quota_limit,
+			i_cpu_max_percent,
 			i_concurrency,
-			i_cpu_soft_priority,
+			i_cpu_weight,
 			i_cpuset;
 
 	printfPQExpBuffer(buf, "SELECT g.rsgname AS groupname, "
 					  "t1.value AS concurrency, "
-					  "t2.value AS cpu_hard_quota_limit, "
-					  "t3.value AS cpu_soft_priority, "
+					  "t2.value AS cpu_max_percent, "
+					  "t3.value AS cpu_weight, "
 					  "t4.value AS cpuset "
 					  "FROM pg_resgroup g "
 					  "     JOIN pg_resgroupcapability t1 ON g.oid = t1.resgroupid AND t1.reslimittype = 1 "
@@ -793,8 +793,8 @@ dumpResGroups(PGconn *conn)
 
 	i_groupname = PQfnumber(res, "groupname");
 	i_concurrency = PQfnumber(res, "concurrency");
-	i_cpu_hard_quota_limit = PQfnumber(res, "cpu_hard_quota_limit");
-	i_cpu_soft_priority = PQfnumber(res, "cpu_soft_priority");
+	i_cpu_max_percent = PQfnumber(res, "cpu_max_percent");
+	i_cpu_weight = PQfnumber(res, "cpu_weight");
 	i_cpuset = PQfnumber(res, "cpuset");
 
 	if (PQntuples(res) > 0)
@@ -804,14 +804,14 @@ dumpResGroups(PGconn *conn)
 	{
 		const char *groupname;
 		const char *concurrency;
-		const char *cpu_hard_quota_limit;
-		const char *cpu_soft_priority;
+		const char *cpu_max_percent;
+		const char *cpu_weight;
 		const char *cpuset;
 
 		groupname = PQgetvalue(res, i, i_groupname);
 		concurrency = PQgetvalue(res, i, i_concurrency);
-		cpu_hard_quota_limit = PQgetvalue(res, i, i_cpu_hard_quota_limit);
-		cpu_soft_priority = PQgetvalue(res, i, i_cpu_soft_priority);
+		cpu_max_percent = PQgetvalue(res, i, i_cpu_max_percent);
+		cpu_weight = PQgetvalue(res, i, i_cpu_weight);
 		cpuset = PQgetvalue(res, i, i_cpuset);
 
 		resetPQExpBuffer(buf);
@@ -827,11 +827,11 @@ dumpResGroups(PGconn *conn)
 			appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET concurrency %s;\n",
 							  fmtId(groupname), concurrency);
 
-			if (atoi(cpu_hard_quota_limit) > 0) {
-				appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET cpu_hard_quota_limit %s;\n",
-								  fmtId(groupname), cpu_hard_quota_limit);
-				appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET cpu_soft_priority %s;\n",
-								  fmtId(groupname), cpu_soft_priority);
+			if (atoi(cpu_max_percent) > 0) {
+				appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET cpu_max_percent %s;\n",
+								  fmtId(groupname), cpu_max_percent);
+				appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET cpu_weight %s;\n",
+								  fmtId(groupname), cpu_weight);
 			}
 			else
 				appendPQExpBuffer(buf, "ALTER RESOURCE GROUP %s SET cpuset '%s';\n",
@@ -841,11 +841,11 @@ dumpResGroups(PGconn *conn)
 		{
 			/* For other groups, we just create it directly. */
 
-			if (atoi(cpu_hard_quota_limit) > 0)
+			if (atoi(cpu_max_percent) > 0)
 			{
 				printfPQExpBuffer(buf, "CREATE RESOURCE GROUP %s WITH ("
-									   "concurrency=%s, cpu_hard_quota_limit=%s, cpu_soft_priority=%s);\n",
-								  fmtId(groupname), concurrency, cpu_hard_quota_limit, cpu_soft_priority);
+									   "concurrency=%s, cpu_max_percent=%s, cpu_weight=%s);\n",
+								  fmtId(groupname), concurrency, cpu_max_percent, cpu_weight);
 			}
 			else
 			{

@@ -8,16 +8,15 @@ In all cases, a `pg_shdepend` entry indicates that the referenced object may not
 -   **SHARED\_DEPENDENCY\_ACL \(a\)** — The referenced object \(which must be a role\) is mentioned in the ACL \(access control list\) of the dependent object.
 -   **SHARED\_DEPENDENCY\_PIN \(p\)** — There is no dependent object; this type of entry is a signal that the system itself depends on the referenced object, and so that object must never be deleted. Entries of this type are created only by system initialization. The columns for the dependent object contain zeroes.
 
-    |column|type|references|description|
-    |------|----|----------|-----------|
-    |`dbid`|oid|pg\_database.oid|The OID of the database the dependent object is in, or zero for a shared object.|
-    |`classid`|oid|pg\_class.oid|The OID of the system catalog the dependent object is in.|
-    |`objid`|oid|any OID column|The OID of the specific dependent object.|
-    |`objsubid`|int4| |For a table column, this is the column number. For all other object types, this column is zero.|
-    |`refclassid`|oid|pg\_class.oid|The OID of the system catalog the referenced object is in \(must be a shared catalog\).|
-    |`refobjid`|oid|any OID column|The OID of the specific referenced object.|
-    |`refobjsubid`|int4| |For a table column, this is the referenced column number. For all other object types, this column is zero.|
-    |`deptype`|char| |A code defining the specific semantics of this dependency relationship.|
+|column|type|references|description|
+|------|----|----------|-----------|
+|`dbid`|oid|pg\_database.oid|The OID of the database the dependent object is in, or zero for a shared object.|
+|`classid`|oid|pg\_class.oid|The OID of the system catalog the dependent object is in.|
+|`objid`|oid|any OID column|The OID of the specific dependent object.|
+|`objsubid`|integer| |For a table column, this is the column number. For all other object types, this column is zero.|
+|`refclassid`|oid|pg\_class.oid|The OID of the system catalog the referenced object is in \(must be a shared catalog\).|
+|`refobjid`|oid|any OID column|The OID of the specific referenced object.|
+|`deptype`|char| |A code defining the specific semantics of this dependency relationship.|
 
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)

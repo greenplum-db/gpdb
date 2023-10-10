@@ -1205,7 +1205,7 @@ explain select c1 from t1 where c1::absint not in
                            ->  Result  (cost=0.00..431.00 rows=7 width=5)
                                  ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=7 width=4)
                                        ->  Seq Scan on t1n  (cost=0.00..431.00 rows=3 width=4)
- Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
+ Optimizer: Pivotal Optimizer (GPORCA)
 (13 rows)
 
 select c1 from t1 where c1::absint not in

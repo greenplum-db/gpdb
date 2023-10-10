@@ -165,6 +165,7 @@ static bool call_string_check_hook(struct config_string *conf, char **newval,
 static bool call_enum_check_hook(struct config_enum *conf, int *newval,
 								 void **extra, GucSource source, int elevel);
 
+static bool check_log_directory(char **newval, void **extra, GucSource source);
 static bool check_log_destination(char **newval, void **extra, GucSource source);
 static void assign_log_destination(const char *newval, void *extra);
 
@@ -190,6 +191,7 @@ static bool check_canonical_path(char **newval, void **extra, GucSource source);
 static bool check_timezone_abbreviations(char **newval, void **extra, GucSource source);
 static void assign_timezone_abbreviations(const char *newval, void *extra);
 static const char *show_archive_command(void);
+static const char *show_log_directory_command(void);
 static void assign_tcp_keepalives_idle(int newval, void *extra);
 static void assign_tcp_keepalives_interval(int newval, void *extra);
 static void assign_tcp_keepalives_count(int newval, void *extra);
@@ -1256,7 +1258,7 @@ static struct config_bool ConfigureNamesBool[] =
 			NULL
 		},
 		&wal_compression,
-		false,
+		true,
 		NULL, NULL, NULL
 	},
 
@@ -2314,7 +2316,7 @@ static struct config_int ConfigureNamesInt[] =
 	},
 
 	{
-		{"work_mem", PGC_USERSET, DEPRECATED_OPTIONS,
+		{"work_mem", PGC_USERSET, RESOURCES_MEM,
 			gettext_noop("Sets the maximum memory to be used for query workspaces."),
 			gettext_noop("This much memory can be used by each internal "
 						 "sort operation and hash table before switching to "
@@ -2654,7 +2656,7 @@ static struct config_int ConfigureNamesInt[] =
 		{"checkpoint_timeout", PGC_SIGHUP, WAL_CHECKPOINTS,
 			gettext_noop("Sets the maximum time between automatic WAL checkpoints."),
 			NULL,
-			GUC_UNIT_S | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_USER_SET
+			GUC_UNIT_S
 		},
 		&CheckPointTimeout,
 		300, 30, 86400,
@@ -3060,7 +3062,7 @@ static struct config_int ConfigureNamesInt[] =
 			NULL
 		},
 		&autovacuum_vac_thresh,
-		50, 0, INT_MAX,
+		500, 0, INT_MAX,
 		NULL, NULL, NULL
 	},
 	{
@@ -3143,7 +3145,7 @@ static struct config_int ConfigureNamesInt[] =
 			GUC_UNIT_KB
 		},
 		&autovacuum_work_mem,
-		-1, -1, MAX_KILOBYTES,
+		131072, -1, MAX_KILOBYTES,
 		check_autovacuum_work_mem, NULL, NULL
 	},
 
@@ -3378,6 +3380,7 @@ static struct config_real ConfigureNamesReal[] =
 		DEFAULT_CPU_OPERATOR_COST, 0, DBL_MAX,
 		NULL, NULL, NULL
 	},
+	/* GPDB_96_MERGE_FIXME: figure out the appropriate default values for the two parallel gucs below. */
 	{
 		{"parallel_tuple_cost", PGC_USERSET, QUERY_TUNING_COST,
 			gettext_noop("Sets the planner's estimate of the cost of "
@@ -3516,7 +3519,7 @@ static struct config_real ConfigureNamesReal[] =
 			NULL
 		},
 		&autovacuum_vac_scale,
-		0.2, 0.0, 100.0,
+		0.05, 0.0, 100.0,
 		NULL, NULL, NULL
 	},
 	{
@@ -3979,15 +3982,15 @@ static struct config_string ConfigureNamesString[] =
 		check_log_destination, assign_log_destination, NULL
 	},
 	{
-		{"log_directory", PGC_SIGHUP, DEFUNCT_OPTIONS,
+		{"log_directory", PGC_SIGHUP, LOGGING_WHERE,
 			gettext_noop("Defunct: Sets the destination directory for log files."),
 			gettext_noop("Can be specified as relative to the data directory "
 						 "or as absolute path."),
-			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL
+			GUC_SUPERUSER_ONLY
 		},
 		&Log_directory,
 		"log",
-		check_canonical_path, NULL, NULL
+		check_log_directory, NULL, show_log_directory_command
 	},
 	{
 		{"log_filename", PGC_SIGHUP, LOGGING_WHERE,
@@ -4689,6 +4692,7 @@ static struct config_enum ConfigureNamesEnum[] =
 static const char *const map_old_guc_names[] = {
 	"sort_mem", "work_mem",
 	"vacuum_mem", "maintenance_work_mem",
+	"gp_session_role", "gp_role",
 	NULL
 };
 
@@ -11488,6 +11492,29 @@ assign_wal_consistency_checking(const char *newval, void *extra)
 }
 
 static bool
+check_log_directory(char **newval, void **extra, GucSource source)
+{
+	char *original_val = NULL;
+	char temp_buf[MAXPGPATH];
+
+	check_canonical_path(newval, extra, source);
+
+	/*
+	 * Having multiple segments using the same directory will create logfile
+	 * conflicts. Use dbid to make each segment log directory unique.
+	 */
+	if (!path_is_relative_and_below_cwd(*newval))
+	{
+		original_val = *newval;
+		snprintf(temp_buf, MAXPGPATH, "%s/%d",original_val, GpIdentity.dbid);
+		*newval = guc_strdup(ERROR, temp_buf);
+		free(original_val);
+	}
+
+	return true;
+}
+
+static bool
 check_log_destination(char **newval, void **extra, GucSource source)
 {
 	char	   *rawstring;
@@ -11725,6 +11752,22 @@ show_archive_command(void)
 		return XLogArchiveCommand;
 	else
 		return "(disabled)";
+}
+
+static const char *
+show_log_directory_command(void)
+{
+	static char show_path[MAXPGPATH];
+
+	/* trim out the dbid when reporting to the user */
+	if (!path_is_relative_and_below_cwd(Log_directory))
+	{
+		snprintf(show_path, sizeof(show_path), "%s", Log_directory);
+		get_parent_directory(show_path);
+		return show_path;
+	}
+
+	return Log_directory;
 }
 
 static void

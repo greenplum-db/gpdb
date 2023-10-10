@@ -585,9 +585,18 @@ ExecInitPartitionInfo(ModifyTableState *mtstate, EState *estate,
 	partrel = table_open(dispatch->partdesc->oids[partidx], RowExclusiveLock);
 
 	leaf_part_rri = makeNode(ResultRelInfo);
-	InitResultRelInfo(leaf_part_rri,
+
+    /*
+     * Init leaf partition ResultRelInfo
+     * Here ResultRelInfo->ri_RangeTableIndex is a dummy element, because we
+     * will rebuild ri_RelationDesc later. So we assign 1 for it instead of 0
+     * which cause failure in EPQ process, and fwd scenarios should still keep 0
+     * since it will handle 0 in their own fwd process.
+     * related issue https://github.com/greenplum-db/gpdb/issues/14935
+     */ 
+    InitResultRelInfo(leaf_part_rri,
 					  partrel,
-					  0,
+					  partrel->rd_rel->relkind != RELKIND_FOREIGN_TABLE ? 1 : 0,
 					  rootResultRelInfo,
 					  estate->es_instrument);
 
@@ -1021,6 +1030,12 @@ ExecInitRoutingInfo(ModifyTableState *mtstate,
 	partRelInfo->ri_CopyMultiInsertBuffer = NULL;
 
 	/*
+	 * If junkFilter is NULL then we try to inherit it from rootRelInfo.
+	 */
+	if (partRelInfo->ri_junkFilter == NULL)
+		partRelInfo->ri_junkFilter = rootRelInfo->ri_junkFilter;
+
+	/*
 	 * Keep track of it in the PartitionTupleRouting->partitions array.
 	 */
 	Assert(dispatch->indexes[partidx] == -1);
@@ -1092,7 +1107,7 @@ ExecInitPartitionDispatchInfo(EState *estate,
 	pd = (PartitionDispatch) palloc(offsetof(PartitionDispatchData, indexes) +
 									partdesc->nparts * sizeof(int));
 	pd->reldesc = rel;
-	pd->key = RelationGetPartitionKey(rel);
+	pd->key = RelationRetrievePartitionKey(rel);
 	pd->keystate = NIL;
 	pd->partdesc = partdesc;
 	if (parent_pd != NULL)
@@ -1435,7 +1450,7 @@ ExecBuildSlotPartitionKeyDescription(Relation rel,
 									 int maxfieldlen)
 {
 	StringInfoData buf;
-	PartitionKey key = RelationGetPartitionKey(rel);
+	PartitionKey key = RelationRetrievePartitionKey(rel);
 	int			partnatts = get_partition_natts(key);
 	int			i;
 	Oid			relid = RelationGetRelid(rel);
@@ -1732,7 +1747,7 @@ ExecCreatePartitionPruneState(PlanState *planstate,
 			 * duration of this executor run.
 			 */
 			partrel = ExecGetRangeTableRelation(estate, pinfo->rtindex);
-			partkey = RelationGetPartitionKey(partrel);
+			partkey = RelationRetrievePartitionKey(partrel);
 			partdesc = PartitionDirectoryLookup(estate->es_partition_directory,
 												partrel);
 

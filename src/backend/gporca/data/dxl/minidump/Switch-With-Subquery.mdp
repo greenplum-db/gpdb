@@ -249,31 +249,22 @@
       <dxl:Relation Mdid="6.32802.1.1" Name="y" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -287,31 +278,22 @@
       <dxl:Relation Mdid="6.32779.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="j" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -407,7 +389,7 @@
     <dxl:Plan Id="0" SpaceSize="134">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.002549" Rows="10.000000" Width="4"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.002574" Rows="10.000000" Width="4"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="19" Alias="c">
@@ -420,7 +402,7 @@
         </dxl:SortingColumnList>
         <dxl:Sort SortDiscardDuplicates="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.002369" Rows="10.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.002394" Rows="10.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="19" Alias="c">
@@ -435,7 +417,7 @@
           <dxl:LimitOffset/>
           <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.002106" Rows="10.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.002131" Rows="10.000000" Width="4"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="19" Alias="c">
@@ -456,7 +438,7 @@
             <dxl:OneTimeFilter/>
             <dxl:HashJoin JoinType="Left">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="862.002086" Rows="10.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="862.002111" Rows="10.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="0" Alias="i">
@@ -523,16 +505,16 @@
               </dxl:RedistributeMotion>
               <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000467" Rows="2.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.000492" Rows="2.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:GroupingColumns>
                   <dxl:GroupingColumn ColId="10"/>
                 </dxl:GroupingColumns>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="18" Alias="max">
-                    <dxl:AggFunc AggMdid="0.2116.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                    <dxl:AggFunc AggMdid="0.2116.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                       <dxl:ValuesList ParamType="aggargs">
-                      <dxl:Ident ColId="20" ColName="ColRef_0020" TypeMdid="0.23.1.0"/>
+                        <dxl:Ident ColId="10" ColName="j" TypeMdid="0.23.1.0"/>
                       </dxl:ValuesList>
                       <dxl:ValuesList ParamType="aggdirectargs"/>
                       <dxl:ValuesList ParamType="aggorder"/>
@@ -546,14 +528,11 @@
                 <dxl:Filter/>
                 <dxl:Sort SortDiscardDuplicates="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000455" Rows="2.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000468" Rows="10.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="10" Alias="j">
                       <dxl:Ident ColId="10" ColName="j" TypeMdid="0.23.1.0"/>
-                    </dxl:ProjElem>
-                    <dxl:ProjElem ColId="20" Alias="ColRef_0020">
-                      <dxl:Ident ColId="20" ColName="ColRef_0020" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
@@ -564,14 +543,11 @@
                   <dxl:LimitOffset/>
                   <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="431.000455" Rows="2.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000204" Rows="10.000000" Width="4"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="10" Alias="j">
                         <dxl:Ident ColId="10" ColName="j" TypeMdid="0.23.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="20" Alias="ColRef_0020">
-                        <dxl:Ident ColId="20" ColName="ColRef_0020" TypeMdid="0.23.1.0"/>
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
@@ -581,85 +557,30 @@
                         <dxl:Ident ColId="10" ColName="j" TypeMdid="0.23.1.0"/>
                       </dxl:HashExpr>
                     </dxl:HashExprList>
-                    <dxl:Result>
+                    <dxl:TableScan>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000429" Rows="2.000000" Width="8"/>
+                        <dxl:Cost StartupCost="0" TotalCost="431.000105" Rows="10.000000" Width="4"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="10" Alias="j">
                           <dxl:Ident ColId="10" ColName="j" TypeMdid="0.23.1.0"/>
                         </dxl:ProjElem>
-                        <dxl:ProjElem ColId="20" Alias="ColRef_0020">
-                          <dxl:Ident ColId="20" ColName="ColRef_0020" TypeMdid="0.23.1.0"/>
-                        </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:OneTimeFilter/>
-                      <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000429" Rows="2.000000" Width="8"/>
-                        </dxl:Properties>
-                        <dxl:GroupingColumns>
-                          <dxl:GroupingColumn ColId="10"/>
-                        </dxl:GroupingColumns>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="20" Alias="ColRef_0020">
-                            <dxl:AggFunc AggMdid="0.2116.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
-                              <dxl:ValuesList ParamType="aggargs">
-                              <dxl:Ident ColId="10" ColName="j" TypeMdid="0.23.1.0"/>
-                              </dxl:ValuesList>
-                              <dxl:ValuesList ParamType="aggdirectargs"/>
-                              <dxl:ValuesList ParamType="aggorder"/>
-                              <dxl:ValuesList ParamType="aggdistinct"/>
-                            </dxl:AggFunc>
-                          </dxl:ProjElem>
-                          <dxl:ProjElem ColId="10" Alias="j">
-                            <dxl:Ident ColId="10" ColName="j" TypeMdid="0.23.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:Sort SortDiscardDuplicates="false">
-                          <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000405" Rows="10.000000" Width="4"/>
-                          </dxl:Properties>
-                          <dxl:ProjList>
-                            <dxl:ProjElem ColId="10" Alias="j">
-                              <dxl:Ident ColId="10" ColName="j" TypeMdid="0.23.1.0"/>
-                            </dxl:ProjElem>
-                          </dxl:ProjList>
-                          <dxl:Filter/>
-                          <dxl:SortingColumnList>
-                            <dxl:SortingColumn ColId="10" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                          </dxl:SortingColumnList>
-                          <dxl:LimitCount/>
-                          <dxl:LimitOffset/>
-                          <dxl:TableScan>
-                            <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="431.000105" Rows="10.000000" Width="4"/>
-                            </dxl:Properties>
-                            <dxl:ProjList>
-                              <dxl:ProjElem ColId="10" Alias="j">
-                                <dxl:Ident ColId="10" ColName="j" TypeMdid="0.23.1.0"/>
-                              </dxl:ProjElem>
-                            </dxl:ProjList>
-                            <dxl:Filter/>
-                            <dxl:TableDescriptor Mdid="6.32802.1.1" TableName="y">
-                              <dxl:Columns>
-                                <dxl:Column ColId="9" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
-                                <dxl:Column ColId="10" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
-                                <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
-                                <dxl:Column ColId="12" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
-                                <dxl:Column ColId="13" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
-                                <dxl:Column ColId="14" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
-                                <dxl:Column ColId="15" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
-                                <dxl:Column ColId="16" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
-                                <dxl:Column ColId="17" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                              </dxl:Columns>
-                            </dxl:TableDescriptor>
-                          </dxl:TableScan>
-                        </dxl:Sort>
-                      </dxl:Aggregate>
-                    </dxl:Result>
+                      <dxl:TableDescriptor Mdid="6.32802.1.1" TableName="y">
+                        <dxl:Columns>
+                          <dxl:Column ColId="9" Attno="1" ColName="i" TypeMdid="0.23.1.0"/>
+                          <dxl:Column ColId="10" Attno="2" ColName="j" TypeMdid="0.23.1.0"/>
+                          <dxl:Column ColId="11" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0"/>
+                          <dxl:Column ColId="12" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0"/>
+                          <dxl:Column ColId="13" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0"/>
+                          <dxl:Column ColId="14" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0"/>
+                          <dxl:Column ColId="15" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0"/>
+                          <dxl:Column ColId="16" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0"/>
+                          <dxl:Column ColId="17" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
+                        </dxl:Columns>
+                      </dxl:TableDescriptor>
+                    </dxl:TableScan>
                   </dxl:RedistributeMotion>
                 </dxl:Sort>
               </dxl:Aggregate>

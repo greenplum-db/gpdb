@@ -12,6 +12,7 @@ You may want to develop your own client applications that interface to Greenplum
 |JDBC|pgjdbc|[https://jdbc.postgresql.org/](https://jdbc.postgresql.org/)|
 |Perl DBI|pgperl|[https://metacpan.org/release/DBD-Pg](https://metacpan.org/release/DBD-Pg)|
 |Python DBI|pygresql|[http://www.pygresql.org/](http://www.pygresql.org/)|
+|Python DBI|psycopg2|[https://www.psycopg.org/](https://www.psycopg.org/)|
 |libpq C Library|libpq|[https://www.postgresql.org/docs/12/libpq.html](https://www.postgresql.org/docs/12/libpq.html)|
 
 General instructions for accessing a Greenplum Database with an API are:

@@ -42,6 +42,7 @@
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/toasting.h"
+#include "cdb/cdbdispatchresult.h"
 #include "commands/cluster.h"
 #include "commands/progress.h"
 #include "commands/tablecmds.h"
@@ -89,7 +90,7 @@ static void copy_table_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex,
 							bool verbose, bool *pSwapToastByContent,
 							TransactionId *pFreezeXid, MultiXactId *pCutoffMulti);
 static List *get_tables_to_cluster(MemoryContext cluster_context);
-
+static void dispatchCluster(ClusterStmt *stmt, MemoryContext cluster_context);
 
 /*---------------------------------------------------------------------------
  * This cluster code allows for clustering multiple tables at once. Because
@@ -118,6 +119,18 @@ static List *get_tables_to_cluster(MemoryContext cluster_context);
 void
 cluster(ClusterStmt *stmt, bool isTopLevel)
 {
+	MemoryContext cluster_context;
+
+	/*
+	 * Create special memory context for cross-transaction storage.
+	 *
+	 * Since it is a child of PortalContext, it will go away even in case
+	 * of error.
+	 */
+	cluster_context = AllocSetContextCreate(PortalContext,
+											"Cluster",
+											ALLOCSET_DEFAULT_SIZES);
+
 	if (stmt->relation != NULL)
 	{
 		/* This is the single-relation case. */
@@ -202,14 +215,7 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
 		cluster_rel(tableOid, indexOid, stmt->options, true /* printError */);
 
 		if (Gp_role == GP_ROLE_DISPATCH)
-		{
-			CdbDispatchUtilityStatement((Node *) stmt,
-										DF_CANCEL_ON_ERROR|
-										DF_WITH_SNAPSHOT|
-										DF_NEED_TWO_PHASE,
-										GetAssignedOidsForDispatch(),
-										NULL);
-		}
+			dispatchCluster(stmt, cluster_context);
 	}
 	else
 	{
@@ -217,7 +223,6 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
 		 * This is the "multi relation" case. We need to cluster all tables
 		 * that have some index with indisclustered set.
 		 */
-		MemoryContext cluster_context;
 		List	   *rvs;
 		ListCell   *rv;
 
@@ -226,16 +231,6 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
 		 * we'd be holding locks way too long.
 		 */
 		PreventInTransactionBlock(isTopLevel, "CLUSTER");
-
-		/*
-		 * Create special memory context for cross-transaction storage.
-		 *
-		 * Since it is a child of PortalContext, it will go away even in case
-		 * of error.
-		 */
-		cluster_context = AllocSetContextCreate(PortalContext,
-												"Cluster",
-												ALLOCSET_DEFAULT_SIZES);
 
 		/*
 		 * Build the list of relations to cluster.  Note that this lives in
@@ -267,11 +262,7 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
 				stmt->relation = makeNode(RangeVar);
 				stmt->relation->schemaname = get_namespace_name(get_rel_namespace(rvtc->tableOid));
 				stmt->relation->relname = get_rel_name(rvtc->tableOid);
-				CdbDispatchUtilityStatement((Node *) stmt,
-											DF_CANCEL_ON_ERROR|
-											DF_WITH_SNAPSHOT,
-											GetAssignedOidsForDispatch(),
-											NULL);
+				dispatchCluster(stmt, cluster_context);
 			}
 
 			PopActiveSnapshot();
@@ -280,10 +271,10 @@ cluster(ClusterStmt *stmt, bool isTopLevel)
 
 		/* Start a new transaction for the cleanup work. */
 		StartTransactionCommand();
-
-		/* Clean up working storage */
-		MemoryContextDelete(cluster_context);
 	}
+
+	/* Clean up working storage */
+	MemoryContextDelete(cluster_context);
 }
 
 /*
@@ -490,6 +481,32 @@ out:
 }
 
 /*
+ * Dispatch and perform follow-up operations such as updating stats.
+ */
+static void dispatchCluster(ClusterStmt *stmt, MemoryContext cluster_context)
+{
+	struct CdbPgResults cdb_pgresults;
+	VacuumStatsContext stats_context;
+
+	Assert(IS_QUERY_DISPATCHER());
+
+	CdbDispatchUtilityStatement((Node *) stmt,
+								DF_CANCEL_ON_ERROR| DF_WITH_SNAPSHOT| DF_NEED_TWO_PHASE,
+								GetAssignedOidsForDispatch(),
+								&cdb_pgresults);
+	/*
+	 * XXX: Reuse vacuum stats combine function to aggregate
+	 * post-CLUSTER stats from QEs. We use vac_send_relstats_to_qd() for
+	 * reporting these stats (see swap_relation_files()).
+	 */
+	stats_context.updated_stats = NIL;
+	vacuum_combine_stats(&stats_context, &cdb_pgresults, cluster_context);
+	vac_update_relstats_from_list(&stats_context);
+
+	cdbdisp_clearCdbPgResults(&cdb_pgresults);
+}
+
+/*
  * Verify that the specified heap and index are valid to cluster on
  *
  * Side effect: obtains lock on the index.  The caller may
@@ -652,12 +669,6 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 	bool		swap_toast_by_content;
 	TransactionId frozenXid;
 	MultiXactId cutoffMulti;
-	/*
-	 * GPDB_12_MERGE_FIXME: We use specific bool in abstract code. This should
-	 * be somehow hidden by table am api or necessity of this switch should be
-	 * revisited.
-	 */
-	bool		is_ao = RelationIsAppendOptimized(OldHeap);
 
 	/* Mark the correct index as clustered */
 	if (OidIsValid(indexOid))
@@ -689,7 +700,7 @@ rebuild_relation(Relation OldHeap, Oid indexOid, bool verbose)
 	 */
 	finish_heap_swap(tableOid, OIDNewHeap, is_system_catalog,
 					 swap_toast_by_content,
-					 !is_ao /* swap_stats */,
+					 true /* swap_stats */,
 					 false, true,
 					 frozenXid, cutoffMulti,
 					 relpersistence);
@@ -1080,6 +1091,15 @@ copy_table_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex, bool verbose,
 	/* Reset rd_toastoid just to be tidy --- it shouldn't be looked at again */
 	NewHeap->rd_toastoid = InvalidOid;
 
+	if (RelationIsAppendOptimized(NewHeap))
+	{
+		/*
+		 * If it's an AO/CO table, we need to hike the command counter here so
+		 * that we can retrieve the ao(cs)seg eof count of the rewritten table,
+		 * during the num_pages calculation below.
+		 */
+		CommandCounterIncrement();
+	}
 	num_pages = RelationGetNumberOfBlocks(NewHeap);
 
 	/* Log what we did */
@@ -1235,6 +1255,28 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 		elog(ERROR, "cache lookup failed for relation %u", r2);
 	relform2 = (Form_pg_class) GETSTRUCT(reltup2);
 
+	/* 
+	 * Swap/transfer pg_attribute_encoding entries for target table if it is CO.
+	 *
+	 * Note that because RemoveAttributeEncodingsByRelid increments command counter,
+	 * this has to happen before ATAOEntries (see the comments for that below).
+	 */
+	if (relform2->relam == AO_COLUMN_TABLE_AM_OID)
+	{
+		RemoveAttributeEncodingsByRelid(r1);
+		CloneAttributeEncodings(r2, r1, relform2->relnatts);
+	}
+	/* If we are rewriting an AO row table, remove all of its pg_attribute_encoding entries */
+	if (relform1->relam == AO_ROW_TABLE_AM_OID && relform2->relam == AO_ROW_TABLE_AM_OID)
+		RemoveAttributeEncodingsByRelid(r1);
+
+	/* 
+	 * Swap/transfer pg_appendonly entries.
+	 *
+	 * Note that, after this point an AO table could have inconsistency with its catalog, e.g.
+	 * it could be missing a pg_appendonly entry. Therefore, we can NOT increment command
+	 * counter until we've swapped pg_class.relam, which removes the inconsistency.
+	 */
 	if (relform1->relam == AO_ROW_TABLE_AM_OID || relform1->relam == AO_COLUMN_TABLE_AM_OID ||
 		relform2->relam == AO_ROW_TABLE_AM_OID || relform2->relam == AO_COLUMN_TABLE_AM_OID)
 		ATAOEntries(relform1, relform2);
@@ -1253,12 +1295,6 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 		reltup1 = heap_modify_tuple(reltup1, RelationGetDescr(relRelation),
 									val, null, repl);
 		relform1 = (Form_pg_class) GETSTRUCT(reltup1);
-	}
-
-	if (relform2->relam == AO_COLUMN_TABLE_AM_OID)
-	{
-		RemoveAttributeEncodingsByRelid(r1);
-		CloneAttributeEncodings(r2, r1, relform2->relnatts);
 	}
 
 	relfilenode1 = relform1->relfilenode;
@@ -1415,6 +1451,15 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 		CatalogTupleUpdateWithInfo(relRelation, &reltup2->t_self, reltup2,
 								   indstate);
 		CatalogCloseIndexes(indstate);
+
+		/*
+		 * Increment counter to reflect the AM change as the caller might soon
+		 * build the new relation descriptor which expects consistent AM and aux
+		 * tables. This shouldn't be needed for other cases as of now, especially
+		 * not for critical catalogs such as pg_attribute. 
+		 */
+		if (relform1->relam != relform2->relam)
+			CommandCounterIncrement();
 	}
 	else
 	{
@@ -1541,7 +1586,7 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 	{
 		rel = relation_open(r1, AccessShareLock);
 
-		vac_send_relstats_to_qd(rel,
+		vac_send_relstats_to_qd(rel->rd_id,
 								relform1->relpages,
 								relform1->reltuples,
 								relform1->relallvisible);

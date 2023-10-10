@@ -53,7 +53,7 @@ select gp_inject_fault_infinite('postmaster_server_loop_no_sigkill', 'skip', dbi
 3:set gp_gang_creation_retry_timer = 10000;
 SET
 3:create table fts_reset_t3(a int);
-CREATE
+CREATE TABLE
 
 1<:  <... completed>
 ERROR:  fault triggered, fault name:'start_prepare' fault type:'panic'
@@ -87,7 +87,7 @@ select gp_inject_fault('fault_in_background_writer_quickdie', 'reset', dbid) fro
 
 -- The only table that should have been created successfully
 drop table fts_reset_t3;
-DROP
+DROP TABLE
 
 -- In case anything goes wrong, we don't want to affect other tests. So rebalance the cluster anyway.
 !\retcode gprecoverseg -aF !\retcode gprecoverseg -ar 

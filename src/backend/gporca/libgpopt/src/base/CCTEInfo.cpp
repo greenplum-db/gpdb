@@ -659,6 +659,10 @@ CCTEInfo::MarkUnusedCTEs()
 		{
 			pcteinfoentry->MarkUnused();
 		}
+		else
+		{
+			pcteinfoentry->MarkUsed();
+		}
 	}
 
 	pbsUnusedConsumers->Release();

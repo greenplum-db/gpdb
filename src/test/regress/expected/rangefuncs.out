@@ -1597,10 +1597,10 @@ select insert_tt('fool');
 select * from tt;
  f1 |   data   
 ----+----------
+ 22 | foolfool
   1 | foo
   2 | bar
-  3 | fool
-  4 | foolfool
+ 21 | fool
 (4 rows)
 
 -- setof does what's expected
@@ -1610,50 +1610,50 @@ language sql;
 select insert_tt2('foolish','barrish');
  insert_tt2 
 ------------
-          5
-          6
+         41
+         42
 (2 rows)
 
 select * from insert_tt2('baz','quux');
  insert_tt2 
 ------------
-          7
-          8
+         43
+         44
 (2 rows)
 
 select * from tt;
  f1 |   data   
 ----+----------
+ 22 | foolfool
+ 41 | foolish
+ 42 | barrish
+ 43 | baz
+ 44 | quux
   1 | foo
   2 | bar
-  3 | fool
-  4 | foolfool
-  5 | foolish
-  6 | barrish
-  7 | baz
-  8 | quux
+ 21 | fool
 (8 rows)
 
 -- limit doesn't prevent execution to completion
-select insert_tt2('foolish','barrish') limit 1;
- insert_tt2 
-------------
-          9
+select 1 from insert_tt2('foolish','barrish') limit 1;
+ ?column? 
+----------
+        1
 (1 row)
 
 select * from tt;
  f1 |   data   
 ----+----------
+ 43 | baz
+ 44 | quux
+ 45 | foolish
+ 22 | foolfool
+ 41 | foolish
+ 42 | barrish
   1 | foo
   2 | bar
-  3 | fool
-  4 | foolfool
-  5 | foolish
-  6 | barrish
-  7 | baz
-  8 | quux
-  9 | foolish
- 10 | barrish
+ 21 | fool
+ 46 | barrish
 (10 rows)
 
 -- triggers will fire, too
@@ -1664,60 +1664,61 @@ begin
 end $$ language plpgsql;
 create trigger tnoticetrigger after insert on tt for each row
 execute procedure noticetrigger();
-select insert_tt2('foolme','barme') limit 1;
-NOTICE:  noticetrigger 11 foolme
-NOTICE:  noticetrigger 12 barme
- insert_tt2 
-------------
-         11
+select 1 from insert_tt2('foolme','barme') limit 1;
+NOTICE:  noticetrigger 61 foolme  (seg2 slice1 127.0.1.1:7004 pid=2003065)
+NOTICE:  noticetrigger 62 barme  (seg2 slice1 127.0.1.1:7004 pid=2003065)
+ ?column? 
+----------
+        1
 (1 row)
 
 select * from tt;
  f1 |   data   
 ----+----------
+ 43 | baz
+ 44 | quux
+ 45 | foolish
+ 22 | foolfool
+ 41 | foolish
+ 42 | barrish
+ 61 | foolme
+ 62 | barme
   1 | foo
   2 | bar
-  3 | fool
-  4 | foolfool
-  5 | foolish
-  6 | barrish
-  7 | baz
-  8 | quux
-  9 | foolish
- 10 | barrish
- 11 | foolme
- 12 | barme
+ 21 | fool
+ 46 | barrish
 (12 rows)
 
 -- and rules work
 create temp table tt_log(f1 int, data text);
 create rule insert_tt_rule as on insert to tt do also
   insert into tt_log values(new.*);
-select insert_tt2('foollog','barlog') limit 1;
-NOTICE:  noticetrigger 13 foollog
-NOTICE:  noticetrigger 14 barlog
+select * from insert_tt2('foollog','barlog');
+NOTICE:  noticetrigger 82 barlog  (seg2 slice1 127.0.1.1:7004 pid=2003065)
+NOTICE:  noticetrigger 81 foollog  (seg1 slice1 127.0.1.1:7003 pid=2003066)
  insert_tt2 
 ------------
-         13
-(1 row)
+         81
+         82
+(2 rows)
 
 select * from tt;
  f1 |   data   
 ----+----------
+ 43 | baz
+ 44 | quux
+ 45 | foolish
+ 81 | foollog
+ 22 | foolfool
+ 41 | foolish
+ 42 | barrish
+ 61 | foolme
+ 62 | barme
+ 82 | barlog
   1 | foo
   2 | bar
-  3 | fool
-  4 | foolfool
-  5 | foolish
-  6 | barrish
-  7 | baz
-  8 | quux
-  9 | foolish
- 10 | barrish
- 11 | foolme
- 12 | barme
- 13 | foollog
- 14 | barlog
+ 21 | fool
+ 46 | barrish
 (14 rows)
 
 -- note that nextval() gets executed a second time in the rule expansion,
@@ -1725,8 +1726,8 @@ select * from tt;
 select * from tt_log;
  f1 |  data   
 ----+---------
- 15 | foollog
- 16 | barlog
+ 83 | foollog
+ 84 | barlog
 (2 rows)
 
 -- test case for a whole-row-variable bug
@@ -1735,7 +1736,6 @@ create function rngfunc1(n integer, out a text, out b text)
   language sql
   as $$ select 'foo ' || i, 'bar ' || i from generate_series(1,$1) i $$;
 set work_mem='64kB';
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 select t.a, t, t.a from rngfunc1(10000) t limit 1;
    a   |         t         |   a   
 -------+-------------------+-------
@@ -1743,7 +1743,6 @@ select t.a, t, t.a from rngfunc1(10000) t limit 1;
 (1 row)
 
 reset work_mem;
-WARNING:  "work_mem": setting is deprecated, and may be removed in a future release.
 select t.a, t, t.a from rngfunc1(10000) t limit 1;
    a   |         t         |   a   
 -------+-------------------+-------

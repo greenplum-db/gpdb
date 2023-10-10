@@ -57,6 +57,7 @@ int			WalSegSz;
 char	   *datadir_target = NULL;
 char	   *datadir_source = NULL;
 char	   *connstr_source = NULL;
+char	   *log_directory = NULL;
 
 static bool debug = false;
 bool		showprogress = false;
@@ -311,16 +312,16 @@ main(int argc, char **argv)
 
 #ifdef FAULT_INJECTOR
 	/*
-	 * SUSPEND_PG_REWIND is used for testing purposes. If set to true, the pg_rewind process will be
-	 * suspended for 120 seconds, so that it's entry can be checked in the pg_stat_activity table.
+	 * SUSPEND_PG_REWIND is used for testing purposes. If set to an int, the pg_rewind process will be
+	 * suspended for set amount of time(secs), so that it's entry can be checked in the pg_stat_activity table.
 	 * The goal being that we can run another instance of gprecoverseg and assert that it ignores
 	 * recovery for segments that already have an active pg_rewind process.
 	 */
 	char* suspend_pg_rewind = getenv("SUSPEND_PG_REWIND");
-	if(suspend_pg_rewind != NULL && strcmp(suspend_pg_rewind, "true") == 0)
+	if(suspend_pg_rewind != NULL)
 	{
-		pg_log_info("pg_rewind suspended");
-		sleep(120);
+		pg_log_info("pg_rewind suspended for %s seconds", suspend_pg_rewind);
+		sleep(atoi(suspend_pg_rewind));
 	}
 #endif
 
@@ -495,6 +496,7 @@ main(int argc, char **argv)
 		pg_log_info("syncing target data directory");
 	syncTargetDirectory();
 
+	pg_free(log_directory);
 	pg_log_info("Done!");
 
 	return 0;

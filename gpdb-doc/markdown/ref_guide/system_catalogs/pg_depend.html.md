@@ -18,10 +18,10 @@ Note that it's quite possible for two objects to be linked by more than one `pg_
 |------|----|----------|-----------|
 |`classid`|oid|[pg\_class](pg_class.html).oid|The object identifier of the system catalog the dependent object is in.|
 |`objid`|oid|any OID column|The object identifier of the specific dependent object.|
-|`objsubid`|int4| |For a table column, this is the column number \(the `objid` and `classid` refer to the table itself\). For all other object types, this column is zero.|
+|`objsubid`|integer| |For a table column, this is the column number \(the `objid` and `classid` refer to the table itself\). For all other object types, this column is zero.|
 |`refclassid`|oid|[pg\_class](pg_class.html).oid|The object identifier of the system catalog the referenced object is in.|
 |`refobjid`|oid|any OID column|The object identifier of the specific referenced object.|
-|`refobjsubid`|int4| |For a table column, this is the referenced column number \(the `refobjid` and `refclassid` refer to the table itself\). For all other object types, this column is zero.|
+|`refobjsubid`|integer| |For a table column, this is the referenced column number \(the `refobjid` and `refclassid` refer to the table itself\). For all other object types, this column is zero.|
 |`deptype`|char| |The code defining the specific semantics of this dependency relationship.|
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)

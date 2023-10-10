@@ -5,9 +5,9 @@ from subprocess import *
 from sys import *
 from xml.dom import minidom
 from xml.dom import Node
-
-import pgdb
+import psycopg2
 from gppylib.gplog import *
+from socket import gethostbyaddr
 
 logger = get_default_logger()
 
@@ -503,14 +503,20 @@ def escapeDoubleQuoteInSQLString(string, forceDoubleQuote=True):
         string = '"' + string + '"'
     return string
 
-
-def Escape(query_str):
-    return pgdb.escape_string(query_str)
-
+# Escape single quotes, backslashes appearing in the string according to the SQL string constants syntax.
+# E.g.,
+# >>> escape_string(r"O'Reilly")
+# "O''Reilly"
+def escape_string(string):
+    adapted = psycopg2.extensions.QuotedString(string)
+    # The getquoted() API returns 'latin-1' encoded binary string by default, we need to specify
+    # the encoding manually.
+    adapted.encoding = 'utf-8'
+    return adapted.getquoted().decode()[1:-1]
 
 def escapeArrayElement(query_str):
     # also escape backslashes and double quotes, in addition to the doubling of single quotes
-    return pgdb.escape_string(query_str.encode(errors='backslashreplace')).decode(errors='backslashreplace').replace('\\','\\\\').replace('"','\\"')
+    return escape_string(query_str.encode(errors='backslashreplace')).encode().decode(errors='backslashreplace').replace('\\','\\\\').replace('"','\\"')
 
 
 # Transform Python list to Postgres array literal (of the form: '{...}')
@@ -593,7 +599,7 @@ def formatInsertValuesList(row, starelid, inclHLL):
         # Format stavalues5 for an hll slot
         elif i == 30 and hll:
             if inclHLL:
-                val = '\'{"%s"}\'' % pgdb.escape_bytea(val[0])
+                val = '\'{\\%s}\'' % val[0]
                 rowVals.append('\t{0}::{1}'.format(val, 'bytea[]'))
             else:
                 rowVals.append('\t{0}'.format('NULL::int4[]'))
@@ -607,3 +613,30 @@ def formatInsertValuesList(row, starelid, inclHLL):
         rowVals.append('\t{0}::{1}'.format(val, typ))
 
     return rowVals
+
+def validateHostnameAddress(hostname, address):
+    """
+    validateHostnameAddress : validates that given hostname and address are for the same host
+    Address can be hostname/alias also. Resolves hostname and address both to get the associated addresses.
+
+    @param hostname Name of the host to be validated
+    @param address Address of the host to be validated. Can be hostname/alias also
+    @return if the address and hostname are of the same host
+    """
+    try:
+        resolved_hostname, _, resolved_address_list = gethostbyaddr(hostname)
+        resolved_hostname_2, _, resolved_address_list_2 = gethostbyaddr(address)
+    except Exception as e:
+        # This means given hostname or address is not reachable
+        logger.warning(
+            "Could not resolve hostname:{0}."
+                .format(hostname))
+        return False
+
+    # Resolved address and hostname should have at least one IP address common if they are of same host
+    if not bool(set(resolved_address_list).intersection(resolved_address_list_2)):
+        logger.warning(
+            "Given address:{0} not present in resolved hostname:{1} address list we got:{2}".format(
+                address, hostname, resolved_address_list))
+        return False
+    return True

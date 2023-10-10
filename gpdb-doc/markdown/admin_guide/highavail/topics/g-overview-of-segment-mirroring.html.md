@@ -15,17 +15,17 @@ When Greenplum Database detects a primary segment failure, the WAL replication p
 These Greenplum Database system catalog tables contain mirroring and replication information.
 
 -   The catalog table [gp\_segment\_configuration](../../../ref_guide/system_catalogs/gp_segment_configuration.html) contains the current configuration and state of primary and mirror segment instances and the coordinator and standby coordinator instance.
--   The catalog view [gp\_stat\_replication](../../../ref_guide/system_catalogs/gp_stat_replication.html) contains replication statistics of the `walsender` processes that are used for Greenplum Database coordinator and segment mirroring.
+-   The catalog view [gp_stat_replication](../../../ref_guide/system_catalogs/catalog_ref-views.html#gp_stat_replication) contains replication statistics of the `walsender` processes that are used for Greenplum Database coordinator and segment mirroring.
 
 ## <a id="mirror_configs"></a>About Segment Mirroring Configurations 
 
 Mirror segment instances can be placed on hosts in the cluster in different configurations. As a best practice, a primary segment and the corresponding mirror are placed on different hosts. Each host must have the same number of primary and mirror segments. When you create segment mirrors with the Greenplum Database utilities [gpinitsystem](../../../utility_guide/ref/gpinitsystem.html) or [gpaddmirrors](../../../utility_guide/ref/gpaddmirrors.html) you can specify the segment mirror configuration, group mirroring \(the default\) or spread mirroring. With `gpaddmirrors`, you can create custom mirroring configurations with a `gpaddmirrors` configuration file and specify the file on the command line.
 
-*Group mirroring* is the default mirroring configuration when you enable mirroring during system initialization. The mirror segments for each host's primary segments are placed on one other host. If a single host fails, the number of active primary segments doubles on the host that backs the failed host. [Figure 1](#fig_rrr_nt2_xt) illustrates a group mirroring configuration.
+*Group mirroring* is the default mirroring configuration when you enable mirroring during system initialization. The mirror segments for each host's primary segments are placed on one other host. If a single host fails, the number of active primary segments doubles on the host that backs the failed host. The following figure illustrates a group mirroring configuration.
 
 ![Group Segment Mirroring in Greenplum Database](../../graphics/group-mirroring.png "Group Segment Mirroring in Greenplum Database")
 
-*Spread mirroring* can be specified during system initialization. This configuration spreads each host's mirrors over multiple hosts so that if any single host fails, no other host will have more than one mirror promoted to an active primary segment. Spread mirroring is possible only if there are more hosts than segments per host. [Figure 2](#fig_ew1_qgg_xt) illustrates the placement of mirrors in a spread segment mirroring configuration.
+*Spread mirroring* can be specified during system initialization. This configuration spreads each host's mirrors over multiple hosts so that if any single host fails, no other host will have more than one mirror promoted to an active primary segment. Spread mirroring is possible only if there are more hosts than segments per host. The following figure illustrates the placement of mirrors in a spread segment mirroring configuration.
 
 ![Spread Segment Mirroring in Greenplum Database](../../graphics/spread-mirroring.png "Spread Segment Mirroring in Greenplum Database")
 

@@ -115,28 +115,20 @@ select * from foo a full join foo b on false;
       <dxl:Relation Mdid="6.16603.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -181,7 +173,7 @@ select * from foo a full join foo b on false;
         <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="36">
+    <dxl:Plan Id="0" SpaceSize="84">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="3017.008465" Rows="80.000000" Width="16"/>
@@ -436,28 +428,28 @@ select * from foo a full join foo b on false;
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="8" Alias="a">
-                      <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+                      <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="9" Alias="ctid">
-                      <dxl:ConstValue TypeMdid="0.27.1.0" IsNull="true" IsByValue="false"/>
+                      <dxl:ConstValue TypeMdid="0.27.1.0" IsNull="true"/>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="10" Alias="xmin">
-                      <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true" IsByValue="true"/>
+                      <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true"/>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="11" Alias="cmin">
-                      <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true" IsByValue="true"/>
+                      <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true"/>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="12" Alias="xmax">
-                      <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true" IsByValue="true"/>
+                      <dxl:ConstValue TypeMdid="0.28.1.0" IsNull="true"/>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="13" Alias="cmax">
-                      <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true" IsByValue="true"/>
+                      <dxl:ConstValue TypeMdid="0.29.1.0" IsNull="true"/>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="14" Alias="tableoid">
-                      <dxl:ConstValue TypeMdid="0.26.1.0" IsNull="true" IsByValue="true"/>
+                      <dxl:ConstValue TypeMdid="0.26.1.0" IsNull="true"/>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="15" Alias="gp_segment_id">
-                      <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+                      <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
@@ -472,7 +464,7 @@ select * from foo a full join foo b on false;
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="48" Alias="a">
-                    <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+                    <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="40" Alias="a">
                     <dxl:Ident ColId="40" ColName="a" TypeMdid="0.23.1.0"/>

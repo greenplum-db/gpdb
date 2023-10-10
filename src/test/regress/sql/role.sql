@@ -151,3 +151,8 @@ revoke select on only grant_only_syntax1, only grant_only_syntax2 from test_role
 drop table grant_only_syntax1;
 drop table grant_only_syntax2;
 drop role test_role;
+
+-- should be able to create gp_ roles, but not pg_ ones
+drop role if exists gp_regresstestrole;
+create role gp_regresstestrole;
+create role pg_regresstestrole;

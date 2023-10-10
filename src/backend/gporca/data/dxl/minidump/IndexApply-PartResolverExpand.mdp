@@ -266,37 +266,26 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
       <dxl:Relation Mdid="6.26854881.1.1" Name="x10" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="j" Attno="2" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="k" Attno="3" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="m" Attno="4" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -306,37 +295,26 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
       <dxl:Relation Mdid="6.26854909.1.0" Name="y10" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="j" Attno="2" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="k" Attno="3" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="m" Attno="4" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -353,37 +331,26 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
       <dxl:Relation Mdid="6.26854909.1.1" Name="y10" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="j" Attno="2" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="k" Attno="3" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="m" Attno="4" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -484,7 +451,7 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
           <dxl:UpperBound Closed="true" TypeMdid="0.25.1.0" Value="AAAAJGVjY2JjODdlNGI1Y2UyZmUyODMwOGZkOWYyYTdiYWYz" LintValue="162161524"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.26855161.1.0" Name="y_idx_1_prt_def" IsClustered="false" IndexType="B-tree" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10">
+      <dxl:Index Mdid="0.26855161.1.0" Name="y_idx_1_prt_def" IsClustered="false" AmCanOrder="true" IndexType="B-tree" KeyColumns="1" IncludedColumns="" ReturnableColumns="1">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.1994.1.0"/>
         </dxl:Opfamilies>
@@ -495,10 +462,10 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
           </dxl:Comparison>
         </dxl:PartConstraint>
       </dxl:Index>
-      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6083.1.0" Name="gp_partition_propagation" ReturnsSet="false" Stability="Volatile" IsStrict="true">
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.6085.1.0" Name="gp_partition_expansion" ReturnsSet="true" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.26.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.26854909.1.1.10" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
@@ -749,7 +716,7 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
                 <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
               </dxl:PartFilterExpr>
             </dxl:PartitionSelector>
-            <dxl:DynamicIndexScan IndexScanDirection="Forward" PartIndexId="1">
+            <dxl:DynamicIndexScan IndexScanDirection="Forward">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="60.009658" Rows="1.000000" Width="82"/>
               </dxl:Properties>

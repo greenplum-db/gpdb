@@ -101,6 +101,8 @@ int         gp_segment_connect_timeout = 180;  /* Maximum time (in seconds) allo
 												* or a mirror to respond.
 												*/
 
+bool		gp_detect_data_correctness;		/* Detect if the current data distribution is correct */
+
 /*
  * Configurable timeout for snapshot add: exceptionally busy systems may take
  * longer than our old hard-coded version -- so here is a tuneable version.
@@ -194,6 +196,7 @@ int			Gp_interconnect_queue_depth = 4;	/* max number of messages
 												 * waiting in rx-queue before
 												 * we drop. */
 int			Gp_interconnect_snd_queue_depth = 2;
+int			Gp_interconnect_cursor_ic_table_size = 128;
 int			Gp_interconnect_timer_period = 5;
 int			Gp_interconnect_timer_checking_period = 20;
 int			Gp_interconnect_default_rtt = 20;
@@ -255,8 +258,6 @@ uint32		gp_interconnect_id = 0;
 double		gp_motion_cost_per_row = 0;
 int			gp_segments_for_planner = 0;
 
-int			gp_hashagg_default_nbatches = 32;
-
 bool		gp_adjust_selectivity_for_outerjoins = true;
 bool		gp_selectivity_damping_for_scans = false;
 bool		gp_selectivity_damping_for_joins = false;
@@ -264,7 +265,6 @@ double		gp_selectivity_damping_factor = 1;
 bool		gp_selectivity_damping_sigsort = true;
 
 int			gp_hashjoin_tuples_per_bucket = 5;
-int			gp_hashagg_groups_per_bucket = 5;
 
 /* Analyzing aid */
 int			gp_motion_slice_noop = 0;
@@ -301,6 +301,12 @@ int			gp_workfile_limit_per_query = 0;
 
 /* Maximum number of workfiles to be created by a query */
 int			gp_workfile_limit_files_per_query = 0;
+
+/*
+ * The overhead memory (kB) used by all compressed workfiles of a single
+ * workfile_set
+ */
+int			gp_workfile_compression_overhead_limit = 0;
 
 /* Enable single-slice single-row inserts ?*/
 bool		gp_enable_fast_sri = true;
@@ -441,6 +447,9 @@ assign_gp_role(const char *newval, void *extra)
 
 	if (Gp_role == GP_ROLE_UTILITY && MyProc != NULL)
 		MyProc->mppIsWriter = false;
+
+	if (Gp_role == GP_ROLE_UTILITY)
+		should_reject_connection = false;
 }
 
 /*
@@ -575,6 +584,22 @@ gpvars_check_statement_mem(int *newval, void **extra, GucSource source)
 	if (*newval >= max_statement_mem)
 	{
 		GUC_check_errmsg("Invalid input for statement_mem, must be less than max_statement_mem (%d kB)",
+						 max_statement_mem);
+		return false;
+	}
+
+	return true;
+}
+
+/*
+ * gpvars_check_rg_query_fixed_mem
+ */
+bool
+gpvars_check_rg_query_fixed_mem(int *newval, void **extra, GucSource source)
+{
+	if (*newval >= max_statement_mem)
+	{
+		GUC_check_errmsg("Invalid input for gp_resgroup_memory_query_fixed_mem, must be less than max_statement_mem (%d kB)",
 						 max_statement_mem);
 		return false;
 	}

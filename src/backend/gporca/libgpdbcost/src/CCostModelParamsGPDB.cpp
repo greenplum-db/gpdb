@@ -45,8 +45,13 @@ const CDouble CCostModelParamsGPDB::DIndexBlockCostUnitVal = 1.27e-06;
 // index filtering cost unit
 const CDouble CCostModelParamsGPDB::DIndexFilterCostUnitVal = 1.65e-04;
 
-// index scan cost unit per tuple per width
+// index scan cost unit per tuple per width. includes the cost to read from the
+// index and the heap.
 const CDouble CCostModelParamsGPDB::DIndexScanTupCostUnitVal = 3.66e-06;
+
+// index only scan cost unit per tuple per width. includes only the cost to
+// read from the index, _not_ the heap.
+const CDouble CCostModelParamsGPDB::DIndexOnlyScanTupCostUnitVal = 3.66e-06;
 
 // index scan random IO factor
 const CDouble CCostModelParamsGPDB::DIndexScanTupRandomFactorVal = 6.0;
@@ -186,6 +191,15 @@ const CDouble CCostModelParamsGPDB::DPenalizeHJSkewUpperLimit(10.0);
 // default scalar func cost
 const CDouble CCostModelParamsGPDB::DScalarFuncCost(1.0e-04);
 
+// Cost conversion factor for Index & Index only scans.
+// 1. Kept it as '1.0e-04' because using the cost factor, aim is to differentiate
+// between different Index scan alternatives. For eg cost for index idx_ab &
+// idx_ba, will be same without this cost component.
+// 2. This factor will also not result in any change of table scan operators as:
+// In costing of Bitmap scans & Sequential scans, the cost equation has a fixed
+// 'Initial cost' mapped to DInitScanFacorVal (431.0). It is not present in the
+// "Index scan costing".
+const CDouble CCostModelParamsGPDB::DIndexCostConversionFactor = 1.0e-04;
 #define GPOPT_COSTPARAM_NAME_MAX_LENGTH 80
 
 // parameter names in the same order of param enumeration
@@ -292,6 +306,9 @@ CCostModelParamsGPDB::CCostModelParamsGPDB(CMemoryPool *mp) : m_mp(mp)
 	m_rgpcp[EcpIndexScanTupCostUnit] = GPOS_NEW(mp) SCostParam(
 		EcpIndexScanTupCostUnit, DIndexScanTupCostUnitVal,
 		DIndexScanTupCostUnitVal - 1.0, DIndexScanTupCostUnitVal + 1.0);
+	m_rgpcp[EcpIndexOnlyScanTupCostUnit] = GPOS_NEW(mp) SCostParam(
+		EcpIndexOnlyScanTupCostUnit, DIndexOnlyScanTupCostUnitVal,
+		DIndexOnlyScanTupCostUnitVal - 1.0, DIndexOnlyScanTupCostUnitVal + 1.0);
 	m_rgpcp[EcpIndexScanTupRandomFactor] = GPOS_NEW(mp) SCostParam(
 		EcpIndexScanTupRandomFactor, DIndexScanTupRandomFactorVal,
 		DIndexScanTupRandomFactorVal - 1.0, DIndexScanTupRandomFactorVal + 1.0);
@@ -436,6 +453,10 @@ CCostModelParamsGPDB::CCostModelParamsGPDB(CMemoryPool *mp) : m_mp(mp)
 	m_rgpcp[EcpScalarFuncCost] =
 		GPOS_NEW(mp) SCostParam(EcpScalarFuncCost, DScalarFuncCost,
 								DScalarFuncCost - 0.0, DScalarFuncCost + 0.0);
+
+	m_rgpcp[EcpIndexCostConversionFactor] = GPOS_NEW(mp) SCostParam(
+		EcpIndexCostConversionFactor, DIndexCostConversionFactor,
+		DIndexCostConversionFactor - 0.0, DIndexCostConversionFactor + 0.0);
 }
 
 

@@ -31,8 +31,14 @@ class TestDML(threading.Thread):
     def run(self):
         conn = dbconn.connect(dbconn.DbURL(dbname=self.dbname), unsetSearchPath=False)
 
+        with conn.cursor() as cur:
+            cur.execute("BEGIN")
+
         self.loop(conn)
         self.verify(conn)
+
+        with conn.cursor() as cur:
+            cur.execute("COMMIT")
 
         conn.commit()
         conn.close()
@@ -109,13 +115,15 @@ class TestInsert(TestDML):
     def verify(self, conn):
         sql = '''
             select c1 from {tablename} order by c1;
-        '''.format(tablename=self.tablename, counter=self.counter)
-        results = dbconn.query(conn, sql).fetchall()
+        '''.format(tablename=self.tablename)
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            results = cur.fetchall()
 
-        for i in range(0, self.counter):
-            if i != int(results[i][0]):
-                self.report_incorrect_result()
-                return
+            for i in range(self.counter):
+                if i != int(results[i][0]):
+                    self.report_incorrect_result()
+                    return
 
 class TestUpdate(TestDML):
     datasize = 1000
@@ -135,13 +143,15 @@ class TestUpdate(TestDML):
     def verify(self, conn):
         sql = '''
             select c2 from {tablename} order by c1;
-        '''.format(tablename=self.tablename, counter=self.counter)
-        results = dbconn.query(conn, sql).fetchall()
+        '''.format(tablename=self.tablename)
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            results = cur.fetchall()
 
-        for i in range(0, self.datasize):
-            if i + self.counter - 1 != int(results[i][0]):
-                self.report_incorrect_result()
-                return
+            for i in range(self.datasize):
+                if i + self.counter - 1 != int(results[i][0]):
+                    self.report_incorrect_result()
+                    return
 
 class TestDelete(TestDML):
     datasize = 100000
@@ -161,13 +171,15 @@ class TestDelete(TestDML):
     def verify(self, conn):
         sql = '''
             select c1 from {tablename} order by c1;
-        '''.format(tablename=self.tablename, counter=self.counter)
-        results = dbconn.query(conn, sql).fetchall()
+        '''.format(tablename=self.tablename)
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            results = cur.fetchall()
 
-        for i in range(self.counter, self.datasize):
-            if i != int(results[i - self.counter][0]):
-                self.report_incorrect_result()
-                return
+            for i in range(self.counter, self.datasize):
+                if i != int(results[i - self.counter][0]):
+                    self.report_incorrect_result()
+                    return
 
 # for test only
 if __name__ == '__main__':

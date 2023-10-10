@@ -3,7 +3,7 @@
 -- AOSEG_STATE_AWAITING_DROP.
 
 CREATE TABLE mark_all_aoseg_await_drop (a int) WITH (appendonly=true);
-CREATE
+CREATE TABLE
 
 -- Create 3 aoseg entries
 0: BEGIN;
@@ -13,11 +13,11 @@ BEGIN
 2: BEGIN;
 BEGIN
 0: INSERT INTO mark_all_aoseg_await_drop SELECT i FROM generate_series(1, 10)i;
-INSERT 10
+INSERT 0 10
 1: INSERT INTO mark_all_aoseg_await_drop SELECT i FROM generate_series(1, 10)i;
-INSERT 10
+INSERT 0 10
 2: INSERT INTO mark_all_aoseg_await_drop SELECT i FROM generate_series(1, 10)i;
-INSERT 10
+INSERT 0 10
 0: COMMIT;
 COMMIT
 1: COMMIT;
@@ -46,11 +46,11 @@ BEGIN
  0     
 (1 row)
 1: INSERT INTO mark_all_aoseg_await_drop SELECT i FROM generate_series(1, 10)i;
-INSERT 10
+INSERT 0 10
 2: VACUUM mark_all_aoseg_await_drop;
 VACUUM
 1: END;
-END
+COMMIT
 
 -- We should see segno 2 and 3 in state 2 (AOSEG_STATE_AWAITING_DROP)
 -- and segno 1 and 4 in state 1 (AOSEG_STATE_DEFAULT). Segno 1 is not

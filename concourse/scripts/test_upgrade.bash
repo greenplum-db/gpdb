@@ -201,6 +201,7 @@ gpinitsystem_for_upgrade() {
     # Greenplum clusters should be upgraded when GUC settings' defaults change.
     ssh -ttn ${MASTER_HOST} '
         source '"${OLD_GPHOME}"'/greenplum_path.sh
+        export COORDINATOR_DATA_DIRECTORY='${OLD_COORDINATOR_DATA_DIRECTORY}'
         gpstop -a -d '"${OLD_COORDINATOR_DATA_DIRECTORY}"'
 
         source '"${NEW_GPHOME}"'/greenplum_path.sh
@@ -214,6 +215,7 @@ gpinitsystem_for_upgrade() {
         # echo "standard_conforming_strings = off" >> upgrade_addopts
         # echo "escape_string_warning = off" >> upgrade_addopts
         gpinitsystem -a -c gpinitsystem_config_new -h '"${GPINITSYSTEM_HOSTFILE}"' # -p ~gpadmin/upgrade_addopts
+        export COORDINATOR_DATA_DIRECTORY='${NEW_COORDINATOR_DATA_DIRECTORY}'
         gpstop -a -d '"${NEW_COORDINATOR_DATA_DIRECTORY}"'
     '
 }

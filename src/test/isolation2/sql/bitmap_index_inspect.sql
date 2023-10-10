@@ -3,7 +3,6 @@
 -- inspect functions run against a single node, as opposed to the entire GP cluster)
 
 -- Setup
-1U: CREATE EXTENSION pageinspect;
 1U: CREATE TABLE bmtest_t1(i int, bmfield int);
 1U: CREATE INDEX bmtest_i1 ON bmtest_t1 USING bitmap(bmfield);
 1U: INSERT INTO bmtest_t1 SELECT i,1 FROM generate_series(1, 1000) i;
@@ -35,4 +34,3 @@
 
 -- cleanup
 1U: DROP TABLE bmtest_t1;
-1U: DROP EXTENSION pageinspect;

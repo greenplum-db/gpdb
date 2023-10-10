@@ -21,6 +21,10 @@ reduced-frequency-trigger-start-rhel8: 1:00 AM
 reduced-frequency-trigger-stop-rhel8: 2:00 AM
 reduced-frequency-trigger-start-oel8: 3:00 AM
 reduced-frequency-trigger-stop-oel8: 4:00 AM
+reduced-frequency-trigger-start-rhel9: 5:00 AM
+reduced-frequency-trigger-stop-rhel9: 6:00 AM
+reduced-frequency-trigger-start-oel9: 7:00 AM
+reduced-frequency-trigger-stop-oel9: 8:00 AM
 configure_flags: "--enable-cassert --enable-tap-tests"
 configure_flags_with_extensions: "--enable-cassert --enable-tap-tests --enable-debug-extensions"
 use_ccache: true
@@ -28,4 +32,5 @@ use_ccache: true
 remote_win_host_build: 10.0.42.5
 remote_win_user_build: buildbot
 remote_win_port_build: 22
-test-binary-swap: false
+test-binary-swap: true
+pivotal-gpdb-pivnet-product-version: ^7\.0\.0-beta.5$

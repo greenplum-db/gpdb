@@ -991,7 +991,7 @@
       </dxl:ColumnStatistics>
       <dxl:MDCast Mdid="3.20.1.0;20.1.0" Name="int8" BinaryCoercible="true" SourceTypeId="0.20.1.0" DestinationTypeId="0.20.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0" CoercePathType="0"/>
-      <dxl:GPDBFunc Mdid="0.481.1.0" Name="int8" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false">
+      <dxl:GPDBFunc Mdid="0.481.1.0" Name="int8" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="false">
         <dxl:ResultType Mdid="0.20.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBScalarOp Mdid="0.96.1.0" Name="=" ComparisonType="Eq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
@@ -1021,46 +1021,36 @@
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.242787.1.0" Name="foo" Rows="100145.000000" EmptyRelation="false"/>
-      <dxl:GPDBFunc Mdid="0.871.1.0" Name="upper" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="true">
+      <dxl:GPDBFunc Mdid="0.871.1.0" Name="upper" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="true">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Relation Mdid="6.242787.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c" Attno="3" Mdid="0.25.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:GPDBFunc Mdid="0.885.1.0" Name="btrim" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="true">
+      <dxl:GPDBFunc Mdid="0.885.1.0" Name="btrim" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="true">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
       <dxl:MDCast Mdid="3.23.1.0;20.1.0" Name="int8" BinaryCoercible="false" SourceTypeId="0.23.1.0" DestinationTypeId="0.20.1.0" CastFuncId="0.481.1.0" CoercePathType="1"/>

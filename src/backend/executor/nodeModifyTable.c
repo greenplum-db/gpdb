@@ -62,6 +62,7 @@
 #include "catalog/aocatalog.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbappendonlyam.h"
+#include "cdb/cdbhash.h"
 #include "cdb/cdbvars.h"
 #include "parser/parsetree.h"
 #include "utils/lsyscache.h"
@@ -529,6 +530,55 @@ ExecInsert(ModifyTableState *mtstate,
 			 (resultRelInfo->ri_TrigDesc &&
 			  resultRelInfo->ri_TrigDesc->trig_insert_before_row)))
 			ExecPartitionCheck(resultRelInfo, slot, estate, true);
+
+		/*
+		 * Everything has been checked, if we set the GUC gp_detect_data_correctness to true,
+		 * we just verify the data belongs to current partition and segment, we'll not insert
+		 * the data really, so just return NULL.
+		 *
+		 * Above ExecPartitionCheck has already checked the partition correctness, so we just
+		 * need check distribution correctness.
+		 */
+		if (gp_detect_data_correctness)
+		{
+			/* Initialize hash function and structure */
+			CdbHash  *hash;
+			Relation rel = resultRelInfo->ri_RelationDesc;
+			GpPolicy *policy = rel->rd_cdbpolicy;
+
+			/* Skip randomly and replicated distributed relation */
+			if (!GpPolicyIsHashPartitioned(policy))
+				return NULL;
+
+			hash = makeCdbHashForRelation(rel);
+
+			cdbhashinit(hash);
+
+			/* Add every attribute in the distribution policy to the hash */
+			for (int i = 0; i < policy->nattrs; i++)
+			{
+				int			attnum = policy->attrs[i];
+				bool		isNull;
+				Datum		attr;
+
+				attr = slot_getattr(slot, attnum, &isNull);
+
+				cdbhash(hash, i + 1, attr, isNull);
+			}
+
+			/* End check if one tuple is in the wrong segment */
+			if (cdbhashreduce(hash) != GpIdentity.segindex)
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_CHECK_VIOLATION),
+								errmsg("trying to insert row into wrong segment")));
+			}
+
+			freeCdbHash(hash);
+
+			/* Do nothing */
+			return NULL;
+		}
 
 		if (onconflict != ONCONFLICT_NONE && resultRelInfo->ri_NumIndices > 0)
 		{
@@ -1148,7 +1198,7 @@ ldelete:;
 	/*
 	 * Disallow DELETE triggers on a split UPDATE. See comments in ExecInsert().
 	 */
-	if (!RelationIsAppendOptimized(resultRelationDesc) && !splitUpdate)
+	if (!RelationStorageIsAO(resultRelationDesc) && !splitUpdate)
 	{
 		ExecARDeleteTriggers(estate, resultRelInfo, tupleid, oldtuple,
 							 ar_delete_trig_tcs);
@@ -1567,7 +1617,7 @@ lreplace:;
 				 * AO case, as visimap update within same command happens at end
 				 * of command.
 				 */
-				if (!RelationIsAppendOptimized(resultRelationDesc) &&
+				if (!RelationStorageIsAO(resultRelationDesc) &&
 					tmfd.cmax != estate->es_output_cid)
 					ereport(ERROR,
 							(errcode(ERRCODE_TRIGGERED_DATA_CHANGE_VIOLATION),
@@ -1677,7 +1727,7 @@ lreplace:;
 
 	/* AFTER ROW UPDATE Triggers */
 	/* GPDB: AO and AOCO tables don't support triggers */
-	if (!RelationIsAppendOptimized(resultRelationDesc))
+	if (!RelationStorageIsAO(resultRelationDesc))
 		ExecARUpdateTriggers(estate, resultRelInfo, tupleid, oldtuple, slot,
 						 recheckIndexes,
 						 mtstate->operation == CMD_INSERT ?
@@ -2375,7 +2425,21 @@ ExecModifyTable(PlanState *pstate)
 	if (node->mt_done)
 		return NULL;
 
-	if (Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer)
+	/* Preload local variables */
+	resultRelInfo = node->resultRelInfo + node->mt_whichplan;
+	subplanstate = node->mt_plans[node->mt_whichplan];
+	junkfilter = resultRelInfo->ri_junkFilter;
+	action_attno = resultRelInfo->ri_action_attno;
+	segid_attno = resultRelInfo->ri_segid_attno;
+
+	/*
+	 * Check cdbcomponent_allocateIdleQE()
+	 *
+	 * In some cases Greenplum has more than one QE on on segment writing the
+	 * external data via foreign tables.
+	 */
+	if (Gp_role == GP_ROLE_EXECUTE && !Gp_is_writer &&
+		resultRelInfo->ri_RelationDesc->rd_rel->relkind != RELKIND_FOREIGN_TABLE)
 	{
 		/*
 		 * Current Greenplum MPP architecture only support one writer gang, and
@@ -2400,13 +2464,6 @@ ExecModifyTable(PlanState *pstate)
 		fireBSTriggers(node);
 		node->fireBSTriggers = false;
 	}
-
-	/* Preload local variables */
-	resultRelInfo = node->resultRelInfo + node->mt_whichplan;
-	subplanstate = node->mt_plans[node->mt_whichplan];
-	junkfilter = resultRelInfo->ri_junkFilter;
-	action_attno = resultRelInfo->ri_action_attno;
-	segid_attno = resultRelInfo->ri_segid_attno;
 
 	/*
 	 * es_result_relation_info must point to the currently active result

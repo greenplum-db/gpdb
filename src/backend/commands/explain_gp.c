@@ -84,6 +84,7 @@ typedef struct CdbExplain_StatHdr
 {
 	NodeTag		type;			/* T_CdbExplain_StatHdr */
 	int			segindex;		/* segment id */
+	int			qe_identifier;	/* qe identifier */
 	int			nInst;			/* num of StatInst entries following StatHdr */
 	int			bnotes;			/* offset to extra text area */
 	int			enotes;			/* offset to end of extra text area */
@@ -126,12 +127,11 @@ typedef struct CdbExplain_NodeSummary
 	CdbExplain_Agg totalWorkfileCreated;
 	/* Used for DynamicSeqScan, DynamicIndexScan, DynamicBitmapHeapScan, and DynamicForeignScan */
 	CdbExplain_Agg totalPartTableScanned;
-	/* Summary of space used by sort */
-	CdbExplain_Agg sortSpaceUsed[NUM_SORT_SPACE_TYPE][NUM_SORT_METHOD];
 
 	/* insts array info */
-	int			segindex0;		/* segment id of insts[0] */
+	int			qe_identifier0;		/* qe identifier of insts[0] */
 	int			ninst;			/* num of StatInst entries in inst array */
+	int			*segindexes;	/* list of segindex */
 
 	/* Array [0..ninst-1] of StatInst entries is appended starting here */
 	CdbExplain_StatInst insts[1];	/* variable size - must be last */
@@ -145,9 +145,10 @@ typedef struct CdbExplain_SliceSummary
 
 	/* worker array */
 	int			nworker;		/* num of SliceWorker slots in worker array */
-	int			segindex0;		/* segment id of workers[0] */
+	int			qe_identifier0;		/* qe_identifier of workers[0] */
 	CdbExplain_SliceWorker *workers;	/* -> array [0..nworker-1] of
 										 * SliceWorker */
+	int			*segindexes;		/* -> array [0..nworker-1] of segindex */
 	CdbExplain_Agg peakmemused; /* Summary of SliceWorker stats over all of
 								 * the slice's workers */
 
@@ -213,16 +214,16 @@ typedef struct CdbExplain_RecvStatCtx
 	int			nStatInst;
 
 	/*
-	 * segIndexMin is the min of segment index from which we collected message
+	 * qeIdentifierMin is the min of qe_identifier from which we collected message
 	 * (i.e., saved msgptrs)
 	 */
-	int			segindexMin;
+	int			qeIdentifierMin;
 
 	/*
-	 * segIndexMax is the max of segment index from which we collected message
+	 * qeIdentifierMax is the max of qe_identifier from which we collected message
 	 * (i.e., saved msgptrs)
 	 */
-	int			segindexMax;
+	int			qeIdentifierMax;
 
 	/*
 	 * We deposit stat for one slice at a time. sliceIndex saves the current
@@ -318,12 +319,13 @@ cdbexplain_localExecStats(struct PlanState *planstate,
 
 	/* Set up a temporary StatHdr for both collecting and depositing stats. */
 	ctx.msgptrs[0] = &ctx.send.hdr;
+	ctx.send.hdr.qe_identifier = qe_identifier;
 	ctx.send.hdr.segindex = GpIdentity.segindex;
 	ctx.send.hdr.nInst = 1;
 
 	/* Set up receive context area referencing our temp StatHdr. */
 	ctx.recv.nStatInst = ctx.send.hdr.nInst;
-	ctx.recv.segindexMin = ctx.recv.segindexMax = ctx.send.hdr.segindex;
+	ctx.recv.qeIdentifierMin = ctx.recv.qeIdentifierMax = ctx.send.hdr.qe_identifier;
 
 	ctx.recv.sliceIndex = LocallyExecutingSliceIndex(planstate->state);
 	ctx.recv.msgptrs = ctx.msgptrs;
@@ -411,6 +413,12 @@ cdbexplain_sendExecStats(QueryDesc *queryDesc)
 	/* Start building the message header in our context area. */
 	memset(&ctx, 0, sizeof(ctx));
 	ctx.hdr.type = T_CdbExplain_StatHdr;
+
+	/* 
+	 * GPDB fix EXPLAIN ANALYZE for foreign tables which options 
+	 * 'num_segments' is larger than local's numsegments.
+	 */
+	ctx.hdr.qe_identifier = qe_identifier;
 	ctx.hdr.segindex = GpIdentity.segindex;
 	ctx.hdr.nInst = 0;
 
@@ -504,7 +512,6 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 	CdbDispatchResult *dispatchResultEnd;
 	CdbExplain_RecvStatCtx ctx;
 	CdbExplain_DispatchSummary ds;
-	int			gpsegmentCount = getgpsegmentCount();
 	int			iDispatch;
 	int			nDispatch;
 	int			imsgptr;
@@ -583,7 +590,7 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 									   hdr->enotes - hdr->bnotes) ||
 			statcell->len != hdr->enotes ||
 			hdr->segindex < -1 ||
-			hdr->segindex >= gpsegmentCount)
+			hdr->segindex >= getgpsegmentCount())
 		{
 			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 							errmsg_internal("Invalid execution statistics "
@@ -614,13 +621,13 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 			Assert(ctx.nStatInst == hdr->nInst);
 		}
 
-		/* Save lowest and highest segment id for which we have stats. */
+		/* Save lowest and highest qe_identifier for which we have stats. */
 		if (iDispatch == 0)
-			ctx.segindexMin = ctx.segindexMax = hdr->segindex;
-		else if (ctx.segindexMax < hdr->segindex)
-			ctx.segindexMax = hdr->segindex;
-		else if (ctx.segindexMin > hdr->segindex)
-			ctx.segindexMin = hdr->segindex;
+			ctx.qeIdentifierMin = ctx.qeIdentifierMax = hdr->qe_identifier;
+		else if (ctx.qeIdentifierMax < hdr->qe_identifier)
+			ctx.qeIdentifierMax = hdr->qe_identifier;
+		else if (ctx.qeIdentifierMin > hdr->qe_identifier)
+			ctx.qeIdentifierMin = hdr->qe_identifier;
 
 		/* Save message ptr for easy reference. */
 		ctx.msgptrs[ctx.nmsgptr] = hdr;
@@ -747,8 +754,8 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr *hdr,
 		ss->workers)
 	{
 		Assert(ss->nworker == 1 &&
-			   recvstatctx->segindexMin == hdr->segindex &&
-			   recvstatctx->segindexMax == hdr->segindex);
+			   recvstatctx->qeIdentifierMin == hdr->qe_identifier &&
+			   recvstatctx->qeIdentifierMax == hdr->qe_identifier);
 
 		/* Expand the SliceSummary array to make room for InitPlan subquery. */
 		sliceIndex = showstatctx->nslice++;
@@ -762,17 +769,19 @@ cdbexplain_depositSliceStats(CdbExplain_StatHdr *hdr,
 	if (!ss->workers)
 	{
 		/* Allocate SliceWorker array and attach it to the SliceSummary. */
-		ss->segindex0 = recvstatctx->segindexMin;
-		ss->nworker = recvstatctx->segindexMax + 1 - ss->segindex0;
+		ss->qe_identifier0 = recvstatctx->qeIdentifierMin;
+		ss->nworker = recvstatctx->qeIdentifierMax + 1 - ss->qe_identifier0;
 		ss->workers = (CdbExplain_SliceWorker *) palloc0(ss->nworker * sizeof(ss->workers[0]));
+		ss->segindexes = (int *) palloc0(ss->nworker * sizeof(int));
 	}
 
 	/* Save a copy of this SliceWorker instance in the worker array. */
-	iworker = hdr->segindex - ss->segindex0;
+	iworker = hdr->qe_identifier - ss->qe_identifier0;
 	ssw = &ss->workers[iworker];
 	Assert(iworker >= 0 && iworker < ss->nworker);
 	Assert(ssw->peakmemused == 0);	/* each worker should be seen just once */
 	*ssw = hdr->worker;
+	ss->segindexes[iworker] = hdr->segindex;
 
 	/* Rollup of per-worker stats into SliceSummary */
 	cdbexplain_agg_upd(&ss->peakmemused, hdr->worker.peakmemused, hdr->segindex);
@@ -984,7 +993,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	CdbExplain_DepStatAcc peakmemused;
 	CdbExplain_DepStatAcc vmem_reserved;
 	CdbExplain_DepStatAcc totalPartTableScanned;
-	CdbExplain_DepStatAcc sortSpaceUsed[NUM_SORT_SPACE_TYPE][NUM_SORT_METHOD];
 	int			imsgptr;
 	int			nInst;
 
@@ -992,11 +1000,12 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		   ctx->iStatInst < ctx->nStatInst);
 
 	/* Allocate NodeSummary block. */
-	nInst = ctx->segindexMax + 1 - ctx->segindexMin;
+	nInst = ctx->qeIdentifierMax + 1 - ctx->qeIdentifierMin;
 	ns = (CdbExplain_NodeSummary *) palloc0(sizeof(*ns) - sizeof(ns->insts) +
 											nInst * sizeof(ns->insts[0]));
-	ns->segindex0 = ctx->segindexMin;
+	ns->qe_identifier0 = ctx->qeIdentifierMin;
 	ns->ninst = nInst;
+	ns->segindexes = (int *) palloc0(nInst * sizeof(int));
 
 	/* Attach our new NodeSummary to the Instrumentation node. */
 	instr->cdbNodeSummary = ns;
@@ -1009,9 +1018,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	cdbexplain_depStatAcc_init0(&workmemwanted);
 	cdbexplain_depStatAcc_init0(&totalWorkfileCreated);
 	cdbexplain_depStatAcc_init0(&totalPartTableScanned);
-	for (int i = 0; i < NUM_SORT_METHOD; i++)
-		for (int j = 0; j < NUM_SORT_SPACE_TYPE; j++)
-			cdbexplain_depStatAcc_init0(&sortSpaceUsed[j][i]);
 
 	/* Initialize per-slice accumulators. */
 	cdbexplain_depStatAcc_init0(&peakmemused);
@@ -1025,11 +1031,12 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		rsi = &rsh->inst[ctx->iStatInst];
 
 		Assert(rsi->pstype == planstate->type &&
-			   ns->segindex0 <= rsh->segindex &&
-			   rsh->segindex < ns->segindex0 + ns->ninst);
+			   ns->qe_identifier0 <= rsh->qe_identifier &&
+			   rsh->qe_identifier < ns->qe_identifier0 + ns->ninst);
 
 		/* Locate this qExec's StatInst slot in node's NodeSummary block. */
-		nsi = &ns->insts[rsh->segindex - ns->segindex0];
+		nsi = &ns->insts[rsh->qe_identifier - ns->qe_identifier0];
+		ns->segindexes[rsh->qe_identifier - ns->qe_identifier0] = rsh->segindex;
 
 		/* Copy the StatInst to NodeSummary from dispatch result buffer. */
 		*nsi = *rsi;
@@ -1050,13 +1057,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		cdbexplain_depStatAcc_upd(&workmemwanted, rsi->workmemwanted, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&totalWorkfileCreated, (rsi->workfileCreated ? 1 : 0), rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&totalPartTableScanned, rsi->numPartScanned, rsh, rsi, nsi);
-		Assert(rsi->sortstats.sortMethod < NUM_SORT_METHOD);
-		Assert(rsi->sortstats.spaceType < NUM_SORT_SPACE_TYPE);
-		if (rsi->sortstats.sortMethod != SORT_TYPE_STILL_IN_PROGRESS)
-		{
-			cdbexplain_depStatAcc_upd(&sortSpaceUsed[rsi->sortstats.spaceType][rsi->sortstats.sortMethod],
-									  (double) rsi->sortstats.spaceUsed, rsh, rsi, nsi);
-		}
 
 		/* Update per-slice accumulators. */
 		cdbexplain_depStatAcc_upd(&peakmemused, rsh->worker.peakmemused, rsh, rsi, nsi);
@@ -1070,9 +1070,6 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	ns->workmemwanted = workmemwanted.agg;
 	ns->totalWorkfileCreated = totalWorkfileCreated.agg;
 	ns->totalPartTableScanned = totalPartTableScanned.agg;
-	for (int i = 0; i < NUM_SORT_METHOD; i++)
-		for (int j = 0; j < NUM_SORT_SPACE_TYPE; j++)
-			ns->sortSpaceUsed[j][i] = sortSpaceUsed[j][i].agg;
 
 	/* Roll up summary over all nodes of slice into RecvStatCtx. */
 	ctx->workmemused_max = Max(ctx->workmemused_max, workmemused.agg.vmax);
@@ -1674,6 +1671,9 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 	{
 		CdbExplain_StatInst *nsi = &ns->insts[i];
 
+		if (nsi->pstype == T_Invalid)
+			continue;
+
 		if (nsi->bnotes < nsi->enotes)
 		{
 			if (!haveExtraText)
@@ -1688,7 +1688,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 			cdbexplain_formatExtraText(&extraData,
 									   0,
 									   (ns->ninst == 1) ? -1
-									   : ns->segindex0 + i,
+									   : ns->segindexes[i],
 									   ctx->extratextbuf.data + nsi->bnotes,
 									   nsi->enotes - nsi->bnotes);
 			ExplainPropertyStringInfo("Extra Text", es, "%s", extraData.data);
@@ -1705,7 +1705,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 	/*
 	 * Dump stats for all workers.
 	 */
-	if (gp_enable_explain_allstat && ns->segindex0 >= 0 && ns->ninst > 0)
+	if (gp_enable_explain_allstat && ns->qe_identifier0 >= 0 && ns->ninst > 0)
 	{
 		if (es->format == EXPLAIN_FORMAT_TEXT)
 		{
@@ -1724,7 +1724,8 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 		{
 			CdbExplain_StatInst *nsi = &ns->insts[i];
 
-			if (INSTR_TIME_IS_ZERO(nsi->firststart))
+			if (INSTR_TIME_IS_ZERO(nsi->firststart) ||
+				nsi->pstype == T_Invalid)
 				continue;
 
 			/* Time from start of query on qDisp to worker's first result row */
@@ -1739,7 +1740,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 										 nsi->total, true);
 				appendStringInfo(es->str,
 								 "/seg%d_%s_%s_%.0f",
-								 ns->segindex0 + i,
+								 ns->segindexes[i],
 								 startbuf,
 								 totalbuf,
 								 nsi->ntuples);
@@ -1752,7 +1753,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 										 nsi->total, false);
 
 				ExplainOpenGroup("Segment", NULL, false, es);
-				ExplainPropertyInteger("Segment index", NULL, ns->segindex0 + i, es);
+				ExplainPropertyInteger("Segment index", NULL, ns->segindexes[i], es);
 				ExplainPropertyText("Time To First Result", startbuf, es);
 				ExplainPropertyText("Time To Total Result", totalbuf, es);
 				ExplainPropertyFloat("Tuples", NULL, nsi->ntuples, 1, es);
@@ -2331,7 +2332,7 @@ cdbexplain_printJITSummary(ExplainState *es, QueryDesc *queryDesc)
 			appendStringInfoSpaces(allstats, es->indent * 2 + 1);
 			appendStringInfo(allstats,
 							 "%s%d: %s %zu, %s %.3f ms, %s %.3f ms, %s %.3f ms, %s %.3f ms, %s %.3f ms.\n",
-							 "seg", ss->segindex0 +j,
+							 "seg", ss->segindexes[j],
 							 "Functions", ji->created_functions,
 							 "Generation", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->generation_counter),
 							 "Inlining", 1000.0 * INSTR_TIME_GET_DOUBLE(ji->inlining_counter),
@@ -2362,7 +2363,7 @@ cdbexplain_printJITSummary(ExplainState *es, QueryDesc *queryDesc)
 				appendStringInfo(es->str, "%.2f. ", max_functions);
 			else
 				appendStringInfo(es->str, "%.2f avg x %d workers, %.2f max (seg%d). ",
-								 avg_functions, nworker, max_functions, ss->segindex0 + idx1);
+								 avg_functions, nworker, max_functions, ss->segindexes[idx1]);
 
 			if (es->analyze && es->timing)
 			{
@@ -2371,7 +2372,7 @@ cdbexplain_printJITSummary(ExplainState *es, QueryDesc *queryDesc)
 					appendStringInfo(es->str, "%.3f ms total.\n", 1000.0 * max_time);
 				else
 					appendStringInfo(es->str, "%.3f ms avg x %d workers, %.3f ms max (seg%d).\n",
-									 1000.0 * avg_time, nworker, 1000.0 * max_time, ss->segindex0 + idx2);
+									 1000.0 * avg_time, nworker, 1000.0 * max_time, ss->segindexes[idx2]);
 			}
 			if (es->verbose)
 			{
@@ -2390,7 +2391,7 @@ cdbexplain_printJITSummary(ExplainState *es, QueryDesc *queryDesc)
 				ExplainPropertyFloat("avg", NULL, avg_functions, 2, es);
 				ExplainPropertyInteger("nworker", NULL, nworker, es);
 				ExplainPropertyFloat("max", NULL, max_functions, 2, es);
-				ExplainPropertyInteger("segid", NULL, ss->segindex0 + idx1, es);
+				ExplainPropertyInteger("segid", NULL, ss->segindexes[idx1], es);
 				ExplainCloseGroup("Functions", "Functions", true, es);
 			}
 
@@ -2404,7 +2405,7 @@ cdbexplain_printJITSummary(ExplainState *es, QueryDesc *queryDesc)
 					ExplainPropertyFloat("avg", NULL, 1000.0 * avg_time, 3, es);
 					ExplainPropertyInteger("nworker", NULL, nworker, es);
 					ExplainPropertyFloat("max", NULL, 1000.0 * max_time, 3, es);
-					ExplainPropertyInteger("segid", NULL, ss->segindex0 + idx2, es);
+					ExplainPropertyInteger("segid", NULL, ss->segindexes[idx2], es);
 					ExplainCloseGroup("Timing", "Timing", true, es);
 				}
 				if (es->verbose)

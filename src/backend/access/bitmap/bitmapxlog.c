@@ -219,6 +219,7 @@ _bitmap_xlog_insert_bitmapwords(XLogRecPtr lsn, XLogReaderState *record)
 		BMBitmap	bitmap;
 		BMBitmapOpaque	bitmapPageOpaque;
 		XLogRedoAction	action;
+		BlockNumber bm_next_blkno;
 
 		action = XLogReadBufferForRedo(record, bmpageno + 1, &bitmapBuffer);
 
@@ -236,6 +237,7 @@ _bitmap_xlog_insert_bitmapwords(XLogRecPtr lsn, XLogReaderState *record)
 			xlrecptr = XLogRecGetBlockData(record, bmpageno + 1, NULL);
 			xlrec_perpage = (xl_bm_bitmapwords_perpage *) xlrecptr;
 			last_blkno = xlrec_perpage->bmp_blkno;
+			bm_next_blkno = xlrec_perpage->bm_next_blkno;
 			xlrecptr += sizeof(xl_bm_bitmapwords_perpage);
 			hwords = (BM_HRL_WORD *) xlrecptr;
 			xlrecptr += xlrec_perpage->bmp_num_hwords * sizeof(BM_HRL_WORD);
@@ -260,17 +262,9 @@ _bitmap_xlog_insert_bitmapwords(XLogRecPtr lsn, XLogReaderState *record)
 				   cwords,
 				   xlrec_perpage->bmp_num_cwords * sizeof(BM_HRL_WORD));
 
-			/* Update next pointer. Peek into the next struct to get its block number */
-			bitmapPageOpaque =
-				(BMBitmapOpaque) PageGetSpecialPointer(bitmapPage);
-			if (bmpageno + 1 < xlrec->bm_num_pages)
-			{
-				xl_bm_bitmapwords_perpage *next_xlrec_perpage;
-
-				next_xlrec_perpage = (xl_bm_bitmapwords_perpage *) xlrecptr;
-
-				bitmapPageOpaque->bm_bitmap_next = next_xlrec_perpage->bmp_blkno;
-			}
+			/* Update the next pointer and other fields */
+			bitmapPageOpaque = (BMBitmapOpaque) PageGetSpecialPointer(bitmapPage);
+			bitmapPageOpaque->bm_bitmap_next = bm_next_blkno;
 			bitmapPageOpaque->bm_last_tid_location = xlrec_perpage->bmp_last_tid;
 			bitmapPageOpaque->bm_hrl_words_used = xlrec_perpage->bmp_start_cword_no + xlrec_perpage->bmp_num_cwords;
 

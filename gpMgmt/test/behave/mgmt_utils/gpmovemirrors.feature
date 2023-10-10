@@ -208,7 +208,7 @@ Feature: Tests for gpmovemirrors
     And the user reset the walsender on the primary on content 0
     And the user waits until saved async process is completed
     And recovery_progress.file should not exist in gpAdminLogs
-    And the user waits until mirror on content 0,1 is up
+    And verify that mirror on content 0,1 is up
     And check if mirrors on content 0,1 are moved to new location on input file
     And user can start transactions
     And all files in gpAdminLogs directory are deleted on all hosts in the cluster
@@ -232,7 +232,7 @@ Feature: Tests for gpmovemirrors
     And the user reset the walsender on the primary on content 0
     And the user waits until saved async process is completed
     And recovery_progress.file should not exist in gpAdminLogs
-    And the user waits until mirror on content 0,1,2 is up
+    And verify that mirror on content 0,1,2 is up
     And check if mirrors on content 0,1,2 are moved to new location on input file
     And user can start transactions
     And all files in gpAdminLogs directory are deleted on all hosts in the cluster
@@ -270,7 +270,6 @@ Feature: Tests for gpmovemirrors
     And verify that mirror on content 0 is down
     And check if mirrors on content 1,2 are moved to new location on input file
     And check if mirrors on content 0 are in their original configuration
-    And an FTS probe is triggered
     And the user reset the walsender on the primary on content 0
     And the user waits until saved async process is completed
     And recovery_progress.file should not exist in gpAdminLogs
@@ -294,7 +293,6 @@ Feature: Tests for gpmovemirrors
     And the user asynchronously runs "gprecoverseg -aF" and the process is saved
     And the user just waits until recovery_progress.file is created in gpAdminLogs
     And user waits until gp_stat_replication table has no pg_basebackup entries for content 2
-    And an FTS probe is triggered
     And the user waits until mirror on content 2 is up
     And verify that mirror on content 0,1 is down
     And the gprecoverseg lock directory is removed
@@ -311,7 +309,6 @@ Feature: Tests for gpmovemirrors
     And verify that mirror on content 0,1 is down
     And check if mirrors on content 2 are moved to new location on input file
     And check if mirrors on content 0,1 are in their original configuration
-    And an FTS probe is triggered
     And the user reset the walsender on the primary on content 0
     And the user reset the walsender on the primary on content 1
     And the user waits until saved async process is completed
@@ -346,7 +343,6 @@ Feature: Tests for gpmovemirrors
     And gprecoverseg should return a return code of 0
     And gpmovemirrors should return a return code of 0
     And check if mirrors on content 0,1,2 are in their original configuration
-    And an FTS probe is triggered
     And the user reset the walsender on the primary on content 0
     And the user reset the walsender on the primary on content 1
     And the user reset the walsender on the primary on content 2
@@ -408,8 +404,11 @@ Feature: Tests for gpmovemirrors
         Then verify the database has mirrors
         And all the segments are running
         And the segments are synchronized
+        And saving host IP address of "sdw3"
         # gpmovemirrors_input_group moves mirror on sdw3 to sdw2, corresponding primary should now have sdw2 entry
         And pg_hba file "/data/gpdata/primary/gpseg1/pg_hba.conf" on host "sdw1" contains entries for "sdw2"
+        And pg_hba file on primary of mirrors on "sdw2" with "1" contains no replication entries for "sdw3"
+        And verify that only replication connection primary has is to "sdw2"
         And verify that mirror segments are in "group" configuration
         And verify that mirrors are recognized after a restart
         And the information of a "mirror" segment on a remote host is saved
@@ -603,3 +602,21 @@ Feature: Tests for gpmovemirrors
         And the cluster is recovered in full and rebalanced
         And check segment conf: postgresql.conf
         And the row count from table "test_movemirrors" in "postgres" is verified against the saved data
+
+    @concourse_cluster
+    Scenario: gpmovemirrors removes the stale replication entries from pg_hba when moving mirrors to another host
+        Given a working directory of the test as '/tmp/gpmovemirrors'
+        And the database is not running
+        And a cluster is created with "spread" segment mirroring on "cdw" and "sdw1, sdw2, sdw3"
+        And verify that mirror segments are in "spread" configuration
+        And a gpmovemirrors directory under '/tmp' with mode '0700' is created
+        And create an input file to move mirrors on "sdw1" to "sdw3"
+        When the user runs "gpmovemirrors --input=/tmp/gpmovemirrors_input_sdw1_sdw3"
+        Then gpmovemirrors should return a return code of 0
+        Then verify the database has mirrors
+        And all the segments are running
+        And the segments are synchronized
+        And saving host IP address of "sdw1"
+        And pg_hba file on primary of mirrors on "sdw3" with "3,4" contains no replication entries for "sdw1"
+        And verify that only replication connection primary has is to "sdw3"
+

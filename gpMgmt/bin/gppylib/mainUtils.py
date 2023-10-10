@@ -170,6 +170,11 @@ class SimpleMainLock:
             if self.pidfilepid == self.parentpid:
                 return None
 
+            # Check if the process that holds the lock exists.
+            # If the process is already killed, remove the lock directory.
+            if not unix.check_pid(self.pidfilepid):
+                shutil.rmtree(self.ppath)
+
         # try and acquire the lock
         try:
             self.pidlockfile.acquire()
@@ -232,7 +237,7 @@ class ExceptionNoStackTraceNeeded(Exception):
 
 class UserAbortedException(Exception):
     """
-    UserAbortedException should be thrown when a user decides to stop the 
+    UserAbortedException should be thrown when a user decides to stop the
     program (at a y/n prompt, for example).
     """
     pass
@@ -259,6 +264,18 @@ def simple_main(createOptionParserFn, createCommandFn, mainOptions=None):
 
 
 def simple_main_internal(createOptionParserFn, createCommandFn, mainOptions):
+
+    """
+    if -d <coordinator_data_dir> option is provided in that case doing parsing after creating
+    lock file would not be a good idea therefore handling -d option before lock.
+    """
+    parser = createOptionParserFn()
+    (parserOptions, parserArgs) = parser.parse_args()
+
+    if parserOptions.ensure_value("coordinatorDataDirectory", None) is not None:
+        parserOptions.coordinator_data_directory = os.path.abspath(parserOptions.coordinatorDataDirectory)
+        gp.set_coordinatordatadir(parserOptions.coordinator_data_directory)
+
     """
     If caller specifies 'pidlockpath' in mainOptions then we manage the
     specified pid file within the COORDINATOR_DATA_DIRECTORY before proceeding
@@ -277,13 +294,13 @@ def simple_main_internal(createOptionParserFn, createCommandFn, mainOptions):
 
     # at this point we have whatever lock we require
     try:
-        simple_main_locked(createOptionParserFn, createCommandFn, mainOptions)
+        simple_main_locked(parserOptions, parserArgs, createCommandFn, mainOptions)
     finally:
         if sml is not None:
             sml.release()
 
 
-def simple_main_locked(createOptionParserFn, createCommandFn, mainOptions):
+def simple_main_locked(parserOptions, parserArgs, createCommandFn, mainOptions):
     """
     Not to be called externally -- use simple_main instead
     """
@@ -299,7 +316,6 @@ def simple_main_locked(createOptionParserFn, createCommandFn, mainOptions):
     parser = None
 
     forceQuiet = mainOptions is not None and mainOptions.get("forceQuietOutput")
-    options = None
 
     if mainOptions is not None and mainOptions.get("programNameOverride"):
         global gProgramName
@@ -315,30 +331,24 @@ def simple_main_locked(createOptionParserFn, createCommandFn, mainOptions):
         hostname = unix.getLocalHostname()
         username = unix.getUserName()
 
-        parser = createOptionParserFn()
-        (options, args) = parser.parse_args()
-
         if useHelperToolLogging:
             gplog.setup_helper_tool_logging(execname, hostname, username)
         else:
             gplog.setup_tool_logging(execname, hostname, username,
-                                     logdir=options.ensure_value("logfileDirectory", None), nonuser=nonuser)
+                                     logdir=parserOptions.ensure_value("logfileDirectory", None), nonuser=nonuser)
 
         if forceQuiet:
             gplog.quiet_stdout_logging()
         else:
-            if options.ensure_value("verbose", False):
+            if parserOptions.ensure_value("verbose", False):
                 gplog.enable_verbose_logging()
-            if options.ensure_value("quiet", False):
+            if parserOptions.ensure_value("quiet", False):
                 gplog.quiet_stdout_logging()
-
-        if options.ensure_value("coordinatorDataDirectory", None) is not None:
-            options.coordinator_data_directory = os.path.abspath(options.coordinatorDataDirectory)
 
         if not suppressStartupLogMessage:
             logger.info("Starting %s with args: %s" % (gProgramName, ' '.join(sys.argv[1:])))
 
-        commandObject = createCommandFn(options, args)
+        commandObject = createCommandFn(parserOptions, parserArgs)
         exitCode = commandObject.run()
         exit_status = exitCode
 
@@ -360,10 +370,10 @@ def simple_main_locked(createOptionParserFn, createCommandFn, mainOptions):
                       e.cmd.results.stderr))
         exit_status = 2
     except Exception as e:
-        if options is None:
+        if parserOptions is None:
             logger.exception("%s failed.  exiting...", gProgramName)
         else:
-            if options.ensure_value("verbose", False):
+            if parserOptions.ensure_value("verbose", False):
                 logger.exception("%s failed.  exiting...", gProgramName)
             else:
                 logger.fatal("%s failed. (Reason='%s') exiting..." % (gProgramName, e))
@@ -462,4 +472,3 @@ def parseStatusLine(line, isStart = False, isStop = False):
     reasonArr = reasonArr[1:]
     reasonStr = ":".join(reasonArr)
     return reasonCode, reasonStr, started, dir
-

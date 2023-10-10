@@ -393,7 +393,7 @@ if [ "${BLDWRAP_POSTGRES_CONF_ADDONS}" != "__none__" ]  && \
     echo ${BLDWRAP_POSTGRES_CONF_ADDONS} | sed -e 's/\[//g' -e 's/\]//g' | tr "," "\n" | sed -e 's/^\"//g' -e 's/\"$//g' >> ${CLUSTER_CONFIG_POSTGRES_ADDONS}
 fi
 
-# Add fsync-off for all gpdemo deployments
+# Add fsync=off for all gpdemo deployments
 grep -q 'fsync=off' ${CLUSTER_CONFIG_POSTGRES_ADDONS} && echo "fsync=off already exists in ${CLUSTER_CONFIG_POSTGRES_ADDONS}." || echo "fsync=off" >> ${CLUSTER_CONFIG_POSTGRES_ADDONS}
 
 echo ""

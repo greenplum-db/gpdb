@@ -2,17 +2,17 @@
 -- need to fault injection to gp_wait_parallel_retrieve_cursor()
 --
 DROP TABLE IF EXISTS t1;
-DROP
+DROP TABLE
 CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
-CREATE
+CREATE TABLE
 insert into t1 select generate_series(1,100);
-INSERT 100
+INSERT 0 100
 
 --------- Test1: Basic test for parallel retrieve interface & close cursor
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id1 | token_id | host_id | port_id | READY
  endpoint_id1 | token_id | host_id | port_id | READY
@@ -165,7 +165,7 @@ DECLARE
  t        
 (1 row)
 1: CLOSE c1;
-CLOSE
+CLOSE CURSOR
 -- check no endpoint info
 1: SELECT auth_token,state FROM gp_get_endpoints() WHERE cursorname='c1';
  auth_token | state 
@@ -199,7 +199,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c2';
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
@@ -467,7 +467,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c3';
  endpoint_id3 | token_id | host_id | port_id | READY
  endpoint_id3 | token_id | host_id | port_id | READY
@@ -618,7 +618,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 4 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c4';
  endpoint_id4 | token_id | host_id | port_id | READY
  endpoint_id4 | token_id | host_id | port_id | READY
@@ -768,7 +768,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c5 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 5 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c5';
  endpoint_id5 | token_id | host_id | port_id | READY
  endpoint_id5 | token_id | host_id | port_id | READY
@@ -929,7 +929,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c6 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 6 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c6';
  endpoint_id6 | token_id | host_id | port_id | READY
  endpoint_id6 | token_id | host_id | port_id | READY
@@ -1071,7 +1071,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c61 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 61 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c61';
  endpoint_id61 | token_id | host_id | port_id | READY
  endpoint_id61 | token_id | host_id | port_id | READY
@@ -1211,7 +1211,7 @@ ERROR:  canceling statement due to user request
 1: BEGIN;
 BEGIN
 1: DECLARE c7 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 7 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c7';
  endpoint_id7 | token_id | host_id | port_id | READY
  endpoint_id7 | token_id | host_id | port_id | READY
@@ -1353,7 +1353,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c8 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'get_tuple_cell SESSION81 1 1 ; create_match_sub_with_spaces $SESSION81 session81' : SELECT sessionid,state FROM gp_get_session_endpoints() WHERE cursorname='c8';
  sessionid | state
 -----------+-------
@@ -1365,7 +1365,7 @@ DECLARE
 2: BEGIN;
 BEGIN
 2: DECLARE c8 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 2: @post_run 'get_tuple_cell SESSION82 1 1 ; create_match_sub_with_spaces $SESSION82 session82' : SELECT sessionid,state FROM gp_get_session_endpoints() WHERE cursorname='c8';
  sessionid | state
 -----------+-------
@@ -1386,11 +1386,11 @@ DECLARE
 (6 rows)
 
 1: CLOSE c8;
-CLOSE
+CLOSE CURSOR
 1: END;
-END
+COMMIT
 2: CLOSE c8;
-CLOSE
+CLOSE CURSOR
 2: END;
-END
+COMMIT
 

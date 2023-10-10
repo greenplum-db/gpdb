@@ -2048,12 +2048,6 @@ llvm_compile_expr(ExprState *state)
 				LLVMBuildBr(b, opblocks[i + 1]);
 				break;
 
-			case EEOP_ALTERNATIVE_SUBPLAN:
-				build_EvalXFunc(b, mod, "ExecEvalAlternativeSubPlan",
-								v_state, v_econtext, op);
-				LLVMBuildBr(b, opblocks[i + 1]);
-				break;
-
 			case EEOP_AGG_STRICT_DESERIALIZE:
 				{
 					FunctionCallInfo fcinfo = op->d.agg_deserialize.fcinfo_data;

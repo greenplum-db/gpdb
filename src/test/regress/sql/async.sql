@@ -28,6 +28,6 @@ SELECT pg_notification_queue_usage();
 -- end_matchsubs
 \c postgres
 LISTEN notify_async3;
-\! psql postgres -c "notify notify_async3;"
+\! psql postgres -Xc "notify notify_async3;"
 SELECT;
 \c -

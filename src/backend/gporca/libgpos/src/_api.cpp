@@ -53,34 +53,14 @@ const ULONG expected_dxl_fallback[] = {
 	gpdxl::
 		ExmiQuery2DXLUnsupportedFeature,  // unsupported feature during algebrization
 	gpdxl::
-		ExmiPlStmt2DXLConversion,  // unsupported feature during plan freezing
-	gpdxl::
 		ExmiDXL2PlStmtConversion,  // unsupported feature during planned statement translation
 	gpdxl::ExmiDXL2ExprAttributeNotFound,
-	gpdxl::ExmiOptimizerError,
 	gpdxl::ExmiDXLMissingAttribute,
 	gpdxl::ExmiDXLUnrecognizedOperator,
 	gpdxl::ExmiDXLUnrecognizedCompOperator,
 	gpdxl::ExmiDXLIncorrectNumberOfChildren,
-	gpdxl::ExmiQuery2DXLMissingValue,
-	gpdxl::ExmiQuery2DXLDuplicateRTE,
 	gpdxl::ExmiMDCacheEntryNotFound,
-	gpdxl::ExmiQuery2DXLError,
-	gpdxl::ExmiInvalidComparisonTypeCode};
-
-// array of DXL minor exception types that error out and NOT fallback to the planner
-const ULONG expected_dxl_errors[] = {
-	gpdxl::ExmiDXL2PlStmtForeignScanError,	// foreign table error
-	gpdxl::ExmiQuery2DXLNotNullViolation,	// not null violation
-};
-
-BOOL
-ShouldErrorOut(gpos::CException &exc)
-{
-	return gpdxl::ExmaDXL == exc.Major() &&
-		   FoundException(exc, expected_dxl_errors,
-						  GPOS_ARRAY_SIZE(expected_dxl_errors));
-}
+	gpdxl::ExmiQuery2DXLError};
 
 gpos::BOOL
 FoundException(gpos::CException &exc, const gpos::ULONG *exceptions,
@@ -130,28 +110,10 @@ gpos_init(struct gpos_init_params *params)
 {
 	CWorker::abort_requested_by_system = params->abort_requested;
 
-	if (GPOS_OK != gpos::CMemoryPoolManager::Init())
-	{
-		return;
-	}
-
-	if (GPOS_OK != gpos::CWorkerPoolManager::Init())
-	{
-		CMemoryPoolManager::GetMemoryPoolMgr()->Shutdown();
-		return;
-	}
-
-	if (GPOS_OK != gpos::CMessageRepository::Init())
-	{
-		CWorkerPoolManager::Shutdown();
-		CMemoryPoolManager::GetMemoryPoolMgr()->Shutdown();
-		return;
-	}
-
-	if (GPOS_OK != gpos::CCacheFactory::Init())
-	{
-		return;
-	}
+	CMemoryPoolManager::Init();
+	CWorkerPoolManager::Init();
+	CMessageRepository::Init();
+	CCacheFactory::Init();
 
 #ifdef GPOS_DEBUG_COUNTERS
 	CDebugCounter::Init();
@@ -276,10 +238,10 @@ gpos_terminate()
 	CDebugCounter::Shutdown();
 #endif
 #ifdef GPOS_DEBUG
-	CMessageRepository::GetMessageRepository()->Shutdown();
+	CMessageRepository::Shutdown();
 	CWorkerPoolManager::Shutdown();
 	CCacheFactory::Shutdown();
-	CMemoryPoolManager::GetMemoryPoolMgr()->Shutdown();
+	CMemoryPoolManager::Shutdown();
 #endif	// GPOS_DEBUG
 }
 

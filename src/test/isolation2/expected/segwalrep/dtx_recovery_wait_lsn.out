@@ -7,9 +7,9 @@
 
 -- modify fts gucs to speed up the test.
 1: alter system set gp_fts_probe_interval to 10;
-ALTER
+ALTER SYSTEM
 1: alter system set gp_fts_probe_retries to 1;
-ALTER
+ALTER SYSTEM
 1: select pg_reload_conf();
  pg_reload_conf 
 ----------------
@@ -17,7 +17,9 @@ ALTER
 (1 row)
 
 1: create table t_wait_lsn(a int);
-CREATE
+CREATE TABLE
+5: create table t_wait_lsn2(a int);
+CREATE TABLE
 
 -- suspend segment 0 before performing 'COMMIT PREPARED'
 2: select gp_inject_fault_infinite('finish_prepared_start_of_function', 'suspend', dbid) from gp_segment_configuration where content=0 and role='p';
@@ -26,7 +28,8 @@ CREATE
  Success:                 
 (1 row)
 1&: insert into t_wait_lsn values(2),(1);  <waiting ...>
-2: select gp_wait_until_triggered_fault('finish_prepared_start_of_function', 1, dbid) from gp_segment_configuration where content=0 and role='p';
+5&: insert into t_wait_lsn2 values(2),(1);  <waiting ...>
+2: select gp_wait_until_triggered_fault('finish_prepared_start_of_function', 2, dbid) from gp_segment_configuration where content=0 and role='p';
  gp_wait_until_triggered_fault 
 -------------------------------
  Success:                      
@@ -48,7 +51,7 @@ CREATE
 0U: select count(*) from pg_prepared_xacts;
  count 
 -------
- 1     
+ 2     
 (1 row)
 
 -- stop mirror
@@ -75,6 +78,29 @@ server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
 
+-- potential flakiness: there is a chance where the coordinator
+-- recovers fast enough (from the panic above) that we end up fault injecting too late.
+-1U: select gp_inject_fault_infinite('post_progress_recovery_comitted', 'suspend', dbid) FROM gp_segment_configuration WHERE content=-1 AND role='p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+-1U: select gp_wait_until_triggered_fault('post_progress_recovery_comitted', 1, dbid) from gp_segment_configuration where content=-1 and role='p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+-1U: select * from gp_stat_progress_dtx_recovery;
+ phase                                        | recover_commited_dtx_total | recover_commited_dtx_completed | in_doubt_tx_total | in_doubt_tx_in_progress | in_doubt_tx_aborted 
+----------------------------------------------+----------------------------+--------------------------------+-------------------+-------------------------+---------------------
+ recovering commited distributed transactions | 2                          | 2                              | 0                 | 0                       | 0                   
+(1 row)
+-1U: select gp_inject_fault_infinite('post_progress_recovery_comitted', 'reset', dbid) from gp_segment_configuration where content=-1 and role='p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
 -- wait for coordinator finish crash recovery
 -1U: select wait_until_standby_in_state('streaming');
  wait_until_standby_in_state 
@@ -91,8 +117,11 @@ server closed the connection unexpectedly
 -------
  2     
 (1 row)
-
 1<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+5<:  <... completed>
 server closed the connection unexpectedly
 	This probably means the server terminated abnormally
 	before or while processing the request.
@@ -153,12 +182,14 @@ server closed the connection unexpectedly
  2     
 (1 row)
 4: drop table t_wait_lsn;
-DROP
+DROP TABLE
+4: drop table t_wait_lsn2;
+DROP TABLE
 
 4: alter system reset gp_fts_probe_interval;
-ALTER
+ALTER SYSTEM
 4: alter system reset gp_fts_probe_retries;
-ALTER
+ALTER SYSTEM
 4: select pg_reload_conf();
  pg_reload_conf 
 ----------------

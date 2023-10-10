@@ -484,7 +484,7 @@ select * from insert_tt2('baz','quux');
 select * from tt;
 
 -- limit doesn't prevent execution to completion
-select insert_tt2('foolish','barrish') limit 1;
+select 1 from insert_tt2('foolish','barrish') limit 1;
 select * from tt;
 
 -- triggers will fire, too
@@ -496,7 +496,7 @@ end $$ language plpgsql;
 create trigger tnoticetrigger after insert on tt for each row
 execute procedure noticetrigger();
 
-select insert_tt2('foolme','barme') limit 1;
+select 1 from insert_tt2('foolme','barme') limit 1;
 select * from tt;
 
 -- and rules work
@@ -505,7 +505,7 @@ create temp table tt_log(f1 int, data text);
 create rule insert_tt_rule as on insert to tt do also
   insert into tt_log values(new.*);
 
-select insert_tt2('foollog','barlog') limit 1;
+select * from insert_tt2('foollog','barlog');
 select * from tt;
 -- note that nextval() gets executed a second time in the rule expansion,
 -- which is expected.

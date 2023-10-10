@@ -261,9 +261,7 @@ static void get_su_pwd();
 static void setup_depend(FILE *cmdfd);
 static void setup_sysviews(FILE *cmdfd);
 static void setup_description(FILE *cmdfd);
-#if 0
 static void setup_collation(FILE *cmdfd);
-#endif
 static void setup_dictionary(FILE *cmdfd);
 static void setup_privileges(FILE *cmdfd);
 static void set_info_version(void);
@@ -1794,14 +1792,9 @@ setup_description(FILE *cmdfd)
 	PG_CMD_PUTS("DROP TABLE tmp_pg_shdescription;\n\n");
 }
 
-#if 0
 /*
  * populate pg_collation
  *
- * GPDB: Do not create collations at database initialization time. Instead,
- * the system administrator is expected to run pg_import_system_collations() on
- * every database that needs them. This ensures that collations are synchronized
- * on all segments.
  */
 static void
 setup_collation(FILE *cmdfd)
@@ -1815,10 +1808,19 @@ setup_collation(FILE *cmdfd)
 				   "VALUES (pg_nextoid('pg_catalog.pg_collation', 'oid', 'pg_catalog.pg_collation_oid_index'), 'ucs_basic', 'pg_catalog'::regnamespace, %u, '%c', true, %d, 'C', 'C');\n\n",
 				   BOOTSTRAP_SUPERUSERID, COLLPROVIDER_LIBC, PG_UTF8);
 
-	/* Now import all collations we can find in the operating system */
+#if 0
+	/*
+	 * Now import all collations we can find in the operating system.
+	 *
+	 * GPDB: Do not import collations at database initialization time. Instead,
+	 * this is done at gpinitsystem time. If pg_import_system_collations() fails the
+	 * system administrator has to figure out which collation cannot be installed on
+	 * which segments, and they should fix the underlying issues accordingly. After
+	 * that, pg_import_system_collations() should be re-run on the coordinator.
+	 */
 	PG_CMD_PUTS("SELECT pg_import_system_collations('pg_catalog');\n\n");
-}
 #endif
+}
 
 /*
  * load extra dictionaries (Snowball stemmers)
@@ -2107,7 +2109,15 @@ setup_cdb_schema(FILE *cmdfd)
 		int			namelen = strlen(file->d_name);
 
 		if (namelen > 4 &&
-			strcmp(".sql", file->d_name + namelen - 4) == 0)
+			strcmp(".sql", file->d_name + namelen - 4) == 0 &&
+			/*
+			 * Since 7X, we do not load gp_toolkit.sql anymore but will run
+			 * CREATE EXTENSION gp_toolkit to do the same thing. But existing
+			 * installation could still have gp_toolkit.sql until e.g. uninstallation
+			 * or a major version upgrade. Ignore that file in any cases.
+			 * XXX: should be no longer needed after 8X.
+			 */
+			(namelen < 14 || strcmp("gp_toolkit.sql", file->d_name) != 0))
 		{
 			scriptnames = pg_realloc(scriptnames,
 									 sizeof(char *) * (nscripts + 1));
@@ -2179,6 +2189,15 @@ static void
 load_plpgsql(FILE *cmdfd)
 {
 	PG_CMD_PUTS("CREATE EXTENSION plpgsql;\n\n");
+}
+
+/*
+ * GPDB: load external table support
+ */
+static void
+load_exttable(FILE *cmdfd)
+{
+	PG_CMD_PUTS("CREATE EXTENSION gp_exttable_fdw;\n\n");
 }
 
 /*
@@ -3265,9 +3284,7 @@ initialize_data_directory(void)
 
 	setup_description(cmdfd);
 
-#if 0
 	setup_collation(cmdfd);
-#endif
 
 	setup_dictionary(cmdfd);
 
@@ -3276,6 +3293,8 @@ initialize_data_directory(void)
 	setup_schema(cmdfd);
 
 	load_plpgsql(cmdfd);
+
+	load_exttable(cmdfd);
 
 	/* sets up the Greenplum Database admin schema */
 	setup_cdb_schema(cmdfd);

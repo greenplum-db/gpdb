@@ -1,0 +1,12 @@
+--
+-- Test: cpuset cannot be specified when group is disabled.
+--
+-- start_ignore
+DROP RESOURCE GROUP resource_group1;
+ERROR:  resource group "resource_group1" does not exist
+-- end_ignore
+CREATE RESOURCE GROUP resource_group1 WITH (cpuset='0');
+CREATE RESOURCE GROUP resource_group1 WITH (cpu_max_percent=5);
+ERROR:  resource group "resource_group1" already exists
+ALTER RESOURCE GROUP resource_group1 SET cpuset '0';
+DROP RESOURCE GROUP resource_group1;

@@ -114,34 +114,24 @@ EXPLAIN CREATE TABLE test AS
       <dxl:Relation Mdid="6.16385.1.0" Name="foo1" IsTemporary="false" HasOids="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="c" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-2" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-3" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-4" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-5" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-6" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -1121,13 +1111,10 @@ EXPLAIN CREATE TABLE test AS
       <dxl:CTASRelation Mdid="5.1.1.0" Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" VarTypeModList="-1,-1,-1" DistributionPolicy="Random">
         <dxl:Columns>
           <dxl:Column Name="first_quartile" Attno="1" Mdid="0.1022.1.0" Nullable="true">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="median_quartile" Attno="2" Mdid="0.1022.1.0" Nullable="true">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="third_quartile" Attno="3" Mdid="0.1022.1.0" Nullable="true">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:CTASOptions OnCommitAction="NOOP"/>
@@ -1536,7 +1523,7 @@ EXPLAIN CREATE TABLE test AS
         <dxl:ResultType Mdid="0.1700.1.0"/>
         <dxl:IntermediateResultType Mdid="0.17.1.0"/>
       </dxl:GPDBAgg>
-      <dxl:GPDBFunc Mdid="0.316.1.0" Name="float8" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
+      <dxl:GPDBFunc Mdid="0.316.1.0" Name="float8" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="false">
         <dxl:ResultType Mdid="0.701.1.0"/>
       </dxl:GPDBFunc>
       <dxl:Type Mdid="0.701.1.0" Name="float8" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsTextRelated="false" IsFixedLength="true" Length="8" PassByValue="true">
@@ -1573,7 +1560,7 @@ EXPLAIN CREATE TABLE test AS
         <dxl:ResultType Mdid="0.20.1.0"/>
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
-      <dxl:GPDBFunc Mdid="0.1779.1.0" Name="int8" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="true">
+      <dxl:GPDBFunc Mdid="0.1779.1.0" Name="int8" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="true">
         <dxl:ResultType Mdid="0.20.1.0"/>
       </dxl:GPDBFunc>
       <dxl:MDCast Mdid="3.23.1.0;701.1.0" Name="float8" BinaryCoercible="false" SourceTypeId="0.23.1.0" DestinationTypeId="0.701.1.0" CastFuncId="0.316.1.0" CoercePathType="1"/>

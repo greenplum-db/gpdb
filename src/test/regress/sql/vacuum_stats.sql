@@ -1,3 +1,38 @@
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+
+-- Make sure backgroud process dtx recover and FTS is not working
+-- before running the test, because they will create gang, which
+-- will start transaction on segment. And concurrent transacion
+-- will affect the behavior of vacuum, which will result in relallvisible
+-- could be 0.
+--
+-- The following scenario could cuase relallvisible be 0 in segment:
+--   1. CREATE TABLE vacstat_test `start transaction with xid =5`;
+--   2. FTS create gang `start transaction with snapshot's xmin = 5`;
+--   3. CREATE TABLE vacstat_test `commit transacion`;
+--   4. INSERT vacstat_test `start transaction with xid =6`;
+--   5. INSERT vacstat_test `commit`;
+--   6. VACUUM vacstat_test `start transaction with snapshot (xmin=7, xmax=7, xcnt=0)
+--      and current globalxmin = 5`;
+--   7. When computing the `all_visible` in `lazy_scan_heap`, the `all_visible`
+--      will be set to false, since `TransactionIdPrecedes(xmin, OldestXmin)`
+--      (xmin=6, OldestXmin=5) is not true.
+
+SELECT gp_inject_fault_infinite('before_orphaned_check', 'skip', dbid)
+FROM gp_segment_configuration WHERE role = 'p' AND content = -1;
+
+SELECT gp_inject_fault_infinite('fts_probe', 'skip', dbid)
+FROM gp_segment_configuration WHERE role = 'p' AND content = -1;
+
+SELECT gp_request_fts_probe_scan();
+
+SELECT gp_wait_until_triggered_fault('before_orphaned_check', 1, dbid)
+FROM gp_segment_configuration WHERE role='p' AND content=-1;
+
+SELECT gp_wait_until_triggered_fault('fts_probe', 1, dbid)
+FROM gp_segment_configuration WHERE role='p' AND content=-1;
+
+
 CREATE TABLE vacstat_test (a int);
 INSERT INTO vacstat_test SELECT i FROM generate_series(1,10) i ;
 VACUUM vacstat_test;
@@ -19,4 +54,10 @@ AND relallvisible =
     (SELECT SUM(relallvisible) FROM gp_dist_random('pg_class')
      WHERE oid='vacstat_test'::regclass);
 
-DROP TABLE vacstat_test
+DROP TABLE vacstat_test;
+
+SELECT gp_inject_fault('before_orphaned_check', 'reset', dbid)
+FROM gp_segment_configuration WHERE role = 'p' AND content = -1;
+
+SELECT gp_inject_fault('fts_probe', 'reset', dbid)
+FROM gp_segment_configuration WHERE role = 'p' AND content = -1;

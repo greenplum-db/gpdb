@@ -6,11 +6,11 @@
 -- transaction is aborted.
 
 1: CREATE TABLE vacuum_full_interrupt(a int, b int, c int);
-CREATE
+CREATE TABLE
 1: CREATE INDEX vacuum_full_interrupt_idx on vacuum_full_interrupt(b);
-CREATE
+CREATE INDEX
 1: INSERT INTO vacuum_full_interrupt SELECT i, i, i from generate_series(1,100)i;
-INSERT 100
+INSERT 0 100
 1: ANALYZE vacuum_full_interrupt;
 ANALYZE
 -- the relfrozenxid is the same as xmin when there's concurrent transactions.
@@ -63,7 +63,7 @@ ERROR:  canceling statement due to user request
 
 -- verify the index is correctly when insert new tuples, in bug also reset 'relhasindex' in pg_class.
 2: INSERT INTO vacuum_full_interrupt SELECT i, i, i from generate_series(1,100)i;
-INSERT 100
+INSERT 0 100
 2: SET optimizer=off;
 SET
 2: SET enable_seqscan=off;

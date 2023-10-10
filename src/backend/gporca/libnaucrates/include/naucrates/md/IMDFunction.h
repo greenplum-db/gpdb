@@ -43,16 +43,6 @@ public:
 		EfsSentinel
 	};
 
-	// function data access property
-	enum EFuncDataAcc
-	{
-		EfdaNoSQL,
-		EfdaContainsSQL,
-		EfdaReadsSQLData,
-		EfdaModifiesSQLData,
-		EfdaSentinel
-	};
-
 	// object type
 	Emdtype
 	MDType() const override
@@ -74,9 +64,6 @@ public:
 
 	// function stability
 	virtual EFuncStbl GetFuncStability() const = 0;
-
-	// function data access
-	virtual EFuncDataAcc GetFuncDataAccess() const = 0;
 
 	// result type
 	virtual IMDId *GetResultTypeMdid() const = 0;

@@ -23,6 +23,7 @@
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "gpopt/operators/CPhysicalDynamicIndexOnlyScan.h"
 #include "gpopt/operators/CPhysicalDynamicIndexScan.h"
 #include "gpopt/operators/CPhysicalHashAgg.h"
 #include "gpopt/operators/CPhysicalIndexOnlyScan.h"
@@ -31,10 +32,12 @@
 #include "gpopt/operators/CPhysicalMotionBroadcast.h"
 #include "gpopt/operators/CPhysicalPartitionSelector.h"
 #include "gpopt/operators/CPhysicalSequenceProject.h"
+#include "gpopt/operators/CPhysicalStreamAgg.h"
 #include "gpopt/operators/CPhysicalUnionAll.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarBitmapIndexProbe.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
+#include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/statistics/CStatisticsUtils.h"
 
 using namespace gpos;
@@ -618,14 +621,33 @@ CCostModelGPDB::CostStreamAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(0 < dHashAggOutputTupWidthCostUnit);
 	GPOS_ASSERT(0 < dTupDefaultProcCostUnit);
 
-	DOUBLE num_rows_outer = pci->PdRows()[0];
+	DOUBLE num_input_rows = pci->PdRows()[0];  // estimated input rows
 	DOUBLE dWidthOuter = pci->GetWidth()[0];
 
-	// streamAgg cost is correlated with rows and width of input tuples and rows and width of output tuples
-	CCost costLocal =
-		CCost(pci->NumRebinds() *
-			  (num_rows_outer * dWidthOuter * dTupDefaultProcCostUnit +
-			   pci->Rows() * pci->Width() * dHashAggOutputTupWidthCostUnit));
+	// In order to handle worst-case scenarios where grouping key tuples
+	// are distributed across segments, and to maintain accurate
+	// cardinality for local stream agg, it is crucial to ensure that the
+	// local stream agg's cardinality does not exceed the NDV of the
+	// grouping key in global agg (upper bound for the number of output
+	// rows). This is achieved by multiplying the global agg's cardinality
+	// of the grouping key with the number of segments. It can helps to
+	// maintain the cardinality for local stream agg in both best and
+	// worst-case scenarios.
+
+	DOUBLE num_output_rows = pci->Rows();  // estimated output rows
+	CPhysicalStreamAgg *popAgg = CPhysicalStreamAgg::PopConvert(exprhdl.Pop());
+	if ((COperator::EgbaggtypeLocal == popAgg->Egbaggtype()) &&
+		popAgg->FGeneratesDuplicates())
+	{
+		num_output_rows = num_output_rows * pcmgpdb->UlHosts();
+	}
+
+	// streamAgg cost is correlated with num_input_rows and width of input
+	// tuples and num_output_rows and width of output tuples CCost
+	CCost costLocal = CCost(
+		pci->NumRebinds() *
+		(num_input_rows * dWidthOuter * dTupDefaultProcCostUnit +
+		 num_output_rows * pci->Width() * dHashAggOutputTupWidthCostUnit));
 	CCost costChild =
 		CostChildren(mp, exprhdl, pci, pcmgpdb->GetCostModelParams());
 	return costLocal + costChild;
@@ -677,7 +699,9 @@ CCostModelGPDB::CostSort(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(COperator::EopPhysicalSort == exprhdl.Pop()->Eopid());
 
 	// log operation below
-	const CDouble rows = CDouble(std::max(1.0, pci->Rows()));
+	// Minimim value of of 2 is used for rows.
+	// With 1 as min rows, costLocal is 0, which results in sort expression being used redundantly.
+	const CDouble rows = CDouble(std::max(2.0, pci->Rows()));
 	const CDouble num_rebinds = CDouble(pci->NumRebinds());
 	const CDouble width = CDouble(pci->Width());
 
@@ -780,25 +804,35 @@ CCostModelGPDB::CostHashAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				COperator::EopPhysicalHashAggDeduplicate == op_id);
 #endif	// GPOS_DEBUG
 
-	DOUBLE num_rows_outer = pci->PdRows()[0];
+	DOUBLE num_input_rows = pci->PdRows()[0];  // estimated input rows
 
-	// A local hash agg may stream partial aggregates to global agg when it's hash table is full to avoid spilling.
-	// This is dertermined by the order of tuples received by local agg. In the worst case, the local hash agg may
-	// see a tuple from each different group until its hash table fills up all available memory, and hence it produces
-	// tuples as many as its input size. On the other hand, in the best case, the local agg may receive tuples sorted
-	// by grouping columns, which allows it to complete all local aggregation in memory and produce exactly tuples as
-	// the number of groups.
+	// A local hash agg may stream partial aggregates to global agg when
+	// it's hash table is full to avoid spilling.  This is dertermined by
+	// the order of tuples received by local agg. In the worst case, the
+	// local hash agg may see a tuple from each different group until its
+	// hash table fills up all available memory, and hence it produces
+	// tuples as many as its input size. On the other hand, in the best
+	// case, the local agg may receive tuples sorted by grouping columns,
+	// which allows it to complete all local aggregation in memory and
+	// produce exactly tuples as the number of groups.
 	//
-	// Since we do not know the order of tuples received by local hash agg, we assume the number of output rows from local
-	// agg is the average between input and output rows
+	// Considering the tuples of local hash agg fit within memory. To
+	// handle worst-case scenarios where the tuples of the grouping key are
+	// distributed across segments. To maintain accurate cardinality for
+	// local hash agg, its crucial to ensure that the cardinality of the
+	// local hash agg does not exceed the NDV of the grouping key in global
+	// aggs (upper bound for the number of output rows).  So we are
+	// achieving this by multiplying the global agg's cardinality of grouping
+	// key with the number of segments. It can help's to maintain the
+	// cardinality for local hash agg across both best and worst-case
+	// scenarios.
 
-	// the cardinality out as (rows + num_rows_outer)/2 to increase the local hash agg cost
-	DOUBLE rows = pci->Rows();
+	DOUBLE num_output_rows = pci->Rows();  // estimated output rows
 	CPhysicalHashAgg *popAgg = CPhysicalHashAgg::PopConvert(exprhdl.Pop());
 	if ((COperator::EgbaggtypeLocal == popAgg->Egbaggtype()) &&
 		popAgg->FGeneratesDuplicates())
 	{
-		rows = (rows + num_rows_outer) / 2.0;
+		num_output_rows = num_output_rows * pcmgpdb->UlHosts();
 	}
 
 	// get the number of grouping columns
@@ -823,15 +857,18 @@ CCostModelGPDB::CostHashAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	GPOS_ASSERT(0 < dHashAggOutputTupWidthCostUnit);
 
 	// hashAgg cost contains three parts: build hash table, aggregate tuples, and output tuples.
-	// 1. build hash table is correlated with the number of rows and width of input tuples and the number of columns used.
-	// 2. cost of aggregate tuples depends on the complexity of aggregation algorithm and thus is ignored.
-	// 3. cost of output tuples is correlated with rows and width of returning tuples.
-	CCost costLocal =
-		CCost(pci->NumRebinds() *
-			  (num_rows_outer * ulGrpCols * dHashAggInputTupColumnCostUnit +
-			   num_rows_outer * ulGrpCols * pci->Width() *
-				   dHashAggInputTupWidthCostUnit +
-			   rows * pci->Width() * dHashAggOutputTupWidthCostUnit));
+	// 1. build hash table is correlated with the number of num_input_rows
+	// and width of input tuples and the number of columns used.
+	// 2. cost of aggregate tuples depends on the complexity of aggregation
+	// algorithm and thus is ignored.
+	// 3. cost of output tuples is correlated with num_output_rows and
+	// width of returning tuples.
+	CCost costLocal = CCost(
+		pci->NumRebinds() *
+		(num_input_rows * ulGrpCols * dHashAggInputTupColumnCostUnit +
+		 num_input_rows * ulGrpCols * pci->Width() *
+			 dHashAggInputTupWidthCostUnit +
+		 num_output_rows * pci->Width() * dHashAggOutputTupWidthCostUnit));
 	CCost costChild =
 		CostChildren(mp, exprhdl, pci, pcmgpdb->GetCostModelParams());
 
@@ -1544,6 +1581,140 @@ CCostModelGPDB::CostSequenceProject(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	return costLocal + costChild;
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CCostModelGPDB::ComputeUnusedIndexWeight
+//
+//	@doc:
+//		Compute weight of unused index column for Index & Index only scans
+//		due to mismatch in columns used in the index and the predicate
+//
+//---------------------------------------------------------------------------
+CDouble
+CCostModelGPDB::ComputeUnusedIndexWeight(CExpressionHandle &exprhdl,
+										 CColRefArray *pdrgpcrIndexColumns,
+										 IStatistics *pBaseTableStats,
+										 CMemoryPool *mp, IMDId *rel_mdid)
+
+{
+	GPOS_ASSERT(nullptr != pBaseTableStats);
+
+	CDouble dCummulativeUnusedIndexWeight = 0;
+	CDouble dNdv(1.0);
+
+	// Finding used predicate columns
+	CExpression *pexprIndexCond = exprhdl.PexprScalarRepChild(0);
+	CColRefSet *pcrsUsedPredicate = pexprIndexCond->DeriveUsedColumns();
+
+	ULONG ulNoOfColumnsInPredicate = pcrsUsedPredicate->Size();
+	ULONG ulNoOfColumnsInIndex = pdrgpcrIndexColumns->Size();
+
+	if (ulNoOfColumnsInIndex > 0 && ulNoOfColumnsInPredicate > 0)
+	{
+		// Iterate through all the index columns to find, any unused
+		// index column in the predicate
+		// Eg- index : a,b,c  Predicate: c,d
+		// Unused index columns - a,b
+		// Used index column -	c
+		// Indexed Predicate column - c (in the expHandle we have information of
+		// only those predicate columns, which are applicable on the index)
+		for (ULONG ulIndexColPos = 0; ulIndexColPos < ulNoOfColumnsInIndex;
+			 ulIndexColPos++)
+		{
+			CColRef *colrefIndexColumn = (*pdrgpcrIndexColumns)[ulIndexColPos];
+
+			CDouble dUnusedIndexColWeight = 0;
+			bool fIndexPredColMatchFound = false;
+
+			// For every index column, we check if it is present in the
+			// predicate columns
+			fIndexPredColMatchFound =
+				pcrsUsedPredicate->FMember(colrefIndexColumn);
+
+			// if no match is found, it implies, index column is not present
+			// in the used predicate. We use this column for costing.
+			if (!fIndexPredColMatchFound)
+			{
+				// Adjusting the weight for the unused index (ulNoOfColumnsInIndex-ul)
+				// For index idx_abc, if column 'a' is unused, then since
+				// it is the most significant index column, so it should have
+				// more weightage.
+				dUnusedIndexColWeight = (ulNoOfColumnsInIndex - ulIndexColPos);
+
+				IStatistics *unusedIndexColStats =
+					CStatistics::CastStats(pBaseTableStats)
+						->ComputeColStats(mp, colrefIndexColumn, rel_mdid);
+
+				// Finding NDV of the unused column
+				dNdv = CStatistics::CastStats(unusedIndexColStats)
+						   ->GetNDVs(colrefIndexColumn);
+
+				CDouble dTableRows =
+					CStatistics::CastStats(pBaseTableStats)->Rows();
+
+				GPOS_ASSERT(0 != dTableRows);
+
+				// we multiply by ratio - (dNdv/dTableRows), to adjust
+				// the weight of column for distinct/duplicate values in it.
+				// For eg- for index idx_abc, if unused column is 'b' and if
+				// all of its value are distinct, then it's weightage should be high
+				// compared to if all of its values are same.
+				dUnusedIndexColWeight =
+					dUnusedIndexColWeight * (dNdv / dTableRows);
+
+				dCummulativeUnusedIndexWeight =
+					dCummulativeUnusedIndexWeight + dUnusedIndexColWeight;
+
+				unusedIndexColStats->Release();
+			}
+		}
+	}
+	return dCummulativeUnusedIndexWeight;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CCostModelGPDB::GetCommonIndexData
+//
+//	@doc:
+// 		Get count of index keys, width of included col, array of index columns
+// 		and table statistics for Index Scan, Index only scan, Dynamic Index scan
+// 		& Dynamic Index only scan
+//
+//		'pdrgpcrIndexColumns' & 'stats' are passed by reference.
+//		The calling function is responsible to release the allocated memory.
+//---------------------------------------------------------------------------
+template <typename T>
+void
+CCostModelGPDB::GetCommonIndexData(T *ptr, ULONG &ulIndexKeys,
+								   ULONG &ulIncludedColWidth,
+								   CColRefArray *&pdrgpcrIndexColumns,
+								   IStatistics *&stats,
+								   CMDAccessor *md_accessor, CMemoryPool *mp)
+{
+	CColumnDescriptorArray *indexIncludedArray = nullptr;
+
+	ulIndexKeys = ptr->Pindexdesc()->Keys();
+
+	// Index's INCLUDE columns adds to the width of the index and thus adds I/O
+	// cost per index row. Account for that cost in dCostPerIndexRow.
+	indexIncludedArray = ptr->Pindexdesc()->PdrgpcoldescIncluded();
+	for (ULONG ul = 0; ul < indexIncludedArray->Size(); ul++)
+	{
+		ulIncludedColWidth += (*indexIncludedArray)[ul]->Width();
+	}
+
+	const IMDRelation *pmdrel =
+		md_accessor->RetrieveRel(ptr->Ptabdesc()->MDId());
+
+	const IMDIndex *pmdindex =
+		md_accessor->RetrieveIndex(ptr->Pindexdesc()->MDId());
+
+	pdrgpcrIndexColumns = CXformUtils::PdrgpcrIndexKeys(
+		mp, ptr->PdrgpcrOutput(), pmdindex, pmdrel);
+
+	stats = ptr->PstatsBaseTable();
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -1554,7 +1725,7 @@ CCostModelGPDB::CostSequenceProject(CMemoryPool *mp, CExpressionHandle &exprhdl,
 //
 //---------------------------------------------------------------------------
 CCost
-CCostModelGPDB::CostIndexScan(CMemoryPool *,  // mp
+CCostModelGPDB::CostIndexScan(CMemoryPool *mp GPOS_UNUSED,
 							  CExpressionHandle &exprhdl,
 							  const CCostModelGPDB *pcmgpdb,
 							  const SCostingInfo *pci)
@@ -1567,6 +1738,8 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *,  // mp
 	GPOS_ASSERT(COperator::EopPhysicalIndexScan == op_id ||
 				COperator::EopPhysicalDynamicIndexScan == op_id);
 
+	IMDId *rel_mdid = CPhysicalScan::PopConvert(pop)->Ptabdesc()->MDId();
+
 	const CDouble dTableWidth =
 		CPhysicalScan::PopConvert(pop)->PstatsBaseTable()->Width();
 
@@ -1577,6 +1750,10 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *,  // mp
 	const CDouble dIndexScanTupCostUnit =
 		pcmgpdb->GetCostModelParams()
 			->PcpLookup(CCostModelParamsGPDB::EcpIndexScanTupCostUnit)
+			->Get();
+	const CDouble dIndexOnlyScanTupCostUnit =
+		pcmgpdb->GetCostModelParams()
+			->PcpLookup(CCostModelParamsGPDB::EcpIndexOnlyScanTupCostUnit)
 			->Get();
 	const CDouble dIndexScanTupRandomFactor =
 		pcmgpdb->GetCostModelParams()
@@ -1589,14 +1766,31 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *,  // mp
 	CDouble dRowsIndex = pci->Rows();
 
 	ULONG ulIndexKeys = 1;
+	ULONG ulIncludedColWidth = 0;
+
+	// Getting Meta Data Accessor  ----------------------------
+	const COptCtxt *poctxt = COptCtxt::PoctxtFromTLS();
+	CMDAccessor *md_accessor = poctxt->Pmda();
+	CColRefArray *pdrgpcrIndexColumns = nullptr;
+	ULONG ulUnindexedPredCount = 0;
+	IStatistics *stats = nullptr;
+
 	if (COperator::EopPhysicalIndexScan == op_id)
 	{
-		ulIndexKeys = CPhysicalIndexScan::PopConvert(pop)->Pindexdesc()->Keys();
+		// For Index Scan
+		CPhysicalIndexScan *ptr = CPhysicalIndexScan::PopConvert(pop);
+		GetCommonIndexData(ptr, ulIndexKeys, ulIncludedColWidth,
+						   pdrgpcrIndexColumns, stats, md_accessor, mp);
+		ulUnindexedPredCount = ptr->ResidualPredicateSize();
 	}
 	else
 	{
-		ulIndexKeys =
-			CPhysicalDynamicIndexScan::PopConvert(pop)->Pindexdesc()->Keys();
+		// For Dynamic Index Scan
+		CPhysicalDynamicIndexScan *ptr =
+			CPhysicalDynamicIndexScan::PopConvert(pop);
+		GetCommonIndexData(ptr, ulIndexKeys, ulIncludedColWidth,
+						   pdrgpcrIndexColumns, stats, md_accessor, mp);
+		ulUnindexedPredCount = ptr->ResidualPredicateSize();
 	}
 
 	// TODO: 2014-02-01
@@ -1605,14 +1799,31 @@ CCostModelGPDB::CostIndexScan(CMemoryPool *,  // mp
 
 	// index scan cost contains two parts: index-column lookup and output tuple cost.
 	// 1. index-column lookup: correlated with index lookup rows, the number of index columns used in lookup,
-	// table width and a randomIOFactor.
+	// table width and a randomIOFactor. also accounts for included columns which adds to the payload of index leaf
+	// pages that leads to bigger a btree which subsequently leads to more random IO during index lookup.
 	// 2. output tuple cost: this is handled by the Filter on top of IndexScan, if no Filter exists, we add output cost
 	// when we sum-up children cost
 
+	CDouble dIndexCostConversionFactor =
+		pcmgpdb->GetCostModelParams()
+			->PcpLookup(CCostModelParamsGPDB::EcpIndexCostConversionFactor)
+			->Get();
+
+	CDouble dUnindexedPredCost =
+		ulUnindexedPredCount * dIndexCostConversionFactor;
+	CDouble dUnusedIndexCost =
+		ComputeUnusedIndexWeight(exprhdl, pdrgpcrIndexColumns, stats, mp,
+								 rel_mdid) *
+		dIndexCostConversionFactor;
+
+	pdrgpcrIndexColumns->Release();
+
 	CDouble dCostPerIndexRow = ulIndexKeys * dIndexFilterCostUnit +
-							   dTableWidth * dIndexScanTupCostUnit;
+							   dTableWidth * dIndexScanTupCostUnit +
+							   ulIncludedColWidth * dIndexOnlyScanTupCostUnit;
 	return CCost(pci->NumRebinds() *
-				 (dRowsIndex * dCostPerIndexRow + dIndexScanTupRandomFactor));
+				 (dRowsIndex * dCostPerIndexRow + dIndexScanTupRandomFactor +
+				  dUnindexedPredCost + dUnusedIndexCost));
 }
 
 
@@ -1627,18 +1838,29 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 	GPOS_ASSERT(nullptr != pci);
 
 	COperator *pop = exprhdl.Pop();
-	GPOS_ASSERT(COperator::EopPhysicalIndexOnlyScan == pop->Eopid());
+	GPOS_ASSERT(COperator::EopPhysicalIndexOnlyScan == pop->Eopid() ||
+				COperator::EopPhysicalDynamicIndexOnlyScan == pop->Eopid());
+
+	IMDId *rel_mdid = CPhysicalScan::PopConvert(pop)->Ptabdesc()->MDId();
 
 	const CDouble dTableWidth =
 		CPhysicalScan::PopConvert(pop)->PstatsBaseTable()->Width();
 
-	const CDouble dIndexFilterCostUnit =
+	BOOL isAO = CPhysicalScan::PopConvert(exprhdl.Pop())
+					->Ptabdesc()
+					->IsAORowOrColTable();
+
+	CDouble dIndexFilterCostUnit =
 		pcmgpdb->GetCostModelParams()
 			->PcpLookup(CCostModelParamsGPDB::EcpIndexFilterCostUnit)
 			->Get();
 	const CDouble dIndexScanTupCostUnit =
 		pcmgpdb->GetCostModelParams()
 			->PcpLookup(CCostModelParamsGPDB::EcpIndexScanTupCostUnit)
+			->Get();
+	const CDouble dIndexOnlyScanTupCostUnit =
+		pcmgpdb->GetCostModelParams()
+			->PcpLookup(CCostModelParamsGPDB::EcpIndexOnlyScanTupCostUnit)
 			->Get();
 	const CDouble dIndexScanTupRandomFactor =
 		pcmgpdb->GetCostModelParams()
@@ -1648,29 +1870,117 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 	GPOS_ASSERT(0 < dIndexScanTupCostUnit);
 	GPOS_ASSERT(0 < dIndexScanTupRandomFactor);
 
+	if (isAO)
+	{
+		// AO specific costs related to index-scan/index-only-scan:
+		//
+		//   * AO tables have a variable block size layout on disk (e.g. batch
+		//     insert creates larger block than single row insert). However,
+		//     this makes index scans tricky because the block identifier does
+		//     not directly map to a fixed offset in the relfile. Instead, an
+		//     additional abstraction layer, the block directory, is required
+		//     to map the block identifier to an offset inside the relfile.
+		//
+		//   * AO table blocks are loaded in-memory into a single varblock.
+		//     Heap blocks, however, support multiple in-memory instances and
+		//     fit in the page cache. That means random I/O on AO tables is
+		//     more susceptible to thrashing.
+		//
+		//   * AO tables in production often compress the blocks. That adds an
+		//     additional penalty for loading blocks that is exacerbated by a
+		//     poor page replacement algorithm. And, in the case of AO single
+		//     varblock, any time we have to revisit a block, it will always
+		//     have to be replaced and reloaded.
+		//
+		// Here an index filter cost is penalized more to provide a rudimentary
+		// way to account for these factors. Script cal_bitmap_test.py was used to
+		// identify a suitable cost.
+		dIndexFilterCostUnit = dIndexFilterCostUnit * 100;
+	}
+
 	CDouble dRowsIndex = pci->Rows();
 
-	ULONG ulIndexKeys =
-		CPhysicalIndexOnlyScan::PopConvert(pop)->Pindexdesc()->Keys();
-	IStatistics *stats =
-		CPhysicalIndexOnlyScan::PopConvert(pop)->PstatsBaseTable();
+	ULONG ulIndexKeys;
+	ULONG ulIncludedColWidth = 0;
+	IStatistics *stats = nullptr;
 
-	// Calculating cost of index-only-scan is identical to index-scan with the
-	// addition of dPartialVisFrac which indicates the percentage of pages not
-	// currently marked as all-visible. Planner has similar logic inside
-	// `cost_index()` to calculate pages fetched from index-only-scan.
+	const COptCtxt *poctxt = COptCtxt::PoctxtFromTLS();
+	CMDAccessor *md_accessor = poctxt->Pmda();
 
-	CDouble dCostPerIndexRow = ulIndexKeys * dIndexFilterCostUnit +
-							   dTableWidth * dIndexScanTupCostUnit;
+	CColRefArray *pdrgpcrIndexColumns = nullptr;
+
+	if (COperator::EopPhysicalIndexOnlyScan == pop->Eopid())
+	{
+		CPhysicalIndexOnlyScan *ptr = CPhysicalIndexOnlyScan::PopConvert(pop);
+		GetCommonIndexData(ptr, ulIndexKeys, ulIncludedColWidth,
+						   pdrgpcrIndexColumns, stats, md_accessor, mp);
+	}
+	else
+	{
+		CPhysicalDynamicIndexOnlyScan *ptr =
+			CPhysicalDynamicIndexOnlyScan::PopConvert(pop);
+		GetCommonIndexData(ptr, ulIndexKeys, ulIncludedColWidth,
+						   pdrgpcrIndexColumns, stats, md_accessor, mp);
+	}
+
+
+	// 1. For 'Index only scans' cost component for 'Unused Index' columns
+	// in the predicate is required.
+	// 2. No additional cost is required for 'Unindexed Predicate' column in the
+	// index, as in that case, Index Only scan will not exist.
+	// 3. For Eg select a,b from t1 where a=1 and b = 'aa1' and c =17;
+	// Assuming only index idx_ab, exists, then since column 'c'
+	// is also used in the query, 'Index only scan' will not be generated as an
+	// alternate.
+
+	CDouble dIndexCostConversionFactor =
+		pcmgpdb->GetCostModelParams()
+			->PcpLookup(CCostModelParamsGPDB::EcpIndexCostConversionFactor)
+			->Get();
+
+	CDouble dUnusedIndexCost =
+		ComputeUnusedIndexWeight(exprhdl, pdrgpcrIndexColumns, stats, mp,
+								 rel_mdid) *
+		dIndexCostConversionFactor;
+
+	pdrgpcrIndexColumns->Release();
+	// The cost of index-only-scan is similar to index-scan with the additional
+	// dimension of variable size I/O. More specifically, index-scan I/O is
+	// bound to the fixed width of the relation times the number of output
+	// rows. However, index-only-scan may be able to sometimes avoid the cost
+	// of the full width of the relation (when the page is all visible) and
+	// instead directly retrieve the row from a narrow index.
+	//
+	// The percent of rows that can avoid I/O on full table width is
+	// approximately equal to the precent of tuples in all-visible blocks
+	// compared to total blocks. It is approximate because there is no
+	// guarantee that blocks are equally filled with live tuples.
+	//
+	// We never scan the underlying append-optimized table relfile for
+	// performing visibility checks. It's as if all blocks are all-visible. See
+	// cdb_estimate_rel_size(). So consider dPartialVisFrac as 0.
+
 	CDouble dPartialVisFrac(1);
-	if (stats->RelPages() != 0)
+	if (isAO)
+	{
+		dPartialVisFrac = 0;
+	}
+	else if (stats->RelPages() != 0)
 	{
 		dPartialVisFrac =
 			1 - (CDouble(stats->RelAllVisible()) / CDouble(stats->RelPages()));
 	}
+
+	CDouble dCostPerIndexRow =
+		ulIndexKeys * dIndexFilterCostUnit +
+		// partial visibile read from table
+		dTableWidth * dIndexScanTupCostUnit * dPartialVisFrac +
+		// always read from index (partial and full visible)
+		ulIncludedColWidth * dIndexOnlyScanTupCostUnit;
+
 	return CCost(pci->NumRebinds() *
-				 (dRowsIndex * dCostPerIndexRow +
-				  dIndexScanTupRandomFactor * dPartialVisFrac));
+				 (dRowsIndex * dCostPerIndexRow + dIndexScanTupRandomFactor +
+				  dUnusedIndexCost));
 }
 
 CCost
@@ -2067,6 +2377,7 @@ CCostModelGPDB::Cost(
 			return CostFilter(m_mp, exprhdl, this, pci);
 		}
 
+		case COperator::EopPhysicalDynamicIndexOnlyScan:
 		case COperator::EopPhysicalIndexOnlyScan:
 		{
 			return CostIndexOnlyScan(m_mp, exprhdl, this, pci);

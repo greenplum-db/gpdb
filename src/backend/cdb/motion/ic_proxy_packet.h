@@ -70,8 +70,6 @@ extern void ic_proxy_message_init(ICProxyPkt *pkt,
 								  ICProxyMessageType type,
 								  const ICProxyKey *key);
 
-extern ICProxyPkt *ic_proxy_pkt_new(const ICProxyKey *key,
-									const void *data, uint16 size);
 extern ICProxyPkt *ic_proxy_pkt_dup(const ICProxyPkt *pkt);
 extern const char *ic_proxy_pkt_to_str(const ICProxyPkt *pkt);
 extern bool ic_proxy_pkt_is_from_client(const ICProxyPkt *pkt,

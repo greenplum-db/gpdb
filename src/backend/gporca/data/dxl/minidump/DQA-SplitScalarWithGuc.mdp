@@ -135,31 +135,22 @@ explain select count(distinct b ) from foo;
       <dxl:Relation Mdid="6.17209.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -340,14 +331,14 @@ explain select count(distinct b ) from foo;
     <dxl:Plan Id="0" SpaceSize="14">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="438.327583" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="438.272788" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:GroupingColumns/>
         <dxl:ProjList>
           <dxl:ProjElem ColId="9" Alias="count">
             <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
               <dxl:ValuesList ParamType="aggargs">
-              <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
+                <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
               </dxl:ValuesList>
               <dxl:ValuesList ParamType="aggdirectargs"/>
               <dxl:ValuesList ParamType="aggorder"/>
@@ -358,7 +349,7 @@ explain select count(distinct b ) from foo;
         <dxl:Filter/>
         <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="438.327582" Rows="2.000000" Width="4"/>
+            <dxl:Cost StartupCost="0" TotalCost="438.272788" Rows="2.000000" Width="4"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="1" Alias="b">
@@ -369,7 +360,7 @@ explain select count(distinct b ) from foo;
           <dxl:SortingColumnList/>
           <dxl:Aggregate AggregationStrategy="Sorted" StreamSafe="false">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="438.327546" Rows="2.000000" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="438.272752" Rows="2.000000" Width="4"/>
             </dxl:Properties>
             <dxl:GroupingColumns>
               <dxl:GroupingColumn ColId="1"/>
@@ -382,7 +373,7 @@ explain select count(distinct b ) from foo;
             <dxl:Filter/>
             <dxl:Sort SortDiscardDuplicates="false">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="438.327539" Rows="2.000000" Width="4"/>
+                <dxl:Cost StartupCost="0" TotalCost="438.272745" Rows="2.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="1" Alias="b">
@@ -397,7 +388,7 @@ explain select count(distinct b ) from foo;
               <dxl:LimitOffset/>
               <dxl:RedistributeMotion InputSegments="0,1" OutputSegments="0,1">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="438.327539" Rows="2.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="438.272700" Rows="2.000000" Width="4"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="1" Alias="b">
@@ -413,7 +404,7 @@ explain select count(distinct b ) from foo;
                 </dxl:HashExprList>
                 <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="438.327527" Rows="2.000000" Width="4"/>
+                    <dxl:Cost StartupCost="0" TotalCost="438.272688" Rows="2.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:GroupingColumns>
                     <dxl:GroupingColumn ColId="1"/>

@@ -14,6 +14,7 @@
 #include "postgres.h"
 
 #include "access/table.h"
+#include "access/tableam.h"
 #include "catalog/partition.h"
 #include "catalog/pg_collation.h"
 #include "catalog/gp_partition_template.h"
@@ -354,8 +355,8 @@ list_qsort_arg(List *list, qsort_arg_comparator cmp, void *arg)
 static void
 deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *stmts, bool addpartition)
 {
-	PartitionKey key = RelationGetPartitionKey(parentrel);
-	PartitionDesc desc = RelationGetPartitionDesc(parentrel);
+	PartitionKey key = RelationRetrievePartitionKey(parentrel);
+	PartitionDesc desc = RelationRetrievePartitionDesc(parentrel);
 
 	list_qsort_arg(stmts, qsort_stmt_cmp, key);
 
@@ -816,7 +817,7 @@ generateRangePartitions(ParseState *pstate,
 				 parser_errposition(pstate, elem->location)));
 
 	boundspec = (GpPartitionRangeSpec *) elem->boundSpec;
-	partkey = RelationGetPartitionKey(parentrel);
+	partkey = RelationRetrievePartitionKey(parentrel);
 	/* Syntax doesn't allow expressions in partition key */
 	Assert(partkey->partattrs[0] != 0);
 
@@ -1384,7 +1385,7 @@ transformGpPartDefElemWithRangeSpec(ParseState *pstate, Relation parentrel, GpPa
 					parser_errposition(pstate, elem->location)));
 
 	boundspec = (GpPartitionRangeSpec *) elem->boundSpec;
-	partkey = RelationGetPartitionKey(parentrel);
+	partkey = RelationRetrievePartitionKey(parentrel);
 
 	/*
 	 * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: We currently disabled support for multi-column
@@ -1438,8 +1439,6 @@ transformGpPartDefElemWithRangeSpec(ParseState *pstate, Relation parentrel, GpPa
 						parser_errposition(pstate, boundspec->location)));
 		every = linitial(boundspec->partEvery);
 	}
-	else if (boundspec->partEvery)
-		new_boundspec->partEvery = NIL;
 
 	part_col_typid = get_partition_col_typid(partkey, 0);
 	part_col_typmod = get_partition_col_typmod(partkey, 0);
@@ -1614,7 +1613,7 @@ transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
 	pstate->p_sourcetext = queryString;
 
 	parentrel = table_open(parentrelid, NoLock);
-	partkey = RelationGetPartitionKey(parentrel);
+	partkey = RelationRetrievePartitionKey(parentrel);
 	Assert(partkey != NULL);
 	if (list_length(partkey->partexprs) > 0)
 		ereport(ERROR,
@@ -1816,10 +1815,15 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 		/* if WITH has "tablename" then it will be used as name for partition */
 		partcomp.tablename = extract_tablename_from_options(&elem->options);
 
-		if (elem->options == NIL)
-			elem->options = parentoptions ? copyObject(parentoptions) : NIL;
 		if (elem->accessMethod == NULL)
 			elem->accessMethod = parentaccessmethod ? pstrdup(parentaccessmethod) : NULL;
+
+		/* if no options are specified AND child has same access method as parent, use parent options */
+		if (elem->options == NIL &&
+			(!elem->accessMethod ||
+			(parentaccessmethod && strcmp(elem->accessMethod, parentaccessmethod) == 0) ||
+			(!parentaccessmethod && strcmp(elem->accessMethod, default_table_access_method) == 0)))
+			elem->options = parentoptions ? copyObject(parentoptions) : NIL;
 
 		if (elem->accessMethod && strcmp(elem->accessMethod, "ao_column") == 0)
 			elem->colencs = merge_partition_encoding(pstate, elem->colencs, penc_cls);
@@ -1828,7 +1832,7 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 			new_parts = generateDefaultPartition(pstate, parentrel, elem, tmpSubPartSpec, &partcomp);
 		else
 		{
-			PartitionKey key = RelationGetPartitionKey(parentrel);
+			PartitionKey key = RelationRetrievePartitionKey(parentrel);
 			Assert(key != NULL);
 			switch (key->strategy)
 			{

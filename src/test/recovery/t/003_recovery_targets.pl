@@ -3,7 +3,8 @@ use strict;
 use warnings;
 use PostgresNode;
 use TestLib;
-use Test::More tests => 8;
+use Test::More tests => 9;
+use Time::HiRes qw(usleep);
 
 # Create and test a standby from given backup, with a certain recovery target.
 # Choose $until_lsn later than the transaction commit that causes the row
@@ -144,10 +145,31 @@ recovery_target_time = '$recovery_time'");
 my $res = run_log(
 	[
 		'pg_ctl',               '-D', $node_standby->data_dir, '-l',
-		$node_standby->logfile, 'start'
+		$node_standby->logfile,  '-o', "-c gp_role=utility", 'start'
 	]);
 ok(!$res, 'invalid recovery startup fails');
 
 my $logfile = slurp_file($node_standby->logfile());
 ok($logfile =~ qr/multiple recovery targets specified/,
 	'multiple conflicting settings');
+
+# Check behavior when recovery ends before target is reached
+
+$node_standby = get_new_node('standby_8');
+$node_standby->init_from_backup($node_master, 'my_backup',
+								has_restoring => 1, standby => 0);
+$node_standby->append_conf('postgresql.conf',
+						   "recovery_target_name = 'does_not_exist'");
+run_log(['pg_ctl', '-D', $node_standby->data_dir, '-l',
+		$node_standby->logfile, '-o', "-c gp_role=utility --gp_dbid=$node_standby->{_dbid} --gp_contentid=0 -c maintenance_mode=on",
+			'start']);
+
+# wait up to 180s for postgres to terminate
+foreach my $i (0..1800)
+{
+	last if ! -f $node_standby->data_dir . '/postmaster.pid';
+	usleep(100_000);
+}
+$logfile = slurp_file($node_standby->logfile());
+ok($logfile =~ qr/FATAL:  recovery ended before configured recovery target was reached/,
+	'recovery end before target reached is a fatal error');

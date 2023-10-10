@@ -55,6 +55,7 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLScalarCoerceToDomain.h"
 #include "naucrates/dxl/operators/CDXLScalarCoerceViaIO.h"
 #include "naucrates/dxl/operators/CDXLScalarDistinctComp.h"
+#include "naucrates/dxl/operators/CDXLScalarFieldSelect.h"
 #include "naucrates/dxl/operators/CDXLScalarFuncExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarIfStmt.h"
 #include "naucrates/dxl/operators/CDXLScalarMinMax.h"
@@ -214,6 +215,10 @@ CTranslatorDXLToScalar::TranslateDXLToScalar(const CDXLNode *dxlnode,
 		case EdxlopScalarArrayRef:
 		{
 			return TranslateDXLScalarArrayRefToScalar(dxlnode, colid_var);
+		}
+		case EdxlopScalarFieldSelect:
+		{
+			return TranslateDXLFieldSelectToScalar(dxlnode, colid_var);
 		}
 		case EdxlopScalarDMLAction:
 		{
@@ -455,7 +460,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayCompToScalar(
 
 		default:
 			GPOS_RAISE(
-				gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+				gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
 				GPOS_WSZ_LIT(
 					"Scalar Array Comparison: Specified operator type is invalid"));
 	}
@@ -585,7 +590,7 @@ CTranslatorDXLToScalar::TranslateDXLScalarAggrefToScalar(
 			break;
 		default:
 			GPOS_RAISE(
-				gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion,
+				gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion,
 				GPOS_WSZ_LIT("AGGREF: Specified AggStage value is invalid"));
 	}
 
@@ -864,6 +869,15 @@ CTranslatorDXLToScalar::TranslateDXLScalarSubplanToScalar(
 	// translate other subplan params
 	TranslateSubplanParams(subplan, &subplan_translate_ctxt, outer_refs,
 						   colid_var);
+	// Similar to the logic in planner's build_subplan(), we can
+	// set useHashTable to true if the expr is hashable and there are no outer
+	// refs, which can significantly improve execution time
+	if (slink == ANY_SUBLINK && subplan->parParam == NIL &&
+		gpdb::TestexprIsHashable(subplan->testexpr, subplan->paramIds))
+	{
+		subplan->useHashTable = true;
+	}
+
 
 	return (Expr *) subplan;
 }
@@ -2112,6 +2126,37 @@ CTranslatorDXLToScalar::TranslateDXLScalarArrayRefToScalar(
 	}
 
 	return (Expr *) array_ref;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToScalar::TranslateDXLFieldSelectToScalar
+//
+//	@doc:
+//		Translates a DXL Scalar FieldSelect into a GPDB FieldSelect node
+//
+//---------------------------------------------------------------------------
+Expr *
+CTranslatorDXLToScalar::TranslateDXLFieldSelectToScalar(
+	const CDXLNode *scalar_field_select, CMappingColIdVar *colid_var)
+{
+	GPOS_ASSERT(nullptr != scalar_field_select);
+
+	CDXLScalarFieldSelect *dxlop =
+		CDXLScalarFieldSelect::Cast(scalar_field_select->GetOperator());
+
+	FieldSelect *fieldSelect = MakeNode(FieldSelect);
+
+	fieldSelect->arg =
+		TranslateDXLToScalar((*scalar_field_select)[0], colid_var);
+	fieldSelect->fieldnum = dxlop->GetDXLFieldNumber();
+	fieldSelect->resulttype =
+		CMDIdGPDB::CastMdid(dxlop->GetDXLFieldType())->Oid();
+	fieldSelect->resulttypmod = dxlop->GetDXLTypeModifier();
+	fieldSelect->resultcollid =
+		CMDIdGPDB::CastMdid(dxlop->GetDXLFieldCollation())->Oid();
+
+	return (Expr *) fieldSelect;
 }
 
 //---------------------------------------------------------------------------

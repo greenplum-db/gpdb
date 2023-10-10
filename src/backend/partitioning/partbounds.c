@@ -117,7 +117,7 @@ List *
 get_qual_from_partbound(Relation rel, Relation parent,
 						PartitionBoundSpec *spec)
 {
-	PartitionKey key = RelationGetPartitionKey(parent);
+	PartitionKey key = RelationRetrievePartitionKey(parent);
 	List	   *my_qual = NIL;
 
 	Assert(key != NULL);
@@ -765,6 +765,11 @@ partition_bounds_equal(int partnatts, int16 *parttyplen, bool *parttypbyval,
 /*
  * Return a copy of given PartitionBoundInfo structure. The data types of bounds
  * are described by given partition key specification.
+ *
+ * Note: it's important that this function and its callees not do any catalog
+ * access, nor anything else that would result in allocating memory other than
+ * the returned data structure.  Since this is called in a long-lived context,
+ * that would result in unwanted memory leaks.
  */
 PartitionBoundInfo
 partition_bounds_copy(PartitionBoundInfo src,
@@ -923,8 +928,8 @@ void
 check_new_partition_bound(char *relname, Relation parent,
 						  PartitionBoundSpec *spec)
 {
-	PartitionKey key = RelationGetPartitionKey(parent);
-	PartitionDesc partdesc = RelationGetPartitionDesc(parent);
+	PartitionKey key = RelationRetrievePartitionKey(parent);
+	PartitionDesc partdesc = RelationRetrievePartitionDesc(parent);
 	PartitionBoundInfo boundinfo = partdesc->boundinfo;
 	ParseState *pstate = make_parsestate(NULL);
 	int			with = -1;
@@ -1455,6 +1460,7 @@ partition_rbound_cmp(int partnatts, FmgrInfo *partsupfunc,
 	Datum	   *datums2 = b2->datums;
 	PartitionRangeDatumKind *kind2 = b2->kind;
 	bool		lower2 = b2->lower;
+	bool		optimizerBackup;
 
 	for (i = 0; i < partnatts; i++)
 	{
@@ -1477,10 +1483,19 @@ partition_rbound_cmp(int partnatts, FmgrInfo *partsupfunc,
 			 */
 			break;
 
+		/*
+		 * Orca doesn't support parameterized queries (which the below FunctionCall 
+		 * is), and would end up throwing an exception and falling back to planner
+		 * anyway. This fallback could also trample memory contexts and cause errors.
+		 * Instead, temporarily disable Orca when making this function call. 
+		 */
+		optimizerBackup = optimizer;
+		optimizer = false;
 		cmpval = DatumGetInt32(FunctionCall2Coll(&partsupfunc[i],
 												 partcollation[i],
 												 datums1[i],
 												 datums2[i]));
+		optimizer = optimizerBackup;
 		if (cmpval != 0)
 			break;
 	}
@@ -1937,7 +1952,7 @@ make_partition_op_expr(PartitionKey key, int keynum,
 static List *
 get_qual_for_hash(Relation parent, PartitionBoundSpec *spec)
 {
-	PartitionKey key = RelationGetPartitionKey(parent);
+	PartitionKey key = RelationRetrievePartitionKey(parent);
 	FuncExpr   *fexpr;
 	Node	   *relidConst;
 	Node	   *modulusConst;
@@ -2020,7 +2035,7 @@ get_qual_for_hash(Relation parent, PartitionBoundSpec *spec)
 static List *
 get_qual_for_list(Relation parent, PartitionBoundSpec *spec)
 {
-	PartitionKey key = RelationGetPartitionKey(parent);
+	PartitionKey key = RelationRetrievePartitionKey(parent);
 	List	   *result;
 	Expr	   *keyCol;
 	Expr	   *opexpr;
@@ -2055,7 +2070,7 @@ get_qual_for_list(Relation parent, PartitionBoundSpec *spec)
 	{
 		int			i;
 		int			ndatums = 0;
-		PartitionDesc pdesc = RelationGetPartitionDesc(parent);
+		PartitionDesc pdesc = RelationRetrievePartitionDesc(parent);
 		PartitionBoundInfo boundinfo = pdesc->boundinfo;
 
 		if (boundinfo)
@@ -2239,7 +2254,7 @@ get_qual_for_range(Relation parent, PartitionBoundSpec *spec,
 				j;
 	PartitionRangeDatum *ldatum,
 			   *udatum;
-	PartitionKey key = RelationGetPartitionKey(parent);
+	PartitionKey key = RelationRetrievePartitionKey(parent);
 	Expr	   *keyCol;
 	Const	   *lower_val,
 			   *upper_val;
@@ -2255,7 +2270,7 @@ get_qual_for_range(Relation parent, PartitionBoundSpec *spec,
 	if (spec->is_default)
 	{
 		List	   *or_expr_args = NIL;
-		PartitionDesc pdesc = RelationGetPartitionDesc(parent);
+		PartitionDesc pdesc = RelationRetrievePartitionDesc(parent);
 		Oid		   *inhoids = pdesc->oids;
 		int			nparts = pdesc->nparts,
 					i;
@@ -2784,7 +2799,7 @@ satisfies_hash_partition(PG_FUNCTION_ARGS)
 
 		/* Open parent relation and fetch partition key info */
 		parent = relation_open(parentId, AccessShareLock);
-		key = RelationGetPartitionKey(parent);
+		key = RelationRetrievePartitionKey(parent);
 
 		/* Reject parent table that is not hash-partitioned. */
 		if (key == NULL || key->strategy != PARTITION_STRATEGY_HASH)

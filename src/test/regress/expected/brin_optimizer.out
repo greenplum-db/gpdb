@@ -330,7 +330,7 @@ BEGIN
 			IF plan_line LIKE '%Bitmap Heap Scan on brintest%' THEN
 				plan_ok := true;
 			END IF;
-			IF plan_line LIKE '%Postgres query optimizer%' THEN
+			IF plan_line LIKE '%Postgres-based planner%' THEN
 				is_planner_plan := true;
 			END IF;
 		END LOOP;
@@ -454,8 +454,7 @@ FROM tenk1 ORDER BY unique2 LIMIT 5 OFFSET 5;
 SELECT brin_desummarize_range('brinidx', 0);
  brin_desummarize_range 
 ------------------------
- 
-(1 row)
+(0 rows)
 
 VACUUM brintest;  -- force a summarization cycle in brinidx
 UPDATE brintest SET int8col = int8col * int4col;
@@ -477,20 +476,17 @@ ERROR:  block number out of range: -1
 SELECT brin_desummarize_range('brinidx', 0);
  brin_desummarize_range 
 ------------------------
- 
-(1 row)
+(0 rows)
 
 SELECT brin_desummarize_range('brinidx', 0);
  brin_desummarize_range 
 ------------------------
- 
-(1 row)
+(0 rows)
 
 SELECT brin_desummarize_range('brinidx', 100000000);
  brin_desummarize_range 
 ------------------------
- 
-(1 row)
+(0 rows)
 
 -- Test brin_summarize_range
 CREATE TABLE brin_summarize (

@@ -659,9 +659,6 @@ typedef struct DynamicIndexScan
  * contain such Vars.  Also, for the convenience of setrefs.c, TLEs in
  * indextlist are marked as resjunk if they correspond to columns that
  * the index AM cannot reconstruct.
- * 
- * GPDB: We need indexqualorig to determine direct dispatch, however there
- * is no need to dispatch it.
  * ----------------
  */
 typedef struct IndexOnlyScan
@@ -674,6 +671,33 @@ typedef struct IndexOnlyScan
 	ScanDirection indexorderdir;	/* forward or backward or don't care */
 	List	   *recheckqual;	/* index quals in recheckable form */
 } IndexOnlyScan;
+
+/*
+ * DynamicIndexOnlyScan
+ *   Scan a list of indexes that will be determined at run time.
+ *   The primary application of this operator is to be used
+ *   for partition tables.
+*/
+typedef struct DynamicIndexOnlyScan
+{
+	/* Fields shared with a normal IndexOnlyScan. Must be first! */
+	IndexOnlyScan	indexscan;
+
+	/*
+	 * List of partition OIDs to scan.
+	 */
+	List	   *partOids;
+
+	/* Info for run-time subplan pruning; NULL if we're not doing that */
+	struct PartitionPruneInfo *part_prune_info;
+
+	/*
+	 * Info for run-time join pruning, using Partition Selector nodes.
+	 * These param IDs contain additional Bitmapsets containing selected
+	 * partitions.
+	 */
+	List	   *join_prune_paramids;
+} DynamicIndexOnlyScan;
 
 /* ----------------
  *		bitmap index scan node
@@ -1059,8 +1083,6 @@ typedef struct Join
 	List	   *joinqual;		/* JOIN quals (in addition to plan.qual) */
 
 	bool		prefetch_inner; /* to avoid deadlock in MPP */
-	bool		prefetch_joinqual; /* to avoid deadlock in MPP */
-	bool		prefetch_qual; /* to avoid deadlock in MPP */
 } Join;
 
 /* ----------------
@@ -1623,7 +1645,6 @@ typedef struct PlanRowMark
 	LockClauseStrength strength;	/* LockingClause's strength, or LCS_NONE */
 	LockWaitPolicy waitPolicy;	/* NOWAIT and SKIP LOCKED options */
 	bool		isParent;		/* true if this is a "dummy" parent entry */
-	bool        canOptSelectLockingClause; /* Whether can do some optimization on select with locking clause */
 } PlanRowMark;
 
 

@@ -388,7 +388,8 @@ alter table foo_p exchange partition for(6) with table bar_p;
 ERROR:  partition constraint is violated by some row  (seg2 127.0.1.1:7004 pid=9703)
 alter table foo_p exchange partition for(6) with table bar_p without
 validation;
-NOTICE:  specifying "WITHOUT VALIDATION" acts as no operation. If the new partition is a regular table, validation is performed to make sure all the rows obey partition constraint. If the new partition is external or foreign table, no validation is performed.
+NOTICE:  specifying "WITHOUT VALIDATION" acts as no operation
+DETAIL:  If the new partition is a regular table, validation is performed to make sure all the rows obey partition constraint. If the new partition is external or foreign table, no validation is performed.
 ERROR:  partition constraint is violated by some row  (seg2 127.0.1.1:7004 pid=4691)
 analyze foo_p;
 select * from foo_p;
@@ -594,6 +595,7 @@ ERROR:  cannot EXCHANGE PARTITION for relation "sto_ao_ao" -- partition has chil
 create table foo_p (i int, j int) distributed by (i) partition by range(j) (start(1) end(10) every(2));
 create readable external table bar_p(i int, j int) location ('gpfdist://host.invalid:8000/file') format 'text';
 alter table foo_p exchange partition for(3) with table bar_p;
+NOTICE:  partition constraints are not validated when attaching a readable external table
 truncate foo_p;
 ERROR:  "foo_p_1_prt_2" is not a table
 drop table foo_p;

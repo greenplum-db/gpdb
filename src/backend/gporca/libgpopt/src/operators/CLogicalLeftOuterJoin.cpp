@@ -83,6 +83,8 @@ CLogicalLeftOuterJoin::PxfsCandidates(CMemoryPool *mp) const
 	(void) xform_set->ExchangeSet(CXform::ExfJoin2BitmapIndexGetApply);
 	(void) xform_set->ExchangeSet(CXform::ExfJoin2IndexGetApply);
 	(void) xform_set->ExchangeSet(CXform::ExfLeftJoin2RightJoin);
+	(void) xform_set->ExchangeSet(CXform::ExfPushJoinBelowLeftUnionAll);
+	(void) xform_set->ExchangeSet(CXform::ExfPushJoinBelowRightUnionAll);
 
 	return xform_set;
 }

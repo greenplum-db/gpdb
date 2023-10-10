@@ -220,7 +220,7 @@ static void try_fetch_rel_stats(RangeTblEntry *rte, const char *attname,
 								VariableStatData* vardata);
 static void try_fetch_largest_child_stats(PlannerInfo *root, Index parent_rti,
 										  const char *attname, VariableStatData* vardata);
-
+static double brin_num_ranges(RelOptInfo *baserel, BlockNumber pagesPerRange);
 
 /*
  *		eqsel			- Selectivity of "=" for any data types.
@@ -7437,8 +7437,7 @@ brincostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 		index_close(indexRel, NoLock);
 
 		/* work out the actual number of ranges in the index */
-		indexRanges = Max(ceil((double) baserel->pages /
-							   statsData.pagesPerRange), 1.0);
+		indexRanges = brin_num_ranges(baserel, statsData.pagesPerRange);
 	}
 	else
 	{
@@ -7446,10 +7445,13 @@ brincostestimate(PlannerInfo *root, IndexPath *path, double loop_count,
 		 * Assume default number of pages per range, and estimate the number
 		 * of ranges based on that.
 		 */
-		indexRanges = Max(ceil((double) baserel->pages /
-							   BRIN_DEFAULT_PAGES_PER_RANGE), 1.0);
+		bool isAO = (baserel->relam == AO_ROW_TABLE_AM_OID ||
+						baserel->relam == AO_COLUMN_TABLE_AM_OID);
+		BlockNumber defaultPagesPerRange = BrinDefaultPagesPerRange(isAO);
 
-		statsData.pagesPerRange = BRIN_DEFAULT_PAGES_PER_RANGE;
+		indexRanges = brin_num_ranges(baserel, defaultPagesPerRange);
+
+		statsData.pagesPerRange = defaultPagesPerRange;
 		statsData.revmapNumPages = (indexRanges / REVMAP_PAGE_MAXITEMS) + 1;
 	}
 
@@ -7692,4 +7694,36 @@ try_fetch_largest_child_stats(PlannerInfo *root, Index parent_rti,
 														child_rel->tuples);
 		}
 	}
+}
+
+/*
+ * GPDB: Get the number of BRIN ranges in the base relation.
+ *
+ * For AO/CO tables, we can't use pg_class.relpages to figure out the number of
+ * ranges present. This is because relpages for AO/CO tables is based on
+ * physical bytes, whereas the number of actual ranges present in the table is
+ * based on logical BlockSequence information. The number of logical
+ * BlockSequences can be very far apart from relpages, due to the dense nature
+ * of AO/CO tables and because of compression. Further, an AO/CO table can have
+ * many dead ranges due to DELETEs/UPDATEs followed by VACUUM, which is
+ * represented in the BlockSequence information.
+ *
+ * However, we have no way to obtain this info on the QD. Instead, we can make
+ * a best guess on the number of ranges. If the table does not have a
+ * significant number of dead ranges, and if it were bulk loaded (with each
+ * logical heap block full), reltuples (which represents live tuples) is
+ * sufficient to base our calculation on. These assumptions represent the
+ * general case reliably.
+ */
+static double
+brin_num_ranges(RelOptInfo *baserel, BlockNumber pagesPerRange)
+{
+	BlockNumber num_pages;
+
+	if (baserel->relam == AO_ROW_TABLE_AM_OID || baserel->relam == AO_COLUMN_TABLE_AM_OID)
+		num_pages = AOTupCountGet_numLogicalHeapBlocks(baserel->tuples);
+	else
+		num_pages = baserel->pages;
+
+	return Max(ceil((double) num_pages / pagesPerRange), 1.0);
 }

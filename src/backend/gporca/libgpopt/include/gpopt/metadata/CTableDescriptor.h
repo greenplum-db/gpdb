@@ -63,6 +63,9 @@ private:
 	// storage type
 	IMDRelation::Erelstoragetype m_erelstoragetype;
 
+	// append only table version
+	IMDRelation::Erelaoversion m_erelaoversion;
+
 	// distribution columns for hash distribution
 	CColumnDescriptorArray *m_pdrgpcoldescDist;
 
@@ -88,6 +91,9 @@ private:
 	// lockmode from the parser
 	INT m_lockmode;
 
+	// acl mode from the parser
+	ULONG m_acl_mode;
+
 	// identifier of query to which current table belongs.
 	// This field is used for assigning current table entry with
 	// target one within DML operation. If descriptor doesn't point
@@ -102,7 +108,8 @@ public:
 					 BOOL convert_hash_to_random,
 					 IMDRelation::Ereldistrpolicy rel_distr_policy,
 					 IMDRelation::Erelstoragetype erelstoragetype,
-					 ULONG ulExecuteAsUser, INT lockmode,
+					 IMDRelation::Erelaoversion erelaoversion,
+					 ULONG ulExecuteAsUser, INT lockmode, ULONG acl_mode,
 					 ULONG assigned_query_id_for_target_rel);
 
 	// dtor
@@ -149,6 +156,12 @@ public:
 	LockMode() const
 	{
 		return m_lockmode;
+	}
+
+	ULONG
+	GetAclMode() const
+	{
+		return m_acl_mode;
 	}
 
 	// return the position of a particular attribute (identified by attno)
@@ -202,6 +215,13 @@ public:
 	RetrieveRelStorageType() const
 	{
 		return m_erelstoragetype;
+	}
+
+	// append only table version
+	IMDRelation::Erelaoversion
+	GetRelAOVersion() const
+	{
+		return m_erelaoversion;
 	}
 
 	BOOL

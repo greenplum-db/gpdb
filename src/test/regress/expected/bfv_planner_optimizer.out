@@ -523,7 +523,7 @@ explain (costs off) select * from t_hashdist cross join (select a, sum(random())
                            Group Key: generate_series.generate_series
                            ->  Function Scan on generate_series
  Optimizer: Pivotal Optimizer (GPORCA)
-(11 rows)
+(14 rows)
 
 explain (costs off) select * from t_hashdist cross join (select random() as k, sum(a) from generate_series(1, 10) a group by k) x;
                           QUERY PLAN                           
@@ -548,15 +548,14 @@ explain (costs off) select * from t_hashdist cross join (select a, count(1) as s
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: true
+         ->  Result
+               Filter: (((count(1)))::double precision > random())
+               ->  HashAggregate
+                     Group Key: generate_series.generate_series
+                     ->  Function Scan on generate_series
          ->  Seq Scan on t_hashdist
-         ->  Materialize
-               ->  Result
-                     Filter: (((count(1)))::double precision > random())
-                     ->  HashAggregate
-                           Group Key: generate_series.generate_series
-                           ->  Function Scan on generate_series
  Optimizer: Pivotal Optimizer (GPORCA)
-(11 rows)
+(10 rows)
 
 -- limit
 explain (costs off) select * from t_hashdist cross join (select * from generate_series(1, 10) limit random()) x;

@@ -6,13 +6,14 @@ This table is populated only on the coordinator. This table is defined in the `p
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`restypid`|smallint| |The resource type ID.|
-|`resname`|name| |The name of the resource type.|
-|`resrequired`|boolean| |Whether the resource type is required for a valid resource queue.|
+|`oid`|oid| |The object ID|
+|`resname`|name| |The name of the resource type|
+|`restypid`|smallint| |The resource type ID|
+|`resrequired`|boolean| |Whether the resource type is required for a valid resource queue|
 |`reshasdefault`|boolean| |Whether the resource type has a default value. When true, the default value is specified in reshasdefaultsetting.|
 |`rescandisable`|boolean| |Whether the type can be removed or deactivated. When true, the default value is specified in resdisabledsetting.|
-|`resdefaultsetting`|text| |Default setting for the resource type, when applicable.|
-|`resdisabledsetting`|text| |The value that deactivates this resource type \(when allowed\).|
+|`resdefaultsetting`|text| |Default setting for the resource type, when applicable|
+|`resdisabledsetting`|text| |The value that deactivates this resource type \(when allowed\)|
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

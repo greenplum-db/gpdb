@@ -18,6 +18,8 @@
 #include "access/parallel.h"
 
 extern IndexOnlyScanState *ExecInitIndexOnlyScan(IndexOnlyScan *node, EState *estate, int eflags);
+extern IndexOnlyScanState *ExecInitIndexOnlyScanForPartition(IndexOnlyScan *node, EState *estate, int eflags,
+							  Relation currentRelation, Oid indexid);
 extern void ExecEndIndexOnlyScan(IndexOnlyScanState *node);
 extern void ExecIndexOnlyMarkPos(IndexOnlyScanState *node);
 extern void ExecIndexOnlyRestrPos(IndexOnlyScanState *node);

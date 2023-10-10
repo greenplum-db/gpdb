@@ -191,6 +191,38 @@ Future improvements
 
 GPDB:
 
+(1) Main design problem:
+
+BRIN needs special handling for append-optimized tables. The revmap relies on
+the assumption that block numbers are consecutive, there are no gaps in the
+sequence of block numbers for a given relation. This assumption does not hold
+for append-optimized tables. The AO tid is comprised of
+<segment file number, row number>. Concurrent inserts into an AO table result in
+multiple segment files, one per insert, being populated.
+
+The existing revmap structure is simple in the sense that it is easy to
+calculate the block number for a revmap page (the block layout is always:
+{meta page, [revmap pages], [data pages]}). The number of revmap pages is
+directly proportional to the logical heap block numbers we are covering in the
+index.
+
+If we continue with this representation, we will have to create revmap entries
+for all the nonexistent TIDs in this gap, leading to large amounts of wasted
+space. For example in a simple AO table with segment 1, having 10 logical heap
+blocks: [33554432, 33554441], we would have to create revmap pages covering the
+range [0, 33554431], and if pages_per_range = 1, that would mean creating close
+to (33554432 / REVMAP_PAGE_MAXITEMS) = (33554432 / 5456) ~= 6150 revmap pages!
+And an AO/CO table can have 128 such segments!
+
+We discuss how we change the internal structure for the metapage and revmap to
+tackle this problem (See Section (3)).
+
+There is also the question is how can we ensure that most of the code between
+heap and AO/CO tables is unified. Section (2) describes how we tackle that
+through the introduction of new table AM APIs and BlockSequences.
+
+(2) BlockSequences and Table AM APIs:
+
 We have introduced a new table AM API relation_get_block_sequences() that helps
 unify code for block-based iteration for BRIN scan and summarization, in a
 table AM agnostic manner.
@@ -216,52 +248,135 @@ Sometimes, an alternative API is also needed: to get the block sequence, given
 a logical heap block number. For that purpose, we have introduced
 relation_get_block_sequence().
 
-BRIN on append only tables
---------------------------
+(3) Changes to the internal page structure:
 
-Greenplum has a new kind of table - append only table. BRIN needs special
-handling for append-optimized tables. The revmap relies on the assumption
-that block numbers are consecutive, there are no gaps in the sequence of block
-numbers for a given relation. This assumption does not hold for append-optimized
-tables. The AO tid is comprised of <segment file number, row number>. Concurrent
-inserts into an AO table result in multiple segment files, one per insert, being
-populated. When mapped to heap TIDs, there is a large gap between the block
-number of the last TID on segment number 1 and the first TID on segment
-number 2. If we continue to represent this using just the revmap, we will have
-to create revmap entries for all the nonexistent TIDs in this gap, leading to
-large amount of wasted space.The structure of revmap has been improved to adapt
-to append only table. An upper block on top of revmap is introduced to avoid
-wasting space due to non-existent AO TIDs.
+BRIN data pages remain unchanged. Only the metapage and revmap pages undergo a
+change in structure, in order to deal with the main design problem highlighted
+in Section (1). Also, these changes are made only for AO/CO tables - for heap
+table,s the fields added to the internal structures are unused.
 
-The Ao table is logically composed of 128 aosegs to support concurrent inserts.
-Each tuple in the Ao table corresponds to a virtual tid. The virtual tid of
-the first tuple of each Aoseg is equal to (248/128)*segnum, then the first
-virtual block number of each Aoseg is equal to (232/128) * segnum.
+We completely break away from the restriction that the revmap pages follow one
+another right after the metapage, in contiguous block numbers. Instead, we now
+have them point to one another in a singly linked list. We have introduced the
+nextRevmapPage pointer in BrinSpecialSpace to this end.
 
-If there are three blocks in aoseg0, aoseg1, and aoseg127, their block numbers
-are 0x0000 0000 0x0000 0001 0x0000 0002, 0x0200 0000 0x0200 0001 0x0200 0002,
-0xFE00 0000 0xFE00 0001 0xFE00 0002. Then the largest index in the revmap array
-is 0xFE00 0002. In this way, the revmap array contains 4,261,412,866 tids,
-taking up 24GB of space. This is clearly unacceptable.
+Note: Since revmap pages are not contiguous, we don't have to follow the page
+evacuation protocol (that we have to follow for indexes on heap tables), which
+had to move data pages to the end of the index relation, to make room for
+revmap pages.
 
-So we added an extra upper level on top of the revmap. In this way, at the
-level of revmap, tid and the corresponding block are initialized only when
-the corresponding block number has data. The upper level block stores the
-revmap level block number. In this way, the revmap level will only store the
-tid corresponding to the block that has been filled with data. The upper
-level will initialize all the blocks corresponding to the block number at
-one time. But because the upper level only stores the block number of the
-revmap, the number of records in the upper level is 232/TidNumPerPage which
-is approximately equal to 800,000. Takes up 3.2MB of space.
+Furthermore, there are up to MAX_AOREL_CONCURRENCY such linked lists of revmap
+pages. There is one list per block sequence. The heads and tails of these lists
+(or chains) are maintained in the metapage (and cached in the revmap access
+struct).
 
-The corresponding relationship between the block number and the upper level
-array index is:
-upper_index=blocknum/TidNumPerPage
-Stored in the upper level array is the block number of the revmap, and the
-offset in the block of the revmap tid is:
-revmap_offset=blocknum%TidNumPerPage
-TidNumPerPage: The number of tids that each revmap page can hold.
-All the discussions above have ignored the pagesPerRange variable.
+We have depicted the logical chain structure below:
 
+                               +----------+
+                               |     meta |
+                               |          |
+                               |          |
+                               +-----+----+
+                                     |
+                    +----------------+------------------+
+                seq0|            seq1|       ...    seqN|
+                    |                |                  |
+               +----v-----+    +-----v----+       +-----v----+
+               |      rev |    |      rev |       |      rev |
+               |    +--+--+    |    +--+--+       |    +--+--+
+               |    | 1|  |    |    | 1|  |       |    | 1|  |
+               +----+--++-+    +----+--++-+       +----+--++-+
+                        |               |                  |
+                        |               |                  |
+               +--------v-+    +--------v-+       +--------v-+
+               |      rev |    |      rev |       |      rev |
+               |    +--+--+    |    +--+--+       |    +--+--+
+               |    | 2|  |    |    | 2|  |       |    | 2|  |
+               +----+--++-+    +----+--++-+       +----+--++-+
+                        |               |                  |
+                        v               v                  v
+                   ...
+               +----------+    +----------+       +----------+
+               |      rev |    |      rev |       |      rev |
+               |    +--+--+    |    +--+--+       |    +--+--+
+               |    |n1|  |    |    |n2|  |       |    |nN|  |
+               +----+--+--+    +----+--+--+       +----+--+--+
 
+Omitted from the diagram are the tail pointers to the revmap chains and the
+data pages, for clarity.
 
+Since revmap pages are no longer contiguous for AO/CO tables, we have to
+additionally maintain logical page numbers (in the BrinSpecialSpace) for all
+revmap pages (depicted in the diagram above). The need can be highlighted with
+the following example:
+
+For heap tables, let's say we have metapage: Block0 and revmap pages: Block1,2,3
+and let's say we have pages_per_range = 1. If we wanted to look up the summary
+info for heapBlk=6000, that would map to Block3 (we know that from simple math.
+See: HEAPBLK_TO_REVMAP_BLK()). However, for AO/CO tables, we have no idea what
+revmap block number this would map to since revmap pages are not contiguous.
+This is where the 1-based logical page number comes in. With it we can say,
+heapBlk 6000 maps to the 2nd revmap page for block sequence 9 (seg0)
+(See: HEAPBLK_TO_REVMAP_PAGENUM_AO()). We can then traverse the revmap chain for
+seg0 until we find the revmap page with pagenum=2.
+
+These logical page numbers are used for both iterating over the revmap during
+scans and also while extending the revmap (see revmap_extend_and_get_blkno_ao()).
+The logical revmap page number for a given logical heap block is calculated by
+paying attention to the segment to which the logical heap block belongs and the
+fixed number of items that can fit in a revmap page (See
+HEAPBLK_TO_REVMAP_PAGENUM_AO()). The logical page numbers of the last chain
+members are also cached in the metapage (and cached in the revmap access struct)
+
+For operations such as scan, build and summarize:
+We always traverse each chain in order justifying their singly-linked-ness.
+Also these chains are always traversed in block sequence order - the chain for
+seg0 is traversed, chain for seg1 and so on. We use a revmap iterator to attain
+this goal. Before traversing each chain, we position the iterator at the start
+of the chain.
+
+We never have to lock more than 1 revmap page at a time during chain traversal.
+Only for revmap extension, do we have to lock two revmap pages: the last revmap
+page in the chain and the new revmap page being added.
+
+For operations such as insert, we make use of the chain tail pointer in the
+metapage. Due to the appendonly nature of AO/CO tables, we would always write to
+the last logical heap block within a block sequence. Thus, unlike for heap,
+blocks other than the last block would never be summarized as a result of an
+insert. So, we can safely position the revmap iterator at the end of the chain
+(instead of traversing the chain unnecessarily from the front).
+
+Note: Multiple revmap pages across chains can map to the same data page.
+
+(4) Default pages_per_range:
+For heap tables, we have decided to scale back the default to 32, since in GPDB
+one heap block is 4x the default size in PG.
+
+For AO/CO tables, since many more tuples fit in 1 logical heap block as opposed
+to heap (for e.g. the tpch lineitem table will have at most 248 tuples/block,
+whereas an AO/CO table is bound to have 32768 tuples/block).
+Having a default of 32 will thus be counter-productive - CPU processing cost
+from unwanted tuples will far outweigh any IO cost savings and will dominate the
+total cost of the query (as per planner cost estimation).
+Thus, we use the lowest default possible: a default value of 1.
+
+(5) VACUUM:
+
+For BRIN indexes on AO/CO tables, we exploit a property of exhausted logical
+block ranges (fast sequence numbers used up) belonging to a segment that
+undergoes VACUUM (i.e. a segment awaiting drop). The property is that these
+ranges will never be reused for future inserts.
+
+This is because we don't reset gp_fastsequence when we VACUUM AO/CO tables and
+gp_fastsequence is always increasing.
+
+So, these ranges are effectively dead and can thus be marked as empty. Doing so
+brings about a couple of benefits:
+(1) These dead ranges will never result in false positives when their summaries
+match scan keys - we will not bloat the output tidbitmap unnecessarily.
+(2) Cycles will not be spent trying to summarize them, as empty ranges are not
+summarized. This saves cycles for both the summarization call at the end of
+VACUUM and for all future summarization calls.
+
+We mark these ranges as empty in the brinbulkdelete callback, which is called
+when we are sure that it is safe to recycle a segment awaiting drop.

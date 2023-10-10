@@ -1020,19 +1020,22 @@ select gp_inject_fault('simulate_bitmap_and', 'skip', dbid) from gp_segment_conf
 (1 row)
 
 explain (costs off) select count(*) from bmunion where a = 53 and b < 3;
-                          QUERY PLAN                          
---------------------------------------------------------------
- Aggregate
+NOTICE:  One or more columns in the following table(s) do not have statistics: bmunion
+HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
+                             QUERY PLAN                             
+--------------------------------------------------------------------
+ Finalize Aggregate
    ->  Gather Motion 1:1  (slice1; segments: 1)
-         ->  Bitmap Heap Scan on bmunion
-               Recheck Cond: ((a = 53) AND (b < 3))
-               ->  BitmapAnd
-                     ->  Bitmap Index Scan on bmu_i_bmtest2_a
-                           Index Cond: (a = 53)
-                     ->  Bitmap Index Scan on bmu_i_bmtest2_b
-                           Index Cond: (b < 3)
+         ->  Partial Aggregate
+               ->  Bitmap Heap Scan on bmunion
+                     Recheck Cond: ((a = 53) AND (b < 3))
+                     ->  BitmapAnd
+                           ->  Bitmap Index Scan on bmu_i_bmtest2_a
+                                 Index Cond: (a = 53)
+                           ->  Bitmap Index Scan on bmu_i_bmtest2_b
+                                 Index Cond: (b < 3)
  Optimizer: Pivotal Optimizer (GPORCA)
-(10 rows)
+(11 rows)
 
 select gp_inject_fault('simulate_bitmap_and', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
  gp_inject_fault 

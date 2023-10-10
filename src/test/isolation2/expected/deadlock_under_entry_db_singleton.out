@@ -22,9 +22,9 @@
 -- the table to ao table here.
 
 CREATE TABLE deadlock_entry_db_singleton_table (c int, d int) WITH (appendonly=true);
-CREATE
+CREATE TABLE
 INSERT INTO deadlock_entry_db_singleton_table select i, i+1 from generate_series(1,10) i;
-INSERT 10
+INSERT 0 10
 
 -- Function that needs ExclusiveLock on a table.  Use a non-SQL
 -- language for this function so that parser cannot understand its
@@ -32,7 +32,7 @@ INSERT 10
 -- of the function.  If the lock is acquired during plan generation of
 -- the calling SQL statement, we don't get the deadlock.
 CREATE FUNCTION function_volatile(x int) RETURNS int AS $$ /*in func*/ BEGIN /*in func*/ UPDATE deadlock_entry_db_singleton_table SET d = d + 1  WHERE c = $1; /*in func*/ RETURN $1 + 1; /*in func*/ END $$ /*in func*/ LANGUAGE plpgsql VOLATILE MODIFIES SQL DATA;
-CREATE
+CREATE FUNCTION
 
 -- inject fault on QD
 select gp_inject_fault('transaction_start_under_entry_db_singleton', 'reset', 1);

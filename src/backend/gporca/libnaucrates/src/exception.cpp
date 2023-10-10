@@ -26,7 +26,7 @@ using namespace gpdxl;
 //		Message initialization for DXL exceptions
 //
 //---------------------------------------------------------------------------
-GPOS_RESULT
+void
 gpdxl::EresExceptionInit(CMemoryPool *mp)
 {
 	//---------------------------------------------------------------------------
@@ -95,34 +95,13 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 			GPOS_WSZ_WSZLEN("Incorrect Number of children")),
 
 		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN("GPDB Expression type: %ls not supported in DXL"),
-			1,	//
-			GPOS_WSZ_WSZLEN("GPDB Expression type not supported in DXL")),
-
-		CMessage(
-			CException(gpdxl::ExmaDXL,
-					   gpdxl::ExmiDXL2PlStmtMissingPlanForSubPlanTranslation),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN(
-				"DXL-to-PlStmt: Missing Plan During SubPlan Translation"),
-			0,	//
-			GPOS_WSZ_WSZLEN(
-				"DXL-to-PlStmt: Missing Plan During SubPlan Translation")),
-
-		CMessage(
 			CException(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtConversion),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN("DXL-to-PlStmt Translation: %ls not supported"),
+			CException::ExsevNotice,
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: %ls"),
 			1,	//
-			GPOS_WSZ_WSZLEN("DXL-to-PlStmt Translation not supported")),
-
-		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiDXL2PlStmtForeignScanError),
-			CException::ExsevError, GPOS_WSZ_WSZLEN("Foreign scan error: %ls"),
-			1,	//
-			GPOS_WSZ_WSZLEN("Foreign scan error")),
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because GPORCA does not support this feature")),
 
 		CMessage(
 			CException(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLAttributeNotFound),
@@ -136,32 +115,11 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 		CMessage(
 			CException(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature),
 			CException::ExsevNotice,
-			GPOS_WSZ_WSZLEN("Feature not supported: %ls"),
-			1,	//
-			GPOS_WSZ_WSZLEN("Feature not supported")),
-
-		CMessage(CException(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLMissingValue),
-				 CException::ExsevError,
-				 GPOS_WSZ_WSZLEN("Query-to-DXL Translation: Missing %ls value"),
-				 1,	 //
-				 GPOS_WSZ_WSZLEN("Query-to-DXL Translation: Missing value")),
-
-		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLNotNullViolation),
-			CException::ExsevError,
 			GPOS_WSZ_WSZLEN(
-				"null value in column \"%ls\" violates not-null constraint"),
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: %ls"),
 			1,	//
 			GPOS_WSZ_WSZLEN(
-				"null value in column violates not-null constraint")),
-
-		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLDuplicateRTE),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN(
-				"DXL-to-Query: Duplicate range table entry at query level %d at position %d"),
-			2,	// query level and var no
-			GPOS_WSZ_WSZLEN("DXL-to-Query: Duplicate range table entry")),
+				"Falling back to Postgres-based planner because GPORCA does not support this feature.")),
 
 		// MD related messages
 		CMessage(
@@ -178,23 +136,14 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 				 1,	 // mdid
 				 GPOS_WSZ_WSZLEN("Lookup of object in cache failed")),
 
-		CMessage(CException(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported),
-				 CException::ExsevNotice,
-				 GPOS_WSZ_WSZLEN("Feature not supported: %ls"),
-				 1,	 // md obj
-				 GPOS_WSZ_WSZLEN("Feature not supported")),
-
-		CMessage(CException(gpdxl::ExmaComm, gpdxl::ExmiCommPropagateError),
-				 CException::ExsevError, GPOS_WSZ_WSZLEN("%S"),
-				 1,	 // message
-				 GPOS_WSZ_WSZLEN("Propagate remote exception")),
-
 		CMessage(
-			CException(gpdxl::ExmaComm, gpdxl::ExmiCommPropagateError),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN("Received unexpected message type from OPT: %d"),
-			1,	// type
-			GPOS_WSZ_WSZLEN("Received unexpected message type from OPT")),
+			CException(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported),
+			CException::ExsevNotice,
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: %ls"),
+			1,	// md obj
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because GPORCA does not support this feature")),
 
 		CMessage(CException(gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError),
 				 CException::ExsevError, GPOS_WSZ_WSZLEN("PG exception raised"),
@@ -212,10 +161,12 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 
 		CMessage(
 			CException(gpdxl::ExmaDXL, gpdxl::ExmiExpr2DXLUnsupportedFeature),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN("Feature not supported: %ls"),
+			CException::ExsevNotice,
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because GPORCA does not support the following feature: %ls"),
 			1,	// feature name
-			GPOS_WSZ_WSZLEN("Feature not supported: %ls")),
+			GPOS_WSZ_WSZLEN(
+				"Falling back to Postgres-based planner because GPORCA does not support this feature")),
 
 		CMessage(
 			CException(gpdxl::ExmaConstExprEval,
@@ -254,57 +205,21 @@ gpdxl::EresExceptionInit(CMemoryPool *mp)
 			GPOS_WSZ_WSZLEN(
 				"DXL-to-Expr Translation: Attribute number not found in project list")),
 
-		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiOptimizerError),
-			CException::ExsevError, GPOS_WSZ_WSZLEN("%s"),
-			1,	// attno
-			GPOS_WSZ_WSZLEN(
-				"PQO unable to generate a plan, please see the above message for details.")),
-
-		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiNoAvailableMemory),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN("No available memory to allocate string buffer."),
-			0,
-			GPOS_WSZ_WSZLEN("No available memory to allocate string buffer.")),
-
-		CMessage(
-			CException(gpdxl::ExmaDXL, gpdxl::ExmiInvalidComparisonTypeCode),
-			CException::ExsevError,
-			GPOS_WSZ_WSZLEN(
-				"Invalid comparison type code. Valid values are Eq, NEq, LT, LEq, GT, GEq."),
-			0,
-			GPOS_WSZ_WSZLEN(
-				"Invalid comparison type code. Valid values are Eq, NEq, LT, LEq, GT, GEq."))
-
 	};
 
-	GPOS_RESULT eres = GPOS_FAILED;
-
-	GPOS_TRY
+	// copy exception array into heap
+	CMessage *rgpmsg[ExmiDXLSentinel];
+	for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgpmsg); i++)
 	{
-		// copy exception array into heap
-		CMessage *rgpmsg[ExmiDXLSentinel];
-		for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgpmsg); i++)
-		{
-			rgpmsg[i] = GPOS_NEW(mp) CMessage(rgmsg[i]);
-		}
-
-		CMessageRepository *pmr = CMessageRepository::GetMessageRepository();
-
-		for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgmsg); i++)
-		{
-			pmr->AddMessage(ElocEnUS_Utf8, rgpmsg[i]);
-		}
-
-		eres = GPOS_OK;
+		rgpmsg[i] = GPOS_NEW(mp) CMessage(rgmsg[i]);
 	}
-	GPOS_CATCH_EX(ex)
+
+	CMessageRepository *pmr = CMessageRepository::GetMessageRepository();
+
+	for (ULONG i = 0; i < GPOS_ARRAY_SIZE(rgmsg); i++)
 	{
+		pmr->AddMessage(ElocEnUS_Utf8, rgpmsg[i]);
 	}
-	GPOS_CATCH_END;
-
-	return eres;
 }
 
 

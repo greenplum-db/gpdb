@@ -44,6 +44,12 @@ private:
 	// order
 	COrderSpec *m_pos;
 
+	// Number of predicate not applicable on the index
+	ULONG m_ulUnindexedPredColCount;
+
+	// index scan direction
+	EIndexScanDirection m_scan_direction;
+
 public:
 	CPhysicalIndexScan(const CPhysicalIndexScan &) = delete;
 
@@ -51,7 +57,8 @@ public:
 	CPhysicalIndexScan(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
 					   CTableDescriptor *ptabdesc, ULONG ulOriginOpId,
 					   const CName *pnameAlias, CColRefArray *colref_array,
-					   COrderSpec *pos);
+					   COrderSpec *pos, ULONG ulUnindexedPredColCount,
+					   EIndexScanDirection scan_direction);
 
 	// dtor
 	~CPhysicalIndexScan() override;
@@ -85,6 +92,13 @@ public:
 		return m_ulOriginOpId;
 	}
 
+	// index scan direction is only used for B-tree indices.
+	EIndexScanDirection
+	IndexScanDirection() const
+	{
+		return m_scan_direction;
+	}
+
 	// operator specific hash function
 	ULONG HashValue() const override;
 
@@ -103,6 +117,13 @@ public:
 	FInputOrderSensitive() const override
 	{
 		return true;
+	}
+
+	// number of predicate not applicable on the index
+	ULONG
+	ResidualPredicateSize() const
+	{
+		return m_ulUnindexedPredColCount;
 	}
 
 	//-------------------------------------------------------------------------------------

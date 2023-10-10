@@ -19,6 +19,7 @@
 
 #include "access/relscan.h"
 #include "access/sdir.h"
+#include "c.h"
 #include "utils/guc.h"
 #include "utils/rel.h"
 #include "utils/snapshot.h"
@@ -541,6 +542,17 @@ typedef struct TableAmRoutine
 	void		(*relation_copy_data) (Relation rel,
 									   const RelFileNode *newrnode);
 
+	/* See table_relation_add_columns(). */
+	void 		(*relation_add_columns) (Relation rel,
+									List *newvals,
+									List *constraints,
+									TupleDesc oldDesc);
+
+	/* See table_relation_rewrite_columns(). */
+	void 		(*relation_rewrite_columns) (Relation rel,
+									List *newvals,
+									TupleDesc oldDesc);
+
 	/* See table_relation_copy_for_cluster() */
 	void		(*relation_copy_for_cluster) (Relation NewTable,
 											  Relation OldTable,
@@ -606,6 +618,13 @@ typedef struct TableAmRoutine
 											double *liverows,
 											double *deadrows,
 											TupleTableSlot *slot);
+	
+	int			(*relation_acquire_sample_rows) (Relation onerel,
+												 int elevel,
+												 HeapTuple *rows,
+												 int targrows,
+												 double *totalrows,
+												 double *totaldeadrows);
 
 	/* see table_index_build_range_scan for reference about parameters */
 	double		(*index_build_range_scan) (Relation table_rel,
@@ -784,6 +803,24 @@ typedef struct TableAmRoutine
 										   struct SampleScanState *scanstate,
 										   TupleTableSlot *slot);
 
+	/* 
+	 * See table_relation_copy_for_repack()
+	 *
+	 * This is kept at the bottom of the struct to avoid ABI breakage within 
+	 * a major version.
+	 */
+	void		(*relation_copy_for_repack) (Relation origTable,
+											 Relation newTable,
+											 int nkeys,
+											 AttrNumber *attNums,
+											 Oid *sortOperators,
+											 Oid *sortCollations,
+											 bool *nullsFirstFlags, 
+											 TransactionId *xid_cutoff,
+											 MultiXactId *multi_cutoff,
+											 TransactionId OldestXmin,
+											 double *num_tuples);
+									 
 } TableAmRoutine;
 
 
@@ -1576,6 +1613,18 @@ table_relation_copy_data(Relation rel, const RelFileNode *newrnode)
 	rel->rd_tableam->relation_copy_data(rel, newrnode);
 }
 
+static inline void
+table_relation_add_columns(Relation rel, List *newvals, List *constraints, TupleDesc oldDesc)
+{
+	rel->rd_tableam->relation_add_columns(rel, newvals, constraints, oldDesc);
+}
+
+static inline void
+table_relation_rewrite_columns(Relation rel, List *newvals, TupleDesc oldDesc)
+{
+	rel->rd_tableam->relation_rewrite_columns(rel, newvals, oldDesc);
+}
+
 /*
  * Copy data from `OldTable` into `NewTable`, as part of a CLUSTER or VACUUM
  * FULL.
@@ -1615,6 +1664,32 @@ table_relation_copy_for_cluster(Relation OldTable, Relation NewTable,
 													tups_recently_dead);
 }
 
+/* 
+ * Routine to support a repack operation, which rewrites the table in physically sorted 
+ * order on disk. It is similar in spirit to cluster, except that an index is not used 
+ * to perform the sort. Due to the lack of an index, tuplesort metadata is 
+ * separately specified. Other than that this interface is exactly similar to 
+ * relation_copy_for_cluster (please refer to it for a description of the args).
+ */
+static inline void
+table_relation_copy_for_repack(Relation origTable, Relation newTable,
+								int nkeys, AttrNumber *attNums,
+								Oid *sortOperators, Oid *sortCollations,
+								bool *nullsFirstFlags, TransactionId *xid_cutoff,
+								MultiXactId *multi_cutoff, TransactionId OldestXmin,
+								double *num_tuples)
+{
+	origTable->rd_tableam->relation_copy_for_repack(origTable, newTable, 
+													nkeys, attNums, 
+													sortOperators, 
+													sortCollations,
+													nullsFirstFlags,
+													xid_cutoff,
+													multi_cutoff,
+													OldestXmin,
+													num_tuples);
+}
+
 /*
  * Perform VACUUM on the relation. The VACUUM can be triggered by a user or by
  * autovacuum. The specific actions performed by the AM will depend heavily on
@@ -1631,6 +1706,38 @@ table_relation_vacuum(Relation rel, struct VacuumParams *params,
 					  BufferAccessStrategy bstrategy)
 {
 	rel->rd_tableam->relation_vacuum(rel, params, bstrategy);
+}
+
+/*
+ * GPDB: Interface to acquire sample rows from a given relation (currently
+ * AO/CO).
+ *
+ * Selected rows are returned in the caller-allocated array rows[], which
+ * must have space to hold at least targrows entries.
+ *
+ * The actual number of rows selected is returned as the function result.
+ * We also estimate the total numbers of live and dead rows in the table,
+ * and return them into *totalrows and *totaldeadrows, respectively.
+ *
+ * The returned list of tuples is in order by physical position in the table.
+ * (We will rely on this later to derive correlation estimates.)
+ *
+ * Note: this interface is not used by upstream code.
+ * The upstream interface (implemented by heap) uses a 2-stage sampling method
+ * using table_scan_analyze_next_block() and table_scan_analyze_next_tuple().
+ * See acquire_sample_rows(). Since this upstream method does not suit AO/CO
+ * tables we have created the relation_acquire_sample_rows() interface.
+ *
+ * Note for future merges:
+ * We have to keep this interface consistent with acquire_sample_rows().
+ */
+static inline int
+table_relation_acquire_sample_rows(Relation rel, int elevel, HeapTuple *rows,
+								   int targrows, double *totalrows, double *totaldeadrows)
+{
+	return rel->rd_tableam->relation_acquire_sample_rows(rel, elevel, rows,
+														 targrows, totalrows,
+														 totaldeadrows);
 }
 
 /*
@@ -1728,6 +1835,9 @@ table_index_build_scan(Relation table_rel,
  * When "anyvisible" mode is requested, all tuples visible to any transaction
  * are indexed and counted as live, including those inserted or deleted by
  * transactions that are still in progress.
+ *
+ * GPDB: For a partial range scan, the caller needs to guarantee that the range
+ * [start_blockno, start_blockno + numblocks) lies in a single BlockSequence.
  */
 static inline double
 table_index_build_range_scan(Relation table_rel,
@@ -1798,6 +1908,9 @@ table_relation_size(Relation rel, ForkNumber forkNumber)
 /*
  * GPDB: Returns the block sequences contained in this relation. See
  * BlockSequence for details. Currently used by BRIN.
+ *
+ * Out of all theoretically possible block sequences, we only return the ones
+ * that currently exist for the relation.
  */
 static inline BlockSequence *
 table_relation_get_block_sequences(Relation rel, int *numSequences)
@@ -1806,8 +1919,12 @@ table_relation_get_block_sequences(Relation rel, int *numSequences)
 }
 
 /*
- * GPDB: Determines the block sequence in which the supplied block number falls.
+ * GPDB: Determines the block sequence in which the logical heap 'blkNumber' falls.
  * See BlockSequence for details. Currently used by BRIN.
+ *
+ * If the specified logical 'blkNumber' doesn't fall into the range of an
+ * existing BlockSequence, the BlockSequence is expected to contain the correct
+ * startblknum with nblocks = 0.
  */
 static inline void
 table_relation_get_block_sequence(Relation rel,

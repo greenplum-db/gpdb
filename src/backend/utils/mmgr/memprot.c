@@ -41,7 +41,10 @@
 #include "utils/guc.h"
 
 #define SHMEM_OOM_TIME "last vmem oom time"
-#define MAX_REQUESTABLE_SIZE 0x7fffffff
+
+#ifdef GP_ALLOC_DEBUG
+int 		gp_max_alloc_size_mb = GP_MAX_ALLOC_SIZE_MB_DEFAULT;
+#endif
 
 static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz);
 
@@ -315,7 +318,13 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 	}
 	else if (ec == MemoryFailure_VmemExhausted)
 	{
-		elog(LOG, "Logging memory usage for reaching Vmem limit");
+		/*
+		 * The memory usage have reached Vmem limit, it will loop in gp_malloc
+		 * and gp_failed_to_alloc if new allocation happens, and then errors out
+		 * with "ERRORDATA_STACK_SIZE exceeded". We are therefore printing the
+		 * log message header using write_stderr.
+		 */
+		write_stderr("Logging memory usage for reaching Vmem limit");
 	}
 	else if (ec == MemoryFailure_SystemMemoryExhausted)
 	{
@@ -330,7 +339,10 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 	}
 	else if (ec == MemoryFailure_ResourceGroupMemoryExhausted)
 	{
-		elog(LOG, "Logging memory usage for reaching resource group limit");
+		/*
+		 * The behavior in resgroup group mode is the same as MemoryFailure_VmemExhausted.
+		 */
+		write_stderr("Logging memory usage for reaching resource group limit");
 	}
 	else
 		elog(ERROR, "Unknown memory failure error code");
@@ -437,7 +449,13 @@ static void *gp_malloc_internal(int64 requested_size)
 	Assert(requested_size > 0);
 	size_t size_with_overhead = UserPtrSize_GetVmemPtrSize(requested_size);
 
-	Assert(size_with_overhead <= MAX_REQUESTABLE_SIZE);
+#ifdef GP_ALLOC_DEBUG
+	/*
+	 * Added protection for debug builds, to catch bugs leading to unusually
+	 * high memory allocation requests.
+	 */
+	Assert(size_with_overhead <= gp_max_alloc_size_mb * 1024L * 1024L);
+#endif
 
 	MemoryAllocationStatus stat = VmemTracker_ReserveVmem(size_with_overhead);
 	if (MemoryAllocation_Success == stat)

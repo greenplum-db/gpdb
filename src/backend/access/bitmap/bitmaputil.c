@@ -1033,6 +1033,7 @@ _bitmap_log_bitmapwords(Relation rel,
 	ListCell   *lcb;
 	bool		init_page;
 	int			num_bm_pages = list_length(xl_bm_bitmapword_pages);
+	int 		current_page = 0;
 
 	Assert(list_length(bitmapBuffers) == num_bm_pages);
 	if (num_bm_pages > MAX_BITMAP_PAGES_PER_INSERT)
@@ -1041,7 +1042,7 @@ _bitmap_log_bitmapwords(Relation rel,
 	MemSet(&xlBitmapWords, 0, sizeof(xlBitmapWords));
 
 	xlBitmapWords.bm_node = rel->rd_node;
-	xlBitmapWords.bm_num_pages = list_length(xl_bm_bitmapword_pages);
+	xlBitmapWords.bm_num_pages = num_bm_pages;
 	xlBitmapWords.bm_init_first_page = init_first_page;
 
 	xlBitmapWords.bm_lov_blkno = BufferGetBlockNumber(lovBuffer);
@@ -1071,6 +1072,13 @@ _bitmap_log_bitmapwords(Relation rel,
 
 		Assert(BufferIsValid(bitmapBuffer));
 
+		/* fill bm_next_blkno field */
+		if (current_page + 1 < num_bm_pages)
+		{
+			xl_bm_bitmapwords_perpage *next_xl_bm_bitmapwords_perpage = lfirst(lnext(lcp));
+			xlBitmapwordsPage->bm_next_blkno = next_xl_bm_bitmapwords_perpage->bmp_blkno;
+		}
+
 		XLogRegisterBuffer(rdata_no, bitmapBuffer, 0);
 
 		XLogRegisterBufData(rdata_no, (char *) xlBitmapwordsPage, sizeof(xl_bm_bitmapwords_perpage));
@@ -1079,6 +1087,7 @@ _bitmap_log_bitmapwords(Relation rel,
 		XLogRegisterBufData(rdata_no, (char *) &bitmap->cwords[xlBitmapwordsPage->bmp_start_cword_no],
 							xlBitmapwordsPage->bmp_num_cwords * sizeof(BM_HRL_WORD));
 		rdata_no++;
+		current_page++;
 	}
 
 	recptr = XLogInsert(RM_BITMAP_ID, XLOG_BITMAP_INSERT_WORDS);

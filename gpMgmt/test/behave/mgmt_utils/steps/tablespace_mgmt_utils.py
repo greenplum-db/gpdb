@@ -1,5 +1,6 @@
 import pipes
 import tempfile
+import os
 
 from behave import given, then
 
@@ -7,7 +8,9 @@ from contextlib import closing
 
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray
-from test.behave_utils.utils import run_cmd
+from test.behave_utils.utils import run_cmd,wait_for_database_dropped
+from gppylib.commands.base import Command, REMOTE
+from gppylib.commands.unix import get_remote_link_path
 
 class Tablespace:
     def __init__(self, name):
@@ -35,17 +38,18 @@ class Tablespace:
         conn.close()
 
     def cleanup(self):
-        conn = dbconn.connect(dbconn.DbURL(dbname="postgres"), unsetSearchPath=False)
-        dbconn.execSQL(conn, "DROP DATABASE IF EXISTS %s" % self.dbname)
-        dbconn.execSQL(conn, "DROP TABLESPACE IF EXISTS %s" % self.name)
+        with closing(dbconn.connect(dbconn.DbURL(dbname="postgres"), unsetSearchPath=False)) as conn:
+            dbconn.execSQL(conn, "DROP DATABASE IF EXISTS %s" % self.dbname)
+            wait_for_database_dropped(self.dbname)
 
-        # Without synchronous_commit = 'remote_apply' introduced in 9.6, there
-        # is no guarantee that the mirrors have removed their tablespace
-        # directories by the time the DROP TABLESPACE command returns.
-        # We need those directories to no longer be in use by the mirrors
-        # before removing them below.
-        _checkpoint_and_wait_for_replication_replay(conn)
-        conn.close()
+            dbconn.execSQL(conn, "DROP TABLESPACE IF EXISTS %s" % self.name)
+
+            # Without synchronous_commit = 'remote_apply' introduced in 9.6, there
+            # is no guarantee that the mirrors have removed their tablespace
+            # directories by the time the DROP TABLESPACE command returns.
+            # We need those directories to no longer be in use by the mirrors
+            # before removing them below.
+            _checkpoint_and_wait_for_replication_replay(conn)
 
         gparray = GpArray.initFromCatalog(dbconn.DbURL())
         for host in gparray.getHostList():
@@ -69,6 +73,32 @@ class Tablespace:
         if sorted(data) != sorted(self.initial_data):
             raise Exception("Tablespace data is not identically distributed. Expected:\n%r\n but found:\n%r" % (
                 sorted(self.initial_data), sorted(data)))
+
+    def verify_symlink(self, hostname=None, port=0):
+        url = dbconn.DbURL(hostname=hostname, port=port, dbname=self.dbname)
+        gparray = GpArray.initFromCatalog(url)
+        all_segments = gparray.getDbList()
+
+        # fetching oid of available user created tablespaces
+        with closing(dbconn.connect(url, unsetSearchPath=False)) as conn:
+            tblspc_oids = dbconn.query(conn, "SELECT oid FROM pg_tablespace WHERE spcname NOT IN ('pg_default', 'pg_global')").fetchall()
+
+        if not tblspc_oids:
+            return None  # no table space is present
+
+        # keeping a list to check if any of the symlink has duplicate entry
+        tblspc = []
+        for seg in all_segments:
+            for tblspc_oid in tblspc_oids:
+                symlink_path = os.path.join(seg.getSegmentTableSpaceDirectory(), str(tblspc_oid[0]))
+                target_path = get_remote_link_path(symlink_path, seg.getSegmentHostName())
+                segDbId = seg.getSegmentDbId()
+                #checking for duplicate and wrong symlink target
+                if target_path in tblspc or os.path.basename(target_path) != str(segDbId):
+                    raise Exception("tablespac has invalid/duplicate symlink for oid {0} in segment dbid {1}".\
+                        format(str(tblspc_oid[0]),str(segDbId)))
+
+                tblspc.append(target_path)
 
     def verify_for_gpexpand(self, hostname=None, port=0):
         """
@@ -187,6 +217,9 @@ def _create_tablespace_with_data(context, name):
 def impl(context):
     context.tablespaces["outerspace"].verify()
 
+@then('the tablespace has valid symlink')
+def impl(context):
+    context.tablespaces["outerspace"].verify_symlink()
 
 @then('the tablespace is valid on the standby coordinator')
 def impl(context):
@@ -196,7 +229,6 @@ def impl(context):
 @then('the other tablespace is valid')
 def impl(context):
     context.tablespaces["myspace"].verify()
-
 
 @then('the tablespace is valid after gpexpand')
 def impl(context):

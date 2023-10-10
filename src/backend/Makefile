@@ -71,8 +71,34 @@ ifneq ($(PORTNAME), cygwin)
 ifneq ($(PORTNAME), win32)
 ifneq ($(PORTNAME), aix)
 
-postgres: $(OBJS)
-	$(CXX) $(CXXFLAGS) $(call expand_subsys,$^) $(LDFLAGS) $(LDFLAGS_EX) $(export_dynamic) $(LIBS) -o $@
+# Due to Greenplum's MPP architecture, the postgres process needs to connect to
+# databases, some symbols from frontend are compiled to the postgres binary.
+# Some extensions requires frontend symbols and are dynamically linked to libpq.so.
+# However, some symbols are not safe to be exported both in the postgres binary
+# and libpq.so. E.g., some of the functions are using palloc()/pfree() to allocate
+# and free memory in backend codes while using malloc()/free() to allocate and free
+# memory in frontend codes. We use linker version script to make these symbols exported
+# in libpq.so and private in the postgres binary.
+# FIXME: Can we teach the postgres binary to dynamically link against libpq.so? So that
+# we don't need this hack.
+SAFELY_EXPORTED_SYMBOLS_PATTERN = "(pqsignal|pg_*)"
+SYMBOL_MAPPING_FLAGS =
+ifeq ($(PORTNAME), darwin)
+SYMBOL_MAP_FILE = hide_symbols.list
+$(SYMBOL_MAP_FILE): $(top_builddir)/src/interfaces/libpq/exports.txt
+	$(AWK) '/^[^\#]/ {printf "_%s\n",$$1}' $< | grep -v -E $(SAFELY_EXPORTED_SYMBOLS_PATTERN) >$@
+SYMBOL_MAPPING_FLAGS = -unexported_symbols_list $(SYMBOL_MAP_FILE)
+endif
+
+ifeq ($(PORTNAME), linux)
+SYMBOL_MAP_FILE = postgres_symbols.map
+$(SYMBOL_MAP_FILE): $(top_builddir)/src/interfaces/libpq/exports.txt
+	( echo '{ global: *; '; echo ' local:'; $(AWK) '/^[^\#]/ {printf "%s;\n",$$1}' $< | grep -v -E $(SAFELY_EXPORTED_SYMBOLS_PATTERN); echo '};' ) >$@
+SYMBOL_MAPPING_FLAGS = -Wl,--version-script=$(SYMBOL_MAP_FILE)
+endif
+
+postgres: $(OBJS) $(SYMBOL_MAP_FILE)
+	$(CXX) $(CXXFLAGS) $(call expand_subsys,$(OBJS)) $(LDFLAGS) $(LDFLAGS_EX) $(export_dynamic) $(LIBS) $(SYMBOL_MAPPING_FLAGS) -o $@
 
 endif
 endif
@@ -311,6 +337,10 @@ ifeq ($(PORTNAME), cygwin)
 endif
 ifeq ($(PORTNAME), win32)
 	rm -f postgres.dll libpostgres.a $(WIN32RES)
+endif
+ifeq (,$(filter cygwin win32 aix,$(PORTNAME)))
+	rm -f postgres_symbols.map
+	rm -f hide_symbols.list
 endif
 
 distclean: clean

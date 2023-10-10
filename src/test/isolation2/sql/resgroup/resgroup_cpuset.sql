@@ -34,6 +34,10 @@ CREATE VIEW cancel_all AS
     FROM pg_stat_activity
     WHERE query LIKE 'SELECT * FROM busy%';
 
+-- The test cases for the value of gp_resource_group_cpu_limit equals 0.9, 
+-- do not change it during the test.
+show gp_resource_group_cpu_limit;
+
 CREATE RESOURCE GROUP rg1_cpuset_test WITH (cpuset='0');
 CREATE ROLE role1_cpuset_test RESOURCE GROUP rg1_cpuset_test;
 
@@ -61,8 +65,8 @@ select pg_sleep(2);
 11: SELECT check_cpuset('rg1_cpuset_test', '0,1');
 11: END;
 
--- change to cpu_hard_quota_limit while the transaction is running
-ALTER RESOURCE GROUP rg1_cpuset_test SET cpu_hard_quota_limit 70;
+-- change to cpu_max_percent while the transaction is running
+ALTER RESOURCE GROUP rg1_cpuset_test SET cpu_max_percent 70;
 
 -- cancel the transaction
 -- start_ignore
@@ -73,7 +77,7 @@ select * from cancel_all;
 11q:
 -- end_ignore
 
--- test whether the cpu_hard_quota_limit had taken effect
+-- test whether the cpu_max_percent had taken effect
 10: SET ROLE TO role1_cpuset_test;
 10: BEGIN;
 10&: SELECT * FROM busy;
@@ -100,7 +104,8 @@ select * from cancel_all;
 select pg_sleep(5);
 
 11: BEGIN;
-11: select max(cpu_usage)::float >= 65 from gp_toolkit.gp_resgroup_status_per_host where rsgname='rg1_cpuset_test';
+11: select max(cpu_usage)::float >= 65 * 0.9 
+from gp_toolkit.gp_resgroup_status_per_host where groupname='rg1_cpuset_test';
 -- cancel the transaction
 -- start_ignore
 select * from cancel_all;
@@ -118,11 +123,11 @@ CREATE RESOURCE GROUP rg1_test_group WITH (cpuset='0');
 SELECT check_cpuset_rules();
 CREATE RESOURCE GROUP rg2_test_group WITH (cpuset='1');
 SELECT check_cpuset_rules();
-ALTER RESOURCE GROUP rg1_test_group SET cpu_hard_quota_limit 1;
+ALTER RESOURCE GROUP rg1_test_group SET cpu_max_percent 1;
 SELECT check_cpuset_rules();
 ALTER RESOURCE GROUP rg1_test_group SET cpuset '0';
 SELECT check_cpuset_rules();
-ALTER RESOURCE GROUP rg1_test_group SET cpu_hard_quota_limit 1;
+ALTER RESOURCE GROUP rg1_test_group SET cpu_max_percent 1;
 SELECT check_cpuset_rules();
 DROP RESOURCE GROUP rg1_test_group;
 SELECT check_cpuset_rules();

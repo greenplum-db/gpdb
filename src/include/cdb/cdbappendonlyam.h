@@ -120,6 +120,8 @@ typedef struct AppendOnlyExecutorReadBlock
 
 	AppendOnlyStorageRead	*storageRead;
 
+	AttrNumber 		curLargestAttnum; /* the largest attnum stored in memtuple currently being read */
+	int64 			*attnum_to_rownum; /*attnum to rownum mapping, used in building memtuple binding */
 	MemTupleBinding *mt_bind;
 	/*
 	 * When reading a segfile that's using version < AOSegfileFormatVersion_GP5,
@@ -133,7 +135,8 @@ typedef struct AppendOnlyExecutorReadBlock
 
 	int				segmentFileNum;
 
-	int64			totalRowsScannned;
+	int64			totalRowsScanned;
+	int64			blockRowsProcessed;
 
 	int64			blockFirstRowNum;
 	int64			headerOffsetInFile;
@@ -199,7 +202,7 @@ typedef struct AppendOnlyScanDescData
 	AppendOnlyExecutorReadBlock	executorReadBlock;
 
 	/* current scan state */
-	bool		bufferDone;
+	bool		needNextBuffer;
 
 	bool	initedStorageRoutines;
 
@@ -229,10 +232,31 @@ typedef struct AppendOnlyScanDescData
 	AppendOnlyVisimap visibilityMap;
 
 	/*
-	 * Only used by `analyze`
+	 * used by `analyze`
 	 */
-	int64		nextTupleId;
-	int64		targetTupleId;
+
+	/*
+	 * targrow: the output of the Row-based sampler (Alogrithm S), denotes a
+	 * rownumber in the flattened row number space that is the target of a sample,
+	 * which starts from 0.
+	 * In other words, if we have seg0 rownums: [1, 100], seg1 rownums: [1, 200]
+	 * If targrow = 150, then we are referring to seg1's rownum=51.
+	 */
+	int64				targrow;
+
+	/*
+	 * segfirstrow: pointing to the next starting row which is used to check
+	 * the distance to `targrow`
+	 */
+	int64				segfirstrow;
+
+	/*
+	 * segrowsprocessed: track the rows processed under the current segfile.
+	 * Don't miss updating it accordingly when "segfirstrow" is updated.
+	 */
+	int64				segrowsprocessed;
+
+	AOBlkDirScan		blkdirscan;
 
 	/* For Bitmap scan */
 	int			rs_cindex;		/* current tuple's index in tbmres->offsets */
@@ -433,6 +457,9 @@ extern void appendonly_endscan(TableScanDesc scan);
 extern bool appendonly_getnextslot(TableScanDesc scan,
 								   ScanDirection direction,
 								   TupleTableSlot *slot);
+extern bool appendonly_get_target_tuple(AppendOnlyScanDesc aoscan,
+										int64 targrow,
+										TupleTableSlot *slot);
 extern AppendOnlyFetchDesc appendonly_fetch_init(
 	Relation 	relation,
 	Snapshot    snapshot,
@@ -465,6 +492,10 @@ extern TM_Result appendonly_delete(
 		AOTupleId* aoTupleId);
 extern void appendonly_delete_finish(AppendOnlyDeleteDesc aoDeleteDesc);
 
+extern bool appendonly_positionscan(AppendOnlyScanDesc aoscan,
+									AppendOnlyBlockDirectoryEntry *dirEntry,
+									int fsInfoIdx);
+
 /*
  * Update total bytes read for the entire scan. If the block was compressed,
  * update it with the compressed length. If the block was not compressed, update
@@ -479,6 +510,23 @@ AppendOnlyScanDesc_UpdateTotalBytesRead(AppendOnlyScanDesc scan)
 		scan->totalBytesRead += scan->storageRead.current.compressedLen;
 	else
 		scan->totalBytesRead += scan->storageRead.current.uncompressedLen;
+}
+
+static inline int64
+AppendOnlyScanDesc_TotalTupCount(AppendOnlyScanDesc scan)
+{
+	Assert(scan != NULL);
+
+	int64 totalrows = 0;
+	FileSegInfo **seginfo = scan->aos_segfile_arr;
+
+    for (int i = 0; i < scan->aos_total_segfiles; i++)
+    {
+	    if (seginfo[i]->state != AOSEG_STATE_AWAITING_DROP)
+		    totalrows += seginfo[i]->total_tupcount;
+    }
+
+    return totalrows;
 }
 
 #endif   /* CDBAPPENDONLYAM_H */

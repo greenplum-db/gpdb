@@ -6,8 +6,10 @@
 -- s/DETAIL:  Failing row contains \(.*\) = \(.*\)/DETAIL:  Failing row contains (#####)/
 -- end_matchsubs
 
-set optimizer=off;
+set optimizer_trace_fallback = on;
 set enable_nestloop=on;
+set optimizer_enable_nljoin = on;
+
 -- Clean up in case a prior regression run failed
 
 -- Suppress NOTICE messages when users/groups don't exist
@@ -102,9 +104,15 @@ GRANT ALL ON atest1 TO PUBLIC; -- fail
 SELECT * FROM atest1 WHERE ( b IN ( SELECT col1 FROM atest2 ) );
 SELECT * FROM atest2 WHERE ( col1 IN ( SELECT b FROM atest1 ) );
 
+-- test ctas
+create table atest2_ctas_ok as select col1 from atest2
+where col1 in (select distinct b from atest1); -- ok 
 
 SET SESSION AUTHORIZATION regress_priv_user3;
 SELECT session_user, current_user;
+
+create table atest2_ctas_fail as select col1 from atest2
+where col1 in (select distinct b from atest1); -- fail 
 
 SELECT * FROM atest1; -- ok
 SELECT * FROM atest2; -- fail
@@ -141,7 +149,7 @@ SELECT * FROM atest1; -- ok
 SET SESSION AUTHORIZATION regress_priv_user1;
 
 CREATE TABLE atest12 as
-  SELECT x AS a, 10001 - x AS b FROM generate_series(1,10000) x;
+  SELECT x AS a, 10001 - x AS b FROM generate_series(1,10000) x distributed by (a);
 CREATE INDEX ON atest12 (a);
 CREATE INDEX ON atest12 (abs(a));
 VACUUM ANALYZE atest12;
@@ -169,6 +177,9 @@ EXPLAIN (COSTS OFF) SELECT * FROM atest12 x, atest12 y
 
 -- This should also be a nestloop, but the security barrier forces the inner
 -- scan to be materialized
+-- set optimizer_trace_fallback for below queries, as the "Query Parameter not supported"
+-- fallback message may appear multiple times and is not deterministic
+set optimizer_trace_fallback=off;
 EXPLAIN (COSTS OFF) SELECT * FROM atest12sbv x, atest12sbv y WHERE x.a = y.b;
 
 -- Check if regress_priv_user2 can break security.
@@ -186,6 +197,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM atest12 WHERE a >>> 0;
 -- These plans should continue to use a nestloop, since they execute with the
 -- privileges of the view owner.
 EXPLAIN (COSTS OFF) SELECT * FROM atest12v x, atest12v y WHERE x.a = y.b;
+
 EXPLAIN (COSTS OFF) SELECT * FROM atest12sbv x, atest12sbv y WHERE x.a = y.b;
 
 -- A non-security barrier view does not guard against information leakage.
@@ -196,6 +208,7 @@ EXPLAIN (COSTS OFF) SELECT * FROM atest12v x, atest12v y
 EXPLAIN (COSTS OFF) SELECT * FROM atest12sbv x, atest12sbv y
   WHERE x.a = y.b and abs(y.a) <<< 5;
 
+set optimizer_trace_fallback=on;
 -- Now regress_priv_user1 grants sufficient access to regress_priv_user2.
 SET SESSION AUTHORIZATION regress_priv_user1;
 GRANT SELECT (a, b) ON atest12 TO PUBLIC;
@@ -1475,6 +1488,7 @@ DROP TABLE atest6;
 DROP TABLE atestc;
 DROP TABLE atestp1;
 DROP TABLE atestp2;
+DROP TABLE atest2_ctas_ok;
 
 -- start_ignore
 SELECT lo_unlink(oid) FROM pg_largeobject_metadata WHERE oid >= 1000 AND oid < 3000 ORDER BY oid;

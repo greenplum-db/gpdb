@@ -35,22 +35,8 @@ except ImportError:
     sys.exit(2)
 
 import platform
-
-try:
-    import pg
-except ImportError:
-    try:
-        from pygresql import pg
-    except Exception as e:
-        pass
-except Exception as e:
-    print(repr(e))
-    errorMsg = "gpload was unable to import The PyGreSQL Python module (pg.py) - %s\n" % str(e)
-    sys.stderr.write(str(errorMsg))
-    errorMsg = "Please check if you have the correct Visual Studio redistributable package installed.\n"
-    sys.stderr.write(str(errorMsg))
-    sys.exit(2)
-
+import psycopg2
+from psycopg2 import extras
 import hashlib
 import datetime,getpass,os,signal,socket,threading,time,traceback,re
 import subprocess
@@ -562,6 +548,16 @@ def is_keyword(tab):
     else:
         return False
 
+# Escape single quotes, backslashes appearing in the string according to the SQL string constants syntax.
+# E.g.,
+# >>> escape_string(r"O'Reilly")
+# "O''Reilly"
+def escape_string(string):
+    adapted = psycopg2.extensions.QuotedString(string)
+    # The getquoted() API returns 'latin-1' encoded binary string by default, we need to specify
+    # the encoding manually.
+    adapted.encoding = 'utf-8'
+    return adapted.getquoted().decode()[1:-1]
 
 def caseInsensitiveDictLookup(key, dictionary):
     """
@@ -724,25 +720,6 @@ def match_notice_obj(notice):
     else:
         return 0
 
-
-def notice_processor_Notice(notice):
-    # process the notice in main branch
-    # notice is a class which is different in 6X, we need a new function to process
-    global NUM_WARN_ROWS
-    if windowsPlatform == True:
-           # We don't have a pygresql with our notice fix, so skip for windows.
-       # This means we will not get any warnings on windows (MPP10989).
-       return
-    theNotices = notice.message
-    messageNumber = 0
-    if isinstance(theNotices, list):
-        while messageNumber < len(theNotices) and NUM_WARN_ROWS==0:
-            NUM_WARN_ROWS = match_notice_obj(theNotices[messageNumber])
-            messageNumber+=1
-    else:
-        NUM_WARN_ROWS = match_notice_obj(theNotices)
-
-
 def notice_processor(notice):
     global NUM_WARN_ROWS
     if windowsPlatform == True:
@@ -777,7 +754,7 @@ def bytestr(size, precision=1):
         if size >= factor:
             break
 
-    float_string_split = "size/float(factor)".split('.')
+    float_string_split = repr(size/float(factor)).split('.')
     integer_part = float_string_split[0]
     decimal_part = float_string_split[1]
     if int(decimal_part[0:precision]):
@@ -832,94 +809,17 @@ class CatThread(threading.Thread):
         except Exception as e:
             # close fd so that not block the worker thread because of stdout/stderr pipe not finish/closed.
             self.fd.close()
-            sys.stderr.write("\n\nWarning: gpfdist log halt because Log Thread '%s' got an exception: %s \n" % (self.getName(), str(e)))
-            self.gpload.log(self.gpload.WARN, "gpfdist log halt because Log Thread '%s' got an exception: %s" % (self.getName(), str(e)))
+            sys.stderr.write("\n\nWarning: gpfdist log halt because Log Thread '%s' got an exception: %s \n" % (self.name, str(e)))
+            self.gpload.log(self.gpload.WARN, "gpfdist log halt because Log Thread '%s' got an exception: %s" % (self.name, str(e)))
             raise
 
-class Progress(threading.Thread):
-    """
-    Determine our progress from the gpfdist daemon
-    """
-    def __init__(self,gpload,ports):
-        threading.Thread.__init__(self)
-        self.gpload = gpload
-        self.ports = ports
-        self.number = 0
-        self.condition = threading.Condition()
-
-    def get(self,port):
-        """
-        Connect to gpfdist and issue an HTTP query. No need to do this with
-        httplib as the transaction is extremely simple
-        """
-        addrinfo = socket.getaddrinfo('localhost', port)
-        s = socket.socket(addrinfo[0][0],socket.SOCK_STREAM)
-        s.connect(('localhost',port))
-        s.sendall('GET gpfdist/status HTTP/1.0\r\n\r\n')
-        f = s.makefile()
-        read_bytes = -1
-        total_bytes = -1
-        total_sessions = -1
-        for line in f:
-            self.gpload.log(self.gpload.DEBUG, "gpfdist stat: %s" % \
-                        line.strip('\n'))
-            a = line.split(' ')
-            if not a:
-                continue
-            if a[0]=='read_bytes':
-                read_bytes = int(a[1])
-            elif a[0]=='total_bytes':
-                total_bytes = int(a[1])
-            elif a[0]=='total_sessions':
-                total_sessions = int(a[1])
-        s.close()
-        f.close()
-        return read_bytes,total_bytes,total_sessions
-
-    def get1(self):
-        """
-        Parse gpfdist output
-        """
-        read_bytes = 0
-        total_bytes = 0
-        for port in self.ports:
-            a = self.get(port)
-            if a[2]<1:
-                return
-            if a[0]!=-1:
-                read_bytes += a[0]
-            if a[1]!=-1:
-                total_bytes += a[1]
-        self.gpload.log(self.gpload.INFO,'transferred %s of %s' % \
-            (bytestr(read_bytes),bytestr(total_bytes)))
-
-    def run(self):
-        """
-        Thread worker
-        """
-        while 1:
-            try:
-                self.condition.acquire()
-                n = self.number
-                self.condition.release()
-                self.get1()
-                if n:
-                    self.gpload.log(self.gpload.DEBUG, "gpfdist status thread told to stop")
-                    self.condition.acquire()
-                    self.condition.notify()
-                    self.condition.release()
-                    break
-            except socket.error as e:
-                self.gpload.log(self.gpload.DEBUG, "got socket exception: %s" % e)
-                break
-            time.sleep(1)
 def cli_help():
     help_path = os.path.join(sys.path[0], '..', 'docs', 'cli_help', EXECNAME +
-                             '_help');
+                             '_help')
     f = None
     try:
         try:
-            f = open(help_path);
+            f = open(help_path)
             return f.read(-1)
         except:
             return ''
@@ -1386,7 +1286,7 @@ class gpload:
                 pass
 
         if level == self.ERROR:
-            self.exitValue = 2;
+            self.exitValue = 2
             sys.exit(self.exitValue)
 
     def getconfig(self, a, typ=None, default='error', extraStuff='', returnOriginal=False):
@@ -1834,9 +1734,9 @@ class gpload:
         """
         Connect to the backend
         """
-        if self.db != None:
-            self.db.close()
-            self.db = None
+        if self.conn != None:
+            self.conn.close()
+            self.conn = None
         if self.options.W:
             if self.options.password==None:
                 self.options.password = getpass.getpass()
@@ -1855,19 +1755,20 @@ class gpload:
                      " host=" + str(self.options.h) +
                      " port=" + str(self.options.p) +
                      " database=" + str(self.options.d))
-            self.db = pg.DB( dbname=self.options.d
-                           , host=self.options.h
-                           , port=self.options.p
-                           , user=self.options.U
-                           , passwd=self.options.password
-                           )
+            self.conn = psycopg2.connect(dbname=self.options.d,
+                                         host=self.options.h,
+                                         port=self.options.p,
+                                         user=self.options.U,
+                                         password=self.options.password)
+            self.conn.set_session(autocommit=True)
             self.log(self.DEBUG, "Successfully connected to database")
 
             if noGpVersion == False:
                 # Get GPDB version
-                curs = self.db.query("SELECT version()")
-                self.gpdb_version = GpVersion(curs.getresult()[0][0])
-                self.log(self.DEBUG, "GPDB version is: %s" % self.gpdb_version)
+                with self.conn.cursor() as cur:
+                    cur.execute("SELECT version()")
+                    self.gpdb_version = GpVersion(cur.fetchall()[0][0])
+                    self.log(self.DEBUG, "GPDB version is: %s" % self.gpdb_version)
 
         except Exception as e:
             errorMessage = str(e)
@@ -1961,13 +1862,15 @@ class gpload:
                              WHERE c.relname = '%s'
                              AND pg_catalog.pg_table_is_visible(c.oid);""" % quote_unident(self.table)
 
-            resultList = self.db.query(queryString).getresult()
+            with self.conn.cursor() as cur:
+                cur.execute(queryString)
+                resultList = cur.fetchall()
 
-            if len(resultList) > 0:
-                self.schema = (resultList[0])[0]
-                self.log(self.INFO, "setting schema '%s' for table '%s'" % (self.schema, quote_unident(self.table)))
-            else:
-                self.log(self.ERROR, "table %s not found in any database schema" % self.table)
+                if len(resultList) > 0:
+                    self.schema = (resultList[0])[0]
+                    self.log(self.INFO, "setting schema '%s' for table '%s'" % (self.schema, quote_unident(self.table)))
+                else:
+                    self.log(self.ERROR, "table %s not found in any database schema" % self.table)
 
 
         queryString = """select nt.nspname as table_schema,
@@ -1990,41 +1893,45 @@ class gpload:
         count = 0
         self.into_columns = []
         self.into_columns_dict = dict()
-        resultList = self.db.query(queryString).dictresult()
-        while count < len(resultList):
-            row = resultList[count]
-            count += 1
-            ct = str(row['data_type'])
-            if ct == 'bigserial':
-               ct = 'bigint'
-            elif ct == 'serial':
-               ct = 'int4'
-            name = row['column_name']
-            name = quote_ident(name)
-            has_seq = row['has_sequence']
-            if has_seq == str('f') or has_seq==False:
-                has_seq_bool = False
-            if has_seq == str('t') or has_seq==True:
-                has_sql_bool = True
-            i = [name,ct,None, has_seq_bool]  
-            # i: [column name, column data type, mapping target, has_sequence]
-            self.into_columns.append(i)
-            self.into_columns_dict[name] = i
-            self.log(self.DEBUG, "found input column: " + str(i))
-        if count == 0:
-            # see if it's a permissions issue or it actually doesn't exist
-            tableName = quote_unident(self.table)
-            tableSchema = quote_unident(self.schema)
-            sql = """select 1 from pg_class c, pg_namespace n
-                        where c.relname = '%s' and
-                        n.nspname = '%s' and
-                        n.oid = c.relnamespace""" % (tableName, tableSchema)
-            resultList = self.db.query(sql).getresult()
-            if len(resultList) > 0:
-                self.log(self.ERROR, "permission denied for table %s.%s" % \
-                            (tableSchema, tableName))
-            else:
-               self.log(self.ERROR, 'table %s.%s does not exist in database %s'% (tableSchema, tableName, self.options.d))
+        with self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(queryString)
+            resultList = cur.fetchall()
+            while count < len(resultList):
+                row = resultList[count]
+                count += 1
+                ct = str(row['data_type'])
+                if ct == 'bigserial':
+                   ct = 'bigint'
+                elif ct == 'serial':
+                   ct = 'int4'
+                name = row['column_name']
+                name = quote_ident(name)
+                has_seq = row['has_sequence']
+                if has_seq == str('f') or has_seq==False:
+                    has_seq_bool = False
+                if has_seq == str('t') or has_seq==True:
+                    has_sql_bool = True
+                i = [name,ct,None, has_seq_bool]  
+                # i: [column name, column data type, mapping target, has_sequence]
+                self.into_columns.append(i)
+                self.into_columns_dict[name] = i
+                self.log(self.DEBUG, "found input column: " + str(i))
+            if count == 0:
+                # see if it's a permissions issue or it actually doesn't exist
+                tableName = quote_unident(self.table)
+                tableSchema = quote_unident(self.schema)
+                sql = """select 1 from pg_class c, pg_namespace n
+                            where c.relname = '%s' and
+                            n.nspname = '%s' and
+                            n.oid = c.relnamespace""" % (tableName, tableSchema)
+                with self.conn.cursor() as cur:
+                    cur.execute(sql)
+                    resultList = cur.fetchall()
+                    if len(resultList) > 0:
+                        self.log(self.ERROR, "permission denied for table %s.%s" % \
+                                    (tableSchema, tableName))
+                    else:
+                       self.log(self.ERROR, 'table %s.%s does not exist in database %s'% (tableSchema, tableName, self.options.d))
 
     def read_mapping(self):
         '''
@@ -2302,8 +2209,10 @@ class gpload:
         if tableName:
             sql = "select %s::regclass::oid" % quote(quote_unident(tableName))
             try:
-                resultList = self.db.query(sql).getresult()
-                return resultList[0][0]
+                with self.conn.cursor() as cur:
+                    cur.execute(sql)
+                    resultList = cur.fetchall()
+                    return resultList[0][0]
             except Exception as e:
                 pass
         return None
@@ -2434,15 +2343,19 @@ class gpload:
         encodingCode = None
         encodingStr = self.getconfig('gpload:input:encoding', str, None)
         if encodingStr is None:
-            result = self.db.query("SHOW SERVER_ENCODING").getresult()
-            if len(result) > 0:
-                encodingStr = result[0][0]
+            with self.conn.cursor() as cur:
+                cur.execute("SHOW SERVER_ENCODING")
+                result = cur.fetchall()
+                if len(result) > 0:
+                    encodingStr = result[0][0]
 
         if encodingStr:
             sql = "SELECT pg_char_to_encoding('%s')" % encodingStr
-            result = self.db.query(sql).getresult()
-            if len(result) > 0:
-                encodingCode = result[0][0]
+            with self.conn.cursor() as cur:
+                cur.execute(sql)
+                result = cur.fetchall()
+                if len(result) > 0:
+                    encodingCode = result[0][0]
 
         limitStr = self.getconfig('gpload:input:error_limit',int, None)
         if self.log_errors and not limitStr:
@@ -2485,11 +2398,13 @@ class gpload:
                               AND n.nspname <> 'pg_catalog'
                               AND n.nspname <> 'information_schema'
                               AND n.nspname !~ '^pg_toast'"""
-                result = self.db.query(sql).getresult()
-                if len(result) > 0:
-                    self.extSchemaTable = self.get_schematable(self.extSchemaName, self.extTableName)
-                    self.log(self.INFO, "reusing external staging table %s" % self.extSchemaTable)
-                    return
+                with self.conn.cursor() as cur:
+                    cur.execute(sql)
+                    result = cur.fetchall()
+                    if len(result) > 0:
+                        self.extSchemaTable = self.get_schematable(self.extSchemaName, self.extTableName)
+                        self.log(self.INFO, "reusing external staging table %s" % self.extSchemaTable)
+                        return
             # staging table is not specified, we need to find it manually
             else:
                 # process the single quotes in order to successfully find an existing external table to reuse.
@@ -2501,17 +2416,19 @@ class gpload:
                     sql = self.get_reuse_exttable_query(formatType, self.formatOpts,
                         limitStr, from_cols, self.extSchemaName, self.log_errors, encodingCode)
 
-                resultList = self.db.query(sql).getresult()
-                if len(resultList) > 0:
-                    # found an external table to reuse. no need to create one. we're done here.
-                    self.extTableName = (resultList[0])[0]
-                    # fast match result is only table name, so we need add schema info
-                    if self.fast_match:
-                        self.extSchemaTable = self.get_schematable(self.extSchemaName, self.extTableName)
-                    else:
-                        self.extSchemaTable = self.extTableName
-                    self.log(self.INFO, "reusing external table %s" % self.extSchemaTable)
-                    return
+                with self.conn.cursor() as cur:
+                    cur.execute(sql)
+                    resultList = cur.fetchall()
+                    if len(resultList) > 0:
+                        # found an external table to reuse. no need to create one. we're done here.
+                        self.extTableName = (resultList[0])[0]
+                        # fast match result is only table name, so we need add schema info
+                        if self.fast_match:
+                            self.extSchemaTable = self.get_schematable(self.extSchemaName, self.extTableName)
+                        else:
+                            self.extSchemaTable = self.extTableName
+                        self.log(self.INFO, "reusing external table %s" % self.extSchemaTable)
+                        return
 
                 # didn't find an existing external table suitable for reuse. Format a reusable
                 # name and issue a CREATE EXTERNAL TABLE on it. Hopefully we can use it next time
@@ -2543,7 +2460,8 @@ class gpload:
             sql += "segment reject limit %s "%limitStr
 
         try:
-            self.db.query(sql.encode('utf-8'))
+            with self.conn.cursor() as cur:
+                cur.execute(sql)
         except Exception as e:
             self.log(self.ERROR, 'could not run SQL "%s": %s' % (sql, str(e)))
 
@@ -2561,7 +2479,9 @@ class gpload:
 
         sql = '''select * from pg_get_table_distributedby('%s.%s'::regclass::oid)'''% (self.schema, self.table)
         try:
-            dk_text = self.db.query(sql.encode('utf-8')).getresult()
+            with self.conn.cursor() as cur:
+                cur.execute(sql)
+                dk_text = cur.fetchall()
         except Exception as e:
             self.log(self.ERROR, 'could not run SQL "%s": %s ' % (sql, str(e)))
 
@@ -2585,10 +2505,12 @@ class gpload:
         distcols = self.get_distribution_key()
 
         sql = "SELECT * FROM pg_class WHERE relname LIKE 'temp_gpload_reusable_%%';"
-        resultList = self.db.query(sql).getresult()
-        if len(resultList) > 0:
-            self.log(self.WARN, """Old style, reusable tables named "temp_gpload_reusable_*" from a previous versions were found.
-                         Greenplum recommends running "DROP TABLE temp_gpload_reusable_..." on each table. This only needs to be done once.""")
+        with self.conn.cursor() as cur:
+            cur.execute(sql)
+            resultList = cur.fetchall()
+            if len(resultList) > 0:
+                self.log(self.WARN, """Old style, reusable tables named "temp_gpload_reusable_*" from a previous versions were found.
+                Greenplum recommends running "DROP TABLE temp_gpload_reusable_..." on each table. This only needs to be done once.""")
 		
         # If the 'reuse tables' option was specified we now try to find an
         # already existing staging table in the catalog which will match
@@ -2608,18 +2530,17 @@ class gpload:
             encoding_conditions = hashlib.md5(conditions_str).hexdigest()
             table_name = 'staging_gpload_reusable_%s'% (encoding_conditions)	
             sql = self.get_reuse_staging_table_query(table_name)
-            resultList = self.db.query(sql).getresult()
+            with self.conn.cursor() as cur:
+                cur.execute(sql)
+                resultList = cur.fetchall()
 
-            if len(resultList) > 0:
-
-                # found a temp table to reuse. no need to create one. we're done here.
-                self.staging_table_name = self.get_schematable(self.extSchemaName, table_name)
-                self.log(self.INFO, "reusing staging table %s" % self.staging_table_name)
-
-                # truncate it so we don't use old data
-                self.do_truncate(self.staging_table_name)
-
-                return
+                if len(resultList) > 0:
+                    # found a temp table to reuse. no need to create one. we're done here.
+                    self.staging_table_name = self.get_schematable(self.extSchemaName, table_name)
+                    self.log(self.INFO, "reusing staging table %s" % self.staging_table_name)
+                    # truncate it so we don't use old data
+                    self.do_truncate(self.staging_table_name)
+                    return
 
             # didn't find an existing staging table suitable for reuse. Format a reusable
             # name and issue a CREATE TABLE on it (without TEMP!). Hopefully we can use it
@@ -2656,31 +2577,31 @@ class gpload:
         self.log(self.LOG, sql)
 
         if not self.options.D:
-            self.db.query(sql)
+            with self.conn.cursor() as cur:
+                cur.execute(sql)
             if not self.reuse_tables:
                 self.cleanupSql.append('DROP TABLE IF EXISTS %s' % self.staging_table_name)
 
 
     def count_errors(self):
-        if self.gpdb_version < "7.0.0":  # for gpdb6
-            notice_processor(self.db.notices())
-        else:
-            pass
-            # callback function is setted before insert
-            # notice processor will be called automaticly
+        notice_processor(self.conn.notices)
 
         if self.log_errors and not self.options.D:
             # make sure we only get errors for our own instance
             if not self.reuse_tables:
-                queryStr = "select count(*) from gp_read_error_log('%s')" % pg.escape_string(self.extSchemaTable)
-                results = self.db.query(queryStr).getresult()
-                return (results[0])[0]
+                queryStr = "select count(*) from gp_read_error_log('%s')" % escape_string(self.extSchemaTable)
+                with self.conn.cursor() as cur:
+                    cur.execute(queryStr)
+                    results = cur.fetchall()
+                    return (results[0])[0]
             else: # reuse_tables
-                queryStr = "select count(*) from gp_read_error_log('%s') where cmdtime > to_timestamp(%s)" % (pg.escape_string(self.extSchemaTable), self.startTimestamp)
-                results = self.db.query(queryStr).getresult()
-                global NUM_WARN_ROWS
-                NUM_WARN_ROWS = (results[0])[0]
-                return (results[0])[0];
+                queryStr = "select count(*) from gp_read_error_log('%s') where cmdtime > to_timestamp(%s)" % (escape_string(self.extSchemaTable), self.startTimestamp)
+                with self.conn.cursor() as cur:
+                    cur.execute(queryStr)
+                    results = cur.fetchall()
+                    global NUM_WARN_ROWS
+                    NUM_WARN_ROWS = (results[0])[0]
+                    return (results[0])[0]
         return 0
 
     def report_errors(self):
@@ -2694,7 +2615,7 @@ class gpload:
         # if reuse_table is set, error message is not deleted.
         if errors and self.log_errors and self.reuse_tables:
             self.log(self.WARN, "Please use following query to access the detailed error")
-            self.log(self.WARN, "select * from gp_read_error_log('{0}') where cmdtime > to_timestamp('{1}')".format(pg.escape_string(self.extSchemaTable), self.startTimestamp))
+            self.log(self.WARN, "select * from gp_read_error_log('{0}') where cmdtime > to_timestamp('{1}')".format(escape_string(self.extSchemaTable), self.startTimestamp))
         self.exitValue = 1 if errors else 0
 
 
@@ -2719,25 +2640,14 @@ class gpload:
         sql += ' SELECT %s' % ','.join([a[2] for a in cols])
         sql += ' FROM %s' % self.extSchemaTable
 
-        # cktan: progress thread is not reliable. revisit later.
-        #progress = Progress(self,self.ports)
-        #progress.start()
-        #self.threads.append(progress)
         self.log(self.LOG, sql)
         if not self.options.D:
             try:
-                # we need to set the notice receiver function before do insert
-                self.db.set_notice_receiver(notice_processor_Notice)
-                self.rowsInserted = self.db.query(sql.encode('utf-8'))
+                with self.conn.cursor() as cur:
+                    cur.execute(sql)
+                    self.rowsInserted = cur.rowcount
             except Exception as e:
-                # We need to be a bit careful about the error since it may contain non-unicode characters
-                strE = e.__str__().encode().decode('unicode-escape')
-                strF = sql.encode().decode('unicode-escape')
-                self.log(self.ERROR, strE + ' encountered while running ' + strF)
-        #progress.condition.acquire()
-        #progress.number = 1
-        #progress.condition.wait()
-        #progress.condition.release()
+                self.log(self.ERROR, '{} encountered while running {}'.format(e, sql))
         self.report_errors()
 
     def do_method_insert(self):
@@ -2826,12 +2736,11 @@ class gpload:
         self.log(self.LOG, sql)
         if not self.options.D:
             try:
-                self.rowsUpdated = self.db.query(sql.encode('utf-8'))
+                with self.conn.cursor() as cur:
+                    cur.execute(sql)
+                    self.rowsUpdated = cur.rowcount
             except Exception as e:
-                # We need to be a bit careful about the error since it may contain non-unicode characters
-                strE = str(str(e), errors = 'ignore')
-                strF = str(str(sql), errors = 'ignore')
-                self.log(self.ERROR, strE + ' encountered while running ' + strF)
+                self.log(self.ERROR, '{} encountered while running {}'.format(e, sql))
 				
     def get_qualified_tablename(self):
         '''
@@ -2860,14 +2769,15 @@ class gpload:
                 "c.relnamespace = n.oid and " + \
                 "n.nspname = '%s' and c.relname = '%s'; " % (quote_unident(self.schema), quote_unident(self.table))
 
-        resultList = self.db.query(sql).getresult()
-        attrs = []
-        count = 0
-        while count < len(resultList):
-            attrs.append((resultList[count])[0])
-            count = count + 1
-
-        return attrs
+        with self.conn.cursor() as cur:
+            cur.execute(sql)
+            resultList = cur.fetchall()
+            attrs = []
+            count = 0
+            while count < len(resultList):
+                attrs.append((resultList[count])[0])
+                count = count + 1
+            return attrs
 
     def table_supports_update(self):
         """ Check wether columns being updated are distribution key."""
@@ -2924,11 +2834,10 @@ class gpload:
         self.log(self.LOG, sql)
         if not self.options.D:
             try:
-                self.db.query(sql.encode('utf-8'))
+                with self.conn.cursor() as cur:
+                    cur.execute(sql)
             except Exception as e:
-                strE = str(str(e), errors = 'ignore')
-                strF = str(str(sql), errors = 'ignore')
-                self.log(self.ERROR, strE + ' encountered while running ' + strF)
+                self.log(self.ERROR, '{} encountered while running {}'.format(e, sql))
 
         # insert new rows to the target table
 
@@ -2945,19 +2854,19 @@ class gpload:
         self.log(self.LOG, sql)
         if not self.options.D:
             try:
-                self.rowsInserted = self.db.query(sql.encode('utf-8'))
+                with self.conn.cursor() as cur:
+                    cur.execute(sql)
+                    self.rowsInserted = cur.rowcount
             except Exception as e:
-                # We need to be a bit careful about the error since it may contain non-unicode characters
-                strE = str(str(e), errors = 'ignore')
-                strF = str(str(sql), errors = 'ignore')
-                self.log(self.ERROR, strE + ' encountered while running ' + strF)
+                self.log(self.ERROR, '{} encountered while running {}'.format(e, sql))
 
     def do_truncate(self, tblname):
         self.log(self.LOG, "Truncate table %s" %(tblname))
         if not self.options.D:
             try:
                 truncateSQLtext = "truncate %s" % tblname
-                self.db.query(truncateSQLtext.encode('utf-8'))
+                with self.conn.cursor() as cur:
+                    cur.execute(truncateSQLtext)
             except Exception as e:
                 self.log(self.ERROR, 'could not execute truncate target %s: %s' % (tblname, str(e)))
 
@@ -2978,8 +2887,9 @@ class gpload:
         truncate = False
         self.reuse_tables = False
 
-        if not self.options.no_auto_trans and not method=='insert':
-            self.db.query("BEGIN")
+        if not self.options.no_auto_trans:
+            with self.conn.cursor() as cur:
+                cur.execute("BEGIN")
 
         self.extSchemaName = self.getconfig('gpload:external:schema', str, None)
         if self.extSchemaName == '%':
@@ -3015,7 +2925,8 @@ class gpload:
             self.log(self.LOG, "Pre-SQL from user: %s" % before)
             if not self.options.D:
                 try:
-                    self.db.query(before.encode('utf-8'))
+                    with self.conn.cursor() as cur:
+                        cur.execute(before)
                 except Exception as e:
                     self.log(self.ERROR, 'could not execute SQL in sql:before "%s": %s' %
                              (before, str(e)))
@@ -3038,13 +2949,15 @@ class gpload:
             self.log(self.LOG, "Post-SQL from user: %s" % after)
             if not self.options.D:
                 try:
-                    self.db.query(after.encode('utf-8'))
+                    with self.conn.cursor() as cur:
+                        cur.execute(after)
                 except Exception as e:
                     self.log(self.ERROR, 'could not execute SQL in sql:after "%s": %s' %
                              (after, str(e)))
 
-        if not self.options.no_auto_trans and not method=='insert':
-            self.db.query("COMMIT")
+        if not self.options.no_auto_trans:
+            with self.conn.cursor() as cur:
+                cur.execute("COMMIT")
 
 
     def stop_gpfdists(self):
@@ -3082,7 +2995,7 @@ class gpload:
         self.log(self.INFO, 'running time: %.2f seconds'%(time.time()-start))
 
     def run(self):
-        self.db = None
+        self.conn = None
         self.rowsInserted = 0
         self.rowsUpdated  = 0
         signal.signal(signal.SIGINT, handle_kill)
@@ -3113,14 +3026,15 @@ class gpload:
                 for a in self.cleanupSql:
                     try:
                         self.log(self.DEBUG, a)
-                        self.db.query(a)
+                        with self.conn.cursor() as cur:
+                            cur.execute(a)
                     except (Exception, SystemExit):
                         traceback.print_exc(file=self.logfile)
                         self.logfile.flush()
                         traceback.print_exc()
 
-            if self.db != None:
-                self.db.close()
+            if self.conn != None:
+                self.conn.close()
 
             self.log(self.INFO, 'rows Inserted          = ' + str(self.rowsInserted))
             self.log(self.INFO, 'rows Updated           = ' + str(self.rowsUpdated))

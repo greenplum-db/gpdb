@@ -60,6 +60,7 @@ OBJS        = CDXLColDescr.o \
               CDXLPhysicalDML.o \
               CDXLPhysicalDynamicBitmapTableScan.o \
               CDXLPhysicalDynamicIndexScan.o \
+              CDXLPhysicalDynamicIndexOnlyScan.o \
               CDXLPhysicalDynamicTableScan.o \
               CDXLPhysicalForeignScan.o \
               CDXLPhysicalGatherMotion.o \
@@ -111,6 +112,7 @@ OBJS        = CDXLColDescr.o \
               CDXLScalarConstValue.o \
               CDXLScalarDMLAction.o \
               CDXLScalarDistinctComp.o \
+	      CDXLScalarFieldSelect.o \
               CDXLScalarFilter.o \
               CDXLScalarFuncExpr.o \
               CDXLScalarHashCondList.o \

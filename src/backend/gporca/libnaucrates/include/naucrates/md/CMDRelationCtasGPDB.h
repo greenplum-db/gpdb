@@ -147,6 +147,12 @@ public:
 		return m_rel_storage_type;
 	}
 
+	Erelaoversion
+	GetRelAOVersion() const override
+	{
+		return IMDRelation::GetCurrentAOVersion();
+	}
+
 	// CTAS storage options
 	CDXLCtasStorageOptions *
 	GetDxlCtasStorageOption() const override

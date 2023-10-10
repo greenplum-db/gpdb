@@ -1456,6 +1456,13 @@ sendDir(const char *path, int basepathlen, bool sizeonly, List *tablespaces,
 		if (excludeFound)
 			continue;
 
+		if (strcmp(de->d_name, Log_directory) == 0)
+		{
+			elog(DEBUG1, "contents of directory \"%s\" excluded from backup", de->d_name);
+			size += _tarWriteDir(pathbuf, basepathlen, &statbuf, sizeonly);
+			continue;
+		}
+
 		/*
 		 * Exclude contents of directory specified by statrelpath if not set
 		 * to the default (pg_stat_tmp) which is caught in the loop above.

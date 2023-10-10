@@ -22,6 +22,7 @@ gpcheckcat [ <options<] [ <dbname>]
      -B <parallel_processes>
      -v
      -A
+     -x "<parameter_name>=<value>"
 
 gpcheckcat  -l 
 
@@ -98,8 +99,6 @@ Catalog inconsistencies are inconsistencies that occur between Greenplum Databas
 
     `part_integrity` - Check *pg\_partition* branch integrity, partition with OIDs, partition distribution policy
 
-    `part_constraint` - Check constraints on partitioned tables
-
     `unique_index_violation` - Check tables that have columns with the unique index constraint for duplicate entries
 
     `dependency` - Check for dependency on non-existent objects \(restricted mode only\)
@@ -126,6 +125,9 @@ Catalog inconsistencies are inconsistencies that occur between Greenplum Databas
 
 -v \(verbose\)
 :   Displays detailed information about the tests that are performed.
+
+-x "<parameter_name>=<value>"
+:   Set a server configuration parameter, such as `log_min_messages`, at a session level. To set multiple configuration parameters, use the `-x` option multiple times. 
 
 ## <a id="notes"></a>Notes 
 

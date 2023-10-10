@@ -278,11 +278,13 @@ process_target_file(const char *path, file_type_t type, size_t size,
 	 * function for those would be better.
 	 */
 	{
+		char		localpath[MAXPGPATH];
 		const char *filename = last_dir_separator(path);
 		if (filename == NULL)
 			filename = path;
 		else
 			filename++;
+
 		if (strcmp(filename, GP_INTERNAL_AUTO_CONF_FILE_NAME) == 0)
 			return;
 		if (strstr(path, "log/") == path)
@@ -290,6 +292,13 @@ process_target_file(const char *path, file_type_t type, size_t size,
 		if (strstr(path, "backups/") == path ||
 			strcmp(path, "backups") == 0)
 			return;
+
+		if (log_directory != NULL)
+		{
+			snprintf(localpath, sizeof(localpath), "%s/", log_directory);
+			if (strstr(path, localpath) == path)
+				return;
+		}
 	}
 
 	if (map->array == NULL)
@@ -434,13 +443,34 @@ process_target_wal_aofile_change(RelFileNode rnode, int segno, int64 offset)
 	}
 }
 
+static bool
+is_excluded_path_found(const char *path, const char *excluded_dir, bool is_source)
+{
+	char		localpath[MAXPGPATH];
+	if (excluded_dir == NULL)
+		return false;
+
+	snprintf(localpath, sizeof(localpath), "%s/", excluded_dir);
+	if (strstr(path, localpath) == path)
+	{
+		if (is_source)
+			pg_log_debug("entry \"%s\" excluded from source file list",
+						path);
+		else
+			pg_log_debug("entry \"%s\" excluded from target file list",
+						path);
+		return true;
+	}
+
+	return false;
+}
+
 /*
  * Is this the path of file that pg_rewind can skip copying?
  */
 static bool
 check_file_excluded(const char *path, bool is_source)
 {
-	char		localpath[MAXPGPATH];
 	int			excludeIdx;
 	const char *filename;
 
@@ -484,19 +514,12 @@ check_file_excluded(const char *path, bool is_source)
 	 */
 	for (excludeIdx = 0; excludeDirContents[excludeIdx] != NULL; excludeIdx++)
 	{
-		snprintf(localpath, sizeof(localpath), "%s/",
-				 excludeDirContents[excludeIdx]);
-		if (strstr(path, localpath) == path)
-		{
-			if (is_source)
-				pg_log_debug("entry \"%s\" excluded from source file list",
-							 path);
-			else
-				pg_log_debug("entry \"%s\" excluded from target file list",
-							 path);
+		if (is_excluded_path_found(path, excludeDirContents[excludeIdx], is_source))
 			return true;
-		}
 	}
+
+	if (is_excluded_path_found(path, log_directory, is_source))
+		return true;
 
 	return false;
 }

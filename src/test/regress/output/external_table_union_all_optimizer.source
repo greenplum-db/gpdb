@@ -33,14 +33,15 @@ SELECT A FROM multilocation_external_table UNION ALL SELECT A FROM simple_replic
 
 EXPLAIN SELECT A FROM simple_replicated_table UNION ALL SELECT A FROM multilocation_external_table;
                                                   QUERY PLAN                                                   
----------------------------------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..100000000000919.44 rows=1000001 width=4)
-   ->  Append  (cost=0.00..100000000000874.72 rows=3000003 width=4)
-         ->  Seq Scan on simple_replicated_table  (cost=0.00..431.00 rows=3 width=4)
-         ->  Broadcast Motion 3:1  (slice2; segments: 3)  (cost=0.00..100000000000439.72 rows=3000000 width=4)
-               ->  Foreign Scan on multilocation_external_table  (cost=0.00..437.23 rows=333334 width=4)
- Optimizer: Pivotal Optimizer (GPORCA)
-(6 rows)
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..886.95 rows=1000001 width=4)
+   ->  Append  (cost=0.00..872.05 rows=333334 width=4)
+         ->  Result  (cost=0.00..431.00 rows=1 width=4)
+               One-Time Filter: (gp_execution_segment() = 1)
+               ->  Seq Scan on simple_replicated_table  (cost=0.00..431.00 rows=1 width=4)
+         ->  Foreign Scan on multilocation_external_table  (cost=0.00..437.23 rows=333334 width=4)
+ Optimizer: GPORCA
+(7 rows)
 
 SELECT A FROM simple_replicated_table UNION ALL SELECT A FROM multilocation_external_table;
  a 
@@ -53,15 +54,15 @@ SELECT A FROM simple_replicated_table UNION ALL SELECT A FROM multilocation_exte
 
 EXPLAIN SELECT A FROM simple_replicated_table UNION ALL SELECT a FROM multilocation_external_table UNION ALL SELECT A FROM simple_distributed_table;
                                                   QUERY PLAN                                                   
----------------------------------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..100000000001350.44 rows=1000002 width=4)
-   ->  Append  (cost=0.00..100000000001305.72 rows=3000006 width=4)
-         ->  Seq Scan on simple_replicated_table  (cost=0.00..431.00 rows=3 width=4)
-         ->  Broadcast Motion 3:1  (slice2; segments: 3)  (cost=0.00..100000000000439.72 rows=3000000 width=4)
-               ->  Foreign Scan on multilocation_external_table  (cost=0.00..437.23 rows=333334 width=4)
-         ->  Broadcast Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=3 width=4)
-               ->  Seq Scan on simple_distributed_table  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA)
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1317.95 rows=1000002 width=4)
+   ->  Append  (cost=0.00..1303.05 rows=333334 width=4)
+         ->  Result  (cost=0.00..431.00 rows=1 width=4)
+               One-Time Filter: (gp_execution_segment() = 2)
+               ->  Seq Scan on simple_replicated_table  (cost=0.00..431.00 rows=1 width=4)
+         ->  Foreign Scan on multilocation_external_table  (cost=0.00..437.23 rows=333334 width=4)
+         ->  Seq Scan on simple_distributed_table  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: GPORCA
 (8 rows)
 
 SELECT A FROM simple_replicated_table UNION ALL SELECT a FROM multilocation_external_table UNION ALL SELECT A FROM simple_distributed_table;

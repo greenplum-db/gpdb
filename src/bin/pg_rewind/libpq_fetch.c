@@ -94,6 +94,9 @@ libpqConnect(const char *connstr)
 		pg_fatal("full_page_writes must be enabled in the source server");
 	pg_free(str);
 
+	log_directory = run_simple_query("SHOW log_directory");
+	pg_log_debug("log directory: %s", log_directory);
+
 	/*
 	 * Although we don't do any "real" updates, we do work with a temporary
 	 * table. We don't care about synchronous commit for that. It doesn't

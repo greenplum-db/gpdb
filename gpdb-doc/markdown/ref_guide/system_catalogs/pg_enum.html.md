@@ -4,6 +4,7 @@ The `pg_enum` table contains entries matching enum types to their associated val
 
 |Column|Type|References|Description|
 |------|----|----------|-----------|
+|`oid`|oid| |The object ID|
 |`enumtypid`|oid|pgtype.oid|The OID of the `pg_type` entry owning this enum value|
 |`enumsortorder`|float4| |The sort position of this enum value within its enum type|
 |`enumlabel`|name| |The textual label for this enum value|

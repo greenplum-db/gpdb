@@ -52,6 +52,8 @@ typedef void (*ReScanForeignScan_function) (ForeignScanState *node);
 
 typedef void (*EndForeignScan_function) (ForeignScanState *node);
 
+typedef void (*HandleForeignScan_function) (ForeignScanState *node);
+
 typedef void (*GetForeignJoinPaths_function) (PlannerInfo *root,
 											  RelOptInfo *joinrel,
 											  RelOptInfo *outerrel,
@@ -178,6 +180,8 @@ typedef List *(*ReparameterizeForeignPathByChild_function) (PlannerInfo *root,
 															List *fdw_private,
 															RelOptInfo *child_rel);
 
+typedef int (*IsMPPPlanNeeded_function) ();
+
 /*
  * FdwRoutine is the struct returned by a foreign-data wrapper's handler
  * function.  It provides pointers to the callback functions needed by the
@@ -200,6 +204,7 @@ typedef struct FdwRoutine
 	IterateForeignScan_function IterateForeignScan;
 	ReScanForeignScan_function ReScanForeignScan;
 	EndForeignScan_function EndForeignScan;
+	HandleForeignScan_function HandleForeignScanError;
 
 	/*
 	 * Remaining functions are optional.  Set the pointer to NULL for any that
@@ -265,6 +270,9 @@ typedef struct FdwRoutine
 	 */
 	AcquireSampleRowsFunc AcquireSampleRowsOnSegment;
 	ForeignTableSize_function GetRelationSizeOnSegment;
+
+	/* Functions for MPP plan generation */
+	IsMPPPlanNeeded_function IsMPPPlanNeeded;
 } FdwRoutine;
 
 

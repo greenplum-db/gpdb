@@ -157,7 +157,7 @@ websearch_to_tsquery([ <config> regconfig, ] <querytext> text) returns tsquery
 
 - `OR`: logical or will be converted to the `|` operator.
 
-- `-`: the logical not operator, converted to the the `!` operator.
+- `-`: the logical not operator, converted to the `!` operator.
 
 Examples:
 

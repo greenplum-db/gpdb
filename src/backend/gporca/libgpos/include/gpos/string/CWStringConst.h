@@ -37,6 +37,7 @@ public:
 	// ctors
 	CWStringConst(const WCHAR *w_str_buffer);
 	CWStringConst(CMemoryPool *mp, const WCHAR *w_str_buffer);
+	CWStringConst(CMemoryPool *mp, const CHAR *str_buffer);
 
 	// shallow copy ctor
 	CWStringConst(const CWStringConst &);

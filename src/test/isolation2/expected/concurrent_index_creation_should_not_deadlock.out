@@ -1,6 +1,6 @@
 -- Create an append only table, popluated with data
 CREATE TABLE index_deadlocking_test_table (value int) WITH (appendonly=true);
-CREATE
+CREATE TABLE
 
 -- Setup a fault to ensure that the first session pauses while creating an index,
 -- ensuring a concurrent index creation.
@@ -26,6 +26,6 @@ SELECT gp_inject_fault('before_acquire_lock_during_create_ao_blkdir_table', 'res
 
 -- Both index creation attempts should succeed
 1<:  <... completed>
-CREATE
+CREATE INDEX
 2<:  <... completed>
-CREATE
+CREATE INDEX

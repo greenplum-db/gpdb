@@ -14,6 +14,9 @@
 # We use an advisory lock (which is locked during s1's setup) to let s2 obtain
 # its snapshot early and only allow it to actually traverse the update chain
 # when s1 is done creating it.
+#
+# GPDB: have to run sessions that have SELECT ... FOR ... w/ planner because 
+# ORCA would upgrade lock to ExclusiveLock.
 
 setup
 {
@@ -32,6 +35,7 @@ teardown
 }
 
 session s1
+setup { SET optimizer=off; }
 # obtain lock on the tuple, traversing its update chain
 step s1l	{ SELECT * FROM foo WHERE pg_advisory_xact_lock(0) IS NOT NULL AND key = 1 FOR KEY SHARE; }
 

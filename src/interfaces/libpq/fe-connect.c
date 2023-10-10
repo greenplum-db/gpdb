@@ -4155,8 +4155,12 @@ sendTerminateConn(PGconn *conn)
 	 *
 	 * Note that the protocol doesn't allow us to send Terminate messages
 	 * during the startup phase.
+	 *
+	 * GPDB: we won't manage to send any pq messages until dispatch isn't
+	 * finished. But we can be here during dispatch interruption.
 	 */
-	if (conn->sock != PGINVALID_SOCKET && conn->status == CONNECTION_OK)
+	if (conn->sock != PGINVALID_SOCKET && conn->status == CONNECTION_OK &&
+		!conn->outBuffer_shared)
 	{
 		/*
 		 * Try to send "close connection" message to backend. Ignore any

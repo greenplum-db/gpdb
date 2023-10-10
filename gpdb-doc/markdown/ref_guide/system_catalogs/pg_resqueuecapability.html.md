@@ -10,7 +10,7 @@ This table is populated only on the coordinator. This table is defined in the `p
 |------|----|----------|-----------|
 |`rsqueueid`|oid|`pg_resqueue.oid`|The object ID of the associated resource queue.|
 |`restypid`|smallint|`pg_resourcetype. restypid`|The resource type, derived from the *[pg\_resqueuecapability](pg_resourcetype.html)* system table.|
-|`resetting`|opaque type| |The specific value set for the capability referenced in this record. Depending on the actual resource type, this value may have different data types.|
+|`resetting`|text| |The specific value set for the capability referenced in this record. Depending on the actual resource type, this value may have different data types.|
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

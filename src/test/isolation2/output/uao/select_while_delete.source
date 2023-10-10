@@ -1,11 +1,11 @@
 -- @Description Ensures that a select during a delete operation is ok
 --
 DROP TABLE IF EXISTS ao;
-DROP
+DROP TABLE
 CREATE TABLE ao (a INT) USING @amname@;
-CREATE
+CREATE TABLE
 insert into ao select generate_series(1,100);
-INSERT 100
+INSERT 0 100
 
 2: BEGIN;
 BEGIN
@@ -52,4 +52,4 @@ COMMIT
  9 
 (5 rows)
 4: INSERT INTO ao VALUES (0);
-INSERT 1
+INSERT 0 1

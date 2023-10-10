@@ -1,20 +1,20 @@
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
-CREATE
+CREATE EXTENSION
 
 -- start_ignore
 DROP EXTERNAL TABLE IF EXISTS exttab_cursor_1;
-DROP
+DROP FOREIGN TABLE
 DROP EXTERNAL TABLE IF EXISTS exttab_cursor_2;
-DROP
+DROP FOREIGN TABLE
 -- end_ignore
 
 -- Define a cursor on an external table scan query with segment reject limit reached
 -- does not reach reject limit
 CREATE EXTERNAL TABLE exttab_cursor_1( i int, j text ) LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|') LOG ERRORS SEGMENT REJECT LIMIT 10;
-CREATE
+CREATE EXTERNAL TABLE
 -- reaches reject limit, use the same err table
 CREATE EXTERNAL TABLE exttab_cursor_2( i int, j text ) LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|') LOG ERRORS SEGMENT REJECT LIMIT 2;
-CREATE
+CREATE EXTERNAL TABLE
 -- Test to make sure error logs are populated when cursors are used
 -- The total number of formatting errors reported by the query is dependant on the number of rows parsed on
 -- the segments before COMMIT finishes. So mask the NOTICE by setting the client_min_messages guc to WARNING.
@@ -23,7 +23,7 @@ SET
 10: BEGIN;
 BEGIN
 10: DECLARE exttab_cur1 no scroll cursor FOR SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i = e2.i UNION ALL SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i = e2.i UNION ALL SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i = e2.i;
-DECLARE
+DECLARE CURSOR
 10: COMMIT;
 COMMIT
 10: reset CLIENT_MIN_MESSAGES;
@@ -100,7 +100,7 @@ ERROR:  segment reject limit reached, aborting operation  (seg0 slice1 @hostname
 DETAIL:  Last error was: invalid input syntax for type integer: "error_1", column i
 CONTEXT:  External table exttab_cursor_2, line 7 of file://@hostname@@abs_srcdir@/data/exttab_more_errors.data, column i
 10: COMMIT;
-COMMIT
+ROLLBACK
 
 -- Reset injected faults
 SELECT gp_inject_fault('transaction_abort_failure', 'reset', dbid) FROM gp_segment_configuration WHERE content=0 AND role='p';
@@ -135,7 +135,7 @@ SELECT gp_inject_fault('interconnect_setup_palloc', 'reset', dbid) FROM gp_segme
 10: BEGIN;
 BEGIN
 10: DECLARE exttab_cur1 no scroll cursor FOR (SELECT e1.i, e2.j from exttab_cursor_1 e1 INNER JOIN exttab_cursor_1 e2 ON e1.i = e2.i ORDER BY e1.i);
-DECLARE
+DECLARE CURSOR
 -- Should not fail
 10: FETCH exttab_cur1;
  i | j        
@@ -196,7 +196,7 @@ GP_IGNORE:-- end_ignore
 
 -- Create external table with delimiter off
 CREATE EXTERNAL WEB TABLE ext_delim_off ( junk text) execute 'echo hi' on coordinator FORMAT 'text' (delimiter 'OFF' null E'\\N' escape E'\\');
-CREATE
+CREATE EXTERNAL TABLE
 
 -- Query the ext_delim_off table
 SELECT * FROM ext_delim_off;
@@ -212,7 +212,7 @@ GP_IGNORE:-- end_ignore
 
 -- Create external table(format text) with delimiter off, and a row with 'O'
 CREATE EXTERNAL WEB TABLE ext_delimiter_off_text (a text) EXECUTE E'echo O' ON COORDINATOR FORMAT 'text' (delimiter 'OFF') ENCODING 'UTF8';
-CREATE
+CREATE EXTERNAL TABLE
 
 SELECT * FROM ext_delimiter_off_text;
  a 
@@ -227,7 +227,7 @@ GP_IGNORE:-- end_ignore
 
 -- Create external table(format csv) with delimiter off, and a row with 'O'
 CREATE EXTERNAL WEB TABLE ext_delimiter_off_csv (a text) EXECUTE E'echo O' ON COORDINATOR FORMAT 'csv' (delimiter 'OFF') ENCODING 'UTF8';
-CREATE
+CREATE EXTERNAL TABLE
 
 SELECT * FROM ext_delimiter_off_csv;
  a 
@@ -237,12 +237,12 @@ SELECT * FROM ext_delimiter_off_csv;
 
 -- start_ignore
 DROP EXTERNAL TABLE IF EXISTS exttab_delimiter_escape_off;
-DROP
+DROP FOREIGN TABLE
 -- end_ignore
 
 -- Create external table(text format) with both delimiter and escape off
 CREATE EXTERNAL WEB TABLE exttab_delimiter_escape_off(a text) EXECUTE E'cat @abs_srcdir@/data/exttab_escape_off.data' ON SEGMENT 0 format 'TEXT' (delimiter 'OFF' escape 'OFF') encoding 'UTF8' LOG ERRORS  SEGMENT REJECT LIMIT 10;
-CREATE
+CREATE EXTERNAL TABLE
 
 SELECT * FROM exttab_delimiter_escape_off ORDER BY a;
  a                                

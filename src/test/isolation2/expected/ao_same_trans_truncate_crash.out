@@ -47,11 +47,11 @@ CHECKPOINT
 1: BEGIN;
 BEGIN
 1: CREATE TABLE ao_same_trans_truncate(a int, b int) WITH (appendonly=true, orientation=column);
-CREATE
+CREATE TABLE
 1: TRUNCATE TABLE ao_same_trans_truncate;
-TRUNCATE
+TRUNCATE TABLE
 1: ABORT;
-ABORT
+ROLLBACK
 -- restart (immediate) to invoke crash recovery
 1: SELECT pg_ctl(datadir, 'restart') FROM gp_segment_configuration WHERE role = 'p' AND content <> -1;
  pg_ctl 

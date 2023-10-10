@@ -118,13 +118,13 @@ class FileState:
         elif timeMatch:
             time = re.sub(r'Time: ([0-9]+).*', r'\1', line)
             if self.exe_phase:
-                if self.exe_time1 < 0:
+                if int(self.exe_time1) < 0:
                     self.exe_time1 = time
                 else:
                     self.exe_time2 = time
                     self.second_query = True
             elif self.explain_phase:
-                if self.planning_time1 < 0:
+                if int(self.planning_time1) < 0:
                     self.planning_time1 = time
                 else:
                     self.planning_time2 = time
@@ -137,7 +137,7 @@ class FileState:
         elif optimizerMatch:
             # Since this script can be used on older explain logs, match both
             # original and new ORCA names
-            if (not re.search(' PQO ', line) and not re.search(' Pivotal Optimizer ', line)):
+            if (not re.search(' PQO ', line) and not re.search(' Pivotal Optimizer ', line) and not re.search(' GPORCA', line)):
                 if self.planning_time1 < 0:
                     self.comment1 = self.comment1 + "Fallback "
                 else:

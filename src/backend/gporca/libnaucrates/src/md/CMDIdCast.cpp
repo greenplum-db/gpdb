@@ -32,9 +32,6 @@ CMDIdCast::CMDIdCast(CMDIdGPDB *mdid_src, CMDIdGPDB *mdid_dest)
 {
 	GPOS_ASSERT(mdid_src->IsValid());
 	GPOS_ASSERT(mdid_dest->IsValid());
-
-	// serialize mdid into static string
-	Serialize();
 }
 
 //---------------------------------------------------------------------------
@@ -60,8 +57,14 @@ CMDIdCast::~CMDIdCast()
 //
 //---------------------------------------------------------------------------
 void
-CMDIdCast::Serialize()
+CMDIdCast::Serialize() const
 {
+	if (m_str.Length() > 0)
+	{
+		return;
+	}
+
+	m_str.Reset();
 	// serialize mdid as SystemType.mdidSrc.mdidDest
 	m_str.AppendFormat(GPOS_WSZ_LIT("%d.%d.%d.%d;%d.%d.%d"), MdidType(),
 					   m_mdid_src->Oid(), m_mdid_src->VersionMajor(),
@@ -81,6 +84,7 @@ CMDIdCast::Serialize()
 const WCHAR *
 CMDIdCast::GetBuffer() const
 {
+	Serialize();
 	return m_str.GetBuffer();
 }
 
@@ -146,6 +150,7 @@ void
 CMDIdCast::Serialize(CXMLSerializer *xml_serializer,
 					 const CWStringConst *pstrAttribute) const
 {
+	Serialize();
 	xml_serializer->AddAttribute(pstrAttribute, &m_str);
 }
 
@@ -160,7 +165,7 @@ CMDIdCast::Serialize(CXMLSerializer *xml_serializer,
 IOstream &
 CMDIdCast::OsPrint(IOstream &os) const
 {
-	os << "(" << m_str.GetBuffer() << ")";
+	os << "(" << GetBuffer() << ")";
 	return os;
 }
 

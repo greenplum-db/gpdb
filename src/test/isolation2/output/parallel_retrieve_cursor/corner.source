@@ -1,48 +1,48 @@
 DROP TABLE IF EXISTS t1;
-DROP
+DROP TABLE
 CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
-CREATE
+CREATE TABLE
 insert into t1 select generate_series(1,100);
-INSERT 100
+INSERT 0 100
 DROP TABLE IF EXISTS t11;
-DROP
+DROP TABLE
 CREATE TABLE t11 (a INT) DISTRIBUTED by (a);
-CREATE
+CREATE TABLE
 insert into t11 select generate_series(1,100000);
-INSERT 100000
+INSERT 0 100000
 DROP TABLE IF EXISTS t2;
-DROP
+DROP TABLE
 CREATE TABLE t2 (a INT) DISTRIBUTED by (a);
-CREATE
+CREATE TABLE
 DROP TABLE IF EXISTS t3;
-DROP
+DROP TABLE
 CREATE TABLE t3 (a text) DISTRIBUTED by (a);
-CREATE
+CREATE TABLE
 COPY t3 FROM PROGRAM 'for i in `seq 1 10`; do echo ${i}test; done';
 COPY 10
 DROP TABLE IF EXISTS t4;
-DROP
+DROP TABLE
 CREATE TABLE t4 (a text) DISTRIBUTED by (a);
-CREATE
+CREATE TABLE
 DROP TABLE IF EXISTS t5;
-DROP
+DROP TABLE
 CREATE TABLE t5 (b INT) DISTRIBUTED by (b);
-CREATE
+CREATE TABLE
 INSERT INTO t5 SELECT GENERATE_SERIES(1, 10);
-INSERT 10
+INSERT 0 10
 
 -- Test1: close not executed PARALLEL RETRIEVE CURSOR
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 1 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id1 | token_id | host_id | port_id | READY
  endpoint_id1 | token_id | host_id | port_id | READY
  endpoint_id1 | token_id | host_id | port_id | READY
 (3 rows)
 1: CLOSE c1;
-CLOSE
+CLOSE CURSOR
 -- check no endpoint info
 1: SELECT auth_token,state FROM gp_get_endpoints() WHERE cursorname='c1';
  auth_token | state 
@@ -76,14 +76,14 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c11 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t11;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 11 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c11';
  endpoint_id11 | token_id | host_id | port_id | READY
  endpoint_id11 | token_id | host_id | port_id | READY
  endpoint_id11 | token_id | host_id | port_id | READY
 (3 rows)
 1: CLOSE c11;
-CLOSE
+CLOSE CURSOR
 -- check no endpoint info
 1: SELECT auth_token,state FROM gp_get_endpoints() WHERE cursorname='c11';
  auth_token | state 
@@ -117,27 +117,27 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c5 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c6 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c7 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c8 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c9 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c10 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c11 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: ROLLBACK;
 ROLLBACK
 -- check no endpoint info
@@ -150,7 +150,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c2', -1);
 ERROR:  cursor "c2" does not exist
 1: ROLLBACK;
@@ -158,7 +158,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: SELECT * FROM gp_wait_parallel_retrieve_cursor('c2', 0);
 ERROR:  cursor "c2" does not exist
 1: ROLLBACK;
@@ -173,27 +173,27 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c5 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c6 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c7 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c8 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c9 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c10 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c11 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c2';
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
@@ -377,7 +377,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE CURSOR
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
 ERROR:  cursor "c1" already exists
 -- check no endpoint info
@@ -389,9 +389,9 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE CURSOR
 1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c2';
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
@@ -559,7 +559,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1 ORDER BY a LIMIT 10;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c2';
  endpoint_id2 | token_id | host_id | port_id | READY
 (1 row)
@@ -634,7 +634,7 @@ Sessions not started cannot be quit
 1: BEGIN;
 BEGIN
 1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1 ORDER BY a LIMIT 0;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c2';
  endpoint_id2 | token_id | host_id | port_id | READY
 (1 row)
@@ -704,7 +704,7 @@ Sessions not started cannot be quit
 1: BEGIN;
 BEGIN
 1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t2;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c2';
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
@@ -782,7 +782,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t3;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c2';
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
@@ -870,7 +870,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t4;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c2';
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
@@ -948,7 +948,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1 WHERE a = 50;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id2 | token_id | host_id | port_id | READY
 (1 row)
@@ -995,7 +995,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT SUM(a) FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id2 | token_id | host_id | port_id | READY
 (1 row)
@@ -1041,7 +1041,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT AVG(a) FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id2 | token_id | host_id | port_id | READY
 (1 row)
@@ -1081,7 +1081,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT COUNT(*) FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id2 | token_id | host_id | port_id | READY
 (1 row)
@@ -1117,7 +1117,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1, t5 where t1.a = t5.b;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
@@ -1175,7 +1175,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT COUNT(*) FROM t1, t5 where t1.a = t5.b;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id2 | token_id | host_id | port_id | READY
 (1 row)
@@ -1206,7 +1206,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
@@ -1355,9 +1355,9 @@ DECLARE
  t        
 (1 row)
 1: CLOSE c1;
-CLOSE
+CLOSE CURSOR
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
@@ -1524,7 +1524,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
@@ -1677,9 +1677,9 @@ DECLARE
  t        
 (1 row)
 1: CLOSE c1;
-CLOSE
+CLOSE CURSOR
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
@@ -1848,7 +1848,7 @@ BEGIN
 1: SAVEPOINT s1;
 SAVEPOINT
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 2 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id2 | token_id | host_id | port_id | READY
  endpoint_id2 | token_id | host_id | port_id | READY
@@ -1868,11 +1868,11 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: SAVEPOINT s1;
 SAVEPOINT
 1: CLOSE c1;
-CLOSE
+CLOSE CURSOR
 1: ROLLBACK TO s1;
 ROLLBACK
 1: SELECT * FROM pg_cursors WHERE name='c1';
@@ -1887,7 +1887,7 @@ COMMIT
 1: BEGIN;
 BEGIN
 1: DECLARE c21a PARALLEL RETRIEVE CURSOR FOR SELECT COUNT(*) from t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'get_tuple_cell TOKEN21a 1 1 ; create_match_sub $TOKEN21a token21a' : SELECT auth_token FROM gp_get_endpoints() WHERE cursorname='c21a';
  auth_token
 ----------------------------------
@@ -1895,9 +1895,9 @@ DECLARE
 (1 row)
 -- Declare more cursors in the same session should not change the first one's token
 1: DECLARE c21b PARALLEL RETRIEVE CURSOR FOR SELECT COUNT(*) from t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE c21c PARALLEL RETRIEVE CURSOR FOR SELECT * from t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: SELECT auth_token FROM gp_get_endpoints() WHERE cursorname='c21a';
  auth_token                       
 ----------------------------------
@@ -1915,7 +1915,7 @@ Sessions not started cannot be quit
 1: BEGIN;
 BEGIN
 1: DECLARE c22 PARALLEL RETRIEVE CURSOR WITHOUT HOLD FOR SELECT * FROM generate_series(1,10);
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 22 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c22';
  endpoint_id22 | token_id | host_id | port_id | READY
 (1 row)
@@ -1992,7 +1992,7 @@ Sessions not started cannot be quit
 1: BEGIN;
 BEGIN
 1: DECLARE c23 PARALLEL RETRIEVE CURSOR WITHOUT HOLD FOR SELECT relname FROM pg_class where relname='pg_class';
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 23 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c23';
  endpoint_id23 | token_id | host_id | port_id | READY
 (1 row)
@@ -2058,11 +2058,11 @@ Sessions not started cannot be quit
 1: BEGIN;
 BEGIN
 1: DECLARE "x12345678901234567890123456789012345678901234567890123456789x" PARALLEL RETRIEVE CURSOR WITHOUT HOLD FOR SELECT * FROM t5;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE "x123456789012345678901234567890123456789012345678901234567890123456789x" PARALLEL RETRIEVE CURSOR WITHOUT HOLD FOR SELECT * FROM t5;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE "x1234567890123456789012345678901234567890123456789012345678901x" PARALLEL RETRIEVE CURSOR WITHOUT HOLD FOR SELECT * FROM t5;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 24 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='x12345678901234567890123456789012345678901234567890123456789x';
  endpoint_id24 | token_id | host_id | port_id | READY
  endpoint_id24 | token_id | host_id | port_id | READY
@@ -2165,7 +2165,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE "x123456789012345678901234567890123456789012345678901234567890123456789x" PARALLEL RETRIEVE CURSOR WITHOUT HOLD FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: DECLARE "x123456789012345678901234567890123456789012345678901234567890123456789y" PARALLEL RETRIEVE CURSOR WITHOUT HOLD FOR SELECT * FROM t1;
 ERROR:  cursor "x12345678901234567890123456789012345678901234567890123456789012" already exists
 1: ROLLBACK;
@@ -2175,7 +2175,7 @@ ROLLBACK
 1: BEGIN;
 BEGIN
 1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t5;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 26 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c2';
  endpoint_id26 | token_id | host_id | port_id | READY
  endpoint_id26 | token_id | host_id | port_id | READY
@@ -2201,7 +2201,7 @@ ERROR:  another session (pid: 46988) used the endpoint and completed retrieving
 
 -- check no endpoint info
 1: CLOSE C2;
-CLOSE
+CLOSE CURSOR
 1: COMMIT;
 COMMIT
 
@@ -2209,7 +2209,7 @@ COMMIT
 1: BEGIN;
 BEGIN
 1: DECLARE c27 PARALLEL RETRIEVE CURSOR FOR SELECT generate_series(1,10);
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 27 1 2 3 4': SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c27';
  endpoint_id27 | token_id | host_id | port_id | READY
 (1 row)
@@ -2287,14 +2287,14 @@ ERROR:  Parallel retrieve cursor should run on the dispatcher only
 
 -- Final: clean up
 DROP TABLE t1;
-DROP
+DROP TABLE
 DROP TABLE t11;
-DROP
+DROP TABLE
 DROP TABLE t2;
-DROP
+DROP TABLE
 DROP TABLE t3;
-DROP
+DROP TABLE
 DROP TABLE t4;
-DROP
+DROP TABLE
 DROP TABLE t5;
-DROP
+DROP TABLE

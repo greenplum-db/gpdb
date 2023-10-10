@@ -10,9 +10,10 @@ The Greenplum `gpload` utility loads data using readable external tables and the
 
 ## <a id="du168147"></a>To use gpload 
 
-1.  Ensure that your environment is set up to run `gpload`. Some dependent files from your Greenplum Database installation are required, such as gpfdist and Python, as well as network access to the Greenplum segment hosts.
-
-    See the *Greenplum Database Reference Guide* for details.
+1.  Ensure that your environment is set up to run `gpload`. Some dependent files from your Greenplum Database installation are required, such as gpfdist and Python 3, as well as network access to the Greenplum segment hosts. On Windows clients, `gpload` also requires that you install the following packages:
+    ```
+    pip install psycopg2 pyyaml
+    ```
 
 2.  Create your load control file. This is a YAML-formatted file that specifies the Greenplum Database connection information, gpfdist configuration information, external table options, and data format.
 

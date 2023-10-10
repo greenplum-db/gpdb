@@ -4,7 +4,7 @@
 -- deadlock testcases stable we reset the gdd period to 2min so should
 -- not be triggered during the local deadlock tests.
 ALTER SYSTEM SET gp_global_deadlock_detector_period to '2min';
-ALTER
+ALTER SYSTEM
 SELECT pg_reload_conf();
  pg_reload_conf 
 ----------------
@@ -18,11 +18,11 @@ SELECT pg_reload_conf();
 (1 row)
 
 DROP TABLE IF EXISTS t03;
-DROP
+DROP TABLE
 CREATE TABLE t03 (id int, val int);
-CREATE
+CREATE TABLE
 INSERT INTO t03 (id, val) SELECT i, i FROM generate_series(1, 100) i;
-INSERT 100
+INSERT 0 100
 
 -- gang creation order is important, reset any guc to force the creation
 10: RESET optimizer;

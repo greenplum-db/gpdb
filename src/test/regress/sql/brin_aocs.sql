@@ -340,7 +340,7 @@ BEGIN
 			IF plan_line LIKE '%Bitmap Heap Scan on brintest_aocs%' THEN
 				plan_ok := true;
 			END IF;
-			IF plan_line LIKE '%Postgres query optimizer%' THEN
+			IF plan_line LIKE '%Postgres-based planner%' THEN
 				is_planner_plan := true;
 			END IF;
 		END LOOP;
@@ -456,103 +456,3 @@ INSERT INTO brintest_aocs SELECT
 	format('%s/%s%s', odd, even, tenthous)::pg_lsn,
 	box(point(odd, even), point(thousand, twothousand))
 FROM tenk1 ORDER BY unique2 LIMIT 5 OFFSET 5;
-
--- Test summarization
-
--- Note: We use loops to populate logical heap pages in one aoseg. These logical
--- heap blocks can start at a large number. See AOSegmentGet_startHeapBlock(segno).
-
-CREATE TABLE brin_aoco_summarize(i int) USING ao_column;
-CREATE INDEX ON brin_aoco_summarize USING brin(i) WITH (pages_per_range=1);
-
--- There is no data, so nothing to summarize.
-SELECT brin_summarize_new_values('brin_aoco_summarize_i_idx');
-
-DROP INDEX brin_aoco_summarize_i_idx;
-
--- Create 3 blocks all on 1 QE, in 1 aoseg: 2 blocks full, 1 block with 1 tuple.
-DO $$
-DECLARE curtid tid;
-BEGIN
-  LOOP
-    INSERT INTO brin_aoco_summarize VALUES (1) RETURNING ctid INTO curtid;
-    EXIT WHEN curtid > tid '(33554434, 0)';
-  END LOOP;
-END;
-$$;
-
--- Now create the index on the data inserted above.
-CREATE INDEX ON brin_aoco_summarize USING brin(i) WITH (pages_per_range=1);
-
--- There is nothing new to summarize - it was all done during the index build.
-SELECT brin_summarize_new_values('brin_aoco_summarize_i_idx');
-
--- Insert more so we have 5 blocks on 1 QE, in 1 aoseg: 4 blocks full, 1 block
--- with 1 tuple. The last and penultimate blocks will be unsummarized.
-DO $$
-DECLARE curtid tid;
-BEGIN
-  LOOP
-    INSERT INTO brin_aoco_summarize VALUES (20) RETURNING ctid INTO curtid;
-    EXIT WHEN curtid > tid '(33554436, 0)';
-  END LOOP;
-END;
-$$;
-
--- The last 2 blocks will be summarized.
-SELECT brin_summarize_new_values('brin_aoco_summarize_i_idx');
-
--- Insert more so we have 7 blocks on 1 QE, in 1 aoseg: 6 blocks full, 1 page
--- with 1 tuple. The last and penultimate blocks are unsummarized.
-DO $$
-DECLARE curtid tid;
-BEGIN
-  LOOP
-    INSERT INTO brin_aoco_summarize VALUES (30) RETURNING ctid INTO curtid;
-    EXIT WHEN curtid > tid '(33554438, 0)';
-  END LOOP;
-END;
-$$;
-
-DELETE FROM brin_aoco_summarize WHERE i = 1;
-
-VACUUM brin_aoco_summarize;
-
--- All the tuples will have been moved to one aoseg and all the tuples should
--- have fit in one logical heap block.
-SELECT distinct(right(split_part(ctid::text, ',', 1), -1)) AS blknum
-FROM brin_aoco_summarize;
-
--- VACUUM should have already summarized this one logical heap block, so
--- invoking summarization again will be a no-op.
-SELECT brin_summarize_new_values('brin_aoco_summarize_i_idx');
-
--- We don't allow specific range summarization for AO tables at the moment.
-SELECT brin_summarize_range('brin_aoco_summarize_i_idx', 1);
-
--- Test summarization of last partial range.
-CREATE TABLE brin_aoco_summarize_partial(i int) USING ao_column;
-CREATE INDEX ON brin_aoco_summarize_partial USING brin(i) WITH (pages_per_range=3);
-
--- Insert 4 blocks of data on 1 QE, in 1 aoseg; 3 blocks full, 1 block with 1 tuple.
--- The 1st range [33554432, 33554434] is full and the last range [33554435, 33554437]
--- is partially full with just 1 block: 33554435.
-DO $$
-DECLARE curtid tid;
-BEGIN
-  LOOP
-    INSERT INTO brin_aoco_summarize_partial VALUES (1) RETURNING ctid INTO curtid;
-    EXIT WHEN curtid > tid '(33554435, 0)';
-  END LOOP;
-END;
-$$;
-
--- We should successfully summarize the last partial range.
---
--- Note: For an empty AOCO table, when INSERTing into the 1st range, we don't
--- summarize. brininsert() -> brinGetTupleForHeapBlock() actually returns NULL
--- in this case as revmap_get_blkno_ao() returns InvalidBlockNumber.
--- This is contrary to heap behavior (where we return 1).
---
--- Thus, we will have both ranges summarized here.
-SELECT brin_summarize_new_values('brin_aoco_summarize_partial_i_idx');

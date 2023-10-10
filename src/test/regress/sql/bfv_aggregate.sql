@@ -180,7 +180,7 @@ select string_agg(b, '') over (partition by a) from foo order by 1;
 select string_agg(b, '') over (partition by a,b) from foo order by 1;
 -- should not fall back
 select max(b) over (partition by a) from foo order by 1;
-select count_operator('select max(b) over (partition by a) from foo order by 1;', 'Pivotal Optimizer (GPORCA)');
+select count_operator('select max(b) over (partition by a) from foo order by 1;', 'GPORCA');
 -- fall back
 select string_agg(b, '') over (partition by a+1) from foo order by 1;
 select string_agg(b || 'txt', '') over (partition by a) from foo order by 1;
@@ -227,6 +227,7 @@ insert into mtup1 values
 -- from exceeding the limit in GPDB7 with that plan(a MinimalTuple has a limit of 1600
 -- columns). So set the parameter to off to prevent error happens.
 set gp_enable_multiphase_agg=off;
+set optimizer_force_multistage_agg=off;
 
 
 select c0, c1, array_length(ARRAY[
@@ -1367,6 +1368,7 @@ select c0, c1, array_length(ARRAY[
  SUM(c4 % 5670), SUM(c4 % 5671)], 1)
 from mtup1 where c0 = 'foo' group by c0, c1 limit 10;
 
+reset optimizer_force_multistage_agg;
 reset gp_enable_multiphase_agg;
 
 -- MPP-29042 Multistage aggregation plans should have consistent targetlists in
@@ -1469,6 +1471,14 @@ explain (costs off)
 select 1, median(col1) from group_by_const group by 1;
 select 1, median(col1) from group_by_const group by 1;
 
+-- Test GROUP BY with a RelabelType
+create table tx (c1 text);
+insert into tx values('hello');
+EXPLAIN (COSTS OFF, VERBOSE ON)
+SELECT MIN(tx.c1) FROM tx GROUP BY (tx.c1)::VARCHAR;
+SELECT MIN(tx.c1) FROM tx GROUP BY (tx.c1)::VARCHAR;
+drop table tx;
+
 -- ORCA should pick singlestage-agg plan when multistage-agg guc is true
 -- and distribution type is universal/replicated
 
@@ -1489,6 +1499,48 @@ explain select count(*) from generate_series(0, 100) g;
 explain select g%10 as c1, sum(g::numeric)as c2, count(*) as c3 from generate_series(1, 99) g group by g%10;
 
 reset optimizer_force_multistage_agg;
+
+-- Test if Motion is placed between the "group by clauses"
+drop table if exists t;
+create table t(a int, b int, c int) distributed by (a);
+insert into t select 1, i, i from generate_series(1, 10)i;
+insert into t select 1, i, i from generate_series(1, 10)i;
+insert into t select 1, i, i from generate_series(1, 10)i;
+insert into t select 1, i, i from generate_series(1, 10)i;
+analyze t;
+
+explain (costs off) select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
+select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
+
+drop table t;
+
+-- Test defferral keyword on primary/unique key
+-- When the grouping columns include a key, the GbAgg operator can be transformed to a Select,
+-- resulting in the dropping of grouping columns. However, it is important to note that if a primary
+-- or unique key has the deferral keyword, ORCA should not optimize (drop grouping columns) in such cases.
+
+drop table if exists t1, t2, t3, t4, t5, t6;
+create table t1 (a int, b int, c int, primary key(a, b));
+create table t2 (a int, b int, c int, primary key(a, b) deferrable);
+create table t3 (a int, b int, c int, primary key(a, b) deferrable initially deferred);
+create table t4 (a int, b int, c int, unique(a, b));
+create table t5 (a int, b int, c int, unique(a, b) deferrable);
+create table t6 (a int, b int, c int, unique(a, b) deferrable initially deferred);
+
+explain (costs off) select * from t1 group by a, b, c;
+explain (costs off) select * from t2 group by a, b, c;
+explain (costs off) select * from t3 group by a, b, c;
+explain (costs off) select * from t4 group by a, b, c;
+explain (costs off) select * from t5 group by a, b, c;
+explain (costs off) select * from t6 group by a, b, c;
+explain (costs off) with cte1 as (select * from t3 group by a, b, c) select * from cte1;
+
+begin;
+insert into t3 values (1, 1, 1), (1, 1, 1), (1, 2, 1), (1, 3, 1), (1, 2, 1);
+select * from t3 group by a, b, c;
+commit;
+
+drop table  t1, t2, t3, t4, t5, t6;
 
 -- CLEANUP
 set client_min_messages='warning';

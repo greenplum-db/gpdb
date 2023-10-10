@@ -525,7 +525,7 @@ logicaltape_test(void)
 	int test_tape = 5;
 	int test_entry = 45000;
 
-	LogicalTapeSet *tape_set = LogicalTapeSetCreate(max_tapes, NULL, NULL, -1);
+	LogicalTapeSet *tape_set = LogicalTapeSetCreate(max_tapes, false, NULL, NULL, -1);
 
 	int work_tape = 0;
 	long blocknum = 0;

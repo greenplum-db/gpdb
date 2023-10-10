@@ -89,10 +89,16 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	/* Extract a list of databases and tables from the old cluster */
 	get_db_and_rel_infos(&old_cluster);
 
+	if (skip_checks())
+	{
+		prep_status("Skipping Consistency Checks");
+		check_ok();
+		goto dump_old_cluster;
+	}
+
 	init_tablespaces();
 
 	get_loadable_libraries();
-
 
 	/*
 	 * Check for various failure cases
@@ -167,6 +173,7 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 		check_for_appendonly_materialized_view_with_relfrozenxid(&old_cluster);
 	}
 
+dump_old_cluster:
 	/*
 	 * While not a check option, we do this now because this is the only time
 	 * the old server is running.

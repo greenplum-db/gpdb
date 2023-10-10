@@ -122,8 +122,6 @@ enum Edxltoken
 
 	EdxltokenDuplicateSensitive,
 
-	EdxltokenPartIndexId,
-	EdxltokenPartIndexIdPrintable,
 	EdxltokenSegmentIdCol,
 
 	EdxltokenScalar,
@@ -267,6 +265,13 @@ enum Edxltoken
 	EdxltokenWindowrefStagePreliminary,
 	EdxltokenWindowrefStageRowKey,
 	EdxltokenWindowrefWinSpecPos,
+
+	// FIELDSELECT
+	EdxltokenScalarFieldSelect,
+	EdxltokenScalarFieldSelectFieldType,
+	EdxltokenScalarFieldSelectFieldCollation,
+	EdxltokenScalarFieldSelectFieldNumber,
+	EdxltokenScalarFieldSelectTypeModifier,
 
 	EdxltokenValue,
 	EdxltokenTypeId,
@@ -449,6 +454,7 @@ enum Edxltoken
 	EdxltokenVersion,
 	EdxltokenMdid,
 	EdxltokenLockMode,
+	EdxltokenAclMode,
 	EdxltokenMDTypeRequest,
 	EdxltokenTypeInfo,
 	EdxltokenFuncInfo,
@@ -490,6 +496,7 @@ enum Edxltoken
 	EdxltokenRelDistrHash,
 	EdxltokenRelDistrRandom,
 	EdxltokenRelDistrReplicated,
+	EdxltokenRelDistrUniversal,
 	EdxltokenConvertHashToRandom,
 
 	EdxltokenRelDistrOpfamilies,
@@ -503,14 +510,15 @@ enum Edxltoken
 	EdxltokenMetadataColumns,
 	EdxltokenMetadataColumn,
 	EdxltokenColumnNullable,
-	EdxltokenColumnDefaultValue,
 
 	EdxltokenKeys,
 	EdxltokenDistrColumns,
 
 	EdxltokenIndexKeyCols,
 	EdxltokenIndexIncludedCols,
+	EdxltokenIndexReturnableCols,
 	EdxltokenIndexClustered,
+	EdxltokenIndexAmCanOrder,
 	EdxltokenIndexPartial,
 	EdxltokenIndexType,
 	EdxltokenIndexTypeBtree,
@@ -519,6 +527,12 @@ enum Edxltoken
 	EdxltokenIndexTypeGist,
 	EdxltokenIndexTypeGin,
 	EdxltokenIndexItemType,
+	EdxltokenIndexKeysSortDirection,
+	EdxltokenIndexKeysNullsDirection,
+	EdxltokenIndexKeySortASC,
+	EdxltokenIndexKeySortDESC,
+	EdxltokenIndexKeyNullsFirst,
+	EdxltokenIndexKeyNullsLast,
 
 	EdxltokenOpfamily,
 	EdxltokenOpfamilies,
@@ -602,11 +616,7 @@ enum Edxltoken
 	EdxltokenGPDBFuncStable,
 	EdxltokenGPDBFuncImmutable,
 	EdxltokenGPDBFuncVolatile,
-	EdxltokenGPDBFuncDataAccess,
-	EdxltokenGPDBFuncNoSQL,
-	EdxltokenGPDBFuncContainsSQL,
-	EdxltokenGPDBFuncReadsSQLData,
-	EdxltokenGPDBFuncModifiesSQLData,
+
 	EdxltokenGPDBFuncResultTypeId,
 	EdxltokenGPDBFuncReturnsSet,
 	EdxltokenGPDBFuncStrict,
@@ -738,6 +748,8 @@ enum Edxltoken
 	EdxltokenIndexTypeBrin,
 
 	EdxltokenForeignServerOid,
+	EdxltokenPhysicalDynamicIndexOnlyScan,
+	EdxltokenRelAppendOnlyVersion,
 
 	EdxltokenSentinel
 };

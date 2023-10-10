@@ -194,7 +194,6 @@ bitcodedir = $(pkglibdir)/bitcode
 with_icu	= @with_icu@
 with_perl	= @with_perl@
 with_python	= @with_python@
-with_pythonsrc_ext = @with_pythonsrc_ext@
 with_tcl	= @with_tcl@
 with_openssl	= @with_openssl@
 with_selinux	= @with_selinux@
@@ -226,7 +225,6 @@ enable_orca		= @enable_orca@
 enable_gpfdist		= @enable_gpfdist@
 enable_debug_extensions = @enable_debug_extensions@
 enable_orafce		= @enable_orafce@
-enable_mapreduce    = @enable_mapreduce@
 enable_gpcloud 	    = @enable_gpcloud@
 enable_ic_proxy     = @enable_ic_proxy@
 

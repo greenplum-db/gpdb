@@ -24,6 +24,7 @@ CREATE [OR REPLACE] FUNCTION <name>    
     | SET <configuration_parameter> { TO <value> | = <value> | FROM CURRENT }
     | AS '<definition>'
     | AS '<obj_file>', '<link_symbol>' 
+    [ WITH ({ DESCRIBE = <describe_function> } [, ...] ) ]
   } ...
 ```
 
@@ -211,6 +212,9 @@ obj\_file, link\_symbol
 :   When repeated `CREATE FUNCTION` calls refer to the same object file, the file is only loaded once per session. To unload and reload the file \(perhaps during development\), start a new session.
 :   Locating shared libraries either relative to `$libdir` \(which is located at `$GPHOME/lib`\) or through the dynamic library path \(set by the `dynamic_library_path` server configuration parameter\) will simplify version upgrades if the new installation is at a different location.
 
+describe\_function
+:   The name of a callback function to run when a query that calls this function is parsed. The callback function returns a tuple descriptor that indicates the result type.
+
 ## <a id="section5o"></a>Overloading 
 
 Greenplum Database allows function overloading; that is, the same name can be used for several different functions so long as they have distinct input argument types. Whether or not you use it, this capability entails security precautions when calling functions in databases where some users mistrust other users; refer to [Functions](https://www.postgresql.org/docs/12/typeconv-func.html) in the PostgreSQL documentation for more information.
@@ -270,7 +274,7 @@ These are limitations for functions defined with the `EXECUTE ON COORDINATOR` or
 -   The function must be a set-returning function.
 -   The function cannot be in the `FROM` clause of a query.
 -   The function cannot be in the `SELECT` list of a query with a `FROM` clause.
--   A query that includes the function falls back from GPORCA to the Postgres Planner.
+-   A query that includes the function falls back from GPORCA to the Postgres-based planner.
 
 The attribute `EXECUTE ON INITPLAN` indicates that the function contains an SQL command that dispatches queries to the segment instances and requires special processing on the coordinator instance by Greenplum Database. When possible, Greenplum Database handles the function on the coordinator instance in the following manner.
 

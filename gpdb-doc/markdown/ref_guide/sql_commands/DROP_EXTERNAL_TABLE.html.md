@@ -18,7 +18,7 @@ WEB
 :   Optional keyword for dropping external web tables.
 
 IF EXISTS
-:   Do not throw an error if the external table does not exist. A notice is issued in this case.
+:   Do not throw an error if the external table does not exist. Greenplum Database issues a notice in this case.
 
 name
 :   The name \(optionally schema-qualified\) of an existing external table.

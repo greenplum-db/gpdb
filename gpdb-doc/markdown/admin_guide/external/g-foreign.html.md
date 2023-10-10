@@ -6,7 +6,7 @@ Greenplum Database implements portions of the SQL/MED specification, allowing yo
 
 You can access foreign data with help from a *foreign-data wrapper*. A foreign-data wrapper is a library that communicates with a remote data source. This library hides the source-specific connection and data access details.
 
-The Greenplum Database distribution includes the [postgres\_fdw](../../ref_guide/modules/postgres_fdw.html) foreign data wrapper.
+The Greenplum Database distribution includes the [greenplum\_fdw](../../ref_guide/modules/greenplum_fdw.html) and [postgres\_fdw](../../ref_guide/modules/postgres_fdw.html) foreign data wrappers.
 
 If none of the existing PostgreSQL or Greenplum Database foreign-data wrappers suit your needs, you can write your own as described in [Writing a Foreign Data Wrapper](g-devel-fdw.html).
 
@@ -22,7 +22,7 @@ Most PostgreSQL foreign-data wrappers should work with Greenplum Database. Howev
 
 Greenplum Database adds an `mpp_execute` option to FDW-related SQL commands. If the foreign-data wrapper supports it, you can specify `mpp_execute '<value>'` in the `OPTIONS` clause when you create the FDW, server, or foreign table to identify the Greenplum host from which the foreign-data wrapper reads or writes data. Valid `<value>`s are:
 
--   `master` \(the default\) - Read or write data from the coordinator host.
+-   `coordinator` \(the default\) - Read or write data from the coordinator host.
 -   `any` - Read data from either the coordinator host or any one segment, depending on which path costs less.
 -   `all segments` - Read or write data from all segments. If a foreign-data wrapper supports this value, for correct results it should have a policy that matches segments to data.
 

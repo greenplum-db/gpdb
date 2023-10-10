@@ -8,11 +8,6 @@
 -- updating, as the system improves.
 --
 
--- GPDB_12_MERGE_FIXME: Many of these queries are no longer able to constraint
--- exclusion, like we used to on GPDB 6. Not sure what we should do about it.
--- See https://github.com/greenplum-db/gpdb/issues/10287.
--- In GPDB6 this case is partition pruned, but the result is wrong,
--- in MAIN branch it is not partition pruned, but has right result.
 -- Create test table with two partitions, for values equal to '1' and values equal to '2'.
 create table parttab (n numeric, t text)
   partition by list (n)(partition one values ('1'), partition two values('2'));

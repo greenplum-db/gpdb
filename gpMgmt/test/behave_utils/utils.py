@@ -11,15 +11,13 @@ import shutil
 import subprocess
 import difflib
 
-import pg
-
 from contextlib import closing
 from datetime import datetime
 from gppylib.commands.base import Command, ExecutionError, REMOTE
 from gppylib.commands.gp import chk_local_db_running, get_coordinatordatadir
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray, MODE_SYNCHRONIZED
-
+from gppylib.utils import escape_string
 
 PARTITION_START_DATE = '2010-01-01'
 PARTITION_END_DATE = '2013-01-01'
@@ -258,17 +256,12 @@ def getRow(dbname, exec_sql):
 
 
 def check_db_exists(dbname, host=None, port=0, user=None):
-    LIST_DATABASE_SQL = 'SELECT datname FROM pg_database'
-
-    results = []
     with closing(dbconn.connect(dbconn.DbURL(hostname=host, username=user, port=port, dbname='template1'), unsetSearchPath=False)) as conn:
-        curs = dbconn.query(conn, LIST_DATABASE_SQL)
-        results = curs.fetchall()
-    for result in results:
-        if result[0] == dbname:
-            return True
+        count = dbconn.querySingleton(conn, "SELECT count(*) FROM pg_database WHERE datname=\'{}\';".format(dbname))
+        if count == 0:
+            return False
 
-    return False
+    return True
 
 
 def create_database_if_not_exists(context, dbname, host=None, port=0, user=None):
@@ -317,14 +310,14 @@ def check_table_exists(context, dbname, table_name, table_type=None, host=None, 
                 FROM pg_class c, pg_namespace n
                 WHERE c.relname = '%s' AND n.nspname = '%s' AND c.relnamespace = n.oid;
                 """
-            SQL = SQL_format % (escape_string(tablename, conn=conn), escape_string(schemaname, conn=conn))
+            SQL = SQL_format % (escape_string(tablename), escape_string(schemaname))
         else:
             SQL_format = """
                 SELECT oid, relkind, relam, reloptions \
                 FROM pg_class \
                 WHERE relname = E'%s';\
                 """
-            SQL = SQL_format % (escape_string(table_name, conn=conn))
+            SQL = SQL_format % (escape_string(table_name))
 
         table_row = None
         try:
@@ -437,7 +430,7 @@ def create_external_partition(context, tablename, dbname, port, filename):
 
 
 def create_partition(context, tablename, storage_type, dbname, compression_type=None, partition=True, rowcount=1094,
-                     with_data=True, host=None, port=0, user=None):
+                     with_data=True, with_desc=False, host=None, port=0, user=None):
     interval = '1 year'
 
     table_definition = 'Column1 int, Column2 varchar(20), Column3 date'
@@ -467,6 +460,11 @@ def create_partition(context, tablename, storage_type, dbname, compression_type=
 
     with closing(dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname), unsetSearchPath=False)) as conn:
         dbconn.execSQL(conn, create_table_str)
+
+    if with_desc:
+	    comment_table_str = "Comment on table " + tablename + " is 'This is a table.';"
+	    with closing(dbconn.connect(dbconn.DbURL(hostname=host, port=port, username=user, dbname=dbname), unsetSearchPath=False)) as conn:
+		    dbconn.execSQL(conn, comment_table_str)
 
     if with_data:
         populate_partition(tablename, PARTITION_START_DATE, dbname, 0, rowcount, host, port, user)
@@ -735,16 +733,12 @@ def validate_local_path(path):
     return len(list)
 
 
-def populate_regular_table_data(context, tabletype, table_name, compression_type, dbname, rowcount=1094,
-                                with_data=False, host=None, port=0, user=None):
+def populate_regular_table_data(context, tabletype, table_name, dbname, compression_type=None, rowcount=1094,
+                                with_data=False, with_desc=False, host=None, port=0, user=None):
     create_database_if_not_exists(context, dbname, host=host, port=port, user=user)
     drop_table_if_exists(context, table_name=table_name, dbname=dbname, host=host, port=port, user=user)
-    if compression_type == "None":
-        create_partition(context, table_name, tabletype, dbname, compression_type=None, partition=False,
-                         rowcount=rowcount, with_data=with_data, host=host, port=port, user=user)
-    else:
-        create_partition(context, table_name, tabletype, dbname, compression_type, partition=False,
-                         rowcount=rowcount, with_data=with_data, host=host, port=port, user=user)
+    create_partition(context, table_name, tabletype, dbname, compression_type=compression_type, partition=False,
+                     rowcount=rowcount, with_data=with_data, with_desc=with_desc, host=host, port=port, user=user)
 
 
 def is_process_running(proc_name, host=None):
@@ -771,11 +765,6 @@ def replace_special_char_env(str):
         if var in os.environ:
             str = str.replace("$%s" % var, os.environ[var])
     return str
-
-
-def escape_string(string, conn):
-    return pg.DB(db=conn).escape_string(string)
-
 
 def wait_for_unblocked_transactions(context, num_retries=150):
     """
@@ -823,3 +812,18 @@ def wait_for_desired_query_result(dburl, query, desired_result, utility=False):
 
     if attempt == num_retries:
         raise Exception('Timed out after %s retries' % num_retries)
+
+
+
+def wait_for_database_dropped(dbname, remaining_attempt = 3000):
+    """
+    Tries once a decisecond to check for the database exist.
+    Raises an Exception after failing <remaining_attempt> times.
+    """
+    while remaining_attempt:
+        if not check_db_exists(dbname):
+            break
+        remaining_attempt -= 1
+        if remaining_attempt == 0:
+            raise Exception('Unable to drop the database {} !!!').format(dbname)
+        time.sleep(0.1)

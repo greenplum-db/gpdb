@@ -1500,58 +1500,36 @@
       <dxl:Relation Mdid="6.2284492.1.1" Name="coverage" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="2" Keys="15,13">
         <dxl:Columns>
           <dxl:Column Name="date" Attno="1" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="vendor" Attno="2" Mdid="0.1043.1.0" Nullable="true" ColWidth="32">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="hostname" Attno="3" Mdid="0.1043.1.0" Nullable="true" ColWidth="64">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ip" Attno="4" Mdid="0.1043.1.0" Nullable="true" ColWidth="16">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="vendor_sla" Attno="5" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="log_any" Attno="6" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="log_sec" Attno="7" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="log_sys" Attno="8" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="log_app" Attno="9" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="first_log" Attno="10" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="last_log" Attno="11" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="reason" Attno="12" Mdid="0.1043.1.0" Nullable="true" ColWidth="256">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="create_ts" Attno="13" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue>
-              <dxl:FuncExpr FuncId="0.2024.1.0" FuncRetSet="false" TypeMdid="0.1114.1.0">
-                <dxl:FuncExpr FuncId="0.748.1.0" FuncRetSet="false" TypeMdid="0.1082.1.0">
-                  <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAB25vdw==" LintValue="565895980"/>
-                </dxl:FuncExpr>
-              </dxl:FuncExpr>
-            </dxl:DefaultValue>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -2624,13 +2602,13 @@
           <dxl:Opfamily Mdid="0.3040.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:GPDBFunc Mdid="0.871.1.0" Name="upper" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.871.1.0" Name="upper" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.25.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.2024.1.0" Name="timestamp" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.2024.1.0" Name="timestamp" ReturnsSet="false" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.1114.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:GPDBFunc Mdid="0.748.1.0" Name="date" ReturnsSet="false" Stability="Stable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.748.1.0" Name="date" ReturnsSet="false" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.1082.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.2372852.1.1.22" Name="state" Width="8.000000" NullFreq="0.241232" NdvRemain="30.000000" FreqRemain="0.245447">
@@ -3309,91 +3287,58 @@
       <dxl:Relation Mdid="6.2372852.1.1" Name="asset_records" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="5" Keys="25,26,24" PartitionColumns="23" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="parent" Attno="1" Mdid="0.16.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="uid" Attno="2" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="checkin_timestamp" Attno="3" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="active" Attno="4" Mdid="0.16.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="dns" Attno="5" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="hostname" Attno="6" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="netbios" Attno="7" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="domain" Attno="8" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ip" Attno="9" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="subnet" Attno="10" Mdid="0.1043.1.0" Nullable="true" ColWidth="2048">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="mac" Attno="11" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="os" Attno="12" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="friendly_os" Attno="13" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="vendor" Attno="14" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="asset_type" Attno="15" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="is_portable" Attno="16" Mdid="0.16.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="release_environment" Attno="17" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="managed_by" Attno="18" Mdid="0.1043.1.0" Nullable="true" ColWidth="2048">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="explicitly_managed_by" Attno="19" Mdid="0.16.1.0" Nullable="true" ColWidth="1">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="managed_by_source" Attno="20" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="region" Attno="21" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="country" Attno="22" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="state" Attno="23" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="create_ts" Attno="24" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue>
-              <dxl:FuncExpr FuncId="0.2024.1.0" FuncRetSet="false" TypeMdid="0.1114.1.0">
-                <dxl:FuncExpr FuncId="0.748.1.0" FuncRetSet="false" TypeMdid="0.1082.1.0">
-                  <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAB25vdw==" LintValue="565895980"/>
-                </dxl:FuncExpr>
-              </dxl:FuncExpr>
-            </dxl:DefaultValue>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -4215,7 +4160,7 @@
                     <dxl:Ident ColId="27" ColName="date" TypeMdid="0.1114.1.0"/>
                   </dxl:Comparison>
                 </dxl:HashCondList>
-                <dxl:DynamicTableScan PartIndexId="1">
+                <dxl:DynamicTableScan>
                   <dxl:Properties>
                     <dxl:Cost StartupCost="0" TotalCost="100962.368230" Rows="17210680.000000" Width="79"/>
                   </dxl:Properties>

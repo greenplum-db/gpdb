@@ -41,6 +41,7 @@ CParseHandlerMDRelation::CParseHandlerMDRelation(
 	  m_mdname(nullptr),
 	  m_is_temp_table(false),
 	  m_rel_storage_type(IMDRelation::ErelstorageSentinel),
+	  m_rel_ao_version(IMDRelation::AORelationVersion_None),
 	  m_rel_distr_policy(IMDRelation::EreldistrSentinel),
 	  m_distr_col_array(nullptr),
 	  m_convert_hash_to_random(false),
@@ -143,6 +144,19 @@ CParseHandlerMDRelation::StartElement(const XMLCh *const element_uri,
 
 	m_rel_storage_type =
 		CDXLOperatorFactory::ParseRelationStorageType(xmlszStorageType);
+
+	// parse ao version
+	m_rel_ao_version = IMDRelation::AORelationVersion_None;
+	if (IMDRelation::ErelstorageAppendOnlyCols == m_rel_storage_type ||
+		IMDRelation::ErelstorageAppendOnlyRows == m_rel_storage_type ||
+		IMDRelation::ErelstorageMixedPartitioned == m_rel_storage_type)
+	{
+		m_rel_ao_version = (IMDRelation::Erelaoversion)
+			CDXLOperatorFactory::ExtractConvertAttrValueToUlong(
+				m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
+				EdxltokenRelAppendOnlyVersion, EdxltokenRelation, true,
+				IMDRelation::MaxAORelationVersion - 1);
+	}
 
 	const XMLCh *xmlszPartColumns =
 		attrs.getValue(CDXLTokens::XmlstrToken(EdxltokenPartKeys));
@@ -259,10 +273,11 @@ CParseHandlerMDRelation::EndElement(const XMLCh *const,	 // element_uri,
 
 	m_imd_obj = GPOS_NEW(m_mp) CMDRelationGPDB(
 		m_mp, m_mdid, m_mdname, m_is_temp_table, m_rel_storage_type,
-		m_rel_distr_policy, md_col_array, m_distr_col_array, distr_opfamilies,
-		m_partition_cols_array, m_str_part_types_array, child_partitions,
-		m_convert_hash_to_random, m_key_sets_arrays, md_index_info_array,
-		mdid_check_constraint_array, m_part_constraint, m_foreign_server);
+		m_rel_ao_version, m_rel_distr_policy, md_col_array, m_distr_col_array,
+		distr_opfamilies, m_partition_cols_array, m_str_part_types_array,
+		child_partitions, m_convert_hash_to_random, m_key_sets_arrays,
+		md_index_info_array, mdid_check_constraint_array, m_part_constraint,
+		m_foreign_server);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();

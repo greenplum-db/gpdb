@@ -1,4 +1,8 @@
+-- start_ignore
+! gpconfig -c plpython3.python_path -v "'$GPHOME/lib/python'" --skipvalidation;
+! gpstop -u;
 create or replace language plpython3u;
+-- end_ignore
 
 -- Helper function, to call either __gp_aoseg, or gp_aocsseg, depending
 -- on whether the table is row- or column-oriented. This allows us to
@@ -156,10 +160,12 @@ $$ language plpython3u;
 --   datadir: data directory of process to target with `pg_ctl`
 --   port: which port the server should start on
 --
-create or replace function pg_ctl_start(datadir text, port int)
+create or replace function pg_ctl_start(datadir text, port int, should_wait bool default true)
 returns text as $$
     import subprocess
     cmd = 'pg_ctl -l postmaster.log -D %s ' % datadir
+    if not should_wait:
+        cmd = cmd + ' -W '
     opts = '-p %d' % (port)
     opts = opts + ' -c gp_role=execute'
     cmd = cmd + '-o "%s" start' % opts
@@ -359,7 +365,7 @@ create or replace function pg_basebackup(host text, dbid int, port int, create_s
             os.environ.pop('PGAPPNAME')
         results = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace(b'.', b'').decode()
     except subprocess.CalledProcessError as e:
-        results = str(e) + "\ncommand output: " + e.output
+        results = str(e) + "\ncommand output: " + (e.output.decode())
 
     return results
 $$ language plpython3u;
@@ -464,3 +470,99 @@ begin
     return 'Fail'; /* in func */
 end; /* in func */
 $$ language plpgsql;
+
+-- Helper function to get the number of blocks in a relation.
+CREATE OR REPLACE FUNCTION nblocks(rel regclass) RETURNS int AS $$ /* in func */
+BEGIN /* in func */
+RETURN pg_relation_size(rel) / current_setting('block_size')::int; /* in func */
+END; $$ /* in func */
+    LANGUAGE PLPGSQL;
+
+-- Helper function to populate logical heap pages in a certain block sequence.
+-- Can be used for both heap and AO/CO tables. The target block sequence into
+-- which we insert the pages depends on the session which is inserting the data.
+-- This is currently meant to be used with a single column integer table.
+--
+-- Sample usage: SELECT populate_pages('foo', 1, tid '(33554435,0)')
+-- This will insert tuples with value=1 into a single QE such that logical
+-- heap blocks [33554432, 33554434] will be full and 33554435 will have only
+-- 1 tuple.
+--
+-- Note: while using this with AO/CO tables, please account for how the block
+-- sequences start/end based on the concurrency level (see AOSegmentGet_startHeapBlock())
+CREATE OR REPLACE FUNCTION populate_pages(relname text, value int, upto tid) RETURNS VOID AS $$ /* in func */
+DECLARE curtid tid; /* in func */
+BEGIN /* in func */
+LOOP /* in func */
+EXECUTE format('INSERT INTO %I VALUES($1) RETURNING ctid', relname) INTO curtid USING value; /* in func */
+EXIT WHEN curtid > upto; /* in func */
+END LOOP; /* in func */
+END; $$ /* in func */
+    LANGUAGE PLPGSQL;
+
+-- Check if autovacuum is enabled/disabled by inspecting the av launcher.
+CREATE or REPLACE FUNCTION check_autovacuum (enabled boolean) RETURNS bool AS
+$$
+declare
+	retries int; /* in func */
+	expected_count int; /* in func */
+begin
+	retries := 1200; /* in func */
+	if enabled then
+		/* (1 for each primary and 1 for the coordinator) */
+		expected_count := 4; /* in func */
+	else
+		expected_count := 0; /* in func */
+	end if; /* in func */
+	loop
+		if (select count(*) = expected_count from gp_stat_activity
+			where backend_type = 'autovacuum launcher') then
+			return true; /* in func */
+		end if; /* in func */
+		if retries <= 0 then
+			return false; /* in func */
+		end if; /* in func */
+		perform pg_sleep(0.1); /* in func */
+		retries := retries - 1; /* in func */
+	end loop; /* in func */
+end; /* in func */
+$$
+language plpgsql;
+
+CREATE OR REPLACE FUNCTION write_bogus_file(datadir text, log_dir text)
+RETURNS TEXT AS $$
+    import subprocess
+    import os
+    bogus_file = os.path.join(datadir, log_dir, 'bogusfile')
+    cmd = "echo 'something' >> %s" % bogus_file
+
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        shell=True)
+    stdout, stderr = proc.communicate()
+
+    if proc.returncode == 0:
+        return 'OK'
+    else:
+        raise Exception(stdout.decode()+'|'+stderr.decode())
+$$ LANGUAGE plpython3u;
+
+CREATE OR REPLACE FUNCTION remove_bogus_file(datadir text, log_dir text)
+RETURNS TEXT AS $$
+    import subprocess
+    import os
+    bogus_file = os.path.join(datadir, log_dir, 'bogusfile')
+    try:
+        os.remove(bogus_file)
+    except FileNotFoundError as e:
+        pass
+$$ LANGUAGE plpython3u;
+
+CREATE OR REPLACE FUNCTION assert_bogus_file_does_not_exist(datadir text, log_dir text)
+RETURNS TEXT AS $$
+    import subprocess
+    import os
+    bogus_file = os.path.join(datadir, log_dir, 'bogusfile')
+    if os.path.exists(bogus_file):
+        raise Exception("bogus file: %s should not exist" % bogus_file)
+    return 'OK'
+$$ LANGUAGE plpython3u;

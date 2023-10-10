@@ -1,0 +1,191 @@
+---
+title: Server Configuration Parameter Changes from Greenplum 6 to Greenplum 7
+---
+
+Greenplum 7 includes new server configuration parameters, and removes or updates the default values of certain server configuration parameters as described below.
+
+### <a id="new"></a>New Parameters
+
+The following new server configuration parameters are available in Greenplum 7:
+
+- `allow_in_place_tablespaces`
+- `archive_cleanup_command`
+- `backend_flush_after`
+- `bgwriter_flush_after`
+- `checkpoint_flush_after`
+- `cluster_name`
+- `data_directory_mode`
+- `debug_deadlocks`
+- `default_table_access_method`
+- `dtx_phase2_retry_second`
+- `enable_gathermerge`
+- `enable_groupingsets_hash_disk`
+- `enable_hashagg_disk`
+- `enable_parallel_append`
+- `enable_parallel_hash`
+- `enable_partition_pruning`
+- `enable_partitionwise_aggregate`
+- `enable_partitionwise_join`
+- `force_parallel_mode`
+- `gin_pending_list_limit`
+- `gp_autovacuum_scope`
+- `gp_detect_data_correctness`
+- `gp_explain_jit`
+- `gp_force_random_redistribution`
+- `gp_gxid_prefetch_num`
+- `gp_max_alloc_size`
+- `gp_pause_on_restore_point_replay`
+- `gp_quicklz_fallback`
+- `gp_resgroup_memory_query_fixed_mem`
+- `gp_resource_group_bypass_direct_dispatch`
+- `gp_workfile_compression_overhead_limit`
+- `idle_in_transaction_session_timeout`
+- `jit`
+- `jit_above_cost`
+- `jit_debugging_support`
+- `jit_dump_bitcode`
+- `jit_expressions`
+- `jit_inline_above_cost`
+- `jit_optimize_above_cost`
+- `jit_profiling_support`
+- `jit_provider`
+- `jit_tuple_deforming`
+- `log_btree_build_stats`
+- `log_replication_commands`
+- `log_statement_sample_rate`
+- `log_transaction_sample_rate`
+- `max_logical_replication_workers`
+- `max_parallel_maintenance_workers`
+- `max_parallel_workers`
+- `max_parallel_workers_per_gather`
+- `max_pred_locks_per_page`
+- `max_pred_locks_per_relation`
+- `max_sync_workers_per_subscription`
+- `max_wal_size`
+- `min_parallel_index_scan_size`
+- `min_parallel_table_scan_size`
+- `min_wal_size`
+- `old_snapshot_threshold`
+- `operator_precedence_warning`
+- `optimize_bounded_sort`
+- `optimizer_enable_coordinator_only_queries`
+- `optimizer_enable_dynamicindexonlyscan`
+- `optimizer_enable_foreign_table`
+- `optimizer_enable_motions_coordinatoronly_queries`
+- `optimizer_enable_nljoin`
+- `optimizer_enable_push_join_below_union_all`
+- `optimizer_jit_above_cost`
+- `optimizer_jit_inline_above_cost`
+- `optimizer_jit_optimize_above_cost`
+- `parallel_leader_participation`
+- `parallel_setup_cost`
+- `parallel_tuple_cost`
+- `primary_conninfo`
+- `primary_slot_name`
+- `promote_trigger_file`
+- `recovery_end_command`
+- `recovery_min_apply_delay`
+- `recovery_target`
+- `recovery_target_action`
+- `recovery_target_inclusive`
+- `recovery_target_lsn`
+- `recovery_target_name`
+- `recovery_target_time`
+- `recovery_target_timeline`
+- `recovery_target_xid`
+- `restore_command`
+- `row_security`
+- `shared_memory_type`
+- `ssl_dh_params_file`
+- `ssl_library`
+- `ssl_max_protocol_version`
+- `ssl_min_protocol_version`
+- `ssl_passphrase_command`
+- `ssl_passphrase_command_supports_reload`
+- `ssl_renegotiation_limit`
+- `syslog_sequence_numbers`
+- `syslog_split_messages`
+- `tcp_user_timeout`
+- `trace_lock_oidmin`
+- `trace_locks`
+- `trace_lock_table`
+- `trace_lwlocks`
+- `trace_syncscan`
+- `trace_userlocks`
+- `track_commit_timestamp`
+- `track_wal_io_timing`
+- `vacuum_cleanup_index_scale_factor`
+- `wal_compression`
+- `wal_consistency_checking`
+- `wal_debug`
+- `wal_init_zero`
+- `wal_keep_size`
+- `wal_recycle`
+- `wal_retrieve_retry_interval`
+- `wal_writer_flush_after`
+
+
+### <a id="removed"></a>Removed Parameters
+
+The following server configuration parameters are removed in Greenplum 7:
+
+- `checkpoint_segments`
+- `debug_latch`
+- `dev_opt_unsafe_truncate_in_subtransaction`
+- `dtx_phase2_retry_count`
+- `enable_implicit_timeformat_YYYYMMDDHH24MISS`
+- `gp_add_column_inherits_table_setting`
+- `gp_allow_rename_relation_without_lock`
+- `gp_count_host_segments_using_address`
+- `gp_eager_agg_distinct_pruning`
+- `gp_eager_one_phase_agg`
+- `gp_eager_preunique`
+- `gp_enable_exchange_default_partition`
+- `gp_enable_gpperfmon`
+- `gp_enable_mk_sort`
+- `gp_enable_motion_mk_sort`
+- `gp_enable_sort_distinct`
+- `gp_gpperfmon_send_interval`
+- `gp_hashagg_default_nbatches`
+- `gp_hashagg_groups_per_bucket`
+- `gp_hashagg_streambottom`
+- `gp_ignore_window_exclude`
+- `gp_indexcheck_vacuum`
+- `gp_keep_all_xlog`
+- `gp_log_resqueue_priority_sleep_time`
+- `gp_max_partition_level`
+- `gp_mk_sort_check`
+- `gp_partitioning_dynamic_selection_log`
+- `gpperfmon_log_alert_level`
+- `gpperfmon_port`
+- `gp_perfmon_print_packet_info`
+- `gp_perfmon_segment_interval`
+- `gp_resgroup_print_operator_memory_limits`
+- `gp_resource_group_cpu_ceiling_enforcement`
+- `gp_resource_group_enable_recalculate_query_mem`
+- `gp_resource_group_memory_limit`
+- `gp_safefswritesize`
+- `gp_sort_flags`
+- `gp_sort_max_distinct`
+- `gp_use_synchronize_seqscans_catalog_vacuum_full`
+- `memory_spill_ratio`
+- `optimizer_analyze_enable_merge_of_leaf_stats`
+- `optimizer_enable_dml_triggers`
+- `optimizer_enable_orderedagg`
+- `optimizer_enable_partial_index`
+- `optimizer_prune_unused_columns`
+- `password_hash_algorithm`
+- `test_print_prefetch_joinqual`
+- `wal_keep_segments`
+
+### <a id="changed"></a>Changed Parameters
+
+These server configuration parameters are changed in Greenplum 7:
+
+- The server configuration parameter `vacuum_cost_page_miss` has a new default value of 2.
+- The default value for the server configuration parameter `gp_interconnect_address_type` changed from `wildcard` to `unicast`.
+- The `wal_keep_segments` server configuration parameter has been replaced by the `wal_keep_size` parameter.
+- The `autovacuum` server configuration parameter is now enabled for all databases by default, rather than just for the `template0` and `template1` databases.
+- The `gp_autostats_mode` server configuration parameter default value has been changed to `none`.
+- The `gp_default_storage_options` parameter no longer supports the `appendonly` and `appendoptimized` keywords. Use the `default_table_access_method` parameter instead.
+

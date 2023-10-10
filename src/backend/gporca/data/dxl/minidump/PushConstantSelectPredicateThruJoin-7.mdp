@@ -85,31 +85,22 @@
       <dxl:Relation Mdid="6.65701.1.0" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.701.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-2" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-3" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-4" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-5" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-6" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -139,31 +130,22 @@
       <dxl:Relation Mdid="6.65704.1.0" Name="t2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-2" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-3" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-4" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-5" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-6" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-7" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -256,7 +238,7 @@
         <dxl:SumAgg Mdid="0.2111.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.317.1.0" Name="int4" ReturnsSet="false" Stability="Immutable" DataAccess="NoSQL" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="true">
+      <dxl:GPDBFunc Mdid="0.317.1.0" Name="int4" ReturnsSet="false" Stability="Immutable" IsStrict="true" IsNDVPreserving="false" IsAllowedForPS="true">
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:ColumnStatistics Mdid="1.65704.1.0.1" Name="b" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
@@ -373,13 +355,13 @@
           <dxl:JoinFilter>
             <dxl:And>
               <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.525.1.0">
-                <dxl:FuncExpr FuncId="0.317.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
+                <dxl:FuncExpr FuncId="0.317.1.0" FuncRetSet="false" TypeMdid="0.23.1.0" FuncVariadic="false">
                   <dxl:Ident ColId="0" ColName="a" TypeMdid="0.701.1.0"/>
                 </dxl:FuncExpr>
                 <dxl:Ident ColId="9" ColName="a" TypeMdid="0.23.1.0"/>
               </dxl:Comparison>
               <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.523.1.0">
-                <dxl:FuncExpr FuncId="0.317.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
+                <dxl:FuncExpr FuncId="0.317.1.0" FuncRetSet="false" TypeMdid="0.23.1.0" FuncVariadic="false">
                   <dxl:Ident ColId="0" ColName="a" TypeMdid="0.701.1.0"/>
                 </dxl:FuncExpr>
                 <dxl:Ident ColId="10" ColName="b" TypeMdid="0.23.1.0"/>
@@ -408,7 +390,7 @@
               </dxl:ProjList>
               <dxl:Filter>
                 <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-                  <dxl:FuncExpr FuncId="0.317.1.0" FuncRetSet="false" TypeMdid="0.23.1.0">
+                  <dxl:FuncExpr FuncId="0.317.1.0" FuncRetSet="false" TypeMdid="0.23.1.0" FuncVariadic="false">
                     <dxl:Ident ColId="0" ColName="a" TypeMdid="0.701.1.0"/>
                   </dxl:FuncExpr>
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="42"/>

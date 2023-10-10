@@ -558,14 +558,10 @@ generateSerialExtraStmts(CreateStmtContext *cxt, ColumnDef *column,
 											 -1),
 								 seqstmt->options);
 
-	/*
-	 * gpdb sequence default cache is 20 to avoid frequent sequence value apply
-	 * in QE, we do not need this optimize here. Since each input data populate
-	 * serial column in QD and then dispatch to QE
-	 */
+	/* keep the same with explicitly created sequence, use default cache value */
 	if (!has_cache_option)
 		seqstmt->options = lappend(seqstmt->options,
-								   makeDefElem("cache", (Node *) makeInteger((long) 1), -1));
+								   makeDefElem("cache", (Node *) makeInteger((long) SEQ_CACHE_DEFAULT), -1));
 
 	/*
 	 * If this is ALTER ADD COLUMN, make sure the sequence will be owned by
@@ -1212,6 +1208,12 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 
 			cxt->alist = lappend(cxt->alist, stmt);
 		}
+
+		/* Likewise, copy attribute encoding if requested */
+		if (table_like_clause->options & CREATE_TABLE_LIKE_ENCODING)
+			cxt->attr_encodings = list_union(cxt->attr_encodings, rel_get_column_encodings(relation));
+		else
+			cxt->attr_encodings = NIL;
 	}
 
 	/*
@@ -1232,55 +1234,38 @@ transformTableLikeClause(CreateStmtContext *cxt, TableLikeClause *table_like_cla
 		cxt->likeclauses = lappend(cxt->likeclauses, table_like_clause);
 	}
 
-	/*
-	 * GPDB_12_MERGE_FIXME:
-	 * 		This is wrong and creates unspecified behaviour when multiple like
-	 * 		clauses are present in the statement.
-	 *
-	 *		Try to use a unified interface for encoding handling in a manner
-	 *		similar to CREATE/ALTER commands.
-	 */
-	/*
-	 * If STORAGE is included, we need to copy over the table storage params
-	 * as well as the attribute encodings.
-	 */
-	if (stmt && table_like_clause->options & CREATE_TABLE_LIKE_STORAGE)
+	/* Copy AM if requested */
+	if (table_like_clause->options & CREATE_TABLE_LIKE_AM)
 	{
-		MemoryContext oldcontext;
-		/*
-		 * As we are modifying the utility statement we must make sure these
-		 * DefElem allocations can survive outside of this context.
-		 */
-		oldcontext = MemoryContextSwitchTo(CurTransactionContext);
+		if (stmt->accessMethod)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg("LIKE %s INCLUDING AM is not allowed because the access method of table %s is already set to %s",
+							   RelationGetRelationName(relation), cxt->relation->relname, stmt->accessMethod)),
+					errdetail("Multiple LIKE clauses with the INCLUDING AM option is not allowed.\n"
+							  "Single LIKE clause with the INCLUDING AM option is also not allowed if access method is explicitly specified by a USING or WITH clause."),
+					errhint("Remove INCLUDING AM or append EXCLUDING AM if INCLUDING ALL is specified."));
+		stmt->accessMethod = get_am_name(relation->rd_rel->relam);
+	}
 
-		if (RelationIsAppendOptimized(relation))
+	/* Copy reloptions if requested */
+	if (table_like_clause->options & CREATE_TABLE_LIKE_RELOPT)
+	{
+		if (stmt->options)
 		{
-			bool		checksum = true;
-			int32		blocksize = -1;
-			int16		compresslevel = 0;
-			NameData	compresstype;
-
-			GetAppendOnlyEntryAttributes(relation->rd_id,&blocksize,
-																	&compresslevel,&checksum,&compresstype);
-
-			stmt->accessMethod = get_am_name(relation->rd_rel->relam);
-
-			stmt->options = lappend(stmt->options,
-			                        makeDefElem("blocksize", (Node *) makeInteger(blocksize), -1));
-			stmt->options = lappend(stmt->options,
-			                        makeDefElem("checksum", (Node *) makeInteger(checksum), -1));
-			stmt->options = lappend(stmt->options,
-			                        makeDefElem("compresslevel", (Node *) makeInteger(compresslevel), -1));
-			if (strlen(NameStr(compresstype)) > 0)
-				stmt->options = lappend(stmt->options,
-				                        makeDefElem("compresstype", (Node *) makeString(pstrdup(NameStr(compresstype))), -1));
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						errmsg(
+							"LIKE %s INCLUDING RELOPT is not allowed because the reloptions of table %s is already set",
+							RelationGetRelationName(relation),
+							cxt->relation->relname)),
+					errdetail(
+						"Multiple LIKE clauses with the INCLUDING RELOPT option is not allowed.\n"
+						"Single LIKE clause with the INCLUDING RELOPT option is also not allowed if reloptions is explicitly specified by a WITH clause."),
+					errhint(
+						"Remove INCLUDING RELOPT or append EXCLUDING RELOPT if INCLUDING ALL is specified."));
 		}
-
-		/*
-		 * Set the attribute encodings.
-		 */
-		cxt->attr_encodings = list_union(cxt->attr_encodings, rel_get_column_encodings(relation));
-		MemoryContextSwitchTo(oldcontext);
+		stmt->options = untransformRelOptions(get_rel_opts(relation));
 	}
 
 	/*
@@ -5052,7 +5037,7 @@ transformPartitionCmd(CreateStmtContext *cxt, PartitionCmd *cmd)
 	{
 		case RELKIND_PARTITIONED_TABLE:
 			/* transform the partition bound, if any */
-			Assert(RelationGetPartitionKey(parentRel) != NULL);
+			Assert(RelationRetrievePartitionKey(parentRel) != NULL);
 			if (cmd->bound != NULL)
 				cxt->partbound = transformPartitionBound(cxt->pstate, parentRel,
 														 cmd->bound);
@@ -5092,7 +5077,7 @@ transformPartitionBound(ParseState *pstate, Relation parent,
 						PartitionBoundSpec *spec)
 {
 	PartitionBoundSpec *result_spec;
-	PartitionKey key = RelationGetPartitionKey(parent);
+	PartitionKey key = RelationRetrievePartitionKey(parent);
 	char		strategy = get_partition_strategy(key);
 	int			partnatts = get_partition_natts(key);
 	List	   *partexprs = get_partition_exprs(key);
@@ -5240,7 +5225,7 @@ transformPartitionRangeBounds(ParseState *pstate, List *blist,
 							  Relation parent)
 {
 	List	   *result = NIL;
-	PartitionKey key = RelationGetPartitionKey(parent);
+	PartitionKey key = RelationRetrievePartitionKey(parent);
 	List	   *partexprs = get_partition_exprs(key);
 	ListCell   *lc;
 	int			i,

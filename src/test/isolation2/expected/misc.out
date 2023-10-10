@@ -5,11 +5,11 @@
 -- preassigned in QD, if we create a table in utility mode in QE, the oid might
 -- conflict with preassigned oid.
 -1U: create table utilitymode_primary_key_tab (c1 int);
-CREATE
+CREATE TABLE
 -1U: create unique index idx_utilitymode_c1 on utilitymode_primary_key_tab (c1);
-CREATE
+CREATE INDEX
 -1U: drop table utilitymode_primary_key_tab;
-DROP
+DROP TABLE
 
 -- Try a few queries in utility mode. (Once upon a time, there was a bug that
 -- caused a crash on EXPLAIN ANALYZE on a Sort node in utility mode.)
@@ -55,7 +55,7 @@ ROLLBACK
 --
 -- We have changed the name to pg_temp_0<backend_id> in utility mode.
 0U: CREATE TEMP TABLE utilitymode_tmp_tab (c1 int) DISTRIBUTED BY (c1);
-CREATE
+CREATE TABLE
 0U: SELECT substring(n.nspname FROM 1 FOR 9) FROM pg_namespace n JOIN pg_class c ON n.oid = c.relnamespace WHERE c.relname = 'utilitymode_tmp_tab';
  substring 
 -----------
@@ -71,7 +71,7 @@ CREATE
 -- gp_dist_random('<view>') should not crash in utility mode
 --
 create or replace view misc_v as select 1;
-CREATE
+CREATE VIEW
 0U: select 1 from gp_dist_random('misc_v') union select 1 from misc_v;
  ?column? 
 ----------
@@ -84,12 +84,12 @@ CREATE
 (1 row)
 -- But views created in utility mode should not throw away gp_dist_random
 0U: create or replace view misc_v2 as select 1 from gp_dist_random('pg_class');
-CREATE
+CREATE VIEW
 0U: select definition from pg_views where viewname = 'misc_v2';
  definition                                                  
-------------
-   FROM gp_dist_random('pg_class'); 
+-------------------------------------------------------------
   SELECT 1 AS "?column?"
+   FROM gp_dist_random('pg_class'); 
 (1 row)
 0U: select count(*) > 0 from gp_dist_random('misc_v2');
  ?column? 
@@ -97,6 +97,24 @@ CREATE
  t        
 (1 row)
 0U: drop view misc_v2;
-DROP
+DROP VIEW
 drop view misc_v;
-DROP
+DROP VIEW
+
+--
+-- gp_toolkit.gp_check_orphaned_files should not be running with concurrent transaction (even idle)
+--
+-- use a different database to do the test, otherwise we might be reporting tons
+-- of orphaned files produced by the many intential PANICs/restarts in the isolation2 tests.
+create database check_orphaned_db;
+CREATE DATABASE
+1:@db_name check_orphaned_db: begin;
+BEGIN
+2:@db_name check_orphaned_db: select * from gp_toolkit.gp_check_orphaned_files;
+ERROR:  There is a client session running on one or more segment. Aborting...
+CONTEXT:  PL/pgSQL function gp_toolkit.__gp_check_orphaned_files_func() line 15 at RAISE
+1q: ... <quitting>
+2q: ... <quitting>
+
+drop database check_orphaned_db;
+DROP DATABASE

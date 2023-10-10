@@ -15,6 +15,7 @@
 
 #include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CDistributionSpecHashed.h"
+#include "gpopt/base/CDistributionSpecNonReplicated.h"
 #include "gpopt/base/CDistributionSpecNonSingleton.h"
 #include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
@@ -253,8 +254,27 @@ CPhysicalHashJoin::PdsMatch(CMemoryPool *mp, CDistributionSpec *pds,
 	switch (pds->Edt())
 	{
 		case CDistributionSpec::EdtUniversal:
-			// first child is universal, request second child to execute on a single host to avoid duplicates
-			return GPOS_NEW(mp) CDistributionSpecSingleton();
+			// One child is universal
+			// If the join outputs the universal side, request the other child
+			// to be a singleton. This way the join output ends up on one segment
+			// or the coordinator, so the data isn't duplicated. This can happen
+			// in outer and anti semi joins.
+			// If the join doesn't output the universal side, request the other
+			// child to be non duplicated, i.e. non-replicated. This is the case
+			// with inner and semi joins.
+
+			if ((EceoRightToLeft == eceo &&
+				 EopPhysicalRightOuterHashJoin == this->Eopid()) ||
+				(EceoLeftToRight == eceo &&
+				 (EopPhysicalLeftOuterHashJoin == this->Eopid() ||
+				  EopPhysicalLeftAntiSemiHashJoin == this->Eopid())))
+			{
+				return GPOS_NEW(mp) CDistributionSpecSingleton();
+			}
+			else
+			{
+				return GPOS_NEW(mp) CDistributionSpecNonReplicated();
+			}
 
 		case CDistributionSpec::EdtSingleton:
 		case CDistributionSpec::EdtStrictSingleton:
@@ -508,8 +528,24 @@ CPhysicalHashJoin::PdsRequiredReplicate(
 
 	if (CDistributionSpec::EdtUniversal == pdsInner->Edt())
 	{
-		// first child is universal, request second child to execute on a single host to avoid duplicates
-		return GPOS_NEW(mp) CDistributionSpecSingleton();
+		// Inner child is universal, which satisfies the requested
+		// replicated spec.
+		// If the join outputs the inner side, request the outer child
+		// to be a singleton. This way the join output ends up on one
+		// segment or the coordinator, so the data isn't duplicated.
+		// This only occurs in right outer join, cause we always
+		// broadcast child index 1.
+		// If the join outputs the outer side, request the outer child
+		// to be non duplicated, i.e. non-replicated.
+
+		if (EopPhysicalRightOuterHashJoin == this->Eopid())
+		{
+			return GPOS_NEW(mp) CDistributionSpecSingleton();
+		}
+		else
+		{
+			return GPOS_NEW(mp) CDistributionSpecNonReplicated();
+		}
 	}
 
 	if (ulOptReq == m_pdrgpdsRedistributeRequests->Size() &&

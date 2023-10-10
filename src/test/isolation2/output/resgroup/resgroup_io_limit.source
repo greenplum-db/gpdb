@@ -1,0 +1,178 @@
+-- different bison version may have different log format
+-- start_matchignore
+-- m/^ERROR:  io limit: syntax error.*\n/
+-- end_matchignore
+
+-- positive: io limit with correct syntax
+CREATE RESOURCE GROUP rg_test_group1 WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000');
+CREATE RESOURCE GROUP
+SELECT io_limit FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg_test_group1';
+ io_limit                                       
+------------------------------------------------
+ 1663:rbps=1000,wbps=1000,riops=1000,wiops=1000 
+(1 row)
+
+SELECT check_cgroup_io_max('rg_test_group1', 'pg_default', 'rbps=1048576000 wbps=1048576000 riops=1000 wiops=1000');
+ check_cgroup_io_max 
+---------------------
+ t                   
+(1 row)
+
+ALTER RESOURCE GROUP rg_test_group1 SET io_limit 'pg_default:rbps=1000,wbps=1000';
+ALTER RESOURCE GROUP
+
+SELECT check_cgroup_io_max('rg_test_group1', 'pg_default', 'rbps=1048576000 wbps=1048576000 riops=max wiops=max');
+ check_cgroup_io_max 
+---------------------
+ t                   
+(1 row)
+
+-- with space
+CREATE RESOURCE GROUP rg_test_group2 WITH (concurrency=10, cpu_max_percent=10, io_limit=' pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000');
+CREATE RESOURCE GROUP
+
+-- with space
+CREATE RESOURCE GROUP rg_test_group3 WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000, wbps=1000,riops=1000,wiops=1000');
+CREATE RESOURCE GROUP
+
+-- with *
+CREATE RESOURCE GROUP rg_test_group4 WITH (concurrency=10, cpu_max_percent=10, io_limit='*:rbps=1000,wbps=1000,riops=1000,wiops=1000');
+CREATE RESOURCE GROUP
+
+SELECT check_cgroup_io_max('rg_test_group4', 'pg_default', 'rbps=1048576000 wbps=1048576000 riops=1000 wiops=1000');
+ check_cgroup_io_max 
+---------------------
+ t                   
+(1 row)
+
+-- negative: io limit with incorrect syntax
+-- * must be unique tablespace
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000;*:wbps=1000');
+ERROR:  io limit: tablespace '*' cannot be used with other tablespaces
+HINT:   pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000;*:wbps=1000
+                                                                    ^
+
+-- tail ;
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000;');
+ERROR:  io limit: syntax error, unexpected end of file, expecting STAR or ID or NUMBER
+HINT:   pg_default:rbps=1000,wbps=1000,riops=1000,wiops=1000;
+                                                            ^
+
+-- tail ,
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rbps=1000,wbps=1000,riops=1000,');
+ERROR:  io limit: syntax error, unexpected end of file, expecting IO_KEY
+HINT:   pg_default:rbps=1000,wbps=1000,riops=1000,
+                                                 ^
+
+-- wrong key
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pg_default:rrbps=1000');
+ERROR:  io limit: syntax error, unexpected ID, expecting IO_KEY
+HINT:   pg_default:rrbps=1000
+                   ^
+
+-- wrong tablespace name
+CREATE RESOURCE GROUP rg_test_group WITH (concurrency=10, cpu_max_percent=10, io_limit='pgdefault:rbps=1000,wbps=1000,riops=1000');
+ERROR:  tablespace "pgdefault" does not exist
+
+-- use another tablespace
+select mkdir('@testtablespace@/rg_io_limit_ts_1') from gp_dist_random('gp_id') intersect select mkdir('@testtablespace@/rg_io_limit_ts_1') from gp_id;
+ mkdir 
+-------
+ t     
+(1 row)
+
+CREATE TABLESPACE rg_io_limit_ts_1 LOCATION '@testtablespace@/rg_io_limit_ts_1';
+CREATE TABLESPACE
+
+CREATE RESOURCE GROUP rg_test_group5 WITH (concurrency=10, cpu_max_percent=10, io_limit='rg_io_limit_ts_1:rbps=1000,wbps=1000,riops=1000,wiops=1000');
+CREATE RESOURCE GROUP
+
+SELECT check_cgroup_io_max('rg_test_group5', 'rg_io_limit_ts_1', 'rbps=1048576000 wbps=1048576000 riops=1000 wiops=1000');
+ check_cgroup_io_max 
+---------------------
+ t                   
+(1 row)
+
+-- try to drop test tablespace
+DROP TABLESPACE rg_io_limit_ts_1;
+ERROR:  io limit: following resource groups depend on tablespace rg_io_limit_ts_1: rg_test_group5
+HINT:  you can remove those resource groups or remove tablespace rg_io_limit_ts_1 from io_limit of those resource groups.
+
+ALTER RESOURCE GROUP rg_test_group5 SET io_limit 'rg_io_limit_ts_1:rbps=1000,wbps=1000';
+ALTER RESOURCE GROUP
+
+SELECT check_cgroup_io_max('rg_test_group5', 'rg_io_limit_ts_1', 'rbps=1048576000 wbps=1048576000 riops=max wiops=max');
+ check_cgroup_io_max 
+---------------------
+ t                   
+(1 row)
+
+ALTER RESOURCE GROUP rg_test_group5 SET concurrency 1;
+ALTER RESOURCE GROUP
+
+SELECT check_clear_io_max('rg_test_group5');
+ check_clear_io_max 
+--------------------
+ t                  
+(1 row)
+
+-- fault injector
+SELECT gp_inject_fault('create_resource_group_fail', 'error', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+CREATE RESOURCE GROUP rg_test_group6 WITH (concurrency=10, cpu_max_percent=10, io_limit='rg_io_limit_ts_1:rbps=1000,wbps=1000,riops=1000,wiops=1000');
+ERROR:  fault triggered, fault name:'create_resource_group_fail' fault type:'error'
+
+SELECT groupid, groupname, cpuset FROM gp_toolkit.gp_resgroup_config WHERE groupname = 'rg_test_group6';
+ groupid | groupname | cpuset 
+---------+-----------+--------
+(0 rows)
+
+SELECT gp_inject_fault('create_resource_group_fail', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- view
+-- start_ignore
+SELECT * from gp_toolkit.gp_resgroup_iostats_per_host;
+ rsgname        | hostname | tablespace       | rbps | wbps | riops | wiops 
+----------------+----------+------------------+------+------+-------+-------
+ rg_test_group1 | mtspc    | pg_default       | 0    | 0    | 0     | 0     
+ rg_test_group2 | mtspc    | pg_default       | 0    | 0    | 0     | 0     
+ rg_test_group3 | mtspc    | pg_default       | 0    | 0    | 0     | 0     
+ rg_test_group4 | mtspc    | *                | 0    | 0    | 0     | 0     
+ rg_test_group5 | mtspc    | rg_io_limit_ts_1 | 0    | 0    | 0     | 0     
+(5 rows)
+-- end_ignore
+
+SELECT count(*) > 0 as r from gp_toolkit.gp_resgroup_iostats_per_host;
+ r    
+------
+ t    
+(1 row)
+
+-- clean
+DROP RESOURCE GROUP rg_test_group1;
+DROP RESOURCE GROUP
+DROP RESOURCE GROUP rg_test_group2;
+DROP RESOURCE GROUP
+DROP RESOURCE GROUP rg_test_group3;
+DROP RESOURCE GROUP
+DROP RESOURCE GROUP rg_test_group4;
+DROP RESOURCE GROUP
+DROP RESOURCE GROUP rg_test_group5;
+DROP RESOURCE GROUP
+
+DROP TABLESPACE rg_io_limit_ts_1;
+DROP TABLESPACE
+
+select rmdir('@testtablespace@/rg_io_limit_ts_1') from gp_dist_random('gp_id') intersect select rmdir('@testtablespace@/rg_io_limit_ts_1') from gp_id;
+ rmdir 
+-------
+ t     
+(1 row)

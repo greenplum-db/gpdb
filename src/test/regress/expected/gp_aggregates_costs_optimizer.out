@@ -16,7 +16,7 @@ set statement_mem= '1800 kB';
 explain select avg(b) from cost_agg_t1 group by c;
                                             QUERY PLAN                                             
 ---------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..485.40 rows=2001 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..485.40 rows=2000 width=8)
    ->  Finalize HashAggregate  (cost=0.00..485.34 rows=667 width=8)
          Group Key: c
          ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..485.26 rows=667 width=12)
@@ -37,14 +37,15 @@ explain select avg(b) from cost_agg_t1 group by c;
 explain select avg(b) from cost_agg_t2 group by c;
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..501.88 rows=305691 width=8)
-   ->  HashAggregate  (cost=0.00..492.76 rows=101897 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..501.31 rows=287713 width=8)
+   ->  HashAggregate  (cost=0.00..492.74 rows=95905 width=8)
          Group Key: c
+         Planned Partitions: 8
          ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..452.01 rows=333334 width=8)
                Hash Key: c
                ->  Seq Scan on cost_agg_t2  (cost=0.00..438.70 rows=333334 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(7 rows)
+(8 rows)
 
 -- But if there are a lot more duplicate values, the two-stage plan becomes
 -- cheaper again, even though it doesn't git in memory and has to spill.
@@ -53,16 +54,18 @@ analyze cost_agg_t2;
 explain select avg(b) from cost_agg_t2 group by c;
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..504.85 rows=102902 width=8)
-   ->  Finalize HashAggregate  (cost=0.00..501.78 rows=34301 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..504.79 rows=102209 width=8)
+   ->  Finalize HashAggregate  (cost=0.00..501.74 rows=34070 width=8)
          Group Key: c
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..497.48 rows=34301 width=12)
+         Planned Partitions: 8
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..497.47 rows=34070 width=12)
                Hash Key: c
-               ->  Streaming Partial HashAggregate  (cost=0.00..496.19 rows=34301 width=12)
+               ->  Streaming Partial HashAggregate  (cost=0.00..496.19 rows=34070 width=12)
                      Group Key: c
+                     Planned Partitions: 4
                      ->  Seq Scan on cost_agg_t2  (cost=0.00..440.24 rows=400000 width=8)
  Optimizer: Pivotal Optimizer (GPORCA)
-(9 rows)
+(11 rows)
 
 drop table cost_agg_t1;
 drop table cost_agg_t2;

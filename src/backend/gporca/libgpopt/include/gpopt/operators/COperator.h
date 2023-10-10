@@ -183,6 +183,8 @@ public:
 		EopScalarBitmapIndexProbe,
 		EopScalarBitmapBoolOp,
 
+		EopScalarFieldSelect,
+
 		EopPhysicalTableScan,
 		EopPhysicalForeignScan,
 		EopPhysicalIndexScan,
@@ -257,6 +259,7 @@ public:
 
 		EopLogicalDynamicForeignGet,
 		EopPhysicalDynamicForeignScan,
+		EopPhysicalDynamicIndexOnlyScan,
 
 		EopSentinel
 	};

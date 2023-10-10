@@ -144,40 +144,28 @@
       <dxl:Relation Mdid="6.196638.1.0" Name="ext_expenses" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Random" Keys="11,5" ForeignServer="0.91908.1.0">
         <dxl:Columns>
           <dxl:Column Name="name" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="date" Attno="2" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="amount" Attno="3" Mdid="0.700.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="category" Attno="4" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="desc1" Attno="5" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
@@ -304,7 +292,7 @@
         </dxl:UnionAll>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="3">
+    <dxl:Plan Id="0" SpaceSize="6">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1350.876031" Rows="1.000000" Width="8"/>
@@ -314,7 +302,7 @@
           <dxl:ProjElem ColId="36" Alias="max">
             <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
               <dxl:ValuesList ParamType="aggargs">
-              <dxl:Ident ColId="37" ColName="ColRef_0037" TypeMdid="0.25.1.0"/>
+                <dxl:Ident ColId="37" ColName="ColRef_0037" TypeMdid="0.25.1.0"/>
               </dxl:ValuesList>
               <dxl:ValuesList ParamType="aggdirectargs"/>
               <dxl:ValuesList ParamType="aggorder"/>
@@ -343,7 +331,7 @@
               <dxl:ProjElem ColId="37" Alias="ColRef_0037">
                 <dxl:AggFunc AggMdid="0.2129.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
                   <dxl:ValuesList ParamType="aggargs">
-                  <dxl:Ident ColId="0" ColName="name" TypeMdid="0.25.1.0"/>
+                    <dxl:Ident ColId="0" ColName="name" TypeMdid="0.25.1.0"/>
                   </dxl:ValuesList>
                   <dxl:ValuesList ParamType="aggdirectargs"/>
                   <dxl:ValuesList ParamType="aggorder"/>

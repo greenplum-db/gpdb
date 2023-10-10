@@ -67,20 +67,6 @@ binary_upgrade_set_next_array_pg_type_oid(PG_FUNCTION_ARGS)
 }
 
 Datum
-binary_upgrade_set_next_toast_pg_type_oid(PG_FUNCTION_ARGS)
-{
-	Oid			typoid = PG_GETARG_OID(0);
-	Oid			typnamespaceoid = PG_GETARG_OID(1);
-	char	   *typname = GET_STR(PG_GETARG_TEXT_P(2));
-
-	CHECK_IS_BINARY_UPGRADE;
-	AddPreassignedOidFromBinaryUpgrade(typoid, TypeRelationId, typname,
-						typnamespaceoid, InvalidOid, InvalidOid);
-
-	PG_RETURN_VOID();
-}
-
-Datum
 binary_upgrade_set_next_heap_pg_class_oid(PG_FUNCTION_ARGS)
 {
 	Oid			reloid = PG_GETARG_OID(0);

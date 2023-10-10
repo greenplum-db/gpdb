@@ -28,12 +28,12 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerCostParams.o \
               CParseHandlerCtasStorageOptions.o \
               CParseHandlerDXL.o \
-              CParseHandlerDefaultValueExpr.o \
               CParseHandlerDirectDispatchInfo.o \
               CParseHandlerDistinctComp.o \
               CParseHandlerDummy.o \
               CParseHandlerDynamicForeignScan.o \
               CParseHandlerDynamicIndexScan.o \
+              CParseHandlerDynamicIndexOnlyScan.o \
               CParseHandlerDynamicTableScan.o \
               CParseHandlerEnumeratorConfig.o \
               CParseHandlerForeignScan.o \
@@ -144,6 +144,7 @@ OBJS        = CParseHandlerAgg.o \
               CParseHandlerScalarConstValue.o \
               CParseHandlerScalarDMLAction.o \
               CParseHandlerScalarExpr.o \
+              CParseHandlerScalarFieldSelect.o \
               CParseHandlerScalarFuncExpr.o \
               CParseHandlerScalarIdent.o \
               CParseHandlerScalarIfStmt.o \

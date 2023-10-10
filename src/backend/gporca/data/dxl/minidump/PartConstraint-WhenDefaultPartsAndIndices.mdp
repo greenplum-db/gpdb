@@ -178,40 +178,28 @@ EXPLAIN SELECT * FROM date_parts WHERE month BETWEEN 1 AND 4;
       <dxl:Relation Mdid="6.3748460.1.0" Name="date_parts" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="1,2,3" PartitionTypes="r,l,r">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="year" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="month" Attno="3" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="day" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="region" Attno="5" Mdid="0.25.1.0" Nullable="true" ColWidth="0">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
@@ -1721,7 +1709,7 @@ EXPLAIN SELECT * FROM date_parts WHERE month BETWEEN 1 AND 4;
           <dxl:UpperBound Closed="true" TypeMdid="0.23.1.0" Value="3650"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
-      <dxl:Index Mdid="0.3749921.1.0" Name="date_parts_ind_1_prt_outlying_years_2_prt_q1_3_prt_other_days" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="2" IncludedColumns="0,1,2,3,4,5,6,7,8,9,10,11">
+      <dxl:Index Mdid="0.3749921.1.0" Name="date_parts_ind_1_prt_outlying_years_2_prt_q1_3_prt_other_days" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="2" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3027.1.0"/>
         </dxl:Opfamilies>
@@ -3396,7 +3384,7 @@ EXPLAIN SELECT * FROM date_parts WHERE month BETWEEN 1 AND 4;
               </dxl:And>
             </dxl:PartFilterExpr>
           </dxl:PartitionSelector>
-          <dxl:DynamicBitmapTableScan PartIndexId="1">
+          <dxl:DynamicBitmapTableScan>
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="430.960341" Rows="1201.003300" Width="16"/>
             </dxl:Properties>

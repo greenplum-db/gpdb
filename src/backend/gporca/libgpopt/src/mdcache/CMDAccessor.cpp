@@ -1134,8 +1134,16 @@ CMDAccessor::Pstats(CMemoryPool *mp, IMDId *rel_mdid, CColRefSet *pcrsHist,
 		INT attno = pcrtable->AttrNum();
 		ULONG ulPos = pmdrel->GetPosFromAttno(attno);
 
-		CDouble *width = GPOS_NEW(mp) CDouble(pmdrel->ColWidth(ulPos));
-		colid_width_mapping->Insert(GPOS_NEW(mp) ULONG(colid), width);
+		// If data is not inserted in MAP, then releasing the allocated memory
+		// for key, value pair.
+		CDouble *valueWidth = GPOS_NEW(mp) CDouble(pmdrel->ColWidth(ulPos));
+		ULONG *keyColid = GPOS_NEW(mp) ULONG(colid);
+		BOOL isInserted = colid_width_mapping->Insert(keyColid, valueWidth);
+		if (!isInserted)
+		{
+			GPOS_DELETE(keyColid);
+			GPOS_DELETE(valueWidth);
+		}
 	}
 
 	CDouble rows = std::max(DOUBLE(1.0), pmdRelStats->Rows().Get());

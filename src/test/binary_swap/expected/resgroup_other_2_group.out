@@ -4,16 +4,17 @@ show gp_resource_manager;
  group
 (1 row)
 
-select * from pg_resgroup
+select rsgname, parent from pg_resgroup
   where rsgname not like 'rg_dump_test%'
   order by oid;
     rsgname    | parent 
 ---------------+--------
  default_group |      0
  admin_group   |      0
- rg1           |      0
+ system_group  |      0
  rg2           |      0
-(4 rows)
+ rg1           |      0
+(5 rows)
 
 select avg(reslimittype)
   from pg_resgroupcapability
@@ -30,9 +31,10 @@ select groupname from gp_toolkit.gp_resgroup_config
 ---------------
  default_group
  admin_group
+ system_group
  rg1
  rg2
-(4 rows)
+(5 rows)
 
 select rsgname from gp_toolkit.gp_resgroup_status
   where rsgname not like 'rg_dump_test%'
@@ -45,10 +47,10 @@ select rsgname from gp_toolkit.gp_resgroup_status
  rg2
 (4 rows)
 
-alter resource group rg1 set cpu_hard_quota_limit 20;
-alter resource group rg1 set cpu_hard_quota_limit 10;
+alter resource group rg1 set cpu_max_percent 20;
+alter resource group rg1 set cpu_max_percent 10;
 drop resource group rg1;
-create resource group rg1 with (cpu_hard_quota_limit=10, memory_limit=10);
-alter resource group rg2 set cpu_hard_quota_limit 20;
-alter resource group rg2 set cpu_hard_quota_limit 10;
+create resource group rg1 with (cpu_max_percent=10, memory_limit=10);
+alter resource group rg2 set cpu_max_percent 20;
+alter resource group rg2 set cpu_max_percent 10;
 -- TODO: change to the resgroup

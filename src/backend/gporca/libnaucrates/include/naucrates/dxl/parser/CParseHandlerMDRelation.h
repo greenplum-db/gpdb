@@ -16,7 +16,6 @@
 
 #include "naucrates/dxl/parser/CParseHandlerMetadataObject.h"
 #include "naucrates/dxl/xml/dxltokens.h"
-#include "naucrates/md/CMDPartConstraintGPDB.h"
 #include "naucrates/md/CMDRelationGPDB.h"
 
 namespace gpdxl
@@ -51,6 +50,9 @@ protected:
 
 	// storage type
 	IMDRelation::Erelstoragetype m_rel_storage_type;
+
+	// append only table version
+	IMDRelation::Erelaoversion m_rel_ao_version;
 
 	// distribution policy
 	IMDRelation::Ereldistrpolicy m_rel_distr_policy;

@@ -4753,6 +4753,8 @@ set_deparse_planstate(deparse_namespace *dpns, PlanState *ps)
 		dpns->index_tlist = ((ForeignScan *) ps->plan)->fdw_scan_tlist;
 	else if (IsA(ps->plan, CustomScan))
 		dpns->index_tlist = ((CustomScan *) ps->plan)->custom_scan_tlist;
+	else if (IsA(ps->plan, DynamicIndexOnlyScan))
+		dpns->index_tlist = ((DynamicIndexOnlyScan *) ps->plan)->indexscan.indextlist;
 	else
 		dpns->index_tlist = NIL;
 }
@@ -8276,7 +8278,12 @@ get_rule_expr(Node *node, deparse_context *context,
 				AlternativeSubPlan *asplan = (AlternativeSubPlan *) node;
 				ListCell   *lc;
 
-				/* As above, this can only happen during EXPLAIN */
+				/*
+				 * This case cannot be reached in normal usage, since no
+				 * AlternativeSubPlan can appear either in parsetrees or
+				 * finished plan trees.  We keep it just in case somebody
+				 * wants to use this code to print planner data structures.
+				 */
 				appendStringInfoString(buf, "(alternatives: ");
 				foreach(lc, asplan->subplans)
 				{

@@ -158,7 +158,7 @@ extern TupleHashTable BuildTupleHashTableExt(PlanState *parent,
 											 MemoryContext tempcxt, bool use_variable_hash_iv);
 extern TupleHashEntry LookupTupleHashEntry(TupleHashTable hashtable,
 										   TupleTableSlot *slot,
-										   bool *isnew);
+										   bool *isnew, uint32 *hash);
 extern uint32 TupleHashTableHash(TupleHashTable hashtable,
 								 TupleTableSlot *slot);
 extern TupleHashEntry LookupTupleHashEntryHash(TupleHashTable hashtable,
@@ -580,6 +580,7 @@ extern void ExecConditionalAssignProjectionInfo(PlanState *planstate,
 												TupleDesc inputDesc, Index varno);
 extern void ExecFreeExprContext(PlanState *planstate);
 extern void ExecAssignScanType(ScanState *scanstate, TupleDesc tupDesc);
+extern void ExecForeignScanError(ForeignScanState *node);
 extern void ExecCreateScanSlotFromOuterPlan(EState *estate,
 											ScanState *scanstate,
 											const TupleTableSlotOps *tts_ops);
@@ -661,7 +662,6 @@ extern void CheckSubscriptionRelkind(char relkind, const char *nspname,
 									 const char *relname);
 
 extern void fake_outer_params(JoinState *node);
-extern void ExecPrefetchQual(JoinState *node, bool isJoinQual);
 
 /* Additions for MPP Slice table utilities defined in execUtils.c */
 extern GpExecIdentity getGpExecIdentity(QueryDesc *queryDesc,

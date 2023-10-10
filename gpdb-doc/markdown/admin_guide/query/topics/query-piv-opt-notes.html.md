@@ -7,12 +7,11 @@ To run queries optimally with GPORCA, consider the query criteria closely.
 Ensure the following criteria are met:
 
 -   The table does not contain multi-column partition keys.
--   The multi-level partitioned table is a uniform multi-level partitioned table. See [About Uniform Multi-level Partitioned Tables](query-piv-uniform-part-tbl.html).
--   The server configuration parameter `optimizer_enable_master_only_queries` is set to `on` when running against coordinator only tables such as the system table *pg\_attribute*. For information about the parameter, see the *Greenplum Database Reference Guide*.
+-   The server configuration parameter `optimizer_enable_coordinator_only_queries` is set to `on` when running against coordinator only tables such as the system table *pg\_attribute*. For information about the parameter, see the *Greenplum Database Reference Guide*.
 
     > **Note** Enabling this parameter decreases performance of short running catalog queries. To avoid this issue, set this parameter only for a session or a query.
 
--   Statistics have been collected on the root partition of a partitioned table.
+-   Statistics have been collected on the root partitioned table.
 
 If the partitioned table contains more than 20,000 partitions, consider a redesign of the table schema.
 
@@ -27,9 +26,9 @@ These server configuration parameters affect GPORCA query processing.
 -   `optimizer_nestloop_factor` controls nested loop join cost factor to apply to during query optimization.
 -   `optimizer_parallel_union` controls the amount of parallelization that occurs for queries that contain a `UNION` or `UNION ALL` clause. When the value is `on`, GPORCA can generate a query plan of the child operations of a `UNION` or `UNION ALL` operation run in parallel on segment instances.
 -   `optimizer_sort_factor` controls the cost factor that GPORCA applies to sorting operations during query optimization. The cost factor can be adjusted for queries when data skew is present.
--   `gp_enable_relsize_collection` controls how GPORCA \(and the Postgres Planner\) handle a table without statistics. By default, GPORCA uses a default value to estimate the number of rows if statistics are not available. When this value is `on`, GPORCA uses the estimated size of a table if there are no statistics for the table.
+-   `gp_enable_relsize_collection` controls how GPORCA \(and the Postgres-based planner\) handle a table without statistics. By default, GPORCA uses a default value to estimate the number of rows if statistics are not available. When this value is `on`, GPORCA uses the estimated size of a table if there are no statistics for the table.
 
-    This parameter is ignored for a root partition of a partitioned table. If the root partition does not have statistics, GPORCA always uses the default value. You can use `ANALZYE ROOTPARTITION` to collect statistics on the root partition. See [ANALYZE](../../../ref_guide/sql_commands/ANALYZE.html).
+    This parameter is ignored for a root partitioned table. If the root partition does not have statistics, GPORCA always uses the default value. You can use `ANALZYE ROOTPARTITION` to collect statistics on the root partition. See [ANALYZE](../../../ref_guide/sql_commands/ANALYZE.html).
 
 
 These server configuration parameters control the display and logging of information.

@@ -542,11 +542,11 @@ INSERT INTO test_parse_arr (b)
 				  UNION ALL
 				  SELECT NULL 
 				) AS q;
-SELECT * FROM test_parse_arr ORDER BY a;
- a |     b     
----+-----------
- 1 | {{1,2,3}}
- 2 | 
+SELECT b FROM test_parse_arr;
+     b     
+-----------
+ 
+ {{1,2,3}}
 (2 rows)
 
 --

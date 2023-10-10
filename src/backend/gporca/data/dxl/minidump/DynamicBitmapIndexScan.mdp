@@ -14,39 +14,34 @@ see sql/DynamicBitmapIndexScan.sql
           <dxl:CostParam Name="NLJFactor" Value="1.000000" LowerBound="0.500000" UpperBound="1.500000"/>
         </dxl:CostParams>
       </dxl:CostModelConfig>
-      <dxl:TraceFlags Value="102001,102002,102003,102024,103045,102120,102144,103001,103014,103015,103022,103027,103033,104004,104005,105000"/>
+      <dxl:TraceFlags Value="102001,102002,102003,102024,103045,102120,102144,103001,103014,103015,103022,103027,103033,103038,104004,104005,105000"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.17408.1.1" Name="foo" Rows="1.000000" EmptyRelation="false"/>
       <dxl:Relation Mdid="6.17408.1.1" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="fid" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmin" Attno="-3" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmin" Attno="-4" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="xmax" Attno="-5" Mdid="0.28.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="cmax" Attno="-6" Mdid="0.29.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
+        <dxl:DistrOpfamilies>
+          <dxl:DistrOpfamily Mdid="0.1998.1.0"/>
+        </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:ColumnStatistics Mdid="1.16959.1.1.6" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:GPDBScalarOp Mdid="0.525.1.0" Name="&gt;=" ComparisonType="GEq" ReturnsNullOnNullInput="true">
@@ -192,61 +187,49 @@ see sql/DynamicBitmapIndexScan.sql
       <dxl:Relation Mdid="6.16929.1.1" Name="outer_table" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="16,14">
         <dxl:Columns>
           <dxl:Column Name="flex_value_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="language" Attno="2" Mdid="0.1043.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="last_update_date" Attno="3" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="last_updated_by" Attno="4" Mdid="0.1700.1.0" Nullable="true" ColWidth="0">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="creation_date" Attno="5" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="created_by" Attno="6" Mdid="0.1700.1.0" Nullable="true" ColWidth="0">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="last_update_login" Attno="7" Mdid="0.1700.1.0" Nullable="true" ColWidth="0">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="description" Attno="8" Mdid="0.1043.1.0" Nullable="true" ColWidth="240">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="source_lang" Attno="9" Mdid="0.1043.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value_meaning" Attno="10" Mdid="0.1043.1.0" Nullable="true" ColWidth="150">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="legalhold" Attno="11" Mdid="0.1043.1.0" Nullable="true" ColWidth="5">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="legaldescription" Attno="12" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="dataowner" Attno="13" Mdid="0.1043.1.0" Nullable="true" ColWidth="255">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="purgedate" Attno="14" Mdid="0.1082.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
+        <dxl:DistrOpfamilies>
+          <dxl:DistrOpfamily Mdid="0.1998.1.0"/>
+        </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:Type Mdid="0.1700.1.0" Name="numeric" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="false" Length="-1" PassByValue="false">
+        <dxl:DistrOpfamily Mdid="0.1998.1.0"/>
+        <dxl:LegacyDistrOpfamily Mdid="0.7103.1.0"/>
         <dxl:EqualityOp Mdid="0.1752.1.0"/>
         <dxl:InequalityOp Mdid="0.1753.1.0"/>
         <dxl:LessThanOp Mdid="0.1754.1.0"/>
@@ -289,31 +272,28 @@ see sql/DynamicBitmapIndexScan.sql
       <dxl:Relation Mdid="6.16959.1.1" Name="inner_table" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4" PartitionColumns="3" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="flex_value_set_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value_id" Attno="2" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value" Attno="3" Mdid="0.1043.1.0" Nullable="true" ColWidth="150">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_partition" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.17270.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
+        <dxl:DistrOpfamilies>
+          <dxl:DistrOpfamily Mdid="0.1998.1.0"/>
+          <dxl:DistrOpfamily Mdid="0.1998.1.0"/>
+        </dxl:DistrOpfamilies>
         <dxl:Partitions>
           <dxl:Partition Mdid="6.16959001.1.1"/>
           <dxl:Partition Mdid="6.16959002.1.1"/>
@@ -325,31 +305,28 @@ see sql/DynamicBitmapIndexScan.sql
       <dxl:Relation Mdid="6.16959001.1.1" Name="inner_table_prt_1" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4">
         <dxl:Columns>
           <dxl:Column Name="flex_value_set_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value_id" Attno="2" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value" Attno="3" Mdid="0.1043.1.0" Nullable="true" ColWidth="150">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_partition" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.17270001.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
+        <dxl:DistrOpfamilies>
+          <dxl:DistrOpfamily Mdid="0.1998.1.0"/>
+          <dxl:DistrOpfamily Mdid="0.1998.1.0"/>
+        </dxl:DistrOpfamilies>
         <dxl:PartConstraint>
           <dxl:And>
             <dxl:IsNotNull>
@@ -369,31 +346,28 @@ see sql/DynamicBitmapIndexScan.sql
       <dxl:Relation Mdid="6.16959002.1.1" Name="inner_table_prt_2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4">
         <dxl:Columns>
           <dxl:Column Name="flex_value_set_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value_id" Attno="2" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value" Attno="3" Mdid="0.1043.1.0" Nullable="true" ColWidth="150">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_partition" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.17270002.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
+        <dxl:DistrOpfamilies>
+          <dxl:DistrOpfamily Mdid="0.1998.1.0"/>
+          <dxl:DistrOpfamily Mdid="0.1998.1.0"/>
+        </dxl:DistrOpfamilies>
         <dxl:PartConstraint>
           <dxl:And>
             <dxl:IsNotNull>
@@ -413,31 +387,28 @@ see sql/DynamicBitmapIndexScan.sql
       <dxl:Relation Mdid="6.16959003.1.1" Name="inner_table_prt_3" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4">
         <dxl:Columns>
           <dxl:Column Name="flex_value_set_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value_id" Attno="2" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value" Attno="3" Mdid="0.1043.1.0" Nullable="true" ColWidth="150">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_partition" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.17270003.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
+        <dxl:DistrOpfamilies>
+          <dxl:DistrOpfamily Mdid="0.1998.1.0"/>
+          <dxl:DistrOpfamily Mdid="0.1998.1.0"/>
+        </dxl:DistrOpfamilies>
         <dxl:PartConstraint>
           <dxl:And>
             <dxl:IsNotNull>
@@ -457,31 +428,28 @@ see sql/DynamicBitmapIndexScan.sql
       <dxl:Relation Mdid="6.16959004.1.1" Name="inner_table_prt_4" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4">
         <dxl:Columns>
           <dxl:Column Name="flex_value_set_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value_id" Attno="2" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value" Attno="3" Mdid="0.1043.1.0" Nullable="true" ColWidth="150">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_partition" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.17270004.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
+        <dxl:DistrOpfamilies>
+          <dxl:DistrOpfamily Mdid="0.1998.1.0"/>
+          <dxl:DistrOpfamily Mdid="0.1998.1.0"/>
+        </dxl:DistrOpfamilies>
         <dxl:PartConstraint>
           <dxl:And>
             <dxl:IsNotNull>
@@ -501,31 +469,28 @@ see sql/DynamicBitmapIndexScan.sql
       <dxl:Relation Mdid="6.16959005.1.1" Name="inner_table_prt_5" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="5,6,4">
         <dxl:Columns>
           <dxl:Column Name="flex_value_set_id" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value_id" Attno="2" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_value" Attno="3" Mdid="0.1043.1.0" Nullable="true" ColWidth="150">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="flex_partition" Attno="4" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="tableoid" Attno="-7" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
           <dxl:Column Name="gp_segment_id" Attno="-8" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
-            <dxl:DefaultValue/>
           </dxl:Column>
         </dxl:Columns>
         <dxl:IndexInfoList>
           <dxl:IndexInfo Mdid="0.17270005.1.0" IsPartial="false"/>
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
+        <dxl:DistrOpfamilies>
+          <dxl:DistrOpfamily Mdid="0.1998.1.0"/>
+          <dxl:DistrOpfamily Mdid="0.1998.1.0"/>
+        </dxl:DistrOpfamilies>
         <dxl:PartConstraint>
           <dxl:And>
             <dxl:IsNotNull>
@@ -590,7 +555,7 @@ see sql/DynamicBitmapIndexScan.sql
       </dxl:GPDBScalarOp>
       <dxl:ColumnStatistics Mdid="1.16959.1.1.1" Name="flex_value_id" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.16959.1.1.0" Name="flex_value_set_id" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
-      <dxl:Index Mdid="0.17270.1.0" Name="inner_table_idx_1_prt_other" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="0,1,2,3,4,5,6">
+      <dxl:Index Mdid="0.17270.1.0" Name="inner_table_idx_1_prt_other" IsClustered="false" IndexType="Bitmap" IndexItemType="0.2283.1.0" KeyColumns="1" IncludedColumns="" ReturnableColumns="">
         <dxl:Opfamilies>
           <dxl:Opfamily Mdid="0.3032.1.0"/>
         </dxl:Opfamilies>
@@ -685,7 +650,7 @@ see sql/DynamicBitmapIndexScan.sql
         </dxl:Comparison>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="63">
+    <dxl:Plan Id="0" SpaceSize="66">
       <dxl:GatherMotion InputSegments="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="6763.875569" Rows="1.000000" Width="9"/>
@@ -725,10 +690,10 @@ see sql/DynamicBitmapIndexScan.sql
             <dxl:Filter/>
             <dxl:SortingColumnList/>
             <dxl:HashExprList>
-              <dxl:HashExpr>
+              <dxl:HashExpr Opfamily="0.1998.1.0">
                 <dxl:Ident ColId="24" ColName="fid" TypeMdid="0.1700.1.0"/>
               </dxl:HashExpr>
-              <dxl:HashExpr>
+              <dxl:HashExpr Opfamily="0.1998.1.0">
                 <dxl:Ident ColId="7" ColName="flex_value_id" TypeMdid="0.1700.1.0"/>
               </dxl:HashExpr>
             </dxl:HashExprList>
@@ -812,7 +777,7 @@ see sql/DynamicBitmapIndexScan.sql
               </dxl:TableScan>
             </dxl:NestedLoopJoin>
           </dxl:RedistributeMotion>
-          <dxl:DynamicBitmapTableScan PartIndexId="0" PrintablePartIndexId="1" SelectorIds="">
+          <dxl:DynamicBitmapTableScan SelectorIds="">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="397.966888" Rows="1.000000" Width="1"/>
             </dxl:Properties>

@@ -64,12 +64,12 @@ public:
 	void AddMessage(ELocale locale, CMessage *msg);
 
 	// initializer for global singleton
-	static GPOS_RESULT Init();
+	static void Init();
 
 	// accessor for global singleton
 	static CMessageRepository *GetMessageRepository();
 
-	void Shutdown();
+	static void Shutdown();
 
 };	// class CMessageRepository
 }  // namespace gpos

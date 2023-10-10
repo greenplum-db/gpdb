@@ -19,6 +19,8 @@ sub run_test
 
 	RewindTest::setup_cluster($test_mode);
 	RewindTest::start_master();
+	master_psql("ALTER SYSTEM SET log_directory TO 'relative_log_dir'");
+	master_psql("SELECT pg_reload_conf()");
 
 	my $test_master_datadir = $node_master->data_dir;
 
@@ -31,6 +33,8 @@ sub run_test
 	  "in both3";
 
 	RewindTest::create_standby($test_mode);
+	standby_psql("ALTER SYSTEM SET log_directory TO 'relative_log_dir'");
+	standby_psql("SELECT pg_reload_conf()");
 
 	# Create different subdirs and files in master and standby
 	my $test_standby_datadir = $node_standby->data_dir;
@@ -60,23 +64,16 @@ sub run_test
 	append_to_file "$test_master_datadir/backups/master_backup_file",
 	  "backup data in master1";
 
-	RewindTest::promote_standby();
-	RewindTest::run_pg_rewind($test_mode);
+	# GPDB: default log directory 'log' should be ignored
+	mkdir "$test_master_datadir/log";
+	append_to_file "$test_master_datadir/log/master_log_file.csv",
+	  "random log in coordinator";
 
-	# List files in the data directory after rewind.
-	my @paths;
-	find(
-		sub {
-			push @paths, $File::Find::name
-			  if $File::Find::name =~ m/.*(tst_|backups).*/;
-		},
-		$test_master_datadir);
-	@paths = sort @paths;
-	is_deeply(
-		\@paths,
-		[
+	my @list_of_expected_files = (
 			"$test_master_datadir/backups",
 			"$test_master_datadir/backups/master_backup_file",
+			"$test_master_datadir/log",
+			"$test_master_datadir/log/master_log_file.csv",
 			"$test_master_datadir/tst_both_dir",
 			"$test_master_datadir/tst_both_dir/both_file1",
 			"$test_master_datadir/tst_both_dir/both_file2",
@@ -86,8 +83,36 @@ sub run_test
 			"$test_master_datadir/tst_standby_dir/standby_file1",
 			"$test_master_datadir/tst_standby_dir/standby_file2",
 			"$test_master_datadir/tst_standby_dir/standby_subdir",
-			"$test_master_datadir/tst_standby_dir/standby_subdir/standby_file3"
-		],
+			"$test_master_datadir/tst_standby_dir/standby_subdir/standby_file3",
+	);
+
+	# GPDB: log directory files, based on the log_directory GUC of
+	# --source-server (AKA standby) should be ignored
+	if ($test_mode eq "remote")
+	{
+		mkdir "$test_standby_datadir/relative_log_dir";
+		append_to_file "$test_standby_datadir/relative_log_dir/standby_relative_log_file.csv",
+		  "random relative_log_dir in standby";
+		# we don't include the csv file as it should be ignored by pg_rewind
+		push(@list_of_expected_files, "$test_master_datadir/relative_log_dir");
+	}
+
+	RewindTest::promote_standby();
+	RewindTest::run_pg_rewind($test_mode);
+
+	# List files in the data directory after rewind.
+	my @paths;
+	find(
+		sub {
+			push @paths, $File::Find::name
+			  if $File::Find::name =~ m/.*(\/log|\/relative_log_dir|tst_|backups).*/;
+		},
+		$test_master_datadir);
+	@paths = sort @paths;
+	@list_of_expected_files = sort @list_of_expected_files;
+	is_deeply(
+		\@paths,
+		\@list_of_expected_files,
 		"file lists match");
 
 	RewindTest::clean_rewind_test();

@@ -123,7 +123,7 @@ Unlike the case with privileges, membership in a role cannot be granted to `PUBL
 
 **GRANT on Partitioned Tables**
 
-By default, when you grant privileges to a partitioned table, Greenplum Database recurses the operation to its child partition tables. To direct Greenplum to perform the `GRANT` on the partitioned table only, specify the `ONLY <table_name>` clause.
+By default, when you grant privileges to a partitioned table, Greenplum Database recurses the operation to its child tables. To direct Greenplum to perform the `GRANT` on the partitioned table only, specify the `ONLY <table_name>` clause.
 
 **GRANT on Protocols**
 

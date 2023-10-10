@@ -139,7 +139,6 @@
 /* Returns true if doing null-fill on inner relation */
 #define HJ_FILL_INNER(hjstate)	((hjstate)->hj_NullOuterTupleSlot != NULL)
 
-extern bool Test_print_prefetch_joinqual;
 
 static TupleTableSlot *ExecHashJoinOuterGetTuple(PlanState *outerNode,
 												 HashJoinState *hjstate,
@@ -163,6 +162,8 @@ static void ReleaseHashTable(HashJoinState *node);
 static void SpillCurrentBatch(HashJoinState *node);
 static bool ExecHashJoinReloadHashTable(HashJoinState *hjstate);
 static void ExecEagerFreeHashJoin(HashJoinState *node);
+
+static inline void SaveWorkFileSetStatsInfo(HashJoinTable hashtable);
 
 /* ----------------------------------------------------------------
  *		ExecHashJoinImpl
@@ -353,6 +354,9 @@ ExecHashJoinImpl(PlanState *pstate, bool parallel)
 				elog(gp_workfile_caching_loglevel, "HashJoin built table with %.1f tuples by executing subplan for batch 0", hashtable->totalTuples);
 #endif
 
+				/* Save stats info of work file set to hash table */
+				SaveWorkFileSetStatsInfo(hashtable);
+
 				/**
 				 * If LASJ_NOTIN and a null was found on the inner side, then clean out.
 				 */
@@ -366,23 +370,6 @@ ExecHashJoinImpl(PlanState *pstate, bool parallel)
 				 */
 				if (hashtable->totalTuples == 0 && !HJ_FILL_OUTER(node))
 					return NULL;
-
-				/*
-				 * Prefetch JoinQual or NonJoinQual to prevent motion hazard.
-				 *
-				 * See ExecPrefetchQual() for details.
-				 */
-				if (node->prefetch_joinqual)
-				{
-					ExecPrefetchQual(&node->js, true);
-					node->prefetch_joinqual = false;
-				}
-
-				if (node->prefetch_qual)
-				{
-					ExecPrefetchQual(&node->js, false);
-					node->prefetch_qual = false;
-				}
 
 				/*
 				 * We just scanned the entire inner side and built the hashtable
@@ -813,22 +800,6 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	 * the fix to MPP-989)
 	 */
 	hjstate->prefetch_inner = node->join.prefetch_inner;
-	hjstate->prefetch_joinqual = node->join.prefetch_joinqual;
-	hjstate->prefetch_qual = node->join.prefetch_qual;
-
-	if (Test_print_prefetch_joinqual && hjstate->prefetch_joinqual)
-		elog(NOTICE,
-			 "prefetch join qual in slice %d of plannode %d",
-			 currentSliceId, ((Plan *) node)->plan_node_id);
-
-	/*
-	 * reuse GUC Test_print_prefetch_joinqual to output debug information for
-	 * prefetching non join qual
-	 */
-	if (Test_print_prefetch_joinqual && hjstate->prefetch_qual)
-		elog(NOTICE,
-			 "prefetch non join qual in slice %d of plannode %d",
-			 currentSliceId, ((Plan *) node)->plan_node_id);
 
 	/*
 	 * initialize child nodes
@@ -1684,6 +1655,16 @@ ExecReScanHashJoin(HashJoinState *node)
 				ExecReScan(node->js.ps.righttree);
 		}
 	}
+	else 
+	{
+		/*
+		 * GPDB: HashTable not built with righttree may be squelched,
+		 * HashJoin need rescan righttree to reset its squelch flag.
+		 */
+		if (node->js.ps.righttree->chgParam == NULL &&
+			node->js.ps.righttree->squelched)
+				ExecReScan(node->js.ps.righttree);
+	}
 
 	/* Always reset intra-tuple state */
 	node->hj_CurHashValue = 0;
@@ -2086,4 +2067,17 @@ ExecHashJoinInitializeWorker(HashJoinState *state,
 	hashNode->parallel_state = pstate;
 
 	ExecSetExecProcNode(&state->js.ps, ExecParallelHashJoin);
+}
+
+static inline void SaveWorkFileSetStatsInfo(HashJoinTable hashtable)
+{
+	workfile_set *work_set = hashtable->work_set;
+	if (work_set)
+	{
+		hashtable->workset_num_files = work_set->num_files;
+		hashtable->workset_num_files_compressed = work_set->num_files_compressed;
+		hashtable->workset_max_file_size = work_set->max_file_size;
+		hashtable->workset_min_file_size = work_set->min_file_size;
+		hashtable->workset_compression_buf_total = work_set->compression_buf_total;
+	}
 }

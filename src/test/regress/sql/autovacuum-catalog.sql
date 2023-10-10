@@ -5,6 +5,7 @@ CREATE DATABASE av_catalog;
 
 -- speed up test
 ALTER SYSTEM SET autovacuum_naptime = 5;
+ALTER SYSTEM SET autovacuum_vacuum_threshold = 50;
 -- start_ignore
 \! gpstop -u;
 -- end_ignore
@@ -27,6 +28,7 @@ SELECT gp_inject_fault('auto_vac_worker_after_report_activity', 'reset', 1);
 
 
 ALTER SYSTEM RESET autovacuum_naptime;
+ALTER SYSTEM RESET autovacuum_vacuum_threshold;
 -- start_ignore
 \! gpstop -u;
 -- end_ignore

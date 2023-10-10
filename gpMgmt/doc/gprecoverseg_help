@@ -10,11 +10,11 @@ Synopsis
 gprecoverseg [-p <new_recover_host>[,...]]
              |-i <recover_config_file> 
              [-d <coordinator_data_directory>]
-             [-B <batch_size>] [-b <segment_batch_size>]
+             [-B <batch_size>] [-b <segment_batch_size>] [--differential]
              [-F] [-a] [-q] [-s] [--no-progress] [-l <logfile_directory>]
 
 
-gprecoverseg -r
+gprecoverseg -r [--replay-lag <replay_lag>] [--disable-replay-lag]
 
 
 gprecoverseg -o <output_recover_config_file> 
@@ -68,7 +68,14 @@ The word SPACE indicates the location of a required space. Do not
 add additional spaces.
 
 <failed_host_address>|<port>|<data_directory>SPACE
-[<recovery_host_address>|<port>|<data_directory>
+[<recovery_host_address>|<port>|<data_directory>]
+
+If hostname is not provided, host-address will be populated in the
+configuration. In case you want to have different hostname and address,
+hostname can be specified in the recovery configuration, the format
+for the config file is as follows:
+<failed_host_name>|<failed_host_address>|<port>|<data_directory>SPACE
+[<recovery_host_name>|<recovery_host_address>|<port>|<data_directory>]
 
 See the -i option below for details and examples of a recovery
 configuration file.
@@ -138,6 +145,12 @@ in order to recover the failed segment. The default is to
 only copy over the incremental changes that occurred while 
 the segment was down.
 
+--differential
+
+Optional. Perform a differential copy of the active segment instance
+in order to recover the failed segment. The default is to only copy
+over the incremental changes that occurred while the segment was down.
+
 
 -i <recover_config_file>
 
@@ -173,7 +186,11 @@ sdw1-1|50001|/data1/mirror/gpseg16
 
 Recovery of a single mirror to a new host
 
-sdw1-1|50001|/data1/mirror/gpseg16SPACE sdw4-1|50001|51001|/data1/recover1/gpseg16
+sdw1-1|50001|/data1/mirror/gpseg16 SPACE sdw4-1|50001|51001|/data1/recover1/gpseg16
+
+Recovery of a single mirror to a new host with hostname specified:
+sdw1|sdw1-1|50001|/data1/mirror/gpseg16 SPACE
+sdw4|sdw4-1|50001|51001|/data1/recover1/gpseg16
 
 Obtaining a Sample File
 
@@ -224,6 +241,16 @@ This option rebalances primary and mirror segments by returning them to
 their preferred roles. All segments must be valid and synchronized before 
 running gprecoverseg -r. If there are any in progress queries, they will 
 be cancelled and rolled back.
+
+--replay-lag
+Replay lag(in GBs) allowed on mirror when rebalancing the segments. Default is 10 GB. If
+the replay_lag (flush_lsn-replay_lsn) is more than the value provided with this option
+then rebalance will be aborted.
+
+
+--disable-replay-lag
+Disable replay lag check when rebalancing segments
+
 
 -s
 

@@ -1,36 +1,36 @@
 -- @Description Tests the privileges related with endpoints
 --
 DROP TABLE IF EXISTS t1;
-DROP
+DROP TABLE
 DROP USER IF EXISTS adminuser;
-DROP
+DROP ROLE
 DROP USER IF EXISTS u1;
-DROP
+DROP ROLE
 DROP USER IF EXISTS uu1;
-DROP
+DROP ROLE
 DROP USER IF EXISTS u2;
-DROP
+DROP ROLE
 CREATE USER adminuser;
-CREATE
+CREATE ROLE
 ALTER USER adminuser WITH SUPERUSER;
-ALTER
+ALTER ROLE
 CREATE USER u1 with CREATEROLE;
-CREATE
+CREATE ROLE
 CREATE USER u2;
-CREATE
+CREATE ROLE
 
 SET SESSION AUTHORIZATION u1;
 SET
 CREATE TABLE t1 (a INT) DISTRIBUTED by (a);
-CREATE
+CREATE TABLE
 insert into t1 select generate_series(1,10);
-INSERT 10
+INSERT 0 10
 CREATE USER uu1;
-CREATE
+CREATE ROLE
 GRANT ALL PRIVILEGES ON t1 TO uu1;
 GRANT
 GRANT uu1 TO u1;
-GRANT
+GRANT ROLE
 RESET SESSION AUTHORIZATION;
 RESET
 
@@ -47,7 +47,7 @@ SET
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c1';
  endpoint_id1 | token_id | host_id | port_id | READY
  endpoint_id1 | token_id | host_id | port_id | READY
@@ -62,10 +62,10 @@ SET
 (1 row)
 --- c2 is declared by u1
 1: DECLARE c2 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 --- c12 is declared by u1 on entry db
 1: DECLARE c12 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM generate_series(1,10);
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 --- u1 is able to see all endpoints created by himself.
 1: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
  cursorname | username 
@@ -161,24 +161,33 @@ SET
  u1           | uu1          
 (1 row)
 1: DECLARE c3 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 2: @post_run 'parse_endpoint_info 3 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c3';
  endpoint_id3 | token_id | host_id | port_id | READY
  endpoint_id3 | token_id | host_id | port_id | READY
  endpoint_id3 | token_id | host_id | port_id | READY
 (3 rows)
---- uu1 can not see u1's endpoints.
 1: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
  cursorname | username 
 ------------+----------
-(0 rows)
+ c3         | uu1      
+(1 row)
+--- u1 can not see uu1's endpoints.
+1: SET ROLE u1;
+SET
+1: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
+ cursorname | username 
+------------+----------
+ c2         | u1       
+ c12        | u1       
+(2 rows)
 2: SELECT DISTINCT(cursorname), username FROM gp_get_endpoints();
  cursorname | username  
 ------------+-----------
  c1         | adminuser 
  c12        | u1        
  c2         | u1        
- c3         | u1        
+ c3         | uu1       
 (4 rows)
 
 3: @pre_run 'export RETRIEVE_USER="uu1"; echo $RAW_STR ' : SELECT 1;
@@ -186,24 +195,27 @@ DECLARE
 ----------
  1        
 (1 row)
---- Login as uu1 and retrieve, only u1 can retrieve
-3R: SELECT SESSION_USER, CURRENT_USER;
-#3retrieve> FATAL:  Authentication failure (Wrong password or no endpoint for the user)
-
+--- Login as uu1 and retrieve
 3R: @pre_run 'set_endpoint_variable @ENDPOINT3': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT3";
-#3retrieve> FATAL:  Authentication failure (Wrong password or no endpoint for the user)
-
+ a 
+---
+ 2 
+ 3 
+ 4 
+ 7 
+ 8 
+(5 rows)
 
 --- Retrieve c2(which belongs to u1) but current user is uu1.
 3R: @pre_run 'set_endpoint_variable @ENDPOINT2': RETRIEVE ALL FROM ENDPOINT "@ENDPOINT2";
-#3retrieve> FATAL:  Authentication failure (Wrong password or no endpoint for the user)
-
+ERROR:  the PARALLEL RETRIEVE CURSOR was created by a different user
+HINT:  Use the same user as the PARALLEL RETRIEVE CURSOR creator to retrieve.
 0Rq: ... <quitting>
-3Rq:Sessions not started cannot be quit
+3Rq: ... <quitting>
 1<:  <... completed>
 FAILED:  Execution failed
 1: END;
-END
+COMMIT
 2q: ... <quitting>
 3: @pre_run 'unset RETRIEVE_USER; echo $RAW_STR ' : SELECT 1;
  ?column? 
@@ -225,12 +237,12 @@ SET
 BEGIN
 -- Used to let super login to retrieve session so then it can change user in session.
 1: DECLARE c0 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: SET SESSION AUTHORIZATION u1;
 SET
 --- c1 is declared and executed by u1
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1&: SELECT * FROM gp_wait_parallel_retrieve_cursor('c1', -1);  <waiting ...>
 
 2: @post_run 'parse_endpoint_info 40 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c0';
@@ -293,7 +305,7 @@ ERROR:  canceling statement due to user request
 1: CLOSE c1;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 1: END;
-END
+ROLLBACK
 1q: ... <quitting>
 3q: ... <quitting>
 0Rq: ... <quitting>
@@ -308,14 +320,14 @@ SET
 1: BEGIN;
 BEGIN
 1: DECLARE c1 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 --- Close c1 by adminuser
 1: SET SESSION AUTHORIZATION adminuser;
 SET
 1: CLOSE c1;
-CLOSE
+CLOSE CURSOR
 1: END;
-END
+COMMIT
 
 
 --------- Test4: u2 should NOT be able to see or retrieve from u1's endpoints
@@ -330,7 +342,7 @@ SET
 BEGIN
 -- Used to let super login to retrieve session so then it can change user in session.
 1: DECLARE c0 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 50 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c0';
  endpoint_id50 | token_id | host_id | port_id | READY
  endpoint_id50 | token_id | host_id | port_id | READY
@@ -340,7 +352,7 @@ DECLARE
 SET
 --- c4 is declared and executed by u1
 1: DECLARE c4 PARALLEL RETRIEVE CURSOR FOR SELECT * FROM t1;
-DECLARE
+DECLARE PARALLEL RETRIEVE CURSOR
 1: @post_run 'parse_endpoint_info 5 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c4';
  endpoint_id5 | token_id | host_id | port_id | READY
  endpoint_id5 | token_id | host_id | port_id | READY
@@ -418,7 +430,7 @@ ERROR:  canceling statement due to user request
 1: CLOSE c4;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 1: END;
-END
+ROLLBACK
 0Rq: ... <quitting>
 1Rq: ... <quitting>
 2Rq: ... <quitting>

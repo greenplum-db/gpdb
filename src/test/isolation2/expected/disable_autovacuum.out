@@ -1,10 +1,28 @@
-alter system set autovacuum = off;
-ALTER
-select gp_segment_id, pg_reload_conf() from gp_id union select gp_segment_id, pg_reload_conf() from gp_dist_random('gp_id');
- gp_segment_id | pg_reload_conf 
----------------+----------------
- 2             | t              
- 1             | t              
- 0             | t              
- -1            | t              
-(4 rows)
+-- start_ignore
+!\retcode gpconfig -c autovacuum -v off;
+-- start_ignore
+20230817:14:42:05:2855408 gpconfig:bdoil-ub:bdoil-[INFO]:-completed successfully with parameters '-c autovacuum -v off'
+
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -au;
+-- start_ignore
+20230817:14:42:05:2855807 gpstop:bdoil-ub:bdoil-[INFO]:-Starting gpstop with args: -au
+20230817:14:42:05:2855807 gpstop:bdoil-ub:bdoil-[INFO]:-Gathering information and validating the environment...
+20230817:14:42:05:2855807 gpstop:bdoil-ub:bdoil-[INFO]:-Obtaining Greenplum Coordinator catalog information
+20230817:14:42:05:2855807 gpstop:bdoil-ub:bdoil-[INFO]:-Obtaining Segment details from coordinator...
+20230817:14:42:05:2855807 gpstop:bdoil-ub:bdoil-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-beta.5+dev.64.g42f3fff56a6 build dev'
+20230817:14:42:05:2855807 gpstop:bdoil-ub:bdoil-[INFO]:-Signalling all postmaster processes to reload
+
+-- end_ignore
+(exited with code 0)
+-- end_ignore
+
+-- Impose a stronger exit criteria for this test:
+-- the AV launcher has shut down (and by extension the workers) following the config change.
+-- This is done to ensure tests in the suite immediately following this one are run under the right conditions.
+select check_autovacuum(false);
+ check_autovacuum 
+------------------
+ t                
+(1 row)

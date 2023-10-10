@@ -152,6 +152,7 @@ sub start_master
 	$node_master->psql(
 		'postgres', "
 		CREATE ROLE rewind_user LOGIN;
+		GRANT pg_read_all_settings TO rewind_user;
 		GRANT EXECUTE ON function pg_catalog.pg_ls_dir(text, boolean, boolean)
 		  TO rewind_user;
 		GRANT EXECUTE ON function pg_catalog.pg_stat_file(text, boolean)

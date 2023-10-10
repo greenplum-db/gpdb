@@ -74,7 +74,7 @@
               <dxl:ConstValue TypeMdid="0.26.1.0" Value="74764"/>
             </dxl:TableValuedFunction>
           </dxl:Result>
-          <dxl:DynamicTableScan PartIndexId="0">
+          <dxl:DynamicTableScan>
             <dxl:Properties>
               <dxl:Cost StartupCost="10" TotalCost="100" Rows="0" Width="16"/>
             </dxl:Properties>

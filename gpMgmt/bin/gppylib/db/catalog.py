@@ -6,12 +6,33 @@
 
 """
 import copy
-
-import pg
+import os
+from contextlib import closing
 from gppylib import gplog
 from gppylib.db import dbconn
 
 logger=gplog.get_default_logger()
+
+
+class RemoteQueryCommand:
+    def __init__(self, qname, query, hostname, port, dbname=None):
+        self.qname = qname
+        self.query = query
+        self.hostname = hostname
+        self.port = port
+        self.dbname = dbname or os.environ.get('PGDATABASE', None) or 'template1'
+        self.res = None
+
+    def get_results(self):
+        return self.res
+
+    def run(self):
+        logger.debug('Executing query (%s:%s) for segment (%s:%s) on database (%s)' % (
+            self.qname, self.query, self.hostname, self.port, self.dbname))
+        with closing(dbconn.connect(dbconn.DbURL(hostname=self.hostname, port=self.port, dbname=self.dbname),
+                                    utility=True)) as conn:
+            self.res = dbconn.query(conn, self.query).fetchall()
+
 
 class CatalogError(Exception): pass
 

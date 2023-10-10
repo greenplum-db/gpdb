@@ -2257,29 +2257,6 @@ get_func_support(Oid funcid)
 }
 
 /*
- * func_data_access
- *		Given procedure id, return the function's data access flag.
- */
-char
-func_data_access(Oid funcid)
-{
-	HeapTuple	tp;
-	char		result;
-	bool		isnull;
-
-	tp = SearchSysCache1(PROCOID, ObjectIdGetDatum(funcid));
-	if (!HeapTupleIsValid(tp))
-		elog(ERROR, "cache lookup failed for function %u", funcid);
-
-	result = DatumGetChar(
-		SysCacheGetAttr(PROCOID, tp, Anum_pg_proc_prodataaccess, &isnull));
-	ReleaseSysCache(tp);
-
-	Assert(!isnull);
-	return result;
-}
-
-/*
  * func_exec_location
  *		Given procedure id, return the function's proexeclocation field
  */
@@ -2343,6 +2320,32 @@ get_relnatts(Oid relid)
 		return InvalidAttrNumber;
 }
 #endif
+
+/*
+ * get_rel_am
+ *		Returns the access method of a given relation.
+ *
+ * Returns InvalidOid if there is no such relation or if the relation is not an
+ * index or a table.
+ */
+Oid
+get_rel_am(Oid relid)
+{
+	HeapTuple       tp;
+
+	tp = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
+	if (HeapTupleIsValid(tp))
+	{
+		Form_pg_class reltup = (Form_pg_class) GETSTRUCT(tp);
+		Oid       result;
+
+		result = reltup->relam;
+		ReleaseSysCache(tp);
+		return result;
+	}
+
+	return InvalidOid;
+}
 
 /*
  * get_rel_name
@@ -4035,7 +4038,13 @@ get_relation_keys(Oid relid)
 		{
 			continue;
 		}
-			
+
+		// skip the constraint if deferrable
+		if (contuple->condeferrable)
+		{
+			continue;
+		}
+
 		// store key set in an array
 		List *key = NIL;
 		

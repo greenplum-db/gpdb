@@ -4192,6 +4192,8 @@ raw_expression_tree_walker(Node *node,
 			break;
 		case T_CommonTableExpr:
 			return walker(((CommonTableExpr *) node)->ctequery, context);
+		case T_TableValueExpr:
+			return walker(((TableValueExpr *) node)->subquery, context);
 		default:
 			elog(ERROR, "unrecognized node type: %d",
 				 (int) nodeTag(node));
@@ -4268,7 +4270,6 @@ planstate_tree_walker(PlanState *planstate,
 									   walker, context))
 				return true;
 			break;
-		/* GPDB_96_MERGE_FIXME: verify walker works on Sequence node */
 		case T_Sequence:
 			if (planstate_walk_members(((SequenceState *) planstate)->subplans,
 									   ((SequenceState *) planstate)->numSubplans,

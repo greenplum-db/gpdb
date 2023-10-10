@@ -45,8 +45,16 @@ CXformDynamicIndexGet2DynamicIndexScan::CXformDynamicIndexGet2DynamicIndexScan(
 CXform::EXformPromise
 CXformDynamicIndexGet2DynamicIndexScan::Exfp(CExpressionHandle &exprhdl) const
 {
-	if (exprhdl.DeriveHasSubquery(0))
+	CLogicalDynamicIndexGet *popGet =
+		CLogicalDynamicIndexGet::PopConvert(exprhdl.Pop());
+
+	CTableDescriptor *ptabdesc = popGet->Ptabdesc();
+	BOOL possible_ao_table = ptabdesc->IsAORowOrColTable() ||
+							 ptabdesc->RetrieveRelStorageType() ==
+								 IMDRelation::ErelstorageMixedPartitioned;
+	if (possible_ao_table || exprhdl.DeriveHasSubquery(0))
 	{
+		// GPDB does not support dynamic index scan on AO/AOCS table.
 		return CXform::ExfpNone;
 	}
 	return CXform::ExfpHigh;
@@ -107,7 +115,8 @@ CXformDynamicIndexGet2DynamicIndexScan::Transform(
 						mp, pindexdesc, ptabdesc, pexpr->Pop()->UlOpId(), pname,
 						pdrgpcrOutput, popIndexGet->ScanId(), pdrgpdrgpcrPart,
 						pos, popIndexGet->GetPartitionMdids(),
-						popIndexGet->GetRootColMappingPerPart()),
+						popIndexGet->GetRootColMappingPerPart(),
+						popIndexGet->ResidualPredicateSize()),
 					pexprIndexCond);
 	// add alternative to transformation result
 	pxfres->Add(pexprAlt);

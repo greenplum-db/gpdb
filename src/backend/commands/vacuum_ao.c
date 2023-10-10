@@ -178,6 +178,8 @@ ao_vacuum_rel_pre_cleanup(Relation onerel, VacuumParams *params, BufferAccessStr
 	};
 	int64		initprog_val[3];
 
+	Assert(RelationStorageIsAO(onerel));
+
 	if (options & VACOPT_VERBOSE)
 		elevel = INFO;
 	else
@@ -265,7 +267,7 @@ ao_vacuum_rel_post_cleanup(Relation onerel, VacuumParams *params, BufferAccessSt
 	 * 
 	 * 4. Update statistics.
 	 */
-	Assert(RelationIsAoRows(onerel) || RelationIsAoCols(onerel));
+	Assert(RelationStorageIsAO(onerel));
 	Assert(vacrelstats != NULL);
 
 	pgstat_progress_update_param(PROGRESS_VACUUM_PHASE,
@@ -329,7 +331,7 @@ ao_vacuum_rel_compact(Relation onerel, VacuumParams *params, BufferAccessStrateg
 		   Gp_role == GP_ROLE_UTILITY ||
 		   DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER ||
 		   DistributedTransactionContext == DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER);
-	Assert(RelationIsAoRows(onerel) || RelationIsAoCols(onerel));
+	Assert(RelationStorageIsAO(onerel));
 	Assert(vacrelstats != NULL);
 
 	if (options & VACOPT_VERBOSE)
@@ -413,14 +415,25 @@ void
 ao_vacuum_rel(Relation rel, VacuumParams *params, BufferAccessStrategy bstrategy)
 {
 	static AOVacuumRelStats *vacrelstats = NULL;
-	Assert(RelationIsAppendOptimized(rel));
+	Assert(RelationStorageIsAO(rel));
 	Assert(params != NULL);
 
 	int ao_vacuum_phase = (params->options & VACUUM_AO_PHASE_MASK);
 
 	if (!vacrelstats)
 	{
-		Assert(ao_vacuum_phase == VACOPT_AO_PRE_CLEANUP_PHASE || Gp_role != GP_ROLE_EXECUTE);
+		if (ao_vacuum_phase != VACOPT_AO_PRE_CLEANUP_PHASE && Gp_role == GP_ROLE_EXECUTE)
+		{
+			/*
+			 * If we enter here, it indicates the previous vacuum worker exited
+			 * and we are in a new worker, previous collected data in vacrelstats
+			 * will be lost.
+			 */
+			SIMPLE_FAULT_INJECTOR("vacuum_worker_changed");
+
+			elog(LOG, "Vacuum worker process is changed, progressing status is reset, current state is %d.",
+				 ao_vacuum_phase);
+		}
 
 		pgstat_progress_start_command(PROGRESS_COMMAND_VACUUM, RelationGetRelid(rel));
 		vacrelstats = init_vacrelstats();
@@ -519,7 +532,7 @@ vacuum_appendonly_indexes(Relation aoRelation, int options, Bitmapset *dead_segs
 	Relation   *Irel;
 	int			nindexes;
 
-	Assert(RelationIsAppendOptimized(aoRelation));
+	Assert(RelationStorageIsAO(aoRelation));
 
 	if (Debug_appendonly_print_compaction)
 		elog(LOG, "Vacuum indexes for append-only relation %s",
@@ -693,7 +706,7 @@ vacuum_appendonly_fill_stats(Relation aorel, Snapshot snapshot, int elevel,
 	AppendOnlyVisimap visimap;
 	Oid			visimaprelid;
 
-	Assert(RelationIsAoRows(aorel) || RelationIsAoCols(aorel));
+	Assert(RelationStorageIsAO(aorel));
 
 	relname = RelationGetRelationName(aorel);
 

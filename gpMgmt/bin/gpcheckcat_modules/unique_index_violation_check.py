@@ -34,22 +34,24 @@ class UniqueIndexViolationCheck:
             ) as violations
         """
 
-    def runCheck(self, db_connection):
-        unique_indexes = db_connection.query(self.unique_indexes_query).getresult()
-        violations = []
+    def runCheck(self, conn):
+        with conn.cursor() as cur:
+            cur.execute(self.unique_indexes_query)
+            unique_indexes = cur.fetchall()
+            violations = []
 
-        for (table_oid, index_name, table_name, column_names) in unique_indexes:
-            column_names = ",".join(column_names)
-            sql = self.get_violated_segments_query(table_name, column_names)
-            violated_segments = db_connection.query(sql).getresult()
-            if violated_segments:
-                violations.append(dict(table_oid=table_oid,
-                                       table_name=table_name,
-                                       index_name=index_name,
-                                       column_names=column_names,
-                                       violated_segments=[row[0] for row in violated_segments]))
-
-        return violations
+            for (table_oid, index_name, table_name, column_names) in unique_indexes:
+                column_names = ",".join(column_names)
+                sql = self.get_violated_segments_query(table_name, column_names)
+                cur.execute(sql)
+                violated_segments = cur.fetchall()
+                if violated_segments:
+                    violations.append(dict(table_oid=table_oid,
+                                           table_name=table_name,
+                                           index_name=index_name,
+                                           column_names=column_names,
+                                           violated_segments=[row[0] for row in violated_segments]))
+            return violations
 
     def get_violated_segments_query(self, table_name, column_names):
         return self.violated_segments_query % (

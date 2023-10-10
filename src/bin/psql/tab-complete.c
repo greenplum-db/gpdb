@@ -1006,6 +1006,7 @@ static const pgsql_thing_t words_after_create[] = {
 	{"DOMAIN", NULL, NULL, &Query_for_list_of_domains},
 	{"EVENT TRIGGER", NULL, NULL, NULL},
 	{"EXTENSION", Query_for_list_of_extensions},
+	{"EXTERNAL TABLE", NULL, NULL, NULL},
 	{"FOREIGN DATA WRAPPER", NULL, NULL, NULL},
 	{"FOREIGN TABLE", NULL, NULL, NULL},
 	{"FUNCTION", NULL, NULL, Query_for_list_of_functions},
@@ -2722,7 +2723,7 @@ psql_completion(const char *text, int start, int end)
 	else if (TailMatches("RESOURCE", "GROUP", MatchAny, "WITH", "("))
 	{
 		static const char *const list_CREATERESOURCEGROUP[] =
-		{"CONCURRENCY", "cpu_hard_quota_limit", "MEMORY_LIMIT", "MEMORY_REDZONE_LIMIT", NULL};
+		{"CONCURRENCY", "cpu_max_percent", "MEMORY_LIMIT", "MEMORY_REDZONE_LIMIT", NULL};
 
 		COMPLETE_WITH_LIST(list_CREATERESOURCEGROUP);
 	}
@@ -3544,8 +3545,9 @@ psql_completion(const char *text, int start, int end)
 		if (ends_with(prev_wd, '(') || ends_with(prev_wd, ','))
 			COMPLETE_WITH("FULL", "FREEZE", "ANALYZE", "VERBOSE",
 						  "DISABLE_PAGE_SKIPPING", "SKIP_LOCKED",
-						  "INDEX_CLEANUP", "TRUNCATE");
-		else if (TailMatches("FULL|FREEZE|ANALYZE|VERBOSE|DISABLE_PAGE_SKIPPING|SKIP_LOCKED|INDEX_CLEANUP|TRUNCATE"))
+						  "INDEX_CLEANUP", "TRUNCATE", "PARALLEL", "SKIP_DATABASE_STATS",
+						  "ONLY_DATABASE_STATS");
+		else if (TailMatches("FULL|FREEZE|ANALYZE|VERBOSE|DISABLE_PAGE_SKIPPING|SKIP_LOCKED|TRUNCATE|SKIP_DATABASE_STATS|ONLY_DATABASE_STATS"))
 			COMPLETE_WITH("ON", "OFF");
 	}
 	else if (HeadMatches("VACUUM") && TailMatches("("))

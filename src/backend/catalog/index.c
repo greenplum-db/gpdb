@@ -62,6 +62,7 @@
 #include "commands/progress.h"
 #include "commands/tablecmds.h"
 #include "commands/trigger.h"
+#include "commands/vacuum.h"
 #include "executor/executor.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
@@ -2948,10 +2949,9 @@ index_update_stats(Relation rel,
 		relpages = RelationGetNumberOfBlocks(rel);
 
 		/*
-		 * GPDB: In theory, it is possible to support index only scans with AO
-		 * tables, but disable them for now by setting relallvisible to 0.
+		 * GPDB: We don't maintain relallvisible for AO/CO tables.
 		 */
-		if (rd_rel->relkind != RELKIND_INDEX && !RelationIsAppendOptimized(rel))
+		if (rd_rel->relkind != RELKIND_INDEX && !RelationStorageIsAO(rel))
 			visibilitymap_count(rel, &relallvisible, NULL);
 		else					/* don't bother for indexes */
 			relallvisible = 0;
@@ -2980,6 +2980,38 @@ index_update_stats(Relation rel,
 	{
 		heap_inplace_update(pg_class, tuple);
 		/* the above sends a cache inval message */
+
+		if (reltuples > 0 &&
+			Gp_role == GP_ROLE_EXECUTE &&
+			!IsSystemClass(rd_rel->oid, rd_rel) &&
+			!isTempOrTempToastNamespace(rd_rel->relnamespace))
+		{
+			/*
+			 * Send the updated relstats to the QD for aggregation. But do this
+			 * only for non-empty relations. Sending it for empty relations
+			 * breaks the detection mechanism for whether an empty table has
+			 * already been analyzed/vacuumed in vac_update_relstats() on the
+			 * QD side. Plus, we save on overhead.
+			 *
+			 * PS: Empty index builds can have the index rel's relpages = 1
+			 * even if reltuples = 0 (for meta-page) and won't have their
+			 * relpages updated on QD. This is what we desire. The index
+			 * meta-page is usually disregarded for planning decisions anyway.
+			 *
+			 * XXX: The detection mechanism, among other stats infrastructure
+			 * will have to change when we absorb upstream commit 3d351d916b2,
+			 * which includes reltuples=-1 to indicate vacuum/analyze on
+			 * empty relations.
+			 *
+			 * Current limitation: If even one QE has reltuples = 0, we will
+			 * fail to update the relstats on the QD. See comment in
+			 * vacuum_combine_stats().
+			 */
+			vac_send_relstats_to_qd(rd_rel->oid,
+									rd_rel->relpages,
+									rd_rel->reltuples,
+									rd_rel->relallvisible);
+		}
 	}
 	else
 	{
@@ -3962,7 +3994,7 @@ reindex_relation(Oid relid, int flags, int options)
 			 get_namespace_name(RelationGetNamespace(rel)),
 			 RelationGetRelationName(rel));
 
-	relIsAO = RelationIsAppendOptimized(rel);
+	relIsAO = RelationStorageIsAO(rel);
 
 	toast_relid = rel->rd_rel->reltoastrelid;
 
@@ -4276,4 +4308,23 @@ RestoreReindexState(void *reindexstate)
 
 	/* Note the worker has its own transaction nesting level */
 	reindexingNestLevel = GetCurrentTransactionNestLevel();
+}
+
+/*
+ * Is this index on an append-optimized table?
+ */
+bool
+IsIndexOnAORel(Relation idx)
+{
+	Oid relid;
+	Oid relam;
+
+	Assert(idx->rd_index);
+
+	relid = idx->rd_index->indrelid;
+	relam = get_rel_am(relid);
+
+	Assert(OidIsValid(relam));
+
+	return (relam == AO_ROW_TABLE_AM_OID || relam == AO_COLUMN_TABLE_AM_OID);
 }

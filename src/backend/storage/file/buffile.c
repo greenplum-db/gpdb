@@ -150,6 +150,9 @@ struct BufFile
 	/* This holds compressed input, during decompression. */
 	ZSTD_inBuffer compressed_buffer;
 	bool		decompression_finished;
+
+	/* Memory usage by ZSTD compression buffer */
+	size_t		compressed_buffer_size;
 #endif
 };
 
@@ -203,6 +206,10 @@ makeBufFile(File firstfile, const char *operation_name)
 	file->name = NULL;
 
 	file->operation_name = pstrdup(operation_name);
+
+#ifdef USE_ZSTD
+	file->compressed_buffer_size = 0;
+#endif
 
 	return file;
 }
@@ -1241,11 +1248,26 @@ bool gp_workfile_compression;		/* GUC */
 void
 BufFilePledgeSequential(BufFile *buffile)
 {
+	workfile_set *work_set = buffile->work_set;
+
 	if (BufFileSize(buffile) != 0)
 		elog(ERROR, "cannot pledge sequential access to a temporary file after writing it");
 
-	if (gp_workfile_compression)
+	AssertImply(work_set->compression_buf_total > 0, gp_workfile_compression);
+
+	/*
+	 * If gp_workfile_compression_overhead_limit is 0, it means no limit for
+	 * memory used by compressed work files. Othersize, compress the work file
+	 * only when the used memory size is under the limit.
+	 */
+	if (gp_workfile_compression &&
+		(gp_workfile_compression_overhead_limit == 0 ||
+		 work_set->compression_buf_total <
+			gp_workfile_compression_overhead_limit * 1024UL))
+	{
 		BufFileStartCompression(buffile);
+		work_set->num_files_compressed++;
+	}
 }
 
 /*
@@ -1312,6 +1334,7 @@ BufFileDumpCompressedBuffer(BufFile *file, const void *buffer, Size nbytes)
 {
 	ZSTD_inBuffer input;
 	off_t pos = 0;
+	size_t	compressed_buffer_size = 0;
 
 	file->uncompressed_bytes += nbytes;
 
@@ -1344,6 +1367,25 @@ BufFileDumpCompressedBuffer(BufFile *file, const void *buffer, Size nbytes)
 			pos += wrote;
 		}
 	}
+
+	/*
+	 * Calculate the delta of buffer used by ZSTD stream and take it into
+	 * account to work_set->comp_buf_total.
+	 */
+
+	compressed_buffer_size = ZSTD_sizeof_CStream(file->zstd_context->cctx);
+
+	/*
+	 * As ZSTD comments said, the memory usage can evolve (increase or
+	 * decrease) over time. We update work_set->compressed_buffer_size only
+	 * when compressed_buffer_size increases. It means we apply the comp buff
+	 * limit to max ever memory usage and ignore the case of memory decreasing.
+	 */
+	if (compressed_buffer_size > file->compressed_buffer_size)
+		file->work_set->compression_buf_total
+			+= compressed_buffer_size - file->compressed_buffer_size;
+	file->compressed_buffer_size = compressed_buffer_size;
+
 	file->curOffset += pos;
 }
 

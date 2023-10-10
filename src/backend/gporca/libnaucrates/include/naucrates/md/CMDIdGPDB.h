@@ -58,10 +58,10 @@ protected:
 	WCHAR m_mdid_array[GPDXL_MDID_LENGTH];
 
 	// string representation of the mdid
-	CWStringStatic m_str;
+	mutable CWStringStatic m_str;
 
 	// serialize mdid
-	virtual void Serialize();
+	virtual void Serialize() const;
 
 public:
 	// ctors

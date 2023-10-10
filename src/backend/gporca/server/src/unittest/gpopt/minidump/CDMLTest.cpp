@@ -91,6 +91,7 @@ const CHAR *rgszDMLFileNames[] = {
 	"../data/dxl/minidump/DML-Volatile-Function.mdp",
 	"../data/dxl/minidump/UpdateWindowGatherMerge.mdp",
 	"../data/dxl/minidump/UpdateDistKeyWithNestedJoin.mdp",
+	"../data/dxl/minidump/RTErequiredPerms.mdp",
 };
 
 //---------------------------------------------------------------------------

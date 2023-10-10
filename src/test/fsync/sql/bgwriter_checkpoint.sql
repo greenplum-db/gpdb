@@ -20,8 +20,11 @@
 -- end_matchsubs
 
 -- Prevent autovacuum from dirty-ing buffers.
-alter system set autovacuum = off;
-select gp_segment_id, pg_reload_conf() from gp_id union select gp_segment_id, pg_reload_conf() from gp_dist_random('gp_id');
+
+-- start_ignore
+\! gpconfig -c autovacuum -v off;
+\! gpstop -au;
+-- end_ignore
 
 begin;
 create function num_dirty_on_qes(relid oid) returns setof bigint as
@@ -148,5 +151,7 @@ select gp_inject_fault('fsync_counter', 'status', 2::smallint);
 select gp_inject_fault('all', 'reset', dbid) from gp_segment_configuration;
 
 -- Reset autovacuum;
-alter system set autovacuum = on;
-select gp_segment_id, pg_reload_conf() from gp_id union select gp_segment_id, pg_reload_conf() from gp_dist_random('gp_id');
+-- start_ignore
+\! gpconfig -c autovacuum -v on;
+\! gpstop -au;
+-- end_ignore

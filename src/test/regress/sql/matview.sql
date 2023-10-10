@@ -266,3 +266,34 @@ refresh materialized view mat_view_github_issue_11956;
 
 drop materialized view mat_view_github_issue_11956;
 drop table t_github_issue_11956;
+
+-- test REFRESH MATERIALIZED VIEW with 'WITH NO DATA' option can be executed immediately.
+DROP TABLE IF EXISTS mvtest_twn;
+CREATE TABLE mvtest_twn(a int);
+CREATE MATERIALIZED VIEW mat_view_twn as SELECT a.a as p, b.a as q, c.a as x, d.a as y FROM mvtest_twn a, mvtest_twn b, mvtest_twn c, mvtest_twn d;
+INSERT INTO mvtest_twn SELECT i FROM generate_series(1,10000)i;
+-- t1 contains 10000 tuples, after cross join it four times, the output is much too huge
+-- refresh with 'no data' should not actually execute the sql
+set statement_timeout = 5000;
+REFRESH MATERIALIZED VIEW mat_view_twn WITH NO DATA;
+reset statement_timeout;
+SELECT relispopulated FROM pg_class WHERE oid = 'mat_view_twn'::regclass;
+SELECT relispopulated FROM gp_dist_random('pg_class') WHERE oid = 'mat_view_twn'::regclass;
+SELECT * FROM mat_view_twn;
+
+DROP MATERIALIZED VIEW mat_view_twn;
+DROP TABLE mvtest_twn;
+
+-- test REFRESH MATERIALIZED VIEW on AO table with index
+-- more details could be found at https://github.com/greenplum-db/gpdb/issues/16447
+CREATE TABLE base_table (idn character varying(10) NOT NULL);
+INSERT INTO base_table select i from generate_series(1, 5000) i;
+CREATE MATERIALIZED VIEW base_view WITH (APPENDONLY=true) AS SELECT tt1.idn AS idn_ban FROM base_table tt1;
+CREATE INDEX test_id1 on base_view using btree(idn_ban);
+REFRESH MATERIALIZED VIEW base_view ;
+SELECT * FROM base_view where idn_ban = '10';
+-- should use index scan rather than seq scan
+EXPLAIN SELECT * FROM base_view where idn_ban = '10';
+
+DROP MATERIALIZED VIEW base_view;
+DROP TABLE base_table;

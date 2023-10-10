@@ -76,7 +76,7 @@ SELECT 0 IS DISTINCT FROM (SELECT COUNT(*) FROM (SELECT UNNEST(ARRAY[1,2,3,4])) 
         <dxl:SumAgg Mdid="0.2108.1.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:GPDBFunc Mdid="0.3240.1.0" Name="unnest" ReturnsSet="true" Stability="Immutable" DataAccess="NoSQL" IsStrict="true">
+      <dxl:GPDBFunc Mdid="0.3240.1.0" Name="unnest" ReturnsSet="true" Stability="Immutable" IsStrict="true">
         <dxl:ResultType Mdid="0.2283.1.0"/>
       </dxl:GPDBFunc>
       <dxl:GPDBAgg Mdid="0.2803.1.0" Name="count" IsSplittable="true" HashAggCapable="true">

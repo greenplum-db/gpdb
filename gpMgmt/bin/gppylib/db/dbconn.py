@@ -9,9 +9,8 @@ import collections
 import sys
 import os
 import stat
-
+import psycopg2
 try:
-    import pgdb
     from gppylib.commands.unix import UserId
 
 except ImportError as e:
@@ -38,9 +37,9 @@ class Pgpass():
             return
 
         st_info = os.stat(PGPASSFILE)
-        mode = str(oct(st_info[stat.ST_MODE] & 0o777))
+        mode = st_info[stat.ST_MODE] & 0o777
 
-        if mode != "0600":
+        if mode != 0o600:
             print('WARNING: password file "%s" has group or world access; permissions should be u=rw (0600) or less' % PGPASSFILE)
             self.valid_pgpass = False
             return
@@ -159,67 +158,44 @@ class DbURL:
 # 1. pg notice is accessible to a user of connection returned by dbconn.connect(),
 # lifted from the underlying _pg connection
 # 2. multiple calls to dbconn.close() should not return an error
-class Connection(pgdb.Connection):
+class Connection:
     def __init__(self, connection):
-        self._notices = collections.deque(maxlen=100)
-        # we must do an attribute by attribute copy of the notices here
-        # due to limitations in pg implementation. Wrap with with a
-        # namedtuple for ease of use.
-        def handle_notice(notice):
-            received = {}
-            for attr in dir(notice):
-                if attr.startswith('__'):
-                    continue
-                value = getattr(notice, attr)
-                received[attr] = value
-            Notice = collections.namedtuple('Notice', sorted(received))
-            self._notices.append(Notice(**received))
-
-
-        self._impl = connection
-        self._impl._cnx.set_notice_receiver(handle_notice)
+        self._conn = connection
+        self._conn.notices = collections.deque(maxlen=100)
 
     def __enter__(self):
-        return self._impl.__enter__()
+        return self._conn.__enter__()
 
     # __exit__() does not close the connection. This is in line with the
     # python DB API v2 specification (pep-0249), where close() is done on
     # __del__(), not __exit__().
     def __exit__(self, *args):
-        return self._impl.__exit__(*args)
+        return self._conn.__exit__(*args)
 
     def __getattr__(self, name):
-        return getattr(self._impl, name)
+        return getattr(self._conn, name)
 
     def notices(self):
-        notice_list = list(self._notices)
-        self._notices.clear()
+        notice_list = list(self._conn.notices)
+        self._conn.notices.clear()
         return notice_list
 
     # don't return operational error if connection is already closed
     def close(self):
-        if not self._impl.closed:
-            self._impl.close()
+        if not self._conn.closed:
+            self._conn.close()
 
 
 def connect(dburl, utility=False, verbose=False,
-            encoding=None, allowSystemTableMods=False, logConn=True, unsetSearchPath=True):
+            encoding=None, allowSystemTableMods=False, logConn=True, unsetSearchPath=True, cursorFactory=None):
 
     conninfo = {
         'user': dburl.pguser,
         'password': dburl.pgpass,
         'host': dburl.pghost,
         'port': dburl.pgport,
-        # dbname is very subtle, Package pgdb contains a bug it will only escape the string when
-        #   1. a space in the dbname, and
-        #   2. there are other keyword arguments of pgdb.connect method
-        # See issue https://github.com/PyGreSQL/PyGreSQL/issues/77 for details
-        # The code here is test if there is space, if so, we know pgdb will escape, let's not do here
-        # if not, let's do escape here since pgdb forget to do.
-        #
-        # NB: we always provide port keyword argument to connect method of pgdb, thus
-        # we will always enter the code path of pgdb.connect of the above escape logic.
-        'database': dburl.pgdb if ' ' in dburl.pgdb else dburl.pgdb.replace('\\', '\\\\').replace("'", "\\'"),
+        'database': dburl.pgdb,
+        'cursor_factory': cursorFactory
     }
 
     # building options
@@ -257,22 +233,23 @@ def connect(dburl, utility=False, verbose=False,
         logFunc = logger.info if dburl.timeout is not None else logger.debug
         logFunc("Connecting to db {} on host {}".format(dburl.pgdb, dburl.pghost))
 
-    connection = None
+    conn = None
     for i in range(retries):
         try:
-            connection = pgdb.connect(**conninfo)
+            conn = psycopg2.connect(**conninfo)
+            conn.set_session(autocommit=True)
             break
 
-        except pgdb.OperationalError as e:
+        except psycopg2.OperationalError as e:
             if 'timeout expired' in str(e):
                 logger.warning('Timeout expired connecting to %s, attempt %d/%d' % (dburl.pgdb, i+1, retries))
                 continue
             raise
 
-    if connection is None:
+    if conn is None:
         raise ConnectionError('Failed to connect to %s' % dburl.pgdb)
 
-    return Connection(connection)
+    return Connection(conn)
 
 def execSQL(conn, sql, autocommit=True):
     """
@@ -286,7 +263,6 @@ def execSQL(conn, sql, autocommit=True):
     Using `with dbconn.connect() as conn` syntax will override autocommit and complete
     queries in a transaction followed by a commit on context close
     """
-    conn.autocommit = autocommit
     with conn.cursor() as cursor:
         cursor.execute(sql)
 

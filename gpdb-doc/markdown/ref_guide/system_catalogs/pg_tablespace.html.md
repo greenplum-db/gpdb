@@ -4,6 +4,7 @@ The `pg_tablespace` system catalog table stores information about the available 
 
 |column|type|references|description|
 |------|----|----------|-----------|
+|`oid`|oid| |The object ID|
 |`spcname`|name| |Tablespace name.|
 |`spcowner`|oid|pg\_authid.oid|Owner of the tablespace, usually the user who created it.|
 |`spcacl`|aclitem\[\]| |Tablespace access privileges.|

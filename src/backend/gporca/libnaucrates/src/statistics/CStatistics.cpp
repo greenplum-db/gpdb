@@ -607,19 +607,20 @@ CStatistics::CopyStatsWithRemap(CMemoryPool *mp,
 	GPOS_ASSERT(nullptr != colref_mapping);
 	UlongToHistogramMap *histograms_new = GPOS_NEW(mp) UlongToHistogramMap(mp);
 	UlongToDoubleMap *widths_new = GPOS_NEW(mp) UlongToDoubleMap(mp);
+	UlongToIntMap *attnos_new = GPOS_NEW(mp) UlongToIntMap(mp);
 
 	AddHistogramsWithRemap(mp, m_colid_histogram_mapping, histograms_new,
 						   colref_mapping, must_exist);
 	AddWidthInfoWithRemap(mp, m_colid_width_mapping, widths_new, colref_mapping,
 						  must_exist);
-
-	m_colid_to_attno_mapping->AddRef();
+	AddAttnoInfoWithRemap(mp, m_colid_to_attno_mapping, attnos_new,
+						  colref_mapping, must_exist);
 
 	// create a copy of the stats object
 	CStatistics *stats_copy = GPOS_NEW(mp)
 		CStatistics(mp, histograms_new, widths_new, m_rows, IsEmpty(),
 					RelPages(), RelAllVisible(), NumRebinds(), m_num_predicates,
-					m_ext_stats, m_colid_to_attno_mapping);
+					m_ext_stats, attnos_new);
 
 	// In the output statistics object, the upper bound source cardinality of the join column
 	// cannot be greater than the the upper bound source cardinality information maintained in the input
@@ -742,6 +743,39 @@ CStatistics::AddWidthInfoWithRemap(CMemoryPool *mp, UlongToDoubleMap *src_width,
 	}
 }
 
+// add attno information where the column ids have been re-mapped
+void
+CStatistics::AddAttnoInfoWithRemap(CMemoryPool *mp, UlongToIntMap *src_attno,
+								   UlongToIntMap *dest_attno,
+								   UlongToColRefMap *colref_mapping,
+								   BOOL must_exist)
+{
+	UlongToIntMapIter col_attno_map_iterator(src_attno);
+	while (col_attno_map_iterator.Advance())
+	{
+		ULONG colid = *(col_attno_map_iterator.Key());
+		CColRef *new_colref = colref_mapping->Find(&colid);
+		if (must_exist && nullptr == new_colref)
+		{
+			continue;
+		}
+
+		if (nullptr != new_colref)
+		{
+			colid = new_colref->Id();
+		}
+
+		if (nullptr == dest_attno->Find(&colid))
+		{
+			const INT *attno = col_attno_map_iterator.Value();
+			INT *attno_copy = GPOS_NEW(mp) INT(*attno);
+			BOOL result GPOS_ASSERTS_ONLY =
+				dest_attno->Insert(GPOS_NEW(mp) ULONG(colid), attno_copy);
+			GPOS_ASSERT(result);
+		}
+	}
+}
+
 // return the index of the array of upper bound ndvs to which column reference belongs
 ULONG
 CStatistics::GetIndexUpperBoundNDVs(const CColRef *colref)
@@ -848,5 +882,26 @@ CStatistics::GetNDVs(const CColRef *colref)
 	return std::min(m_rows, GetColUpperBoundNDVs(colref));
 }
 
+// Compute stats of a given column
+IStatistics *
+CStatistics::ComputeColStats(CMemoryPool *mp, CColRef *colref, IMDId *rel_mdid)
+{
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != colref);
+	GPOS_ASSERT(nullptr != rel_mdid);
+
+	CColRefSet *pcrsHist = GPOS_NEW(mp) CColRefSet(mp);
+	pcrsHist->Include(colref);
+
+	CColRefSet *pcrsWidth = GPOS_NEW(mp) CColRefSet(mp);
+	pcrsWidth->Include(colref);
+
+	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+	IStatistics *stats = md_accessor->Pstats(mp, rel_mdid, pcrsHist, pcrsWidth);
+
+	pcrsHist->Release();
+	pcrsWidth->Release();
+	return stats;
+}
 
 // EOF

@@ -1008,9 +1008,6 @@
 /* Define to 1 to build with LLVM based JIT support. (--with-llvm) */
 #undef USE_LLVM
 
-/* Define to 1 to build with Mapreduce capabilities (--enable-mapreduce) */
-#undef USE_MAPREDUCE
-
 /* Define to select named POSIX semaphores. */
 #undef USE_NAMED_POSIX_SEMAPHORES
 

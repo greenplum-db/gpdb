@@ -424,3 +424,251 @@ ALTER TABLE split_tupdesc_leak SPLIT DEFAULT PARTITION AT ('201412')
 	INTO (PARTITION p_split_tupdesc_leak_ym, PARTITION p_split_tupdesc_leak_ym_201412);
 
 DROP TABLE split_tupdesc_leak;
+
+---------------------------------------------------
+-- ADD COLUMN optimization for ao_row tables
+---------------------------------------------------
+
+create table relfilenodecheck(segid int, relname text, relfilenodebefore int, relfilenodeafter int, casename text);
+
+-- capture relfilenode for a table, which will be checked by checkrelfilenodediff
+prepare capturerelfilenodebefore as
+insert into relfilenodecheck select -1 segid, relname, pg_relation_filenode(relname::text) as relfilenode, null::int, $1 as casename from pg_class where relname like $2
+union select gp_segment_id segid, relname, pg_relation_filenode(relname::text) as relfilenode, null::int, $1 as casename  from gp_dist_random('pg_class')
+where relname like $2 order by segid;
+
+-- check to see if relfilenode changed (i.e. whether a table is rewritten), only showing result of primary seg0
+prepare checkrelfilenodediff as
+select a.segid, b.casename, b.relname, (relfilenodebefore != a.relfilenode) rewritten
+from
+    (
+        select -1 segid, relname, pg_relation_filenode(relname::text) as relfilenode
+        from pg_class
+        where relname like $2
+        union
+        select gp_segment_id segid, relname, pg_relation_filenode(relname::text) as relfilenode
+        from gp_dist_random('pg_class')
+        where relname like $2 order by segid
+    )a, relfilenodecheck b
+where b.casename like $1 and b.relname like $2 and a.segid = b.segid and a.segid = 0;
+
+-- checking pg_attribute_encoding on one of the primaries (most of tested tables are distributed replicated)
+prepare checkattributeencoding as
+select attnum, filenum, lastrownums, attoptions 
+from gp_dist_random('pg_attribute_encoding') e
+  join pg_class c
+  on e.attrelid = c.oid
+where c.relname = $1 and e.gp_segment_id = 0;
+
+-- prepare the initial table
+create table t_addcol(a int) using ao_row distributed replicated;
+create index i_addcol_a on t_addcol(a);
+insert into t_addcol select * from generate_series(1, 10);
+
+--
+-- ADD COLUMN w/ default value
+--
+
+execute capturerelfilenodebefore('add column default 10', 't_addcol');
+alter table t_addcol add column def10 int default 10;
+-- no table rewrite
+execute checkrelfilenodediff('add column default 10', 't_addcol');
+-- select results are expected
+select sum(a), sum(def10) from t_addcol;
+select gp_segment_id, (gp_toolkit.__gp_aoblkdir('t_addcol')).* from gp_dist_random('gp_id');
+-- pg_attribute_encoding currently has one row that corresponds to the new column
+execute checkattributeencoding('t_addcol');
+
+--
+-- ADD COLUMN w/ null default
+--
+
+execute capturerelfilenodebefore('add column NULL default', 't_addcol');
+alter table t_addcol add column defnull1 int;
+alter table t_addcol add column defnull2 int default NULL;
+-- no table rewrite and results stay the same
+execute checkrelfilenodediff('add column NULL default', 't_addcol');
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol;
+-- pg_attribute_encoding shows more entries for the new columns
+execute checkattributeencoding('t_addcol');
+-- add more data
+insert into t_addcol select 0 from generate_series(1, 10)i;
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol;
+-- insert explict NULLs
+insert into t_addcol values(1,NULL,1, NULL);
+insert into t_addcol values(1,NULL,NULL, 1);
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol;
+
+--
+-- transaction abort should work fine
+--
+begin;
+alter table t_addcol add column colabort int default 1;
+insert into t_addcol values(1);
+-- results updated in transaction
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(colabort), count(*) from t_addcol;
+-- pg_attribute_encoding shows the new column
+execute checkattributeencoding('t_addcol');
+abort;
+-- results reverts to previous ones
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol;
+-- error out
+select colabort from t_addcol;
+-- the aborted column is not visible in pg_attribute_encoding
+execute checkattributeencoding('t_addcol');
+
+--
+-- table rewrite scenarios 
+--
+
+-- 1. reorganize
+execute capturerelfilenodebefore('reorganize', 't_addcol');
+alter table t_addcol set with(reorganize=true);
+execute checkrelfilenodediff('reorganize', 't_addcol');
+-- results intact
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol;
+
+-- 2. alter access method
+execute capturerelfilenodebefore('atsetam', 't_addcol');
+alter table t_addcol set access method ao_column with (compresstype=rle_type, compresslevel=1);
+execute checkrelfilenodediff('atsetam', 't_addcol');
+-- results intact
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol;
+-- should see updated pg_attribute_encoding entries, w/o lastrownums but w/ attoptions
+execute checkattributeencoding('t_addcol');
+
+-- change it back to ao_row for further testing
+alter table t_addcol set access method ao_row;
+select a.amname from pg_class c join pg_am a on c.relam = a.oid where c.relname = 't_addcol';
+
+--
+-- DELETE and VACUUM
+--
+
+alter table t_addcol add column def20 int default 20;
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(def20) from t_addcol;
+-- delete
+delete from t_addcol where a = 10;
+-- the row (10, 10, NULL, NULL, 20) is deleted
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(def20) from t_addcol;
+-- visimap shows effect of the deletion
+select gp_segment_id, (gp_toolkit.__gp_aovisimap('t_addcol')).* from gp_dist_random('gp_id');
+
+-- vacuum
+vacuum t_addcol;
+-- results intact
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(def20) from t_addcol;
+-- insert one row and delete it
+insert into t_addcol values(99);
+delete from t_addcol where a = 99;
+-- results stay the same, but visimap shows effect for segno=1 (which the new row is inserted)
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(def20) from t_addcol;
+select gp_segment_id, (gp_toolkit.__gp_aovisimap('t_addcol')).* from gp_dist_random('gp_id');
+vacuum t_addcol;
+-- segno=1 has been vacuum'ed, visimap shows effect
+select gp_segment_id, (gp_toolkit.__gp_aovisimap('t_addcol')).* from gp_dist_random('gp_id');
+
+-- delete all but the newly inserted
+insert into t_addcol values(NULL, NULL, NULL, NULL, 100);
+delete from t_addcol where def20 != 100;
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(def20) from t_addcol;
+
+-- delete all for further testing
+delete from t_addcol;
+select count(*) from t_addcol;
+vacuum t_addcol;
+-- visimap cleared
+select gp_segment_id, (gp_toolkit.__gp_aovisimap('t_addcol')).* from gp_dist_random('gp_id');
+
+--
+-- large/toasted values
+--
+
+-- we've had a few AO segments for the table now (due to vacuum etc.), and insert could be choosing
+-- different segno depending on some runtime status (like the tuple order in scanning aoseg).
+-- So truncate to make test stable (no segments now).
+truncate t_addcol;
+-- new column has large default value
+insert into t_addcol values(1);
+execute capturerelfilenodebefore('addlarge1', 't_addcol');
+alter table t_addcol add column deflarge1 text default repeat('a', 100000);
+execute checkrelfilenodediff('addlarge1', 't_addcol');
+select a, def10, defnull1, defnull2, def20, char_length(deflarge1) from t_addcol;
+
+-- large existing value
+insert into t_addcol values(1,1,1,1,1, repeat('a',100001));
+execute capturerelfilenodebefore('addlarge2', 't_addcol');
+alter table t_addcol add column deflarge2 text default repeat('a', 1000002);
+execute checkrelfilenodediff('addlarge2', 't_addcol');
+select a, def10, defnull1, defnull2, def20, char_length(deflarge1), char_length(deflarge2) from t_addcol;
+
+--
+-- drop column
+--
+-- check current pg_attribute_encoding
+execute checkattributeencoding('t_addcol');
+-- drop a column
+alter table t_addcol drop column def20;
+-- error out
+select def20 from t_addcol;
+-- other results intact
+select a, def10, defnull1, defnull2, char_length(deflarge1), char_length(deflarge2) from t_addcol;
+-- column info still shown in pg_attribute_encoding, just like for AOCO tables
+execute checkattributeencoding('t_addcol');
+
+--
+-- default value is an expression
+--
+-- non-volatile expressions
+execute capturerelfilenodebefore('addexp_nonvolatile', 't_addcol');
+alter table t_addcol add column defexp1 int default char_length(repeat('a', 100003));
+alter table t_addcol add column defexp2 timestamptz default current_timestamp;
+-- no table rewrite
+execute checkrelfilenodediff('addexp_nonvolatile', 't_addcol');
+-- results are expected
+select a, def10, defnull1, defnull2, char_length(deflarge1), char_length(deflarge2), defexp1, defexp2 <= current_timestamp as expected_defexp2 from t_addcol;
+-- volatile expression, expecting a rewrite
+execute capturerelfilenodebefore('addexp_volatile', 't_addcol');
+alter table t_addcol add column defexp3 int default random()*1000::int;
+execute checkrelfilenodediff('addexp_volatile', 't_addcol');
+-- results are expected
+select a, def10, defnull1, defnull2, char_length(deflarge1), char_length(deflarge2), defexp1, defexp2 <= current_timestamp as expected_defexp2, defexp3 >=0 and defexp3 <= 1000 as expected_defexp3 from t_addcol;
+
+--
+-- truncate
+--
+-- safe truncate
+truncate t_addcol;
+select count(*) from t_addcol;
+-- unsafe truncate
+begin;
+create table t_addcol_truncate(a int) distributed replicated;
+insert into t_addcol_truncate select * from generate_series(1,10000);
+alter table t_addcol_truncate add column b int default 10;
+select count(*) from t_addcol_truncate;
+truncate t_addcol_truncate;
+select count(*) from t_addcol_truncate;
+end;
+-- columns gone after truncate in pg_attribute_encoding
+execute checkattributeencoding('t_addcol');
+execute checkattributeencoding('t_addcol_truncate');
+
+--
+-- partition table
+--
+create table t_addcol_part(a int, b int) using ao_row partition by range(b);
+create table t_addcol_p1 partition of t_addcol_part for values from (1) to (51);
+create table t_addcol_p2 partition of t_addcol_part for values from (51) to (101);
+insert into t_addcol_part select i,i from generate_series(1,100)i;
+-- no rewrite for child partitions (parent partition doesn't have valid relfilenode)
+execute capturerelfilenodebefore('partition', 't_addcol_p1');
+execute capturerelfilenodebefore('partition', 't_addcol_p2');
+alter table t_addcol_part add column c int default 10;
+execute checkrelfilenodediff('partition', 't_addcol_p1');
+execute checkrelfilenodediff('partition', 't_addcol_p2');
+-- results are expected
+select sum(a), sum(b), sum(c) from t_addcol_part;
+-- child partitions have expected lastrownums info in the pg_attribute_encoding, while parent partition doesn't
+execute checkattributeencoding('t_addcol');
+execute checkattributeencoding('t_addcol_p1');
+execute checkattributeencoding('t_addcol_p2');
