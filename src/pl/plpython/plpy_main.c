@@ -23,6 +23,8 @@
 
 #include "cdb/cdbvars.h"
 
+#include "cdb/cdbvars.h"
+
 #include "plpython.h"
 
 #include "plpy_main.h"
