@@ -497,7 +497,7 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the cluster is rebalanced
 
-    Scenario: rebalance and recovery to new host with -F option shows error and exits
+    Scenario: gprecoverseg errors out with restricted options
       Given the database is running
         And user stops all primary processes
         And user can start transactions
@@ -507,6 +507,10 @@ Feature: gprecoverseg tests
        When the user runs "gprecoverseg -a -p localhost -F"
        Then gprecoverseg should return a return code of 2
         And gprecoverseg should print "-F option is not supported with -p option" to stdout
+       When the user runs "gprecoverseg xyz"
+       Then gprecoverseg should return a return code of 2
+       And gprecoverseg should print "Recovers a primary or mirror segment instance" to stdout
+       And gprecoverseg should print "too many arguments: only options may be specified" to stdout
        When the user runs "gprecoverseg -a"
        Then gprecoverseg should return a return code of 0
         And the segments are synchronized
