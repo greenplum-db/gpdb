@@ -7240,6 +7240,12 @@ xact_redo_commit(xl_xact_parsed_commit *parsed,
 		DropRelationFiles(parsed->xnodes, parsed->nrels, true);
 	}
 
+	/*
+	 * If there were some rels created in current xact, remove them from
+	 * pending delete list.
+	 */
+	PendingDeleteRedoRemove(xid);
+
 	if (parsed->ndeldbs > 0)
 	{
 		XLogFlush(lsn);
@@ -7366,6 +7372,8 @@ xact_redo_abort(xl_xact_parsed_abort *parsed, TransactionId xid,
 
 		DropRelationFiles(parsed->xnodes, parsed->nrels, true);
 	}
+
+	PendingDeleteRedoRemove(xid);
 
 	if (parsed->ndeldbs > 0)
 	{

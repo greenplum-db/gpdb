@@ -24,6 +24,7 @@
 #include "access/subtrans.h"
 #include "access/twophase.h"
 #include "access/distributedlog.h"
+#include "catalog/storage.h"
 #include "cdb/cdblocaldistribxact.h"
 #include "cdb/cdbvars.h"
 #include "commands/async.h"
@@ -227,6 +228,9 @@ CreateSharedMemoryAndSemaphores(int port)
 		/* size of parallel cursor count */
 		size = add_size(size, ParallelCursorCountSize());
 
+		/* size of pending delete nodes struct */
+		size = add_size(size, PendingDeleteShmemSize());
+
 		elog(DEBUG3, "invoking IpcMemoryCreate(size=%zu)", size);
 
 		/*
@@ -396,6 +400,8 @@ CreateSharedMemoryAndSemaphores(int port)
 	
 	if (Gp_role == GP_ROLE_DISPATCH)
 		ParallelCursorCountInit();
+
+	PendingDeleteShmemInit();
 
 	/*
 	 * Now give loadable modules a chance to set up their shmem allocations

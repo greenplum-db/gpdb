@@ -68,3 +68,4 @@ ShareInputScanLock	  		61
 FTSReplicationStatusLock  		62
 GxidBumpLock		  		63
 ParallelCursorEndpointLock		64
+PendingDeleteLock			65

@@ -39,6 +39,7 @@
 #include "catalog/catversion.h"
 #include "catalog/pg_control.h"
 #include "catalog/pg_database.h"
+#include "catalog/storage.h"
 #include "commands/progress.h"
 #include "commands/tablespace.h"
 #include "common/controldata_utils.h"
@@ -7617,6 +7618,11 @@ StartupXLOG(void)
 					}
 				}
 
+				/* drop all orphaned files from base during recovery */
+				if (record->xl_rmid == RM_XLOG_ID &&
+					(record->xl_info & ~XLR_INFO_MASK) == XLOG_CHECKPOINT_SHUTDOWN)
+					PendingDeleteRedoDropFiles();
+
 				/*
 				 * If rm_redo called XLogRequestWalReceiverReply, then we wake
 				 * up the receiver so that it notices the updated
@@ -8069,7 +8075,11 @@ StartupXLOG(void)
 								  CHECKPOINT_WAIT);
 		}
 		else
+		{
 			CreateCheckPoint(CHECKPOINT_END_OF_RECOVERY | CHECKPOINT_IMMEDIATE);
+			/* drop all orphaned files from base after recovery */
+			PendingDeleteRedoDropFiles();
+		}
 	}
 
 	if (ArchiveRecoveryRequested)
@@ -9175,6 +9185,7 @@ CreateCheckPoint(int flags)
 	bool		shutdown;
 	CheckPoint	checkPoint;
 	XLogRecPtr	recptr;
+	XLogRecPtr	chkptr;
 	XLogSegNo	_logSegNo;
 	XLogCtlInsert *Insert = &XLogCtl->Insert;
 	char* 		dtxCheckPointInfo;
@@ -9561,6 +9572,15 @@ CreateCheckPoint(int flags)
 	pfree(dtxCheckPointInfo);
 	dtxCheckPointInfo = NULL;
 
+	chkptr = ProcLastRecPtr;
+	if (!shutdown)
+	{
+		XLogRecPtr	pd_recptr = PendingDeleteXLogInsert();
+
+		if (pd_recptr != InvalidXLogRecPtr)
+			recptr = pd_recptr;
+	}
+
 	/*
 	 * We mustn't write any new WAL after a shutdown checkpoint, or it will be
 	 * overwritten at next startup.  No-one should even try, this just allows
@@ -9596,7 +9616,7 @@ CreateCheckPoint(int flags)
 	LWLockAcquire(ControlFileLock, LW_EXCLUSIVE);
 	if (shutdown)
 		ControlFile->state = DB_SHUTDOWNED;
-	ControlFile->checkPoint = ProcLastRecPtr;
+	ControlFile->checkPoint = chkptr;
 	ControlFile->checkPointCopy = checkPoint;
 	ControlFile->time = (pg_time_t) time(NULL);
 	/* crash recovery should always recover to the end of WAL */
@@ -10974,6 +10994,10 @@ xlog_redo(XLogReaderState *record)
 
 		/* Keep track of full_page_writes */
 		lastFullPageWrites = fpw;
+	}
+	else if (info == XLOG_PENDING_DELETE)
+	{
+		PendingDeleteRedoRecord(record);
 	}
 }
 

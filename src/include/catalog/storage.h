@@ -14,10 +14,32 @@
 #ifndef STORAGE_H
 #define STORAGE_H
 
+#include "access/xlog.h"
 #include "storage/block.h"
 #include "storage/relfilenode.h"
 #include "storage/smgr.h"
 #include "utils/relcache.h"
+
+/* Pending delete node linked to xact it created */
+typedef struct PendingRelXactDelete
+{
+	RelFileNodePendingDelete relnode;
+	TransactionId xid;
+}			PendingRelXactDelete;
+
+
+typedef struct PendingRelXactDeleteArray
+{
+	size_t		count;
+	PendingRelXactDelete array[FLEXIBLE_ARRAY_MEMBER];
+}			PendingRelXactDeleteArray;
+
+extern Size PendingDeleteShmemSize(void);
+extern void PendingDeleteShmemInit(void);
+extern XLogRecPtr PendingDeleteXLogInsert(void);
+extern void PendingDeleteRedoRecord(XLogReaderState *record);
+extern void PendingDeleteRedoRemove(TransactionId xid);
+extern void PendingDeleteRedoDropFiles(void);
 
 extern SMgrRelation RelationCreateStorage(RelFileNode rnode,
 										  char relpersistence,
