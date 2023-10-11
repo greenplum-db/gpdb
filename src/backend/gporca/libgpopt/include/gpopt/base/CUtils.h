@@ -964,6 +964,13 @@ public:
 	static CExpression *PexprLimit(CMemoryPool *mp, CExpression *pexpr,
 								   ULONG ulOffSet, ULONG count);
 
+	// generate a limit expression on top of the given relational child with given offset, limit count and OrderSpec
+	static CExpression *BuildLimitExprWithOrderSpec(CMemoryPool *mp,
+													CExpression *pexpr,
+													COrderSpec *pos,
+													ULONG ulOffSet,
+													ULONG count);
+
 	// return true if given expression contains window aggregate function
 	static BOOL FHasAggWindowFunc(CExpression *pexpr);
 

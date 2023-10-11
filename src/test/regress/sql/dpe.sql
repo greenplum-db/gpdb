@@ -124,10 +124,15 @@ select ptid from pt where ptid in (select tid from t where t1 = 'hello' || tid) 
 -- start_ignore
 -- Known_opt_diff: MPP-21320
 -- end_ignore
+-- Disable 'CXformSelect2DynamicIndexGet' to avoid picking Dynamic Index Scan and use this test
+-- to showcase dpe alternative
+select disable_xform('CXformSelect2DynamicIndexGet');
 explain (costs off, timing off, summary off, analyze) select * from pt where exists (select 1 from t where tid = ptid and t1 = 'hello' || tid);
 
 select * from pt where exists (select 1 from t where tid = ptid and t1 = 'hello' || tid);
 
+-- enable xform
+select enable_xform('CXformSelect2DynamicIndexGet');
 --
 -- group-by on top
 --

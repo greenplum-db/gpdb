@@ -110,7 +110,7 @@ IndexScan-OrderBy-on-Single-IndexCol IndexScan-OrderBy-on-Multiple-IndexCols Ind
 Forward-IndexScan-OrderBy-on-SingleCol-Index Backward-IndexScan-OrderBy-on-SingleCol-Index
 Forward-IndexScan-OrderBy-on-MultiCol-Index Backward-IndexScan-OrderBy-on-MultiCol-Index
 IndexScan-OrderBy-on-MultiCol-NonIndex Max-Aggregate-uses-IndexScan-and-Limit
-Min-Aggregate-uses-IndexScan-and-Limit;
+Min-Aggregate-uses-IndexScan-and-Limit IndexScan-IsNullPred IndexScan-IsNotNullPred;
 
 CBitmapScanTest:
 IndexedNLJBitmap BitmapIndex-ChooseHashJoin BitmapTableScan-AO-Btree-PickOnlyHighNDV

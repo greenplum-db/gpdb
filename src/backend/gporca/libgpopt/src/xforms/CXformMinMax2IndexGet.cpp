@@ -14,7 +14,7 @@
 
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CLogicalGet.h"
-#include "gpopt/operators/CLogicalLimit.h"
+#include "gpopt/operators/CScalarProjectList.h"
 #include "gpopt/xforms/CXformUtils.h"
 
 using namespace gpopt;
@@ -39,7 +39,13 @@ CXformMinMax2IndexGet::CXformMinMax2IndexGet(CMemoryPool *mp)
 				  GPOS_NEW(mp) CLogicalGet(mp)),  // relational child
 			  GPOS_NEW(mp) CExpression(
 				  mp,
-				  GPOS_NEW(mp) CPatternTree(mp))))	// scalar project list
+				  GPOS_NEW(mp) CScalarProjectList(mp),	// scalar project list
+				  GPOS_NEW(mp) CExpression(
+					  mp,
+					  GPOS_NEW(mp)
+						  CScalarProjectElement(mp),  // scalar project element
+					  GPOS_NEW(mp)
+						  CExpression(mp, GPOS_NEW(mp) CPatternTree(mp))))))
 {
 }
 
@@ -96,15 +102,8 @@ CXformMinMax2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	// get the indices count of this relation
 	const ULONG ulIndices = popGet->Ptabdesc()->IndexCount();
 
-	// Ignore xform if relation doesn't have any b-tree indices
+	// Ignore xform if relation doesn't have any indices
 	if (0 == ulIndices)
-	{
-		return;
-	}
-
-	// Check if query has no aggregate function with empty group by,
-	// or it has more than one aggregate function
-	if (pexprScalarPrjList->Arity() != 1)
 	{
 		return;
 	}
@@ -118,24 +117,22 @@ CXformMinMax2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	IMDId *agg_func_mdid = CScalar::PopConvert(popScAggFunc)->MdidType();
 	const IMDType *agg_func_type = md_accessor->RetrieveType(agg_func_mdid);
 
-	// Check if aggregate function is either min() or max()
-	if (!popScAggFunc->IsMinMax(agg_func_type))
-	{
-		return;
-	}
-
 	const IMDRelation *pmdrel =
 		md_accessor->RetrieveRel(popGet->Ptabdesc()->MDId());
 
-	const CColRef *agg_colref = CCastUtils::PcrExtractFromScIdOrCastScId(
-		(*(*pexprAggFunc)[EAggfuncChildIndices::EaggfuncIndexArgs])[0]);
+	IMdIdArray *btree_indices = IsMinMaxAggOnColumn(
+		mp, agg_func_type, pexprAggFunc, popGet->PdrgpcrOutput(), md_accessor,
+		pmdrel, ulIndices);
 
-	// Check if min/max aggregation performed on a column or cast
-	// of column. This optimization isn't necessary for min/max on constants.
-	if (nullptr == agg_colref)
+	// Check if agg function is min/max and relation has btree indices with
+	// leading index key as agg column
+	if (btree_indices == nullptr)
 	{
 		return;
 	}
+
+	const CColRef *agg_colref = CCastUtils::PcrExtractFromScIdOrCastScId(
+		(*(*pexprAggFunc)[EAggfuncChildIndices::EaggfuncIndexArgs])[0]);
 
 	// Generate index column not null condition.
 	CExpression *notNullExpr =
@@ -146,59 +143,52 @@ CXformMinMax2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	pdrgpexpr->Append(notNullExpr);
 
 	popGet->AddRef();
-	CExpression *pexprUpdatedRltn =
+	CExpression *pexprGetNotNull =
 		GPOS_NEW(mp) CExpression(mp, popGet, notNullExpr);
 
 	CColRefSet *pcrsScalarExpr = GPOS_NEW(mp) CColRefSet(mp);
 	pcrsScalarExpr->Include(agg_colref);
-	CColRefArray *pdrgpcrIndexColumns = nullptr;
 
-	for (ULONG ul = 0; ul < ulIndices; ul++)
+	for (ULONG ul = 0; ul < btree_indices->Size(); ul++)
 	{
-		IMDId *pmdidIndex = pmdrel->IndexMDidAt(ul);
+		IMDId *pmdidIndex = (*btree_indices)[ul];
 		const IMDIndex *pmdindex = md_accessor->RetrieveIndex(pmdidIndex);
-		// get columns in the index
-		pdrgpcrIndexColumns = CXformUtils::PdrgpcrIndexKeys(
-			mp, popGet->PdrgpcrOutput(), pmdindex, pmdrel);
+
 		// Check if index is applicable and get Scan direction
 		EIndexScanDirection scan_direction =
-			GetScanDirection(agg_colref, pdrgpcrIndexColumns, pmdindex,
-							 popScAggFunc, agg_func_type);
-		// Proceed if index is applicable
-		if (scan_direction != EisdSentinel)
+			GetScanDirection(pmdindex, popScAggFunc, agg_func_type);
+
+		// build IndexGet expression
+		CExpression *pexprIndexGet = CXformUtils::PexprLogicalIndexGet(
+			mp, md_accessor, pexprGetNotNull, popAgg->UlOpId(), pdrgpexpr,
+			pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel, false,
+			scan_direction);
+
+		if (pexprIndexGet != nullptr)
 		{
-			// build IndexGet expression
-			CExpression *pexprIndexGet = CXformUtils::PexprLogicalIndexGet(
-				mp, md_accessor, pexprUpdatedRltn, popAgg->UlOpId(), pdrgpexpr,
-				pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel, false,
-				scan_direction);
+			// Compute the required OrderSpec for first index key
+			COrderSpec *pos = CXformUtils::ComputeOrderSpecForIndexKey(
+				mp, pmdindex, scan_direction, agg_colref, 0);
 
-			if (pexprIndexGet != nullptr)
-			{
-				// build Limit expression
-				CExpression *pexprLimit =
-					CUtils::PexprLimit(mp, pexprIndexGet, 0, 1);
-				CLogicalLimit *popLimit =
-					CLogicalLimit::PopConvert(pexprLimit->Pop());
-				// Compute the required OrderSpec for first index key
-				CXformUtils::ComputeOrderSpecForIndexKey(
-					pmdindex, scan_direction, agg_colref, popLimit->Pos(), 0);
+			// build Limit expression
+			CExpression *pexprLimit = CUtils::BuildLimitExprWithOrderSpec(
+				mp, pexprIndexGet, pos, 0, 1);
 
-				popAgg->AddRef();
-				pexprScalarPrjList->AddRef();
+			popAgg->AddRef();
+			pexprScalarPrjList->AddRef();
 
-				// build Aggregate expression
-				CExpression *finalpexpr = GPOS_NEW(mp)
-					CExpression(mp, popAgg, pexprLimit, pexprScalarPrjList);
+			// build Aggregate expression
+			CExpression *finalpexpr = GPOS_NEW(mp)
+				CExpression(mp, popAgg, pexprLimit, pexprScalarPrjList);
 
-				pxfres->Add(finalpexpr);
-			}
+			pxfres->Add(finalpexpr);
 		}
-		pdrgpcrIndexColumns->Release();
 	}
+
+	btree_indices->Release();
 	pcrsScalarExpr->Release();
 	pdrgpexpr->Release();
-	pexprUpdatedRltn->Release();
+	pexprGetNotNull->Release();
 }
 
 //---------------------------------------------------------------------------
@@ -211,20 +201,10 @@ CXformMinMax2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 //		is prefix of the index columns.
 //---------------------------------------------------------------------------
 EIndexScanDirection
-CXformMinMax2IndexGet::GetScanDirection(const CColRef *agg_col,
-										CColRefArray *pdrgpcrIndexColumns,
-										const IMDIndex *pmdindex,
+CXformMinMax2IndexGet::GetScanDirection(const IMDIndex *pmdindex,
 										CScalarAggFunc *popScAggFunc,
 										const IMDType *agg_col_type)
 {
-	// Ordered IndexScan is only applicable if index type is Btree and
-	// if aggregate function's column matches with first index key
-	if (pmdindex->IndexType() != IMDIndex::EmdindBtree ||
-		!CColRef::Equals(agg_col, (*pdrgpcrIndexColumns)[0]))
-	{
-		return EisdSentinel;
-	}
-
 	// If Aggregate function is min()
 	if (popScAggFunc->MDId()->Equals(
 			agg_col_type->GetMdidForAggType(IMDType::EaggMin)))
@@ -244,6 +224,68 @@ CXformMinMax2IndexGet::GetScanDirection(const CColRef *agg_col,
 		return pmdindex->KeySortDirectionAt(0) == SORT_DESC ? EForwardScan
 															: EBackwardScan;
 	}
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CXformMinMax2IndexGet::IsMinMaxAggOnColumn
+//
+//	@doc:
+//		This function performs below checks to determine if this transform
+//		applies for a given pattern and if it does, returns applicable btree
+//		indices array, if not returns nullptr
+//		 1. Is the aggregate on min or max and is performed on a column.
+//		 2. If the relation has any btree indices that have leading index key as
+//		    the aggregate column
+//---------------------------------------------------------------------------
+IMdIdArray *
+CXformMinMax2IndexGet::IsMinMaxAggOnColumn(
+	CMemoryPool *mp, const IMDType *agg_func_type, CExpression *pexprAggFunc,
+	CColRefArray *output_col_array, CMDAccessor *md_accessor,
+	const IMDRelation *pmdrel, ULONG ulIndices)
+{
+	CScalarAggFunc *popScAggFunc =
+		CScalarAggFunc::PopConvert(pexprAggFunc->Pop());
+
+	// Check if aggregate function is either min() or max()
+	if (!popScAggFunc->IsMinMax(agg_func_type))
+	{
+		return nullptr;
+	}
+
+	const CColRef *agg_colref = CCastUtils::PcrExtractFromScIdOrCastScId(
+		(*(*pexprAggFunc)[EAggfuncChildIndices::EaggfuncIndexArgs])[0]);
+
+	// Check if min/max aggregation performed on a column or cast
+	// of column. This optimization isn't necessary for min/max on constants.
+	if (nullptr == agg_colref)
+	{
+		return nullptr;
+	}
+
+	CColRefArray *pdrgpcrIndexColumns = nullptr;
+	IMdIdArray *btree_indices = GPOS_NEW(mp) IMdIdArray(mp);
+
+	for (ULONG ul = 0; ul < ulIndices; ul++)
+	{
+		IMDId *pmdidIndex = pmdrel->IndexMDidAt(ul);
+		const IMDIndex *pmdindex = md_accessor->RetrieveIndex(pmdidIndex);
+		// get columns in the index
+		pdrgpcrIndexColumns = CXformUtils::PdrgpcrIndexKeys(
+			mp, output_col_array, pmdindex, pmdrel);
+
+		// Ordered IndexScan is only applicable if index type is Btree and
+		// if aggregate function's column matches with first index key
+		if (pmdindex->IndexType() == IMDIndex::EmdindBtree &&
+			CColRef::Equals(agg_colref, (*pdrgpcrIndexColumns)[0]))
+		{
+			pmdidIndex->AddRef();
+			btree_indices->Append(pmdidIndex);
+		}
+		pdrgpcrIndexColumns->Release();
+	}
+
+	return btree_indices;
 }
 
 // EOF

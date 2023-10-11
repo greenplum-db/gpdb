@@ -90,6 +90,7 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLScalarBoolExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarFuncExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarHashExpr.h"
+#include "naucrates/dxl/operators/CDXLScalarNullTest.h"
 #include "naucrates/dxl/operators/CDXLScalarOpExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarProjElem.h"
 #include "naucrates/dxl/operators/CDXLScalarSortCol.h"
@@ -1124,42 +1125,33 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 	{
 		CDXLNode *index_cond_dxlnode = (*index_cond_list_dxlnode)[ul];
 
+		// Translate index condition CDXLScalarBoolExpr of format 'NOT (col IS NULL)'
+		// to CDXLScalarNullTest 'col IS NOT NULL', because IndexScan only
+		// supports indexquals of types: OpExpr, RowCompareExpr,
+		// ScalarArrayOpExpr and NullTest
+		if (index_cond_dxlnode->GetOperator()->GetDXLOperator() ==
+			EdxlopScalarBoolExpr)
+		{
+			CDXLScalarBoolExpr *boolexpr_dxlop =
+				CDXLScalarBoolExpr::Cast(index_cond_dxlnode->GetOperator());
+			if (boolexpr_dxlop->GetDxlBoolTypeStr() == Edxlnot &&
+				(*index_cond_dxlnode)[0]->GetOperator()->GetDXLOperator() ==
+					EdxlopScalarNullTest)
+			{
+				CDXLNode *null_test_cond_dxlnode = (*index_cond_dxlnode)[0];
+				CDXLNode *modified_null_test_cond_dxlnode = GPOS_NEW(m_mp)
+					CDXLNode(m_mp,
+							 GPOS_NEW(m_mp) CDXLScalarNullTest(m_mp, false),
+							 (*null_test_cond_dxlnode)[0]);
+				index_cond_dxlnode = modified_null_test_cond_dxlnode;
+			}
+		}
 		Expr *original_index_cond_expr =
 			m_translator_dxl_to_scalar->TranslateDXLToScalar(
 				index_cond_dxlnode, &colid_var_mapping);
 		Expr *index_cond_expr =
 			m_translator_dxl_to_scalar->TranslateDXLToScalar(
 				index_cond_dxlnode, &colid_var_mapping);
-
-		// Translate BoolExpr of format 'NOT (col IS NULL)' to NullExpr
-		// 'col IS NOT NULL', because IndexScan only supports indexquals
-		// of types: OpExpr, RowCompareExpr, ScalarArrayOpExpr and NullTest
-		if (IsA(index_cond_expr, BoolExpr) &&
-			((BoolExpr *) index_cond_expr)->boolop == NOT_EXPR)
-		{
-			// Fetch first child of 'BoolExpr' condition
-			Node *null_test_arg = (Node *) lfirst(
-				gpdb::ListHead(((BoolExpr *) index_cond_expr)->args));
-			Node *original_null_test_arg = (Node *) lfirst(
-				gpdb::ListHead(((BoolExpr *) original_index_cond_expr)->args));
-			// If first child of BoolExpr with boolop NOT is a NullTest
-			// then, modify index qual to NullTest with opposite null test type
-			// condition
-			if (IsA(null_test_arg, NullTest))
-			{
-				index_cond_expr = (Expr *) null_test_arg;
-				NullTestType existing_null_test_type =
-					((NullTest *) index_cond_expr)->nulltesttype;
-				((NullTest *) index_cond_expr)->nulltesttype =
-					(existing_null_test_type == IS_NULL) ? IS_NOT_NULL
-														 : IS_NULL;
-				original_index_cond_expr = (Expr *) original_null_test_arg;
-				((NullTest *) original_index_cond_expr)->nulltesttype =
-					(existing_null_test_type == IS_NULL) ? IS_NOT_NULL
-														 : IS_NULL;
-			}
-		}
-
 		GPOS_ASSERT(
 			(IsA(index_cond_expr, OpExpr) ||
 			 IsA(index_cond_expr, ScalarArrayOpExpr) ||
@@ -1190,6 +1182,11 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 		{
 			args_list = ((ScalarArrayOpExpr *) index_cond_expr)->args;
 		}
+		else
+		{
+			// NullTest struct doesn't have List argument, hence ignoring
+			// assignment for that type
+		}
 
 		Node *left_arg;
 		Node *right_arg;
@@ -1205,7 +1202,7 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 			left_arg = (Node *) lfirst(gpdb::ListHead(args_list));
 			right_arg = (Node *) lfirst(gpdb::ListTail(args_list));
 			// Type Coercion doesn't add much value for IS NULL and IS NOT NULL
-			// conditions, and is not supported
+			// conditions, and is not supported by ORCA currently
 			BOOL is_relabel_type = false;
 			if (IsA(left_arg, RelabelType) &&
 				IsA(((RelabelType *) left_arg)->arg, Var))

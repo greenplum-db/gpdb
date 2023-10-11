@@ -2171,7 +2171,7 @@ CPredicateUtils::ExtractIndexPredicates(
 		}
 		// Expression of form 'col IS NULL' or 'col IS NOT NULL'.
 		// This check is to enable support of "IS NULL/IS NOT NULL" conditions
-		// for min/max optimization, which is possible only for btree indices.
+		// for btree indices.
 		else if (((CUtils::FScalarIdentNullTest(pexprCond)) ||
 				  (FNot(pexprCond) &&
 				   CUtils::FScalarIdentNullTest((*pexprCond)[0]))) &&

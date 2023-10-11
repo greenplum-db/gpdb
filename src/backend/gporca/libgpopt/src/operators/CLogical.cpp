@@ -189,8 +189,19 @@ CLogical::PosFromIndex(CMemoryPool *mp, const IMDIndex *pmdindex,
 		CColRef *colref = (*colref_array)[ulPosTabDesc];
 
 		// Compute OrderSpec for Index key
-		CXformUtils::ComputeOrderSpecForIndexKey(pmdindex, scan_direction,
-												 colref, pos, ul);
+		COrderSpec *index_key_orderspec =
+			CXformUtils::ComputeOrderSpecForIndexKey(
+				mp, pmdindex, scan_direction, colref, ul);
+
+		// Ensure orderspec contains one sort column
+		GPOS_ASSERT(index_key_orderspec->UlSortColumns() == 1);
+
+		IMDId *mdid = index_key_orderspec->GetMdIdSortOp(0);
+		mdid->AddRef();
+		pos->Append(mdid, index_key_orderspec->Pcr(0),
+					index_key_orderspec->Ent(0));
+
+		index_key_orderspec->Release();
 	}
 
 	return pos;

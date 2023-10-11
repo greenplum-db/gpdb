@@ -4478,6 +4478,25 @@ CUtils::PexprLimit(CMemoryPool *mp, CExpression *pexpr, ULONG ulOffSet,
 		CExpression(mp, popLimit, pexpr, pexprLimitOffset, pexprLimitCount);
 }
 
+// generate a limit expression on top of the given relational child with given offset, limit count and OrderSpec
+CExpression *
+CUtils::BuildLimitExprWithOrderSpec(CMemoryPool *mp, CExpression *pexpr,
+									COrderSpec *pos, ULONG ulOffSet,
+									ULONG count)
+{
+	GPOS_ASSERT(pexpr);
+	GPOS_ASSERT(nullptr != pos);
+
+	CLogicalLimit *popLimit = GPOS_NEW(mp)
+		CLogicalLimit(mp, pos, true /* fGlobal */, true /* fHasCount */,
+					  false /*fTopLimitUnderDML*/);
+	CExpression *pexprLimitOffset = CUtils::PexprScalarConstInt8(mp, ulOffSet);
+	CExpression *pexprLimitCount = CUtils::PexprScalarConstInt8(mp, count);
+
+	return GPOS_NEW(mp)
+		CExpression(mp, popLimit, pexpr, pexprLimitOffset, pexprLimitCount);
+}
+
 // check if a given operator is a ANY subquery
 BOOL
 CUtils::FAnySubquery(COperator *pop)

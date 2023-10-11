@@ -39,6 +39,10 @@ private:
 public:
 	CScalarProjectElement(const CScalarProjectElement &) = delete;
 
+	CScalarProjectElement(CMemoryPool *mp) : CScalar(mp)
+	{
+	}
+
 	// ctor
 	CScalarProjectElement(CMemoryPool *mp, CColRef *colref)
 		: CScalar(mp), m_pcr(colref)

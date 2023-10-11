@@ -796,10 +796,12 @@ DROP TABLE part_table2;
 CREATE TABLE min_max_aggregates(a int, b text, c int, d float, e numeric, f int);
 CREATE INDEX index_bc on min_max_aggregates using btree(b DESC, c);
 ANALYZE min_max_aggregates;
--- Ensure Planner picks IndexScan wherever possible
+-- Ensure Planner picks IndexOnlyScan wherever possible
 set enable_seqscan to off;
 
 -- Test min() and max() optimization if table doesn't have any tuples
+-- This test is added to ensure min/max functions return 1 NULL row
+-- indicating no min or max value exists as table doesn't have any tuples.
 explain(costs off) select min(b) from min_max_aggregates;
 select min(b) from min_max_aggregates;
 explain(costs off) select max(b) from min_max_aggregates;
@@ -810,13 +812,14 @@ INSERT INTO min_max_aggregates values(null, null, null, null, null, null);
 
 -- Positive Tests
 
--- Test optimization on index_bc
+-- Test optimization on multi-key index
 explain(costs off) select min(b) from min_max_aggregates;
 select min(b) from min_max_aggregates;
 explain(costs off) select max(b) from min_max_aggregates;
 select max(b) from min_max_aggregates;
 
--- Create index_a and test optimization on its keys
+-- Test min/max optimization behavior on index with key direction
+-- ASC NULLS FIRST
 CREATE INDEX index_a on min_max_aggregates using btree(a NULLS FIRST);
 ANALYZE min_max_aggregates;
 explain(costs off) select min(a) from min_max_aggregates;
@@ -824,7 +827,8 @@ select min(a) from min_max_aggregates;
 explain(costs off) select max(a) from min_max_aggregates;
 select max(a) from min_max_aggregates;
 
--- Create index_d and test optimization on its keys
+-- Test min/max optimization behavior on index with key direction
+-- DESC NULLS LAST
 CREATE INDEX index_d on min_max_aggregates using btree(d DESC NULLS LAST);
 ANALYZE min_max_aggregates;
 explain(costs off) select min(d) from min_max_aggregates;
@@ -832,7 +836,7 @@ select min(d) from min_max_aggregates;
 explain(costs off) select max(d) from min_max_aggregates;
 select max(d) from min_max_aggregates;
 
--- Create index_e and test optimization on its keys
+-- Test min/max optimization behavior on index with key direction ASC
 CREATE INDEX index_e on min_max_aggregates using btree(e);
 ANALYZE min_max_aggregates;
 explain(costs off) select min(e) from min_max_aggregates;
@@ -840,16 +844,81 @@ select min(e) from min_max_aggregates;
 explain(costs off) select max(e) from min_max_aggregates;
 select max(e) from min_max_aggregates;
 
--- Test min/max with empty group by
+-- Test min/max optimization behavior with empty group by
 explain(costs off) select min(e) from min_max_aggregates group by ();
 select min(e) from min_max_aggregates group by ();
 explain(costs off) select max(e) from min_max_aggregates group by ();
 select max(e) from min_max_aggregates group by ();
 
+-- Test min/max optimization when used as part of a subquery
+explain (costs off) select b,e from min_max_aggregates where e = (select max(e) from min_max_aggregates);
+select b,e from min_max_aggregates where e = (select max(e) from min_max_aggregates);
+
+-- Test min/max optimization when used in CTE producer
+explain (costs off) with cte_producer as (select min(d) from min_max_aggregates) select 1 from cte_producer;
+with cte_producer as (select min(d) from min_max_aggregates) select 1 from cte_producer;
+
+-- Test min/max optimization when used in CTE consumer
+explain (costs off) with cte_producer as (select d as col_d from min_max_aggregates) select min(col_d) from cte_producer;
+with cte_producer as (select d as col_d from min_max_aggregates) select min(col_d) from cte_producer;
+
+-- Test min/max optimization when the result is casted to a compatible
+-- data type
+explain (costs off) select min(e)::int from min_max_aggregates;
+select min(e)::int from min_max_aggregates;
+
+-- Test min/max optimization in union all and joins
+CREATE TABLE table1 (a int, b text, c int);
+CREATE INDEX t1_c_idx on table1 using btree(c);
+CREATE TABLE table2 (a int, b text, c int);
+CREATE INDEX t2_c_idx on table2 using btree(c);
+INSERT INTO table1 select i, concat('b', i), i-2 from generate_series(1,100) i;
+INSERT INTO table2 select i, concat('b', i), i-2 from generate_series(1,100) i;
+ANALYZE table1;
+ANALYZE table2;
+
+-- Test min/max optimization with union all
+explain (costs off) select min(c) from table1 union all select max(c) from table2;
+select min(c) from table1 union all select max(c) from table2;
+
+-- Test min/max optimization when used as part of predicate subquery
+-- for join
+explain (costs off) select table1.b, table2.c from table1 join table2 on table1.a = table2.a where table1.c > (select max(table2.a) from table2);
+select table1.b, table2.c from table1 join table2 on table1.a = table2.a where table1.c > (select max(table2.a) from table2);
+
 -- Negative Tests
 reset enable_seqscan;
 
--- Test optimization on non index columns
+-- Test min/max optimization on result of union all present as part of subquery.
+-- This query is not supported by min/max optimization because for this to
+-- be supported ORCA needs support of MergeAppend node which could Merge result
+-- of two table's Index Scans in the sorted order and limit can be applied on top
+-- of it.
+explain (costs off) select max(c) from (select c from table1 union all select c from table2) subquery;
+select max(c) from (select c from table1 union all select c from table2) subquery;
+
+-- Test min/max optimization used as part of projected columns in join. This query
+-- could not use the optimization as it involves join result which is not
+-- guaranteed to be sorted, unless it is an NL join. Even for NL joins this
+-- optimization isn't supported currently as it isn't in scope of story.
+explain (costs off) select min(table1.a) from table1 join table2 on table1.a=table2.a;
+select min(table1.a) from table1 join table2 on table1.a=table2.a;
+
+-- Test min/max optimization on columns from join result. This isn't
+-- supported for the same reason as above: join result is not guaranteed
+-- to be sorted.
+explain (costs off) select min(table1_c) from (select table1.c as table1_c from table1 join table2 on table1.a=table2.a) as join_relation;
+select min(table1_c) from (select table1.c as table1_c from table1 join table2 on table1.a=table2.a) as join_relation;
+
+-- Test min/max optimization when used in CTE consumer
+explain (costs off) with cte_producer as (select d/2 as col_d from min_max_aggregates) select min(col_d) from cte_producer;
+with cte_producer as (select d/2 as col_d from min_max_aggregates) select min(col_d) from cte_producer;
+
+-- Clean up
+drop table table1;
+drop table table2;
+
+-- Test optimization on non index columns. These tests use SeqScan
 explain(costs off) select min(c) from min_max_aggregates;
 select min(c) from min_max_aggregates;
 explain(costs off) select max(c) from min_max_aggregates;
@@ -860,153 +929,72 @@ select min(f) from min_max_aggregates;
 explain(costs off) select max(f) from min_max_aggregates;
 select max(f) from min_max_aggregates;
 
--- Test min/max on a constant
+-- Test min/max on a constant. Aggregates optimization isn't necessary
+-- for min/max on constants
 explain(costs off) select min(100) from min_max_aggregates;
 select min(100) from min_max_aggregates;
 explain(costs off) select max(100) from min_max_aggregates;
 select max(100) from min_max_aggregates;
 
--- Test if optimization is applicable on other aggregates
-explain(costs off) select count(*) from min_max_aggregates;
-select count(*) from min_max_aggregates;
-explain(costs off) select avg(e) from min_max_aggregates;
-select avg(e) from min_max_aggregates;
-explain(costs off) select sum(d) from min_max_aggregates;
-select sum(d) from min_max_aggregates;
-
--- Test min/max with group by
+-- Test min/max with group by. This test's pattern matches xform's
+-- pattern and it is included to ensure if xform correctly filters
+-- this case out and doesn't apply transformation to it.
 explain(costs off) select min(e) from min_max_aggregates group by e;
 explain(costs off) select max(e) from min_max_aggregates group by e;
 
--- Case with no aggregate function and empty group by
-explain(costs off) select 3 from min_max_aggregates group by ();
-select 3 from min_max_aggregates group by ();
-
--- Case with more than one aggregate functions
+-- Case with more than one min/max aggregate functions. These cases aren't
+-- supported in ORCA as that would be over optimization and not supported
+-- unless customer requests for it.
 explain(costs off) select min(a), max(d) from min_max_aggregates;
 select min(a), max(d) from min_max_aggregates;
 
--- Purpose: This section tests IS NULL predicate on btree and non-index columns
+explain(costs off) select min(a) + max(d) from min_max_aggregates;
+select min(a) + max(d) from min_max_aggregates;
 
--- Tests with IS NULL on btree index columns
--- Ensure Planner picks IndexScan wherever possible
-set enable_seqscan to off;
-explain(costs off) select * from min_max_aggregates where a is null;
-select * from min_max_aggregates where a is null;
-
-explain(costs off) select * from min_max_aggregates where b is null;
-select * from min_max_aggregates where b is null;
-
-explain(costs off) select * from min_max_aggregates where c is null;
-select * from min_max_aggregates where c is null;
-
-explain(costs off) select * from min_max_aggregates where d is null;
-select * from min_max_aggregates where d is null;
-
-explain(costs off) select * from min_max_aggregates where e is null;
-select * from min_max_aggregates where e is null;
-
-reset enable_seqscan;
--- Tests with IS NULL on non-index columns
-explain(costs off) select * from min_max_aggregates where f is null;
-select * from min_max_aggregates where f is null;
-
-
--- Purpose: This section tests IS NOT NULL predicate on btree and non-index columns
-
--- Tests with IS NOT NULL on btree index columns
--- Ensure 1 NON NULL and NULL row exists in table to exactly determine output
--- for below queries
-delete from min_max_aggregates where a<100;
--- Ensure Planner picks IndexScan wherever possible
-set enable_seqscan to off;
-set enable_bitmapscan to off;
-explain(costs off) select * from min_max_aggregates where a is not null;
-select * from min_max_aggregates where a is not null;
-
-explain(costs off) select * from min_max_aggregates where b is not null;
-select * from min_max_aggregates where b is not null;
-
-explain(costs off) select * from min_max_aggregates where c is not null;
-select * from min_max_aggregates where c is not null;
-
-explain(costs off) select * from min_max_aggregates where d is not null;
-select * from min_max_aggregates where d is not null;
-
-explain(costs off) select * from min_max_aggregates where e is not null;
-select * from min_max_aggregates where e is not null;
-
-reset enable_seqscan;
-reset enable_bitmapscan;
--- Tests with IS NOT NULL on non-index columns
-explain(costs off) select * from min_max_aggregates where f is not null;
-select * from min_max_aggregates where f is not null;
+-- Case with no aggregate function and empty group by. This test's
+-- pattern matches xform's pattern and it is included to ensure if
+-- xform correctly filters this case out and doesn't apply
+-- transformation to it.
+explain(costs off) select 3 from min_max_aggregates group by ();
+select 3 from min_max_aggregates group by ();
 
 -- Clean Up
 drop table min_max_aggregates;
 
--- Purpose: Test min/max optimization on non-btree indices
-CREATE TABLE test_multi_index_types_table(a int, b int, c float, d text, e tsquery, f tsvector);
--- create a bitmap index
-create index bitmap_a on test_multi_index_types_table using bitmap(a);
--- create a hash index
-create index hash_b on test_multi_index_types_table using hash(b);
--- create a brin index
-create index brin_c on test_multi_index_types_table using brin(c);
--- create a spgist index
-create index spgist_d on test_multi_index_types_table using spgist(d);
--- create a gin index
-create index gist_e on test_multi_index_types_table using gist(e);
--- create a gin index
-create index gin_f on test_multi_index_types_table using gin(f);
+-- Purpose: This section tests IS NULL/IS NOT NULL predicate on btree and non-index columns
+CREATE TABLE test_nulltype_predicates(a int, b text, c int, d float, e numeric, f int);
+CREATE INDEX index_bc on test_nulltype_predicates using btree(b DESC);
+INSERT INTO test_nulltype_predicates select i, concat('col_b', i), i*2, i/3.1, i*1.6, i-1 from generate_series(1,3)i;
+INSERT INTO test_nulltype_predicates values(null, null, null, null, null, null);
+ANALYZE test_nulltype_predicates;
 
--- Test max optimization
-explain(costs off) select max(a) from test_multi_index_types_table;
-select max(a) from test_multi_index_types_table;
+-- Tests with IS NULL on btree index columns
+-- Ensure Planner picks IndexScan wherever possible
+set enable_seqscan to off;
+explain(costs off) select * from test_nulltype_predicates where b is null;
+select * from test_nulltype_predicates where b is null;
 
-explain(costs off) select max(b) from test_multi_index_types_table;
-select max(b) from test_multi_index_types_table;
+reset enable_seqscan;
+-- Tests with IS NULL on non-index columns
+explain(costs off) select * from test_nulltype_predicates where f is null;
+select * from test_nulltype_predicates where f is null;
 
-explain(costs off) select max(c) from test_multi_index_types_table;
-select max(c) from test_multi_index_types_table;
+-- Tests with IS NOT NULL on btree index columns
+-- Ensure Planner picks IndexScan wherever possible
+set enable_seqscan to off;
+set enable_bitmapscan to off;
 
-explain(costs off) select max(d) from test_multi_index_types_table;
-select max(d) from test_multi_index_types_table;
+explain(costs off) select * from test_nulltype_predicates where b is not null;
+select * from test_nulltype_predicates where b is not null;
 
--- Test min optimization
-explain(costs off) select min(a) from test_multi_index_types_table;
-select min(a) from test_multi_index_types_table;
-
-explain(costs off) select min(b) from test_multi_index_types_table;
-select min(b) from test_multi_index_types_table;
-
-explain(costs off) select min(c) from test_multi_index_types_table;
-select min(c) from test_multi_index_types_table;
-
-explain(costs off) select min(d) from test_multi_index_types_table;
-select min(d) from test_multi_index_types_table;
-
--- max/min functions are not associated with complex data types
--- of gin, gist indices.
-
--- Test IS NULL, IS NOT NULL on non-btree indices
--- Expected to use SeqScan with Filter
-explain(costs off) select * from test_multi_index_types_table where a is null;
-explain(costs off) select * from test_multi_index_types_table where b is null;
-explain(costs off) select * from test_multi_index_types_table where c is null;
-explain(costs off) select * from test_multi_index_types_table where d is null;
-explain(costs off) select * from test_multi_index_types_table where e is null;
-explain(costs off) select * from test_multi_index_types_table where f is null;
-explain(costs off) select * from test_multi_index_types_table where a is not null;
-explain(costs off) select * from test_multi_index_types_table where b is not null;
-explain(costs off) select * from test_multi_index_types_table where c is not null;
-explain(costs off) select * from test_multi_index_types_table where d is not null;
-explain(costs off) select * from test_multi_index_types_table where e is not null;
-explain(costs off) select * from test_multi_index_types_table where f is not null;
-
+reset enable_seqscan;
+reset enable_bitmapscan;
+-- Tests with IS NOT NULL on non-index columns
+explain(costs off) select * from test_nulltype_predicates where f is not null;
+select * from test_nulltype_predicates where f is not null;
 
 -- Clean Up
-drop table test_multi_index_types_table;
+drop table test_nulltype_predicates;
 
 -- Purpose: Test min/max optimization on AO table with mixed data type columns.
 -- IndexOnlyScans are supported but IndexScans aren't supported on AO tables

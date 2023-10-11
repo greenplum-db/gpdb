@@ -34,10 +34,14 @@ class CXformMinMax2IndexGet : public CXformExploration
 private:
 	// helper function to validate if index is applicable and determine Index Scan
 	// direction, given index columns.
-	static EIndexScanDirection GetScanDirection(
-		const CColRef *agg_col, CColRefArray *pdrgpcrIndexColumns,
-		const IMDIndex *pmdindex, CScalarAggFunc *popScAggFunc,
-		const IMDType *agg_col_type);
+	static EIndexScanDirection GetScanDirection(const IMDIndex *pmdindex,
+												CScalarAggFunc *popScAggFunc,
+												const IMDType *agg_col_type);
+
+	static IMdIdArray *IsMinMaxAggOnColumn(
+		CMemoryPool *mp, const IMDType *agg_func_type,
+		CExpression *pexprAggFunc, CColRefArray *output_col_array,
+		CMDAccessor *md_accessor, const IMDRelation *pmdrel, ULONG ulIndices);
 
 public:
 	CXformMinMax2IndexGet(const CXformMinMax2IndexGet &) = delete;
