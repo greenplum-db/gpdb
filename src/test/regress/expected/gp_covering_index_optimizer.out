@@ -680,6 +680,42 @@ SELECT a, b FROM test_index_types WHERE a<@ box '(0,0,3,3)';
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
+-- KEYS: [a]    INCLUDED: []
+CREATE TABLE tsvector_table(t text, a tsvector) DISTRIBUTED BY (t);
+INSERT INTO tsvector_table values('\n', '');
+CREATE INDEX a_gist_index ON tsvector_table USING GIST (a);
+-- Check index-only-scan is not used when index can not return column
+SET optimizer_enable_indexscan=off;
+SET optimizer_enable_bitmapscan=off;
+SET optimizer_enable_tablescan=off;
+-- expect fallback
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT count(*) FROM tsvector_table WHERE a @@ 'w:*|q:*';
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Finalize Aggregate (actual rows=1 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3) (actual rows=3 loops=1)
+         ->  Partial Aggregate (actual rows=1 loops=1)
+               ->  Bitmap Heap Scan on tsvector_table (actual rows=0 loops=1)
+                     Recheck Cond: (a @@ '''w'':* | ''q'':*'::tsquery)
+                     ->  Bitmap Index Scan on a_gist_index (actual rows=1 loops=1)
+                           Index Cond: (a @@ '''w'':* | ''q'':*'::tsquery)
+ Optimizer: Postgres-based planner
+(8 rows)
+
+SELECT count(*) FROM tsvector_table WHERE a @@ 'w:*|q:*';
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
+ count 
+-------
+     0
+(1 row)
+
+RESET optimizer_enable_indexscan;
+RESET optimizer_enable_bitmapscan;
+RESET optimizer_enable_tablescan;
 -- KEYS: [a]    INCLUDED: [b]
 -- Check support dynamic-index-only-scan on GIST indexes
 CREATE TABLE test_partition_table_with_gist_index(a int, b_box box)

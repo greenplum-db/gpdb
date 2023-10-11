@@ -361,6 +361,27 @@ VACUUM ANALYZE test_index_types;
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b FROM test_index_types WHERE a<@ box '(0,0,3,3)';
 
+-- KEYS: [a]    INCLUDED: []
+CREATE TABLE tsvector_table(t text, a tsvector) DISTRIBUTED BY (t);
+INSERT INTO tsvector_table values('\n', '');
+CREATE INDEX a_gist_index ON tsvector_table USING GIST (a);
+
+-- Check index-only-scan is not used when index can not return column
+SET optimizer_enable_indexscan=off;
+SET optimizer_enable_bitmapscan=off;
+SET optimizer_enable_tablescan=off;
+
+-- expect fallback
+EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+SELECT count(*) FROM tsvector_table WHERE a @@ 'w:*|q:*';
+SELECT count(*) FROM tsvector_table WHERE a @@ 'w:*|q:*';
+
+RESET optimizer_enable_indexscan;
+RESET optimizer_enable_bitmapscan;
+RESET optimizer_enable_tablescan;
+
+
+
 -- KEYS: [a]    INCLUDED: [b]
 -- Check support dynamic-index-only-scan on GIST indexes
 CREATE TABLE test_partition_table_with_gist_index(a int, b_box box)
