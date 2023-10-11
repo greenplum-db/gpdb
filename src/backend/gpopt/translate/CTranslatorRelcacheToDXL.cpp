@@ -1039,27 +1039,27 @@ CTranslatorRelcacheToDXL::RetrieveIndex(CMemoryPool *mp,
 
 	for (int i = 0; i < form_pg_index->indnatts; i++)
 	{
-		INT attno = form_pg_index->indkey.values[i];
-		GPOS_ASSERT(0 != attno && "Index expressions not supported");
+		INT colno = form_pg_index->indkey.values[i];
+		GPOS_ASSERT(0 != colno && "Index expressions not supported");
 
 		// key columns are indexed [0, indnkeyatts)
 		if (i < form_pg_index->indnkeyatts)
 		{
 			index_key_cols_array->Append(
-				GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+				GPOS_NEW(mp) ULONG(GetAttributePosition(colno, attno_mapping)));
 		}
 		// include columns are indexed [indnkeyatts, indnatts)
 		else
 		{
 			included_cols->Append(
-				GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+				GPOS_NEW(mp) ULONG(GetAttributePosition(colno, attno_mapping)));
 		}
 
 		// check if index can return column for index-only scans
-		if (gpdb::IndexCanReturn(index_rel.get(), attno))
+		if (gpdb::IndexCanReturn(index_rel.get(), i + 1))
 		{
 			returnable_cols->Append(
-				GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
+				GPOS_NEW(mp) ULONG(GetAttributePosition(colno, attno_mapping)));
 		}
 	}
 
