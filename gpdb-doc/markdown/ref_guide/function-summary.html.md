@@ -424,7 +424,7 @@ Many of these processing functions and operators convert Unicode escapes in JSON
                     json_to_recordset('[{"a":1,"b":"foo"},{"a":"2","c":"bar"}]') as x(a int, b
                     text);</code>
 </td>
-<td class="entry nocellnorowborder" style=="vertical-align:top;" headers="d233567e2045 ">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2045 ">
 <pre class="pre"> a |  b
 ---+-----
  1 | foo
