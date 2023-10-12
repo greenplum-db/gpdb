@@ -34,7 +34,8 @@ new\_version
 :   The new server version.
 
 OPTIONS \( \[ ADD \| SET \| DROP \] option \['value'\] \[, ... \] \)
-:   Change the server's options. `ADD`, `SET`, and `DROP` specify the action to perform. If no operation is explicitly specified, the default operation is `ADD`. Option names must be unique. Greenplum Database validates names and values using the server's foreign-data wrapper library.
+:   Change the server's options. `ADD`, `SET`, and `DROP` specify the action to perform. Option names must be unique. Greenplum Database validates names and values using the server's foreign-data wrapper library.
+:   Use `ADD` to define an option that is not currently set. Use `SET` to change the value of an option that you previously defined. If you do not explicitly specify an action, the default operation is `ADD`.
 
 new\_owner
 :   Specifies the new owner of the foreign server.
