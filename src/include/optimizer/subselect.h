@@ -18,6 +18,8 @@
 #include "nodes/pathnodes.h"
 #include "nodes/plannodes.h"
 
+extern bool contain_outer_selfref(Node *node);
+extern bool contain_outer_selfref_walker(Node *node, Index *depth);
 extern void SS_process_ctes(PlannerInfo *root);
 extern Node *convert_testexpr(PlannerInfo *root,
 				 Node *testexpr,

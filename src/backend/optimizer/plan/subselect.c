@@ -100,8 +100,8 @@ static bool hash_ok_operator(OpExpr *expr);
  */
 static bool contain_dml(Node *node);
 static bool contain_dml_walker(Node *node, void *context);
-static bool contain_outer_selfref(Node *node);
-static bool contain_outer_selfref_walker(Node *node, Index *depth);
+bool contain_outer_selfref(Node *node);
+bool contain_outer_selfref_walker(Node *node, Index *depth);
 static void inline_cte(PlannerInfo *root, CommonTableExpr *cte);
 static bool inline_cte_walker(Node *node, inline_cte_walker_context *context);
 
@@ -1344,7 +1344,7 @@ contain_dml_walker(Node *node, void *context)
 /*
  * contain_outer_selfref: is there an external recursive self-reference?
  */
-static bool
+bool
 contain_outer_selfref(Node *node)
 {
 	Index		depth = 0;
@@ -1358,7 +1358,7 @@ contain_outer_selfref(Node *node)
 	return contain_outer_selfref_walker(node, &depth);
 }
 
-static bool
+bool
 contain_outer_selfref_walker(Node *node, Index *depth)
 {
 	if (node == NULL)
