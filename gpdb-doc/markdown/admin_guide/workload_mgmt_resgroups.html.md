@@ -8,24 +8,6 @@ When you assign a resource group to a role \(a role-based resource group\), the 
 
 Similarly, when you assign a resource group to an external component, the group limits apply to all running instances of the component. For example, if you create a resource group for a PL/Container external component, the memory limit that you define for the group specifies the maximum memory usage for all running instances of each PL/Container runtime to which you assign the group.
 
-This topic includes the following subtopics:
-
--   [Understanding Role and Component Resource Groups](#topic8339intro)
--   [Resource Group Attributes and Limits](#topic8339introattrlim)
-    -   [Memory Auditor](#topic8339777)
-    -   [Transaction Concurrency Limit](#topic8339717179)
-    -   [CPU Limits](#topic833971717)
-    -   [Memory Limits](#topic8339717)
--   [Using VMware Greenplum Command Center to Manage Resource Groups](#topic999)
--   [Configuring and Using Resource Groups](#topic71717999)
-    -   [Enabling Resource Groups](#topic8)
-    -   [Creating Resource Groups](#topic10)
-    -   [Configuring Automatic Query Termination Based on Memory Usage](#topic_jlz_hzg_pkb)
-    -   [Assigning a Resource Group to a Role](#topic17)
--   [Monitoring Resource Group Status](#topic22)
--   [Moving a Query to a Different Resource Group](#moverg)
--   [Resource Group Frequently Asked Questions](#topic777999)
-
 **Parent topic:** [Managing Resources](wlmgmt.html)
 
 ## <a id="topic8339intro"></a>Understanding Role and Component Resource Groups 
@@ -282,29 +264,17 @@ Refer to the [Greenplum Command Center documentation](http://docs.vmware.com/en/
 
 If you use RedHat 6 and the performance with resource groups is acceptable for your use case, upgrade your kernel to version 2.6.32-696 or higher to benefit from other fixes to the cgroups implementation.
 
-### <a id="topic833"></a>Prerequisite 
+### <a id="topic833"></a>Prerequisites 
 
 Greenplum Database resource groups use Linux Control Groups \(cgroups\) to manage CPU resources. Greenplum Database also uses cgroups to manage memory for resource groups for external components. With cgroups, Greenplum isolates the CPU and external component memory usage of your Greenplum processes from other processes on the node. This allows Greenplum to support CPU and external component memory usage restrictions on a per-resource-group basis.
 
-> **Note** Redhat 8.x supports two versions of cgroups: cgroup v1 and cgroup v2. Greenplum Database only supports cgroup v1. Follow the steps below to make sure that your system is mounting the `cgroups-v1` filesystem at startup.
+> **Note** Redhat 8.x/9.x supports two versions of cgroups: cgroup v1 and cgroup v2. Greenplum Database only supports cgroup v1. Follow the steps below to make sure that your system is mounting the `cgroups-v1` filesystem at startup.
 
 For detailed information about cgroups, refer to the Control Groups documentation for your Linux distribution.
 
 Complete the following tasks on each node in your Greenplum Database cluster to set up cgroups for use with resource groups:
 
-1.  If not already installed, install the Control Groups operating system package on each Greenplum Database node. The command that you run to perform this task will differ based on the operating system installed on the node. You must be the superuser or have `sudo` access to run the command:
-    -   Redhat/CentOS 7.x/8.x systems:
-
-        ```
-        sudo yum install libcgroup-tools
-        ```
-    -   Redhat/CentOS 6.x systems:
-
-        ```
-        sudo yum install libcgroup
-        ```
-
-1. If you are using Redhat 8.x, make sure that you configured the system to mount the `cgroups-v1` filesystem by default during system boot by running the following command:
+1. If you are using Redhat 8.x/9.x, make sure that you configured the system to mount the `cgroups-v1` filesystem by default during system boot by running the following command:
 
     ```
     stat -fc %T /sys/fs/cgroup/
@@ -325,14 +295,19 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
 
     Reboot the system for the changes to take effect.
 
+1. Create the required cgroup hierarchies on each Greenplum Database node. Since the hierarchies are cleaned when the operating system rebooted, a service is applied to recreate them automatically on boot. Follow the below steps based on your operating system version.
+
+#### Redhat/CentOS 6.x/7.x/8.x
+
+These operating systems include the `libcgroup-tools` package (for Redhat/CentOS 7.x/8.x) or `libcgroup` (for Redhat/CentOS 6.x)
 
 1.  Locate the cgroups configuration file `/etc/cgconfig.conf`. You must be the superuser or have `sudo` access to edit this file:
 
     ```
-    sudo vi /etc/cgconfig.conf
+    vi /etc/cgconfig.conf
     ```
 
-2.  Add the following configuration information to the file:
+1.  Add the following configuration information to the file:
 
     ```
     group gpdb {
@@ -359,19 +334,38 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
 
     This content configures CPU, CPU accounting, CPU core set, and memory control groups managed by the `gpadmin` user. Greenplum Database uses the memory control group only for those resource groups created with the `cgroup` `MEMORY_AUDITOR`.
 
-3.  Start the cgroups service on each Greenplum Database node. The command that you run to perform this task will differ based on the operating system installed on the node. You must be the superuser or have `sudo` access to run the command:
+1.  Start the cgroups service on each Greenplum Database node. You must be the superuser or have `sudo` access to run the command:
     -   Redhat/CentOS 7.x/8.x systems:
 
         ```
-        sudo cgconfigparser -l /etc/cgconfig.conf 
+        cgconfigparser -l /etc/cgconfig.conf 
         ```
     -   Redhat/CentOS 6.x systems:
 
         ```
-        sudo service cgconfig start 
+        service cgconfig start 
         ```
 
-4.  Identify the `cgroup` directory mount point for the node:
+1.  To automatically recreate Greenplum Database required cgroup hierarchies and parameters when your system is restarted, configure your system to enable the Linux cgroup service daemon `cgconfig.service` \(Redhat/CentOS 7.x/8.x\) or `cgconfig` \(Redhat/CentOS 6.x\) at node start-up. To ensure the configuration is persistent after reboot, run the following commands as user root:
+
+    -   Redhat/CentOS 7.x/8.x systems:
+
+        ```
+        systemctl enable cgconfig.service
+        ```
+
+        To start the service immediately \(without having to reboot\) enter:
+
+        ```
+        systemctl start cgconfig.service
+        ```
+    -   Redhat/CentOS 6.x systems:
+
+        ```
+        chkconfig cgconfig on
+        ```
+
+1.  Identify the `cgroup` directory mount point for the node:
 
     ```
     grep cgroup /proc/mounts
@@ -379,7 +373,7 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
 
     The first line of output identifies the `cgroup` mount point.
 
-5.  Verify that you set up the Greenplum Database cgroups configuration correctly by running the following commands. Replace \<cgroup\_mount\_point\> with the mount point that you identified in the previous step:
+1.  Verify that you set up the Greenplum Database cgroups configuration correctly by running the following commands. Replace \<cgroup\_mount\_point\> with the mount point that you identified in the previous step:
 
     ```
     ls -l <cgroup_mount_point>/cpu/gpdb
@@ -390,26 +384,41 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
 
     If these directories exist and are owned by `gpadmin:gpadmin`, you have successfully configured cgroups for Greenplum Database CPU resource management.
 
-6.  To automatically recreate Greenplum Database required cgroup hierarchies and parameters when your system is restarted, configure your system to enable the Linux cgroup service daemon `cgconfig.service` \(Redhat/CentOS 7.x/8.x\) or `cgconfig` \(Redhat/CentOS 6.x\) at node start-up. For example, configure one of the following cgroup service commands in your preferred service auto-start tool:
-    -   Redhat/CentOS 7.x/8.x systems:
+#### Redhat 9.x
 
-        ```
-        sudo systemctl enable cgconfig.service
-        ```
+If you are using Redhat 9.x, the `libcgroup` and `libcgroup-tools` packages are not available with the operating system. In this scenario, you must manually create a service that automatically recreates the cgroup hierarchies after a system boot. Add the following bash script for systemd so it runs automatically during system startup. Perform the following steps as user root:
 
-        To start the service immediately \(without having to reboot\) enter:
+1. Create `greenplum-cgroup-v1-config.service`
+   ```
+   vim /etc/systemd/system/greenplum-cgroup-v1-config.service
+   ```
 
-        ```
-        sudo systemctl start cgconfig.service
-        ```
-    -   Redhat/CentOS 6.x systems:
+2. Write the following content into `greenplum-cgroup-v1-config.service`. If the user is not `gpadmin`, replace it with the appropriate user.
+   ```
+   [Unit]
+   Description=Greenplum Cgroup v1 Configuration
 
-        ```
-        sudo chkconfig cgconfig on
-        ```
+   [Service]
+   Type=oneshot
+   RemainAfterExit=yes
+   WorkingDirectory=/sys/fs/cgroup
+   # set up hierarchies only if cgroup v1 mounted
+   ExecCondition=bash -c '[ xcgroupfs = x$(stat -fc "%%T" /sys/fs/cgroup/memory) ] || exit 1'
+   ExecStart=bash -ec '\
+       for controller in cpu cpuacct cpuset memory;do \
+           [ -e $controller/gpdb ] || mkdir $controller/gpdb; \
+           chown -R gpadmin:gpadmin $controller/gpdb; \
+       done'
 
-    You may choose a different method to recreate the Greenplum Database resource group cgroup hierarchies.
+   [Install]
+   WantedBy=basic.target
+   ```
 
+3. Reload systemd daemon and enable the service:
+   ```
+   systemctl daemon-reload
+   systemctl enable greenplum-cgroup-v1-config.service
+   ```
 
 ### <a id="topic8339191"></a>Procedure 
 
