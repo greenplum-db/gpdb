@@ -180,12 +180,7 @@ function _main() {
 	prep_env
 
 	generate_build_number
-
-        if [[ -z "${BUILD_GPDB_DEVEL}" ]]; then
-	    build_gpdb "${BLD_TARGET_OPTION[@]}"
-	else
-	    build_gpdb_devel "${BLD_TARGET_OPTION[@]}"
-	fi
+	build_gpdb "${BLD_TARGET_OPTION[@]}"
 	git_info
 
 	if [[ -z "${SKIP_UNITTESTS}" ]]; then
