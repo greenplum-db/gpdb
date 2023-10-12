@@ -35,6 +35,12 @@ DROP TABLE quicklz_err;
 SET gp_quicklz_fallback = true;
 SET gp_default_storage_options='';
 
+-- with gp_quicklz_fallback set to true, create table using other compress type
+-- should not be impacted
+CREATE TABLE zlib_with(a int) USING ao_column WITH (compresstype=zlib) DISTRIBUTED BY (a);
+select reloptions::text like '%compresstype=zlib%' as ok from pg_class where oid = 'zlib_with'::regclass::oid;
+DROP TABLE zlib_with;
+
 -- Fill in column encoding from WITH clause
 CREATE TABLE quicklz_with(c1 int, c2 int) USING ao_column WITH (compresstype=quicklz) DISTRIBUTED BY (c1);
 \d+ quicklz_with

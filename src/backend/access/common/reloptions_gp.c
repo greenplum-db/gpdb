@@ -614,12 +614,14 @@ transformAOStdRdOptions(StdRdOptions *opts, Datum withOpts, bool hasStorage)
 
 				if (opts->compresstype[0])
 				{
-					if (gp_quicklz_fallback && pg_strcasecmp(opts->compresstype, "quicklz"))				
+					if (gp_quicklz_fallback && pg_strcasecmp(opts->compresstype, "quicklz") == 0)
+					{						
 #ifdef USE_ZSTD
 						compresstype = "zstd";
 #else
 						compresstype = AO_DEFAULT_USABLE_COMPRESSTYPE;
-#endif				
+#endif
+					}
 					else
 						compresstype = opts->compresstype;
 				}
