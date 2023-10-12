@@ -54,6 +54,15 @@ jobs:
             ref: ${{ github.sha }}
 
     steps:
+      ## FIXME: abi-dumper requires universal-ctags and the package manager doesn't provide it.
+      - name: Install universal-ctags.
+        run: |
+          git clone https://github.com/universal-ctags/ctags.git
+          cd ctags
+          ./autogen.sh
+          env CC=$(which clang) CXX=$(which clang++) ./configure
+          make -j`nproc` && sudo make install
+
       - name: Download Greenplum source code
         uses: actions/checkout@v3
         with:
@@ -66,7 +75,7 @@ jobs:
       - name: Install abi-dumper
         run: |
           yum install -y epel-release
-          yum install -y abi-dumper ctags
+          yum install -y abi-dumper
 
       - name: Build Greenplum
         run: |
