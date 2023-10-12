@@ -90,6 +90,11 @@ jobs:
     runs-on: ubuntu-latest
     container: gcr.io/data-gpdb-public-images/gpdb6-rocky8-build
     steps:
+      ## We need to fetch the source again since we need to skip checking some symbols
+      ## which are defined under the 'gpdb_src/.abi-check/' directory.
+      - name: Fetch source
+        uses: actions/checkout@v3
+
       - name: Download baseline
         uses: actions/download-artifact@v3
         with:
