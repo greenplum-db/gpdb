@@ -57,11 +57,9 @@ jobs:
       ## FIXME: abi-dumper requires universal-ctags and the package manager doesn't provide it.
       - name: Install universal-ctags.
         run: |
-          git clone https://github.com/universal-ctags/ctags.git
-          cd ctags
-          ./autogen.sh
-          env CC=$(which clang) CXX=$(which clang++) ./configure
-          make -j`nproc` && make install
+          wget 'https://github.com/universal-ctags/ctags-nightly-build/releases/download/2023.09.29%2B0aa6d047ffd78c3baff508a53f4a176d97a28b5b/uctags-2023.09.29-linux-x86_64.tar.xz'
+          tar -xf uctags-2023.09.29-linux-x86_64.tar.xz
+          cp uctags-2023.09.29-linux-x86_64/bin/* /usr/bin/
 
       - name: Download Greenplum source code
         uses: actions/checkout@v3
