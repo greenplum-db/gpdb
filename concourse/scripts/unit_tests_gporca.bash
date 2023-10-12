@@ -2,6 +2,8 @@
 set -exo pipefail
 
 GPDB_SRC_PATH=${GPDB_SRC_PATH:=gpdb_src}
+CWDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${CWDIR}/common.bash"
 
 function build_xerces
 {
@@ -26,6 +28,13 @@ function test_orca
 
 function _main
 {
+  export BLD_ARCH=$(build_arch)
+  if [[ ${BLD_ARCH} == "rhel9"* ]]; then
+    export PYTHONHOME=$(find /opt -maxdepth 1 -type d -name "python-2*")
+    export PATH="${PYTHONHOME}/bin:${PATH}"
+    export LD_LIBRARY_PATH="${PYTHONHOME}/lib/:${LD_LIBRARY_PATH}"
+    ln -s "${PYTHONHOME}"/bin/python2 /usr/bin/python
+  fi
   mkdir gpdb_src/gpAux/ext
   build_xerces
   test_orca

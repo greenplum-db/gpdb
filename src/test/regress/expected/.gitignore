@@ -14,6 +14,7 @@ dispatch.out
 external_table.out
 filespace.out
 gpcopy.out
+gp_check_files.out
 gptokencheck.out
 /gp_transactions.out
 /gp_tablespace_with_faults.out

@@ -6,6 +6,9 @@ The `gpperfmon` database is a dedicated database where data collection agents on
 
 The `gpperfmon` database is created using the `gpperfmon_install` command-line utility. The utility creates the database and the `gpmon` database role and enables the data collection agents on the master and segment hosts. See the `gpperfmon_install` reference in the *Greenplum Database Utility Guide* for information about using the utility and configuring the data collection agents.
 
+>**NOTE**
+>VMware Greenplum customers should use Greenplum Command Center, rather than the `gpperfmon` database, to monitor VMware Greenplum. If you are an open source Greenplum Database user and plan to run `gpperfrmon_install`, be aware that it is not supported on Red Hat Linux 8.
+
 The `gpperfmon` database consists of three sets of tables that capture query and system status information at different stages.
 
 -   `_now` tables store current system metrics such as active queries.

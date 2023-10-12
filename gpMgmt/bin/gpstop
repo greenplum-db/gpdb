@@ -35,6 +35,7 @@ try:
     from gppylib.operations.utils import ParallelOperation, RemoteOperation
     from gppylib.operations.rebalanceSegments import ReconfigDetectionSQLQueryCommand
     from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
+    from contextlib import closing
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
@@ -367,6 +368,8 @@ class GpStop:
         gp.check_permissions(self.user)
         self._read_postgresqlconf()
         self._check_db_running()
+        if self._is_db_shutting_down():
+            self._handle_shutdown_state()
         self._build_gparray()
         if self.onlyThisHost:
             self._is_hostname_valid()
@@ -425,6 +428,60 @@ class GpStop:
         logger.info("Obtaining Segment details from master...")
         self.dburl = dbconn.DbURL(port=self.port, dbname='template1')
         self.gparray = GpArray.initFromCatalog(self.dburl, utility=True)
+
+    def _handle_shutdown_state(self):
+        """
+        Handle the scenario where the Greenplum database is in shutting down state.
+        """
+        # Check if gpstop is called with -u option
+        if self.sighup:
+            logger.fatal("Cannot send SIGHUP to postmaster as the database is shutting down. "
+                         "Please run 'gpstop' to complete the shutdown process.")
+            sys.exit(1)
+
+        # Prompt user for mode selection
+        mode_selection = userinput.ask_string("Please select fast or immediate mode to complete the shutdown:",
+                                              "['(f)ast_mode', '(i)mmediate_mode']", 'f',
+                                              ['f', 'i'])
+        logger.info("Your choice was '{0}'".format(mode_selection))
+        self.mode = 'fast' if mode_selection == 'f' else 'immediate'
+
+        # Stop the master processes stuck in shutting down state
+        logger.info("Stopping the master to finish the database shutdown")
+        try:
+            cmd = gp.MasterStop("stopping master", self.master_datadir, mode='immediate')
+            cmd.run(validateAfter=True)
+        except Exception as exc:
+            raise Exception("Unable to stop the master: {0}".format(exc))
+
+        # Starting the cluster in master_only mode. It is required to gather segment information
+        # in subsequent steps in order to continue the normal gpstop workflow.
+        self._start_db_masteronly()
+
+    def _is_db_shutting_down(self):
+        """
+        Check if the Greenplum database is in the process of shutting down.
+        Returns True if the database is shutting down.
+        """
+        try:
+            self.dburl = dbconn.DbURL(port=self.port, dbname='template1')
+            with closing(dbconn.connect(self.dburl, utility=True)) as conn:
+                pass  # Nothing to do here, as we are only testing the database connection
+        except Exception as exc:
+            if "the database system is shutting down" in str(exc):
+                logger.warning("The database is currently in the process of shutting down.")
+                return True
+
+    def _start_db_masteronly(self):
+        """
+        Starting the cluster in master-only mode.
+        """
+        logger.info("Running gpstart in master_only mode.")
+        try:
+            cmd = gp.GpStart("running gpstart -am", masterOnly=True)
+            cmd.run(validateAfter=True)
+        except Exception as exc:
+            raise Exception("Unable to start the cluster in master_only mode: {0}".format(exc))
 
     class _SigIntHandler(object):
         def __init__(self):
@@ -1028,6 +1085,14 @@ class GpStop:
                       logfileDirectory=logfileDirectory,
                       onlyThisHost=options.only_this_host)
 
+    @staticmethod
+    def mainOptions():
+        """
+        This method returns a dictionary instructing simple_main to check for
+        a gpstop.lock file under MASTER_DATA_DIRECTORY in order to prevent
+        the customer from running multiple instances of gpstop.
+        """
+        return {'pidlockpath': 'gpstop.lock', 'parentpidvar': 'GPSTOPPID'}
 
 if __name__ == '__main__':
-    simple_main(GpStop.createParser, GpStop.createProgram)
+    simple_main(GpStop.createParser, GpStop.createProgram, GpStop.mainOptions())

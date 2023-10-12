@@ -86,3 +86,4 @@ end;
 
 -- the heap table segment file size after truncate should be zero
 select stat_table_segfile_size('regression', 'truncate_with_create_heap');
+

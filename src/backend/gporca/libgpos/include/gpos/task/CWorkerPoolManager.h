@@ -136,7 +136,7 @@ public:
 	}
 
 	// initialize worker pool manager
-	static GPOS_RESULT Init();
+	static void Init();
 
 	// de-init global instance
 	static void Shutdown();

@@ -172,7 +172,6 @@ class DifferentialRecovery(Command):
             "current_logfiles.tmp",
             "postmaster.pid",
             "postmaster.opts",
-            "pg_internal.init",
             "internal.auto.conf",
             "pg_dynshmem",
             "pg_notify/*",

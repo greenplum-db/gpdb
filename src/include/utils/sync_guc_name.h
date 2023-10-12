@@ -18,6 +18,7 @@
 		"gp_blockdirectory_minipage_size",
 		"gp_debug_linger",
 		"gp_default_storage_options",
+		"gp_detect_data_correctness",
 		"gp_disable_tuple_hints",
 		"gp_enable_mk_sort",
 		"gp_enable_motion_mk_sort",

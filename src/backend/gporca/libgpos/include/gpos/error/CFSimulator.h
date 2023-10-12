@@ -173,7 +173,7 @@ public:
 	static CFSimulator *m_fsim;
 
 	// initializer for global f-simulator
-	static GPOS_RESULT Init();
+	static void Init();
 
 #ifdef GPOS_DEBUG
 	// destroy simulator

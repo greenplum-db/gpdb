@@ -174,6 +174,7 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 	Oid			save_userid;
 	int			save_sec_context;
 	int			save_nestlevel;
+	bool 		createAoBlockDirectory;
 	RefreshClause *refreshClause;
 
 	/* MATERIALIZED_VIEW_FIXME: Refresh MatView is not MPP-fied. */
@@ -332,13 +333,16 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 	else
 		tableSpace = matviewRel->rd_rel->reltablespace;
 
+	/* If an AO temp table has index, we need to create it. */
+	createAoBlockDirectory = matviewRel->rd_rel->relhasindex;
+
 	/*
 	 * Create the transient table that will receive the regenerated data. Lock
 	 * it against access by any other process until commit (by which time it
 	 * will be gone).
 	 */
 	OIDNewHeap = make_new_heap(matviewOid, tableSpace, concurrent,
-							   ExclusiveLock, false, true);
+							   ExclusiveLock, createAoBlockDirectory, true);
 	LockRelationOid(OIDNewHeap, AccessExclusiveLock);
 	dest = CreateTransientRelDestReceiver(OIDNewHeap, matviewOid, concurrent, stmt->skipData);
 
@@ -485,6 +489,7 @@ transientrel_init(QueryDesc *queryDesc)
 	Oid			OIDNewHeap;
 	bool		concurrent;
 	LOCKMODE	lockmode;
+	bool 		createAoBlockDirectory;
 	RefreshClause *refreshClause;
 
 	refreshClause = queryDesc->plannedstmt->refreshClause;
@@ -515,13 +520,17 @@ transientrel_init(QueryDesc *queryDesc)
 	{
 		tableSpace = matviewRel->rd_rel->reltablespace;
 	}
+
+	/* If an AO temp table has index, we need to create it. */
+	createAoBlockDirectory = matviewRel->rd_rel->relhasindex;
+
 	/*
 	 * Create the transient table that will receive the regenerated data. Lock
 	 * it against access by any other process until commit (by which time it
 	 * will be gone).
 	 */
 	OIDNewHeap = make_new_heap(matviewOid, tableSpace, concurrent,
-							   ExclusiveLock, false, false);
+							   ExclusiveLock, createAoBlockDirectory, false);
 	LockRelationOid(OIDNewHeap, AccessExclusiveLock);
 
 	queryDesc->dest = CreateTransientRelDestReceiver(OIDNewHeap, matviewOid, concurrent,

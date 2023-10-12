@@ -316,14 +316,14 @@ def main():
         action='store',
         dest='test_sections',
         choices=[
-            'ICW',
-            'CLI',
-            'AA',
-            'Release'
+            'icw',
+            'cli',
+            'aa',
+            'release'
         ],
         default=[],
         nargs='+',
-        help='Select tests sections to run, Release section should be specified with {ICW,CLI,AA}, and will be ignored if os_type is rhel8 or oel8'
+        help='Select tests sections to run, release section should be specified with {icw,cli,aa}, and will be ignored if os_type is rhel8 or oel8'
     )
 
     parser.add_argument(
@@ -381,20 +381,20 @@ def main():
     if args.pipeline_target in ['prod', 'dev', 'cm']:
         args.use_ICW_workers = True
 
-    if args.pipeline_target in ['prod'] and args.os_type not in ["rhel9", "oel9", "rocky9"]:
+    if args.pipeline_target in ['prod'] :
         args.test_sections = [
-            'ICW',
-            'CLI',
-            'AA',
-            'Release'
+            'icw',
+            'cli',
+            'aa',
+            'release'
         ]
 
     if args.directed_release:
         args.test_sections = [
-            'ICW',
-            'CLI',
-            'AA',
-            'Release'
+            'icw',
+            'cli',
+            'aa',
+            'release'
         ]
 
     git_remote = suggested_git_remote()

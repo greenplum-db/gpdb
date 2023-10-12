@@ -3251,6 +3251,18 @@ The value of [wal\_sender\_timeout](#replication_timeout) controls the time that
 |-----------|-------|-------------------|
 |integer 0- INT\_MAX/1000|10 sec|master, system, reload, superuser|
 
+## <a id="work_mem"></a>work_mem
+
+Sets the maximum amount of memory to be used by a query operation (such as a sort or hash table) before writing to temporary disk files. If this value is specified without units, it is taken as kilobytes. The default value is 32 MB. Note that for a complex query, several sort or hash operations might be running in parallel; each operation will be allowed to use as much memory as this value specifies before it starts to write data into temporary files. In addition, several running sessions may be performing such operations concurrently. Therefore, the total memory used could be many times the value of `work_mem`; keep this fact in mind when choosing the value for this parameter. Sort operations are used for `ORDER BY`, `DISTINCT`, and merge joins. Hash tables are used in hash joins, hash-based aggregation, and hash-based processing of `IN` subqueries. Apart from sorting and hashing, bitmap index scans also rely on `work_mem`. Operations relying on tuplestores such as function scans, CTEs, PL/pgSQL and administration UDFs also rely on `work_mem`.
+
+Apart from assigning memory to specific execution operators, setting `work_mem` also influences certain query plans over others, when the Postgres-based planner is used as the optimizer.
+
+`work_mem` is a distinct memory management concept that does not interact with resource queue or resource group memory controls, which are imposed at the query level.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|number of kilobytes|32MB|coordinator, session, reload|
+
 ## <a id="writable_external_table_bufsize"></a>writable\_external\_table\_bufsize 
 
 Size of the buffer that Greenplum Database uses for network communication, such as the `gpfdist` utility and external web tables \(that use http\). Valid units are `KB` \(as in `128KB`\), `MB`, `GB`, and `TB`. Greenplum Database stores data in the buffer before writing the data out. For information about `gpfdist`, see the *Greenplum Database Utility Guide*.

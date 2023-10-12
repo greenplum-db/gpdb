@@ -23,7 +23,7 @@ import sys
 
 
 def usage(exitarg):
-    print __doc__
+    print(__doc__)
     sys.exit(exitarg)
 
 
@@ -132,20 +132,20 @@ pfile = []
 blocksz = opt['-B']
 cnt = int(math.ceil(opt['-S'] / blocksz))
 totalBytes = 0
-for i in xrange(len(opt['-i'])):
+for i in range(len(opt['-i'])):
     ifile = opt['-i'][i]
     ofile = opt['-o'][i]
     cmd.append('dd if=%s of=%s count=%d bs=%d' % (ifile, ofile, cnt, blocksz))
     totalBytes += cnt * blocksz
 
 for c in cmd:
-    print c
+    print(c)
     pfile.append(os.popen(c))
 
 for f in pfile:
     ok = False
     try:
-        print f.read()
+        print(f.read())
         ok = not f.close()
         f = None
     except:
@@ -157,4 +157,4 @@ for f in pfile:
         sys.exit(1)
 
 os.system('sync')
-print 'multidd total bytes ', totalBytes
+print('multidd total bytes {0}' .format(totalBytes))

@@ -38,3 +38,17 @@
 --
 0U: create table utilitymode_pt_lt_tab (col1 int, col2 decimal)
 	distributed by (col1) partition by list(col2) (partition part1 values(1));
+
+--
+-- gp_check_orphaned_files should not be running with concurrent transaction (even idle)
+--
+-- use a different database to do the test, otherwise we might be reporting tons 
+-- of orphaned files produced by the many intential PANICs/restarts in the isolation2 tests.
+create database check_orphaned_db;
+1:@db_name check_orphaned_db: create extension gp_check_functions;
+1:@db_name check_orphaned_db: begin;
+2:@db_name check_orphaned_db: select * from gp_check_orphaned_files;
+1q:
+2q:
+
+drop database check_orphaned_db;

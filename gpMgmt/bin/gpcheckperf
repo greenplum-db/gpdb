@@ -149,7 +149,8 @@ def gpsync(src, dst):
     -P : print information showing the progress of the transfer
     """
     proc = []
-    for peer in GV.opt['-h']:
+    host_list = getHostList()
+    for peer in host_list:
         cmd = 'rsync -P -a -c -e "ssh -o BatchMode=yes -o StrictHostKeyChecking=no" {0} {1}:{2}' \
             .format(src, unix.canonicalize(peer), dst)
         if GV.opt['-v']:
@@ -665,10 +666,11 @@ def setupNetPerfTest():
     print '-------------------'
 
     hostlist = ssh_utils.HostList()
-    for h in GV.opt['-h']:
-        hostlist.add(h)
     if GV.opt['-f']:
         hostlist.parseFile(GV.opt['-f'])
+    else:
+        for h in GV.opt['-h']:
+            hostlist.add(h)
 
     h = hostlist.get()
     if len(h) == 0:
@@ -999,20 +1001,21 @@ def getHostList():
     :return: returns a list of hosts
     """
     hostlist = ssh_utils.HostList()
-    for h in GV.opt['-h']:
-        hostlist.add(h)
     if GV.opt['-f']:
         hostlist.parseFile(GV.opt['-f'])
+    else:
+        for h in GV.opt['-h']:
+            hostlist.add(h)
 
     try:
         hostlist.checkSSH()
     except ssh_utils.SSHError, e:
         sys.exit('[Error] {0}' .format(str(e)))
 
-    GV.opt['-h'] = hostlist.filterMultiHomedHosts()
-    if len(GV.opt['-h']) == 0:
+    host_list = hostlist.filterMultiHomedHosts()
+    if len(host_list) == 0:
         usage('Error: missing hosts in -h and/or -f arguments')
-    return GV.opt['-h']
+    return host_list
 
 
 def main():

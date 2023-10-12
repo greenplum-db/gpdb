@@ -1,0 +1,5 @@
+# gp_check_functions extension
+
+comment = 'various GPDB helper views/functions'
+default_version = '1.0.0'
+relocatable = true

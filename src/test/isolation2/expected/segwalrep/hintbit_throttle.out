@@ -14,14 +14,12 @@
 include: helpers/server_helpers.sql;
 CREATE
 
--- set wait_for_replication_threshold to 1kB for quicker test
-ALTER SYSTEM SET wait_for_replication_threshold = 1;
-ALTER
-SELECT pg_reload_conf();
- pg_reload_conf 
-----------------
- t              
-(1 row)
+-- set wait_for_replication_threshold to 100kB for quicker test.
+-- this cannot be too low otherwise is_query_waiting_for_syncrep() might hit it too.
+!\retcode gpconfig -c wait_for_replication_threshold -v 100;
+(exited with code 0)
+!\retcode gpstop -u;
+(exited with code 0)
 
 CREATE TABLE select_no_throttle(a int) DISTRIBUTED BY (a);
 CREATE
@@ -68,6 +66,13 @@ checkpoint;
 CHECKPOINT
 -- This query should wait for Syncrep since its WAL size for hint bits is greater than wait_for_replication_threshold
 1U&: SELECT count(*) FROM select_throttle;  <waiting ...>
+
+-- wait until fault is triggered
+select gp_wait_until_triggered_fault('wal_sender_loop', 1, dbid) from gp_segment_configuration where role='p' and content = 1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
 
 -- check if the above query is waiting on SyncRep in pg_stat_activity
 SELECT is_query_waiting_for_syncrep(50, 'SELECT count(*) FROM select_throttle;');
@@ -156,6 +161,13 @@ CHECKPOINT
 -- This query should wait for Syncrep since its WAL size for hint bits is greater than wait_for_replication_threshold
 1U&: SELECT count(*) FROM select_throttle;  <waiting ...>
 
+-- wait until fault is triggered
+select gp_wait_until_triggered_fault('wal_sender_loop', 1, dbid) from gp_segment_configuration where role='p' and content = 1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
 -- check if the above query is waiting on SyncRep in pg_stat_activity
 SELECT is_query_waiting_for_syncrep(50, 'SELECT count(*) FROM select_throttle;');
  is_query_waiting_for_syncrep 
@@ -199,49 +211,6 @@ select content, role, preferred_role, mode, status from gp_segment_configuration
  count 
 -------
  33327 
-(1 row)
-
--- Cleanup
-1U: RESET gp_disable_tuple_hints;
-RESET
--- reset the mirror down grace period back to its default value.
--- the 1Uq and 1U pair will force a wait on the config reload.
-!\retcode gpconfig -r gp_fts_mark_mirror_down_grace_period;
--- start_ignore
-20230428:13:32:53:1967437 gpconfig:station6:pivotal-[INFO]:-completed successfully with parameters '-r gp_fts_mark_mirror_down_grace_period'
-
--- end_ignore
-(exited with code 0)
-!\retcode gpstop -u;
--- start_ignore
-20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-Starting gpstop with args: -u
-20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-Gathering information and validating the environment...
-20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-Obtaining Greenplum Coordinator catalog information
-20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-Obtaining Segment details from coordinator...
-20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-Greenplum Version: 'postgres (Greenplum Database) 7.0.0-beta.1+dev.82.g0281df93bb6 build dev'
-20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-Signalling all postmaster processes to reload
-20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:---------------------------------------------
-20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-Some segment postmasters were not reloaded
-20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:---------------------------------------------
-20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-   Host       Datadir                                                                          Port   Status
-20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:-   station6   /home/pivotal/workspace/gpdb/gpAux/gpdemo/datadirs/dbfast_mirror2/demoDataDir1   7006   d
-20230428:13:32:53:1967844 gpstop:station6:pivotal-[INFO]:---------------------------------------------
-
--- end_ignore
-(exited with code 1)
-1Uq: ... <quitting>
-1U: show gp_fts_mark_mirror_down_grace_period;
- gp_fts_mark_mirror_down_grace_period 
---------------------------------------
- 30s                                  
-(1 row)
-
-ALTER SYSTEM RESET wait_for_replication_threshold;
-ALTER
-SELECT pg_reload_conf();
- pg_reload_conf 
-----------------
- t              
 (1 row)
 
 !\retcode gprecoverseg -av;
@@ -771,3 +740,119 @@ SELECT wait_until_all_segments_synchronized();
 --------------------------------------
  OK                                   
 (1 row)
+
+-- Test 3:
+-- Just like Test 2, but with VACUUM instead of SELECT, so exclusive buffer lock
+-- will be acquired instead of shared lock.
+
+-- Setup:
+-- set mirror down grace period to zero to instantly mark mirror down.
+-- the 1Uq and 1U pair will force a wait on the config reload.
+!\retcode gpconfig -c gp_fts_mark_mirror_down_grace_period -v 2;
+(exited with code 0)
+!\retcode gpstop -u;
+(exited with code 0)
+1Uq: ... <quitting>
+1U: show gp_fts_mark_mirror_down_grace_period;
+ gp_fts_mark_mirror_down_grace_period 
+--------------------------------------
+ 2s                                   
+(1 row)
+set gp_disable_tuple_hints = off;
+SET
+
+create table vacuum_throttle(a int);
+CREATE
+insert into vacuum_throttle select * from generate_series(1,1000);
+INSERT 1000
+delete from vacuum_throttle;
+DELETE 1000
+checkpoint;
+CHECKPOINT
+select gp_inject_fault_infinite('wal_sender_loop', 'suspend', dbid) FROM gp_segment_configuration WHERE role = 'p' and content = 1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+checkpoint;
+CHECKPOINT
+1&: vacuum vacuum_throttle;  <waiting ...>
+
+-- wait until fault is triggered
+select gp_wait_until_triggered_fault('wal_sender_loop', 1, dbid) from gp_segment_configuration where role='p' and content = 1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- check if the above query is waiting on SyncRep in pg_stat_activity
+select is_query_waiting_for_syncrep(50, 'vacuum vacuum_throttle;');
+ is_query_waiting_for_syncrep 
+------------------------------
+ t                            
+(1 row)
+
+-- this shouldn't stuck
+2: checkpoint;
+CHECKPOINT
+
+-- stop the mirror should turn off syncrep
+SELECT pg_ctl(datadir, 'stop', 'immediate') FROM gp_segment_configuration WHERE content=1 AND role = 'm';
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+-- reset walsender and let it exit so that mirror stop can be detected
+select gp_inject_fault('wal_sender_loop', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' and content = 1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- perform fts probe scan and verify that mirror is down
+select wait_for_mirror_down(1::smallint, 30);
+ wait_for_mirror_down 
+----------------------
+ t                    
+(1 row)
+select content, role, preferred_role, mode, status from gp_segment_configuration where content = 1;
+ content | role | preferred_role | mode | status 
+---------+------+----------------+------+--------
+ 1       | p    | p              | n    | u      
+ 1       | m    | m              | n    | d      
+(2 rows)
+
+-- after mirror is stopped, the VACUUM query should proceed without waiting for syncrep
+1<:  <... completed>
+VACUUM
+
+!\retcode gprecoverseg -av;
+(exited with code 0)
+SELECT wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+
+-- Cleanup
+reset gp_disable_tuple_hints;
+RESET
+-- reset the mirror down grace period back to its default value.
+-- the 1Uq and 1U pair will force a wait on the config reload.
+!\retcode gpconfig -r gp_fts_mark_mirror_down_grace_period;
+(exited with code 0)
+!\retcode gpstop -u;
+(exited with code 0)
+1Uq: ... <quitting>
+1U: show gp_fts_mark_mirror_down_grace_period;
+ gp_fts_mark_mirror_down_grace_period 
+--------------------------------------
+ 30s                                  
+(1 row)
+
+!\retcode gpconfig -r wait_for_replication_threshold;
+(exited with code 0)
+!\retcode gpstop -u;
+(exited with code 0)
+

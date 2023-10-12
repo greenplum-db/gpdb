@@ -315,7 +315,13 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 	}
 	else if (ec == MemoryFailure_VmemExhausted)
 	{
-		elog(LOG, "Logging memory usage for reaching Vmem limit");
+		/*
+		 * The memory usage have reached Vmem limit, it will loop in gp_malloc
+		 * and gp_failed_to_alloc if new allocation happens, and then errors out
+		 * with "ERRORDATA_STACK_SIZE exceeded". We are therefore printing the
+		 * log message header using write_stderr.
+		 */
+		write_stderr("Logging memory usage for reaching Vmem limit");
 	}
 	else if (ec == MemoryFailure_SystemMemoryExhausted)
 	{
@@ -330,7 +336,10 @@ static void gp_failed_to_alloc(MemoryAllocationStatus ec, int en, int sz)
 	}
 	else if (ec == MemoryFailure_ResourceGroupMemoryExhausted)
 	{
-		elog(LOG, "Logging memory usage for reaching resource group limit");
+		/*
+		 * The behavior in resgroup group mode is the same as MemoryFailure_VmemExhausted.
+		 */
+		write_stderr("Logging memory usage for reaching resource group limit");
 	}
 	else
 		elog(ERROR, "Unknown memory failure error code");

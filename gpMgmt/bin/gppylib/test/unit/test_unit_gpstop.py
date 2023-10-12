@@ -11,7 +11,7 @@ from mock import Mock, call, patch
 from gppylib.gparray import Segment, GpArray, SegmentPair
 from gppylib.test.unit.gp_unittest import GpTestCase, run_tests
 from gppylib.commands import base
-from gppylib.commands.base import Command, WorkerPool
+from gppylib.commands.base import Command, WorkerPool, CommandResult
 from gppylib.commands.gp import GpSegStopCmd
 from gppylib.mainUtils import ProgramArgumentValidationException
 
@@ -56,6 +56,8 @@ class GpStop(GpTestCase):
             patch('gpstop.base.WorkerPool'),
             patch('gpstop.socket.gethostname'),
             patch('gpstop.print_progress'),
+            patch('gpstop.userinput', return_value=Mock(spec=['ask_string'])),
+            patch('gppylib.commands.base.Command')
         ])
 
         sys.argv = ["gpstop"]  # reset to relatively empty args list
@@ -66,6 +68,9 @@ class GpStop(GpTestCase):
         self.mock_gparray = self.get_mock_from_apply_patch('initFromCatalog')
         self.mock_gparray.return_value = self.gparray
         self.mock_socket = self.get_mock_from_apply_patch('gethostname')
+        self.mock_userinput = self.get_mock_from_apply_patch('userinput')
+        self.mock_cmd = self.get_mock_from_apply_patch('Command')
+        self.mock_conn = self.get_mock_from_apply_patch('connect')
 
     def tearDown(self):
         super(GpStop, self).tearDown()
@@ -98,7 +103,6 @@ class GpStop(GpTestCase):
 
     def get_error_messages(self):
         return [args[0][0] for args in self.subject.logger.error.call_args_list]
-
 
     @patch('gpstop.userinput', return_value=Mock(spec=['ask_yesno']))
     def test_option_master_success_without_auto_accept(self, mock_userinput):
@@ -406,6 +410,105 @@ class GpStop(GpTestCase):
         self.assertTrue("Stopping master standby host smdw mode=fast" not in log_message)
         self.assertTrue("No standby master host configured" not in log_message)
 
+    @patch('gpstop.gp.GpStart')
+    def test_gpstop_fast_if_previous_gpstop_was_interrupted(self, mockGpStart):
+        sys.argv = ["gpstop", "-a"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        self.mock_conn.side_effect = Exception('the database system is shutting down')
+        self.mock_userinput.ask_string.return_value = 'f'
+        self.mock_cmd.results = CommandResult(0, ''.encode(), ''.encode(), True, False)
+        self.mock_cmd.get_return_code.return_value = 0
+        mockGpStart.return_value = self.mock_cmd
+        gpstop = self.subject.GpStop.createProgram(options, args)
+        gpstop.run()
+
+        self.assertEqual(self.mock_userinput.ask_string.call_count, 1)
+        self.subject.logger.warning.assert_any_call("The database is currently in the process of shutting down.")
+        self.subject.logger.info.assert_any_call("Your choice was 'f'")
+        self.subject.logger.info.assert_any_call("Stopping the master to finish the database shutdown")
+        self.subject.logger.info.assert_any_call("Running gpstart in master_only mode.")
+        self.subject.logger.info.assert_any_call("Database successfully shutdown with no errors reported")
+
+    @patch('gpstop.gp.GpStart')
+    def test_gpstop_immediate_if_previous_gpstop_was_interrupted(self, mockGpStart):
+        sys.argv = ["gpstop", "--host", "sdw1"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        self.mock_conn.side_effect = Exception('the database system is shutting down')
+        self.mock_userinput.ask_string.return_value = 'i'
+        self.mock_cmd.results = CommandResult(0, ''.encode(), ''.encode(), True, False)
+        self.mock_cmd.get_return_code.return_value = 0
+        mockGpStart.return_value = self.mock_cmd
+        gpstop = self.subject.GpStop.createProgram(options, args)
+        gpstop.run()
+
+        self.assertEqual(self.mock_userinput.ask_string.call_count, 1)
+        self.subject.logger.warning.assert_any_call("The database is currently in the process of shutting down.")
+        self.subject.logger.info.assert_any_call("Your choice was 'i'")
+        self.subject.logger.info.assert_any_call("Stopping the master to finish the database shutdown")
+        self.subject.logger.info.assert_any_call("Running gpstart in master_only mode.")
+        self.subject.logger.info.assert_any_call("Database successfully shutdown with no errors reported")
+
+    @patch('gpstop.gp.GpStart')
+    def test_gpstop_fails_to_start_master_after_interrupt(self, mockGpstart):
+        sys.argv = ["gpstop", "-am"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        self.mock_conn.side_effect = Exception('the database system is shutting down')
+        self.mock_userinput.ask_string.return_value = 'f'
+        self.mock_cmd.run.side_effect = Exception('error')
+        mockGpstart.return_value = self.mock_cmd
+
+        gpstop = self.subject.GpStop.createProgram(options, args)
+        with self.assertRaisesRegexp(Exception, 'Unable to start the cluster in master_only mode: error'):
+            gpstop.run()
+
+    @patch('gpstop.gp.MasterStop')
+    def test_gpstop_fails_to_stop_master_processes_after_interrupt(self, mockMasterStop):
+        sys.argv = ["gpstop", "-am"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        self.mock_conn.side_effect = Exception('the database system is shutting down')
+        self.mock_userinput.ask_string.return_value = 'f'
+        self.mock_cmd.run.side_effect = Exception('error')
+        mockMasterStop.return_value = self.mock_cmd
+
+        gpstop = self.subject.GpStop.createProgram(options, args)
+        with self.assertRaisesRegexp(Exception, 'Unable to stop the master: error'):
+            gpstop.run()
+
+    def test_gpstop_sighup_option_after_interrupt(self):
+        sys.argv = ["gpstop", "-u"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        self.mock_conn.side_effect = Exception('the database system is shutting down')
+        gpstop = self.subject.GpStop.createProgram(options, args)
+        with self.assertRaises(SystemExit):
+            gpstop.run()
+
+        self.subject.logger.warning.assert_any_call("The database is currently in the process of shutting down.")
+        self.subject.logger.fatal.assert_any_call("Cannot send SIGHUP to postmaster as the database is shutting down. "
+                                                  "Please run 'gpstop' to complete the shutdown process.")
+
+    @patch('gpstop.GpArray.initFromCatalog')
+    def test_gpstop_raise_exception_other_than_database_system_shutting_down(self, mock_initFromCatalog):
+        sys.argv = ["gpstop", "-a"]
+        parser = self.subject.GpStop.createParser()
+        options, args = parser.parse_args()
+
+        self.mock_conn.side_effect = Exception('unexpected exception')
+        mock_initFromCatalog.side_effect = [Exception('unexpected exception')]
+
+        gpstop = self.subject.GpStop.createProgram(options, args)
+        with self.assertRaisesRegexp(Exception, 'unexpected exception'):
+            gpstop.run()
+
 
 # Perform an 'import gpstop', as above.
 _gpstop_file = os.path.abspath(os.path.dirname(__file__) + "/../../../gpstop")
@@ -562,3 +665,5 @@ class GpStopSmartModeTestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     run_tests()
+
+

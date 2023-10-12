@@ -205,12 +205,10 @@ groups:
   jobs:
   - gate_compile_start
   - compile_gpdb_[[ compile_platform ]]
-  {% if os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
   - prepare_binary_swap_gpdb_[[ os_type ]]
-  {% endif %}
   - test_gpdb_clients_[[ os_type ]]
-  {% if os_type != "rhel8" and os_type != "oel8" and os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
-  - Publish Server Builds
+  {% if os_type == compile_platform  %}
+  - publish_server_builds
   {% endif %}
   {% if os_type == default_os_type %}
   - check_format
@@ -220,7 +218,7 @@ groups:
   - test_gpdb_clients_windows
   {% endif %}
   - gate_compile_end
-{% if "ICW" in test_sections %}
+{% if "icw" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_icw_start
   - icw_gporca_[[ os_type ]]
@@ -247,7 +245,7 @@ groups:
   - gate_icw_end
 {% endif %}
 
-{% if "CLI" in test_sections %}
+{% if "cli" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_cli_start
   {% if os_type == "centos6" or os_type == "centos7" %}
@@ -262,57 +260,48 @@ groups:
   - gate_cli_end
 {% endif %}
 
-{% if "AA" in test_sections %}
+{% if "aa" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_advanced_analytics_start
   - madlib_build_gppkg_[[ os_type ]]
-  - MADlib_Test_orca_[[ os_type ]]
-  - MADlib_Test_planner_[[ os_type ]]
+  - madlib_test_orca_[[ os_type ]]
+  - madlib_test_planner_[[ os_type ]]
   - gate_advanced_analytics_end
 {% endif %}
 
 
 ## ======================================================================
-{% if "Release" in test_sections or build_test_rc_rpm or directed_release %}
-{% if os_type != "rhel8" and os_type != "oel8" %}
-{% if os_type == "rocky9" %}
-- name: Release
+{% if "release" in test_sections or build_test_rc_rpm or directed_release %}
+{% if os_type == compile_platform  %}
+- name: release
   jobs:
-  - gate_compile_end
-  - gate_release_candidate_start
-  - Release_Candidate
-{% elif os_type != "oel9" and os_type != "rhel9" %}
-- name: Release
-  jobs:
-{% if "Release" in test_sections or directed_release %}
+{% if "release" in test_sections or directed_release %}
   - gate_icw_end
   - gate_cli_end
   - gate_advanced_analytics_end
   - gate_release_candidate_start
-  - Release_Candidate
+  - release_candidate
 {% endif %}
 
 {% if not directed_release %}
   {% if os_type != "ubuntu20.04" %}
-  - Build_Release_Candidate_RPMs
+  - build_release_candidate_rpms
   {% endif %}
 {% endif %}
 
-{% endif %}
+
 {% endif %}
 {% endif %}
 ## ======================================================================
 
-- name: Compile
+- name: compile
   jobs:
   - gate_compile_start
   - compile_gpdb_[[ compile_platform ]]
-  {% if os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
   - prepare_binary_swap_gpdb_[[ os_type ]]
-  {% endif %}
   - test_gpdb_clients_[[ os_type ]]
-  {% if os_type != "rhel8" and os_type != "oel8" and os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
-  - Publish Server Builds
+  {% if os_type == compile_platform  %}
+  - publish_server_builds
   {% endif %}
   {% if os_type == default_os_type %}
   - check_format
@@ -323,10 +312,10 @@ groups:
   {% endif %}
   - gate_compile_end
 
-{% if "ICW" in test_sections %}
+{% if "icw" in test_sections %}
 ## ======================================================================
 
-- name: ICW
+- name: icw
   jobs:
   - gate_compile_end
   - gate_icw_start
@@ -354,10 +343,10 @@ groups:
   - gate_icw_end
 {% endif %}
 
-{% if "CLI" in test_sections %}
+{% if "cli" in test_sections %}
 ## ======================================================================
 
-- name: CLI
+- name: cli
   jobs:
   - gate_compile_end
   - gate_cli_start
@@ -373,14 +362,14 @@ groups:
   - gate_cli_end
 {% endif %}
 
-{% if "AA" in test_sections %}
-- name: AdvancedAnalytics
+{% if "aa" in test_sections %}
+- name: advancedanalytics
   jobs:
   - gate_compile_end
   - gate_advanced_analytics_start
   - madlib_build_gppkg_[[ os_type ]]
-  - MADlib_Test_orca_[[ os_type ]]
-  - MADlib_Test_planner_[[ os_type ]]
+  - madlib_test_orca_[[ os_type ]]
+  - madlib_test_planner_[[ os_type ]]
   - gate_advanced_analytics_end
 {% endif %}
 
@@ -417,8 +406,8 @@ resource_types:
 
 resources:
 #used in test_gpdb_clients_windows and the job only created when os_type == default_os_type
-# also used in ICW and CLI section jobs
-{% if os_type == default_os_type or "CLI" in test_sections or "ICW" in test_sections %}
+# also used in icw and cli section jobs
+{% if os_type == default_os_type or "cli" in test_sections or "icw" in test_sections %}
 - name: ccp_src
   type: git
   source:
@@ -435,7 +424,7 @@ resources:
     versioned_file: plugin-cache.tgz
   type: s3
 {% endif %}
-{% if "CLI" in test_sections or "ICW" in test_sections %}
+{% if "cli" in test_sections or "icw" in test_sections %}
 - name: terraform
   <<: *terraform_cluster
 
@@ -446,7 +435,7 @@ resources:
     tag: 'latest'
 {% endif %}
 
-{% if "CLI" in test_sections %}
+{% if "cli" in test_sections %}
 - name: terraform_1
   <<: *terraform_cluster
 
@@ -460,7 +449,7 @@ resources:
     tag: latest
 {% endif %}
 
-{% if "ICW" in test_sections %}
+{% if "icw" in test_sections %}
 - name: icw_planner_[[ os_type ]]_dump
   type: gcs
   source:
@@ -501,15 +490,20 @@ resources:
     bucket: pivotal-gpdb-concourse-resources-intermediates-prod
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: gpdb-package-testing/deb_gpdb_ubuntu20.04/greenplum-db-6-ubuntu20.04-amd64.deb
+{% elif compile_platform == "rocky9" %}
+- name: gpdb_package_rocky9
+  type: gcs
+  source:
+    bucket: pivotal-gpdb-concourse-resources-intermediates-prod
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: gpdb-package-testing/rpm_gpdb_rocky9/gpdb6/greenplum-db-6-rhel9-x86_64.rpm
 {% else %}
-{% if os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
 - name: previous_gpdb
   type: pivnet
   source:
     api_token: ((pivotal-gpdb-pivnet-api-token))
     product_slug: pivotal-gpdb
     product_version: ((pivotal-gpdb-pivnet-product-version))
-{% endif %}
 {% endif %}
 
 {% if os_type != compile_platform  %}
@@ -526,8 +520,8 @@ resources:
     {% endif %}
 {% endif %}
 
-  {% if ( os_type == compile_platform ) or ( os_type != compile_platform and "ICW" in test_sections) %}
-   # for os_type oel8 and rhel8, gpdb6-oel8-build and gpdb6-rhel8-build is only used in ICW job: unit_tests_gporca_[[os_type]]
+  {% if ( os_type == compile_platform ) or ( os_type != compile_platform and "icw" in test_sections) %}
+   # for os_type oel8 and rhel8, gpdb6-oel8-build and gpdb6-rhel8-build is only used in icw job: unit_tests_gporca_[[os_type]]
 - name: gpdb6-[[ os_type ]]-build
   type: registry-image
   source:
@@ -605,9 +599,9 @@ resources:
     versioned_file: ((pipeline-name))/bin_gpdb_clients_[[ os_type ]]_without_scram-sha-256/bin_gpdb_clients.tar.gz
 {% endif %}
 
-{% if "Release" in test_sections or directed_release %}
+{% if "release" in test_sections or directed_release %}
 {% if not directed_release %}
-{% if os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
+
 - name: bin_gpdb_icw_green
   type: s3
   source:
@@ -616,9 +610,9 @@ resources:
     region_name: ((aws-region))
     secret_access_key: ((aws-bucket-secret-access-key))
     versioned_file: bin_gpdb/gpdb_branch_6X_STABLE/icw_green/bin_gpdb.tar.gz
-{% endif %}
 
-{% if os_type != "rhel8" and os_type != "oel8"  and os_type != "rhel9" and os_type != "oel9" %}
+
+{% if os_type == compile_platform  %}
 - name: bin_gpdb_clients_[[ os_type ]]_rc
   type: gcs
   source:
@@ -655,8 +649,8 @@ resources:
 {% endif %}
 {% endif %}
 
-{% if "Release" in test_sections and not directed_release %}
-{% if os_type != "oel8" and os_type != "rhel8" and os_type != "rhel9" and os_type != "oel9" %}
+{% if "release" in test_sections and not directed_release %}
+{% if os_type == compile_platform  %}
 - name: bin_gpdb_[[ os_type ]]_rc
   type: gcs
   source:
@@ -679,8 +673,8 @@ resources:
     regexp: server/published/gpdb6/server-rc-(.*)-rhel7_x86_64((rc-build-type-gcs)).tar.gz
 {% endif %}
 
-{% if not directed_release and "Release" in test_sections or build_test_rc_rpm %}
-{% if os_type != "ubuntu20.04" and os_type != "rhel8" and os_type != "oel8" and os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
+{% if not directed_release and "release" in test_sections or build_test_rc_rpm %}
+{% if os_type != "ubuntu20.04" and os_type == compile_platform  %}
 - name: gpdb_rpm_installer_[[ os_type ]]
   type: gcs
   source:
@@ -692,7 +686,6 @@ resources:
     regexp: server/published/gpdb6/greenplum-db-(.*)-[[ os_type ]]-x86_64((rc-build-type-gcs)).rpm
 {% endif %}
 
-{% if os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
 - name: greenplum-database-release
   type: git
   icon: git
@@ -707,22 +700,18 @@ resources:
     bucket: ((gcs-bucket-for-oss))
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: osl/released/gpdb6/open_source_license_greenplum-database-6.0.0-97773a0-(.*).txt
+
 {% endif %}
 {% endif %}
 
-{% endif %}
-
-
-{% if os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
 - name: binary_swap_gpdb_[[ os_type ]]
   type: gcs
   source:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
     versioned_file: ((pipeline-name))/binary_swap_gpdb_[[ os_type ]]/bin_gpdb.tar.gz
-{% endif %}
 
-{% if os_type != "rhel8" and os_type != "oel8" and os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
+{% if os_type == compile_platform  %}
 - name: server-build-[[ os_type ]]
   type: gcs
   source:
@@ -779,7 +768,7 @@ resources:
 {% endif %}
 
 {% if not directed_release %}
-{% if os_type == default_os_type and "Release" in test_sections %}
+{% if os_type == default_os_type and "release" in test_sections %}
 - name: bin_gpdb_clients_windows_rc
   type: gcs
   source:
@@ -788,7 +777,7 @@ resources:
     regexp: clients/published/gpdb6/clients-rc-*-windows_x86_64((rc-build-type-gcs)).msi
 {% endif %}
 {% endif %}
-{% if "AA" in test_sections %}
+{% if "aa" in test_sections %}
 - name: madlib_src
   type: git
   source:
@@ -845,7 +834,7 @@ resources:
     json_key: ((concourse-gcs-resources-service-account-key))
     regexp: gp-internal-artifacts/madlib-snowflakes/boost_(1_61_0).tar.gz
 {% endif %}
-{% if "ICW" in test_sections %}
+{% if "icw" in test_sections %}
 
 - name: postgres_for_fdw
   type: gcs
@@ -860,8 +849,8 @@ resources:
   type: time
   source:
     location: America/Los_Angeles
-    start: ((reduced-frequency-trigger-start-[[ os_type ]]))
-    stop: ((reduced-frequency-trigger-stop-[[ os_type ]]))
+    start: (("reduced-frequency-trigger-start-[[ os_type ]]"))
+    stop: (("reduced-frequency-trigger-stop-[[ os_type ]]"))
     {% if os_type != "centos7" %}
     days: [Monday]
     {% else %}
@@ -974,7 +963,6 @@ jobs:
           file: gpdb_artifacts/bin_gpdb_clients.tar.gz
 {% endif %}
 
-{% if os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
 - name: prepare_binary_swap_gpdb_[[ os_type ]]
   plan:
   - in_parallel:
@@ -985,6 +973,9 @@ jobs:
       {% if os_type == "ubuntu20.04" %}
       - get: gpdb_package
         resource: gpdb_package_ubuntu20.04
+      {% elif compile_platform == "rocky9" %}
+      - get: gpdb_package
+        resource: gpdb_package_rocky9
       {% else %}
       - get: gpdb_package
         resource: previous_gpdb
@@ -1008,7 +999,6 @@ jobs:
   - put: binary_swap_gpdb_[[ os_type ]]
     params:
       file: gpdb_artifacts/bin_gpdb.tar.gz
-{% endif %}
 
 - name: test_gpdb_clients_[[ os_type ]]
   plan:
@@ -1134,8 +1124,9 @@ jobs:
     get_params:
       action: destroy
 {% endif %}
-{% if os_type != "rhel8" and os_type != "oel8" and os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
-- name: Publish Server Builds
+{% if os_type == compile_platform  %}
+- name: publish_server_builds
+  old_name: Publish Server Builds
   plan:
   - in_parallel:
       steps:
@@ -1146,7 +1137,7 @@ jobs:
       - get: bin_gpdb
         passed: [compile_gpdb_[[ compile_platform ]]]
       - get: gpdb6-[[ os_type ]]-build
-  - task: rename server build artifacts
+  - task: rename_server_build_artifacts
     image: gpdb6-[[ os_type ]]-build
     config:
       platform: linux
@@ -1177,12 +1168,10 @@ jobs:
       params:
         skip_download: 'true'
       passed:
-        {% if os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
         - prepare_binary_swap_gpdb_[[ os_type ]]
-        {% endif %}
         - test_gpdb_clients_[[ os_type ]]
-        {% if os_type != "rhel8" and os_type != "oel8" and os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
-        - Publish Server Builds
+        {% if os_type == compile_platform  %}
+        - publish_server_builds
         {% endif %}
         {% if os_type == default_os_type %}
         - test_gpdb_clients_sles12
@@ -1193,24 +1182,22 @@ jobs:
         skip_download: 'true'
       passed:
       - test_gpdb_clients_[[ os_type ]]
-      {% if os_type != "rhel8" and os_type != "oel8" and os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
-      - Publish Server Builds
+      {% if os_type == compile_platform  %}
+      - publish_server_builds
       {% endif %}
     - get: bin_gpdb_clients
       params:
         skip_download: 'true'
       passed: [test_gpdb_clients_[[ os_type ]]]
-    {% if os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
     - get: binary_swap_gpdb_[[ os_type ]]
       params:
         skip_download: 'true'
       passed: [ prepare_binary_swap_gpdb_[[ os_type ]] ]
-    {% endif %}
-    {% if os_type != "rhel8" and os_type != "oel8" and os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
+    {% if os_type == compile_platform  %}
     - get: server-build-[[ os_type ]]
       params:
         skip_download: 'true'
-      passed: [Publish Server Builds]
+      passed: [publish_server_builds]
     {% endif %}
     {% if os_type == "centos6" or os_type == "centos7" or os_type == "rhel8" %}
     - get: bin_gpdb_[[ os_type ]]_without_scram-sha-256
@@ -1238,7 +1225,7 @@ jobs:
     {% endif %}
 
 
-{% if "ICW" in test_sections %}
+{% if "icw" in test_sections %}
 ## ======================================================================
 ##  ___ ______        __
 ## |_ _/ ___\ \      / /
@@ -1745,6 +1732,8 @@ jobs:
         GPINITSYSTEM_CONFIG: gpdb_src/concourse/scripts/configurations/pg_upgrade_gpinitsystem_config
     - task: gpinitsystem
       file: ccp_src/ci/tasks/gpinitsystem.yml
+      params:
+        PLATFORM: [[ os_type ]]
     - task: test_upgrade
       file: gpdb_src/concourse/tasks/test_upgrade.yml
       input_mapping:
@@ -1868,14 +1857,14 @@ jobs:
           skip_download: 'true'
         passed: [ unit_tests_gporca_[[ os_type ]] ]
       {% endif %}
-{% if not directed_release and "Release" in test_sections %}
+{% if not directed_release and "release" in test_sections %}
   - put: bin_gpdb_icw_green
     params:
       file: bin_gpdb/bin_gpdb.tar.gz
 {% endif %}
 {% endif %}
 
-{% if "CLI" in test_sections %}
+{% if "cli" in test_sections %}
 ## ======================================================================
 ##   ____ _     ___
 ##  / ___| |   |_ _|
@@ -1977,6 +1966,8 @@ jobs:
           {% endif %}
           - task: gpinitsystem
             file: ccp_src/ci/tasks/gpinitsystem.yml
+            params:
+              PLATFORM: [[ os_type ]]
           - task: [[ test.name ]]_concourse_cluster_tests
             file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
             image: ccp-image
@@ -2135,6 +2126,7 @@ jobs:
       file: ccp_src/ci/tasks/gpinitsystem.yml
       params:
         GPINIT_STANDBY_COORDINATOR: '-s cdw-2'
+        PLATFORM: [[ os_type ]]
     - task: cross_subnet_tests
       file: gpdb_src/concourse/tasks/run_behave_on_ccp_cluster.yml
       image: ccp-image
@@ -2196,6 +2188,8 @@ jobs:
         <<: *ccp_gen_cluster_default_params
     - task: gpinitsystem
       file: ccp_src/ci/tasks/gpinitsystem.yml
+      params:
+        PLATFORM: [[ os_type ]]
     - task: run_tests
       file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
       image: ccp-image
@@ -2243,9 +2237,9 @@ jobs:
             passed:
             - resource_group_[[ os_type ]]
 
-{% endif %} # end CLI test_sections
+{% endif %} # end cli test_sections
 
-{% if "AA" in test_sections %}
+{% if "aa" in test_sections %}
 ## ======================================================================
 ##     _        _
 ##    / \      / \
@@ -2339,7 +2333,8 @@ jobs:
       params:
         file: madlib_master_artifacts_[[ os_type ]]/madlib-*.gppkg
 {% endif %}
-- name: MADlib_Test_planner_[[ os_type ]]
+- name: madlib_test_planner_[[ os_type ]]
+  old_name: MADlib_Test_planner_[[ os_type ]]
   plan:
   - in_parallel:
       steps:
@@ -2364,7 +2359,7 @@ jobs:
         resource: madlib_gppkg_[[ os_type ]]
       {% endif %}
         passed: [madlib_build_gppkg_[[ os_type ]]]
-  - task: MADlib_Test
+  - task: madlib_test
     {% if os_type == "ubuntu20.04" %}
     file: madlib_ci/concourse/tasks/madlib_master_ic_gpdb_ubuntu.yml
     image: gpdb6-[[ os_type ]]-test
@@ -2383,7 +2378,8 @@ jobs:
       DBVER: gpdb6
     {% endif %}
 
-- name: MADlib_Test_orca_[[ os_type ]]
+- name: madlib_test_orca_[[ os_type ]]
+  old_name: MADlib_Test_orca_[[ os_type ]]
   plan:
   - in_parallel:
       steps:
@@ -2408,7 +2404,7 @@ jobs:
         resource: madlib_gppkg_[[ os_type ]]
       {% endif %}
         passed: [madlib_build_gppkg_[[ os_type ]]]
-  - task: MADlib_Test
+  - task: madlib_test
     {% if os_type == "ubuntu20.04" %}
     file: madlib_ci/concourse/tasks/madlib_master_ic_gpdb_ubuntu.yml
     image: gpdb6-[[ os_type ]]-test
@@ -2435,19 +2431,19 @@ jobs:
             params:
               skip_download: 'true'
             passed:
-              - MADlib_Test_orca_[[ os_type ]]
-              - MADlib_Test_planner_[[ os_type ]]
+              - madlib_test_orca_[[ os_type ]]
+              - madlib_test_planner_[[ os_type ]]
             trigger: true
           - get: bin_gpdb
             params:
               skip_download: 'true'
             passed:
-              - MADlib_Test_orca_[[ os_type ]]
-              - MADlib_Test_planner_[[ os_type ]]
+              - madlib_test_orca_[[ os_type ]]
+              - madlib_test_planner_[[ os_type ]]
 
 {% endif %}
 
-{% if "Release" in test_sections or build_test_rc_rpm or directed_release %}
+{% if "release" in test_sections or build_test_rc_rpm or directed_release %}
 ## ======================================================================
 ##  ____      _
 ## |  _ \ ___| | ___  __ _ ___  ___
@@ -2455,8 +2451,8 @@ jobs:
 ## |  _ <  __/ |  __/ (_| \__ \  __/
 ## |_| \_\___|_|\___|\__,_|___/\___|
 ## ======================================================================
-{% if os_type != "rhel8" and os_type != "oel8" and os_type != "rhel9" and os_type != "oel9" %}
-{% if "Release" in test_sections or directed_release %}
+{% if os_type == compile_platform %}
+{% if "release" in test_sections or directed_release %}
 - name: gate_release_candidate_start
   plan:
   - in_parallel:
@@ -2466,33 +2462,21 @@ jobs:
         params:
           skip_download: 'true'
         passed:
-        {% if os_type == "rocky9" %}
-        - gate_compile_end
-        {% else %}
         - gate_icw_end
         - gate_cli_end
         - gate_advanced_analytics_end
-        {% endif %}
       - get: bin_gpdb
         params:
           skip_download: 'true'
         passed:
-        {% if os_type == "rocky9" %}
-        - gate_compile_end
-        {% else %}
         - gate_icw_end
         - gate_cli_end
         - gate_advanced_analytics_end
-        {% endif %}
       - get: bin_gpdb_clients
         params:
           skip_download: 'true'
         passed:
-        {% if os_type == "rocky9" %}
-        - gate_compile_end
-        {% else %}
         - gate_icw_end
-        {% endif %}
       {% if os_type == default_os_type %}
       - get: bin_gpdb_sles12
         params:
@@ -2508,7 +2492,8 @@ jobs:
         passed: [ gate_icw_end ]
       {% endif %}
 
-- name: Release_Candidate
+- name: release_candidate
+  old_name: Release_Candidate
   plan:
   - in_parallel:
       steps:
@@ -2580,11 +2565,9 @@ jobs:
   - in_parallel:
       steps:
 {% if not directed_release %}
-      {% if os_type != "rhel9" and os_type != "oel9" %}
       - put: bin_gpdb_[[ os_type ]]_rc
         params:
           file: "release_candidates/server-rc-*[[ dist ]]*.tar.gz"
-      {% endif %}
       - put: bin_gpdb_clients_[[ os_type ]]_rc
         params:
           file: "release_candidates/clients-rc-*[[ dist ]]*.tar.gz"
@@ -2605,8 +2588,9 @@ jobs:
 {% endif %}
 
 {% if not directed_release %}
-{% if os_type != "ubuntu20.04" and os_type != "rhel9" and os_type != "oel9" and os_type != "rocky9" %}
-- name: Build_Release_Candidate_RPMs
+{% if os_type != "ubuntu20.04"%}
+- name: build_release_candidate_rpms
+  old_name: Build_Release_Candidate_RPMs
   plan:
   - in_parallel:
       steps:

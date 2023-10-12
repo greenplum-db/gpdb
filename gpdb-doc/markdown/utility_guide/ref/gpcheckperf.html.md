@@ -7,7 +7,7 @@ Verifies the baseline hardware performance of the specified hosts.
 ```
 gpcheckperf -d <test_directory> [-d <test_directory> ...] 
     {-f <hostfile_gpcheckperf> | - h <hostname> [-h hostname ...]} 
-    [-r ds] [-B <block_size>] [-S <file_size>] [-D] [-v|-V]
+    [-r ds] [-B <block_size>] [-S <file_size>] [--buffer-size <buffer_size>] [-D] [-v|-V]
 
 gpcheckperf -d <temp_directory>
     {-f <hostfile_gpchecknet> | - h <hostname> [-h< hostname> ...]} 
@@ -36,6 +36,9 @@ Before using `gpcheckperf`, you must have a trusted host setup between the hosts
 
 -B block\_size
 :   Specifies the block size \(in KB or MB\) to use for disk I/O test. The default is 32KB, which is the same as the Greenplum Database page size. The maximum block size is 1 MB.
+
+--buffer-size buffer_size 
+:    Specifies the size of the send buffer in kilobytes. Default size is 32 kilobytes.
 
 -d test\_directory
 :   For the disk I/O test, specifies the file system directory locations to test. You must have write access to the test directory on all hosts involved in the performance test. You can use the `-d` option multiple times to specify multiple test directories \(for example, to test disk I/O of your primary and mirror data directories\).

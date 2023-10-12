@@ -9185,7 +9185,7 @@ CREATE FUNCTION sum_combinefunc(anyelement,anyelement) returns anyelement AS 'se
 CREATE AGGREGATE myagg1(anyelement) (SFUNC = sum_sfunc, COMBINEFUNC = sum_combinefunc, STYPE = anyelement, INITCOND = '0');
 SELECT myagg1(i) FROM orca.tab1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "sum_sfunc" during startup
  myagg1 
 --------
@@ -9196,7 +9196,7 @@ CREATE FUNCTION sum_sfunc2(anyelement,anyelement,anyelement) returns anyelement 
 CREATE AGGREGATE myagg2(anyelement,anyelement) (SFUNC = sum_sfunc2, STYPE = anyelement, INITCOND = '0');
 SELECT myagg2(i,j) FROM orca.tab1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "sum_sfunc2" during startup
  myagg2 
 --------
@@ -9219,10 +9219,10 @@ INSERT INTO array_table values(7,array[3],'a');
 INSERT INTO array_table values(8,array[3],'b');
 SELECT f3, myagg3(f1) from (select * from array_table order by f1 limit 10) as foo GROUP BY f3 ORDER BY f3;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "gptfp" during startup
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "gpffp" during startup
  f3 | myagg3  
 ----+---------
@@ -10955,7 +10955,7 @@ CREATE FUNCTION func_enum_element(ANYENUM, ANYELEMENT) RETURNS TABLE(a ANYENUM, 
 AS $$ SELECT $1, ARRAY[$2] $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_enum_element('red'::rainbow, 'blue'::rainbow::anyelement);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "func_enum_element" during startup
   a  |   b    
 -----+--------
@@ -10968,7 +10968,7 @@ CREATE FUNCTION func_element_array(ANYELEMENT, ANYARRAY) RETURNS TABLE(a ANYELEM
 AS $$ SELECT $1, $2[1]$$ LANGUAGE SQL STABLE;
 SELECT * FROM func_element_array('red'::rainbow, ARRAY['blue'::rainbow]);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "func_element_array" during startup
   a  |  b   
 -----+------
@@ -10981,7 +10981,7 @@ CREATE FUNCTION func_element_array(ANYARRAY, ANYENUM) RETURNS TABLE(a ANYELEMENT
 AS $$ SELECT $1[1], $2 $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_element_array(ARRAY['blue'::rainbow], 'blue'::rainbow);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "func_element_array" during startup
   a   |  b   
 ------+------
@@ -10994,7 +10994,7 @@ CREATE FUNCTION func_array(ANYARRAY) RETURNS TABLE(a ANYELEMENT, b ANYENUM)
 AS $$ SELECT $1[1], $1[2] $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_array(ARRAY['blue'::rainbow, 'yellow'::rainbow]);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "func_array" during startup
   a   |   b    
 ------+--------
@@ -11007,7 +11007,7 @@ CREATE FUNCTION func_element_variadic(ANYELEMENT, VARIADIC ANYARRAY) RETURNS TAB
 AS $$ SELECT array_prepend($1, $2); $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_element_variadic(1.1, 1.1, 2.2, 3.3);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "func_element_variadic" during startup
          a         
 -------------------
@@ -11020,7 +11020,7 @@ CREATE FUNCTION func_nonarray(ANYNONARRAY) RETURNS TABLE(a ANYNONARRAY)
 AS $$ SELECT $1; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_nonarray(5);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "func_nonarray" during startup
  a 
 ---
@@ -11033,7 +11033,7 @@ CREATE FUNCTION func_nonarray_enum(ANYNONARRAY, ANYENUM) RETURNS TABLE(a ANYARRA
 AS $$ SELECT ARRAY[$1, $2]; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_nonarray_enum('blue'::rainbow, 'red'::rainbow);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "func_nonarray_enum" during startup
      a      
 ------------
@@ -11046,7 +11046,7 @@ CREATE FUNCTION func_array_nonarray_enum(ANYARRAY, ANYNONARRAY, ANYENUM) RETURNS
 AS $$ SELECT $1[1]; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_array_nonarray_enum(ARRAY['blue'::rainbow, 'red'::rainbow], 'red'::rainbow, 'yellow'::rainbow);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "func_array_nonarray_enum" during startup
   a   
 ------
@@ -11059,7 +11059,7 @@ CREATE FUNCTION return_enum_as_array(ANYENUM, ANYELEMENT, ANYELEMENT) RETURNS TA
 AS $$ SELECT $1, array[$2, $3] $$ LANGUAGE SQL STABLE;
 SELECT * FROM return_enum_as_array('red'::rainbow, 'yellow'::rainbow, 'blue'::rainbow);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+DETAIL:  Feature not supported: Query Parameter
 CONTEXT:  SQL function "return_enum_as_array" during startup
  ae  |      aa       
 -----+---------------

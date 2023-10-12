@@ -19,7 +19,6 @@
 #ifdef GPOS_FPSIMULATOR
 
 #include "gpos/common/CAutoP.h"
-#include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/memory/CMemoryPoolManager.h"
 #include "gpos/task/CAutoTraceFlag.h"
 
@@ -131,18 +130,13 @@ CFSimulator::NewStack(ULONG major, ULONG minor)
 //		Initialize global instance
 //
 //---------------------------------------------------------------------------
-GPOS_RESULT
+void
 CFSimulator::Init()
 {
-	CAutoMemoryPool amp;
-	CMemoryPool *mp = amp.Pmp();
+	CMemoryPool *mp =
+		CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
 
-	CFSimulator::m_fsim = GPOS_NEW(mp) CFSimulator(mp, GPOS_FSIM_RESOLUTION);
-
-	// detach safety
-	(void) amp.Detach();
-
-	return GPOS_OK;
+	m_fsim = GPOS_NEW(mp) CFSimulator(mp, GPOS_FSIM_RESOLUTION);
 }
 
 

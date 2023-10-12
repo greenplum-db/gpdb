@@ -761,3 +761,15 @@ def get_host_address(hostname):
     return host_address[0]
 
 
+@then('verify deletion of orphaned directory of the dropped database')
+def impl(context):
+    hostname = context.pseg_hostname
+    db_data_dir = "{0}/base/{1}".format(context.pseg_data_dir, context.db_oid)
+    cmd = Command("list directory", cmdStr="test -d {}".format(db_data_dir), ctxt=REMOTE, remoteHost=hostname)
+    cmd.run()
+    rc = cmd.get_return_code()
+    if rc == 0:
+        raise Exception('Orphaned directory:"{0}" of dropped database:"{1}" exists on host:"{2}"' .format(db_data_dir,
+                        context.db_name, hostname))
+
+

@@ -57,7 +57,7 @@ WHERE pp.paristemplate = false AND pp.parrelid = cl.oid AND pr1.paroid = pp.oid 
 
 GET_ALL_DATA_TABLES_SQL = """
 select n.nspname as schemaname, c.relname as tablename from pg_class c, pg_namespace n where
-c.relnamespace = n.oid and c.relkind='r'::char and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog') and c.oid not in (select reloid from pg_exttable)
+c.relnamespace = n.oid and (c.relkind='r'::char or c.relkind = 'm'::char) and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog') and c.oid not in (select reloid from pg_exttable)
 EXCEPT
 select distinct schemaname, tablename from (%s) AS pps1
 EXCEPT
@@ -66,7 +66,7 @@ select distinct partitionschemaname, parentpartitiontablename from (%s) AS pps2 
 
 GET_VALID_DATA_TABLES_SQL = """
 select n.nspname as schemaname, c.relname as tablename from pg_class c, pg_namespace n where
-c.relnamespace = n.oid and c.oid in (%s) and c.relkind='r'::char and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog') and c.oid not in (select reloid from pg_exttable)
+c.relnamespace = n.oid and c.oid in (%s) and  (c.relkind='r'::char or c.relkind = 'm'::char) and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog') and c.oid not in (select reloid from pg_exttable)
 """
 
 GET_REQUESTED_AO_DATA_TABLE_INFO_SQL = """
@@ -90,7 +90,7 @@ GET_REQUESTED_LAST_OP_INFO_SQL = """
 
 GET_ALL_DATA_TABLES_IN_SCHEMA_SQL = """
 select n.nspname as schemaname, c.relname as tablename from pg_class c, pg_namespace n where
-c.relnamespace = n.oid and c.relkind='r'::char and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog') and c.oid not in (select reloid from pg_exttable)
+c.relnamespace = n.oid and (c.relkind='r'::char or c.relkind = 'm'::char) and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog') and c.oid not in (select reloid from pg_exttable)
 and n.nspname = '%s'
 EXCEPT
 select distinct schemaname, tablename from (%s) AS pps1
@@ -111,7 +111,7 @@ select distinct partitionschemaname, parentpartitiontablename from (%s) AS pps1 
 
 GET_REQUESTED_NON_AO_TABLES_SQL = """
 select n.nspname as schemaname, c.relname as tablename from pg_class c, pg_namespace n where
-c.relnamespace = n.oid and c.relkind='r'::char and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog')
+c.relnamespace = n.oid and  (c.relkind='r'::char or c.relkind = 'm'::char) and (c.relnamespace >= 16384 or n.nspname = 'public' or n.nspname = 'pg_catalog')
 and c.oid not in (select relid from pg_appendonly) and c.oid in (%s) and c.oid not in (select reloid from pg_exttable)
 EXCEPT
 select distinct schemaname, tablename from (%s) AS pps1
@@ -564,7 +564,7 @@ class AnalyzeDb(Operation):
         At the same time, parse the requested columns and populate the col_dict.
         If a requested table is partitioned, expand all the leaf partitions.
         """
-        logger.info("Getting and verifying input tables...")
+        logger.info("Getting and verifying input tables and materialized views...")
         if self.single_table:
 
             # Check that the table name given on the command line is schema-qualified.

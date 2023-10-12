@@ -102,7 +102,7 @@ protected:
 
 	// Initialize global memory pool manager using given types
 	template <typename ManagerType, typename PoolType>
-	static GPOS_RESULT
+	static void
 	SetupGlobalMemoryPoolManager()
 	{
 		// raw allocation of memory for internal memory pools
@@ -110,22 +110,12 @@ protected:
 
 		GPOS_OOM_CHECK(alloc_internal);
 
-		GPOS_TRY
-		{
-			// create internal memory pool
-			CMemoryPool *internal = ::new (alloc_internal) PoolType();
+		// create internal memory pool
+		CMemoryPool *internal = ::new (alloc_internal) PoolType();
 
-			// instantiate manager
-			m_memory_pool_mgr = ::new ManagerType(internal, EMemoryPoolTracker);
-			m_memory_pool_mgr->Setup();
-		}
-		GPOS_CATCH_EX(ex)
-		{
-			gpos::clib::Free(alloc_internal);
-			GPOS_RETHROW(ex);
-		}
-		GPOS_CATCH_END;
-		return GPOS_OK;
+		// instantiate manager
+		m_memory_pool_mgr = ::new ManagerType(internal, EMemoryPoolTracker);
+		m_memory_pool_mgr->Setup();
 	}
 
 public:
@@ -188,7 +178,7 @@ public:
 	virtual ULONG UserSizeOfAlloc(const void *ptr);
 
 	// initialize global instance
-	static GPOS_RESULT Init();
+	static void Init();
 
 	// global accessor
 	static CMemoryPoolManager *

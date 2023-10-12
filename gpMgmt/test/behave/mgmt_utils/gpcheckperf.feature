@@ -126,3 +126,16 @@ Feature: Tests for gpcheckperf
     Then  gpcheckperf should return a return code of 0
     And   gpcheckperf should print "--buffer-size value is not specified or invalid. Using default \(32 kilobytes\)" to stdout
     And   gpcheckperf should print "avg = " to stdout
+
+
+  @concourse_cluster
+  Scenario: gpcheckperf runs sequential network test with hostfile
+    Given the database is running
+    Given the user runs command "echo -e "cdw\nsdw1" > /tmp/hostfile_gpchecknet"
+    When  the user runs "gpcheckperf -f /tmp/hostfile_gpchecknet -d /data/gpdata/ -r n"
+    Then  gpcheckperf should return a return code of 0
+    And   gpcheckperf should print the following lines 1 times to stdout
+      """
+      cdw -> sdw1
+      sdw1 -> cdw
+      """

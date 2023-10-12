@@ -30,7 +30,7 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
         with tempfile.NamedTemporaryFile() as f:
             f.write(test["config"].encode("utf-8"))
             f.flush()
-            return self._run_single_FromGpArray_test(test["gparray"], f.name, None, None,
+            return self._run_single_FromGpArray_test(test["gparray"], f.name, None, test.get("unreachable_hosts"),
                                                      test.get("is_pgrewind_running", itertools.repeat(False)),
                                                      test.get("is_seg_in_backup_mode", itertools.repeat(False)),
                                                      test.get("segments_with_running_basebackup", set()),
@@ -290,6 +290,21 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
                                5|3|p|p|s|u|sdw2|sdw2|20001|/primary/gpseg3""",
                 "config": "sdw1|20000|/primary/gpseg0 sdw3|20000|/primary/gpseg5",
                 "expected": "For content 2, the dbid values are the same.  A segment may not be recovered from itself"
+            },
+            {
+                "name": "failover_unreachable",
+                "gparray": """1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+                               2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0
+                               3|1|p|p|s|u|sdw1|sdw1|20001|/primary/gpseg1
+                               8|2|m|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2
+                               9|3|m|m|s|u|sdw3|sdw3|21001|/mirror/gpseg3
+                               6|0|p|m|s|u|sdw2|sdw2|21000|/mirror/gpseg0
+                               7|1|m|m|s|u|sdw2|sdw2|21001|/mirror/gpseg1
+                               4|2|p|p|s|u|sdw2|sdw2|20000|/primary/gpseg2
+                               5|3|p|p|s|u|sdw2|sdw2|20001|/primary/gpseg3""",
+                "config": "sdw1|20000|/primary/gpseg0 new_1|20000|/primary/gpseg0",
+                "unreachable_hosts": ['new_1'],
+                "expected": "The recovery target segment new_1 \(content 0\) is unreachable."
             },
             {
                 "name": "invalid_failed_hostname_with_4_parameter",
@@ -598,6 +613,21 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
                        5|3|p|p|s|u|sdw2|sdw2|20001|/primary/gpseg3""",
             "new_hosts": ['new_1'],
             "expected": "For content 2, the dbid values are the same.  A segment may not be recovered from itself"
+            },
+            {
+            "name": "failover_unreachable",
+            "gparray": """1|-1|p|p|n|u|mdw|mdw|5432|/master/gpseg-1
+                       2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0
+                       3|1|p|p|s|u|sdw1|sdw1|20001|/primary/gpseg1
+                       8|2|m|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2
+                       9|3|m|m|s|u|sdw3|sdw3|21001|/mirror/gpseg3
+                       6|0|p|m|s|u|sdw2|sdw2|21000|/mirror/gpseg0
+                       7|1|m|m|s|u|sdw2|sdw2|21001|/mirror/gpseg1
+                       4|2|p|p|s|u|sdw2|sdw2|20000|/primary/gpseg2
+                       5|3|p|p|s|u|sdw2|sdw2|20001|/primary/gpseg3""",
+            "new_hosts": ['new_1'],
+            "unreachable_hosts": ['new_1'],
+            "expected": "Cannot recover. The following recovery target hosts are unreachable: \['new_1'\]"
             }
         ]
         self.run_fail_tests(tests, self.run_single_GpArray_test)

@@ -57,40 +57,18 @@ CCacheFactory::Pmp() const
 //		Initializes global instance
 //
 //---------------------------------------------------------------------------
-GPOS_RESULT
+void
 CCacheFactory::Init()
 {
 	GPOS_ASSERT(NULL == GetFactory() &&
 				"Cache factory was already initialized");
 
-	GPOS_RESULT res = GPOS_OK;
-
 	// create cache factory memory pool
 	CMemoryPool *mp =
 		CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
-	GPOS_TRY
-	{
-		// create cache factory instance
-		CCacheFactory::m_factory = GPOS_NEW(mp) CCacheFactory(mp);
-	}
-	GPOS_CATCH_EX(ex)
-	{
-		// destroy memory pool if global instance was not created
-		CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
 
-		CCacheFactory::m_factory = NULL;
-
-		if (GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiOOM))
-		{
-			res = GPOS_OOM;
-		}
-		else
-		{
-			res = GPOS_FAILED;
-		}
-	}
-	GPOS_CATCH_END;
-	return res;
+	// create cache factory instance
+	m_factory = GPOS_NEW(mp) CCacheFactory(mp);
 }
 
 

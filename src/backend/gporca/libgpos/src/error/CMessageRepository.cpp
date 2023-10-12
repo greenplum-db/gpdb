@@ -12,7 +12,6 @@
 #include "gpos/error/CMessageRepository.h"
 
 #include "gpos/common/CSyncHashtableAccessByKey.h"
-#include "gpos/memory/CAutoMemoryPool.h"
 #include "gpos/utils.h"
 
 
@@ -103,24 +102,17 @@ CMessageRepository::LookupMessage(CException exc, ELocale locale)
 //		Initialize global instance of message repository
 //
 //---------------------------------------------------------------------------
-GPOS_RESULT
+void
 CMessageRepository::Init()
 {
 	GPOS_ASSERT(NULL == m_repository);
 
-	CAutoMemoryPool amp;
-	CMemoryPool *mp = amp.Pmp();
+	CMemoryPool *mp =
+		CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
 
-	CMessageRepository *repository = GPOS_NEW(mp) CMessageRepository(mp);
-	repository->InitDirectory(mp);
-	repository->LoadStandardMessages();
-
-	CMessageRepository::m_repository = repository;
-
-	// detach safety
-	(void) amp.Detach();
-
-	return GPOS_OK;
+	m_repository = GPOS_NEW(mp) CMessageRepository(mp);
+	m_repository->InitDirectory(mp);
+	m_repository->LoadStandardMessages();
 }
 
 

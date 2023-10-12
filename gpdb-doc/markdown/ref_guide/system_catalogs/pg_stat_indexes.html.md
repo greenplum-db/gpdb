@@ -56,7 +56,7 @@ FROM
      SELECT *
      FROM pg_stat_all_indexes
      WHERE relid < 16384) m, pg_stat_all_indexes s
-WHERE m.relid = s.relid;
+WHERE m.relid = s.relid AND m.indexrelid = s.indexrelid;
 
 
 CREATE VIEW pg_stat_sys_indexes_gpdb6 AS 

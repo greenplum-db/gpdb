@@ -960,3 +960,120 @@ fetch backward all in c1;
 
 commit;
 --end_ignore
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink, which contains attributes referenced in query's GROUP BY clause.
+-- Due to presence of non-grouping columns in targetList, ORCA performs query
+-- normalization, during which ORCA establishes a correspondence between vars
+-- from targetlist entries to grouping attributes. And this process should
+-- correctly handle nested structures. The inner part of SubPlan in the test
+-- should contain only t.j.
+-- start_ignore
+drop table if exists t;
+NOTICE:  table "t" does not exist, skipping
+-- end_ignore
+create table t (i int, j int) distributed by (i);
+insert into t values (1, 2);
+explain (verbose, costs off)
+select j,
+(select j from (select j) q2)
+from t
+group by i, j;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: t.j, ((SubPlan 1)), t.i
+   ->  HashAggregate
+         Output: t.j, (SubPlan 1), t.i
+         Group Key: t.i, t.j
+         ->  Seq Scan on public.t
+               Output: t.j, t.i
+         SubPlan 1  (slice1; segments: 1)
+           ->  Result
+                 Output: t.j
+ Optimizer: Postgres query optimizer
+(11 rows)
+
+select j,
+(select j from (select j) q2)
+from t
+group by i, j;
+ j | j 
+---+---
+ 2 | 2
+(1 row)
+
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink when this SubLink is inside the GROUP BY clause. Attribute, which is
+-- not grouping column (1 as c), is added to query targetList to make ORCA
+-- perform query normalization. During normalization ORCA modifies the vars of
+-- the grouping elements of targetList in order to produce a new Query tree.
+-- The modification of vars inside nested part of SubLinks should be handled
+-- correctly. ORCA shouldn't fall back due to missing variable entry as a result
+-- of incorrect query normalization.
+explain (verbose, costs off)
+select j, 1 as c,
+(select j from (select j) q2) q1
+from t
+group by j, q1;
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   Output: t.j, 1, ((SubPlan 1))
+   ->  HashAggregate
+         Output: t.j, 1, ((SubPlan 1))
+         Group Key: t.j, ((SubPlan 1))
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Output: t.j, ((SubPlan 1))
+               Hash Key: t.j, ((SubPlan 1))
+               ->  HashAggregate
+                     Output: t.j, ((SubPlan 1))
+                     Group Key: t.j, (SubPlan 1)
+                     ->  Seq Scan on public.t
+                           Output: t.j, (SubPlan 1)
+                           SubPlan 1  (slice1; segments: 1)
+                             ->  Result
+                                   Output: t.j
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+select j, 1 as c,
+(select j from (select j) q2) q1
+from t
+group by j, q1;
+ j | c | q1 
+---+---+----
+ 2 | 1 |  2
+(1 row)
+
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink, and this SubLink is under aggregation. ORCA shouldn't fall back due
+-- to missing variable entry as a result of incorrect query normalization. ORCA
+-- should correctly process args of the aggregation during normalization.
+explain (verbose, costs off)
+select (select max((select t.i))) from t;
+                   QUERY PLAN                   
+------------------------------------------------
+ Aggregate
+   Output: (SubPlan 2)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (max((SubPlan 1)))
+         ->  Aggregate
+               Output: max((SubPlan 1))
+               ->  Seq Scan on public.t
+                     Output: t.i
+               SubPlan 1  (slice1; segments: 1)
+                 ->  Result
+                       Output: t.i
+   SubPlan 2  (slice0)
+     ->  Result
+           Output: max((max((SubPlan 1))))
+ Optimizer: Postgres query optimizer
+(15 rows)
+
+select (select max((select t.i))) from t;
+ max 
+-----
+   1
+(1 row)
+
+drop table t;

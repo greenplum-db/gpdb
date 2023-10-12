@@ -34,9 +34,9 @@ The `gp_parallel_retrieve_cursor` module provides the following functions and vi
 
 |Function, View Name|Description|
 |-------------------|-----------|
-|gp\_get\_endpoints\(\)<br/><br/>[gp\_endpoints](../system_catalogs/gp_endpoints.html#topic1)|List the endpoints associated with all active parallel retrieve cursors declared by the current session user in the current database. When the Greenplum Database superuser invokes this function, it returns a list of all endpoints for all parallel retrieve cursors declared by all users in the current database.|
-|gp\_get\_session\_endpoints\(\)<br/><br/>[gp\_session\_endpoints](../system_catalogs/gp_session_endpoints.html#topic1)|List the endpoints associated with all parallel retrieve cursors declared in the current session for the current session user.|
-|gp\_get\_segment\_endpoints\(\)<br/><br/>[gp\_segment\_endpoints](../system_catalogs/gp_segment_endpoints.html#topic1)|List the endpoints created in the QE for all active parallel retrieve cursors declared by the current session user. When the Greenplum Database superuser accesses this view, it returns a list of all endpoints on the QE created for all parallel retrieve cursors declared by all users.|
+|gp\_get\_endpoints\(\)<br/><br/>[gp\_endpoints](../system_catalogs/gp_endpoints.html#topic1)|List the endpoints associated with all active parallel retrieve cursors declared by the current user in the current database. When the Greenplum Database superuser invokes this function, it returns a list of all endpoints for all parallel retrieve cursors declared by all users in the current database.|
+|gp\_get\_session\_endpoints\(\)<br/><br/>[gp\_session\_endpoints](../system_catalogs/gp_session_endpoints.html#topic1)|List the endpoints associated with all parallel retrieve cursors declared in the current session for the current user.|
+|gp\_get\_segment\_endpoints\(\)<br/><br/>[gp\_segment\_endpoints](../system_catalogs/gp_segment_endpoints.html#topic1)|List the endpoints created in the QE for all active parallel retrieve cursors declared by the current user. When the Greenplum Database superuser accesses this view, it returns a list of all endpoints on the QE created for all parallel retrieve cursors declared by all users.|
 |gp\_wait\_parallel\_retrieve\_cursor\(cursorname text, timeout\_sec int4 \)|Return cursor status or block and wait for results to be retrieved from all endpoints associated with the specified parallel retrieve cursor.|
 
 > **Note** Each of these functions and views is located in the `pg_catalog` schema, and each `RETURNS TABLE`.
@@ -112,7 +112,7 @@ These commands return the list of endpoints in a table with the following column
 |sessionid|The identifier of the session in which the parallel retrieve cursor was created.|
 |hostname|The name of the host from which to retrieve the data for the endpoint.|
 |port|The port number from which to retrieve the data for the endpoint.|
-|username|The name of the session user \(not the current user\); *you must initiate the retrieve session as this user*.|
+|username|The name of the current user; *you must initiate the retrieve session as this user*.|
 |state|The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
 |endpointname|The endpoint identifier; you provide this identifier to the `RETRIEVE` command.|
 
@@ -132,7 +132,7 @@ Retrieve session authentication does not depend on the `pg_hba.conf` file, but r
 
 When you initiate a retrieve session to an endpoint:
 
--   The user that you specify for the retrieve session must be the session user that declared the parallel retrieve cursor \(the `username` returned by `gp_endpoints`\). This user must have Greenplum Database login privileges.
+-   The user that you specify for the retrieve session must be the user that declared the parallel retrieve cursor \(the `username` returned by `gp_endpoints`\). This user must have Greenplum Database login privileges.
 -   You specify the `hostname` and `port` returned by `gp_endpoints` for the endpoint.
 -   You authenticate the retrieve session by specifying the `auth_token` returned for the endpoint via the `PGPASSWORD` environment variable, or when prompted for the retrieve session `Password`.
 -   You must specify the [gp\_retrieve\_conn](../config_params/guc-list.html#gp_retrieve_conn) server configuration parameter on the connection request, and set the value to `true` .
@@ -218,7 +218,7 @@ SELECT * FROM gp_get_segment_endpoints();
 SELECT * FROM gp_segment_endpoints;
 ```
 
-These commands provide information about the retrieve sessions associated with a QE endpoint for all active parallel retrieve cursors declared by the current session user. When the Greenplum Database superuser invokes the command, it returns the retrieve session information for all endpoints on the QE created for all parallel retrieve cursors declared by all users.
+These commands provide information about the retrieve sessions associated with a QE endpoint for all active parallel retrieve cursors declared by the current user. When the Greenplum Database superuser invokes the command, it returns the retrieve session information for all endpoints on the QE created for all parallel retrieve cursors declared by all users.
 
 You can obtain segment-specific retrieve session information in two ways: from the QD, or via a utility-mode connection to the endpoint:
 
@@ -254,7 +254,7 @@ The commands return endpoint and retrieve session information in a table with th
 |state|The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
 |gp\_segment\_id|The QE's endpoint `gp_segment_id`.|
 |sessionid|The identifier of the session in which the parallel retrieve cursor was created.|
-|username|The name of the session user that initiated the retrieve session.|
+|username|The name of the user that initiated the retrieve session.|
 |endpointname|The endpoint identifier.|
 |cursorname|The name of the parallel retrieve cursor.|
 

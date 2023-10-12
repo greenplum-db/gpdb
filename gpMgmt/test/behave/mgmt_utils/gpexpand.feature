@@ -229,6 +229,33 @@ Feature: expand the cluster by adding more segments
 	When the user runs gpexpand to redistribute
 	Then the tablespace is valid after gpexpand
 
+    @gpexpand_no_mirrors
+    Scenario: expand a cluster with tablespace when there is no tablespace configuration file
+        Given the database is not running
+        And a working directory of the test as '/data/gpdata/gpexpand'
+        And the user runs command "rm -rf /data/gpdata/gpexpand/*"
+        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
+        And a cluster is created with no mirrors on "cdw" and "sdw1"
+        And database "gptest" exists
+        And a tablespace is created with data
+        And another tablespace is created with data
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "cdw"
+        And the user runs gpexpand interview to add 1 new segment and 0 new host "ignore.host"
+        And the number of segments have been saved
+        And there are no gpexpand tablespace input configuration files
+        When the user runs gpexpand with the latest gpexpand_inputfile without ret code check
+        Then gpexpand should return a return code of 1
+        And gpexpand should print "[WARNING]:-Could not locate tablespace input configuration file" escaped to stdout
+        And gpexpand should print "A new tablespace input configuration file is written to" escaped to stdout
+        And gpexpand should print "Please review the file and re-run with: gpexpand -i" escaped to stdout
+        And verify if a gpexpand tablespace input configuration file is created
+        When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
+        And verify that the cluster has 1 new segments
+        And all the segments are running
+        When the user runs gpexpand to redistribute
+        Then the tablespace is valid after gpexpand
+
     @gpexpand_verify_redistribution
     Scenario: Verify data is correctly redistributed after expansion
         Given the database is not running

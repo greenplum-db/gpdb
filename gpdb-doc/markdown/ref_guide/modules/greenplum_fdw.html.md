@@ -2,7 +2,7 @@
 title: greenplum_fdw
 ---
 
-The `greenplum_fdw` module is a foreign-data wrapper \(FDW\) that you can use to run queries across one or more Greenplum Database version 6.20+ clusters.
+The `greenplum_fdw` module is a foreign-data wrapper \(FDW\) that you can use to run queries between one or more Greenplum Database version 6.20+ and 7 clusters.
 
 The Greenplum Database `greenplum_fdw` module is an MPP extension of the PostgreSQL `postgres_fdw` module.
 
@@ -74,7 +74,7 @@ num_segments
 
 option, the default value is the number of segments on the local Greenplum Database cluster.
 
-The following example command creates a server named `gpc1_testdb` that will be used to access tables residing in the database named `testdb` on the remote `8`-segment Greenplum Database cluster whose master is running on the host `gpc1_master`, port `5432`:
+The following example command creates a server named `gpc1_testdb` that will be used to access tables residing in the database named `testdb` on the remote 8-segment Greenplum Database cluster whose master is running on the host `gpc1_master`, port `5432`:
 
 ```
 CREATE SERVER gpc1_testdb FOREIGN DATA WRAPPER greenplum_fdw
@@ -164,6 +164,55 @@ Setting this option at the foreign table-level overrides a foreign server-level 
 
 `greenplum_fdw` manages transactions as described in the [Transaction Management](https://www.postgresql.org/docs/9.4/postgres-fdw.html) topic in the PostgreSQL `postgres_fdw` documentation.
 
+## <a id="resgroups"></a>About Using Resource Groups to Limit Concurrency
+
+You can create a dedicated user and resource group to manage `greenplum_fdw` concurrency on the remote Greenplum clusters. In the following example scenario, local cluster 2 reads data from remote cluster 1.
+
+Remote cluster (1) configuration:
+
+1. Create a dedicated Greenplum Database user/role to represent the `greenplum_fdw` users on cluster 2 that initiate queries. For example, to create a role named `gpcluster2_users`:
+
+    ```
+    CREATE ROLE gpcluster2_users;
+    ```
+
+1. Create a dedicated resource group to manage resources for these users:
+
+    ```
+    CREATE RESOURCE GROUP rg_gpcluster2_users with (concurrency=2, cpu_rate_limit=20, memory_limit=10);
+    ALTER ROLE gpcluster2_users RESOURCE GROUP rg_gpcluster2_users;
+    ```
+
+    When you configure the remote cluster as described above, the `rg_gpcluster2_users` resource group manages the resources used by all queries that are initiated by `gpcluster2_users`.
+
+Local cluster (2) configuration:
+
+1. Create a `greenplum_fdw` foreign server to access the remote cluster. For example, to create a server named `gpc1_testdb` that accesses the `testdb` database:
+
+    ```
+    CREATE SERVER gpc1_testdb FOREIGN DATA WRAPPER greenplum_fdw
+        OPTIONS (host 'gpc1_master', port '5432', dbname 'testdb', mpp_execute 'all segments', );
+    ```
+
+1. Map local users of the `greenplum_fdw` foreign server to the remote role. For example, to map specific users of the `gpc1_testdb` server on the local cluster to the `gpcluster2_users` role on the remote cluster:
+
+    ```
+    CREATE USER MAPPING FOR greenplum_fdw_user1 SERVER gpc1_testdb
+        OPTIONS (user ‘gpcluster2_users’, password ‘changeme’);
+    CREATE USER MAPPING FOR greenplum_fdw_user2 SERVER gpc1_testdb
+        OPTIONS (user ‘gpcluster2_users’, password ‘changeme’);
+    ```
+
+1.  Create a foreign table referencing a table on the remote cluster. For example to create a foreign table that references table `t1` on the remote cluster:
+
+    ```
+    CREATE FOREIGN TABLE table_on_cluster1 ( tc1 int )
+      SERVER gpc1_testdb
+      OPTIONS (schema_name 'public', table_name 't1', mpp_execute 'all segments');
+    ```
+
+All local queries on foreign table `table_on_cluster1` are bounded on the remote cluster by the `rg_gpcluster2_users` resource group limits.
+
 ## <a id="topic_limits"></a>Known Issues and Limitations 
 
 The `greenplum_fdw` module has the following known issues and limitations:
@@ -173,7 +222,7 @@ The `greenplum_fdw` module has the following known issues and limitations:
 
 ## <a id="topic_compat"></a>Compatibility 
 
-You can use `greenplum_fdw` to access other remote Greenplum Database clusters running version 6.20+.
+You can use `greenplum_fdw` to access other remote Greenplum Database clusters running version 6.20+ and 7.
 
 ## <a id="topic_examples"></a>Example 
 

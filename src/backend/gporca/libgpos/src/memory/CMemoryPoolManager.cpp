@@ -66,16 +66,13 @@ CMemoryPoolManager::Setup()
 }
 
 // Initialize global memory pool manager using CMemoryPoolTracker
-GPOS_RESULT
+void
 CMemoryPoolManager::Init()
 {
 	if (NULL == CMemoryPoolManager::m_memory_pool_mgr)
 	{
-		return SetupGlobalMemoryPoolManager<CMemoryPoolManager,
-											CMemoryPoolTracker>();
+		SetupGlobalMemoryPoolManager<CMemoryPoolManager, CMemoryPoolTracker>();
 	}
-
-	return GPOS_OK;
 }
 
 

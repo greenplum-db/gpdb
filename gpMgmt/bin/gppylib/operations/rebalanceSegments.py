@@ -1,5 +1,6 @@
 import sys
 import signal
+from contextlib import closing
 from gppylib.gparray import GpArray
 from gppylib.db import dbconn
 from gppylib.commands.gp import GpSegStopCmd
@@ -8,7 +9,32 @@ from gppylib import gplog
 
 from gppylib.operations.segment_reconfigurer import SegmentReconfigurer
 
-MIRROR_PROMOTION_TIMEOUT=600
+MIRROR_PROMOTION_TIMEOUT = 600
+
+logger = gplog.get_default_logger()
+
+
+def replay_lag(primary_db):
+    """
+    This function returns replay lag (diff of flush_lsn and replay_lsn) on mirror segment. Goal being if there is a
+    lot to catchup on mirror the user should be warned about that and rebalance opertion should be aborted.
+    params: primary segment info
+    return value: replay lag in bytes
+    replay lag in bytes: diff of flush_lsn and replay_lsn on mirror
+    """
+    port = primary_db.getSegmentPort()
+    host = primary_db.getSegmentHostName()
+    logger.debug('Get replay lag on mirror of primary segment with host:{}, port:{}'.format(host, port))
+    sql = "select pg_xlog_location_diff(flush_location, replay_location) from pg_stat_replication;"
+
+    try:
+        dburl = dbconn.DbURL(hostname=host, port=port)
+        with closing(dbconn.connect(dburl, utility=True, encoding='UTF8')) as conn:
+            replay_lag = dbconn.execSQLForSingleton(conn, sql)
+    except Exception as ex:
+        raise Exception("Failed to query pg_stat_replication for host:{}, port:{}, error: {}".
+                        format(host, port, str(ex)))
+    return replay_lag
 
 
 class ReconfigDetectionSQLQueryCommand(base.SQLCommand):
@@ -26,11 +52,13 @@ class ReconfigDetectionSQLQueryCommand(base.SQLCommand):
 
 
 class GpSegmentRebalanceOperation:
-    def __init__(self, gpEnv, gpArray, batch_size, segment_batch_size):
+    def __init__(self, gpEnv, gpArray, batch_size, segment_batch_size, disable_replay_lag, replay_lag):
         self.gpEnv = gpEnv
         self.gpArray = gpArray
         self.batch_size = batch_size
         self.segment_batch_size = segment_batch_size
+        self.disable_replay_lag = disable_replay_lag
+        self.replay_lag = replay_lag
         self.logger = gplog.get_default_logger()
 
     def rebalance(self):
@@ -45,10 +73,20 @@ class GpSegmentRebalanceOperation:
                 continue
 
             if segmentPair.up() and segmentPair.reachable() and segmentPair.synchronized():
+                if not self.disable_replay_lag:
+                    self.logger.info("Allowed replay lag during rebalance is {} GB".format(self.replay_lag))
+                    replay_lag_in_bytes = replay_lag(segmentPair.primaryDB)
+                    if float(replay_lag_in_bytes) >= (self.replay_lag * 1024 * 1024 * 1024):
+                        raise Exception("{} bytes of xlog is still to be replayed on mirror with dbid {}, let "
+                                        "mirror catchup on replay then trigger rebalance. Use --replay-lag to "
+                                        "configure the allowed replay lag limit or --disable-replay-lag to disable"
+                                        " the check completely if you wish to continue with rebalance anyway"
+                                        .format(replay_lag_in_bytes, segmentPair.primaryDB.getSegmentDbId()))
                 unbalanced_primary_segs.append(segmentPair.primaryDB)
             else:
                 self.logger.warning(
-                    "Not rebalancing primary segment dbid %d with its mirror dbid %d because one is either down, unreachable, or not synchronized" \
+                    "Not rebalancing primary segment dbid %d with its mirror dbid %d because one is either down, "
+                    "unreachable, or not synchronized" \
                     % (segmentPair.primaryDB.dbid, segmentPair.mirrorDB.dbid))
 
         if not len(unbalanced_primary_segs):
@@ -76,7 +114,7 @@ class GpSegmentRebalanceOperation:
                 pool.addCommand(cmd)
 
             base.join_and_indicate_progress(pool)
-            
+
             failed_count = 0
             completed = pool.getCompletedItems()
             for res in completed:

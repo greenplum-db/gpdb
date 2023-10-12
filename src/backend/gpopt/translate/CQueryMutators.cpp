@@ -436,11 +436,12 @@ CQueryMutators::RunGroupingColMutator(Node *node,
 
 		GPOS_ASSERT(IsA(old_sublink->subselect, Query));
 
-		new_sublink->subselect = gpdb::MutateQueryOrExpressionTree(
-			old_sublink->subselect,
-			(MutatorWalkerFn) CQueryMutators::RunGroupingColMutator, context,
-			0  // flags -- mutate into cte-lists
-		);
+		// One need to call the Query mutator for subselect and take into
+		// account that SubLink can be multi-level. Therefore, the
+		// context->m_current_query_level must be modified properly
+		// while diving into such nested SubLink.
+		new_sublink->subselect =
+			RunGroupingColMutator(old_sublink->subselect, context);
 
 		context->m_current_query_level--;
 
@@ -686,22 +687,34 @@ CQueryMutators::RunExtractAggregatesMutator(Node *node,
 		// Handle other top-level outer references in the project element.
 		if (var->varlevelsup == context->m_current_query_level)
 		{
-			if (var->varlevelsup == context->m_agg_levels_up)
+			if (var->varlevelsup >= context->m_agg_levels_up)
 			{
-				// If Var references the top level query inside an Aggref that also
-				// references top level query, the Aggref is moved to the derived query
-				// (see comments in Aggref if-case above). Thus, these Var references
-				// are brought up to the top-query level.
+				// If Var references the top level query (varlevelsup = m_current_query_level)
+				// inside an Aggref that also references top level query, the Aggref is moved
+				// to the derived query (see comments in Aggref if-case above).
+				// And, therefore, if we are mutating such Vars inside the Aggref, we must
+				// change their varlevelsup field in order to preserve correct reference level.
+				// i.e these Vars are pulled up as the part of the Aggref by the m_agg_levels_up.
 				// e.g:
-				// explain select (select sum(foo.a) from jazz) from foo group by a, b;
+				// select (select max((select foo.a))) from foo;
 				// is transformed into
-				// select (select fnew.sum_t from jazz)
-				// from (select foo.a, foo.b, sum(foo.a) sum_t
-				//       from foo group by foo.a, foo.b) fnew;
-				//
-				// Note the foo.a var which is in sum() in a subquery must now become a
-				// var referencing the current query level.
-				var->varlevelsup = 0;
+				// select (select fnew.max_t)
+				// from (select max((select foo.a)) max_t from foo) fnew;
+				// Here the foo.a inside max referenced top level RTE foo at
+				// varlevelsup = 2 inside the Aggref at agglevelsup 1. Then the
+				// Aggref is brought up to the top-query-level of fnew and foo.a
+				// inside Aggref is bumped up by original Aggref's level.
+				// We may visualize that logic with the following diagram:
+				// Query <------┐  <--------------------┐
+				//              |                       |
+				//              | m_agg_levels_up = 1   |
+				//              |                       |
+				//     Aggref --┘                       | varlevelsup = 2
+				//                                      |
+				//                                      |
+				//                                      |
+				//         Var -------------------------┘
+				var->varlevelsup -= context->m_agg_levels_up;
 				return (Node *) var;
 			}
 
@@ -798,15 +811,43 @@ CQueryMutators::RunExtractAggregatesMutator(Node *node,
 
 		GPOS_ASSERT(IsA(old_sublink->subselect, Query));
 
-		new_sublink->subselect = gpdb::MutateQueryOrExpressionTree(
-			old_sublink->subselect,
-			(MutatorWalkerFn) RunExtractAggregatesMutator, (void *) context,
-			0  // mutate into cte-lists
-		);
+		// One need to call the Query mutator for subselect and take into
+		// account that SubLink can be multi-level. Therefore, the
+		// context->m_current_query_level must be modified properly
+		// while diving into such nested SubLink.
+		new_sublink->subselect =
+			RunExtractAggregatesMutator(old_sublink->subselect, context);
 
 		context->m_current_query_level--;
 
 		return (Node *) new_sublink;
+	}
+
+	if (IsA(node, Query))
+	{
+		// Mutate Query tree and ignore rtable subqueries in order to modify
+		// m_current_query_level properly when mutating them below.
+		Query *query = gpdb::MutateQueryTree(
+			(Query *) node, (MutatorWalkerFn) RunExtractAggregatesMutator,
+			context, QTW_IGNORE_RT_SUBQUERIES);
+
+		ListCell *lc;
+		ForEach(lc, query->rtable)
+		{
+			RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
+
+			if (RTE_SUBQUERY == rte->rtekind)
+			{
+				Query *subquery = rte->subquery;
+				context->m_current_query_level++;
+				rte->subquery = (Query *) RunExtractAggregatesMutator(
+					(Node *) subquery, context);
+				context->m_current_query_level--;
+				gpdb::GPDBFree(subquery);
+			}
+		}
+
+		return (Node *) query;
 	}
 
 	return gpdb::MutateExpressionTree(

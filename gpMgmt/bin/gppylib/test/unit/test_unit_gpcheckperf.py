@@ -1,13 +1,17 @@
 import imp
 import os
 import sys
-from mock import patch
+from mock import patch, MagicMock
 from gppylib.test.unit.gp_unittest import GpTestCase,run_tests
+from gppylib.util import ssh_utils
 
 class GpCheckPerf(GpTestCase):
     def setUp(self):
-        gpcheckcat_file = os.path.abspath(os.path.dirname(__file__) + "/../../../gpcheckperf")
-        self.subject = imp.load_source('gpcheckperf', gpcheckcat_file)
+        gpcheckperf_file = os.path.abspath(os.path.dirname(__file__) + "/../../../gpcheckperf")
+        self.subject = imp.load_source('gpcheckperf', gpcheckperf_file)
+        self.mocked_hostlist = MagicMock()
+        ssh_utils.HostList = MagicMock(return_value=self.mocked_hostlist)
+
 
     def tearDown(self):
         super(GpCheckPerf, self).tearDown()
@@ -83,13 +87,45 @@ class GpCheckPerf(GpTestCase):
         self.subject.main()
         mock_gpscp.assert_called_with(src, target)
 
-    def test_gpsync_failed_to_copy(self):
+    @patch('gpcheckperf.getHostList', return_value=['localhost', "invalid_host"])
+    def test_gpsync_failed_to_copy(self, mock_hostlist):
         src = '%s/lib/multidd' % os.path.abspath(os.path.dirname(__file__) + "/../../../")
         target = '=:tmp/'
-        self.subject.GV.opt['-h'] = ['localhost', "invalid_host"]
         with self.assertRaises(SystemExit) as e:
             self.subject.gpsync(src, target)
         self.assertIn('[Error] command failed for host:invalid_host', e.exception.code)
+
+
+    def test_get_host_list_with_host_file(self):
+        self.subject.GV.opt = {'-f': 'hostfile.txt', '-h': ['host1', 'host2']}
+        self.mocked_hostlist.filterMultiHomedHosts.return_value = ['host3', 'host4']
+
+        result = self.subject.getHostList()
+
+        self.assertEqual(result, ['host3', 'host4'])
+        self.mocked_hostlist.parseFile.assert_called_with('hostfile.txt')
+        self.mocked_hostlist.checkSSH.assert_called()
+
+
+    def test_get_host_list_without_host_file(self):
+        self.subject.GV.opt = {'-f': '', '-h': ['host1', 'host2']}
+        self.mocked_hostlist.filterMultiHomedHosts.return_value = ['host1', 'host2']
+
+        result = self.subject.getHostList()
+
+        self.assertEqual(result, ['host1', 'host2'])
+        self.mocked_hostlist.add.assert_any_call('host1')
+        self.mocked_hostlist.add.assert_any_call('host2')
+        self.mocked_hostlist.checkSSH.assert_called()
+
+
+    def test_get_host_list_with_ssh_error(self):
+        self.mocked_hostlist.checkSSH.side_effect = ssh_utils.SSHError("Test ssh error")
+
+        with self.assertRaises(SystemExit) as e:
+            self.subject.getHostList()
+
+        self.assertEqual(e.exception.code, '[Error] Test ssh error')
 
 if __name__ == '__main__':
     run_tests()

@@ -65,7 +65,7 @@ public:
 	}
 
 	// initialize global memory pool
-	static GPOS_RESULT Init();
+	static void Init();
 
 	// destroy global instance
 	void Shutdown();

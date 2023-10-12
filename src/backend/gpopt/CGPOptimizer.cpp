@@ -245,7 +245,19 @@ InitGPOPT()
 {
 	GPOS_TRY
 	{
-		return CGPOptimizer::InitGPOPT();
+		try
+		{
+			CGPOptimizer::InitGPOPT();
+		}
+		catch (CException ex)
+		{
+			throw ex;
+		}
+		catch (...)
+		{
+			// unexpected failure
+			GPOS_RAISE(CException::ExmaUnhandled, CException::ExmiUnhandled);
+		}
 	}
 	GPOS_CATCH_EX(ex)
 	{
@@ -253,6 +265,10 @@ InitGPOPT()
 		{
 			PG_RE_THROW();
 		}
+
+		errstart(ERROR, ex.Filename(), ex.Line(), NULL, TEXTDOMAIN);
+		errfinish(errcode(ERRCODE_INTERNAL_ERROR),
+				  errmsg("optimizer failed to init"));
 	}
 	GPOS_CATCH_END;
 }

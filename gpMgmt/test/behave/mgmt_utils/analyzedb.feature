@@ -1777,3 +1777,11 @@ Feature: Incrementally analyze the database
         And the user runs "dropdb schema_with_temp_table"
         And the user drops the named connection "default"
 
+    Scenario: analyzedb finds materialized views
+        Given  a materialized view "public.mv_test_view" exists on table "pg_class"
+        And the user runs "analyzedb -a -d incr_analyze"
+        Then analyzedb should print "-public.mv_test_view" to stdout
+        And the user runs "analyzedb -a -s public -d incr_analyze"
+        Then analyzedb should print "-public.mv_test_view" to stdout
+        And the user runs "analyzedb -a -t public.mv_test_view -d incr_analyze"
+        Then analyzedb should print "-public.mv_test_view" to stdout

@@ -420,7 +420,6 @@ select * from (select sum(a.salary) over(), count(*)
                from t2_github_issue_10143 a
                group by a.salary) T;
 
--- this query currently falls back, needs to be fixed
 select (select rn from (select row_number() over () as rn, name
                         from t1_github_issue_10143
                         where code = a.code

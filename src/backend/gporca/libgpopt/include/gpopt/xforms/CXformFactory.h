@@ -111,7 +111,7 @@ public:
 	}
 
 	// initialize global factory instance
-	static GPOS_RESULT Init();
+	static void Init();
 
 	// destroy global factory instance
 	void Shutdown();

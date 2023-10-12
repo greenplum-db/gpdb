@@ -117,9 +117,13 @@ OPTIONS
 
 
 -M smart
- 
- Smart shut down. If there are active connections, this command 
- fails with a warning. This is the default shutdown mode.
+
+ Smart shut down. This is the default shutdown mode. gpstop waits for
+ active user connections to disconnect and then proceeds with the
+ shutdown. If any user connections remain open after the timeout period
+ (or if you interrupt by pressing CTRL-C) gpstop lists the open user
+ connections and prompts whether to continue waiting for connections to
+ finish, or to perform a fast or immediate shutdown.
 
 
 -q

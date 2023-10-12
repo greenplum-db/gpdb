@@ -30,9 +30,15 @@ installcheck: gpdiff.pl gpstringsubs.pl
 	@echo "skip gpload test for Red Hat"
 else
 installcheck: gpdiff.pl gpstringsubs.pl
+	# install pytest for python2 and gpload test
+	python2 -m ensurepip --upgrade
+	python2 -m pip install -r pytest_requirement.txt
+	python2 -m pip install pytest-order==0.11.0
+	python2 -m pip install lxml
+
 	@cd gpload && ./TEST.py
 	@export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/site-packages/:/usr/lib64/python2.7/site-packages/:/usr/local/greenplum-db-devel/lib/python\
-	&& cd gpload2 && python -m pytest TEST_local_*
+	&& cd gpload2 && python2 -m pytest TEST_local_*
 endif
 
 clean distclean:

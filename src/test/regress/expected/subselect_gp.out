@@ -3112,3 +3112,37 @@ select * from r where b in (select b from s where c=10 order by c limit 2);
  1 | 2 | 3
 (1 row)
 
+-- Test nested query with aggregate inside a sublink,
+-- ORCA should correctly normalize the aggregate expression inside the
+-- sublink's nested query and the column variable accessed in aggregate should
+-- be accessible to the aggregate after the normalization of query.
+-- If the query is not supported, ORCA should gracefully fallback to postgres
+explain (COSTS OFF) with t0 AS (
+    SELECT
+       ROW_TO_JSON((SELECT x FROM (SELECT max(t.b)) x))
+       AS c
+    FROM r
+        JOIN s ON true
+        JOIN s as t ON  true
+   )
+SELECT c FROM t0;
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice3; segments: 3)
+         ->  Aggregate
+               ->  Nested Loop
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                           ->  Nested Loop
+                                 ->  Seq Scan on r
+                                 ->  Materialize
+                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                             ->  Seq Scan on s
+                     ->  Materialize
+                           ->  Seq Scan on s t
+   SubPlan 1  (slice0)
+     ->  Subquery Scan on x
+           ->  Result
+ Optimizer: Postgres query optimizer
+(16 rows)
+

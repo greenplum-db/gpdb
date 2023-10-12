@@ -40,8 +40,7 @@ public:
 	// get user requested size of allocation
 	ULONG UserSizeOfAlloc(const void *ptr);
 
-
-	static GPOS_RESULT Init();
+	static void Init();
 };
 }  // namespace gpos
 

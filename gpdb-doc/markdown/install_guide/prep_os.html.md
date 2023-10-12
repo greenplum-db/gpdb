@@ -4,6 +4,8 @@ title: Configuring Your Systems
 
 Describes how to prepare your operating system environment for Greenplum Database software installation.
 
+> **Caution** Do not install anti-virus software of any type on Greenplum Database hosts. VMware Greenplum is not supported for use with anti-virus software because the additional CPU and IO load interferes with Greenplum Database operations.
+
 Perform the following tasks in order:
 
 1.  Make sure your host systems meet the requirements described in [Platform Requirements](platform-requirements-overview.html).
@@ -473,13 +475,14 @@ The XFS options can also be set in the `/etc/fstab` file. This example entry fro
 
 The maximum transmission unit (MTU) of a network specifies the size (in bytes) of the largest data packet/frame accepted by a network-connected device. A jumbo frame is a frame that contains more than the standard MTU of 1500 bytes.
 
-Greenplum Database utilizes 3 distinct MTU settings:
+You may control the value of the MTU at various locations:
 
 - The Greenplum Database [gp_max_packet_size](../ref_guide/config_params/guc-list.html#gp_max_packet_size) server configuration parameter. The default max packet size is 8192. This default assumes a jumbo frame MTU.
-- The operating system MTU setting.
-- The rack switch MTU setting.
+- The operating system MTU settings for network interfaces.
+- The physical switch MTU settings.
+- The virtual switch MTU setting when using vSphere.
 
-These settings are connected, in that they should always be either the same, or close to the same, value, or otherwise in the order of Greenplum < OS < switch for MTU size.
+These settings are connected, in that they should always be either the same, or close to the same, value, or otherwise in the order of Greenplum < Operating System < Virtual or Physical switch for MTU size.
 
 9000 is a common supported setting for switches, and is the recommended OS and rack switch MTU setting for your Greenplum Database hosts.
 

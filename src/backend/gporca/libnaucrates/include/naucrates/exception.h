@@ -80,7 +80,7 @@ enum ExMinor
 };
 
 // message initialization for GPOS exceptions
-gpos::GPOS_RESULT EresExceptionInit(gpos::CMemoryPool *mp);
+void EresExceptionInit(gpos::CMemoryPool *mp);
 
 }  // namespace gpdxl
 

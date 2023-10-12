@@ -59,7 +59,7 @@ CWorkerPoolManager::CWorkerPoolManager(CMemoryPool *mp)
 //		Initializer for global worker pool manager
 //
 //---------------------------------------------------------------------------
-GPOS_RESULT
+void
 CWorkerPoolManager::Init()
 {
 	GPOS_ASSERT(NULL == WorkerPoolManager());
@@ -67,29 +67,8 @@ CWorkerPoolManager::Init()
 	CMemoryPool *mp =
 		CMemoryPoolManager::GetMemoryPoolMgr()->CreateMemoryPool();
 
-	GPOS_TRY
-	{
-		// create worker pool
-		CWorkerPoolManager::m_worker_pool_manager =
-			GPOS_NEW(mp) CWorkerPoolManager(mp);
-	}
-	GPOS_CATCH_EX(ex)
-	{
-		// turn in memory pool in case of failure
-		CMemoryPoolManager::GetMemoryPoolMgr()->Destroy(mp);
-
-		CWorkerPoolManager::m_worker_pool_manager = NULL;
-
-		if (GPOS_MATCH_EX(ex, CException::ExmaSystem, CException::ExmiOOM))
-		{
-			return GPOS_OOM;
-		}
-
-		return GPOS_FAILED;
-	}
-	GPOS_CATCH_END;
-
-	return GPOS_OK;
+	// create worker pool
+	m_worker_pool_manager = GPOS_NEW(mp) CWorkerPoolManager(mp);
 }
 
 

@@ -76,6 +76,7 @@ These parameters control system memory usage.
 - [max_stack_depth](guc-list.html#max_stack_depth)
 - [shared_buffers](guc-list.html#shared_buffers)
 - [temp_buffers](guc-list.html#temp_buffers)
+- [work_mem](guc-list.html#work_mem)
 
 ### <a id="topic18"></a>OS Resource Parameters 
 

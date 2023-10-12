@@ -6526,7 +6526,7 @@ StartupXLOG(void)
 	XLogCtlInsert *Insert;
 	CheckPoint	checkPoint;
 	bool		wasShutdown;
-	bool		reachedStopPoint = false;
+	bool		reachedRecoveryTarget = false;
 	bool		haveBackupLabel = false;
 	XLogRecPtr	RecPtr,
 				checkPointLoc,
@@ -7353,7 +7353,7 @@ StartupXLOG(void)
 				 */
 				if (recoveryStopsBefore(record))
 				{
-					reachedStopPoint = true;	/* see below */
+					reachedRecoveryTarget = true;
 					break;
 				}
 
@@ -7529,7 +7529,7 @@ StartupXLOG(void)
 				/* Exit loop if we reached inclusive recovery target */
 				if (recoveryStopsAfter(record))
 				{
-					reachedStopPoint = true;
+					reachedRecoveryTarget = true;
 					break;
 				}
 
@@ -7541,7 +7541,7 @@ StartupXLOG(void)
 			 * end of main redo apply loop
 			 */
 
-			if (reachedStopPoint)
+			if (reachedRecoveryTarget)
 			{
 				if (!reachedConsistency)
 					ereport(FATAL,
@@ -7597,7 +7597,18 @@ StartupXLOG(void)
 			/* there are no WAL records following the checkpoint */
 			ereport(LOG,
 					(errmsg("redo is not required")));
+
 		}
+
+		/*
+		 * This check is intentionally after the above log messages that
+		 * indicate how far recovery went.
+		 */
+		if (ArchiveRecoveryRequested &&
+			recoveryTarget != RECOVERY_TARGET_UNSET &&
+			!reachedRecoveryTarget)
+			ereport(FATAL,
+					(errmsg("recovery ended before configured recovery target was reached")));
 	}
 	else
 	{
@@ -8098,6 +8109,37 @@ StartupXLOG(void)
 		SpinLockAcquire(&xlogctl->info_lck);
 		xlogctl->SharedRecoveryInProgress = false;
 		SpinLockRelease(&xlogctl->info_lck);
+	}
+
+	/*
+	 * GPDB: A timeline history file is only marked as ready for archival if
+	 * WAL archiving was already enabled when a new timeline id is created
+	 * during promotion.  Thus it's possible to get into a state where the
+	 * timeline history file is not archived yet due to WAL archiving being
+	 * disabled during the timeline switch.  As such, we need to guarantee
+	 * that the current timeline history file is archived.  This will make
+	 * sure downstream operations that require the timeline history file
+	 * succeed (e.g. creating a standby with recovery_target_timeline
+	 * explicitly set to the control file's timeline id or when creating a
+	 * streaming replication standby).  Skip if the current timeline ID is 1
+	 * since there's no timeline history file for it.
+	 */
+	if (XLogArchivingActive() && ThisTimeLineID > 1)
+	{
+		char		histfname[MAXFNAMELEN];
+
+		TLHistoryFileName(histfname, ThisTimeLineID);
+
+		/*
+		 * Timeline history .done files do not get removed automatically so
+		 * this check should be valid to make sure we don't archive the
+		 * timeline history file again on restart.  However, if the timeline
+		 * history .done file was manually removed for some reason, then we
+		 * make the assumption that the archive_command is set up properly to
+		 * gracefully handle the re-archiving attempt.
+		 */
+		if (!XLogArchiveIsReadyOrDone(histfname))
+			XLogArchiveNotify(histfname);
 	}
 
 	/*

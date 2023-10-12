@@ -1009,3 +1009,141 @@ fetch backward all in c1;
 ERROR:  backward scan is not supported in this version of Greenplum Database
 commit;
 --end_ignore
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink, which contains attributes referenced in query's GROUP BY clause.
+-- Due to presence of non-grouping columns in targetList, ORCA performs query
+-- normalization, during which ORCA establishes a correspondence between vars
+-- from targetlist entries to grouping attributes. And this process should
+-- correctly handle nested structures. The inner part of SubPlan in the test
+-- should contain only t.j.
+-- start_ignore
+drop table if exists t;
+NOTICE:  table "t" does not exist, skipping
+-- end_ignore
+create table t (i int, j int) distributed by (i);
+insert into t values (1, 2);
+explain (verbose, costs off)
+select j,
+(select j from (select j) q2)
+from t
+group by i, j;
+                  QUERY PLAN                  
+----------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: j, ((SubPlan 1))
+   ->  Result
+         Output: j, (SubPlan 1)
+         ->  GroupAggregate
+               Output: j, i
+               Group Key: t.i, t.j
+               ->  Sort
+                     Output: i, j
+                     Sort Key: t.i, t.j
+                     ->  Seq Scan on public.t
+                           Output: i, j
+         SubPlan 1  (slice1; segments: 3)
+           ->  Result
+                 Output: t.j
+                 ->  Result
+                       Output: true
+ Optimizer: Pivotal Optimizer (GPORCA)
+(18 rows)
+
+select j,
+(select j from (select j) q2)
+from t
+group by i, j;
+ j | j 
+---+---
+ 2 | 2
+(1 row)
+
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink when this SubLink is inside the GROUP BY clause. Attribute, which is
+-- not grouping column (1 as c), is added to query targetList to make ORCA
+-- perform query normalization. During normalization ORCA modifies the vars of
+-- the grouping elements of targetList in order to produce a new Query tree.
+-- The modification of vars inside nested part of SubLinks should be handled
+-- correctly. ORCA shouldn't fall back due to missing variable entry as a result
+-- of incorrect query normalization.
+explain (verbose, costs off)
+select j, 1 as c,
+(select j from (select j) q2) q1
+from t
+group by j, q1;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Result
+   Output: j, 1, ((SubPlan 1))
+   ->  Gather Motion 3:1  (slice2; segments: 3)
+         Output: j, ((SubPlan 1))
+         ->  GroupAggregate
+               Output: j, ((SubPlan 1))
+               Group Key: t.j, ((SubPlan 1))
+               ->  Sort
+                     Output: j, ((SubPlan 1))
+                     Sort Key: t.j, ((SubPlan 1))
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Output: j, ((SubPlan 1))
+                           Hash Key: j, ((SubPlan 1))
+                           ->  Result
+                                 Output: j, ((SubPlan 1))
+                                 ->  Result
+                                       Output: (SubPlan 1), j
+                                       ->  Seq Scan on public.t
+                                             Output: j
+                                       SubPlan 1  (slice1; segments: 3)
+                                         ->  Result
+                                               Output: t.j
+                                               ->  Result
+                                                     Output: true
+ Optimizer: Pivotal Optimizer (GPORCA)
+(25 rows)
+
+select j, 1 as c,
+(select j from (select j) q2) q1
+from t
+group by j, q1;
+ j | c | q1 
+---+---+----
+ 2 | 1 |  2
+(1 row)
+
+-- Ensure that both planners produce valid plans for the query with the nested
+-- SubLink, and this SubLink is under aggregation. ORCA shouldn't fall back due
+-- to missing variable entry as a result of incorrect query normalization. ORCA
+-- should correctly process args of the aggregation during normalization.
+explain (verbose, costs off)
+select (select max((select t.i))) from t;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Result
+   Output: (SubPlan 2)
+   ->  Aggregate
+         Output: max((max((SubPlan 1))))
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Output: (max((SubPlan 1)))
+               ->  Aggregate
+                     Output: max((SubPlan 1))
+                     ->  Seq Scan on public.t
+                           Output: i
+                     SubPlan 1  (slice1; segments: 3)
+                       ->  Result
+                             Output: t.i
+                             ->  Result
+                                   Output: true
+   SubPlan 2  (slice0)
+     ->  Result
+           Output: (max((max((SubPlan 1)))))
+           ->  Result
+                 Output: true
+ Optimizer: Pivotal Optimizer (GPORCA)
+(21 rows)
+
+select (select max((select t.i))) from t;
+ max 
+-----
+   1
+(1 row)
+
+drop table t;

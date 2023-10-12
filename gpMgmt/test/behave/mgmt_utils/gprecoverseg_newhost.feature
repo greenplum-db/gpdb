@@ -99,3 +99,85 @@ Feature: gprecoverseg tests involving migrating to a new host
     And the original cluster state is recreated for "one_host_down"
     And the cluster configuration is saved for "after_recreation"
     And the "before" and "after_recreation" cluster configuration matches with the expected for gprecoverseg newhost
+
+  @concourse_cluster
+  Scenario: failed host is not in reach gprecoverseg recovery works well with all instances recovered
+    Given  the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And database "gptest" exists
+    And the cluster configuration is saved for "before"
+    And segment hosts "sdw1" are disconnected from the cluster and from the spare segment hosts "sdw5"
+    And the user runs psql with "-c 'SELECT gp_request_fts_probe_scan()'" against database "postgres"
+    And the cluster configuration has no segments where "hostname='sdw1' and status='u'"
+    And a gprecoverseg directory under '/tmp' with mode '0700' is created
+    And a gprecoverseg input file is created
+    And edit the input file to recover with content id 0 to host sdw5
+    And edit the input file to recover with content id 1 to host sdw5
+    And edit the input file to recover with content id 6 to host sdw5
+    And edit the input file to recover with content id 7 to host sdw5
+    When the user runs gprecoverseg with input file and additional args "-av"
+    Then gprecoverseg should return a return code of 0
+    Then the original cluster state is recreated for "one_host_down-1"
+    And the cluster configuration is saved for "after_recreation"
+    And the "before" and "after_recreation" cluster configuration matches with the expected for gprecoverseg newhost
+
+  @concourse_cluster
+  Scenario: failed host is not in reach gprecoverseg recovery works well with partial recovery
+    Given  the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And database "gptest" exists
+    And the cluster configuration is saved for "before"
+    And segment hosts "sdw1" are disconnected from the cluster and from the spare segment hosts "sdw5"
+    And the user runs psql with "-c 'SELECT gp_request_fts_probe_scan()'" against database "postgres"
+    And the cluster configuration has no segments where "hostname='sdw1' and status='u'"
+    And a gprecoverseg directory under '/tmp' with mode '0700' is created
+    And a gprecoverseg input file is created
+    And edit the input file to recover with content id 0 to host sdw5
+    And edit the input file to recover with content id 6 to host sdw5
+    When the user runs gprecoverseg with input file and additional args "-av"
+    Then gprecoverseg should return a return code of 0
+    Then the original cluster state is recreated for "one_host_down-2"
+    And the cluster configuration is saved for "after_recreation"
+    And the "before" and "after_recreation" cluster configuration matches with the expected for gprecoverseg newhost
+
+  @concourse_cluster
+  Scenario: failed host is not in reach gprecoverseg recovery works well only primaries are recovered
+    Given  the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And database "gptest" exists
+    And the cluster configuration is saved for "before"
+    And segment hosts "sdw1" are disconnected from the cluster and from the spare segment hosts "sdw5"
+    And the user runs psql with "-c 'SELECT gp_request_fts_probe_scan()'" against database "postgres"
+    And the cluster configuration has no segments where "hostname='sdw1' and status='u'"
+    And a gprecoverseg directory under '/tmp' with mode '0700' is created
+    And a gprecoverseg input file is created
+    And edit the input file to recover with content id 0 to host sdw5
+    And edit the input file to recover with content id 1 to host sdw5
+    When the user runs gprecoverseg with input file and additional args "-av"
+    Then gprecoverseg should return a return code of 0
+    Then the original cluster state is recreated for "one_host_down-3"
+    And the cluster configuration is saved for "after_recreation"
+    And the "before" and "after_recreation" cluster configuration matches with the expected for gprecoverseg newhost
+
+  @concourse_cluster
+  Scenario: failover host is not in reach gprecoverseg recovery to new host skips
+    Given  the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And database "gptest" exists
+    And the cluster configuration is saved for "before"
+    And the primary on content 0 is stopped with the immediate flag
+    And user can start transactions
+    And segment hosts "sdw1,sdw5" are disconnected from the cluster and from the spare segment hosts "sdw6"
+    And the user runs psql with "-c 'SELECT gp_request_fts_probe_scan()'" against database "postgres"
+    And the cluster configuration has no segments where "hostname='sdw1' and status='u'"
+    And a gprecoverseg directory under '/tmp' with mode '0700' is created
+    And a gprecoverseg input file is created
+    And edit the input file to recover with content id 0 to host sdw5
+    When the user runs gprecoverseg with input file and additional args "-av"
+    Then gprecoverseg should return a return code of 2
+    And gprecoverseg  should print "The recovery target segment sdw5 (content 0) is unreachable" escaped to stdout
+

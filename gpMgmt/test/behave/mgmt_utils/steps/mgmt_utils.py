@@ -27,7 +27,9 @@ from os import path
 
 from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, MasterStop
+from gppylib.commands.gp import get_masterdatadir
 from gppylib.commands import gp, unix
+from gppylib.commands.unix import CMD_CACHE
 from gppylib.commands.pg import PgBaseBackup
 from gppylib.commands.unix import findCmdInPath, Scp
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
@@ -360,7 +362,7 @@ def impl(context, dbname):
     drop_database(context, dbname)
 
 
-@given('{env_var} environment variable is not set')
+@given('"{env_var}" environment variable is not set')
 def impl(context, env_var):
     if not hasattr(context, 'orig_env'):
         context.orig_env = dict()
@@ -483,6 +485,7 @@ def impl(context, logdir):
         time.sleep(0.1)
         if attempt == num_retries:
             raise Exception('Timed out after {} retries'.format(num_retries))
+
 
 @then('verify that lines from recovery_progress.file are present in segment progress files in {logdir}')
 def impl(context, logdir):
@@ -1197,6 +1200,15 @@ def impl(context, options):
     context.execute_steps(u'''Then the user runs command "gpactivatestandby -a %s" from standby master''' % options)
     context.standby_was_activated = True
 
+
+@given('the user runs utility "{utility}" with master data directory and "{options}"')
+@when('the user runs utility "{utility}" with master data directory and "{options}"')
+@then('the user runs utility "{utility}" with master data directory and "{options}"')
+def impl(context, utility, options):
+    cmd = "{} -d {} {}".format(utility, master_data_dir, options)
+    context.execute_steps(u'''then the user runs command "%s"''' % cmd )
+
+
 @then('gpintsystem logs should {contain} lines about running backout script')
 def impl(context, contain):
     string_to_find = 'Run command bash .*backout_gpinitsystem.* on master to remove these changes$'
@@ -1609,7 +1621,6 @@ def impl(context, seg):
     if not context.bg_pid:
         raise Exception("Unable to obtain the pid of the background script. Seg Host: %s, get_results: %s" %
                         (hostname, cmd.get_stdout()))
-
 
 @when('the background pid is killed on "{seg}" segment')
 @then('the background pid is killed on "{seg}" segment')
@@ -2872,6 +2883,20 @@ def impl(context, command, target):
     if target not in contents:
         raise Exception("cannot find %s in %s" % (target, filename))
 
+
+@then('{command} should print "{target}" regex to logfile')
+def impl(context, command, target):
+    log_dir = _get_gpAdminLogs_directory()
+    filename = glob.glob('%s/%s_*.log' % (log_dir, command))[0]
+    contents = ''
+    with open(filename) as fr:
+        for line in fr:
+            contents += line
+
+    pat = re.compile(target)
+    if not pat.search(contents):
+        raise Exception("cannot find %s in %s" % (target, filename))
+
 @given('verify that a role "{role_name}" exists in database "{dbname}"')
 @then('verify that a role "{role_name}" exists in database "{dbname}"')
 def impl(context, role_name, dbname):
@@ -3038,6 +3063,17 @@ def impl(context, num_of_segments, num_of_hosts, hostnames):
 @given('there are no gpexpand_inputfiles')
 def impl(context):
     map(os.remove, glob.glob("gpexpand_inputfile*"))
+
+@given('there are no gpexpand tablespace input configuration files')
+def impl(context):
+    list(map(os.remove, glob.glob("{}/*.ts".format(context.working_directory))))
+    if len(glob.glob('{}/*.ts'.format(context.working_directory))) != 0:
+        raise Exception("expected no gpexpand tablespace input configuration files")
+
+@then('verify if a gpexpand tablespace input configuration file is created')
+def impl(context):
+    if len(glob.glob('{}/*.ts'.format(context.working_directory))) != 1:
+        raise Exception("expected gpexpand tablespace input configuration file to be created")
 
 @when('the user runs gpexpand with the latest gpexpand_inputfile with additional parameters {additional_params}')
 def impl(context, additional_params=''):
@@ -3894,7 +3930,10 @@ def impl(context):
 
 
 @when('the user runs {command} and selects {input}')
+@then('the user runs {command} and selects {input}')
 def impl(context, command, input):
+    if input == "no mode but presses enter":
+        input = os.linesep
     p = Popen(command.split(), stdout=PIPE, stdin=PIPE, stderr=PIPE)
     stdout, stderr = p.communicate(input=input)
 
@@ -3903,6 +3942,17 @@ def impl(context, command, input):
     context.ret_code = p.returncode
     context.stdout_message = stdout
     context.error_message = stderr
+
+@when('the user runs {command}, selects {input} and interrupt the process')
+def impl(context, command, input):
+    p = Popen(command.split(), stdout=PIPE, stdin=PIPE, stderr=PIPE)
+    p.stdin.write(input.encode())
+    p.stdin.flush()
+    time.sleep(120)
+    # interrupt the process.
+    p.terminate()
+    p.communicate(input=input.encode())
+
 
 def are_on_different_subnets(primary_hostname, mirror_hostname):
     x = platform.linux_distribution()
@@ -4167,11 +4217,11 @@ def impl(context):
                 raise Exception("Postgres process {0} not killed on {1}.".format(pid, host))
 
 
-@then( 'verify if the gprecoverseg.lock directory is present in master_data_directory')
-def impl(context):
-    gprecoverseg_lock_file = "%s/gprecoverseg.lock" % gp.get_masterdatadir()
-    if not os.path.exists(gprecoverseg_lock_file):
-        raise Exception('gprecoverseg.lock directory does not exist')
+@then('verify if the {lock_file} directory is present in master_data_directory')
+def impl(context, lock_file):
+    utility_lock_file = "%s/%s" % (gp.get_masterdatadir(), lock_file)
+    if not os.path.exists(utility_lock_file):
+        raise Exception('{0} directory does not exist'.format(utility_lock_file))
     else:
         return
 
@@ -4200,3 +4250,91 @@ def impl(context):
             continue
         else:
             raise Exception("segment process not running in execute mode for DBID:{0}".format(dbid))
+
+
+@given('user creates a new executable rsync script which inserts data into table and runs checkpoint along with doing '
+       'rsync')
+def impl(context):
+
+    rsync_script = """
+cat >/usr/local/bin/rsync <<EOL
+#!/usr/bin/env bash
+arguments="\$@"
+# Insert data into table and run checkpoint just before syncing pg_control
+if [[ "\$arguments" == *"pg_xlog"* ]]
+then
+    ssh cdw "source /usr/local/greenplum-db-devel/greenplum_path.sh; psql -c 'INSERT INTO test_recoverseg SELECT generate_series(1, 1000)' -d postgres -p 5432 -h cdw"
+    # run checkpoint
+    ssh cdw "source /usr/local/greenplum-db-devel/greenplum_path.sh; psql -c "CHECKPOINT" -d postgres -p 5432 -h cdw"
+fi
+/usr/bin/rsync \$arguments
+EOL
+"""
+    clear_cmd_cache_script = """
+cat >/tmp/clear_cmd_cache.py <<EOL
+#!/usr/bin/env python
+# clear the cmd cache
+global CMD_CACHE
+CMD_CACHE = {}
+EOL
+"""
+
+    with closing(dbconn.connect(dbconn.DbURL(port=os.environ.get("PGPORT")), unsetSearchPath=False)) as conn:
+        query = "select distinct hostname from gp_segment_configuration where status='d';"
+        result = dbconn.execSQL(conn, query).fetchall()
+        host_list = [result[s][0] for s in range(len(result))]
+        context.hosts_with_rsync_bash = host_list
+
+    cmd = Command(name='create a file for new rsync script',
+                  cmdStr="sudo touch /usr/local/bin/rsync;sudo chmod 777 /usr/local/bin/rsync")
+    cmd.run(validateAfter=True)
+
+    cmd = Command(name='update rsync bash script', cmdStr=rsync_script)
+    cmd.run(validateAfter=True)
+
+    for host in host_list:
+        cmd = Command(name='create a file for new rsync script', cmdStr="sudo touch /usr/local/bin/rsync;sudo chmod 777 /usr/local/bin/rsync", remoteHost=host, ctxt=REMOTE)
+        cmd.run(validateAfter=True)
+
+        cmd = Command(name='update rsync bash script', cmdStr="scp /usr/local/bin/rsync {}:/usr/local/bin/rsync".format(host))
+        cmd.run(validateAfter=True)
+
+        cmd = Command(name='create script to clear cmd_cache', cmdStr=clear_cmd_cache_script,
+                      remoteHost=host, ctxt=REMOTE)
+        cmd.run(validateAfter=True)
+
+        cmd = Command(name='run script to clear cmd_cache', cmdStr="chmod +x /tmp/clear_cmd_cache.py;/tmp/clear_cmd_cache.py",
+                      remoteHost=host, ctxt=REMOTE)
+        cmd.run(validateAfter=True)
+
+
+@then('the row count of table {table} in "{dbname}" should be {count}')
+def impl(context, table, dbname, count):
+    current_row_count = _get_row_count_per_segment(table, dbname)
+    if int(count) != sum(current_row_count):
+        raise Exception(
+            "%s table in %s has %d rows, expected %d rows." % (table, dbname, sum(current_row_count), int(count)))
+
+@then('{command} should print the following lines {num} times to stdout')
+def impl(context, command, num):
+    """
+    Verify that each pattern occurs a specific number of times in the output.
+    """
+    expected_lines = context.text.strip().split('\n')
+    for expected_pattern in expected_lines:
+        match_count = len(re.findall(re.escape(expected_pattern), context.stdout_message))
+        if match_count != int(num):
+            raise Exception(
+                "Expected %s to occur %s times but Found %d times" .format(expected_pattern, num, match_count))
+
+
+
+
+@given('save the information of the database "{dbname}"')
+def impl(context, dbname):
+    with dbconn.connect(dbconn.DbURL(dbname='template1'), unsetSearchPath=False) as conn:
+        query = """SELECT datname,oid  FROM pg_database WHERE datname='{0}';""" .format(dbname)
+        datname, oid = dbconn.execSQLForSingletonRow(conn, query)
+        context.db_name = datname
+        context.db_oid = oid
+

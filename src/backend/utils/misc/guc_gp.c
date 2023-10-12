@@ -3297,6 +3297,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 		NULL, NULL, NULL
 	},
 
+	{
+			{"gp_detect_data_correctness", PGC_USERSET, UNGROUPED,
+			 gettext_noop("Detect if the current partitioning of the table or data distribution is correct."),
+			 NULL,
+			 GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			},
+			&gp_detect_data_correctness,
+			false,
+			NULL, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
