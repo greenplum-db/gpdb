@@ -113,7 +113,17 @@ jobs:
 
       - name: Compare ABI
         run: |
-          abi-compliance-checker -lib postgres -old build-baseline/postgres*.abi -new build-latest/postgres*.abi -skip-symbols .abi-check/${{ needs.abi-dump-setup.outputs.BASELINE_VERSION }}/skip-postgres-symbols.txt
+          SKIP_POSTGRES_SYMBOLS_LIST=".abi-check/${{ needs.abi-dump-setup.outputs.BASELINE_VERSION }}/skip-postgres-symbols.txt"
+          if [[ -f "$SKIP_POSTGRES_SYMBOLS_LIST" ]]; then
+            abi-compliance-checker -lib postgres \
+                                   -old build-baseline/postgres*.abi \
+                                   -new build-latest/postgres*.abi \
+                                   -skip-symbols $SKIP_POSTGRES_SYMBOLS_LIST
+          else
+            abi-compliance-checker -lib postgres \
+                                   -old build-baseline/postgres*.abi \
+                                   -new build-latest/postgres*.abi
+          fi
 
       - name: Upload ABI Comparison
         if: always()
