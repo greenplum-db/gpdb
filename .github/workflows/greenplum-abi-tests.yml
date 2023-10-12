@@ -61,7 +61,7 @@ jobs:
           cd ctags
           ./autogen.sh
           env CC=$(which clang) CXX=$(which clang++) ./configure
-          make -j`nproc` && sudo make install
+          make -j`nproc` && make install
 
       - name: Download Greenplum source code
         uses: actions/checkout@v3
