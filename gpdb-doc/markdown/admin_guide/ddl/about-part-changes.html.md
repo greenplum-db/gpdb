@@ -63,6 +63,7 @@ The following items describe the Greenplum 7 *changes* to classic partitioning s
     The new [pg_partitioned_table](../../ref_guide/system_catalogs/pg_partitioned_table.html) catalog table and `pg_partition_tree()`, `pg_partition_ancestors()`, and `pg_partition_root()` functions provide similar information. Refer to [About Viewing Your Partition Design](ddl-partition.html#topic76) for more information on these new functions.
 - The `FOR (RANK(<value>))` clause is no longer supported. When creating or altering a partitioned table, you must locate a partition by `VALUE`.
 - Partition boundaries are no longer represented as `CHECK` constraints, but rather internally-constructed partition constraints.
+- The level of a partition in the partition hierarchy differs in Greenplum 6 and Greenplum 7. In Greenplum 6, the level of the immediate child of a partitioned table is 0. In Greenplum 7, the level of the partitioned table itself is 0, and the level of its immediate child is 1.
 - The interpretation of `START`/`END` and `EXCLUSIVE`/`INCLUSIVE` clauses for range partition boundaries has changed:
 
     - When a clause is not specified, the start boundary is always inclusive and the end boundary exclusive (same behaviour as Greenplum 6).

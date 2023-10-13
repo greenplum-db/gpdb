@@ -277,3 +277,12 @@ explain delete from ext_part where a=1;
 
 explain update ext_part set a=1;
 ERROR:  cannot update foreign table "p2_ext"
+set optimizer_enable_orderedagg=off;
+select array_agg(a order by b)
+  from (values (1,4),(2,3),(3,1),(4,2)) v(a,b);
+ array_agg 
+-----------
+ {3,4,2,1}
+(1 row)
+
+reset optimizer_enable_orderedagg;

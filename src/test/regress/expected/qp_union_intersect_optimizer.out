@@ -1855,15 +1855,16 @@ explain (costs off)
 select * from t_test_append_rep
 union all
 select * from t_test_append_hash;
-                       QUERY PLAN                        
----------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)
+                         QUERY PLAN
+-------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
    ->  Append
-         ->  Seq Scan on t_test_append_rep
-         ->  Broadcast Motion 3:1  (slice2; segments: 3)
-               ->  Seq Scan on t_test_append_hash
- Optimizer: Pivotal Optimizer (GPORCA) version 3.93.0
-(6 rows)
+         ->  Result
+               One-Time Filter: (gp_execution_segment() = 0)
+               ->  Seq Scan on t_test_append_rep
+         ->  Seq Scan on t_test_append_hash
+ Optimizer: GPORCA
+(7 rows)
 
 select * from t_test_append_rep
 union all
@@ -1932,15 +1933,16 @@ insert into t1 select i, i+1 from generate_series(6, 9) i;
 insert into rt1 select i, i+1 from generate_series(1, 5) i;
 set local gp_enable_direct_dispatch = on;
 explain(costs off) select * from rt1 union all select * from t1;
-                       QUERY PLAN                        
----------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)
+                         QUERY PLAN
+-------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
    ->  Append
-         ->  Seq Scan on rt1
-         ->  Broadcast Motion 3:1  (slice2; segments: 3)
-               ->  Seq Scan on t1
- Optimizer: Pivotal Optimizer (GPORCA)
-(6 rows)
+         ->  Result
+               One-Time Filter: (gp_execution_segment() = 0)
+               ->  Seq Scan on rt1
+         ->  Seq Scan on t1
+ Optimizer: GPORCA
+(7 rows)
 
 select * from rt1 union all select * from t1;
  a | b  

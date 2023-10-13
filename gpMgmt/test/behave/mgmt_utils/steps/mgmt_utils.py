@@ -2887,6 +2887,17 @@ def impl(context, num_of_segments, num_of_hosts, hostnames):
 def impl(context):
     list(map(os.remove, glob.glob("gpexpand_inputfile*")))
 
+@given('there are no gpexpand tablespace input configuration files')
+def impl(context):
+    list(map(os.remove, glob.glob("{}/*.ts".format(context.working_directory))))
+    if len(glob.glob('{}/*.ts'.format(context.working_directory))) != 0:
+        raise Exception("expected no gpexpand tablespace input configuration files")
+
+@then('verify if a gpexpand tablespace input configuration file is created')
+def impl(context):
+    if len(glob.glob('{}/*.ts'.format(context.working_directory))) != 1:
+        raise Exception("expected gpexpand tablespace input configuration file to be created")
+
 @when('the user runs gpexpand with the latest gpexpand_inputfile with additional parameters {additional_params}')
 def impl(context, additional_params=''):
     gpexpand = Gpexpand(context, working_directory=context.working_directory)

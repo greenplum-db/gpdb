@@ -43,6 +43,7 @@ The following table lists the modules that are provided in the Data Science Pack
 | cycler | Composable style cycles |
 | cymem | Manage calls to calloc/free through Cython |
 | Cython | The Cython compiler for writing C extensions for the Python language |
+| datasets | HuggingFace community-driven open-source library of datasets |
 | deprecat | Python @deprecat decorator to deprecate old python classes, functions or methods |
 | dill | serialize all of python |
 | fastprogress | A nested progress with plotting options for fastai |
@@ -67,6 +68,7 @@ The following table lists the modules that are provided in the Data Science Pack
 | holidays | Generate and work with holidays in Python |
 | idna | Internationalized Domain Names in Applications (IDNA) |
 | importlib-metadata | Read metadata from Python packages |
+| InstructorEmbedding | Text embedding tool |
 | interface-meta | Provides a convenient way to expose an extensible API with enforced method signatures and consistent documentation |
 | jaraco.classes | Utility functions for Python class constructs |
 | jaraco.collections | Collection objects similar to those in stdlib by jaraco |
@@ -82,6 +84,7 @@ The following table lists the modules that are provided in the Data Science Pack
 | langcodes | Tools for labeling human languages with IETF language tags |
 | libclang | Clang Python Bindings, mirrored from the official LLVM repo |
 | lifelines | Survival analysis in Python, including Kaplan Meier, Nelson Aalen and regression |
+| lime | Local Interpretable Model-Agnostic Explanations for machine learning classifiers |
 | llvmlite | lightweight wrapper around basic LLVM functionality |
 | lxml | Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API |
 | Markdown | Python implementation of Markdown |
@@ -98,6 +101,7 @@ The following table lists the modules that are provided in the Data Science Pack
 | numpy | Scientific computing |
 | oauthlib | A generic, spec-compliant, thorough implementation of the OAuth request-signing logic |
 | opt-einsum | Optimizing numpys einsum function |
+| orjson | Fast, correct Python JSON library supporting dataclasses, datetimes, and numpy |
 | packaging | Core utilities for Python packages |
 | pandas | Data analysis |
 | pathy | pathlib.Path subclasses for local and cloud bucket storage |
@@ -126,11 +130,15 @@ The following table lists the modules that are provided in the Data Science Pack
 | regex | Alternative regular expression module, to replace re |
 | requests | HTTP library |
 | requests-oauthlib | OAuthlib authentication support for Requests |
+| rouge | Full Python ROUGE Score Implementation (not a wrapper) |
 | rsa | OAuthlib authentication support for Requests |
+| sacrebleu | Hassle-free computation of shareable, comparable, and reproducible BLEU, chrF, and TER scores |
 | scikit-learn | Machine learning data mining and analysis |
 | scipy | Scientific computing |
 | semver | Python helper for Semantic Versioning |
+| sentence_transformers | Multilingual Sentence, Paragraph, and Image Embeddings using BERT & Co. |
 | sgmllib3k | Py3k port of sgmllib |
+| shap | A unified approach to explain the output of any machine learning model |
 | six | Python 2 and 3 compatibility library |
 | sklearn | A set of python modules for machine learning and data mining |
 | smart-open | Utilities for streaming large files \(S3, HDFS, gzip, bz2, and so forth\) |

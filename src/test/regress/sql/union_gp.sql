@@ -660,6 +660,34 @@ union all
 select * from union_schema.t3;
 
 reset allow_system_table_mods;
+
+-- The following tests demonstrate the plan alternative
+-- where ORCA requests union all's outer child to become
+-- a Non-Singleton. This alternative is at times costed
+-- lower than aligning the inner child's distribution spec
+-- with that delivered by the outer child. 
+-- 
+-- Replicated ∪ Hashed
+create table rep (a int) distributed replicated;
+insert into rep select i from generate_series (1, 10) i; 
+create table dist (a int);
+insert into dist select i from generate_series (1, 1000) i;
+analyze dist;
+analyze rep;
+-- It's more cost-effective to apply a duplicate-sensitive
+-- random motion (non-phyiscal) on a replicated table, 
+-- than a broadcast motion on a distributed table.
+explain select a from rep union all select a from dist;
+
+-- Universal ∪ Random
+create table rand (a int) distributed randomly;
+insert into rand select i from generate_series (1, 10000) i;
+analyze rand;
+-- It's more cost-effective to apply a duplicate-sensitive
+-- random motion (non-physical) on a universal TVF, than a
+-- gather motion on a randomly distributed table.
+explain select i from generate_series(1,1000) i union all select a from rand;
+
 --
 -- Clean up
 --

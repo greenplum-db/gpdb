@@ -54,6 +54,7 @@
 		"gp_initial_bad_row_limit",
 		"gp_interconnect_address_type",
 		"gp_interconnect_cache_future_packets",
+		"gp_interconnect_cursor_ic_table_size",
 		"gp_interconnect_debug_retry_interval",
 		"gp_interconnect_default_rtt",
 		"gp_interconnect_fc_method",

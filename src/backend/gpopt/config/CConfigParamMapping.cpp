@@ -270,6 +270,11 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] = {
 	 false,	 // m_negate_param
 	 GPOS_WSZ_LIT(
 		 "Enable Eager Agg transform for pushing aggregate below an innerjoin.")},
+
+	{EopttraceDisableOrderedAgg, &optimizer_enable_orderedagg,
+	 true,	// m_negate_param
+	 GPOS_WSZ_LIT("Disable ordered aggregate plans.")},
+
 	{EopttraceExpandFullJoin, &optimizer_expand_fulljoin,
 	 false,	 // m_negate_param
 	 GPOS_WSZ_LIT(

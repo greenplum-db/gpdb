@@ -206,7 +206,8 @@ private:
 	// for index scan & index only scan.
 	static CDouble ComputeUnusedIndexWeight(CExpressionHandle &exprhdl,
 											CColRefArray *pdrgpcrIndexColumns,
-											IStatistics *stats);
+											IStatistics *pBaseTableStats,
+											CMemoryPool *mp, IMDId *rel_mdid);
 
 	// Get  count of index keys, width of included col, array of index columns
 	// and table statistics for Index Scan, Index only scan, Dynamic Index scan

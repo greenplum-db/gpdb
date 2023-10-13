@@ -869,6 +869,15 @@ CTranslatorDXLToScalar::TranslateDXLScalarSubplanToScalar(
 	// translate other subplan params
 	TranslateSubplanParams(subplan, &subplan_translate_ctxt, outer_refs,
 						   colid_var);
+	// Similar to the logic in planner's build_subplan(), we can
+	// set useHashTable to true if the expr is hashable and there are no outer
+	// refs, which can significantly improve execution time
+	if (slink == ANY_SUBLINK && subplan->parParam == NIL &&
+		gpdb::TestexprIsHashable(subplan->testexpr, subplan->paramIds))
+	{
+		subplan->useHashTable = true;
+	}
+
 
 	return (Expr *) subplan;
 }

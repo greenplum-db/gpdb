@@ -84,7 +84,7 @@ You should also deactivate firewall software such as `firewalld` \(on systems su
 
     ```
     # systemctl stop firewalld.service
-    # systemctl deactivate firewalld.service
+    # systemctl disable firewalld.service
     ```
 
 See the documentation for the firewall or your operating system for additional information.

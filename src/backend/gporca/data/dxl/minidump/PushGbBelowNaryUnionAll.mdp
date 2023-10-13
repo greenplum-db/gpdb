@@ -1637,7 +1637,7 @@ explain select id from uav group by id;
         </dxl:UnionAll>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="36">
+    <dxl:Plan Id="0" SpaceSize="54">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1307.860912" Rows="101.000000" Width="4"/>

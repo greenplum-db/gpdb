@@ -4244,6 +4244,28 @@ DropTempTableNamespaceForResetSession(Oid namespaceOid)
 }
 
 /*
+ * Remove temp namespace entry from pg_namespace.
+ */
+void
+DropTempTableNamespaceEntryForResetSession(Oid namespaceOid, Oid toastNamespaceOid)
+{
+	if (IsTransactionOrTransactionBlock())
+		elog(ERROR, "Called within a transaction");
+
+	StartTransactionCommand();
+
+	/* Make sure the temp namespace is valid. */
+	if (SearchSysCacheExists1(NAMESPACEOID,
+							  ObjectIdGetDatum(namespaceOid)))
+	{
+		RemoveSchemaById(namespaceOid);
+		RemoveSchemaById(toastNamespaceOid);
+	}
+
+	CommitTransactionCommand();
+}
+
+/*
  * Called by CreateSchemaCommand when creating a temporary schema 
  */
 void

@@ -154,7 +154,7 @@ Greenplum Database returns an empty set if there are no more rows to retrieve fr
 
 ### <a id="wait"></a>Waiting for Data Retrieval to Complete
 
-Use the `gp_wait_parallel_retrieve_cursor()` function to display the the status of data retrieval from a parallel retrieve cursor, or to wait for all endpoints to finishing retrieving the data. You invoke this function in the transaction block in which you declared the parallel retrieve cursor.
+Use the `gp_wait_parallel_retrieve_cursor()` function to display the status of data retrieval from a parallel retrieve cursor, or to wait for all endpoints to finishing retrieving the data. You invoke this function in the transaction block in which you declared the parallel retrieve cursor.
 
 `gp_wait_parallel_retrieve_cursor()` returns `true` only when all tuples are fully retrieved from all endpoints. In all other cases, the function returns `false` and may additionally throw an error.
 

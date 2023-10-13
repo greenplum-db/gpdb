@@ -344,6 +344,16 @@ extern int	Gp_interconnect_queue_depth;
  *
  */
 extern int	Gp_interconnect_snd_queue_depth;
+
+/*
+ * Cursor IC table size.
+ *
+ * For cursor case, there may be several concurrent interconnect
+ * instances on QD. The table is used to track the status of the
+ * instances, which is quite useful for "ACK the past and NAK the future" paradigm.
+ *
+ */
+extern int  Gp_interconnect_cursor_ic_table_size;
 extern int	Gp_interconnect_timer_period;
 extern int	Gp_interconnect_timer_checking_period;
 extern int	Gp_interconnect_default_rtt;

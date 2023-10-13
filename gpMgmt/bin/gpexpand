@@ -1255,6 +1255,20 @@ class gpexpand:
 
         tablespace_inputfile = self.options.filename + ".ts"
 
+        """
+        Check if the tablespace input file exists or not
+        In cases where the user manually creates an input file, the file
+        will not be present. In such cases create the file and exit giving the
+        user a chance to review it and re-run gpexpand.
+        """
+        if not os.path.exists(tablespace_inputfile):
+            self.generate_tablespace_inputfile(tablespace_inputfile)
+            self.logger.warning("Could not locate tablespace input configuration file '{0}'. A new tablespace input configuration file is written " \
+                                "to '{0}'. Please review the file and re-run with: gpexpand -i {1}".format(tablespace_inputfile, self.options.filename))
+
+            logger.info("Exiting...")
+            sys.exit(1)
+
         new_tblspc_info = {}
 
         with open(tablespace_inputfile) as f:
@@ -2525,10 +2539,10 @@ def main(options, args, parser):
             _gp_expand.validate_heap_checksums()
             newSegList = _gp_expand.read_input_files()
             _gp_expand.addNewSegments(newSegList)
+            newTableSpaceInfo = _gp_expand.read_tablespace_file()
             _gp_expand.sync_packages()
             _gp_expand.start_prepare()
             _gp_expand.lock_catalog()
-            newTableSpaceInfo = _gp_expand.read_tablespace_file()
             _gp_expand.add_segments(newTableSpaceInfo)
             _gp_expand.update_original_segments()
             _gp_expand.cleanup_new_segments()

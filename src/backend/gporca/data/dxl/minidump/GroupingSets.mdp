@@ -240,7 +240,7 @@
         </dxl:UnionAll>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="220">
+    <dxl:Plan Id="0" SpaceSize="620">
       <dxl:Sequence>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.000386" Rows="2.000000" Width="12"/>

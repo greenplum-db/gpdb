@@ -401,7 +401,7 @@ CPhysical::PdsRequireSingletonOrReplicated(CMemoryPool *mp,
 										   CDistributionSpec *pdsRequired,
 										   ULONG child_index, ULONG ulOptReq)
 {
-	GPOS_ASSERT(2 > ulOptReq);
+	GPOS_ASSERT(3 > ulOptReq);
 
 	// if expression has to execute on a single host then we need a gather motion
 	if (exprhdl.NeedsSingletonExecution())

@@ -1964,7 +1964,7 @@ explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on 
    ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=28)
          Join Filter: true
          ->  Seq Scan on foojoinpruning  (cost=0.00..431.00 rows=1 width=28)
-         ->  Index Scan using idx3 on barjoinpruning  (cost=0.00..6.00 rows=1 width=1)
+         ->  Index Scan using idx4 on barjoinpruning  (cost=0.00..6.00 rows=1 width=1)
                Index Cond: (p = foojoinpruning.a)
                Filter: (r = s)
  Optimizer: Pivotal Optimizer (GPORCA)

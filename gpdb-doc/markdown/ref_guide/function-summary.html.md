@@ -424,7 +424,7 @@ Many of these processing functions and operators convert Unicode escapes in JSON
                     json_to_recordset('[{"a":1,"b":"foo"},{"a":"2","c":"bar"}]') as x(a int, b
                     text);</code>
 </td>
-<td class="entry nocellnorowborder="vertical-align:top;" headers="d233567e2045 ">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e2045 ">
 <pre class="pre"> a |  b
 ---+-----
  1 | foo
@@ -1077,6 +1077,44 @@ The following built-in advanced analytic functions are Greenplum extensions of t
 </tr>
 </thead>
 <tbody class="tbody">
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3144 ">
+<code class="ph codeph">gp_array_agg (<em class="ph i">anyarray</em>)</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3147 ">
+same as the argument data type
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3150 ">
+<code class="ph codeph">gp_array_agg (<em class="ph i">anyarray</em>)</code>
+<p class="p">
+<em class="ph i">Example:</em>
+</p>
+<pre class="pre codeblock"><code>CREATE TABLE intarr_tbl (a int, arr int[]);
+INSERT INTO intarr_tbl SELECT i, array[i, i] FROM generate_series(1, 5)i;
+INSERT INTO intarr_tbl SELECT 6, '{6, NULL}'::int[];
+INSERT INTO intarr_tbl SELECT 8, '{NULL, 7}'::int[];
+SELECT gp_array_agg(arr ORDER BY arr) FROM intarr_tbl; </code></pre>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3153 ">A parallel version of <code>array_agg(anyarray)</code>. Concatenates input arrays to create an array of one higher dimension. The inputs must all have the same dimensions, and they cannot be empty or null.</td>
+</tr>
+<tr class="row">
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3144 ">
+<code class="ph codeph">gp_array_agg (<em class="ph i">anynonarray</em>)</code>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3147 ">
+array of the argument type
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3150 ">
+<code class="ph codeph">gp_array_agg (<em class="ph i">anynonarray</em>)</code>
+<p class="p">
+<em class="ph i">Example:</em>
+</p>
+<pre class="pre codeblock"><code>CREATE TABLE table1(a int4, b int4);
+INSERT INTO table1 VALUES (4,5), (2,1), (1,3), (3,null), (3,7);
+SELECT gp_array_agg(a ORDER BY b NULLS FIRST) FROM table1; </code></pre>
+</td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3153 ">An parallel version of <code>array_agg(anynonarray)</code>. Creates an array by concatenating input values, including nulls.</td>
+</tr>
 <tr class="row">
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d233567e3144 ">
 <code class="ph codeph">MEDIAN (<em class="ph i">expr</em>)</code>

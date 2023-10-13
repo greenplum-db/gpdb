@@ -352,7 +352,7 @@ class GpStop:
         """
         try:
             self.dburl = dbconn.DbURL(port=self.port, dbname='template1')
-            with closing(dbconn.connect(self.dburl)) as conn:
+            with closing(dbconn.connect(self.dburl, utility=True)) as conn:
                 pass  # Nothing to do here, as we are only testing the database connection
         except Exception as exc:
             if "the database system is shutting down" in str(exc):

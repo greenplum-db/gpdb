@@ -45,13 +45,31 @@ CPhysicalSerialUnionAll::CPhysicalSerialUnionAll(
 	CColRef2dArray *pdrgpdrgpcrInput)
 	: CPhysicalUnionAll(mp, pdrgpcrOutput, pdrgpdrgpcrInput)
 {
-	// UnionAll creates two distribution requests to enforce distribution of its children:
-	// (1) (Hashed, Hashed): used to pass hashed distribution (requested from above)
-	//     to child operators and match request Exactly
-	// (2) (ANY, matching_distr): used to request ANY distribution from outer child, and
-	//     match its response on the distribution requested from inner child
+	// UnionAll creates 3 distribution requests to enforce
+	// distribution of its children:
+	//
+	// Request 1: HASH
+	// Pass hashed distribution (requested from above) to child
+	// operators and match request exactly
+	//
+	// Request 2: NON-SINGLETON, matching_dist
+	// Request NON-SINGLETON from the outer child, and match the
+	// requests on the rest children based what dist spec the outer
+	// child NOW delivers (derived from property plan). Note, the
+	// NON-SINGLETON that we request from the outer child is not
+	// satisfiable by REPLICATED.
+	//
+	// Request 3: ANY, matching_dist
+	// Request ANY distribution from the outer child, and match the
+	// requests on the rest children based on what dist spec the outer
+	// child delivers. Note, no enforcement should ever be applied to
+	// the outer child, because ANY is satisfiable by all specs.
+	//
+	// If request 1 falls through, request 3 serves as the
+	// backup request. Duplicate requests would eventually be
+	// deduplicated.
 
-	SetDistrRequests(2 /*ulDistrReq*/);
+	SetDistrRequests(3 /*ulDistrReq*/);
 	GPOS_ASSERT(0 < UlDistrRequests());
 }
 
@@ -73,8 +91,9 @@ CPhysicalSerialUnionAll::PdsRequired(
 {
 	GPOS_ASSERT(nullptr != PdrgpdrgpcrInput());
 	GPOS_ASSERT(child_index < PdrgpdrgpcrInput()->Size());
-	GPOS_ASSERT(2 > ulOptReq);
+	GPOS_ASSERT(3 > ulOptReq);
 
+	// First check if we have to request SINGLETON or REPLICATED
 	CDistributionSpec *pds = PdsRequireSingletonOrReplicated(
 		mp, exprhdl, pdsRequired, child_index, ulOptReq);
 	if (nullptr != pds)
@@ -82,6 +101,8 @@ CPhysicalSerialUnionAll::PdsRequired(
 		return pds;
 	}
 
+	// Request 1: HASH
+	// This request applies to all union all children
 	if (0 == ulOptReq && CDistributionSpec::EdtHashed == pdsRequired->Edt())
 	{
 		// attempt passing requested hashed distribution to children
@@ -95,8 +116,17 @@ CPhysicalSerialUnionAll::PdsRequired(
 
 	if (0 == child_index)
 	{
-		// otherwise, ANY distribution is requested from outer child
-		return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
+		if (1 == ulOptReq)
+		{
+			// Request 2: NON-SINGLETON from outer child
+			return GPOS_NEW(mp) CDistributionSpecNonSingleton(
+				false /*fAllowReplicated*/, true /*fAllowEnforced*/);
+		}
+		else
+		{
+			// Request 3: ANY from outer child
+			return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
+		}
 	}
 
 	// inspect distribution delivered by outer child

@@ -190,17 +190,6 @@ struct ConnHashTable
 								(a)->srcPid == (b)->srcPid &&			\
 								(a)->dstPid == (b)->dstPid && (a)->icId == (b)->icId))
 
-
-/*
- * Cursor IC table definition.
- *
- * For cursor case, there may be several concurrent interconnect
- * instances on QD. The table is used to track the status of the
- * instances, which is quite useful for "ACK the past and NAK the future" paradigm.
- *
- */
-#define CURSOR_IC_TABLE_SIZE (128)
-
 /*
  * CursorICHistoryEntry
  *
@@ -233,8 +222,9 @@ struct CursorICHistoryEntry
 typedef struct CursorICHistoryTable CursorICHistoryTable;
 struct CursorICHistoryTable
 {
+	uint32		size;
 	uint32		count;
-	CursorICHistoryEntry *table[CURSOR_IC_TABLE_SIZE];
+	CursorICHistoryEntry **table;
 };
 
 /*
@@ -284,6 +274,13 @@ struct ReceiveControlInfo
 
 	/* Cursor history table. */
 	CursorICHistoryTable cursorHistoryTable;
+
+	/*
+	 * Last distributed transaction id when SetupUDPInterconnect is called.
+	 * Coupled with cursorHistoryTable, it is used to handle multiple
+	 * concurrent cursor cases.
+	 */
+	DistributedTransactionId lastDXatId;
 };
 
 /*
@@ -928,8 +925,13 @@ dumpTransProtoStats()
 static void
 initCursorICHistoryTable(CursorICHistoryTable *t)
 {
+	MemoryContext old;
 	t->count = 0;
-	memset(t->table, 0, sizeof(t->table));
+	t->size = Gp_interconnect_cursor_ic_table_size;
+
+	old = MemoryContextSwitchTo(ic_control_info.memContext);
+	t->table = palloc0(sizeof(struct CursorICHistoryEntry *) * t->size);
+	MemoryContextSwitchTo(old);
 }
 
 /*
@@ -941,7 +943,7 @@ addCursorIcEntry(CursorICHistoryTable *t, uint32 icId, uint32 cid)
 {
 	MemoryContext old;
 	CursorICHistoryEntry *p;
-	uint32		index = icId % CURSOR_IC_TABLE_SIZE;
+	uint32		index = icId % t->size;
 
 	old = MemoryContextSwitchTo(ic_control_info.memContext);
 	p = palloc0(sizeof(struct CursorICHistoryEntry));
@@ -971,7 +973,7 @@ static void
 updateCursorIcEntry(CursorICHistoryTable *t, uint32 icId, uint8 status)
 {
 	struct CursorICHistoryEntry *p;
-	uint8		index = icId % CURSOR_IC_TABLE_SIZE;
+	uint8		index = icId % t->size;
 
 	for (p = t->table[index]; p; p = p->next)
 	{
@@ -992,7 +994,7 @@ static CursorICHistoryEntry *
 getCursorIcEntry(CursorICHistoryTable *t, uint32 icId)
 {
 	struct CursorICHistoryEntry *p;
-	uint8		index = icId % CURSOR_IC_TABLE_SIZE;
+	uint8		index = icId % t->size;
 
 	for (p = t->table[index]; p; p = p->next)
 	{
@@ -1014,7 +1016,7 @@ pruneCursorIcEntry(CursorICHistoryTable *t, uint32 icId)
 {
 	uint8		index;
 
-	for (index = 0; index < CURSOR_IC_TABLE_SIZE; index++)
+	for (index = 0; index < t->size; index++)
 	{
 		struct CursorICHistoryEntry *p,
 				   *q;
@@ -1063,7 +1065,7 @@ purgeCursorIcEntry(CursorICHistoryTable *t)
 {
 	uint8		index;
 
-	for (index = 0; index < CURSOR_IC_TABLE_SIZE; index++)
+	for (index = 0; index < t->size; index++)
 	{
 		struct CursorICHistoryEntry *trash;
 
@@ -1448,6 +1450,7 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 
 	/* allocate a buffer for sending disorder messages */
 	rx_control_info.disorderBuffer = palloc0(MIN_PACKET_SIZE);
+	rx_control_info.lastDXatId = InvalidTransactionId;
 	rx_control_info.lastTornIcId = 0;
 	initCursorICHistoryTable(&rx_control_info.cursorHistoryTable);
 
@@ -3039,34 +3042,66 @@ SetupUDPIFCInterconnect_Internal(SliceTable *sliceTable)
 	set_test_mode();
 #endif
 
+	/* Prune the QD's history table if it is too large */
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		/* 
-		 * Prune the history table if it is too large
-		 * 
-		 * We only keep history of constant length so that
-		 * - The history table takes only constant amount of memory.
-		 * - It is long enough so that it is almost impossible to receive 
-		 *   packets from an IC instance that is older than the first one 
-		 *   in the history.
-		 */
-		if (rx_control_info.cursorHistoryTable.count > (2 * CURSOR_IC_TABLE_SIZE))
-		{
-			uint32 prune_id = sliceTable->ic_instance_id - CURSOR_IC_TABLE_SIZE;
+		CursorICHistoryTable *ich_table = &rx_control_info.cursorHistoryTable;
+		DistributedTransactionId distTransId = getDistributedTransactionId();
 
-			/* 
-			 * Only prune if we didn't underflow -- also we want the prune id
-			 * to be newer than the limit (hysteresis)
+		if (ich_table->count > (2 * ich_table->size))
+		{
+			/*
+			 * distTransId != lastDXatId
+			 * Means the last transaction is finished, it's ok to make a prune.
 			 */
-			if (prune_id < sliceTable->ic_instance_id)
+			if (distTransId != rx_control_info.lastDXatId)
 			{
 				if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
-					elog(DEBUG1, "prune cursor history table (count %d), icid %d", rx_control_info.cursorHistoryTable.count, sliceTable->ic_instance_id);
-				pruneCursorIcEntry(&rx_control_info.cursorHistoryTable, prune_id);
+					elog(DEBUG1, "prune cursor history table (count %d), icid %d, prune_id %d",
+						 ich_table->count, sliceTable->ic_instance_id, sliceTable->ic_instance_id);
+				pruneCursorIcEntry(ich_table, sliceTable->ic_instance_id);
+			}
+			/*
+			 * distTransId == lastDXatId and they are not InvalidTransactionId(0)
+			 * Means current (non Read-Only) transaction isn't finished, should not prune.
+			 */
+			else if (rx_control_info.lastDXatId != InvalidTransactionId)
+			{
+				;
+			}
+			/*
+			 * distTransId == lastDXatId and they are InvalidTransactionId(0)
+			 * Means they are the same transaction or different Read-Only transactions.
+			 *
+			 * For the latter, it's hard to get a perfect timepoint to prune: prune eagerly may
+			 * cause problems (pruned current Txn's Ic instances), but prune in low frequency
+			 * causes memory leak.
+			 *
+			 * So, we choose a simple algorithm to prune it here. And if it mistakenly prune out
+			 * the still-in-used Ic instance (with lower id), the query may hang forever.
+			 * Then user have to set a bigger gp_interconnect_cursor_ic_table_size value and
+			 * try the query again, it is a workaround.
+			 *
+			 * More backgrounds please see: https://github.com/greenplum-db/gpdb/pull/16458
+			 */
+			else
+			{
+				if (sliceTable->ic_instance_id > ich_table->size)
+				{
+					uint32 prune_id = sliceTable->ic_instance_id - ich_table->size;
+					Assert(prune_id < sliceTable->ic_instance_id);
+
+					if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
+						elog(DEBUG1, "prune cursor history table (count %d), icid %d, prune_id %d",
+							ich_table->count, sliceTable->ic_instance_id, prune_id);
+					pruneCursorIcEntry(ich_table, prune_id);
+				}
 			}
 		}
 
-		addCursorIcEntry(&rx_control_info.cursorHistoryTable, sliceTable->ic_instance_id, gp_command_count);
+		addCursorIcEntry(ich_table, sliceTable->ic_instance_id, gp_command_count);
+		/* save the latest transaction id */
+		rx_control_info.lastDXatId = distTransId;
 	}
 
 	/* now we'll do some setup for each of our Receiving Motion Nodes. */

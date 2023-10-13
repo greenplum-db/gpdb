@@ -994,15 +994,17 @@ explain (costs off) insert into t_replicate_volatile select nextval('seq_for_ins
 (5 rows)
 
 explain (costs off) select a from t_replicate_volatile union all select * from nextval('seq_for_insert_replicated_table');
-                  QUERY PLAN                  
-----------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)
+                         QUERY PLAN
+-------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
    ->  Append
-         ->  Seq Scan on t_replicate_volatile
-         ->  Broadcast Motion 1:1  (slice2)
+         ->  Result
+               One-Time Filter: (gp_execution_segment() = 0)
+               ->  Seq Scan on t_replicate_volatile
+         ->  Redistribute Motion 1:3  (slice2)
                ->  Function Scan on nextval
- Optimizer: Pivotal Optimizer (GPORCA)
-(6 rows)
+ Optimizer: GPORCA
+(8 rows)
 
 -- CTAS
 explain (costs off) create table rpt_ctas as select random() from generate_series(1, 10) distributed replicated;

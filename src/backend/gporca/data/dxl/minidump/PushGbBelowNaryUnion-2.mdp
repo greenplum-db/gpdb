@@ -2298,7 +2298,7 @@
         </dxl:LogicalGet>
       </dxl:Union>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="812">
+    <dxl:Plan Id="0" SpaceSize="1222">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1307.912752" Rows="201.000000" Width="4"/>

@@ -915,6 +915,9 @@ The `gp_check_orphaned_files` view scans the default and user-defined tablespace
 | gp_segment_id | The Greenplum Database segment identifier. |
 | tablespace | The identifier of the tablespace in which the orphaned file resides. |
 | filename | The file name of the orphaned data file. |
+| filepath | The file system path of the orphaned data file, relative to `$COORDINATOR_DATA_DIRECTORY`. |
+
+> **Caution** Use this view as one of many data points to identify orphaned data files. Do not delete files based solely on results from querying this view.
 
 
 ### <a id="mf_missing"></a>gp_check_missing_files

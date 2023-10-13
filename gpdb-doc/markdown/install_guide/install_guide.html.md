@@ -24,8 +24,8 @@ Information about installing optional VMware Greenplum Database extensions and p
 The Greenplum Database distribution includes several PostgreSQL- and Greenplum-sourced `contrib` modules that you have the option to install.
 -   **[Configuring Timezone and Localization Settings](localization.html)**  
 Describes the available timezone and localization features of Greenplum Database.
--   **[Upgrading to Greenplum 6](upgrade_intro.html)**  
-This topic identifies the upgrade paths for upgrading a Greenplum Database 6.x release to a newer 6.x release. The topic also describes the migration paths for migrating VMware Greenplum Database 4.x or 5.x data to Greenplum Database 6.x.
+-   **[Upgrading from Greenplum 6 to Greenplum 7](upgrading_6_to_7.html)**  
+Explains how to upgrade from Greenplum 6 to Greenplum 7. 
 -   **[Enabling iptables \(Optional\)](enable_iptables.html)**  
 On Linux systems, you can configure and enable the `iptables` firewall to work with Greenplum Database.
 -   **[Installation Management Utilities](apx_mgmt_utils.html)**  

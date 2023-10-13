@@ -8,7 +8,7 @@ In Greenplum Database, inheritance relationships are created by both the `INHERI
 |------|----|----------|-----------|
 |`inhrelid`|oid|[pg\_class](pg_class.html).oid|The object identifier of the child table.|
 |`inhparent`|oid|[pg\_class](pg_class.html).oid|The object identifier of the parent table.|
-|`inhseqno`|int4| |If there is more than one direct parent for a child table \(multiple inheritance\), this number tells the order in which the inherited columns are to be arranged. The count starts at 1.  Indexes can not have multiple inheritance, since they can only inherit when using declarative partitioning.|
+|`inhseqno`|integer| |If there is more than one direct parent for a child table \(multiple inheritance\), this number tells the order in which the inherited columns are to be arranged. The count starts at 1.  Indexes can not have multiple inheritance, since they can only inherit when using declarative partitioning.|
 
 **Parent topic:** [System Catalogs Definitions](../system_catalogs/catalog_ref-html.html)
 

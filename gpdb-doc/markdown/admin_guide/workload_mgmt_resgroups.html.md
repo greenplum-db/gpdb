@@ -2,19 +2,19 @@
 title: Using Resource Groups 
 ---
 
-You use resource groups to set and enforce CPU, memory, and concurrent transaction limits in Greenplum Database. Once you define a resource group, you assign the group to one or more Greenplum Database roles in order to control the resources used by them. 
+You use resource groups to manage and protect the resource allocation of CPU, memory, concurrent transaction limits, and disk I/O in Greenplum Database. Once you define a resource group, you assign the group to one or more Greenplum Database roles in order to control the resources used by them. 
 
 When you assign a resource group to a role, the resource limits that you define for the group apply to all of the roles to which you assign the group. For example, the memory limit for a resource group identifies the maximum memory usage for all running transactions submitted by Greenplum Database users in all roles to which you assign the group.
 
 Greenplum Database uses Linux-based control groups for CPU resource management, and Runaway Detector for statistics, tracking and management of memory. 
 
-When using resource groups to control resources like CPU cores, review the Hyperthreading note in [Hardware and Network](../install_guide/platform-requirements-overview.html#hardware-and-network-3).
+When using resource groups to control resources like CPU cores, review the Hyperthreading note in [Hardware and Network](../install_guide/platform-requirements-overview.html#hardware-requirements).
 
 **Parent topic:** [Managing Resources](wlmgmt.html)
 
 ## <a id="topic8339intro"></a>Understanding Role and Component Resource Groups 
 
-The most common application for resource groups is to manage the number of active queries that different roles may run concurrently in your Greenplum Database cluster. You can also manage the amount of CPU and memory resources that Greenplum allocates to each query.
+The most common application for resource groups is to manage the number of active queries that different roles may run concurrently in your Greenplum Database cluster. You can also manage the amount of CPU, memory resources, and disk I/O that Greenplum allocates to each query.
 
 When a user runs a query, Greenplum Database evaluates the query against a set of limits defined for the resource group. Greenplum Database runs the query immediately if the group's resource limits have not yet been reached and the query does not cause the group to exceed the concurrent transaction limit. If these conditions are not met, Greenplum Database queues the query. For example, if the maximum number of concurrent transactions for the resource group has already been reached, a subsequent query is queued and must wait until other queries complete before it runs. Greenplum Database may also run a pending query when the resource group's concurrency and memory limits are altered to large enough values.
 
@@ -26,11 +26,12 @@ When you create a resource group, you provide a set of limits that determine the
 
 |Limit Type|Description|Value Range|Default|
 |----------|-----------|-----| ------| 
-|CONCURRENCY|The maximum number of concurrent transactions, including active and idle transactions, that are permitted in the resource group.| 0-[max_connections](../ref_guide/config_params/guc-list.html#max_connections) | 20 |
-|CPU_MAX_PERCENT|The maximum percentage of CPU resources the group can use.| [0-100] | -1 (not set)|
-|CPU_WEIGHT|The scheduling priority of the resource group.| [1-500] | 100 |
+|CONCURRENCY|The maximum number of concurrent transactions, including active and idle transactions, that are permitted in the resource group.| [0 - [max_connections](../ref_guide/config_params/guc-list.html#max_connections)] | 20 |
+|CPU_MAX_PERCENT|The maximum percentage of CPU resources the group can use.| [1 - 100] | -1 (not set)|
+|CPU_WEIGHT|The scheduling priority of the resource group.| [1 -  500] | 100 |
 |CPUSET|The specific CPU logical core (or logical thread in hyperthreading) reserved for this resource group.| It depends on system core configuration | -1 |
-|MEMORY_LIMIT|The memory limit value specified for the resource group.| Integer (MB) | -1 (not set) | 
+|IO_LIMIT| The limit for the maximum read/write disk I/O throughput, and maximum read/write I/O operations per second. Set the value on a per-tablespace basis.| [2 - 4294967295 or `max`] | -1 |
+|MEMORY_LIMIT|The memory limit value specified for the resource group.| Integer (MB) | -1 (not set, use `statement_mem` as the memory limit for a single query) | 
 |MIN_COST| The minimum cost of a query plan to be included in the resource group.| Integer | 0 |
 
 > **Note** Resource limits are not enforced on `SET`, `RESET`, and `SHOW` commands.
@@ -43,7 +44,7 @@ Each resource group is logically divided into a fixed number of slots equal to t
 
 The default `CONCURRENCY` limit value for a resource group for roles is 20. A value of 0 means that no query is allowed to run for this resource group.
 
-Greenplum Database queues any transactions submitted after the resource group reaches its `CONCURRENCY` limit. When a running transaction completes, Greenplum Database un-queues and runs the earliest queued transaction if sufficient memory resources exist. Note that if a transaction is in idle state, even if no statement is running, the concurrency slot is still in use.
+Greenplum Database queues any transactions submitted after the resource group reaches its `CONCURRENCY` limit. When a running transaction completes, Greenplum Database un-queues and runs the earliest queued transaction if sufficient memory resources exist. Note that if a transaction is in `idle in transaction` state, even if no statement is running, the concurrency slot is still in use.
 
 You can set the server configuration parameter [gp_resource_group_queuing_timeout](../ref_guide/config_params/guc-list.html#gp_resource_group_queuing_timeout) to specify the amount of time a transaction remains in the queue before Greenplum Database cancels the transaction. The default timeout is zero, Greenplum queues transactions indefinitely.
 
@@ -94,13 +95,13 @@ Resource groups that you configure with `CPUSET` have a higher priority on CPU r
 
 You configure a resource group with `CPU_MAX_PERCENT` in order to assign CPU resources by percentage. When you configure `CPU_MAX_PERCENT` for a resource group, Greenplum Database deactivates `CPUSET` for the group. 
 
-The parameter `CPU_MAX_PERCENT` reserves the specified percentage of the segment CPU for resource management. The minimum `CPU_MAX_PERCENT` percentage you can specify for a resource group is 1, the maximum is 100. The sum of `CPU_MAX_PERCENT`s specified for all resource groups that you define in your Greenplum Database cluster can exceed 100. It specifies the total time ratio that all tasks in a resource group can run in one CPU cycle. Once the tasks in the resource group have used up all the time specified by the quota, they are throttled for the remainder of the time specified in that time period, and are not allowed to run until the next time period. 
+The parameter `CPU_MAX_PERCENT` sets a hard upper limit for the percentage of the segment CPU for resource management. The minimum `CPU_MAX_PERCENT` percentage you can specify for a resource group is 1, the maximum is 100. The sum of `CPU_MAX_PERCENT`s specified for all resource groups that you define in your Greenplum Database cluster can exceed 100. It specifies the total time ratio that all tasks in a resource group can run in a given CPU time period. Once the tasks in the resource group have used up all the time specified by the quota, they are throttled for the remainder of the time specified in that time period, and are not allowed to run until the next time period. 
 
-You set the parameter `CPU_WEIGHT` to assign the scheduling priority of the current group. The default value is 100, and the range of values is 1 to 500. The value specifies the relative share of CPU time available to tasks in the resource group. For example, tasks in two resource groups with `CPU_WEIGHT` set to 100 get the same CPU time, but tasks in a resource group with `CPU_WEIGHT` set to 200 get twice the CPU time. 
+When tasks in a resource group are idle and not using any CPU time, the leftover time is collected in a global pool of unused CPU cycles. Other resource groups can borrow CPU cycles from this pool. The actual amount of CPU time available to a resource group may vary, depending on the number of resource groups present on the system.
 
-For example, for a high priority job that does not need too much CPU resources, configure the resource group with values `CPU_MAX_PERCENT`=10 and `CPU_WEIGHT`=500. For a low priority job that requires a high amount of CPU resources, configure the resource group with values `CPU_MAX_PERCENT`=90 and `CPU_WEIGHT`=10.  
+The parameter `CPU_MAX_PERCENT` enforces a hard upper limit of CPU usage. For example, if it is set to 40%, it indicates that although the resource group can temporarily use some idle CPU resources from other groups, the maximum it can use is 40% of the CPU resources available to Greenplum. 
 
-When tasks in a resource group are idle and not using any CPU time, the leftover time is collected in a global pool of unused CPU cycles. Other resource groups can borrow CPU cycles from this pool. The actual amount of CPU time available to a resource group may vary, depending on the number of resource groups present on the system. 
+You set the parameter `CPU_WEIGHT` to assign the scheduling priority of the current group. The default value is 100, and the range of values is 1 to 500. The value specifies the relative share of CPU time available to tasks in the resource group. For example, if one resource group has a relative share of 100 and another two groups have a relative share of 50, when processes in all the resource groups try to use 100% of the CPU (that means, the value of `CPU_MAX_PERCENT` for all groups is set to 100), the first resource group gets 50% of all CPU time, and the other two get 25% each. However, if you add another group with a relative share of 100, the first group is only allowed to use 33% of the CPU, and the remaining groups get 16.5%, 16.5%, and 33% respectively. 
 
 For example, consider the following groups:
 
@@ -137,7 +138,7 @@ For example, consider a resource group named `adhoc` with `MEMORY_LIMIT`set to 1
 1. User `ADHOC_2` submits query `Q2`, using the default 500MB.
 1. With `Q1` and `Q2` still running, user `ADHOC3` submits query `Q3`, using the default 500MB.
 
-    Queries `Q1` and `Q2` have used 1300MB of the group's 1500MB. Therefore, `Q3` must wait for `Q1` or `Q2` to complete before it can run.
+    Queries `Q1` and `Q2` have used 1300MB of the group's 1500MB. However, if there is enough system memory available for query `Q3` in the segment at that time, it can run normally.
 
 1. User `ADHOC4` submits query `Q4`, using `gp_resgroup_memory_query_fixed_mem` set to 700 MB.
 
@@ -149,11 +150,27 @@ There are some special usage considerations regarding memory limits:
 - The maximum value of `statement_mem` is capped at [max_statement_mem](../ref_guide/config_params/guc-list.html#max_statement_mem).
 - Queries whose plan cost is less than the limit `MIN_COST` use a memory quota of `statement_mem`. 
 
+### <a id="diskio"></a>Disk I/O Limits
+
+Greenplum Database leverages Linux control groups to implement disk I/O limits. The parameter `IO_LIMIT` limits the maximum read/write disk I/O throughput, and the maximum read/write I/O operations per second for the queries assigned to a specific resource group. It allocates bandwidth, ensures the use of high-priority resource groups, and avoids excessive use of disk bandwidth. The value of the parameter is set on a per-tablespace basis. 
+
+> **Note** Disk I/O limits are only available when you use Linux Control Groups v2. See [Configuring and Using Resource Groups](#topic71717999) for more information.
+
+When you limit disk I/O you specify:
+
+- The tablespace name or the tablespace object ID (OID) you set the limits for. Use `*` to set limits for all tablespaces.
+
+- The values for `rbps` and `wbps` to limit the maximum read and write disk I/O throughput in the resource group, in MB/sec. The default value is `max`, which means there is no limit. 
+
+- The values for `riops` and `wiops` to limit the maximum read and write I/O operations per second in the resource group. The default value is `max`, which means there is no limit. 
+
+If the parameter `IO_LIMIT` is not set, the default value for `rbps`, `wpbs`, `riops`, and `wiops`s is set to `max`, which means that there are no disk I/O limits. In this scenario, the `gp_toolkit.gp_resgroup_config` system view displays its value as `-1`. If only some of the values of `IO_LIMIT` are set (for example. `rbps`), the parameters that are not set default to `max` (in this example, `wbps`, `riops`, wiops`).
+
 ## <a id="topic71717999"></a>Configuring and Using Resource Groups 
 
 ### <a id="topic833"></a>Prerequisites
 
-Greenplum Database resource groups use Linux Control Groups \(cgroups\) to manage CPU resources. There are two versions of cgroups: cgroup v1 and cgroup v2, which differ in the virtual file hierarchy implemented by v2. Greenplum Database uses cgroup v2 by default. For detailed information about cgroups, refer to the Control Groups documentation for your Linux distribution.
+Greenplum Database resource groups use Linux Control Groups \(cgroups\) to manage CPU resources and disk I/O. There are two versions of cgroups: cgroup v1 and cgroup v2. Greenplum Database 7 supports both versions, but it only supports the parameter `IO_LIMIT` for cgroup v2. The version of Linux Control Groups shipped by default with your Linux distribution depends on the operating system version. For Enterprise Linux 8 and older, the default version is v1. For Enterprise Linux 9 and later, the default version is v2. For detailed information about cgroups, refer to the Control Groups documentation for your Linux distribution.
 
 Verify what version of cgroup is configured in your environment by checking what filesystem is mounted by default during system boot:
 
@@ -163,51 +180,45 @@ stat -fc %T /sys/fs/cgroup/
 
 For cgroup v1, the output is `tmpfs`. For cgroup v2, output is `cgroup2fs`.
 
-If you want to switch from cgroup v1 to v2, run the following commands:
+You do not need to change your version of cgroup, you can simply skip to [Configuring cgroup v1](#cgroupv1) or [Configuring cgroup v2](#cgroupv2) in order to complete the configuration prerequisites. However, if you prefer to switch from cgroup v1 to v2, run the following commands as root:
 
 - Red Hat 8/Rocky 8/Oracle 8 systems:
     ```
-    sudo grubby --update-kernel=/boot/vmlinuz-$(uname -r) --args="systemd.unified_cgroup_hierarchy=1"
+    grubby --update-kernel=/boot/vmlinuz-$(uname -r) --args="systemd.unified_cgroup_hierarchy=1"
     ```
 - Ubuntu systems:
     ```
-    sudo vim /etc/default/grub
-    add or modify: GRUB_CMDLINE_LINUX="systemd.unified_cgroup_hierarchy=1"
-    sudo update-grub
+    vim /etc/default/grub
+    # add or modify: GRUB_CMDLINE_LINUX="systemd.unified_cgroup_hierarchy=1"
+    update-grub
     ```
 
-If you want to switch from cgroup v2 to v1, run the following commands:
+If you want to switch from cgroup v2 to v1, run the following commands as root:
 
 - Red Hat 8/Rocky 8/Oracle 8 systems:
     ```
-    sudo grubby --update-kernel=/boot/vmlinuz-$(uname -r) --args="systemd.unified_cgroup_hierarchy=0 systemd.legacy_systemd_cgroup_controller"
+    grubby --update-kernel=/boot/vmlinuz-$(uname -r) --args="systemd.unified_cgroup_hierarchy=0 systemd.legacy_systemd_cgroup_controller"
     ```
 - Ubuntu systems:
     ```
-    sudo vim /etc/default/grub
-    add or modify: GRUB_CMDLINE_LINUX="systemd.unified_cgroup_hierarchy=0"
-    sudo update-grub
+    vim /etc/default/grub
+    # add or modify: GRUB_CMDLINE_LINUX="systemd.unified_cgroup_hierarchy=0"
+    update-grub
     ```
 
-After that, reboot your host and make the changes take effect.
+After that, reboot your host in order for the changes to take effect.
 
 #### <a id="cgroupv1"></a>Configuring cgroup v1
 
 Complete the following tasks on each node in your Greenplum Database cluster to set up cgroups v1 for use with resource groups:
 
-1. If not already installed, install the Control Groups operating system package on each Greenplum Database node. The command that you run to perform this task will differ based on the operating system installed on the node. You must be the superuser or have `sudo` access to run the command:
+1. Locate the cgroups configuration file `/etc/cgconfig.conf`. You must be the superuser or have `sudo` access to edit this file:
 
     ```
-    sudo yum install libcgroup-tools
+    vi /etc/cgconfig.conf
     ```
 
-2. Locate the cgroups configuration file `/etc/cgconfig.conf`. You must be the superuser or have `sudo` access to edit this file:
-
-    ```
-    sudo vi /etc/cgconfig.conf
-    ```
-
-3. Add the following configuration information to the file:
+1. Add the following configuration information to the file:
 
     ```
     group gpdb {
@@ -234,13 +245,25 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
 
     This content configures CPU, CPU accounting, CPU core set, and memory control groups managed by the `gpadmin` user. Greenplum Database uses the memory control group only for monitoring the memory usage.
 
-4. Start the cgroups service on each Greenplum Database node. The command that you run to perform this task will differ based on the operating system installed on the node. You must be the superuser or have `sudo` access to run the command:
+1. Start the cgroups service on each Greenplum Database node. For Redhat/Oracle/Rocky 8.x and older, run the following as root:
 
     ```
-    sudo cgconfigparser -l /etc/cgconfig.conf 
+    cgconfigparser -l /etc/cgconfig.conf 
     ```
 
-5. Identify the `cgroup` directory mount point for the node:
+1. To automatically recreate Greenplum Database required cgroup hierarchies and parameters when your system is restarted, configure your system to enable the Linux cgroup service daemon `cgconfig.service` at node start-up. To ensure the configuration is persisten after reboot, run the following commands as user root. For Redhat/Oracle/Rocky 8.x and older:
+
+    ```
+    systemctl enable cgconfig.service
+    ```
+
+    To start the service immediately \(without having to reboot\) enter:
+
+    ```
+    systemctl start cgconfig.service
+    ```
+
+1. Identify the `cgroup` directory mount point for the node. For Redhat/Oracle/Rocky 8.x and older, run the following as root:
 
     ```
     grep cgroup /proc/mounts
@@ -248,65 +271,50 @@ Complete the following tasks on each node in your Greenplum Database cluster to 
 
     The first line of output identifies the `cgroup` mount point.
 
-6. Verify that you set up the Greenplum Database cgroups configuration correctly by running the following commands. Replace \<cgroup\_mount\_point\> with the mount point that you identified in the previous step:
+1. Verify that you set up the Greenplum Database cgroups configuration correctly by running the following commands. Replace \<cgroup\_mount\_point\> with the mount point that you identified in the previous step:
 
     ```
     ls -l <cgroup_mount_point>/cpu/gpdb
-    ls -l <cgroup_mount_point>/cpuacct/gpdb
     ls -l <cgroup_mount_point>/cpuset/gpdb
     ls -l <cgroup_mount_point>/memory/gpdb
     ```
 
-    If these directories exist and are owned by `gpadmin:gpadmin`, you have successfully configured cgroups for Greenplum Database CPU resource management.
-
-7. To automatically recreate Greenplum Database required cgroup hierarchies and parameters when your system is restarted, configure your system to enable the Linux cgroup service daemon `cgconfig.service` \(Redhat/Oracle/Rocky 8.x\) at node start-up. For example, configure one of the following cgroup service commands in your preferred service auto-start tool:
-
-    ```
-    sudo systemctl enable cgconfig.service
-    ```
-
-    To start the service immediately \(without having to reboot\) enter:
-
-    ```
-    sudo systemctl start cgconfig.service
-    ```
-
-You may choose a different method to recreate the Greenplum Database resource group cgroup hierarchies.
-
+    If these directories exist and are owned by `gpadmin:gpadmin`, you have successfully configured cgroups for Greenplum Database resource management.
 
 #### <a id="cgroupv2"></a>Configuring cgroup v2
 
-1. Configure the system to mount `cgroups-v2` by default during system boot by the `systemd` system and service manager:
+1. Configure the system to mount `cgroups-v2` by default during system boot by the `systemd` system and service manager as user root.
 
     ```
-    sudo grubby --update-kernel=ALL --args="systemd.unified_cgroup_hierarchy=1"
+    grubby --update-kernel=ALL --args="systemd.unified_cgroup_hierarchy=1"
     ```
 
-2. Reboot the system for the changes to take effect.
+1. Reboot the system for the changes to take effect.
     ```
-    sudo reboot now
+    reboot now
     ```
-3. Create the directory `/sys/fs/cgroup/gpdb` and ensure `gpadmin` user has read and write permission on it.
+1. Create the directory `/sys/fs/cgroup/gpdb`, add all the necessary controllers, and ensure `gpadmin` user has read and write permission on it.
     ```
-    sudo mkdir -p /sys/fs/cgroup/gpdb
-    echo "+cpuset +io +cpu +memory" | sudo tee -a /sys/fs/cgroup/cgroup.subtree_control
-    sudo chown -R gpadmin:gpadmin /sys/fs/cgroup/gpdb
-    ```
-4. Ensure that `gpadmin` has write permission on `/sys/fs/cgroup/cgroup.procs`.
-    ```
-    sudo chmod a+w /sys/fs/cgroup/cgroup.procs
+    mkdir -p /sys/fs/cgroup/gpdb
+    echo "+cpuset +io +cpu +memory" | tee -a /sys/fs/cgroup/cgroup.subtree_control
+    chown -R gpadmin:gpadmin /sys/fs/cgroup/gpdb
     ```
 
-If you get "Invalid argument" error when enable cpu subtree control, please follow the below step:
-> WARNING: cgroup2 doesn't yet support control of realtime processes and the cpu controller can only be enabled when all RT processes are in the root cgroup. Be aware that system management software may already have placed RT processes into nonroot cgroups during the system boot process, and these processes may need to be moved to the root cgroup before the cpu controller can be enabled.
+You may encounter the error `Invalid argument` after running the above commands. This is because cgroups v2 do not support control of real-time processes, and the `cpu` controller can only be enabled when all the real-time processes are in the root cgroup. In this situation, find all real-time processes and move them to the root cgroup before you re-enable the controllers. 
 
-Since resource groups manually manage cgroup files, the above settings may become ineffective after a system reboot. Consider adding the following bash script for systemd so it runs automatically during system startup:
+1. Ensure that `gpadmin` has write permission on `/sys/fs/cgroup/cgroup.procs`. This is required to move the Greenplum processes from the user slices to `/sys/fs/cgroup/gpdb/` after the cluster is started in order to manage the postmaster services and all its auxiliary processes.
+    ```
+    chmod a+w /sys/fs/cgroup/cgroup.procs
+    ```
+Since resource groups manually manage cgroup files, the above settings will become ineffective after a system reboot. Add the following bash script for systemd so it runs automatically during system startup. Perform the following steps as user root:
 
 1. Create `greenplum-cgroup-v2-config.service`.
    ```
-   sudo vim /etc/systemd/system/greenplum-cgroup-v2-config.service
+   vim /etc/systemd/system/greenplum-cgroup-v2-config.service
    ```
-2. Write the following content into `greenplum-cgroup-v2-config.service`, if the user is not `gpadmin`, please replace it to your own.
+
+2. Write the following content into `greenplum-cgroup-v2-config.service`, if the user is not `gpadmin`, replace it with the appropriate user.
+
    ```
    [Unit]
    Description=Greenplum Cgroup v2 Configuration Service
@@ -334,13 +342,11 @@ Since resource groups manually manage cgroup files, the above settings may becom
    [Install]
    WantedBy=multi-user.target
    ```
-3. Reload systemd daemon and enable the service:
+1. Reload systemd daemon and enable the service:
    ```
-   sudo systemctl daemon-reload
-   sudo systemctl enable greenplum-cgroup-v2-config.service
+   systemctl daemon-reload
+   systemctl enable greenplum-cgroup-v2-config.service
    ```
-
-You may choose a different method to recreate the Greenplum Database resource group cgroup v2 hierarchies.
 
 ## <a id="topic8"></a>Enabling Resource Groups 
 
@@ -353,14 +359,14 @@ When you install Greenplum Database, no resource management policy is enabled by
     gpconfig -c gp_resource_manager -v "group-v2"
     ```
 
-2.  Restart Greenplum Database:
+1.  Restart Greenplum Database:
 
     ```
     gpstop
     gpstart
     ```
 
-Once enabled, any transaction submitted by a role is directed to the resource group assigned to the role, and is governed by that resource group's concurrency, memory, and CPU limits. 
+Once enabled, any transaction submitted by a role is directed to the resource group assigned to the role, and is governed by that resource group's concurrency, memory, CPU, and disk I/O limits. 
 
 Greenplum Database creates three default resource groups for roles named `admin_group`, `default_group`, and `system_group`. When you enable resources groups, any role that was not explicitly assigned a resource group is assigned the default group for the role's capability. `SUPERUSER` roles are assigned the `admin_group`, non-admin roles are assigned the group named `default_group`. The resources of the Greenplum Database system processes are assigned to the `system_group`. You cannot manually assign any roles to the `system_group`.
 
@@ -372,19 +378,21 @@ The default resource groups `admin_group`, `default_group`, and `system_group`  
 |CPU_MAX_PERCENT|10|20|10|
 |CPU_WEIGHT|100|100|100|
 |CPUSET|-1|-1|-1|
+|IO_LIMIT|-1|-1|-1|
 |MEMORY\_LIMIT|-1|-1|-1|
 |MIN_COST|0|0|0|
 
 ## <a id="topic10"></a>Creating Resource Groups 
 
-When you create a resource group for a role, you provide a name and a CPU resource allocation mode (core or percentage). You can optionally provide a concurrent transaction limit, a memory limit, a CPU soft priority, and a minimum cost. Use the [CREATE RESOURCE GROUP](../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.html) command to create a new resource group.
+When you create a resource group for a role, you provide a name and a CPU resource allocation mode (core or percentage). You can optionally provide a concurrent transaction limit, a memory limit, a CPU soft priority, disk I/O limits, and a minimum cost. Use the [CREATE RESOURCE GROUP](../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.html) command to create a new resource group.
 
 When you create a resource group for a role, you must provide a `CPU_MAX_PERCENT` or `CPUSET` limit value. These limits identify the percentage of Greenplum Database CPU resources to allocate to this resource group. You may specify a `MEMORY_LIMIT` to reserve a fixed amount of memory for the resource group. 
 
-For example, to create a resource group named *rgroup1* with a CPU limit of 20, a memory limit of 25, a CPU soft priority of 500 and a minimum cost of 50:
+For example, to create a resource group named *rgroup1* with a CPU limit of 20, a memory limit of 25, a CPU soft priority of 500, a minimum cost of 50, and disk I/O limits for the `pg_default` tablespace:
 
 ```
-CREATE RESOURCE GROUP rgroup1 WITH (CONCURRENCY=20, CPU_MAX_PERCENT=20, MEMORY_LIMIT=25, CPU_WEIGHT=500, MIN_COST=50);
+CREATE RESOURCE GROUP rgroup1 WITH (CONCURRENCY=20, CPU_MAX_PERCENT=20, MEMORY_LIMIT=250, CPU_WEIGHT=500, MIN_COST=50, 
+  IO_LIMIT=’pg_default: wbps=1000, rbps=1000, wiops=100, riops=100’);
 ```
 
 The CPU limit of 20 is shared by every role to which `rgroup1` is assigned. Similarly, the memory limit of 25 is shared by every role to which `rgroup1` is assigned. `rgroup1` utilizes the default `CONCURRENCY` setting of 20.
@@ -395,6 +403,7 @@ The [ALTER RESOURCE GROUP](../ref_guide/sql_commands/ALTER_RESOURCE_GROUP.html) 
 ALTER RESOURCE GROUP rg_role_light SET CONCURRENCY 7;
 ALTER RESOURCE GROUP exec SET MEMORY_LIMIT 30;
 ALTER RESOURCE GROUP rgroup1 SET CPUSET '1;2,4';
+ALTER RESOURCE GROUP sales SET IO_LIMIT 'tablespace1:wbps=2000,wiops=2000;tablespace2:rbps=2024,riops=2024'; 
 ```
 
 > **Note** You cannot set or alter the `CONCURRENCY` value for the `admin_group` to zero \(0\).
@@ -454,9 +463,9 @@ The [gp\_resgroup\_status](../ref_guide/system_catalogs/catalog_ref-views.html#g
 SELECT * FROM gp_toolkit.gp_resgroup_status;
 ```
 
-#### <a id="topic23a"></a>Viewing Resource Group CPU/Memory Usage Per Host 
+### <a id="topic23a"></a>Viewing Resource Group Memory Usage Per Host 
 
-The [gp\_resgroup\_status\_per\_host](../ref_guide/system_catalogs/catalog_ref-views.html#gp_resgroup_status_per_host) `gp_toolkit` system view enables you to view the real-time CPU and memory usage of a resource group on a per-host basis. To view this information:
+The [gp\_resgroup\_status\_per\_host](../ref_guide/system_catalogs/catalog_ref-views.html#gp_resgroup_status_per_host) `gp_toolkit` system view enables you to view the real-time memory usage of a resource group on a per-host basis. To view this information:
 
 ```
 SELECT * FROM gp_toolkit.gp_resgroup_status_per_host;
@@ -469,6 +478,14 @@ To view the resource group-to-role assignments, perform the following query on t
 ```
 SELECT rolname, rsgname FROM pg_roles, pg_resgroup
 WHERE pg_roles.rolresgroup=pg_resgroup.oid;
+```
+
+### <a id="topic25"></a>Viewing Resource Group Disk I/O Usage Per Host
+
+The [gp_resgroup_iostats_per_host](../ref_guide/system_catalogs/catalog_ref-views.html#gp_resgroup_iostats_per_host) `gp_toolkit` system view enables you to view the real-time disk I/O usage of a resource group on a per-host basis. To view this information:
+
+```
+SELECT * FROM gp_toolkit.gp_resgroup_iostats_per_host;
 ```
 
 ### <a id="topic252525"></a>Viewing a Resource Group's Running and Pending Queries 
@@ -502,8 +519,8 @@ Sample partial query output:
 ```
  rolname | rsgname  | pid     | waiting | state  |          query           | datname 
 ---------+----------+---------+---------+--------+------------------------ -+---------
-  sammy  | rg_light |  31861  |    f    | idle   | SELECT * FROM mytesttbl; | testdb
-  billy  | rg_light |  31905  |    t    | active | SELECT * FROM topten;    | testdb
+  sammy  | rg_light |  31861  |    f    | idle   | SELECT * FROM mytesttbl; | testdb
+  billy  | rg_light |  31905  |    t    | active | SELECT * FROM topten;    | testdb
 ```
 
 Use this output to identify the process id \(`pid`\) of the transaction you want to cancel, and then cancel the process. For example, to cancel the pending query identified in the sample output above:

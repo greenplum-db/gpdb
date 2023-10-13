@@ -13,6 +13,7 @@ Greenplum Database provides the following system views:
 -   [gp_replication_origin_status](#gp_replication_origin_status)
 -   [gp_replication_slots](#gp_replication_slots)
 -   [gp_resgroup_config](#gp_resgroup_config)
+-   [gp_resgroup_iostats_per_host](#gp_resgroup_iostats_per_host)
 -   [gp_resgroup_status](#gp_resgroup_status)
 -   [gp_resgroup_status_per_host](#gp_resgroup_status_per_host)
 -   [gp_resgroup_status_per_segment](#gp_resgroup_status_per_segment)
@@ -133,11 +134,11 @@ The `gp_backend_memory_contexts` view is a cluster-wide view that displays the [
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
 |`name`|text| |The name of the memory context.|
-|`ident`|text| |Identification information of the memory context. This field is truncated at 1024 bytes.|
-|`parent`|text| |The name of the parent of this memory context.|
-|`level`|int4| |The distance from `TopMemoryContext` in context tree.|
-|`total_bytes`|int8| |The total number of bytes allocated for this memory context.|
-|`total_nblocks`|int8| |The total number of blocks allocated for this memory context.|
+|`ident`|text| |Identification information of the memory context. This field is truncated at 1024 bytes.|
+|`parent`|text| |The name of the parent of this memory context.|
+|`level`|int4| |The distance from `TopMemoryContext` in context tree.|
+|`total_bytes`|int8| |The total number of bytes allocated for this memory context.|
+|`total_nblocks`|int8| |The total number of blocks allocated for this memory context.|
 |`free_bytes`|int8| |Free space in bytes.|
 |`free_chunks`|int8| |The total number of free chunks.|
 |`used_bytes`|int8| |Used space in bytes.|
@@ -159,13 +160,13 @@ The `gp_cursors` view is a cluster-wide view that displays the [`pg_config`](#pg
 |name|type|references|description|
 |----|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`name`|text| |The name of the cursor.|
-|`statement`|text| |The verbatim query string submitted to declare this cursor.|
-|`is_holdable`|boolean| |`true` if the cursor is holdable \(that is, it can be accessed after the transaction that declared the cursor has committed\); `false` otherwise.<br/><br/> **Note** Greenplum Database does not support holdable parallel retrieve cursors, this value is always `false` for such cursors.|
-|`is_binary`|boolean| |`true` if the cursor was declared `BINARY`; `false` otherwise.|
-|`is_scrollable`|boolean| |`true` if the cursor is scrollable \(that is, it allows rows to be retrieved in a nonsequential manner\); `false` otherwise.<br/><br/> **Note** Greenplum Database does not support scrollable cursors, this value is always `false`.|
-|`creation_time`|timestamptz| |The time at which the cursor was declared.|
-|`is_parallel`|boolean| |`true` if the cursor was declared `PARALLEL RETRIEVE`; `false` otherwise.|
+|`name`|text| |The name of the cursor.|
+|`statement`|text| |The verbatim query string submitted to declare this cursor.|
+|`is_holdable`|boolean| |`true` if the cursor is holdable \(that is, it can be accessed after the transaction that declared the cursor has committed\); `false` otherwise.<br/><br/> **Note** Greenplum Database does not support holdable parallel retrieve cursors, this value is always `false` for such cursors.|
+|`is_binary`|boolean| |`true` if the cursor was declared `BINARY`; `false` otherwise.|
+|`is_scrollable`|boolean| |`true` if the cursor is scrollable \(that is, it allows rows to be retrieved in a nonsequential manner\); `false` otherwise.<br/><br/> **Note** Greenplum Database does not support scrollable cursors, this value is always `false`.|
+|`creation_time`|timestamptz| |The time at which the cursor was declared.|
+|`is_parallel`|boolean| |`true` if the cursor was declared `PARALLEL RETRIEVE`; `false` otherwise.|
 
 ## <a id="gp_distributed_log"></a>gp_distributed_log 
 
@@ -175,10 +176,10 @@ The `gp_distributed_log` view contains status information about distributed tran
 |------|----|----------|-----------|
 |`segment_id`|smallint|gp\_segment\_configuration.content|The content id of the segment. The coordinator is always -1 \(no content\).|
 |`dbid`|smallint|gp\_segment\_configuration.dbid|The unique id of the segment instance.|
-|`distributed_xid`|xid| |The global transaction id.|
-|`distributed_id`|text| |A system assigned ID for a distributed transaction.|
-|`status`|text| |The status of the distributed transaction \(Committed or Aborted\).|
-|`local_transaction`|xid| |The local transaction ID.|
+|`distributed_xid`|xid| |The global transaction id.|
+|`distributed_id`|text| |A system assigned ID for a distributed transaction.|
+|`status`|text| |The status of the distributed transaction \(Committed or Aborted\).|
+|`local_transaction`|xid| |The local transaction ID.|
 
 ## <a id="gp_distributed_xacts"></a>gp_distributed_xacts 
 
@@ -186,11 +187,11 @@ The `gp_distributed_xacts` view contains information about Greenplum Database di
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`distributed_xid`|xid| |The transaction ID used by the distributed transaction across the Greenplum Database array.|
-|`distributed_id`|text| |The distributed transaction identifier. It has 2 parts — a unique timestamp and the distributed transaction number.|
-|`state`|text| |The current state of this session with regards to distributed transactions.|
-|`gp_session_id`|int| |The ID number of the Greenplum Database session associated with this transaction.|
-|`xmin_distributed _snapshot`|xid| |The minimum distributed transaction number found among all open transactions when this transaction was started. It is used for MVCC distributed snapshot purposes.|
+|`distributed_xid`|xid| |The transaction ID used by the distributed transaction across the Greenplum Database array.|
+|`distributed_id`|text| |The distributed transaction identifier. It has 2 parts — a unique timestamp and the distributed transaction number.|
+|`state`|text| |The current state of this session with regards to distributed transactions.|
+|`gp_session_id`|int| |The ID number of the Greenplum Database session associated with this transaction.|
+|`xmin_distributed _snapshot`|xid| |The minimum distributed transaction number found among all open transactions when this transaction was started. It is used for MVCC distributed snapshot purposes.|
 
 ## <a id="gp_endpoints"></a>gp_endpoints 
 
@@ -200,15 +201,15 @@ Endpoints exist only for the duration of the transaction that defines the parall
 
 |name|type|references|description|
 |----|----|----------|-----------|
-|gp\_segment\_id|integer| |The QE's endpoint `gp_segment_id`.|
-|auth\_token|text| |The authentication token for a retrieve session.|
-|cursorname|text| |The name of the parallel retrieve cursor.|
-|sessionid|integer| |The identifier of the session in which the parallel retrieve cursor was created.|
-|hostname|varchar\(64\)| |The name of the host from which to retrieve the data for the endpoint.|
-|port|integer| |The port number from which to retrieve the data for the endpoint.|
-|username|text| |The name of the session user \(not the current user\); *you must initiate the retrieve session as this user*.|
-|state|text| |The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
-|endpointname|text| |The endpoint identifier; you provide this identifier to the `RETRIEVE` command.|
+|gp\_segment\_id|integer| |The QE's endpoint `gp_segment_id`.|
+|auth\_token|text| |The authentication token for a retrieve session.|
+|cursorname|text| |The name of the parallel retrieve cursor.|
+|sessionid|integer| |The identifier of the session in which the parallel retrieve cursor was created.|
+|hostname|varchar\(64\)| |The name of the host from which to retrieve the data for the endpoint.|
+|port|integer| |The port number from which to retrieve the data for the endpoint.|
+|username|text| |The name of the session user \(not the current user\); *you must initiate the retrieve session as this user*.|
+|state|text| |The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
+|endpointname|text| |The endpoint identifier; you provide this identifier to the `RETRIEVE` command.|
 
 ## <a id="gp_file_settings"></a>gp_file_settings
 
@@ -281,11 +282,77 @@ The `gp_toolkit.gp_resgroup_config` view allows administrators to see the curren
 |`groupname`|name|pg\_resgroup.rsgname|The name of the resource group.|
 |`concurrency`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 1|The concurrency \(`CONCURRENCY`\) value specified for the resource group.|
 |`cpu_max_percent`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 2|The CPU limit \(`CPU_MAX_PERCENT`\) value specified for the resource group, or -1.|
-|`memory_limit`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 3|The memory limit \(`MEMORY_LIMIT`\) value specified for the resource group.|
-|`memory_shared_quota`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 4|The shared memory quota \(`MEMORY_SHARED_QUOTA`\) value specified for the resource group.|
-|`memory_spill_ratio`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 5|The memory spill ratio \(`MEMORY_SPILL_RATIO`\) value specified for the resource group.|
-|`memory_auditor`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 6|The memory auditor in use for the resource group.|
-|`cpuset`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 7|The CPU cores reserved for the resource group, or -1.|
+|`cpu_weight`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 3|The scheduling priority of the resource group (CPU_WEIGHT).|
+|`cpuset`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 4|The CPU cores reserved for the resource group (CPUSET), or -1.|
+|`memory_limit`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 5|The memory limit \(`MEMORY_LIMIT`\) value specified for the resource group.|
+|`min_cost`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 6|The minimum cost of a query plan to be included in the resource group (MIN_COST).|
+|`io_limit`|text|pg\_resgroupcapability.value for pg\_resgroupcapability.reslimittype = 7|The maximum read/write sequential disk I/O throughput, and the maximum read/write I/O operations per second for the queries assigned to a specific tablespace (shown as the tablespace oid) and resource group (IO_LIMIT).|
+
+## <a id="gp_resgroup_iostats_per_host"></a>gp_resgroup_iostats_per_host
+
+The `gp_toolkit.gp_resgroup_iostats_per_host` view allows administrators to see current disk I/O  usage for each resource group on a per-host basis.
+
+Memory amounts are specified in MBs.
+
+> **Note** The `gp_resgroup_iostats_per_host` view is valid only when resource group-based resource management is active.
+
+|column|type|references|description|
+|------|----|----------|-----------|
+|`rsgname`|name| pg_resgroup.rsgname|The name of the resource group|
+|`hostname`|text|gp_segment_configuration.hostname|The hostname of the segment host|
+|`tablespace`|name|pg_tablespace.spcname|The name of the tablespace|
+|`rbps`|bigint||The real-time read sequential disk I/O throughput by the resource group on a host, in Bytes/s|
+|`wbps`|bigint||The real-time write sequential disk I/O throughput by the resource group on a host, in Bytes/s|
+|`riops`|bigint||The real-time read I/O operations per second by the resource group on a host|
+|`wiops`|bigint||The real-time write I/O operations per second by the resource group on a host|
+
+Sample output for the `gp_resgroup_iostats_per_host` view:
+
+```
+SELECT * from gp_toolkit.gp_resgroup_iostats_per_host;
+ rsgname        | hostname | tablespace       | rbps | wbps | riops | wiops  
+----------------+----------+------------------+------------------+------------------+-------------+-------------
+ rg_test_group1 | mtspc    | pg_default       | 21356347                | 29369067                | 162           | 36           
+ rg_test_group2 | mtspc    | pg_default       | 0                | 0                | 0           | 0           
+ rg_test_group3 | mtspc    | pg_default       | 0                | 0                | 0           | 0           
+ rg_test_group4 | mtspc    | *                | 0                | 0                | 0           | 0           
+ rg_test_group5 | mtspc    | rg_io_limit_ts_1 | 0                | 0                | 0           | 0           
+(5 rows)
+```
+
+## <a id="gp_resgroup_iostats_per_host"></a>gp_resgroup_iostats_per_host
+
+The `gp_toolkit.gp_resgroup_iostats_per_host` view allows administrators to see current disk I/O  usage for each resource group on a per-host basis.
+
+Memory amounts are specified in MBs.
+
+> **Note** The `gp_resgroup_iostats_per_host` view is valid only when resource group-based resource management is active.
+
+|column|type|references|description|
+|------|----|----------|-----------|
+|`rsgname`|name| pg_resgroup.rsgname|The name of the resource group.|
+|`hostname`|text|gp_segment_configuration.hostname|The hostname of the segment host.|
+|`tablespace`|
+|`rbps`|
+|`
+
+
+
+|`cpu_usage`|float| |The real-time CPU core usage by the resource group on a host. The value is the sum of the percentages of the CPU cores that are used by the resource group on the host.|
+|`memory_usage`|float| |The real-time memory usage of the resource group on each Greenplum Database segment's host, in MB.|
+
+Sample output for the `gp_resgroup_iostats_per_host` view:
+
+```
+select * from gp_toolkit.gp_resgroup_status_per_host;
+ rsgname       | hostname | tablespace | rbps (MB_read/s)
+---------------+----------+-----------+--------------
+ admin_group   | zero     | pg_default | 80
+ default_group | zero     | pg_default | 500
+ system_group  | zero     | pg_default | 300
+ rg_new_group  | zero     | 
+(4 rows)
+```
 
 ## <a id="gp_resgroup_status"></a>gp_resgroup_status
 
@@ -347,7 +414,7 @@ select * from gp_toolkit.gp_resgroup_status_per_host;
 
 ## <a id="gp_resgroup_status_per_segment"></a>gp_resgroup_status_per_segment
 
-The `gp_toolkit.gp_resgroup_status_per_segment` view allows administrators to see current memory and CPU usage and allocation for each resource group on a per-host and per-segment basis.
+The `gp_toolkit.gp_resgroup_status_per_segment` view allows administrators to see current memory usage usage calculated by vmem tracker and grouped by segment.
 
 Memory amounts are specified in MBs.
 
@@ -355,17 +422,10 @@ Memory amounts are specified in MBs.
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`rsgname`|name|pg\_resgroup.rsgname|The name of the resource group.|
 |`groupid`|oid|pg\_resgroup.oid|The ID of the resource group.|
-|`hostname`|text|gp\_segment\_configuration.hostname|The hostname of the segment host.|
+|`groupname`|name|pg\_resgroup.rsgname|The name of the resource group.|
 |`segment_id`|smallint|gp\_segment\_configuration.content|The content ID for a segment instance on the segment host.|
-|`cpu`|numeric| |The real-time, per-segment instance CPU core usage by the resource group on the host. The value is the sum of the percentages \(as a decimal value\) of the CPU cores that are used by the resource group for the segment instance.|
-|`memory_used`|integer| |The real-time memory usage of the resource group for the segment instance on the host. This total includes resource group fixed and shared memory. It also includes global shared memory used by the resource group.|
-|`memory_available`|integer| |The unused fixed and shared memory for the resource group for the segment instance on the host.|
-|`memory_quota_used`|integer| |The real-time fixed memory usage for the resource group for the segment instance on the host.|
-|`memory_quota_available`|integer| |The fixed memory available to the resource group for the segment instance on the host.|
-|`memory_shared_used`|integer| |The group shared memory used by the resource group for the segment instance on the host.|
-|`memory_shared_available`|integer| |The amount of group shared memory available for the segment instance on the host. Resource group global shared memory is not included in this total.|
+|`vmem_usage`|The real-time memory usage of the resource group on each segment, in MB.|
 
 ## <a id="gp_resqueue_status"></a>gp_resqueue_status
 
@@ -394,16 +454,16 @@ Endpoints exist only for the duration of the transaction that defines the parall
 
 |column|type|references|description|
 |----|----|----------|-----------|
-|auth\_token|text| |The authentication token for the retrieve session.|
-|databaseid|oid| |The identifier of the database in which the parallel retrieve cursor was created.|
-|senderpid|integer| |The identifier of the process sending the query results.|
-|receiverpid|integer| |The process identifier of the retrieve session that is receiving the query results.|
-|state|text| |The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
-|gp\_segment\_id|integer| |The QE's endpoint `gp_segment_id`.|
-|sessionid|integer| |The identifier of the session in which the parallel retrieve cursor was created.|
-|username|text| |The name of the session user \(not the current user\); *you must initiate the retrieve session as this user*.|
-|endpointname|text| |The endpoint identifier; you provide this identifier to the `RETRIEVE` command.|
-|cursorname|text| |The name of the parallel retrieve cursor.|
+|auth\_token|text| |The authentication token for the retrieve session.|
+|databaseid|oid| |The identifier of the database in which the parallel retrieve cursor was created.|
+|senderpid|integer| |The identifier of the process sending the query results.|
+|receiverpid|integer| |The process identifier of the retrieve session that is receiving the query results.|
+|state|text| |The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
+|gp\_segment\_id|integer| |The QE's endpoint `gp_segment_id`.|
+|sessionid|integer| |The identifier of the session in which the parallel retrieve cursor was created.|
+|username|text| |The name of the session user \(not the current user\); *you must initiate the retrieve session as this user*.|
+|endpointname|text| |The endpoint identifier; you provide this identifier to the `RETRIEVE` command.|
+|cursorname|text| |The name of the parallel retrieve cursor.|
 
 ## <a id="gp_session_endpoints"></a>gp_session_endpoints
 
@@ -413,15 +473,15 @@ Endpoints exist only for the duration of the transaction that defines the parall
 
 |column|type|references|description|
 |----|----|----------|-----------|
-|gp\_segment\_id|integer| |The QE's endpoint `gp_segment_id`.|
-|auth\_token|text| |The authentication token for a retrieve session.|
-|cursorname|text| |The name of the parallel retrieve cursor.|
-|sessionid|integer| |The identifier of the session in which the parallel retrieve cursor was created.|
-|hostname|varchar\(64\)| |The name of the host from which to retrieve the data for the endpoint.|
-|port|integer| |The port number from which to retrieve the data for the endpoint.|
-|username|text| |The name of the session user \(not the current user\); *you must initiate the retrieve session as this user*.|
-|state|text| |The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
-|endpointname|text| |The endpoint identifier; you provide this identifier to the `RETRIEVE` command.|
+|gp\_segment\_id|integer| |The QE's endpoint `gp_segment_id`.|
+|auth\_token|text| |The authentication token for a retrieve session.|
+|cursorname|text| |The name of the parallel retrieve cursor.|
+|sessionid|integer| |The identifier of the session in which the parallel retrieve cursor was created.|
+|hostname|varchar\(64\)| |The name of the host from which to retrieve the data for the endpoint.|
+|port|integer| |The port number from which to retrieve the data for the endpoint.|
+|username|text| |The name of the session user \(not the current user\); *you must initiate the retrieve session as this user*.|
+|state|text| |The state of the endpoint; the valid states are:<br/><br/>READY: The endpoint is ready to be retrieved.<br/><br/>ATTACHED: The endpoint is attached to a retrieve connection.<br/><br/>RETRIEVING: A retrieve session is retrieving data from the endpoint at this moment.<br/><br/>FINISHED: The endpoint has been fully retrieved.<br/><br/>RELEASED: Due to an error, the endpoint has been released and the connection closed.|
+|endpointname|text| |The endpoint identifier; you provide this identifier to the `RETRIEVE` command.|
 
 ## <a id="gp_settings"></a>gp_settings
 
@@ -467,8 +527,8 @@ The `gp_transaction_log` view contains status information about transactions loc
 |------|----|----------|-----------|
 |`segment_id`|smallint|gp\_segment\_configuration.content|The content id of the segment. The coordinator is always -1 \(no content\).|
 |`dbid`|smallint|gp\_segment\_configuration.dbid|The unique id of the segment instance.|
-|`transaction`|xid| |The local transaction ID.|
-|`status`|text| |The status of the local transaction \(Committed or Aborted\).|
+|`transaction`|xid| |The local transaction ID.|
+|`status`|text| |The status of the local transaction \(Committed or Aborted\).|
 
 ## <a id="gpexpandexpansion_progress"></a>gpexpand.expansion_progress
 
@@ -478,8 +538,8 @@ Status for specific tables involved in the expansion is stored in [gpexpand.stat
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`name`|text| |Name for the data field provided. Includes:<br/><br/>Bytes Left<br/><br/>Bytes Done<br/><br/>Estimated Expansion Rate<br/><br/>Estimated Time to Completion<br/><br/>Tables Expanded<br/><br/>Tables Left|
-|`value`|text| |The value for the progress data. For example: `Estimated Expansion Rate - 9.75667095996092 MB/s`|
+|`name`|text| |Name for the data field provided. Includes:<br/><br/>Bytes Left<br/><br/>Bytes Done<br/><br/>Estimated Expansion Rate<br/><br/>Estimated Time to Completion<br/><br/>Tables Expanded<br/><br/>Tables Left|
+|`value`|text| |The value for the progress data. For example: `Estimated Expansion Rate - 9.75667095996092 MB/s`|
 
 ## <a id="gp_stat_activity"></a>gp_stat_activity
 
@@ -489,23 +549,23 @@ The `gp_stat_activity` view is a cluster-wide view that displays the [`pg_stat_a
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
 |`datid`|oid|pg\_database.oid|Database OID|
-|`datname`|name| |Database name|
-|`pid`|integer| |Process ID of this backend|
-|`sess_id`|integer| |Session ID|
+|`datname`|name| |Database name|
+|`pid`|integer| |Process ID of this backend|
+|`sess_id`|integer| |Session ID|
 |`usesysid`|oid|pg\_authid.oid|OID of the user logged into this backend|
-|`usename`|name| |Name of the user logged into this backend|
-|`application_name`|text| |Name of the application that is connected to this backend|
-|`client_addr`|inet| |IP address of the client connected to this backend. If this field is null, it indicates either that the client is connected via a Unix socket on the server machine or that this is an internal process such as autovacuum.|
-|`client_hostname`|text| |Host name of the connected client, as reported by a reverse DNS lookup of `client_addr`. This field will only be non-null for IP connections, and only when log\_hostname is enabled.|
-|`client_port`|integer| |TCP port number that the client is using for communication with this backend, or -1 if a Unix socket is used|
-|`backend_start`|timestamptz| |Time backend process was started|
-|`xact_start`|timestamptz| |Transaction start time|
-|`query_start`|timestamptz| |Time query began execution|
-|`state_change`|timestampz| |Time when the `state` was last changed|
-|`wait_event_type`|text| |Type of event for which the backend is waiting|
-|`wait_event`|text| |Wait event name if backend is currently waiting|
-|`state`|text| |Current overall state of this backend. Possible values are:<br/><br/>-   `active`: The backend is running a query.<br/><br/>-   `idle`: The backend is waiting for a new client command.<br/><br/>-   `idle in transaction`: The backend is in a transaction, but is not currently running a query.<br/><br/>-   `idle in transaction (aborted)`: This state is similar to idle in transaction, except one of the statements in the transaction caused an error.<br/><br/>-   `fastpath function call`: The backend is running a fast-path function.<br/><br/>-   `disabled`: This state is reported if `track_activities` is deactivated in this backend.|
-|`query`|text| |Text of this backend's most recent query. If `state` is active this field shows the currently running query. In all other states, it shows the last query that was run.|
+|`usename`|name| |Name of the user logged into this backend|
+|`application_name`|text| |Name of the application that is connected to this backend|
+|`client_addr`|inet| |IP address of the client connected to this backend. If this field is null, it indicates either that the client is connected via a Unix socket on the server machine or that this is an internal process such as autovacuum.|
+|`client_hostname`|text| |Host name of the connected client, as reported by a reverse DNS lookup of `client_addr`. This field will only be non-null for IP connections, and only when log\_hostname is enabled.|
+|`client_port`|integer| |TCP port number that the client is using for communication with this backend, or -1 if a Unix socket is used|
+|`backend_start`|timestamptz| |Time backend process was started|
+|`xact_start`|timestamptz| |Transaction start time|
+|`query_start`|timestamptz| |Time query began execution|
+|`state_change`|timestampz| |Time when the `state` was last changed|
+|`wait_event_type`|text| |Type of event for which the backend is waiting|
+|`wait_event`|text| |Wait event name if backend is currently waiting|
+|`state`|text| |Current overall state of this backend. Possible values are:<br/><br/>-   `active`: The backend is running a query.<br/><br/>-   `idle`: The backend is waiting for a new client command.<br/><br/>-   `idle in transaction`: The backend is in a transaction, but is not currently running a query.<br/><br/>-   `idle in transaction (aborted)`: This state is similar to idle in transaction, except one of the statements in the transaction caused an error.<br/><br/>-   `fastpath function call`: The backend is running a fast-path function.<br/><br/>-   `disabled`: This state is reported if `track_activities` is deactivated in this backend.|
+|`query`|text| |Text of this backend's most recent query. If `state` is active this field shows the currently running query. In all other states, it shows the last query that was run.|
 |`rsgid`|oid|pg\_resgroup.oid|Resource group OID or `0`.<br/><br/>See [Note](#rsg_note).|
 |`rsgname`|text|pg\_resgroup.rsgname|Resource group name or `unknown`.<br/><br/>See [Note](#rsg_note).|
 
@@ -516,13 +576,13 @@ The `gp_stat_all_indexes` view is a cluster-wide view that displays the [`pg_sta
 |column|type|references|description|
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`relid`|oid| |ID of the table for this index.|
-|`indexrelid`|oid| |OID of this index.|
-|`schemaname`|name| |Name of the schema this index is in.|
-|`relname`|name| |Name of the table for this index.|
-|`indexrelname`|name| |Name for this index.|
-|`idx_scan`|bigint| |Number of index scans initiated on this index.|
-|`idx_tup_read`|bigint| |Number of index entries returned by scans on this index.|
+|`relid`|oid| |ID of the table for this index.|
+|`indexrelid`|oid| |OID of this index.|
+|`schemaname`|name| |Name of the schema this index is in.|
+|`relname`|name| |Name of the table for this index.|
+|`indexrelname`|name| |Name for this index.|
+|`idx_scan`|bigint| |Number of index scans initiated on this index.|
+|`idx_tup_read`|bigint| |Number of index entries returned by scans on this index.|
 |`idx_tup_fetch`|bigint| |Number of live table rows fetched by simple index scans using this index|
 
 This system view is summarized in the `gp_stat_all_indexes_summary` system view.
@@ -534,11 +594,11 @@ The `gp_stat_all_tables` view is a cluster-wide view that displays the [`pg_stat
 |column|type|references|description|
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`relid`|oid| |OID of a table.|
-|`schemaname`|name| |Name of the schema this table is on.|
-|`relname`|name| |Name of this table.|
-|`seq_scan`|bigint| |Number of sequential scans initiated on this table.|
-|`seq_tup_read`|bigint| |Number of live rows fetched by sequential scans.|
+|`relid`|oid| |OID of a table.|
+|`schemaname`|name| |Name of the schema this table is on.|
+|`relname`|name| |Name of this table.|
+|`seq_scan`|bigint| |Number of sequential scans initiated on this table.|
+|`seq_tup_read`|bigint| |Number of live rows fetched by sequential scans.|
 |`idx_scan`|bigint| |Number of index scans initiated on this table.|
 |`idx_tup_fetch`|bigint| |Number of live rows fetched by index scans.|
 |`n_tup_ins`|bigint| |Number of rows inserted.|
@@ -565,13 +625,13 @@ This system view is summarized in the `gp_stat_all_tables_summary` system view.
 |column|type|references|description|
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`archived_count`|bigint| |Number of WAL files that have been successfully archived.|
-|`last_archived_wal`|text| |Name of the WAL file most recently successfully archived.|
-|`last_archived_time `|timestamp with time zone| |Time of the most recent successful archive operation.|
-|`failed_count`|bigint| |Number of failed attempts for archiving WAL files.|
-|`last_failed_wal`|timestamp with time zone| |Name of the WAL file of the most recent failed archival operation.|
-|`last_failed_time`|bigint| |Time of the most recent failed archival operation.|
-|`stats_reset`|timestamp with time zone| |Time at which these statistics were last reset.|
+|`archived_count`|bigint| |Number of WAL files that have been successfully archived.|
+|`last_archived_wal`|text| |Name of the WAL file most recently successfully archived.|
+|`last_archived_time `|timestamp with time zone| |Time of the most recent successful archive operation.|
+|`failed_count`|bigint| |Number of failed attempts for archiving WAL files.|
+|`last_failed_wal`|timestamp with time zone| |Name of the WAL file of the most recent failed archival operation.|
+|`last_failed_time`|bigint| |Time of the most recent failed archival operation.|
+|`stats_reset`|timestamp with time zone| |Time at which these statistics were last reset.|
 
 This system view is summarized in the `gp_stat_archiver_summary` system view.
 
@@ -580,17 +640,17 @@ This system view is summarized in the `gp_stat_archiver_summary` system view.
 |column|type|references|description|
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`checkpoints_timed`|bigint| |Number of scheduled checkpoints that have been performed.|
-|`checkpoints_req`|bigint| |Number of requested checkpoints that have been performed.|
-|`checkpoint_write_time`|double precision| |Total amount of time that has been spent in the portion of checkpoint processing where files are written to disk, in milliseconds.|
-|`checkpoint_sync_time`|double precision| |Total amount of time that has been spent in the portion of checkpoint processing where files are synchronized to disk, in milliseconds.|
-|`buffers_checkpoint`|bigint| |Number of buffers written during checkpoints.|
-|`buffers_clean`|bigint| |Number of buffers written by the background writer.|
-|`maxwritten_clean` bigint| |Number of times the background writer stopped a cleaning scan because it had written too many buffers.|
-|`buffers_backend` bigint| |Number of buffers written directly by a backend.|
-|`buffers_backend_fsync` bigint| |Number of times the background writer stopped a cleaning scan because it had written too many buffers.|
-|`buffers_alloc`|bigint| |Number of buffers allocated.|
-|`stats_reset`|timestamp with time zone| |Time at which these statistics were last reset.|
+|`checkpoints_timed`|bigint| |Number of scheduled checkpoints that have been performed.|
+|`checkpoints_req`|bigint| |Number of requested checkpoints that have been performed.|
+|`checkpoint_write_time`|double precision| |Total amount of time that has been spent in the portion of checkpoint processing where files are written to disk, in milliseconds.|
+|`checkpoint_sync_time`|double precision| |Total amount of time that has been spent in the portion of checkpoint processing where files are synchronized to disk, in milliseconds.|
+|`buffers_checkpoint`|bigint| |Number of buffers written during checkpoints.|
+|`buffers_clean`|bigint| |Number of buffers written by the background writer.|
+|`maxwritten_clean` bigint| |Number of times the background writer stopped a cleaning scan because it had written too many buffers.|
+|`buffers_backend` bigint| |Number of buffers written directly by a backend.|
+|`buffers_backend_fsync` bigint| |Number of times the background writer stopped a cleaning scan because it had written too many buffers.|
+|`buffers_alloc`|bigint| |Number of buffers allocated.|
+|`stats_reset`|timestamp with time zone| |Time at which these statistics were last reset.|
 
 This system view is summarized in the `gp_stat_bgwriter_summary` system view.
 
@@ -599,11 +659,11 @@ This system view is summarized in the `gp_stat_bgwriter_summary` system view.
 |column|type|references|description|
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`datid`|oid| |OID of this database, or 0 for objects belonging to a shared relation.|
-|`datname`|name| |Name of this database, or NULL for shared objects.|
-|`numbackends`|integer| |Number of backends currently connected to this database, or NULL for shared objects. This is the only column in this view that returns a value reflecting current state; all other columns return the accumulated values since the last reset.|
-|`xact_commit`|bigint| |Number of transactions in this database that have been committed.|
-|`xact_rollback`|bigint| |Number of transactions in this database that have been rolled back.|
+|`datid`|oid| |OID of this database, or 0 for objects belonging to a shared relation.|
+|`datname`|name| |Name of this database, or NULL for shared objects.|
+|`numbackends`|integer| |Number of backends currently connected to this database, or NULL for shared objects. This is the only column in this view that returns a value reflecting current state; all other columns return the accumulated values since the last reset.|
+|`xact_commit`|bigint| |Number of transactions in this database that have been committed.|
+|`xact_rollback`|bigint| |Number of transactions in this database that have been rolled back.|
 |`blks_read`|bigint| |Number of disk blocks read in this database.|
 |`blks_hit`|bigint| |Number of times disk blocks were found already in the buffer cache, so that a read was not necessary (this only includes hits in the PostgreSQL buffer cache, not the operating system's file system cache).|
 |`tup_returned`|bigint| |Number of live rows fetched by sequential scans and index entries returned by index scans in this database.|
@@ -634,24 +694,24 @@ This system view is summarized in the `gp_stat_database_summary` system view.
 |column|type|references|description|
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`datid`|oid| |OID of a database.|
-|`datname`|name| |Name of this database.|
-|`confl_tablespace`|bigint| |Number of queries in this database that have been canceled due to dropped tablespaces.|
-|`confl_lock`|bigint| |Number of queries in this database that have been canceled due to lock timeouts.|
-|`confl_snapshot`|bigint| |Number of queries in this database that have been canceled due to old snapshots.|
-|`client_port`|integer| |Client port number.|
-|`confl_bufferpin`|bigint| |Number of queries in this database that have been canceled due to pinned buffers.|
-|`confl_deadlock`|bigint| |Number of queries in this database that have been canceled due to deadlocks.|
+|`datid`|oid| |OID of a database.|
+|`datname`|name| |Name of this database.|
+|`confl_tablespace`|bigint| |Number of queries in this database that have been canceled due to dropped tablespaces.|
+|`confl_lock`|bigint| |Number of queries in this database that have been canceled due to lock timeouts.|
+|`confl_snapshot`|bigint| |Number of queries in this database that have been canceled due to old snapshots.|
+|`client_port`|integer| |Client port number.|
+|`confl_bufferpin`|bigint| |Number of queries in this database that have been canceled due to pinned buffers.|
+|`confl_deadlock`|bigint| |Number of queries in this database that have been canceled due to deadlocks.|
 
 ## <a id="gp_stat_gssapi"></a>gp_stat_gssapi
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
+|`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
 |`pid`|integer| |Process ID of a backend.|
-|`gss_authenticated boolean`|boolean| |True if GSSAPI authentication was used for this connection.|
-|`principal`|text| |Principal used to authenticate this connection, or NULL if GSSAPI was not used to authenticate this connection. This field is truncated if the principal is longer than `NAMEDATALEN` (64 characters in a standard build).|
-|`encrypted`|boolean| |True if GSSAPI encryption is in use on this connection.|
+|`gss_authenticated boolean`|boolean| |True if GSSAPI authentication was used for this connection.|
+|`principal`|text| |Principal used to authenticate this connection, or NULL if GSSAPI was not used to authenticate this connection. This field is truncated if the principal is longer than `NAMEDATALEN` (64 characters in a standard build).|
+|`encrypted`|boolean| |True if GSSAPI encryption is in use on this connection.|
 
 ## <a id="gp_stat_operations"></a>gp_stat_operations
 
@@ -659,16 +719,16 @@ The view `gp_stat_operations` shows details about the last operation performed o
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`classname`|text| |The name of the system table in the `pg_catalog` schema where the record about this object is stored \(`pg_class`=relations, `pg_database`=databases,`pg_namespace`=schemas, `pg_authid`=roles\)|
-|`objname`|name| |The name of the object.|
-|`objid`|oid| |The OID of the object.|
-|`schemaname`|name| |The name of the schema where the object resides.|
-|`usestatus`|text| |The status of the role who performed the last operation on the object \(`CURRENT`=a currently active role in the system, `DROPPED`=a role that no longer exists in the system, `CHANGED`=a role name that exists in the system, but has changed since the last operation was performed\).|
-|`usename`|name| |The name of the role that performed the operation on this object.|
-|`actionname`|name| |The action that was taken on the object.|
-|`subtype`|text| |The type of object operated on or the subclass of operation performed.|
-|`statime`|timestamptz| |The timestamp of the operation. This is the same timestamp that is written to the Greenplum Database server log files in case you need to look up more detailed information about the operation in the logs.|
+|`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
+|`classname`|text| |The name of the system table in the `pg_catalog` schema where the record about this object is stored \(`pg_class`=relations, `pg_database`=databases,`pg_namespace`=schemas, `pg_authid`=roles\)|
+|`objname`|name| |The name of the object.|
+|`objid`|oid| |The OID of the object.|
+|`schemaname`|name| |The name of the schema where the object resides.|
+|`usestatus`|text| |The status of the role who performed the last operation on the object \(`CURRENT`=a currently active role in the system, `DROPPED`=a role that no longer exists in the system, `CHANGED`=a role name that exists in the system, but has changed since the last operation was performed\).|
+|`usename`|name| |The name of the role that performed the operation on this object.|
+|`actionname`|name| |The action that was taken on the object.|
+|`subtype`|text| |The type of object operated on or the subclass of operation performed.|
+|`statime`|timestamptz| |The timestamp of the operation. This is the same timestamp that is written to the Greenplum Database server log files in case you need to look up more detailed information about the operation in the logs.|
 
 ### <a id="gp_stat_progress_analyze"></a>gp_stat_progress_analyze
 
@@ -678,7 +738,7 @@ The `gp_stat_progress_analyze_summary` view aggregates across the Greenplum Data
 
 |Column|Type|Description|
 |------|----|-----------|
-|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_analyze_summary` view.) |
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_analyze_summary` view.) |
 | `pid` | integer | The process identifier of the backend, or the coordinator process identifier if the `gp_stat_progress_analyze_summary` view. |
 | `datid` | oid | The object identifier of the database to which this backend is connected. |
 | `datname` | name | Name of the database to which this backend is connected. |
@@ -700,7 +760,7 @@ The `gp_stat_progress_basebackup_summary` view aggregates across the Greenplum D
 
 |Column|Type|Description|
 |------|----|-----------|
-|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_basebackup_summary` view.)|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_basebackup_summary` view.)|
 | `pid` | integer | The process identifier of a WAL sender process, or the coordinator process identifier if the `gp_stat_progress_basebackup_summary` view. |
 | `phase` | text | Current processing phase. Refer to [Base Backup Progress Reporting](../../admin_guide/managing/progress_reporting.html#basebackup_progress) for detailed information about the phases. |
 | `backup_total` | bigint | Total amount of data that will be streamed. This is estimated and reported as of the beginning of streaming database files phase. Note that this is only an approximation since the database may change during streaming database files phase and WAL log may be included in the backup later. This is always the same value as backup_streamed once the amount of data streamed exceeds the estimated total size. NULL if the estimation is disabled in `pg_basebackup`. |
@@ -716,7 +776,7 @@ The `gp_stat_progress_cluster_summary` view aggregates across the Greenplum Data
 
 |Column|Type|Description|
 |------|----|-----------|
-|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_cluster_summary` view.)|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_cluster_summary` view.)|
 | `pid` | integer | Process identifier of the backend, or the coordinator process identifier if the `gp_stat_progress_cluster_summary` view. |
 | `datid` | oid | The object identifier of the database to which this backend is connected. |
 | `datname` | name | Name of the database to which this backend is connected. |
@@ -738,7 +798,7 @@ The `gp_stat_progress_copy_summary` view aggregates across the Greenplum Databas
 
 |Column|Type|Description|
 |------|----|-----------|
-|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_copy_summary` view.)|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_copy_summary` view.)|
 | `pid` | integer | Process identifier of the backend, or the coordinator process identifier if the `gp_stat_progress_copy_summary` view. |
 | `datid` | oid | The object identifier of the database to which this backend is connected. |
 | `datname` | name | Name of the database to which this backend is connected. |
@@ -758,7 +818,7 @@ The `gp_stat_progress_create_index_summary` view aggregates across the Greenplum
 
 |Column|Type|Description|
 |------|----|-----------|
-|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_create_index_summary` view.)|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_create_index_summary` view.)|
 | `pid` | integer | Process identifier of the backend, or the coordinator process identifier if the `gp_stat_progress_create_index_summary` view. |
 | `datid` | oid | The object identifer of the database to which this backend is connected. |
 | `datname` | name | Name of the database to which this backend is connected. |
@@ -784,7 +844,7 @@ The `gp_stat_progress_vacuum_summary` view aggregates across the Greenplum Datab
 
 |Column|Type|Description|
 |------|----|-----------|
-|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_vacuum_summary` view.)|
+|`gp_segment_id`|integer| Unique identifier of a segment \(or coordinator\) instance. (This column is not present in the `gp_stat_progress_vacuum_summary` view.)|
 | `pid` | integer | Process identifier of the backend, or the coordinator process identifier if the `gp_stat_progress_vacuum_summary` view. |
 | `datid` | oid | The object identifier of the database to which this backend is connected. |
 | `datname` | name | Name of the database to which this backend is connected. |
@@ -806,24 +866,24 @@ The `gp_stat_replication` view contains replication statistics of the `walsender
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`gp_segment_id`|integer| |Unique identifier of a segment \(or coordinator\) instance.|
-|`pid`|integer| |Process ID of the `walsender` backend process.|
-|`usesysid`|oid| |User system ID that runs the `walsender` backend process.|
-|`usename`|name| |User name that runs the `walsender` backend process.|
-|`application_name`|text| |Client application name.|
-|`client_addr`|inet| |Client IP address.|
-|`client_hostname`|text| |Client host name.|
-|`client_port`|integer| |Client port number.|
-|`backend_start`|timestamp| |Operation start timestamp.|
-|`backend_xmin`|xid| |The current backend's `xmin` horizon.|
-|`state`|text| |`walsender` state. The value can be:<br/><br/>`startup`<br/><br/>`backup`<br/><br/>`catchup`<br/><br/>`streaming`|
-|`sent_location`|text| |`walsender` xlog record sent location.|
-|`write_location`|text| |`walreceiver` xlog record write location.|
-|`flush_location`|text| |`walreceiver` xlog record flush location.|
-|`replay_location`|text| |Coordinator standby or segment mirror xlog record replay location.|
-|`sync_priority`|integer| |Priority. The value is `1`.|
-|`sync_state`|text| |`walsender`synchronization state. The value is `sync`.|
-|`sync_error`|text| |`walsender` synchronization error. `none` if no error.|
+|`gp_segment_id`|integer| |Unique identifier of a segment \(or coordinator\) instance.|
+|`pid`|integer| |Process ID of the `walsender` backend process.|
+|`usesysid`|oid| |User system ID that runs the `walsender` backend process.|
+|`usename`|name| |User name that runs the `walsender` backend process.|
+|`application_name`|text| |Client application name.|
+|`client_addr`|inet| |Client IP address.|
+|`client_hostname`|text| |Client host name.|
+|`client_port`|integer| |Client port number.|
+|`backend_start`|timestamp| |Operation start timestamp.|
+|`backend_xmin`|xid| |The current backend's `xmin` horizon.|
+|`state`|text| |`walsender` state. The value can be:<br/><br/>`startup`<br/><br/>`backup`<br/><br/>`catchup`<br/><br/>`streaming`|
+|`sent_location`|text| |`walsender` xlog record sent location.|
+|`write_location`|text| |`walreceiver` xlog record write location.|
+|`flush_location`|text| |`walreceiver` xlog record flush location.|
+|`replay_location`|text| |Coordinator standby or segment mirror xlog record replay location.|
+|`sync_priority`|integer| |Priority. The value is `1`.|
+|`sync_state`|text| |`walsender`synchronization state. The value is `sync`.|
+|`sync_error`|text| |`walsender` synchronization error. `none` if no error.|
 
 ## <a id="gp_stat_resqueues"></a>gp_stat_resqueues
 
@@ -832,12 +892,12 @@ The `gp_stat_resqueues` view is a cluster-wide view that displays the [`pg_stat_
 |column|type|references|description|
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
-|`queueid`|oid| |The OID of the resource queue.|
-|`queuename`|name| |The name of the resource queue.|
-|`n_queries_exec`|bigint| |Number of queries submitted for execution from this resource queue.|
-|`n_queries_wait`|bigint| |Number of queries submitted to this resource queue that had to wait before they could run.|
-|`elapsed_exec`|bigint| |Total elapsed execution time for statements submitted through this resource queue.|
-|`elapsed_wait`|bigint| |Total elapsed time that statements submitted through this resource queue had to wait before they were run.|
+|`queueid`|oid| |The OID of the resource queue.|
+|`queuename`|name| |The name of the resource queue.|
+|`n_queries_exec`|bigint| |Number of queries submitted for execution from this resource queue.|
+|`n_queries_wait`|bigint| |Number of queries submitted to this resource queue that had to wait before they could run.|
+|`elapsed_exec`|bigint| |Total elapsed execution time for statements submitted through this resource queue.|
+|`elapsed_wait`|bigint| |Total elapsed time that statements submitted through this resource queue had to wait before they were run.|
 
 ## <a id="gp_stat_slru"></a>gp_stat_slru
 
@@ -847,14 +907,14 @@ The `gp_stat_slru` view is a cluster-wide view that displays the [`pg_stat_slru`
 |------|----|----------|-----------|
 |`gp_segment_id`|integer| |Unique identifier of a segment (or coordinator) instance.|
 |`name`|text| |Name of the SLRU.|
-|`blks_zeroed`|bigint| |Number of blocks zeroed during initializations.|
-|`blks_hit`|bigint| |Number of times disk blocks were found already in the SLRU, so that a read was not necessary (this only includes hits in the SLR, not the operating system's file system cache).|
-|`blks_read`|bigint| |Number of disk blocks read for this SLRU.|
+|`blks_zeroed`|bigint| |Number of blocks zeroed during initializations.|
+|`blks_hit`|bigint| |Number of times disk blocks were found already in the SLRU, so that a read was not necessary (this only includes hits in the SLR, not the operating system's file system cache).|
+|`blks_read`|bigint| |Number of disk blocks read for this SLRU.|
 |`blks_written`|biging| |Number of disk blocks written for this SLRU.|
-|`blks_exists`|biging| |Number of blocks checked for existence for this SLRU.|
-|`flushes`|bigint| |Number of flushes of dirty data for this SLRU.|
-|`truncates`|bigint| |Number of truncates for this SLRU.|
-|`stats_reset`|timestamp with time zone| |Time at which these statistics were last reset.|
+|`blks_exists`|biging| |Number of blocks checked for existence for this SLRU.|
+|`flushes`|bigint| |Number of flushes of dirty data for this SLRU.|
+|`truncates`|bigint| |Number of truncates for this SLRU.|
+|`stats_reset`|timestamp with time zone| |Time at which these statistics were last reset.|
 
 This system view is summarized in the `gp_stat_slru_summary` system view.
 
@@ -937,12 +997,12 @@ The `gp_stat_wal` view is a cluster-wide view that displays the [`pg_stat_wal`](
 |`wal_records`|bigint| |Total number of WAL records generated.|
 |`wal_fpw`|bigint| |Total number of WAL full page images generated.|
 |`wal_bytes`|numeric| |Total amount of WAL generated in bytes.|
-|`wal_buffers_full`|bigint| |Number of times WAL data was written to disk because WAL buffers became full.|
+|`wal_buffers_full`|bigint| |Number of times WAL data was written to disk because WAL buffers became full.|
 |`wal_write`|bigint| |Number of times WAL buffers were written out to disk.|
 |`wal_sync`|bigint||Number of times WAL files were synced to disk.|
-|`wal_write_time`|double precision| |Total amount of time spent writing WAL buffers to disk, in milliseconds (if [track_wal_io_timing](../config_params/guc-list.html#track_wal_io_timing) is enabled, otherwise zero).|
-|`wal_sync_time`|double precision| |Total amount of time spent syncing WAL files to disk, in milliseconds (if `track_wal_io_timing` is enabled, otherwise zero).|
-|`stats_reset`|timestamp with time zone| |Time at which these statistics were last reset.|
+|`wal_write_time`|double precision| |Total amount of time spent writing WAL buffers to disk, in milliseconds (if [track_wal_io_timing](../config_params/guc-list.html#track_wal_io_timing) is enabled, otherwise zero).|
+|`wal_sync_time`|double precision| |Total amount of time spent syncing WAL files to disk, in milliseconds (if `track_wal_io_timing` is enabled, otherwise zero).|
+|`stats_reset`|timestamp with time zone| |Time at which these statistics were last reset.|
 
 This system view is summarized in the `gp_stat_wal_summary` system view.
 
@@ -1138,11 +1198,11 @@ The `pg_backend_memory_contexts` system view displays all of the memory contexts
 |column|type|description|
 |------|----|-----------|
 |`name`|text| The name of the memory context.|
-|`ident`|text| Identification information of the memory context. This field is truncated at 1024 bytes.|
-|`parent`|text| The name of the parent of this memory context.|
-|`level`|int4| The distance from `TopMemoryContext` in context tree.|
-|`total_bytes`|int8| The total number of bytes allocated for this memory context.|
-|`total_nblocks`|int8| The total number of blocks allocated for this memory context.|
+|`ident`|text| Identification information of the memory context. This field is truncated at 1024 bytes.|
+|`parent`|text| The name of the parent of this memory context.|
+|`level`|int4| The distance from `TopMemoryContext` in context tree.|
+|`total_bytes`|int8| The total number of bytes allocated for this memory context.|
+|`total_nblocks`|int8| The total number of blocks allocated for this memory context.|
 |`free_bytes`|int8| Free space in bytes.|
 |`free_chunks`|int8| The total number of free chunks.|
 |`used_bytes`|int8| Used space in bytes.|
@@ -1164,13 +1224,13 @@ Cursors exist only for the duration of the transaction that defines them, unless
 
 |name|type|references|description|
 |----|----|----------|-----------|
-|`name`|text| |The name of the cursor.|
-|`statement`|text| |The verbatim query string submitted to declare this cursor.|
-|`is_holdable`|boolean| |`true` if the cursor is holdable \(that is, it can be accessed after the transaction that declared the cursor has committed\); `false` otherwise.<br/><br/>> **Note** Greenplum Database does not support holdable parallel retrieve cursors, this value is always `false` for such cursors.|
-|`is_binary`|boolean| |`true` if the cursor was declared `BINARY`; `false` otherwise.|
-|`is_scrollable`|boolean| |`true` if the cursor is scrollable \(that is, it allows rows to be retrieved in a nonsequential manner\); `false` otherwise.<br/><br/>> **Note** Greenplum Database does not support scrollable cursors, this value is always `false`.|
-|`creation_time`|timestamptz| |The time at which the cursor was declared.|
-|`is_parallel`|boolean| |`true` if the cursor was declared `PARALLEL RETRIEVE`; `false` otherwise.|
+|`name`|text| |The name of the cursor.|
+|`statement`|text| |The verbatim query string submitted to declare this cursor.|
+|`is_holdable`|boolean| |`true` if the cursor is holdable \(that is, it can be accessed after the transaction that declared the cursor has committed\); `false` otherwise.<br/><br/>> **Note** Greenplum Database does not support holdable parallel retrieve cursors, this value is always `false` for such cursors.|
+|`is_binary`|boolean| |`true` if the cursor was declared `BINARY`; `false` otherwise.|
+|`is_scrollable`|boolean| |`true` if the cursor is scrollable \(that is, it allows rows to be retrieved in a nonsequential manner\); `false` otherwise.<br/><br/>> **Note** Greenplum Database does not support scrollable cursors, this value is always `false`.|
+|`creation_time`|timestamptz| |The time at which the cursor was declared.|
+|`is_parallel`|boolean| |`true` if the cursor was declared `PARALLEL RETRIEVE`; `false` otherwise.|
 
 ## <a id="pg_exttable"></a>pg_exttable
 
@@ -1179,17 +1239,17 @@ The `pg_exttable` system catalog view is used to track external tables and web t
 |column|type|references|description|
 |------|----|----------|-----------|
 |`reloid`|oid|pg\_class.oid|The OID of this external table.|
-|`urilocation`|text\[\]| |The URI location\(s\) of the external table files.|
-|`execlocation`|text\[\]| |The ON segment locations defined for the external table.|
-|`fmttype`|char| |Format of the external table files: `t` for text, `c` for csv, or `b` for custom. |
-|`fmtopts`|text| |Formatting options of the external table files, such as the field delimiter, null string, escape character, etc.|
-|`options`|text\[\]| |The options defined for the external table.|
-|`command`|text| |The OS command to run when the external table is accessed.|
-|`rejectlimit`|integer| |The per segment reject limit for rows with errors, after which the load will fail.|
-|`rejectlimittype`|char| |Type of reject limit threshold: `r` for number of rows, or `p` for percent.|
-|`logerrors`|bool| |`1` to log errors, `0` to not.|
-|`encoding`|text| |The client encoding.|
-|`writable`|boolean| |`false` for readable external tables, `true` for writable external tables.|
+|`urilocation`|text\[\]| |The URI location\(s\) of the external table files.|
+|`execlocation`|text\[\]| |The ON segment locations defined for the external table.|
+|`fmttype`|char| |Format of the external table files: `t` for text, `c` for csv, or `b` for custom. |
+|`fmtopts`|text| |Formatting options of the external table files, such as the field delimiter, null string, escape character, etc.|
+|`options`|text\[\]| |The options defined for the external table.|
+|`command`|text| |The OS command to run when the external table is accessed.|
+|`rejectlimit`|integer| |The per segment reject limit for rows with errors, after which the load will fail.|
+|`rejectlimittype`|char| |Type of reject limit threshold: `r` for number of rows, or `p` for percent.|
+|`logerrors`|bool| |`1` to log errors, `0` to not.|
+|`encoding`|text| |The client encoding.|
+|`writable`|boolean| |`false` for readable external tables, `true` for writable external tables.|
 
 ## <a id="pg_matviews"></a>pg_matviews
 
@@ -1211,8 +1271,8 @@ The `pg_max_external_files` view shows the maximum number of external table file
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`hostname`|name| |The host name used to access a particular segment instance on a segment host.|
-|`maxfiles`|bigint| |Number of primary segment instances on the host.|
+|`hostname`|name| |The host name used to access a particular segment instance on a segment host.|
+|`maxfiles`|bigint| |Number of primary segment instances on the host.|
 
 ## <a id="pg_policies"></a>pg_policies
 
@@ -1223,11 +1283,11 @@ The `pg_policies` view provides access to information about each row-level secur
 |`schemaname`|name|pg\_namespace.nspname |The name of schema that contas the table the policy is on|
 |`tablename`|name|pg\_class.relname|The name of the table the policy is on|
 |`policyname`|name|pg\_policy.polname |The name of policy|
-|`polpermissive`|text| |Is the policy permissive or restrictive?|
-|`roles`|name[]| |The roles to which this policy applies|
-|`cmd`|text| |The command type to which the policy is applied|
-|`qual`|text| |The expression added to the security barrier qualifications for queries to which this policy applies|
-|`with_check`|text| |The expression added to the `WITH CHECK` qualifications for queries that attempt to add rows to this table|
+|`polpermissive`|text| |Is the policy permissive or restrictive?|
+|`roles`|name[]| |The roles to which this policy applies|
+|`cmd`|text| |The command type to which the policy is applied|
+|`qual`|text| |The expression added to the security barrier qualifications for queries to which this policy applies|
+|`with_check`|text| |The expression added to the `WITH CHECK` qualifications for queries that attempt to add rows to this table|
 
 > **Note**  Policies stored in `pg_policy` are applied only when `pg_class.relrowsecurity` is set for their table.
 
@@ -1240,9 +1300,9 @@ The `pg_resqueue_attributes` view allows administrators to see the attributes se
 |column|type|references|description|
 |------|----|----------|-----------|
 |`rsqname`|name|pg\_resqueue.rsqname|The name of the resource queue.|
-|`resname`|text| |The name of the resource queue attribute.|
-|`resetting`|text| |The current value of a resource queue attribute.|
-|`restypid`|integer| |System assigned resource type id.|
+|`resname`|text| |The name of the resource queue attribute.|
+|`resetting`|text| |The current value of a resource queue attribute.|
+|`restypid`|integer| |System assigned resource type id.|
 
 ## <a id="pg_stat_activity"></a>pg_stat_activity
 
@@ -1253,25 +1313,25 @@ The maximum length of the query text string stored in the column `query` can be 
 |column|type|references|description|
 |------|----|----------|-----------|
 |`datid`|oid|pg\_database.oid|Database OID|
-|`datname`|name| |Database name|
-|`pid`|integer| |Process ID of this backend|
-|`sess_id`|integer| |Session ID|
+|`datname`|name| |Database name|
+|`pid`|integer| |Process ID of this backend|
+|`sess_id`|integer| |Session ID|
 |`usesysid`|oid|pg\_authid.oid|OID of the user logged into this backend|
-|`usename`|name| |Name of the user logged into this backend|
-|`application_name`|text| |Name of the application that is connected to this backend|
-|`client_addr`|inet| |IP address of the client connected to this backend. If this field is null, it indicates either that the client is connected via a Unix socket on the server machine or that this is an internal process such as autovacuum.|
-|`client_hostname`|text| |Host name of the connected client, as reported by a reverse DNS lookup of `client_addr`. This field will only be non-null for IP connections, and only when log\_hostname is enabled.|
-|`client_port`|integer| |TCP port number that the client is using for communication with this backend, or -1 if a Unix socket is used|
-|`backend_start`|timestamptz| |Time backend process was started|
-|`xact_start`|timestamptz| |Transaction start time|
-|`query_start`|timestamptz| |Time query began execution|
-|`state_change`|timestampz| |Time when the `state` was last changed|
-|`wait_event_type`|text| |Type of event for which the backend is waiting|
-|`wait_event`|text| |Wait event name if backend is currently waiting|
-|`state`|text| |Current overall state of this backend. Possible values are:<br/><br/>-   `active`: The backend is running a query.<br/><br/>-   `idle`: The backend is waiting for a new client command.<br/><br/>-   `idle in transaction`: The backend is in a transaction, but is not currently running a query.<br/><br/>-   `idle in transaction (aborted)`: This state is similar to idle in transaction, except one of the statements in the transaction caused an error.<br/><br/>-   `fastpath function call`: The backend is running a fast-path function.<br/><br/>-   `disabled`: This state is reported if `track_activities` is deactivated in this backend.|
+|`usename`|name| |Name of the user logged into this backend|
+|`application_name`|text| |Name of the application that is connected to this backend|
+|`client_addr`|inet| |IP address of the client connected to this backend. If this field is null, it indicates either that the client is connected via a Unix socket on the server machine or that this is an internal process such as autovacuum.|
+|`client_hostname`|text| |Host name of the connected client, as reported by a reverse DNS lookup of `client_addr`. This field will only be non-null for IP connections, and only when log\_hostname is enabled.|
+|`client_port`|integer| |TCP port number that the client is using for communication with this backend, or -1 if a Unix socket is used|
+|`backend_start`|timestamptz| |Time backend process was started|
+|`xact_start`|timestamptz| |Transaction start time|
+|`query_start`|timestamptz| |Time query began execution|
+|`state_change`|timestampz| |Time when the `state` was last changed|
+|`wait_event_type`|text| |Type of event for which the backend is waiting|
+|`wait_event`|text| |Wait event name if backend is currently waiting|
+|`state`|text| |Current overall state of this backend. Possible values are:<br/><br/>-   `active`: The backend is running a query.<br/><br/>-   `idle`: The backend is waiting for a new client command.<br/><br/>-   `idle in transaction`: The backend is in a transaction, but is not currently running a query.<br/><br/>-   `idle in transaction (aborted)`: This state is similar to idle in transaction, except one of the statements in the transaction caused an error.<br/><br/>-   `fastpath function call`: The backend is running a fast-path function.<br/><br/>-   `disabled`: This state is reported if `track_activities` is deactivated in this backend.|
 |`backend_xid`|xid||The top-level transaction identifier of this backend, if any.|
 |`backend_xmin`|xid||The current backend's `xmin` horizon.| 
-|`query`|text| |Text of this backend's most recent query. If `state` is active this field shows the currently running query. In all other states, it shows the last query that was run.|
+|`query`|text| |Text of this backend's most recent query. If `state` is active this field shows the currently running query. In all other states, it shows the last query that was run.|
 |`backend_type`|text||The type of the current backend.|
 |`rsgid`|oid|pg\_resgroup.oid|Resource group OID or `0`.<br/><br/>See [Note](#rsg_note).|
 |`rsgname`|text|pg\_resgroup.rsgname|Resource group name or `unknown`.<br/><br/>See [Note](#rsg_note).|
@@ -1333,15 +1393,15 @@ The view `pg_stat_operations` shows details about the last operation performed o
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`classname`|text| |The name of the system table in the `pg_catalog` schema where the record about this object is stored \(`pg_class`=relations, `pg_database`=databases,`pg_namespace`=schemas, `pg_authid`=roles\)|
-|`objname`|name| |The name of the object.|
-|`objid`|oid| |The OID of the object.|
-|`schemaname`|name| |The name of the schema where the object resides.|
-|`usestatus`|text| |The status of the role who performed the last operation on the object \(`CURRENT`=a currently active role in the system, `DROPPED`=a role that no longer exists in the system, `CHANGED`=a role name that exists in the system, but has changed since the last operation was performed\).|
-|`usename`|name| |The name of the role that performed the operation on this object.|
-|`actionname`|name| |The action that was taken on the object.|
-|`subtype`|text| |The type of object operated on or the subclass of operation performed.|
-|`statime`|timestamptz| |The timestamp of the operation. This is the same timestamp that is written to the Greenplum Database server log files in case you need to look up more detailed information about the operation in the logs.|
+|`classname`|text| |The name of the system table in the `pg_catalog` schema where the record about this object is stored \(`pg_class`=relations, `pg_database`=databases,`pg_namespace`=schemas, `pg_authid`=roles\)|
+|`objname`|name| |The name of the object.|
+|`objid`|oid| |The OID of the object.|
+|`schemaname`|name| |The name of the schema where the object resides.|
+|`usestatus`|text| |The status of the role who performed the last operation on the object \(`CURRENT`=a currently active role in the system, `DROPPED`=a role that no longer exists in the system, `CHANGED`=a role name that exists in the system, but has changed since the last operation was performed\).|
+|`usename`|name| |The name of the role that performed the operation on this object.|
+|`actionname`|name| |The action that was taken on the object.|
+|`subtype`|text| |The type of object operated on or the subclass of operation performed.|
+|`statime`|timestamptz| |The timestamp of the operation. This is the same timestamp that is written to the Greenplum Database server log files in case you need to look up more detailed information about the operation in the logs.|
 
 ## <a id="pg_stat_replication"></a>pg_stat_replication
 
@@ -1349,22 +1409,22 @@ The `pg_stat_replication` view contains metadata of the `walsender` process that
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`pid`|integer| |Process ID of WAL sender backend process.|
-|`usesysid`|integer| |User system ID that runs the WAL sender backend process|
-|`usename`|name| |User name that runs WAL sender backend process.|
-|`application_name`|oid| |Client application name.|
-|`client_addr`|name| |Client IP address.|
-|`client_hostname`|text| |The host name of the client machine.|
-|`client_port`|integer| |Client port number.|
-|`backend_start`|timestamp| |Operation start timestamp.|
-|`backend_xmin`|xid| |The current backend's `xmin` horizon.|
-|`state`|text| |WAL sender state. The value can be:<br/><br/>`startup`<br/><br/>`backup`<br/><br/>`catchup`<br/><br/>`streaming`|
-|`sent_location`|text| |WAL sender xlog record sent location.|
-|`write_location`|text| |WAL receiver xlog record write location.|
-|`flush_location`|text| |WAL receiver xlog record flush location.|
-|`replay_location`|text| |Standby xlog record replay location.|
-|`sync_priority`|text| |Priority. the value is `1`.|
-|`sync_state`|text| |WAL sender synchronization state. The value is `sync`.|
+|`pid`|integer| |Process ID of WAL sender backend process.|
+|`usesysid`|integer| |User system ID that runs the WAL sender backend process|
+|`usename`|name| |User name that runs WAL sender backend process.|
+|`application_name`|oid| |Client application name.|
+|`client_addr`|name| |Client IP address.|
+|`client_hostname`|text| |The host name of the client machine.|
+|`client_port`|integer| |Client port number.|
+|`backend_start`|timestamp| |Operation start timestamp.|
+|`backend_xmin`|xid| |The current backend's `xmin` horizon.|
+|`state`|text| |WAL sender state. The value can be:<br/><br/>`startup`<br/><br/>`backup`<br/><br/>`catchup`<br/><br/>`streaming`|
+|`sent_location`|text| |WAL sender xlog record sent location.|
+|`write_location`|text| |WAL receiver xlog record write location.|
+|`flush_location`|text| |WAL receiver xlog record flush location.|
+|`replay_location`|text| |Standby xlog record replay location.|
+|`sync_priority`|text| |Priority. the value is `1`.|
+|`sync_state`|text| |WAL sender synchronization state. The value is `sync`.|
 
 ## <a id="pg_stat_resqueues"></a>pg_stat_resqueues
 
@@ -1374,12 +1434,12 @@ The `pg_stat_resqueues` view allows administrators to view metrics about a resou
 
 |column|type|references|description|
 |------|----|----------|-----------|
-|`queueid`|oid| |The OID of the resource queue.|
-|`queuename`|name| |The name of the resource queue.|
-|`n_queries_exec`|bigint| |Number of queries submitted for execution from this resource queue.|
-|`n_queries_wait`|bigint| |Number of queries submitted to this resource queue that had to wait before they could run.|
-|`elapsed_exec`|bigint| |Total elapsed execution time for statements submitted through this resource queue.|
-|`elapsed_wait`|bigint| |Total elapsed time that statements submitted through this resource queue had to wait before they were run.|
+|`queueid`|oid| |The OID of the resource queue.|
+|`queuename`|name| |The name of the resource queue.|
+|`n_queries_exec`|bigint| |Number of queries submitted for execution from this resource queue.|
+|`n_queries_wait`|bigint| |Number of queries submitted to this resource queue that had to wait before they could run.|
+|`elapsed_exec`|bigint| |Total elapsed execution time for statements submitted through this resource queue.|
+|`elapsed_wait`|bigint| |Total elapsed time that statements submitted through this resource queue had to wait before they were run.|
 
 ## <a id="pg_stat_slru"></a>pg_stat_slru
 
@@ -1388,14 +1448,14 @@ Greenplum Database accesses certain on-disk information via SLRU (simple least-r
 |column|type|references|description|
 |------|----|----------|-----------|
 |`name`|text| |Name of the SLRU.|
-|`blks_zeroed`|bigint| |Number of blocks zeroed during initializations.|
-|`blks_hit`|bigint| |Number of times disk blocks were found already in the SLRU, so that a read was not necessary (this only includes hits in the SLR, not the operating system's file system cache).|
-|`blks_read`|bigint| |Number of disk blocks read for this SLRU.|
+|`blks_zeroed`|bigint| |Number of blocks zeroed during initializations.|
+|`blks_hit`|bigint| |Number of times disk blocks were found already in the SLRU, so that a read was not necessary (this only includes hits in the SLR, not the operating system's file system cache).|
+|`blks_read`|bigint| |Number of disk blocks read for this SLRU.|
 |`blks_written`|biging| |Number of disk blocks written for this SLRU.|
-|`blks_exists`|biging| |Number of blocks checked for existence for this SLRU.|
-|`flushes`|bigint| |Number of flushes of dirty data for this SLRU.|
-|`truncates`|bigint| |Number of truncates for this SLRU.|
-|`stats_reset`|timestamp with time zone| |Time at which these statistics were last reset.|
+|`blks_exists`|biging| |Number of blocks checked for existence for this SLRU.|
+|`flushes`|bigint| |Number of flushes of dirty data for this SLRU.|
+|`truncates`|bigint| |Number of truncates for this SLRU.|
+|`stats_reset`|timestamp with time zone| |Time at which these statistics were last reset.|
 
 ## <a id="pg_stat_wal"></a>pg_stat_wal
 
@@ -1406,12 +1466,12 @@ The `pg_stat_wal` view shows data about the WAL activity of the cluster. It cont
 |`wal_records`|bigint| |Total number of WAL records generated.|
 |`wal_fpw`|bigint| |Total number of WAL full page images generated.|
 |`wal_bytes`|numeric| |Total amount of WAL generated in bytes.|
-|`wal_buffers_full`|bigint| |Number of times WAL data was written to disk because WAL buffers became full.|
+|`wal_buffers_full`|bigint| |Number of times WAL data was written to disk because WAL buffers became full.|
 |`wal_write`|bigint| |Number of times WAL buffers were written out to disk.|
 |`wal_sync`|bigint||Number of times WAL files were synced to disk.|
-|`wal_write_time`|double precision| |Total amount of time spent writing WAL buffers to disk, in milliseconds (if [track_wal_io_timing](../config_params/guc-list.html#track_wal_io_timing) is enabled, otherwise zero).|
-|`wal_sync_time`|double precision| |Total amount of time spent syncing WAL files to disk, in milliseconds (if `track_wal_io_timing` is enabled, otherwise zero).|
-|`stats_reset`|timestamp with time zone| |Time at which these statistics were last reset.|
+|`wal_write_time`|double precision| |Total amount of time spent writing WAL buffers to disk, in milliseconds (if [track_wal_io_timing](../config_params/guc-list.html#track_wal_io_timing) is enabled, otherwise zero).|
+|`wal_sync_time`|double precision| |Total amount of time spent syncing WAL files to disk, in milliseconds (if `track_wal_io_timing` is enabled, otherwise zero).|
+|`stats_reset`|timestamp with time zone| |Time at which these statistics were last reset.|
 
 ## <a id="pg_stats"></a>pg_stats
 

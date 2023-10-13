@@ -2474,28 +2474,19 @@ create_motion_path_for_upddel(PlannerInfo *root, Index rti, GpPolicy *policy,
  * consist of a delete and insert. So, if the result relation has update
  * triggers, we should reject and error out because it's not functional.
  *
- * GPDB_96_MERGE_FIXME: the below comment is obsolete. Nowadays, SplitUpdate
- * computes the new row's hash, and the corresponding. target segment. The
- * old segment comes from the gp_segment_id junk column. But ORCA still
- * does it the old way!
- *
- * Third, to support deletion, and hash delete operation to correct segment,
- * we need to get attributes of OLD tuple. The old attributes must therefore
- * be present in the subplan's target list. That is handled earlier in the
- * planner, in expand_targetlist().
  *
  * For example, a typical plan would be as following for statement:
  * update foo set id = l.v + 1 from dep l where foo.v = l.id:
  *
- * |-- join ( targetlist: [ l.v + 1, foo.v, foo.id, foo.ctid, foo.gp_segment_id ] )
+ * |-- join ( targetlist: [ l.v + 1, foo.v, foo.ctid, foo.gp_segment_id ] )
  *       |
  *       |-- motion ( targetlist: [l.id, l.v] )
  *       |    |
  *       |    |-- seqscan on dep ....
  *       |
- *       |-- hash (targetlist [ v, foo.ctid, foo.gp_segment_id ] )
+ *       |-- hash (targetlist [ foo.v, foo.ctid, foo.gp_segment_id ] )
  *            |
- *            |-- seqscan on foo (targetlist: [ v, foo.id, foo.ctid, foo.gp_segment_id ] )
+ *            |-- seqscan on foo (targetlist: [ foo.v, foo.ctid, foo.gp_segment_id ] )
  *
  * From the plan above, the target foo.id is assigned as l.v + 1, and expand_targetlist()
  * ensured that the old value of id, is also available, even though it would not otherwise

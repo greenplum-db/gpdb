@@ -501,7 +501,7 @@ select * from bar where c not in (select distinct a from foo);
         </dxl:LogicalSelect>
       </dxl:UnionAll>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1349729832">
+    <dxl:Plan Id="0" SpaceSize="2613306696">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="4310.001444" Rows="4.000000" Width="8"/>

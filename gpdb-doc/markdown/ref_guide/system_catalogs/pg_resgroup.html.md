@@ -6,6 +6,7 @@ The `pg_resgroup` system catalog table contains information about Greenplum Data
 
 |column|type|references|description|
 |------|----|----------|-----------|
+|`oid`|oid| |The object ID|
 |`rsgname`|name| |The name of the resource group.|
 |`parent`|oid| |Unused; reserved for future use.|
 

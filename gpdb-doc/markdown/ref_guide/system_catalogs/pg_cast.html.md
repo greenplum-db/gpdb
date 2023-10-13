@@ -12,6 +12,7 @@ When a `pg_cast` entry has different source and target types and a function that
 
 |column|type|references|description|
 |------|----|----------|-----------|
+|`oid`|oid||The object ID.|
 |`castsource`|oid|pg\_type.oid|OID of the source data type.|
 |`casttarget`|oid|pg\_type.oid|OID of the target data type.|
 |`castfunc`|oid|pg\_proc.oid|The OID of the function to use to perform this cast. Zero is stored if the cast method does not require a function.|

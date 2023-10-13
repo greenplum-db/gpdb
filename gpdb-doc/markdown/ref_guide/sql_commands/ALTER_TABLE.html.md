@@ -200,7 +200,7 @@ and <subpartition_element> is:
 
 ## <a id="section3"></a>Description 
 
-`ALTER TABLE` changes the definition of an existing table. There are several subforms described below. Note that the lock level required may differ for each subform. An `ACCESS EXCLUSIVE` lock is acquired unless explicitly noted. When multiple subcommands are provided, Greenplum Database acquires the strictest lock required by any subcommand.
+`ALTER TABLE` changes the definition of an existing table. There are several subforms described below. Note that the lock level required may differ for each subform. *An `ACCESS EXCLUSIVE` lock is acquired unless explicitly noted.* When multiple subcommands are provided, Greenplum Database acquires the strictest lock required by any subcommand.
 
 ADD COLUMN [ IF NOT EXISTS ]
 :    Adds a new column to the table, using the same syntax as [CREATE TABLE](CREATE_TABLE.html). If `IF NOT EXISTS` is specified and a column already exists with this name, no error is thrown.
@@ -378,7 +378,7 @@ ATTACH PARTITION partition_name { FOR VALUES partition_bound_spec | DEFAULT }
 
 :   When a table has a default partition, defining a new partition changes the partition constraint for the default partition. The default partition can't contain any rows that would need to be moved to the new partition, and will be scanned to verify that none are present. This scan, like the scan of the new partition, can be avoided if an appropriate `CHECK` constraint is present. Also like the scan of the new partition, it is always skipped when the default partition is a foreign table.
 
-:   Attaching a partition acquires a `SHARE UPDATE EXCLUSIVE` lock on the parent table, in addition to the `ACCESS EXCLUSIVE` locks on the table being attached and on the default partition (if any).
+:   Attaching a partition acquires a `SHARE UPDATE EXCLUSIVE` lock on the parent table, in addition to the `ACCESS EXCLUSIVE` locks on the table being attached and on the default partition (if any). You can run `SELECT` and `INSERT` queries in parallel with `ATTACH PARTITION`. You can also run `UPDATE` queries in parallel with `ATTACH PARTITION` when the parent table is a heap table and the Global Deadlock Detector is enabled (the [gp_enable_global_deadlock_detector](../config_params/guc-list.html#gp_enable_global_deadlock_detector) server configuration paramer is set to `on`).
 
 :   Additional locks must also be held on all sub-partitions if the table being attached is itself a partitioned table. Likewise if the default partition is itself a partitioned table. The locking of the sub-partitions can be avoided by adding a `CHECK` constraint as described in [Partitioning Large Tables](../../admin_guide/ddl/ddl-partition.html.md).
 
@@ -502,7 +502,7 @@ ADD DEFAULT PARTITION
 :   Adds a default partition to an existing partition design. When data does not match to an existing partition, it is inserted into the default partition. Partition designs that do not have a default partition will reject incoming rows that do not match to an existing partition. Default partitions must be given a name.
 
 ADD PARTITION
-:   partition\_element - Using the existing partition type of the table (range or list), defines the boundaries of new partition you are adding.
+:   partition\_element - Using the existing partition type of the table (range or list), defines the boundaries of new partition you are adding.  `ADD PARTITION` acquires an `ACCESS EXCLUSIVE` lock on the parent table.
 
 :   name - A name for this new partition.
 
@@ -553,7 +553,7 @@ SPLIT PARTITION
 :   **INTO** - Allows you to specify names for the two new partitions created by the split.
 
 partition\_name
-:   The given name of a partition. You can obtain the the table names of the leaf partitions of a partitioned table using the `pg_partition_tree() function.
+:   The given name of a partition. You can obtain the table names of the leaf partitions of a partitioned table using the `pg_partition_tree() function.
 
 FOR ('value')
 :   Specifies a partition by declaring a value that falls within the partition boundary specification. If the value declared with `FOR` matches to both a partition and one of its sub-partitions (for example, if the value is a date and the table is partitioned by month and then by day), then `FOR` will operate on the first level where a match is found (for example, the monthly partition). If your intent is to operate on a sub-partition, you must declare so as follows: `ALTER TABLE name ALTER PARTITION FOR ('2016-10-01') DROP PARTITION FOR ('2016-10-01');`

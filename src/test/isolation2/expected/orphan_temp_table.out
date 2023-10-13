@@ -21,6 +21,12 @@ ERROR:  fault triggered, fault name:'before_exec_scan' fault type:'panic'  (seg0
  oid | relname | relnamespace 
 -----+---------+--------------
 (0 rows)
+-- we should not see the temp namespace on the coordinator
+1: SELECT count(*) FROM pg_namespace where (nspname like '%pg_temp_%' or nspname like '%pg_toast_temp_%') and oid > 16386;
+ count 
+-------
+ 0     
+(1 row)
 
 
 -- the temp table is left on segment 0, it should be dropped by autovacuum later

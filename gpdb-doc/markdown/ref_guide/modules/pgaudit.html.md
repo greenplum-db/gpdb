@@ -23,5 +23,5 @@ gpstop -ar
 
 ## <a id="topic_info"></a>Module Documentation
 
-Refer to the [pgaudit github documentation](https://github.com/pgaudit/pgaudit/blob/master/README.md) for detailed information about using the module.
+Refer to the [pgaudit github documentation](https://github.com/pgaudit/pgaudit/blob/REL_12_STABLE/README.md) for detailed information about using the module.
 

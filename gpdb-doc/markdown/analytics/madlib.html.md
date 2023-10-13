@@ -49,7 +49,7 @@ The R package for PivotalR can be found at [https://cran.r-project.org/web/packa
 
 MADlib requires the `m4` macro processor version 1.4.13 or later. Ensure that you have access to, or superuser permissions to install, this package on each Greenplum Database host.
 
-MADlib 2.0.0 requires Python 3, which should already be installed as a dependency when you install the Greenplum Database software on each Greenplum host.
+MADlib 2.1.0 requires Python 3, which should already be installed as a dependency when you install the Greenplum Database software on each Greenplum host.
 
 ## <a id="topic3"></a>Installing MADlib 
 
@@ -69,13 +69,13 @@ Before you install the MADlib package, make sure that your Greenplum database is
 4.  Unpack the MADlib distribution package. For example:
 
     ```
-    $ tar xzvf madlib-2.0.0-gp7-rhel8-x86_64.tar.gz
+    $ tar xzvf madlib-2.1.0-gp7-rhel8-x86_64.tar.gz
     ```
 
 5.  Install the software package by running the `gppkg` command. For example:
 
     ```
-    $ gppkg install ./madlib-2.0.0-gp7-rhel8-x86_64/madlib-2.0.0-gp7-rhel8-x86_64.gppkg.tar.gz
+    $ gppkg install ./madlib-2.1.0-gp7-rhel8-x86_64/madlib-2.1.0-gp7-rhel8-x86_64.gppkg.tar.gz
     ```
 
 ### <a id="topic5"></a>Adding MADlib Functions to a Database 
@@ -122,7 +122,7 @@ $ madpack  -s madlib -p greenplum -c gpadmin@cdw:5432/testdb uninstall
 If no databases use the MADlib functions, use the Greenplum `gppkg` utility with the `remove` option to uninstall the MADlib package. When removing the package you must specify the package and version. This example uninstalls MADlib package version 1.18.
 
 ```
-$ gppkg remove madlib-2.0.0-gp7-rhel8-x86_64
+$ gppkg remove madlib-2.1.0-gp7-rhel8-x86_64
 ```
 
 You can run the `gppkg` utility with the `query` option to list the installed extensions and their versions.

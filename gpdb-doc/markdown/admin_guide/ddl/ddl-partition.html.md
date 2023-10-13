@@ -99,7 +99,8 @@ The following table provides a feature comparison to help you choose the syntax 
 | Multi-column range partitioning | Not supported. | Supported. |
 | Multi-column list partitioning | Supported (via composite type). | Not supported. |
 | Hash partitioning | Not supported. | Supported. |
-| Partition Removal | Dropping a partition deletes the table contents. Must create a dummy table and swap. | Supported. Can directly detach a partition, retaining the table contents. |
+| Adding a Partition | Adding a partition acquires an `ACCESS EXCLUSIVE` lock on the parent table. | Attaching a partition acquires a less restrictive `SHARE UPDATE EXCLUSIVE` lock on the parent table. |
+| Removing a Partition | Dropping a partition deletes the table contents. Must create a dummy table and swap. | Supported. Can directly detach a partition, retaining the table contents. |
 | Sub-partition templating | Supported. The definitions of the parent and child tables are consistent by default. | Not supported. You ensure that the table definitions are consistent. |
 | Partition maintenance | You operate on a child table via the parent, requiring knowledge of the partition hierarchy. | You operate directly on the child table, no knowledge of the partition hierarchy is required. |
 
@@ -397,26 +398,7 @@ SELECT pg_get_expr(template, relid) FROM gp_partition_template
 
 ### <a id="topic76classic"></a>Constructing a pg_partitions-Equivalent Query
 
-You can obtain most of the information available via the (removed) Greenplum 6 `pg_partitions` view with the following query:
-
-``` sql
-SELECT
-  n.nspname,
-  c.relname,
-  pg_partition_root(c.oid) AS rootname,
-  inh.inhparent::regclass::text AS parentname,
-  pt.partstrat,
-  pt.partnatts,
-  pt.partattrs AS partkeycol,
-  pg_get_expr(pt.partexprs, pt.partrelid) AS partkeyexpr,
-  (SELECT level FROM pg_partition_tree(pg_partition_root(c.oid)) WHERE relid = c.oid::regclass) AS level,
-  pg_get_expr(c.relpartbound, c.oid) AS partbound
-FROM pg_class c
- LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
- LEFT JOIN pg_inherits inh ON inh.inhrelid = c.oid
- LEFT JOIN pg_partitioned_table pt ON (inh.inhparent = pt.partrelid)
-WHERE c.relispartition = 't'; 
-```
+Refer to [Migrating Partition Maintenance Scripts to the New Greenplum 7 Partitioning Catalogs](../../install_guide/migrate-classic-partitioning.html) for information about mapping Greenplum 6 partitioning catalogs to the new definitions in Greenplum 7.
 
 ## <a id="prune"></a>About Partition Pruning
 
