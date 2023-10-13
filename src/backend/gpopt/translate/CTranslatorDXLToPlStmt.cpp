@@ -1124,7 +1124,7 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
 		CDXLNode *index_cond_dxlnode = (*index_cond_list_dxlnode)[ul];
-
+                CDXLNode *modified_null_test_cond_dxlnode = nullptr;
 		// Translate index condition CDXLScalarBoolExpr of format 'NOT (col IS NULL)'
 		// to CDXLScalarNullTest 'col IS NOT NULL', because IndexScan only
 		// supports indexquals of types: OpExpr, RowCompareExpr,
@@ -1139,7 +1139,7 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 					EdxlopScalarNullTest)
 			{
 				CDXLNode *null_test_cond_dxlnode = (*index_cond_dxlnode)[0];
-				CDXLNode *modified_null_test_cond_dxlnode = GPOS_NEW(m_mp)
+                                modified_null_test_cond_dxlnode = GPOS_NEW(m_mp)
 					CDXLNode(m_mp,
 							 GPOS_NEW(m_mp) CDXLScalarNullTest(m_mp, false),
 							 (*null_test_cond_dxlnode)[0]);
@@ -1283,6 +1283,10 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 				attno, index_cond_expr, original_index_cond_expr, strategy_num,
 				index_subtype_oid));
 		}
+                if (modified_null_test_cond_dxlnode != nullptr)
+                {
+                    modified_null_test_cond_dxlnode->Release();
+                }
 	}
 
 	// the index quals much be ordered by attribute number
