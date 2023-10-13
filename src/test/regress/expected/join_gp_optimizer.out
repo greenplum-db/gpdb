@@ -1601,3 +1601,40 @@ drop table random_dis_char;
 set optimizer_enable_hashjoin to on;
 reset enable_hashjoin;
 reset enable_nestloop;
+-- Test lateral join a subquery where the subquery contains a function can node
+-- that refs outer query's parameter.
+create table t1_funcscan (id int, c_jsonb jsonb);
+create table t2_funcscan (id int not null,  c1_var varchar(50) not null, c2_var varchar(50) not null);
+insert into t1_funcscan values (1, '[{"c1":"abc", "c2":"m", "c3":"s"}]');
+insert into t1_funcscan values (2, '[{"c1":"abcd", "c2":"m", "c3":"s"}]');
+insert into t1_funcscan values (3, '[{"c1":"abcde", "c2":"m", "c3":"s"}]');
+insert into t2_funcscan values(1, 'abc', 'abcd');
+explain (costs off)
+select * from t1_funcscan as a
+left join lateral (
+    select string_agg(distinct (case when a.c1='abc' then d.c2_var when a.c1='abcd' then a.c2 else a.c1 end), '||') from
+      jsonb_to_recordset(c_jsonb) as a (
+        c1 varchar,
+        c2 varchar,
+        c3 varchar
+        )
+        left join t2_funcscan d on lower(a.c1)=lower(d.c1_var)
+    ) c on 1 = 1;
+                                    QUERY PLAN
+----------------------------------------------------------------------------------
+ Nested Loop Left Join
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t1_funcscan a
+   ->  Materialize
+         ->  Aggregate
+               ->  Hash Left Join
+                     Hash Cond: (lower((a_1.c1)::text) = lower((d.c1_var)::text))
+                     ->  Function Scan on jsonb_to_recordset a_1
+                     ->  Hash
+                           ->  Gather Motion 3:1  (slice2; segments: 3)
+                                 ->  Seq Scan on t2_funcscan d
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+drop table t1_funcscan;
+drop table t2_funcscan;
