@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package idl;
+
+option go_package= "../idl";
+
+service Agent {
+    rpc Stop(StopAgentRequest) returns (StopAgentReply) {}
+    rpc Status(StatusAgentRequest) returns (StatusAgentReply) {}
+}
+
+message StopAgentRequest {}
+message StopAgentReply {}
+
+message StatusAgentRequest {}
+message StatusAgentReply {
+	string status = 1;
+	string uptime = 2;
+	uint32 pid = 3;
+}

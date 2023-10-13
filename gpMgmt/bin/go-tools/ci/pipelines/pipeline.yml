@@ -1,0 +1,263 @@
+anchors:
+- &default_platform
+  PLATFORM: rocky8-gpdb7
+
+- &ccp_default_params
+  action: create
+  delete_on_failure: true
+  generate_random_name: true
+  plugin_dir: ../../terraform.d/plugin-cache/linux_amd64
+  terraform_source: ccp_src/google/
+
+- &ccp_default_vars
+  instance_type: n1-standard-1
+  <<: *default_platform
+
+- &ccp_destroy
+  put: terraform
+  params:
+    action: destroy
+    plugin_dir: ../../terraform.d/plugin-cache/linux_amd64
+    terraform_source: ccp_src/google/
+    env_name_file: terraform/name
+    vars:
+      aws_instance-node-instance_type: t2.micro #t2.micro is ignored in destroy, but aws_instance-node-instance_type is required.
+      aws_ebs_volume_type: standard
+  get_params:
+    action: destroy
+
+- &ccp_gen_cluster_default_params
+  AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+  AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+  AWS_DEFAULT_REGION: ((aws-region))
+  BUCKET_PATH: clusters-google/
+  BUCKET_NAME: ((tf-bucket-name))
+  CLOUD_PROVIDER: google
+  <<: *default_platform
+
+- &set_failed
+  do:
+    - task: on_failure_set_failed
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: gcr.io/data-gpdb-public-images/ccp
+            tag: latest
+        inputs:
+          - name: ccp_src
+          - name: terraform
+        run:
+          path: 'ccp_src/google/ccp_failed_test.sh'
+        params:
+          GOOGLE_CREDENTIALS: ((google-service-account-key/dev))
+          GOOGLE_PROJECT_ID: ((google-project-id))
+          GOOGLE_ZONE: ((google-zone))
+          GOOGLE_SERVICE_ACCOUNT: ((google-service-account/dev))
+          AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+          AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+          AWS_DEFAULT_REGION: ((tf-machine-region))
+          BUCKET_PATH: clusters-google/
+          BUCKET_NAME: ((tf-bucket-name))
+
+- &terraform_cluster
+  type: terraform
+  source:
+    env:
+      AWS_ACCESS_KEY_ID: ((tf-machine-access-key-id))
+      AWS_SECRET_ACCESS_KEY: ((tf-machine-secret-access-key))
+      GOOGLE_CREDENTIALS: ((google-service-account-key/dev))
+    vars:
+      project_id: ((google-project-id))
+    storage:
+      access_key_id: ((tf-machine-access-key-id))
+      secret_access_key: ((tf-machine-secret-access-key))
+      region_name: ((aws-region))
+      # This is not parameterized, on purpose. All tfstates will go to this spot,
+      # and different teams will place there clusters' tfstate files under different paths
+      bucket: gpdb5-pipeline-dynamic-terraform
+      bucket_path: clusters-google/
+
+
+resource_types:
+  - name: gcs
+    type: registry-image
+    source:
+      repository: frodenas/gcs-resource
+
+  - name: terraform
+    type: registry-image
+    source:
+      repository: ljfranklin/terraform-resource
+      tag: 0.11.14
+
+resources:
+  - name: gpdb_src
+    type: git
+    source:
+      branch: ((gpdb-git-branch))
+      uri: ((gpdb-git-remote))
+      ignore_paths:
+      - gpdb-doc/*
+      - README*
+
+  - name: gpdb7-rocky8-build
+    type: registry-image
+    source:
+      tag: latest
+      repository: gcr.io/data-gpdb-public-images/gpdb7-rocky8-build
+
+  # - name: gpdb7-rocky8-test
+  #   type: registry-image
+  #   source:
+  #     tag: latest
+  #     repository: gcr.io/data-gpdb-public-images/gpdb7-rocky8-test
+
+  - name: ccp-image
+    type: registry-image
+    icon: docker
+    source:
+      repository: gcr.io/data-gpdb-public-images/ccp
+      tag: latest
+
+  - name: gpdb_binary
+    type: gcs
+    source:
+      bucket: pivotal-gpdb-concourse-resources-prod
+      json_key: ((concourse-gcs-resources-service-account-key))
+      regexp: server/published/main/server-build-(.*)-el8_x86_64.debug.tar.gz
+
+  - name: gp_binary
+    type: gcs
+    source:
+      bucket: ((gcs-bucket-intermediates))
+      json_key: ((concourse-gcs-resources-service-account-key))
+      versioned_file: ((pipeline-name))/gp.tgz
+
+  - name: ccp_src
+    type: git
+    source:
+      branch: ((gp-concourse-cluster-provisioner-git-branch))
+      private_key: ((gp-concourse-cluster-provisioner-git-key))
+      uri: ((gp-concourse-cluster-provisioner-git-remote))
+
+  - name: terraform
+    <<: *terraform_cluster
+
+  - name: terraform.d
+    source:
+      access_key_id: ((aws-bucket-access-key-id))
+      bucket: ccp-terraform-provider-plugins
+      region_name: ((aws-region))
+      secret_access_key: ((aws-bucket-secret-access-key))
+      versioned_file: plugin-cache.tgz
+    type: s3
+
+
+groups:
+  - name: all
+    jobs:
+      - lint
+      - build
+      - run_tests
+
+jobs:
+  - name: lint
+    plan:
+      - get: gpdb_src
+        trigger: true
+      - task: lint
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: golangci/golangci-lint
+          inputs:
+            - name: gpdb_src
+          run:
+            path: bash
+            args:
+              - -c
+              - |
+                set -eux -o pipefail
+                cd gpdb_src/gpMgmt/bin/go-tools
+                make lint
+
+  - name: build
+    plan:
+    - in_parallel:
+        steps:
+        - get: gpdb_src
+          trigger: true
+        - get: gpdb7-rocky8-build
+    - task: build
+      image: gpdb7-rocky8-build
+      config:
+        platform: linux
+        inputs:
+          - name: gpdb_src
+        outputs:
+        - name: gp_binary
+        run:
+          path: bash
+          args:
+            - -c
+            - |
+              set -eux -o pipefail
+              pushd gpdb_src/gpMgmt/bin/go-tools
+              make build
+              popd
+              tar -czf gp_binary/gp.tgz -C gpdb_src/gpMgmt/bin/go-tools gp
+
+    - in_parallel:
+        steps:
+        - put: gp_binary
+          params:
+            file: gp_binary/gp.tgz
+
+  # TODO: Create seperate jobs for unit tests and integration tests.
+  - name: run_tests
+    plan:
+    - in_parallel:
+        steps:
+        - do:
+          - get: gp_binary
+            resource: gp_binary
+            passed: [build]
+            trigger: true
+          - get: gpdb_binary
+          - get: gpdb_src
+          - get: ccp_src
+          - get: ccp-image
+          - get: terraform.d
+            params:
+              unpack: true
+          - put: terraform
+            params:
+              <<: *ccp_default_params
+              vars:
+                <<: *ccp_default_vars
+                instance_type: n1-standard-2
+                number_of_nodes: 4
+          - task: gen_cluster
+            file: ccp_src/ci/tasks/gen_cluster.yml
+            params:
+              <<: *ccp_gen_cluster_default_params
+          - task: run_tests
+            image: ccp-image
+            config:
+              platform: linux
+              inputs:
+                - name: gpdb_src
+                - name: ccp_src
+                - name: cluster_env_files
+                - name: gp_binary
+              run:
+                path: gpdb_src/gpMgmt/bin/go-tools/ci/scripts/run_tests.bash
+
+            on_success:
+              <<: *ccp_destroy
+            ensure:
+              <<: *set_failed

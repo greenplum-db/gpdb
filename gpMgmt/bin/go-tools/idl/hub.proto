@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package idl;
+
+option go_package= "../idl";
+
+service Hub {
+    rpc Stop(StopHubRequest) returns (StopHubReply) {}
+    rpc StartAgents(StartAgentsRequest) returns (StartAgentsReply) {}
+    rpc StatusAgents(StatusAgentsRequest) returns (StatusAgentsReply) {}
+    rpc StopAgents(StopAgentsRequest) returns (StopAgentsReply) {}
+}
+
+message StopHubRequest {}
+message StopHubReply {}
+
+message StartAgentsRequest {}
+message StartAgentsReply {}
+
+message StatusAgentsRequest {}
+message ServiceStatus {
+	string host = 1;
+	string status = 2;
+	string uptime = 3;
+	uint32 pid = 4;
+}
+message StatusAgentsReply {
+	repeated ServiceStatus statuses = 1;
+}
+message StopAgentsRequest {}
+message StopAgentsReply {}
