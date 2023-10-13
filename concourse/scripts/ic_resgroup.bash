@@ -28,7 +28,7 @@ mount_cgroups() {
     fi
 
     if [ "$TEST_OS" = rhel8 ]; then
-      ssh -t $gpdb_host_alias sudo bash -ex <<EOF
+      ssh $gpdb_host_alias sudo -n bash -ex <<EOF
         mkdir -p $basedir
         mount -t tmpfs tmpfs $basedir
         for group in $rhel8_groups; do
@@ -45,7 +45,7 @@ make_cgroups_dir() {
     local gpdb_host_alias=$1
     local basedir=$CGROUP_BASEDIR
 
-    ssh -t $gpdb_host_alias sudo bash -ex <<EOF
+    ssh $gpdb_host_alias sudo -n bash -ex <<EOF
         for comp in cpuset cpu cpuacct memory; do
             chmod -R 777 $basedir/\$comp
             mkdir -p $basedir/\$comp/gpdb
@@ -105,7 +105,7 @@ keep_minimal_cgroup_dirs() {
     local gpdb_master_alias=$1
     local basedir=$CGROUP_BASEDIR
 
-    ssh -t $gpdb_master_alias sudo bash -ex <<EOF
+    ssh $gpdb_master_alias sudo -n bash -ex <<EOF
         rmdir $basedir/memory/gpdb/*/ || :
         rmdir $basedir/memory/gpdb
         rmdir $basedir/cpuset/gpdb/*/ || :

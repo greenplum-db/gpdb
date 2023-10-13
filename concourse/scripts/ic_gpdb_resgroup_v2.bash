@@ -16,13 +16,11 @@ enable_cgroup_subtree_control() {
     local gpdb_host_alias=$1
     local basedir=$CGROUP_BASEDIR
 
-    ssh -t $gpdb_host_alias sudo bash -ex <<EOF
-        sudo su
+    ssh $gpdb_host_alias sudo -n bash -ex <<EOF
         chmod -R 777 $basedir/
-        echo "+cpu" >> $basedir/cgroup.subtree_control
-        echo "+cpuset" >> $basedir/cgroup.subtree_control
-        echo "+memory" >> $basedir/cgroup.subtree_control
-        echo "+io" >> $basedir/cgroup.subtree_control
+        # create required cgroup controllers (cpu cpuset io memory) via a transient service,
+        # this can avoid systemd from trimming unused controllers before gpdb startup.
+        systemd-run --unit=cgroup-holder --service=oneshot -r -p Delegate=yes true
         mkdir $basedir/gpdb
         chmod -R 777 $basedir/gpdb
 EOF

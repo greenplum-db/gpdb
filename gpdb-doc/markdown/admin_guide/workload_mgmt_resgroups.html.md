@@ -318,29 +318,21 @@ Since resource groups manually manage cgroup files, the above settings will beco
    ```
    [Unit]
    Description=Greenplum Cgroup v2 Configuration Service
-   Requires=network-online.target
-   After=network-online.target
    
    [Service]
-   User=root
-   Group=root
-   
-   ExecStart=/bin/sh -c " \
-                       mkdir -p /sys/fs/cgroup/gpdb; \
-                       echo '+cpuset +io +cpu +memory' | tee -a /sys/fs/cgroup/cgroup.subtree_control; \
-                       chown -R gpadmin:gpadmin /sys/fs/cgroup/gpdb; \
-                       chmod a+w /sys/fs/cgroup/cgroup.procs;"
-   ExecStop=
-   
-   # Specifies the maximum file descriptor number that can be opened by this process
-   LimitNOFILE=65536
-   
-   # Disable timeout logic and wait until process is stopped
-   TimeoutStopSec=infinity
-   SendSIGKILL=no
+   Type=oneshot
+   RemainAfterExit=yes
+   WorkingDirectory=/sys/fs/cgroup
+   Delegate=yes
+   # set hierarchies only if cgroup v2 mounted
+   ExecCondition=bash -c '[ xcgroup2fs = x$(stat -fc "%%T" /sys/fs/cgroup) ] || exit 1'
+   ExecStart=bash -ec " \
+                       [ -d gpdb ] || mkdir gpdb; \
+                       chown -R gpadmin:gpadmin gpdb; \
+                       chmod a+w cgroup.procs;"
    
    [Install]
-   WantedBy=multi-user.target
+   WantedBy=basic.target
    ```
 1. Reload systemd daemon and enable the service:
    ```
