@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
 
+set -x
+
 ## Append -g3 -Og to compilation flags, since abi-dumper requires them.
-exec env PATH=$(echo "$PATH" | sed -e "s/${GCC_WRAPPER}://") "$(which gcc)" -g3 -O0 $*
+exec env PATH=$(echo "$PATH" | sed -e "s/${GCC_WRAPPER}://") "$(which gcc)" $* -g3 -Og
