@@ -55,7 +55,7 @@ function link_python() {
 function build_gpdb() {
 	pushd ${GPDB_SRC_PATH}/gpAux
 	if [ -n "$1" ]; then
-		make "$1" GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s dist
+		make $1 GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s dist
 	else
 		make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s dist
 	fi
@@ -64,7 +64,7 @@ function build_gpdb() {
 
 function build_gpdb_devel() {
 	pushd ${GPDB_SRC_PATH}/gpAux
-	make "$1" "$2" "$3" "$5" HOME=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s devel
+	make HOME=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s devel
 	popd
 }
 
@@ -178,9 +178,9 @@ function _main() {
 	generate_build_number
 
 	if [[ -z "${BUILD_GPDB_DEVEL}" ]]; then
-	    build_gpdb "${BLD_TARGET_OPTION[@]}"
+		build_gpdb "${BLD_TARGET_OPTION[@]}"
 	else
-	    build_gpdb_devel "${BLD_TARGET_OPTION[@]}" "${DEBUGFLAGS}"
+		build_gpdb_devel "${BLD_TARGET_OPTION[@]}"
 	fi
 
 	git_info
