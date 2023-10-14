@@ -81,7 +81,8 @@ jobs:
       - name: Build Greenplum
         run: |
           ## abi-dumper requires the binary having debug info.
-          env PATH=gpdb_src/.github/scripts:$PATH SKIP_UNITTESTS=1 CONFIGURE_FLAGS='--enable-tap-tests --enable-debug-extensions' \
+          GCC_WRAPPER=$(echo "$(pwd)/gpdb_src/.github/scripts" | sed 's/\//\\\//g')
+          env PATH=$(pwd)/gpdb_src/.github/scripts:$PATH SKIP_UNITTESTS=1 CONFIGURE_FLAGS='--enable-tap-tests --enable-debug-extensions' \
             gpdb_src/concourse/scripts/compile_gpdb.bash
 
       - name: Dump ABI
