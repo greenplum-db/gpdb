@@ -9,6 +9,7 @@ function prep_env() {
 	export CONFIGURE_FLAGS=${CONFIGURE_FLAGS}
 	export GPDB_ARTIFACTS_DIR=$(pwd)/${OUTPUT_ARTIFACT_DIR}
 	export BLD_ARCH=$(build_arch)
+	export DEBUGFLAGS=${DEBUGFLAGS}
 
 	GPDB_SRC_PATH=${GPDB_SRC_PATH:=gpdb_src}
 	GPDB_BIN_FILENAME=${GPDB_BIN_FILENAME:="bin_gpdb.tar.gz"}
@@ -180,7 +181,7 @@ function _main() {
 	if [[ -z "${BUILD_GPDB_DEVEL}" ]]; then
 		build_gpdb "${BLD_TARGET_OPTION[@]}"
 	else
-		build_gpdb_devel "${BLD_TARGET_OPTION[@]}" "${DEBUGFLAGS}"
+		build_gpdb_devel "${BLD_TARGET_OPTION[@]}" "DEBUGFLAGS=${DEBUGFLAGS}"
 	fi
 
 	git_info
