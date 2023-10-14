@@ -180,7 +180,7 @@ function _main() {
 	if [[ -z "${BUILD_GPDB_DEVEL}" ]]; then
 		build_gpdb "${BLD_TARGET_OPTION[@]}"
 	else
-		build_gpdb_devel "${BLD_TARGET_OPTION[@]}"
+		build_gpdb_devel "${BLD_TARGET_OPTION[@]}" "${DEBUGFLAGS}"
 	fi
 
 	git_info
