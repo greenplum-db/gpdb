@@ -64,11 +64,7 @@ function build_gpdb() {
 
 function build_gpdb_devel() {
 	pushd ${GPDB_SRC_PATH}/gpAux
-	if [ -n "$1" ]; then
-		make "$1" HOME=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s devel
-	else
-		make HOME=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s devel
-	fi
+	make "$1" "$2" "$3" "$5" HOME=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s devel
 	popd
 }
 
@@ -184,7 +180,7 @@ function _main() {
 	if [[ -z "${BUILD_GPDB_DEVEL}" ]]; then
 	    build_gpdb "${BLD_TARGET_OPTION[@]}"
 	else
-	    build_gpdb_devel "${BLD_TARGET_OPTION[@]}"
+	    build_gpdb_devel "${BLD_TARGET_OPTION[@]}" "${DEBUGFLAGS}"
 	fi
 
 	git_info
