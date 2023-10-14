@@ -10,7 +10,8 @@ on:
     paths:
       - 'concourse/scripts/**'
       - 'src/**'
-      - '.github/workflows/greenplum-abi-tests.yml'
+      - '.github/workflows/**'
+      - '.github/scripts/**'
       - '.abi-check/**'
 
 jobs:
