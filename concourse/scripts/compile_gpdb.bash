@@ -62,6 +62,16 @@ function build_gpdb() {
 	popd
 }
 
+function build_gpdb_devel() {
+	pushd ${GPDB_SRC_PATH}/gpAux
+	if [ -n "$1" ]; then
+		make "$1" HOME=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s devel
+	else
+		make HOME=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s devel
+	fi
+	popd
+}
+
 function git_info() {
 	pushd ${GPDB_SRC_PATH}
 	if [[ -d .git ]]; then
