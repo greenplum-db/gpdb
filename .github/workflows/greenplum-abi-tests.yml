@@ -80,8 +80,8 @@ jobs:
       - name: Build Greenplum
         run: |
           ## abi-dumper requires the binary having debug info.
-          env SKIP_UNITTESTS=1 BUILD_GPDB_DEVEL=1 BLD_TARGETS='DEBUGFLAGS="-Og -g3"' CONFIGURE_FLAGS='--enable-tap-tests --enable-debug-extensions' \
-            gpdb_src/concourse/scripts/compile_gpdb.bash
+          env SKIP_UNITTESTS=1 BUILD_GPDB_DEVEL=1 CONFIGURE_FLAGS='--enable-tap-tests --enable-debug-extensions' \
+            gpdb_src/concourse/scripts/compile_gpdb.bash DEBUGFLAGS='-O0 -g3'
 
       - name: Dump ABI
         run: |
