@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+## Restore the previous path.
+export PATH=$PREV_PATH
+
+## Append -g3 -Og to compilation flags, since abi-dumper requires them.
+exec $(which gcc) $* -g3 -Og
