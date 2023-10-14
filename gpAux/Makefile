@@ -114,7 +114,7 @@ else
 DEBUG_CFLAGS_OPT=-g3
 endif
 
-DEBUGFLAGS="$(strip $(BLD_CFLAGS) $(CFLAGS_OPT) $(DEBUG_CFLAGS_OPT))"
+DEBUGFLAGS?="$(strip $(BLD_CFLAGS) $(CFLAGS_OPT) $(DEBUG_CFLAGS_OPT))"
 
 #---------------------------------------------------------------------
 # configure
