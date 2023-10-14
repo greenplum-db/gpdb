@@ -64,7 +64,7 @@ function build_gpdb() {
 
 function build_gpdb_devel() {
 	pushd ${GPDB_SRC_PATH}/gpAux
-	make HOME=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s devel
+	make $1 $2 $3 $4 $5 HOME=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s devel
 	popd
 }
 
