@@ -1,1 +1,2 @@
 freeCdbHash
+check_role
