@@ -8,10 +8,10 @@ on:
       ## For testing, should be removed later.
       - 6x-abi-check
     paths:
-      - 'concourse/scripts/*'
-      - 'src/*'
+      - 'concourse/scripts/**'
+      - 'src/**'
       - '.github/workflows/greenplum-abi-tests.yml'
-      - '.abi-check/*'
+      - '.abi-check/**'
 
 jobs:
   abi-dump-setup:
