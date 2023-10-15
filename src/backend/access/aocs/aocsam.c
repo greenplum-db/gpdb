@@ -456,6 +456,13 @@ close_cur_scan_seg(AOCSScanDesc scan)
 		AppendOnlyBlockDirectory_End_forInsert(scan->blockDirectory);
 }
 
+bool
+switch_to_next_scan_seg(AOCSScanDesc scan)
+{
+	close_cur_scan_seg(scan);
+	return open_next_scan_seg(scan) != -1;
+}
+
 static void
 aocs_blkdirscan_init(AOCSScanDesc scan)
 {
@@ -592,6 +599,8 @@ aocs_beginscan_internal(Relation relation,
 	/* relationTupleDesc will be inited by the slot when needed */
 	scan->columnScanInfo.relationTupleDesc = NULL;
 
+	natts = RelationGetNumberOfAttributes(relation);
+
 	/*
 	 * We get an array of booleans to indicate which columns are needed. But
 	 * if you have a very wide table, and you only select a few columns from
@@ -604,7 +613,6 @@ aocs_beginscan_internal(Relation relation,
 	 */
 	if (proj)
 	{
-		natts = RelationGetNumberOfAttributes(relation);
 		scan->columnScanInfo.proj_atts = (AttrNumber *)
 										 palloc0(natts * sizeof(AttrNumber));
 		scan->columnScanInfo.num_proj_atts = 0;
@@ -650,8 +658,20 @@ aocs_beginscan_internal(Relation relation,
 	}
 
 	if ((flags & SO_TYPE_SAMPLESCAN) != 0)
+	{
 		scan->sampleSlot = MakeSingleTupleTableSlot(RelationGetDescr(relation),
 													table_slot_callbacks(relation));
+		scan->sampleBlkdir = palloc0(sizeof(AppendOnlyBlockDirectory));
+
+		AppendOnlyBlockDirectory_Init_forSearch(scan->sampleBlkdir,
+												snapshot,
+												(FileSegInfo **) scan->seginfo,
+												scan->total_seg,
+												relation,
+												natts,
+												true,
+												proj);
+	}
 	else
 		scan->sampleSlot = NULL;
 
@@ -781,6 +801,11 @@ aocs_endscan(AOCSScanDesc scan)
 	{
 		ExecDropSingleTupleTableSlot(scan->sampleSlot);
 		scan->sampleSlot = NULL;
+	}
+	if (scan->sampleBlkdir)
+	{
+		AppendOnlyBlockDirectory_End_forSearch(scan->sampleBlkdir);
+		scan->sampleBlkdir = NULL;
 	}
 
 	pfree(scan);

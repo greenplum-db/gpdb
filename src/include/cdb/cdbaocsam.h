@@ -260,6 +260,9 @@ typedef struct AOCSScanDescData
 
 	/* sampleSlot: Holds tuple last read as part of a sample scan */
 	TupleTableSlot *sampleSlot;
+
+	/* Block directory used for block sample scans */
+	AppendOnlyBlockDirectory *sampleBlkdir;
 } AOCSScanDescData;
 
 typedef AOCSScanDescData *AOCSScanDesc;
@@ -415,6 +418,8 @@ extern bool aocs_positionscan(AOCSScanDesc aoscan,
 							  AppendOnlyBlockDirectoryEntry *dirEntry,
 							  int colIdx,
 							  int fsInfoIdx);
+
+extern bool switch_to_next_scan_seg(AOCSScanDesc scan);
 
 /*
  * Update total bytes read for the entire scan. If the block was compressed,

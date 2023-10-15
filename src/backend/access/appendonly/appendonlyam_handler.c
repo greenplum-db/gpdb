@@ -53,6 +53,9 @@ static void reset_state_cb(void *arg);
 
 static const TableAmRoutine ao_row_methods;
 
+static bool appendonly_scan_sample_seek_block(AppendOnlyScanDesc aoscan,
+											  BlockNumber targetblk);
+
 /*
  * Per-relation backend-local DML state for DML or DML-like operations.
  */
@@ -2263,27 +2266,80 @@ appendonly_scan_bitmap_next_tuple(TableScanDesc scan,
 static bool
 appendonly_scan_sample_next_block(TableScanDesc scan, SampleScanState *scanstate)
 {
-	TsmRoutine *tsm = scanstate->tsmroutine;
-	/*
-	 * GPDB_95_MERGE_FIXME: Add support for AO tables
-	 */
+	TsmRoutine 			*tsm = scanstate->tsmroutine;
+	AppendOnlyScanDesc 	aoscan = (AppendOnlyScanDesc) scan;
+	ItemPointer 		currtid = &aoscan->sampleSlot->tts_tid;
+
+	if (aoscan->aos_done_all_segfiles)
+		goto end_of_rel;
+
 	if (tsm->NextSampleBlock)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("invalid relation type"),
-				 errhint("SYSTEM sampling is only supported in heap tables.")));
+	{
+		Oid 			segrelid;
+		int 			currseg;
+		BlockSequence 	currblockseq;
+		BlockNumber 	targetblk;
+
+		/* If the relation doesn't have a blkdir bail */
+		if (!RelationIsValid(aoscan->sampleBlkdir->blkdirRel))
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						errmsg("SYSTEM sampling requires a block directory"),
+						errhint("create an index to create a block directory on the ao_row table")));
+		}
+
+		if (!ItemPointerIsValid(currtid))
+		{
+			/* First time in this aoseg: fetch the next tuple to get our bearings */
+			if (!appendonly_getnextslot(scan, ForwardScanDirection,
+										aoscan->sampleSlot))
+				goto end_of_rel;
+		}
+
+		GetAppendOnlyEntryAuxOids(scan->rs_rd, &segrelid, NULL, NULL);
+		currseg = AOTupleIdGet_segmentFileNum((AOTupleId *) currtid);
+		AOSegment_PopulateBlockSequence(&currblockseq,
+										segrelid,
+										currseg);
+
+		targetblk = tsm->NextSampleBlock(scanstate, currblockseq.nblocks);
+		if (targetblk == InvalidBlockNumber)
+		{
+			/*
+			 * If we get here, it means that we have considered all blocks in
+			 * the current block sequence, and it's time to move to the next.
+			 *
+			 * Note: The sampler state has been reset in the above call to
+			 * NextSampleBlock(). So, we can safely call NextSampleBlock() again
+			 * in the next aoseg.
+			 */
+			if (!SwitchToNextFileSegForRead(aoscan))
+				goto end_of_rel;
+
+			/* clear the sampleSlot so can start fresh in the next aoseg */
+			ExecClearTuple(aoscan->sampleSlot);
+			/* recurse to move on to the next aoseg */
+			return appendonly_scan_sample_next_block(scan, scanstate);
+		}
+		else
+		{
+			/* selected a block in the current aoseg */
+			BlockNumber abstargetblk = AOSegmentGet_startHeapBlock(currseg) + targetblk;
+
+			if (!appendonly_scan_sample_seek_block(aoscan, abstargetblk))
+			{
+				/* we didn't find the target block, recurse to move on */
+				ExecClearTuple(aoscan->sampleSlot);
+				return appendonly_scan_sample_next_block(scan, scanstate);
+			}
+
+			return true;
+		}
+	}
 	else
 	{
 		/* scanning table sequentially */
-		AppendOnlyScanDesc aoscan = (AppendOnlyScanDesc) scan;
-		ItemPointer        currtid = &aoscan->sampleSlot->tts_tid;
-
-		if (aoscan->aos_done_all_segfiles)
-		{
-			/* no more items in relation, exit */
-			ExecClearTuple(aoscan->sampleSlot);
-			return false;
-		}
 
 		/* First time in this function */
 		if (!ItemPointerIsValid(currtid))
@@ -2293,14 +2349,16 @@ appendonly_scan_sample_next_block(TableScanDesc scan, SampleScanState *scanstate
 			 * entry criteria for appendonly_scan_sample_next_tuple() is met.
 			 */
 			if (!appendonly_getnextslot(scan, ForwardScanDirection, aoscan->sampleSlot))
-			{
-				ExecClearTuple(aoscan->sampleSlot);
-				return false;
-			}
+				goto end_of_rel;
 		}
+
+		return true;
 	}
 
-	return true;
+end_of_rel:
+	Assert(aoscan->aos_done_all_segfiles);
+	ExecClearTuple(aoscan->sampleSlot);
+	return false;
 }
 
 static bool
@@ -2369,6 +2427,14 @@ appendonly_scan_sample_next_tuple(TableScanDesc scan, SampleScanState *scanstate
 														targetblk,
 														targetrownum);
 					Assert(targetrownum == InvalidOffsetNumber);
+
+					if (tsm->NextSampleBlock &&
+						AOHeapBlockGet_startHeapBlock(currblk) > AOHeapBlockGet_startHeapBlock(targetblk))
+					{
+						/* Reset block sampler state if we have switched aosegs */
+						tsm->NextSampleBlock(scanstate, 0);
+					}
+
 					ExecClearTuple(slot);
 					return false;
 				}
@@ -2404,6 +2470,13 @@ appendonly_scan_sample_next_tuple(TableScanDesc scan, SampleScanState *scanstate
 				currblk = ItemPointerGetBlockNumber(&sampleslot->tts_tid);
 			} while (currblk <= targetblk);
 
+			if (tsm->NextSampleBlock &&
+				AOHeapBlockGet_startHeapBlock(currblk) > AOHeapBlockGet_startHeapBlock(targetblk))
+			{
+				/* Reset block sampler state if we have switched aosegs */
+				tsm->NextSampleBlock(scanstate, 0);
+			}
+
 			ExecClearTuple(slot);
 			return false;
 		}
@@ -2415,6 +2488,72 @@ end_of_rel:
 	ExecClearTuple(slot);
 	ExecClearTuple(sampleslot);
 	return false;
+}
+
+/*
+ * We attempt to position the scan so that the first visible row of the logical
+ * 'targetblk' has been read into the scan's sampleSlot.
+ *
+ * We can be unsuccessful for a variety of reasons including the fact that we
+ * may have run out of blocks in the current segfile or the relation. Also, our
+ * 'targetblk' may be falling into a hole.
+ */
+static bool
+appendonly_scan_sample_seek_block(AppendOnlyScanDesc aoscan,
+								  BlockNumber targetblk)
+{
+	BlockNumber 					currblk;
+	int								fsInfoIdx;
+	AppendOnlyBlockDirectoryEntry 	dirEntry = {{0}};
+	TupleTableSlot 					*sampleSlot = aoscan->sampleSlot;
+
+	Assert(BlockNumberIsValid(targetblk));
+	Assert(!TTS_EMPTY(aoscan->sampleSlot) &&
+			   ItemPointerIsValid(&aoscan->sampleSlot->tts_tid));
+
+	currblk = ItemPointerGetBlockNumber(&sampleSlot->tts_tid);
+
+	/* we are already on the target block */
+	if (currblk == targetblk)
+		return true;
+
+	if (AppendOnlyBlockDirectory_GetEntryForPartialScan(aoscan->sampleBlkdir,
+														targetblk,
+														0, /* columnGroupNo */
+														&dirEntry,
+														&fsInfoIdx))
+	{
+		/*
+		 * Since we found a block directory entry near targetBlk, use it to
+		 * position our scan.
+		 */
+		if (!appendonly_positionscan(aoscan, &dirEntry, fsInfoIdx))
+			return false;
+		/*
+		 * appendonly_positionscan() isn't exact, the current varblock may have
+		 * tuples from prior logical heap blocks. So, skip over them until we
+		 * reach the 1st visible tuple in the targetBlk.
+		 */
+		while (currblk < targetblk)
+		{
+			if (!appendonly_getnextslot(&aoscan->rs_base, ForwardScanDirection,
+										sampleSlot))
+				return false;
+			currblk = ItemPointerGetBlockNumber(&sampleSlot->tts_tid);
+		}
+	}
+	else
+	{
+		/*
+		 * We were unable to find a block directory row encompassing/preceding
+		 * targetBlk. This represents an edge case where the start block maps to
+		 * a hole at the very beginning of the segfile (and before the first
+		 * minipage entry of the first minipage corresponding to this segfile).
+		 */
+		return false;
+	}
+
+	return true;
 }
 
 /* ------------------------------------------------------------------------

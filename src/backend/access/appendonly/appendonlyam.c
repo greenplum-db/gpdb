@@ -97,6 +97,8 @@ static void AppendOnlyExecutorReadBlock_ResetCounts(
 static void AppendOnlyScanDesc_UpdateTotalBytesRead(
 										AppendOnlyScanDesc scan);
 
+static void CloseScannedFileSeg(AppendOnlyScanDesc scan);
+
 /* ----------------
  *		initscan - scan code common to appendonly_beginscan and appendonly_rescan
  * ----------------
@@ -315,6 +317,27 @@ SetSegFileForRead(AppendOnlyScanDesc aoscan, int fsInfoIdx)
 
 	return SetNextFileSegForRead(aoscan) &&
 		(aoscan->aos_segfiles_processed - fsInfoIdx == 1);
+}
+
+/*
+ * Switches to the next valid segment file in preparation to read it, after
+ * closing the current one. This can be used to skip over any existing content
+ * in the current segment file, from the current read position.
+ */
+bool
+SwitchToNextFileSegForRead(AppendOnlyScanDesc aoscan)
+{
+	Assert(aoscan->initedStorageRoutines);
+	Assert(aoscan->aos_segfiles_processed > 0);
+	Assert(!aoscan->aos_need_new_segfile);
+
+	CloseScannedFileSeg(aoscan);
+
+	if (!SetNextFileSegForRead(aoscan))
+		return false;
+
+	aoscan->needNextBuffer = true;
+	return true;
 }
 
 /*
@@ -1825,8 +1848,19 @@ appendonly_beginrangescan_internal(Relation relation,
 	scan->totalBytesRead = 0;
 
 	if ((flags & SO_TYPE_SAMPLESCAN) != 0)
+	{
 		scan->sampleSlot = MakeSingleTupleTableSlot(RelationGetDescr(relation),
 													table_slot_callbacks(relation));
+		scan->sampleBlkdir = palloc0(sizeof(AppendOnlyBlockDirectory));
+		AppendOnlyBlockDirectory_Init_forSearch(scan->sampleBlkdir,
+												snapshot,
+												scan->aos_segfile_arr,
+												scan->aos_total_segfiles,
+												scan->aos_rd,
+												1,
+												false,
+												NULL);
+	}
 	else
 		scan->sampleSlot = NULL;
 
@@ -1980,7 +2014,7 @@ appendonly_positionscan(AppendOnlyScanDesc aoscan,
 
 	Assert(dirEntry);
 
-	if (!SetSegFileForRead(aoscan, fsInfoIdx))
+	if (fsInfoIdx != aoscan->aos_segfiles_processed - 1 && !SetSegFileForRead(aoscan, fsInfoIdx))
 	{
 		/* target segment is empty/awaiting-drop */
 		return false;
@@ -1995,6 +2029,8 @@ appendonly_positionscan(AppendOnlyScanDesc aoscan,
 	AppendOnlyStorageRead_SetTemporaryStart(&aoscan->storageRead,
 											beginFileOffset,
 											afterFileOffset);
+
+	aoscan->needNextBuffer = true;
 
 	return true;
 }
@@ -2052,6 +2088,11 @@ appendonly_endscan(TableScanDesc scan)
 	{
 		ExecDropSingleTupleTableSlot(aoscan->sampleSlot);
 		aoscan->sampleSlot = NULL;
+	}
+	if (aoscan->sampleBlkdir)
+	{
+		AppendOnlyBlockDirectory_End_forSearch(aoscan->sampleBlkdir);
+		aoscan->sampleBlkdir = NULL;
 	}
 
 	pfree(aoscan);

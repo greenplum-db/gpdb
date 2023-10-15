@@ -270,6 +270,9 @@ typedef struct AppendOnlyScanDescData
 
 	/* sampleSlot: Holds tuple last read as part of a sample scan */
 	TupleTableSlot *sampleSlot;
+
+	/* Block directory used for block sample scans */
+	AppendOnlyBlockDirectory *sampleBlkdir;
 }	AppendOnlyScanDescData;
 
 typedef AppendOnlyScanDescData *AppendOnlyScanDesc;
@@ -498,6 +501,7 @@ extern bool appendonly_positionscan(AppendOnlyScanDesc aoscan,
 									AppendOnlyBlockDirectoryEntry *dirEntry,
 									int fsInfoIdx);
 
+extern bool SwitchToNextFileSegForRead(AppendOnlyScanDesc aoscan);
 /*
  * Update total bytes read for the entire scan. If the block was compressed,
  * update it with the compressed length. If the block was not compressed, update
