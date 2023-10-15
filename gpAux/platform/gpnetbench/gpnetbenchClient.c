@@ -32,7 +32,7 @@ usage(void)
 int
 main(int argc, char** argv)
 {
-	int socketFd;
+	int socketFd = -1;
 	int retVal;
 	int c;
 	int displayHeaders = 1;
