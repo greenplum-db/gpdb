@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-
-env PATH=$(echo "$PATH" | sed -e "s/${GCC_WRAPPER}://") $(which gcc) "${@}" -g3 -Og

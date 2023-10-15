@@ -9,7 +9,6 @@ function prep_env() {
 	export CONFIGURE_FLAGS=${CONFIGURE_FLAGS}
 	export GPDB_ARTIFACTS_DIR=$(pwd)/${OUTPUT_ARTIFACT_DIR}
 	export BLD_ARCH=$(build_arch)
-	export DEBUGFLAGS=${DEBUGFLAGS}
 
 	GPDB_SRC_PATH=${GPDB_SRC_PATH:=gpdb_src}
 	GPDB_BIN_FILENAME=${GPDB_BIN_FILENAME:="bin_gpdb.tar.gz"}
@@ -56,9 +55,9 @@ function link_python() {
 function build_gpdb() {
 	pushd ${GPDB_SRC_PATH}/gpAux
 	if [ -n "$1" ]; then
-		make "$1" GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" dist
+		make "$1" GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s dist
 	else
-		make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" dist
+		make GPROOT=/usr/local PARALLEL_MAKE_OPTS=-j"$(nproc)" -s dist
 	fi
 	popd
 }
