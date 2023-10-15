@@ -56,6 +56,11 @@ jobs:
             ref: ${{ github.sha }}
 
     steps:
+      - name: Install gcc wrapper
+        uses: actions/checkout@v3
+        with:
+          path: gpdb_gcc_wrapper
+
       ## FIXME: abi-dumper requires universal-ctags and the package manager doesn't provide it.
       - name: Install universal-ctags.
         run: |
@@ -81,8 +86,8 @@ jobs:
       - name: Build Greenplum
         run: |
           ## abi-dumper requires the binary having debug info.
-          export GCC_WRAPPER=$(echo "$(pwd)/gpdb_src/.github/scripts" | sed 's/\//\\\//g')
-          env PATH=$(pwd)/gpdb_src/.github/scripts:$PATH SKIP_UNITTESTS=1 CONFIGURE_FLAGS='--enable-tap-tests --enable-debug-extensions' \
+          export GCC_WRAPPER=$(echo "$(pwd)/gpdb_gcc_wrapper/.github/scripts" | sed 's/\//\\\//g')
+          env PATH=$(pwd)/gpdb_gcc_wrapper/.github/scripts:$PATH SKIP_UNITTESTS=1 CONFIGURE_FLAGS='--enable-tap-tests --enable-debug-extensions' \
             gpdb_src/concourse/scripts/compile_gpdb.bash
 
       - name: Dump ABI
