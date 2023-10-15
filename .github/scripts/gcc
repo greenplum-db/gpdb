@@ -4,11 +4,14 @@ set -x
 
 newopts=()
 
+opt_option=false
+
 for opt in $*
 do
 	case $opt in
 	-O*|-g*)
 		## We ignore any -O or -g options.
+		opt_option=true
 	;;
 	*)
 		newopts+=($opt)
@@ -16,5 +19,9 @@ do
 	esac
 done
 
-## Append -g3 -Og to compilation flags, since abi-dumper requires them.
-env PATH=$(echo "$PATH" | sed -e "s/${GCC_WRAPPER}://") $(which gcc) "-Og -g3 ${newopts[@]}"
+if [[ $opt_option == true ]];; then
+    ## Append -g3 -Og to compilation flags, since abi-dumper requires them.
+    env PATH=$(echo "$PATH" | sed -e "s/${GCC_WRAPPER}://") $(which gcc) "-Og -g3 ${newopts[@]}"
+else
+    env PATH=$(echo "$PATH" | sed -e "s/${GCC_WRAPPER}://") $(which gcc) "${newopts[@]}"
+fi
