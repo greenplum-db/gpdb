@@ -83,7 +83,7 @@ jobs:
           export PATH=/opt/python-3.9.13/bin:/opt/python-2.7.18/bin:$PATH
           pushd gpdb_src
           CC='gcc -m64' \
-          CFLAGS='-Og -g3' LDFLAGS='-Wl, -Wl,--enable-new-dtags -Wl,-rpath,\$$ORIGIN/../lib' \
+          CFLAGS='-Og -g3' LDFLAGS='-Wl,--enable-new-dtags' \
           ./configure --with-quicklz --disable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy \
                       --enable-orca --with-libxml --with-pythonsrc-ext --with-uuid=e2fs --with-pgport=5432 --enable-tap-tests \
                       --enable-debug-extensions --with-perl --with-python --with-openssl --with-pam --with-ldap --with-includes="" \
