@@ -2,7 +2,7 @@
 
 set -x
 
-newopts=""
+newopts=()
 
 for opt in $*
 do
@@ -11,10 +11,10 @@ do
 		## We ignore any -O or -g options.
 	;;
 	*)
-		newopts="$newopts $opt"
+		newopts+=($opt)
 	;;
 	esac
 done
 
 ## Append -g3 -Og to compilation flags, since abi-dumper requires them.
-env PATH=$(echo "$PATH" | sed -e "s/${GCC_WRAPPER}://") $(which gcc) -Og -g3 $newopts
+env PATH=$(echo "$PATH" | sed -e "s/${GCC_WRAPPER}://") $(which gcc) -Og -g3 ${newopts[@]}
