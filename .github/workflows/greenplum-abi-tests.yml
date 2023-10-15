@@ -134,12 +134,18 @@ jobs:
 
       - name: Compare ABI
         run: |
-          SKIP_POSTGRES_SYMBOLS_LIST=".abi-check/${{ needs.abi-dump-setup.outputs.BASELINE_VERSION }}/skip-postgres-symbols.txt"
+          SKIP_POSTGRES_SYMBOLS_LIST=".abi-check/${{ needs.abi-dump-setup.outputs.BASELINE_VERSION }}/postgres.symbols.ignore"
           SKIP_POSTGRES_SYMBOLS_OPTION=""
           if [[ -f "$SKIP_POSTGRES_SYMBOLS_LIST" ]]; then
             SKIP_POSTGRES_SYMBOLS_OPTION="-skip-symbols ${SKIP_POSTGRES_SYMBOLS_LIST}"
           fi
+          SKIP_POSTGRES_TYPES_LIST=".abi-check/${{ needs.abi-dump-setup.outputs.BASELINE_VERSION }}/postgres.types.ignore"
+          SKIP_POSTGRES_TYPES_OPTION=""
+          if [[ -f "$SKIP_POSTGRES_TYPES_LIST" ]]; then
+            SKIP_POSTGRES_TYPES_OPTION="-skip-types ${SKIP_POSTGRES_TYPES_LIST}"
+          fi
           abi-compliance-checker ${SKIP_POSTGRES_SYMBOLS_OPTION} \
+                                 ${SKIP_POSTGRES_TYPES_OPTION} \
                                  -lib postgres \
                                  -old build-baseline/postgres*.abi \
                                  -new build-latest/postgres*.abi
