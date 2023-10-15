@@ -2067,32 +2067,6 @@ extractSimplyUpdatableRTEIndex(List *rtable)
 	Insist(ret != 0);
 	return ret;
 }
-Index
-extractSimplyUpdatableRTEIndex1(List *rtable) 
-{
-	Assert(list_length(rtable) > 0);
-	if (list_length(rtable) == 1)
-		return 1;
-
-	/* 
-	 * This better be an inheritance case. 
-	 * Find the RTE with inh = true. 
-	 * Furthermore, we Insist that no other RTEs have inh = true. 
-	 */
-	Index 			temp, ret = 0;
-	ListCell        *lc;
-	foreach_with_count (lc, rtable, temp)
-	{
-		RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
-		if (rte->inh)
-		{
-			Insist(ret == 0);	/* to be simply updatable, there cannot be more than 1 parent table */
-			ret = temp + 1;		/* the temp counter is zero indexed */
-		}
-	}
-	Insist(ret != 0);
-	return ret;
-}
 
 /*
  * Add the given RTE as a top-level entry in the pstate's join list

@@ -105,5 +105,5 @@ extern bool isQueryUsingTempRelation(Query *query);
 
 extern bool isSimplyUpdatableRelation(Oid relid, bool noerror);
 extern Index extractSimplyUpdatableRTEIndex(List *rtable);
-extern Index extractSimplyUpdatableRTEIndex1(List *rtable);
+
 #endif   /* PARSE_RELATION_H */
