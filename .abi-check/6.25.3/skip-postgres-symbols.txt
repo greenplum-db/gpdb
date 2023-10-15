@@ -1,2 +1,1 @@
 freeCdbHash
-check_role
