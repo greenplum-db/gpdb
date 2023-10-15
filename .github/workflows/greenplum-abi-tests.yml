@@ -56,11 +56,6 @@ jobs:
             ref: ${{ github.sha }}
 
     steps:
-      - name: Install gcc wrapper
-        uses: actions/checkout@v3
-        with:
-          path: gpdb_gcc_wrapper
-
       ## FIXME: abi-dumper requires universal-ctags and the package manager doesn't provide it.
       - name: Install universal-ctags.
         run: |
@@ -85,10 +80,16 @@ jobs:
 
       - name: Build Greenplum
         run: |
-          ## abi-dumper requires the binary having debug info.
-          export GCC_WRAPPER=$(echo "$(pwd)/gpdb_gcc_wrapper/.github/scripts" | sed 's/\//\\\//g')
-          env PATH=$(pwd)/gpdb_gcc_wrapper/.github/scripts:$PATH SKIP_UNITTESTS=1 CONFIGURE_FLAGS='--enable-tap-tests --enable-debug-extensions' \
-            gpdb_src/concourse/scripts/compile_gpdb.bash
+          export PATH=/opt/python-3.9.13/bin:/opt/python-2.7.18/bin:$PATH
+          pushd gpdb_src
+          CFLAGS='-Og -g3' LDFLAGS='-Wl, -Wl,--enable-new-dtags -Wl,-rpath,\$$ORIGIN/../lib' \
+          ./configure --with-quicklz --disable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy \
+                      --enable-orca --with-libxml --with-pythonsrc-ext --with-uuid=e2fs --with-pgport=5432 --enable-tap-tests \
+                      --enable-debug-extensions --with-perl --with-python --with-openssl --with-pam --with-ldap --with-includes="" \
+                      --with-libraries="" --disable-rpath \
+                      --prefix=/usr/local/greenplum-db-devel \
+                      --mandir=/usr/local/greenplum-db-devel/man
+          make -j`nproc` && make install
 
       - name: Dump ABI
         run: |
