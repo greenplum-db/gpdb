@@ -1414,7 +1414,18 @@ static int get_hostinfo_index(EState *estate)
 	ExecSlice *current_slice = &estate->es_sliceTable->slices[currentSliceId];
 
 	/* Get the process nth number in current gang */
-	int index = bms_member_index(current_slice->processesMap, qe_identifier);
+	int index = -1;
+	int i = 0;
+	ListCell *lc = NULL;
+	foreach_with_count(lc, current_slice->processesList, i)
+	{
+		int	identifier = lfirst_int(lc);
+		if (qe_identifier == identifier)
+		{
+			index = i;
+			break;
+		}
+	}
 
 	if (index < 0)
 		ereport(ERROR, (errmsg("No valid slice number")));

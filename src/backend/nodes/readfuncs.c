@@ -4231,6 +4231,7 @@ _readSliceTable(void)
 		READ_DUMMY_FIELD(slices[i].primaryGang, NULL);
 		READ_NODE_FIELD(slices[i].primaryProcesses); /* List of (CDBProcess *) */
 		READ_BITMAPSET_FIELD(slices[i].processesMap);
+		READ_NODE_FIELD(slices[i].processesList); /* List of qe_identifier */
 	}
 	READ_BOOL_FIELD(hasMotions);
 
