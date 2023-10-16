@@ -32,7 +32,6 @@ volatile sig_atomic_t CheckClientConnectionPending = false;
 volatile sig_atomic_t ClientConnectionLost = false;
 volatile sig_atomic_t ConfigReloadPending = false;
 volatile sig_atomic_t IdleGangTimeoutPending = false;
-volatile sig_atomic_t GpParallelRetrieveCursorCheckPending = false;
 volatile sig_atomic_t IdleInTransactionSessionTimeoutPending = false;
 volatile sig_atomic_t InterruptPending = false;
 volatile sig_atomic_t LogMemoryContextPending = false;

@@ -682,30 +682,6 @@ ProcessClientReadInterrupt(bool blocked)
 		if (notifyInterruptPending)
 			ProcessNotifyInterrupt();
 
-		/*
-		 * issue: https://github.com/greenplum-db/gpdb/issues/15143
-		 *
-		 * handle errors of parallel retrieve cursor's non-root slices
-		 */
-		if (GpParallelRetrieveCursorCheckPending)
-		{
-			int num;
-			GpParallelRetrieveCursorCheckPending = false;
-
-			Assert(Gp_role == GP_ROLE_DISPATCH);
-
-			/* It calls cdbdisp_checkForCancel(), which doesn't raise error */
-			gp_check_parallel_retrieve_cursor_error();
-
-			num = GetNumOfParallelRetrieveCursors();
-
-			/* Reset the alarm to check after a timeout */
-			if (num > 0)
-			{
-				elog(DEBUG1, "There are still %d parallel retrieve cursors alive", num);
-				enable_parallel_retrieve_cursor_check_timeout();
-			}
-		}
 	}
 	else if (ProcDiePending)
 	{

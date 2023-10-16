@@ -1410,27 +1410,13 @@ BEGIN
 -------
  3     
 (1 row)
-1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c9';
- endpoint_id1 | token_id | host_id | port_id | READY
- endpoint_id1 | token_id | host_id | port_id | READY
- endpoint_id1 | token_id | host_id | port_id | READY
-(3 rows)
--- GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT is 10s, we sleep 11 to check all QEs are already finished.
-1: select pg_sleep(11);
- pg_sleep 
-----------
-          
-(1 row)
-1: select pg_sleep(1);
- pg_sleep 
-----------
-          
-(1 row)
+-- GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT is 10s, we sleep 12 to check all QEs are already finished.
+1: ! sleep 12;
+
 1: SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c9';
  endpointname | auth_token | hostname | port | state 
 --------------+------------+----------+------+-------
 (0 rows)
-1: ROLLBACK;
-ERROR:  cannot take square root of a negative number  (seg2 slice1 11.164.61.163:55305 pid=24746)
-1: drop table if exists t1;
-DROP TABLE
+1: rollback;
+ERROR:  cannot take square root of a negative number  (seg2 slice1 127.0.1.1:7004 pid=35247)
+1q: ... <quitting>

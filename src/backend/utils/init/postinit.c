@@ -100,6 +100,7 @@ static bool ThereIsAtLeastOneRole(void);
 static void process_startup_options(Port *port, bool am_superuser);
 static void process_settings(Oid databaseid, Oid roleid);
 
+extern bool DoingCommandRead;
 #ifdef USE_ORCA
 extern void InitGPOPT();
 extern void TerminateGPOPT();
@@ -1522,9 +1523,31 @@ ClientCheckTimeoutHandler(void)
 static void
 GpParallelRetrieveCursorCheckTimeoutHandler(void)
 {
-	GpParallelRetrieveCursorCheckPending = true;
-	InterruptPending = true;
-	SetLatch(MyLatch);
+	/*
+	 * issue: https://github.com/greenplum-db/gpdb/issues/15143
+	 *
+	 * handle errors of parallel retrieve cursor's non-root slices
+	 */
+	if (DoingCommandRead)
+	{
+		Assert(Gp_role == GP_ROLE_DISPATCH);
+
+		/* It calls cdbdisp_checkForCancel(), which doesn't raise error */
+		gp_check_parallel_retrieve_cursor_error();
+		int num = GetNumOfParallelRetrieveCursors();
+
+		/* Reset the alarm to check after a timeout */
+		if (num > 0)
+		{
+			elog(DEBUG1, "There are still %d parallel retrieve cursors alive", num);
+			enable_parallel_retrieve_cursor_check_timeout();
+		}
+	}
+	else
+	{
+		elog(DEBUG1, "DoingCommandRead is false, check parallel cursor timeout delay");
+		enable_parallel_retrieve_cursor_check_timeout();
+	}
 }
 
 /*

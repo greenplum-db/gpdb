@@ -263,10 +263,8 @@ insert into t1 select generate_series(1,100);
 1: insert into t1 values (-1, 1);
 1: BEGIN;
 1: DECLARE c9 PARALLEL RETRIEVE CURSOR FOR select count(*) from t1 group by sqrt(a); select count() from gp_get_endpoints();
-1: @post_run 'parse_endpoint_info 1 1 2 3 4' : SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c9';
--- GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT is 10s, we sleep 11 to check all QEs are already finished.
-1: select pg_sleep(11);
-1: select pg_sleep(1);
+-- GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT is 10s, we sleep 12 to check all QEs are already finished.
+1: ! sleep 12;
 1: SELECT endpointname,auth_token,hostname,port,state FROM gp_get_endpoints() WHERE cursorname='c9';
-1: ROLLBACK;
-1: drop table if exists t1;
+1: rollback;
+1q:
