@@ -10,6 +10,7 @@ SYNOPSIS
 gpfdist [-d <directory>] [-p <http_port>] [-l <log_file>] [-t <timeout>] 
 [-S] [-w <time>] [-v | -V] [-m <max_length>] [--ssl <certificate_path>]
 [--compress] [--multi_thread <number_of_threads>] [-k <seconds>]
+[--ssl_verify_peer <on/off>]
 
 gpfdist [-? | --help] | --version
 
@@ -169,6 +170,17 @@ OPTIONS
  to use this flag in conjunction with '--compress'. However, when used 
  together, the effect is equivalent to using '--multi_thread' by itself.
 
+--ssl_verify_peer <on/off>
+
+  This option is used to configure the SSL authentication files required in 
+  the GPFDIST protocol, as well as to control the behavior of GPFDIST regarding 
+  SSL identity authentication.
+  
+  If the flag is 'on', gpfdist will be forced to check the identity of clients, 
+  and CA certification file (root.crt) is necessary to be laid in the SSL 
+  certification directory. If the flag is 'off', gpfdist will not check the 
+  identity of clients, and it doesn't matter whether the CA certification file 
+  exists on the gpfdist side. 
 
 -v (verbose) 
 
