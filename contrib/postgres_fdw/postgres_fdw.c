@@ -2226,13 +2226,6 @@ postgresIsForeignRelUpdatable(Relation rel)
 	table = GetForeignTable(RelationGetRelid(rel));
 	server = GetForeignServer(table->serverid);
 
-	/*
-	 * Now if there are multiple remote servers,, we don't support INSERT/UPDATE/DELETE.
-	 * We plan to support it later.
-	 */
-	if (is_multi_servers(server, table->exec_location))
-		return 0;
-
 	foreach(lc, server->options)
 	{
 		DefElem    *def = (DefElem *) lfirst(lc);
