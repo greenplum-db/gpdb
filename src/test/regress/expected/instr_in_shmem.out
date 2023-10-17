@@ -27,6 +27,18 @@ SELECT 1;
         1
 (1 row)
 
+SHOW GP_MAX_SCAN_ON_SHMEM;
+ gp_max_scan_on_shmem 
+----------------------
+ 300
+(1 row)
+
+SELECT 1;
+ ?column? 
+----------
+        1
+(1 row)
+
 -- start_ignore
 DROP SCHEMA IF EXISTS QUERY_METRICS CASCADE; 
 NOTICE:  schema "query_metrics" does not exist, skipping

@@ -319,6 +319,7 @@ These parameters enable and configure query metrics collection. When enabled, Gr
 
 - [gp_enable_query_metrics](guc-list.html#gp_enable_query_metrics)
 - [gp_instrument_shmem_size](guc-list.html#gp_instrument_shmem_size)
+- [gp_max_scan_on_shmem](guc-list.html#gp_max_scan_on_shmem)
 
 ## <a id="topic37"></a>Runtime Statistics Collection Parameters 
 

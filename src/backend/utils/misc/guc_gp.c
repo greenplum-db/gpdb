@@ -409,6 +409,7 @@ static char *gp_server_version_string;
 /* Query Metrics */
 bool		gp_enable_query_metrics = false;
 int			gp_instrument_shmem_size = 5120;
+int			gp_max_scan_on_shmem = 300;
 
 /* Security */
 bool		gp_reject_internal_tcp_conn = true;
@@ -3792,6 +3793,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		},
 		&gp_instrument_shmem_size,
 		5120, 0, 131072,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_max_scan_on_shmem", PGC_POSTMASTER, UNGROUPED,
+			gettext_noop("Sets the limit of shmem slots used by scan nodes for each backend."),
+			NULL,
+		},
+		&gp_max_scan_on_shmem,
+		300, 0, 3072,
 		NULL, NULL, NULL
 	},
 

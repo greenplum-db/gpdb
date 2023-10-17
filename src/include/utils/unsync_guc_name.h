@@ -200,6 +200,7 @@
 		"gp_max_local_distributed_cache",
 		"gp_max_parallel_cursors",
 		"gp_max_plan_size",
+		"gp_max_scan_on_shmem",
 		"gp_max_slices",
 		"gp_motion_cost_per_row",
 		"gp_pause_on_restore_point_replay",

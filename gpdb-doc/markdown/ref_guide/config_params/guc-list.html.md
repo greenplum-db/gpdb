@@ -1140,6 +1140,14 @@ The amount of shared memory, in kilobytes, allocated for query metrics. The defa
 |-----------|-------|-------------------|
 |integer `0 - 131072`|5120|coordinator, system, restart|
 
+## <a id="gp_max_scan_on_shmem"></a>gp\_max\_scan\_on\_shmem 
+
+Specifies the limit of maximum scan node's instrumentations per query in shmem. If table has many partitions, Postgres planner will generate a plan with many SCAN nodes under a APPEND node. If the number of partitions are too many, this plan will occupy too many slots. Here is a limitation on number of shmem slots used by scan nodes for each backend. Instruments exceeding the limitation are allocated in local memory.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|integer `0 - 3072`|300|master, system, restart|
+
 ## <a id="gp_interconnect_address_type"></a>gp_interconnect_address_type
 
 Specifies the type of address binding strategy Greenplum Database uses for communication between segment host sockets. There are two types: `unicast` and `wildcard`. The default is `unicast`.
