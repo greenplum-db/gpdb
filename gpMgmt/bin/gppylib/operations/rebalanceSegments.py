@@ -52,12 +52,11 @@ class ReconfigDetectionSQLQueryCommand(base.SQLCommand):
 
 
 class GpSegmentRebalanceOperation:
-    def __init__(self, gpEnv, gpArray, batch_size, segment_batch_size, disable_replay_lag, replay_lag):
+    def __init__(self, gpEnv, gpArray, batch_size, segment_batch_size, replay_lag):
         self.gpEnv = gpEnv
         self.gpArray = gpArray
         self.batch_size = batch_size
         self.segment_batch_size = segment_batch_size
-        self.disable_replay_lag = disable_replay_lag
         self.replay_lag = replay_lag
         self.logger = gplog.get_default_logger()
 
@@ -73,14 +72,13 @@ class GpSegmentRebalanceOperation:
                 continue
 
             if segmentPair.up() and segmentPair.reachable() and segmentPair.synchronized():
-                if not self.disable_replay_lag:
+                if self.replay_lag is not None:
                     self.logger.info("Allowed replay lag during rebalance is {} GB".format(self.replay_lag))
                     replay_lag_in_bytes = replay_lag(segmentPair.primaryDB)
                     if float(replay_lag_in_bytes) >= (self.replay_lag * 1024 * 1024 * 1024):
                         raise Exception("{} bytes of xlog is still to be replayed on mirror with dbid {}, let "
                                         "mirror catchup on replay then trigger rebalance. Use --replay-lag to "
-                                        "configure the allowed replay lag limit or --disable-replay-lag to disable"
-                                        " the check completely if you wish to continue with rebalance anyway"
+                                        "configure the allowed replay lag limit."
                                         .format(replay_lag_in_bytes, segmentPair.primaryDB.getSegmentDbId()))
                 unbalanced_primary_segs.append(segmentPair.primaryDB)
             else:

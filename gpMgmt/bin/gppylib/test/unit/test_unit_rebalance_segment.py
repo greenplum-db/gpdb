@@ -38,8 +38,7 @@ class RebalanceSegmentsTestCase(GpTestCase):
         self.success_command_mock.get_results.return_value = CommandResult(
             0, "stdout success text", "stderr text", True, False)
 
-        self.subject = GpSegmentRebalanceOperation(Mock(), self._create_gparray_with_2_primary_2_mirrors(), 1, 1, False,
-                                                   10)
+        self.subject = GpSegmentRebalanceOperation(Mock(), self._create_gparray_with_2_primary_2_mirrors(), 1, 1, 10)
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
 
         self.mock_logger = self.get_mock_from_apply_patch('logger')
@@ -72,9 +71,8 @@ class RebalanceSegmentsTestCase(GpTestCase):
         with self.assertRaises(Exception) as ex:
             self.subject.rebalance()
         self.assertEqual('56780000000 bytes of xlog is still to be replayed on mirror with dbid 2, let mirror catchup '
-                         'on replay then trigger rebalance. Use --replay-lag to configure the allowed replay lag limit '
-                         'or --disable-replay-lag to disable the check completely if you wish to continue with '
-                         'rebalance anyway', str(ex.exception))
+                         'on replay then trigger rebalance. Use --replay-lag to configure the allowed replay lag limit.'
+                         , str(ex.exception))
         self.assertEqual([call("Get replay lag on mirror of primary segment with host:sdw1, port:40000")],
                          self.mock_logger.debug.call_args_list)
         self.assertEqual([call("Determining primary and mirror segment pairs to rebalance"),
@@ -86,15 +84,6 @@ class RebalanceSegmentsTestCase(GpTestCase):
         self.subject.rebalance()
         self.assertEqual([call("Get replay lag on mirror of primary segment with host:sdw1, port:40000")],
                          self.mock_logger.debug.call_args_list)
-
-    @patch('gppylib.db.dbconn.execSQLForSingleton', return_value='56780000000')
-    def test_rebalance_replay_lag_is_disabled(self, mock1):
-        self.subject.disable_replay_lag = True
-        self.subject.rebalance()
-        self.assertNotIn([call("Get replay lag on mirror of primary segment with host:sdw1, port:40000")],
-                         self.mock_logger.debug.call_args_list)
-        self.assertIn([call("Determining primary and mirror segment pairs to rebalance")],
-                      self.subject.logger.info.call_args_list)
 
     @patch('gppylib.db.dbconn.connect', side_effect=Exception())
     def test_replay_lag_connect_exception(self, mock1):

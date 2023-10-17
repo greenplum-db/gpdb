@@ -52,11 +52,6 @@ DEFAULT_MASTER_NUM_WORKERS=16
 #max batch size of thread pool on master
 MAX_MASTER_NUM_WORKERS=64
 
-# Maximum replay lag (in GBs) allowed on mirror when rebalancing the segments
-# The default value for ALLOWED_REPLAY_LAG has been decided to be 10 GBs as mirror
-# took 5 mins to replay 10 GB lag on a local demo cluster.
-ALLOWED_REPLAY_LAG = 10
-
 # Application name used by the pg_rewind instance that gprecoverseg starts
 # during incremental recovery. gpstate uses this to figure out when incremental
 # recovery is active.

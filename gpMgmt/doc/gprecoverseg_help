@@ -14,7 +14,7 @@ gprecoverseg [-p <new_recover_host>[,...]]
              [-F] [-a] [-q] [-s] [--no-progress] [-l <logfile_directory>]
 
 
-gprecoverseg -r [--replay-lag <replay_lag>] [--disable-replay-lag]
+gprecoverseg -r [--replay-lag <replay_lag>]
 
 
 gprecoverseg -o <output_recover_config_file> 
@@ -244,13 +244,9 @@ running gprecoverseg -r. If there are any in progress queries, they will
 be cancelled and rolled back.
 
 --replay-lag
-Replay lag(in GBs) allowed on mirror when rebalancing the segments. Default is 10 GB. If
-the replay_lag (flush_lsn-replay_lsn) is more than the value provided with this option
-then rebalance will be aborted.
-
-
---disable-replay-lag
-Disable replay lag check when rebalancing segments
+Replay lag(in GBs) allowed on mirror when rebalancing the segments. If the replay_lag
+(flush_lsn-replay_lsn) is more than the value provided with this option then rebalance
+will be aborted.
 
 
 -s

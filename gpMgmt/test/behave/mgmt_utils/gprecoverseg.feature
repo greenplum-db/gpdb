@@ -1913,36 +1913,19 @@ Feature: gprecoverseg tests
         And all files in gpAdminLogs directory are deleted on all hosts in the cluster
         And user immediately stops all primary processes for content 0
         And user can start transactions
+       When the user runs "gprecoverseg -av --replay-lag 10"
+       Then gprecoverseg should return a return code of 2
+        And gprecoverseg should print "--replay-lag should be used only with -r" to stdout
         When the user runs "gprecoverseg -av"
         Then gprecoverseg should return a return code of 0
         When the user runs "gprecoverseg -ar --replay-lag 0"
         Then gprecoverseg should return a return code of 2
+         And gprecoverseg should print "Allowed replay lag during rebalance is 0.0 GB" to stdout
          And gprecoverseg should print ".* bytes of xlog is still to be replayed on mirror with dbid.*, let mirror catchup on replay then trigger rebalance" regex to logfile
-        When the user runs "gprecoverseg -ar --disable-replay-lag"
+        When the user runs "gprecoverseg -ar"
         Then gprecoverseg should return a return code of 0
          And all the segments are running
          And user can start transactions
-
-  @demo_cluster
-  @concourse_cluster
-  Scenario: gprecoverseg errors out if invalid options are used with --disable-replay-lag
-      Given the database is running
-        And all the segments are running
-        And the segments are synchronized
-        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
-        And user immediately stops all primary processes for content 0,1,2
-        And user can start transactions
-       When the user runs "gprecoverseg -av"
-       Then gprecoverseg should return a return code of 0
-        And verify that mirror on content 0,1,2 is up
-       When the user runs "gprecoverseg -aF --disable-replay-lag"
-       Then gprecoverseg should return a return code of 2
-        And gprecoverseg should print "--disable-replay-lag should be used only with -r" to stdout
-        When the user runs "gprecoverseg -ar"
-        Then gprecoverseg should return a return code of 0
-        And gprecoverseg should print "Allowed replay lag during rebalance is 10 GB" to stdout
-        And all the segments are running
-        And user can start transactions
 
 
     @remove_rsync_bash
