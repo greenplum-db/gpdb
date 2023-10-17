@@ -91,7 +91,12 @@ typedef struct workfile_set
 	/* Average work file size */
 	uint64		avg_file_size;
 
-	/* Not used, just to for ABI compatibility */
+	/*
+	 * ABI_BUMP_FIXME
+	 *
+	 * Not used, just for ABI compatibility, remove this when we decide to bump
+	 * the ABI version.
+	 */
 	uint64		abi_reserved;
 
 	/* Total memory usage by compression buffer */

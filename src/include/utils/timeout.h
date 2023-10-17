@@ -36,11 +36,20 @@ typedef enum TimeoutId
 	IDLE_IN_TRANSACTION_SESSION_TIMEOUT,
 	IDLE_GANG_TIMEOUT,
 	CLIENT_CONNECTION_CHECK_TIMEOUT,
-	GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT,
 	/* First user-definable timeout reason */
 	USER_TIMEOUT,
+	GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT = USER_TIMEOUT + 11,
 	/* Maximum number of timeout reasons */
-	MAX_TIMEOUTS = USER_TIMEOUT + 10
+	MAX_TIMEOUTS
+	/*
+	 * ABI_BUMP_FIXME
+	 *
+	 * It was this at 7.0:
+	 * MAX_TIMEOUTS = USER_TIMEOUT + 10
+	 *
+	 * To not break ABI, we have to reserve the timeouts from the **original**
+	 * USER_TIMEOUT and the **original** MAX_TIMEOUTS, [10, 20] in this case.
+	 */
 } TimeoutId;
 
 /* callback function signature */
