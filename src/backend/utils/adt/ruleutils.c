@@ -9315,7 +9315,6 @@ get_rule_expr(Node *node, deparse_context *context,
 					{
 						ListCell *cell;
 
-						appendStringInfoString(buf, sep);
 						appendStringInfoString(buf, " WITH (");
 						if (elem->accessMethod)
 						{
