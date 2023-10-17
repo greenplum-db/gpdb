@@ -319,9 +319,16 @@ addOneOption(StringInfo option, StringInfo diff, struct config_generic *guc)
 			}
 		case PGC_STRING:
 			{
+				/*
+				 * We should be more wary about NULL values for GUC string variables.
+				 * See PR #16694 for the details.
+				 */
 				struct config_string *sguc = (struct config_string *) guc;
-				const char *str = sguc->reset_val;
+				sguc->boot_val = sguc->boot_val ? sguc->boot_val : "";
+				sguc->reset_val = sguc->reset_val ? sguc->reset_val : "";
+				*sguc->variable = *sguc->variable ? *sguc->variable : "";
 				int			i;
+				const char *str = sguc->reset_val;
 
 				appendStringInfo(option, " -c %s=", guc->name);
 
