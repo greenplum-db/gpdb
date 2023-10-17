@@ -38,10 +38,16 @@ private:
 												CScalarAggFunc *popScAggFunc,
 												const IMDType *agg_col_type);
 
-	static IMdIdArray *IsMinMaxAggOnColumn(
-		CMemoryPool *mp, const IMDType *agg_func_type,
-		CExpression *pexprAggFunc, CColRefArray *output_col_array,
-		CMDAccessor *md_accessor, const IMDRelation *pmdrel, ULONG ulIndices);
+	static BOOL IsMinMaxAggOnColumn(const IMDType *agg_func_type,
+									CExpression *pexprAggFunc,
+									const CColRef **agg_colref);
+
+	static IMdIdArray *GetApplicableIndices(CMemoryPool *mp,
+											const CColRef *agg_colref,
+											CColRefArray *output_col_array,
+											CMDAccessor *md_accessor,
+											const IMDRelation *pmdrel,
+											ULONG ulIndices);
 
 public:
 	CXformMinMax2IndexGet(const CXformMinMax2IndexGet &) = delete;
