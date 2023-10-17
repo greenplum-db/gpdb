@@ -56,7 +56,8 @@ jobs:
             ref: ${{ github.sha }}
 
     steps:
-      ## FIXME: abi-dumper requires universal-ctags and the package manager doesn't provide it.
+      ## FIXME: abi-dumper requires 'Universal Ctags' but the package manager only provides
+      ## 'Exuberant Ctags'.
       - name: Install universal-ctags.
         run: |
           wget 'https://github.com/universal-ctags/ctags-nightly-build/releases/download/2023.07.05%2Bafdae39c0c2e508d113cbc570f4635b96159840c/uctags-2023.07.05-linux-x86_64.tar.xz'
@@ -127,10 +128,11 @@ jobs:
           name: build-latest
           path: build-latest/
 
-      - name: Install abi-compliance-checker
+      - name: Install abi-compliance-checker and report viewer (lynx)
         run: |
           yum install -y epel-release
           yum install -y abi-compliance-checker
+          yum install -y --enablerepo=powertools lynx
 
       - name: Compare ABI
         run: |
@@ -149,6 +151,9 @@ jobs:
                                  -lib postgres \
                                  -old build-baseline/postgres*.abi \
                                  -new build-latest/postgres*.abi
+
+          ## Dump the reports to stdout.
+          lynx -dump $(find compat_reports/ | grep html)
 
       - name: Upload ABI Comparison
         if: always()
