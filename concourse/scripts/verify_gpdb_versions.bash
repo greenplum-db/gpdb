@@ -20,8 +20,6 @@ assert_postgres_version_matches() {
   fi
 }
 
-yum -d0 -y install git
-
 GREENPLUM_INSTALL_DIR=/usr/local/greenplum-db-devel
 GPDB_SRC_SHA=$(cd gpdb_src && git rev-parse HEAD)
 
