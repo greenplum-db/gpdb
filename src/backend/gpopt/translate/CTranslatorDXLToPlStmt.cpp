@@ -166,7 +166,7 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 {
 	GPOS_ASSERT(nullptr != dxlnode);
 
-	CDXLTranslateContext dxl_translate_ctxt(m_mp, false);
+	CDXLTranslateContext dxl_translate_ctxt(m_mp, false, orig_query);
 
 	PlanSlice *topslice;
 
@@ -5420,6 +5420,32 @@ CTranslatorDXLToPlStmt::TranslateDXLProjList(
 				}
 				target_entry->resorigtbl = pteOriginal->resorigtbl;
 				target_entry->resorigcol = pteOriginal->resorigcol;
+
+				// Hack! ORCA represents strings using wide characters. That
+				// can require converting from multibyte characters using
+				// vswprintf(). However, vswprintf() is dependent on the system
+				// locale which is set at the database level. When that locale
+				// cannot interpret the string correctly, it fails. ORCA
+				// bypasses the failure by using a generic "UNKNOWN" string.
+				// When that happens, the following code translates it back to
+				// the original multibyte string.
+				if (strcmp(target_entry->resname, "UNKNOWN") == 0 &&
+					nullptr != output_context->GetQuery())
+				{
+					ListCell *lc_rte = nullptr;
+					ForEach(lc_rte, output_context->GetQuery()->rtable)
+					{
+						RangeTblEntry *pRTE = (RangeTblEntry *) lfirst(lc_rte);
+						if (target_entry->resorigtbl == pRTE->relid &&
+							nullptr != pRTE->eref)
+						{
+							target_entry->resname = strVal(
+								gpdb::ListNth(pRTE->eref->colnames,
+											  target_entry->resorigcol - 1));
+							break;
+						}
+					}
+				}
 			}
 		}
 

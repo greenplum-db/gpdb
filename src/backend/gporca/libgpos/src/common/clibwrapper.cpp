@@ -358,7 +358,7 @@ gpos::clib::Vswprintf(WCHAR *wcstr, SIZE_T max_len, const WCHAR *format,
 	{
 		// Invalid multibyte character encountered. This can happen if the byte sequence does not
 		// match with the server encoding.
-		GPOS_RAISE(CException::ExmaSystem, CException::ExmiIllegalByteSequence);
+		res = swprintf(wcstr, max_len, format, "UNKNOWN");
 	}
 
 	return res;
