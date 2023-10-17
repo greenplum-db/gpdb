@@ -38,9 +38,9 @@ typedef enum TimeoutId
 	CLIENT_CONNECTION_CHECK_TIMEOUT,
 	/* First user-definable timeout reason */
 	USER_TIMEOUT,
-	GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT = USER_TIMEOUT + 11,
+	GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT = USER_TIMEOUT + 10,
 	/* Maximum number of timeout reasons */
-	MAX_TIMEOUTS = GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT
+	MAX_TIMEOUTS
 	/*
 	 * GP_ABI_BUMP_FIXME
 	 *
@@ -48,7 +48,8 @@ typedef enum TimeoutId
 	 * MAX_TIMEOUTS = USER_TIMEOUT + 10
 	 *
 	 * To not break ABI, we have to reserve the timeouts from the **original**
-	 * USER_TIMEOUT and the **original** MAX_TIMEOUTS, [10, 20] in this case.
+	 * USER_TIMEOUT (included) and the **original** MAX_TIMEOUTS, [10, 20) in
+	 * this case.
 	 */
 } TimeoutId;
 
