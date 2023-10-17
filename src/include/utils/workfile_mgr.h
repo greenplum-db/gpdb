@@ -92,7 +92,7 @@ typedef struct workfile_set
 	uint64		avg_file_size;
 
 	/*
-	 * ABI_BUMP_FIXME
+	 * GP_ABI_BUMP_FIXME
 	 *
 	 * Not used, just for ABI compatibility, remove this when we decide to bump
 	 * the ABI version.
