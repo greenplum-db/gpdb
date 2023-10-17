@@ -27,8 +27,9 @@ using namespace gpos;
 //
 //---------------------------------------------------------------------------
 CDXLTranslateContext::CDXLTranslateContext(CMemoryPool *mp,
-										   BOOL is_child_agg_node)
-	: m_mp(mp), m_is_child_agg_node(is_child_agg_node)
+										   BOOL is_child_agg_node,
+										   const Query *query)
+	: m_mp(mp), m_is_child_agg_node(is_child_agg_node), m_query(query)
 {
 	// initialize hash table
 	m_colid_to_target_entry_map = GPOS_NEW(m_mp) ULongToTargetEntryMap(m_mp);
@@ -46,7 +47,7 @@ CDXLTranslateContext::CDXLTranslateContext(CMemoryPool *mp,
 CDXLTranslateContext::CDXLTranslateContext(CMemoryPool *mp,
 										   BOOL is_child_agg_node,
 										   ULongToColParamMap *original)
-	: m_mp(mp), m_is_child_agg_node(is_child_agg_node)
+	: m_mp(mp), m_is_child_agg_node(is_child_agg_node), m_query(NULL)
 {
 	m_colid_to_target_entry_map = GPOS_NEW(m_mp) ULongToTargetEntryMap(m_mp);
 	m_colid_to_paramid_map = GPOS_NEW(m_mp) ULongToColParamMap(m_mp);

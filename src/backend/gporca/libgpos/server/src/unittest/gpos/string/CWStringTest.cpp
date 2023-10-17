@@ -178,30 +178,23 @@ CWStringTest::EresUnittest_AppendFormatInvalidLocale()
 	CAutoMemoryPool amp(CAutoMemoryPool::ElcExc);
 	CMemoryPool *mp = amp.Pmp();
 
+	CWStringDynamic *expected =
+		GPOS_NEW(mp) CWStringDynamic(mp, GPOS_WSZ_LIT("UNKNOWN"));
+
 	CHAR *oldLocale = setlocale(LC_CTYPE, NULL);
 	CWStringDynamic *pstr1 = GPOS_NEW(mp) CWStringDynamic(mp);
 
 	GPOS_RESULT eres = GPOS_OK;
 
 	setlocale(LC_CTYPE, "C");
-	GPOS_TRY
-	{
-		pstr1->AppendFormat(GPOS_WSZ_LIT("%s"), (CHAR *) "ÃË", 123);
+	pstr1->AppendFormat(GPOS_WSZ_LIT("%s"), (CHAR *) "ÃË", 123);
 
-		eres = GPOS_FAILED;
-	}
-	GPOS_CATCH_EX(ex)
-	{
-		GPOS_ASSERT(GPOS_MATCH_EX(ex, CException::ExmaSystem,
-								  CException::ExmiIllegalByteSequence));
-
-		GPOS_RESET_EX;
-	}
-	GPOS_CATCH_END;
+	pstr1->Equals(expected);
 
 	// cleanup
 	setlocale(LC_CTYPE, oldLocale);
 	GPOS_DELETE(pstr1);
+	GPOS_DELETE(expected);
 
 	return eres;
 }

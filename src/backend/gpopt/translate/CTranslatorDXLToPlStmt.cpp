@@ -210,11 +210,12 @@ CTranslatorDXLToPlStmt::InitTranslators()
 //---------------------------------------------------------------------------
 PlannedStmt *
 CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
+											  const Query *orig_query,
 											  bool can_set_tag)
 {
 	GPOS_ASSERT(NULL != dxlnode);
 
-	CDXLTranslateContext dxl_translate_ctxt(m_mp, false);
+	CDXLTranslateContext dxl_translate_ctxt(m_mp, false, orig_query);
 
 	CDXLTranslationContextArray *ctxt_translation_prev_siblings =
 		GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
@@ -4744,6 +4745,51 @@ CTranslatorDXLToPlStmt::TranslateDXLTblDescrToRangeTblEntry(
 
 //---------------------------------------------------------------------------
 //	@function:
+//		update_unknown_locale_walker
+//
+//	@doc:
+//		Given an expression tree and a TargetEntry pointer context, look for a
+//		matching target entry in the expression tree and overwrite the given
+//		TargetEntry context's resname with the original found in the expression
+//		tree.
+//
+//---------------------------------------------------------------------------
+static bool
+update_unknown_locale_walker(Node *node, void *context)
+{
+	if (node == NULL)
+	{
+		return false;
+	}
+
+	TargetEntry *unknown_target_entry = (TargetEntry *) context;
+
+	if (IsA(node, TargetEntry))
+	{
+		TargetEntry *te = (TargetEntry *) node;
+
+		if (te->resorigtbl == unknown_target_entry->resorigtbl &&
+			te->resno == unknown_target_entry->resno)
+		{
+			unknown_target_entry->resname = te->resname;
+			return false;
+		}
+	}
+	else if (IsA(node, Query))
+	{
+		Query *query = (Query *) node;
+
+		return gpdb::WalkExpressionTree(
+			(Node *) query->targetList,
+			(bool (*)()) update_unknown_locale_walker, (void *) context);
+	}
+
+	return gpdb::WalkExpressionTree(
+		node, (bool (*)()) update_unknown_locale_walker, (void *) context);
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CTranslatorDXLToPlStmt::TranslateDXLProjList
 //
 //	@doc:
@@ -4846,6 +4892,21 @@ CTranslatorDXLToPlStmt::TranslateDXLProjList(
 				}
 				target_entry->resorigtbl = pteOriginal->resorigtbl;
 				target_entry->resorigcol = pteOriginal->resorigcol;
+
+				// ORCA represents strings using wide characters. That can
+				// require converting from multibyte characters using
+				// vswprintf(). However, vswprintf() is dependent on the system
+				// locale which is set at the database level. When that locale
+				// cannot interpret the string correctly, it fails. ORCA
+				// bypasses the failure by using a generic "UNKNOWN" string.
+				// When that happens, the following code translates it back to
+				// the original multibyte string.
+				if (strcmp(target_entry->resname, "UNKNOWN") == 0)
+				{
+					update_unknown_locale_walker(
+						(Node *) output_context->GetQuery(),
+						(void *) target_entry);
+				}
 			}
 		}
 
