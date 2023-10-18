@@ -83,15 +83,6 @@ CREATE SCHEMA mpp_import_dest;
 IMPORT FOREIGN SCHEMA import_source FROM SERVER pgserver INTO mpp_import_dest;
 
 -- ===================================================================
--- When there are multiple remote servers, we don't support INSERT/UPDATE/DELETE
--- ===================================================================
-INSERT INTO mpp_ft1 VALUES (1, 1);
-
-UPDATE mpp_ft1 SET c1 = c1 + 1;
-
-DELETE FROM mpp_ft1;
-
--- ===================================================================
 -- Aggregate and grouping queries
 -- ===================================================================
 -- Simple aggregates with different data types
@@ -243,3 +234,25 @@ SELECT count(c1), max(c6) FROM mpp_ft2 GROUP BY c2 order by c2 limit 3;
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT count(*), sum(t1.c1), avg(t2.c2) FROM mpp_ft2 t1 inner join mpp_ft2 t2 on (t1.c1 = t2.c1) where t1.c1 = 2;
 SELECT count(*), sum(t1.c1), avg(t2.c2) FROM mpp_ft2 t1 inner join mpp_ft2 t2 on (t1.c1 = t2.c1) where t1.c1 = 2;
+
+-- =====================================================================================
+-- Test DISTRIBUTED BY clause for postgres_fdw foreign table
+-- =====================================================================================
+\! env PGOPTIONS='' psql -p 5432 contrib_regression -c 'truncate "MPP_S 1"."T 1"'
+\! env PGOPTIONS='' psql -p 5555 contrib_regression -c 'truncate "MPP_S 1"."T 1"'
+CREATE FOREIGN TABLE mpp_dist_1 (
+	   c1 int,
+	   c2 int
+) SERVER pgserver OPTIONS (mpp_execute 'coordinator', schema_name 'MPP_S 1', table_name 'T 1') DISTRIBUTED BY (c1);
+
+CREATE FOREIGN TABLE mpp_dist (
+       c1 int,
+       c2 int
+) SERVER pgserver OPTIONS (schema_name 'MPP_S 1', table_name 'T 1') DISTRIBUTED BY (c1);
+\d+ mpp_dist
+
+INSERT INTO mpp_dist SELECT id, id % 5 FROM generate_series(1, 20) as id;
+SELECT * FROM mpp_dist ORDER BY c1;
+
+EXPLAIN VERBOSE SELECT * FROM mpp_dist t1 JOIN mpp_dist t2 ON t1.c1 = t2.c1 ORDER BY t1.c1;
+SELECT * FROM mpp_dist t1 JOIN mpp_dist t2 ON t1.c1 = t2.c1 ORDER BY t1.c1;
