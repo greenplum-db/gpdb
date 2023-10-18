@@ -33,7 +33,7 @@ Several binaries are shipped in Greenplum, e.g., `$GPHOME/bin/postgres`, `$GPHOM
    abi-compliance-checker \
          -lib <library name> \
          -old <output file from step1> \
-		 -new <output file from step2>
+         -new <output file from step2>
    ```
    - `<library name>`: The name of the library, e.g., `postgres`.
 
@@ -44,12 +44,12 @@ Several binaries are shipped in Greenplum, e.g., `$GPHOME/bin/postgres`, `$GPHOM
 There might be "safe ABI breaking changes", e.g., some symbol being removed and not referenced by any extensions or programs. Here are steps on how to suppress such errors.
 
 1. Add ignored symbols to `gpdb_src/.abi-check/<base version>/postgres.symbols.ignore` (one symbol per line).
-   - `<base version>`: The baseline version of Greenplum. If we want to ensure the ABI isn't broken between the `6.25.3` release and the latest `6X_STABLE`. The baseline version of Greenplum is `6.25.3`.
+   - `<base version>`: The baseline version of Greenplum. If we want to ensure the ABI isn't broken between the `6.25.3` release and the latest `6X_STABLE`. The baseline version of Greenplum is `6.25.3`. See: [./6.25.3/postgres.symbols.ignore](./6.25.3/postgres.symbols.ignore)
 
 2. Add ignored types to `gpdb_src/.abi-check/<base version>/postgres.types.ignore` (one type per line).
-   - `<base version>`: The baseline version of Greenplum. If we want to ensure the ABI isn't broken between the `6.25.3` release and the latest `6X_STABLE`. The baseline version of Greenplum is `6.25.3`.
+   - `<base version>`: The baseline version of Greenplum. If we want to ensure the ABI isn't broken between the `6.25.3` release and the latest `6X_STABLE`. The baseline version of Greenplum is `6.25.3`. See: [./6.25.3/postgres.types.ignore](./6.25.3/postgres.types.ignore)
 
-3. Pass these two files to `abi-compliance-checker`.
+3. Pass these two files to `abi-compliance-checker` and it will produce a report in HTML format.
    ```
    abi-compliance-checker -skip-symbols gpdb_src/.abi-check/<base version>/postgres.symbols.ignore \
                           -skip-types   gpdb_src/.abi-check/<base version>/postgres.types.ignore \
@@ -57,3 +57,18 @@ There might be "safe ABI breaking changes", e.g., some symbol being removed and 
                           -old greenplum-<base version>.dump
                           -new greenplum-new.dump
    ```
+   It will produce a ABI report in `./compat_reports/postgres/X_to_Y/compat_report.html`.
+
+## View the ABI compatibility report
+
+### View the report locally
+
+You can either open the HTML report in your browser or dump it to stdout using `lynx -dump compat_reports/postgres/X_to_Y/compat_report.html`.
+
+## View the report from GitHub Action
+
+1. Navigate to the "Summary" page of the test.
+2. Click the report and download it.
+3. View the report as above.
+
+![./.images/download-report-from-gh-action.png](./.images/download-report-from-gh-action.png)
