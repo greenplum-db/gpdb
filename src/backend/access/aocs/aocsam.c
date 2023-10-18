@@ -659,21 +659,33 @@ aocs_beginscan_internal(Relation relation,
 
 	if ((flags & SO_TYPE_SAMPLESCAN) != 0)
 	{
+		Oid blkdirrelid;
+
 		scan->sampleSlot = MakeSingleTupleTableSlot(RelationGetDescr(relation),
 													table_slot_callbacks(relation));
-		scan->sampleBlkdir = palloc0(sizeof(AppendOnlyBlockDirectory));
 
-		AppendOnlyBlockDirectory_Init_forSearch(scan->sampleBlkdir,
-												snapshot,
-												(FileSegInfo **) scan->seginfo,
-												scan->total_seg,
-												relation,
-												natts,
-												true,
-												proj);
+		GetAppendOnlyEntryAuxOids(relation, NULL, &blkdirrelid, NULL);
+		if (OidIsValid(blkdirrelid))
+		{
+			scan->sampleBlkdir = palloc0(sizeof(AppendOnlyBlockDirectory));
+
+			AppendOnlyBlockDirectory_Init_forSearch(scan->sampleBlkdir,
+													snapshot,
+													(FileSegInfo **) scan->seginfo,
+													scan->total_seg,
+													relation,
+													natts,
+													true,
+													proj);
+		}
+		else
+			scan->sampleBlkdir = NULL;
 	}
 	else
+	{
 		scan->sampleSlot = NULL;
+		scan->sampleBlkdir = NULL;
+	}
 
 	return scan;
 }
@@ -750,6 +762,46 @@ aocs_positionscan(AOCSScanDesc scan,
 											afterFileOffset);
 
 	return true;
+}
+
+bool
+aocs_positionscan_wo_blkdir(AOCSScanDesc aoscan,
+							BlockNumber targetblk,
+							int columnGroupNo)
+{
+	TupleTableSlot              *sampleSlot = aoscan->sampleSlot;
+	AOTupleId                   *currtid = (AOTupleId *) &sampleSlot->tts_tid;
+	int                         currseg = AOTupleIdGet_segmentFileNum(currtid);
+
+	DatumStreamRead *ds = aoscan->columnScanInfo.ds[columnGroupNo];
+
+	while (datumstreamread_block_info(ds))
+	{
+		AOTupleId   lastAOTidInBlock;
+		ItemPointer lastTidInBlock;
+		BlockNumber blkNumLastTid;
+
+		AOTupleIdInit(&lastAOTidInBlock, currseg,
+					  ds->blockFirstRowNum + ds->blockRowCount - 1);
+		lastTidInBlock = (ItemPointer) &lastAOTidInBlock;
+		blkNumLastTid  = ItemPointerGetBlockNumber(lastTidInBlock);
+
+		if (aoscan->cur_seg > currseg)
+			return false;
+
+		if (blkNumLastTid > targetblk)
+			return false;
+
+		if (blkNumLastTid == targetblk)
+		{
+			datumstreamread_block_content(ds);
+			return true;
+		}
+
+		AppendOnlyStorageRead_SkipCurrentBlock(&ds->ao_read);
+	}
+
+	return false;
 }
 
 void

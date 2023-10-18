@@ -418,6 +418,10 @@ extern bool aocs_positionscan(AOCSScanDesc aoscan,
 							  AppendOnlyBlockDirectoryEntry *dirEntry,
 							  int colIdx,
 							  int fsInfoIdx);
+extern bool aocs_positionscan_wo_blkdir(AOCSScanDesc aoscan,
+										BlockNumber targetblk,
+										int columnGroupNo);
+
 
 extern bool switch_to_next_scan_seg(AOCSScanDesc scan);
 

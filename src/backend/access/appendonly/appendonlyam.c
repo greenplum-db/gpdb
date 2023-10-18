@@ -1849,20 +1849,31 @@ appendonly_beginrangescan_internal(Relation relation,
 
 	if ((flags & SO_TYPE_SAMPLESCAN) != 0)
 	{
+		Oid	blkdirrelid;
+
 		scan->sampleSlot = MakeSingleTupleTableSlot(RelationGetDescr(relation),
 													table_slot_callbacks(relation));
-		scan->sampleBlkdir = palloc0(sizeof(AppendOnlyBlockDirectory));
-		AppendOnlyBlockDirectory_Init_forSearch(scan->sampleBlkdir,
-												snapshot,
-												scan->aos_segfile_arr,
-												scan->aos_total_segfiles,
-												scan->aos_rd,
-												1,
-												false,
-												NULL);
+		GetAppendOnlyEntryAuxOids(relation, NULL, &blkdirrelid, NULL);
+		if (OidIsValid(blkdirrelid))
+		{
+			scan->sampleBlkdir = palloc0(sizeof(AppendOnlyBlockDirectory));
+			AppendOnlyBlockDirectory_Init_forSearch(scan->sampleBlkdir,
+													snapshot,
+													scan->aos_segfile_arr,
+													scan->aos_total_segfiles,
+													scan->aos_rd,
+													1,
+													false,
+													NULL);
+		}
+		else
+			scan->sampleBlkdir = NULL;
 	}
 	else
+	{
 		scan->sampleSlot = NULL;
+		scan->sampleBlkdir = NULL;
+	}
 
 	return scan;
 }
@@ -2033,6 +2044,47 @@ appendonly_positionscan(AppendOnlyScanDesc aoscan,
 	aoscan->needNextBuffer = true;
 
 	return true;
+}
+
+bool
+appendonly_positionscan_wo_blkdir(AppendOnlyScanDesc aoscan,
+								  BlockNumber targetblk)
+{
+	AppendOnlyExecutorReadBlock *varblock = &aoscan->executorReadBlock;
+	TupleTableSlot 				*sampleSlot = aoscan->sampleSlot;
+	AOTupleId 					*currtid = (AOTupleId *) &sampleSlot->tts_tid;
+	int 						currseg = AOTupleIdGet_segmentFileNum(currtid);
+
+	aoscan->needNextBuffer = true;
+	while (AppendOnlyExecutorReadBlock_GetBlockInfo(&aoscan->storageRead, varblock))
+	{
+		AOTupleId 	lastAOTidInBlock;
+		ItemPointer lastTidInBlock;
+		BlockNumber blkNumLastTid;
+
+		if (varblock->segmentFileNum > currseg)
+			return false;
+
+		AOTupleIdInit(&lastAOTidInBlock, currseg,
+					  varblock->blockFirstRowNum + varblock->rowCount - 1);
+		lastTidInBlock = (ItemPointer) &lastAOTidInBlock;
+		blkNumLastTid = ItemPointerGetBlockNumber(lastTidInBlock);
+
+		if (blkNumLastTid > targetblk)
+			return false;
+
+		if (blkNumLastTid == targetblk)
+		{
+			AppendOnlyExecutorReadBlock_GetContents(varblock);
+			aoscan->needNextBuffer = false;
+			return true;
+		}
+
+		AppendOnlyExecutionReadBlock_FinishedScanBlock(varblock);
+		AppendOnlyStorageRead_SkipCurrentBlock(&aoscan->storageRead);
+	};
+
+	return false;
 }
 
 /* ----------------

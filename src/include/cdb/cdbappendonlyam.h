@@ -500,6 +500,8 @@ extern void appendonly_delete_finish(AppendOnlyDeleteDesc aoDeleteDesc);
 extern bool appendonly_positionscan(AppendOnlyScanDesc aoscan,
 									AppendOnlyBlockDirectoryEntry *dirEntry,
 									int fsInfoIdx);
+extern bool appendonly_positionscan_wo_blkdir(AppendOnlyScanDesc aoscan,
+											  BlockNumber targetblk);
 
 extern bool SwitchToNextFileSegForRead(AppendOnlyScanDesc aoscan);
 /*

@@ -2500,15 +2500,6 @@ aoco_scan_sample_next_block(TableScanDesc scan, SampleScanState *scanstate)
 		BlockSequence 	currblockseq;
 		BlockNumber 	targetblk;
 
-		/* If the relation doesn't have a blkdir bail */
-		if (!RelationIsValid(aoscan->sampleBlkdir->blkdirRel))
-		{
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("SYSTEM sampling requires a block directory"),
-						errhint("create an index to create a block directory on the ao_row table")));
-		}
-
 		if (!ItemPointerIsValid(currtid))
 		{
 			/* First time in this aoseg: fetch the next tuple to get our bearings */
@@ -2740,45 +2731,52 @@ aocs_scan_sample_seek_block(AOCSScanDesc aocoscan,
 	{
 		int								fsInfoIdx;
 		int 							columnGroupNo = aocoscan->columnScanInfo.proj_atts[colIdx];
-		AppendOnlyBlockDirectoryEntry 	dirEntry = {{0}};
 
-		if (AppendOnlyBlockDirectory_GetEntryForPartialScan(aocoscan->sampleBlkdir,
-															targetblk,
-															columnGroupNo,
-															&dirEntry,
-															&fsInfoIdx))
+		if (RelationIsValid(aocoscan->sampleBlkdir))
 		{
-			/*
-			 * Since we found a block directory entry near start_blockno, we
-			 * can use it to position our scan.
-			 */
-			if (!aocs_positionscan(aocoscan, &dirEntry, colIdx, fsInfoIdx))
-				return false;
-			/*
-			 * aocs_positionscan() isn't exact, the current varblock may have
-			 * tuples from prior logical heap blocks. So, skip over them until we
-			 * reach the 1st visible tuple in the targetBlk.
-			 */
-			while (currblk < targetblk)
+			AppendOnlyBlockDirectoryEntry 	dirEntry = {{0}};
+
+			if (AppendOnlyBlockDirectory_GetEntryForPartialScan(aocoscan->sampleBlkdir,
+																targetblk,
+																columnGroupNo,
+																&dirEntry,
+																&fsInfoIdx))
 			{
-				if (!aoco_getnextslot(&aocoscan->rs_base, ForwardScanDirection, sampleSlot))
+				/*
+				 * Since we found a block directory entry near start_blockno, we
+				 * can use it to position our scan.
+				 */
+				if (!aocs_positionscan(aocoscan, &dirEntry, colIdx, fsInfoIdx))
 					return false;
-				currblk = ItemPointerGetBlockNumber(&sampleSlot->tts_tid);
+			}
+			else
+			{
+				/*
+				 * We were unable to find a block directory row encompassing/preceding
+				 * targetBlk. This represents an edge case where the start block maps to
+				 * a hole at the very beginning of the segfile (and before the first
+				 * minipage entry of the first minipage corresponding to this segfile).
+				 */
+				return false;
 			}
 		}
-		else
-		{
-			/*
-			 * We were unable to find a block directory row encompassing/preceding
-			 * targetBlk. This represents an edge case where the start block maps to
-			 * a hole at the very beginning of the segfile (and before the first
-			 * minipage entry of the first minipage corresponding to this segfile).
-			 */
+		else if (!aocs_positionscan_wo_blkdir(aocoscan, targetblk, colIdx))
 			return false;
-		}
 	}
 
-	return true;
+	/*
+	 * Positioning isn't exact, the current varblock may have tuples from prior
+	 * logical heap blocks. So, skip over them until we reach the 1st visible
+	 * tuple in the targetblk.
+	 */
+	while (currblk < targetblk)
+	{
+		if (!aoco_getnextslot(&aocoscan->rs_base, ForwardScanDirection, sampleSlot))
+			return false;
+		currblk = ItemPointerGetBlockNumber(&sampleSlot->tts_tid);
+	}
+
+	return currblk == targetblk;
 }
 
 /* ------------------------------------------------------------------------

@@ -1,9 +1,8 @@
--- Test Bernoulli and System sampling
+-- Test Bernoulli and System sampling. For System sampling both blkdir and
+-- without blkdir cases are considered.
 
 CREATE TABLE tsample_@amname@(i int) USING @amname@;
 CREATE TABLE
-CREATE INDEX ON tsample_@amname@(i) WHERE i != i;
-CREATE INDEX
 
 -- Case 0: Empty table
 SELECT count(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE BERNOULLI(100);
@@ -16,7 +15,35 @@ SELECT * FROM tsample_@amname@ TABLESAMPLE BERNOULLI(10);
 ---
 (0 rows)
 
+SELECT count(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 0     
+(1 row)
+SELECT count(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE SYSTEM(10);
+ count 
+-------
+ 0     
+(1 row)
+CREATE INDEX ON tsample_@amname@(i) WHERE i != i;
+CREATE INDEX
+SELECT count(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 0     
+(1 row)
+SELECT count(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE SYSTEM(10);
+ count 
+-------
+ 0     
+(1 row)
+
+DROP TABLE tsample_@amname@;
+DROP TABLE
+
 -- Case 1: Single partially populated logical heap block on each QE
+CREATE TABLE tsample_@amname@(i int) USING @amname@;
+CREATE TABLE
 INSERT INTO tsample_@amname@ SELECT generate_series(1, 100);
 INSERT 0 100
 
@@ -126,11 +153,29 @@ SELECT count(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE SYSTEM(100);
  100   
 (1 row)
 
+CREATE INDEX ON tsample_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT COUNT(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(1);
+ count 
+-------
+ 100   
+(1 row)
+SELECT COUNT(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(1);
+ count 
+-------
+ 100   
+(1 row)
+
+SELECT count(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 100   
+(1 row)
+
 -- Case 2: Multiple full logical heap blocks on a single QE
 CREATE TABLE tsample2_@amname@(i int) USING @amname@;
 CREATE TABLE
-CREATE INDEX ON tsample2_@amname@(i) WHERE i != i;
-CREATE INDEX
 INSERT INTO tsample2_@amname@ SELECT 1 FROM generate_series(1, 32767 + 32768 + 32768);
 INSERT 0 98303
 SELECT right(split_part(ctid::text, ',', 1), -1) as blknum, count(*) FROM tsample2_@amname@ GROUP BY 1;
@@ -182,11 +227,29 @@ SELECT COUNT(DISTINCT ctid) FROM tsample2_@amname@ TABLESAMPLE SYSTEM(100);
  98303 
 (1 row)
 
+CREATE INDEX ON tsample2_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT COUNT(DISTINCT ctid) FROM tsample2_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(1);
+ count 
+-------
+ 98303 
+(1 row)
+SELECT COUNT(DISTINCT ctid) FROM tsample2_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(1);
+ count 
+-------
+ 98303 
+(1 row)
+
+SELECT COUNT(DISTINCT ctid) FROM tsample2_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 98303 
+(1 row)
+
 -- Case 3: Multiple full logical heap blocks + a final partial block on a single QE
 CREATE TABLE tsample3_@amname@(i int) USING @amname@;
 CREATE TABLE
-CREATE INDEX ON tsample3_@amname@(i) WHERE i != i;
-CREATE INDEX
 INSERT INTO tsample3_@amname@ SELECT 1 FROM generate_series(1, 32767 + 32768 + 100);
 INSERT 0 65635
 SELECT right(split_part(ctid::text, ',', 1), -1) as blknum, count(*) FROM tsample3_@amname@ GROUP BY 1;
@@ -217,11 +280,46 @@ SELECT count(DISTINCT ctid) FROM tsample3_@amname@ TABLESAMPLE BERNOULLI(100);
  65635 
 (1 row)
 
+SELECT count(DISTINCT ctid) FROM tsample3_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(0);
+ count 
+-------
+ 32868 
+(1 row)
+SELECT count(DISTINCT ctid) FROM tsample3_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(0);
+ count 
+-------
+ 32868 
+(1 row)
+
+SELECT count(DISTINCT ctid) FROM tsample3_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 65635 
+(1 row)
+
+CREATE INDEX ON tsample3_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT count(DISTINCT ctid) FROM tsample3_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(0);
+ count 
+-------
+ 32868 
+(1 row)
+SELECT count(DISTINCT ctid) FROM tsample3_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(0);
+ count 
+-------
+ 32868 
+(1 row)
+
+SELECT count(DISTINCT ctid) FROM tsample3_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 65635 
+(1 row)
+
 -- Case 4: Logical heap block with hole in the beginning on a single QE
 CREATE TABLE tsample4_@amname@(i int) USING @amname@;
 CREATE TABLE
-CREATE INDEX ON tsample4_@amname@(i) WHERE i != i;
-CREATE INDEX
 BEGIN;
 BEGIN
 INSERT INTO tsample4_@amname@ SELECT 1 FROM generate_series(1, 50);
@@ -274,11 +372,29 @@ SELECT count(DISTINCT ctid) FROM tsample4_@amname@ TABLESAMPLE SYSTEM(100);
  32800 
 (1 row)
 
+CREATE INDEX ON tsample4_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT COUNT(DISTINCT ctid) FROM tsample4_@amname@ TABLESAMPLE SYSTEM(66) REPEATABLE(1);
+ count 
+-------
+ 32800 
+(1 row)
+SELECT COUNT(DISTINCT ctid) FROM tsample4_@amname@ TABLESAMPLE SYSTEM(66) REPEATABLE(1);
+ count 
+-------
+ 32800 
+(1 row)
+
+SELECT count(DISTINCT ctid) FROM tsample4_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 32800 
+(1 row)
+
 -- Case 5: Logical heap block with hole in the middle on a single QE
 CREATE TABLE tsample5_@amname@(i int) USING @amname@;
 CREATE TABLE
-CREATE INDEX ON tsample5_@amname@(i) WHERE i != i;
-CREATE INDEX
 INSERT INTO tsample5_@amname@ SELECT 1 FROM generate_series(1, 50);
 INSERT 0 50
 INSERT INTO tsample5_@amname@ SELECT 1 FROM generate_series(1, 32800);
@@ -331,25 +447,49 @@ SELECT count(DISTINCT ctid) FROM tsample5_@amname@ TABLESAMPLE SYSTEM(100);
  32850 
 (1 row)
 
+CREATE INDEX ON tsample5_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT count(DISTINCT ctid) FROM tsample5_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(1);
+ count 
+-------
+ 32850 
+(1 row)
+SELECT count(DISTINCT ctid) FROM tsample5_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(1);
+ count 
+-------
+ 32850 
+(1 row)
+
+SELECT count(DISTINCT ctid) FROM tsample5_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 32850 
+(1 row)
+
 -- Case 6: Logical heap block with hole at the end on a single QE
 CREATE TABLE tsample6_@amname@(i int) USING @amname@;
 CREATE TABLE
-CREATE INDEX ON tsample6_@amname@(i) WHERE i != i;
-CREATE INDEX
 INSERT INTO tsample6_@amname@ SELECT 1 FROM generate_series(1, 32700);
 INSERT 0 32700
+BEGIN;
+BEGIN
 INSERT INTO tsample6_@amname@ SELECT 1 FROM generate_series(1, 200);
 INSERT 0 200
+ABORT;
+ROLLBACK
+INSERT INTO tsample6_@amname@ SELECT 1 FROM generate_series(1, 300);
+INSERT 0 300
 SELECT right(split_part(ctid::text, ',', 1), -1) as blknum, count(*) FROM tsample6_@amname@ GROUP BY 1;
  blknum   | count 
 ----------+-------
- 33554433 | 200   
  33554432 | 32700 
+ 33554433 | 300   
 (2 rows)
 SELECT count(DISTINCT ctid) FROM tsample6_@amname@;
  count 
 -------
- 32900 
+ 33000 
 (1 row)
 
 SELECT ctid FROM tsample6_@amname@ TABLESAMPLE BERNOULLI(0.01) REPEATABLE(1);
@@ -368,31 +508,49 @@ SELECT ctid FROM tsample6_@amname@ TABLESAMPLE BERNOULLI(0.01) REPEATABLE(1);
 SELECT count(DISTINCT ctid) FROM tsample6_@amname@ TABLESAMPLE BERNOULLI(100);
  count 
 -------
- 32900 
+ 33000 
 (1 row)
 
-SELECT count(DISTINCT ctid) FROM tsample6_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(3);
+SELECT count(DISTINCT ctid) FROM tsample6_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(2);
  count 
 -------
- 32700 
+ 300   
 (1 row)
-SELECT count(DISTINCT ctid) FROM tsample6_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(3);
+SELECT count(DISTINCT ctid) FROM tsample6_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(2);
  count 
 -------
- 32700 
+ 300   
 (1 row)
 
 SELECT count(DISTINCT ctid) FROM tsample6_@amname@ TABLESAMPLE SYSTEM(100);
  count 
 -------
- 32900 
+ 33000 
+(1 row)
+
+CREATE INDEX ON tsample6_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT count(DISTINCT ctid) FROM tsample6_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(2);
+ count 
+-------
+ 300   
+(1 row)
+SELECT count(DISTINCT ctid) FROM tsample6_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(2);
+ count 
+-------
+ 300   
+(1 row)
+
+SELECT count(DISTINCT ctid) FROM tsample6_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 33000 
 (1 row)
 
 -- Case 7: Multiple full logical heap blocks across 2 aosegs on a single QE
 CREATE TABLE tsample7_@amname@(i int) USING @amname@;
 CREATE TABLE
-CREATE INDEX ON tsample7_@amname@(i) WHERE i != i;
-CREATE INDEX
 1: BEGIN;
 BEGIN
 2: BEGIN;
@@ -480,11 +638,29 @@ SELECT count(DISTINCT ctid) FROM tsample7_@amname@ TABLESAMPLE SYSTEM(100);
  131070 
 (1 row)
 
+CREATE INDEX ON tsample7_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT count(*) FROM tsample7_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(5);
+ count 
+-------
+ 65534 
+(1 row)
+SELECT count(*) FROM tsample7_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(5);
+ count 
+-------
+ 65534 
+(1 row)
+
+SELECT count(DISTINCT ctid) FROM tsample7_@amname@ TABLESAMPLE SYSTEM(100);
+ count  
+--------
+ 131070 
+(1 row)
+
 -- Case 8: Logical heap blocks with holes across 2 aosegs on a single QE
 CREATE TABLE tsample8_@amname@(i int) USING @amname@;
 CREATE TABLE
-CREATE INDEX ON tsample8_@amname@(i) WHERE i != i;
-CREATE INDEX
 1: BEGIN;
 BEGIN
 2: BEGIN;
@@ -559,6 +735,31 @@ SELECT count(DISTINCT ctid) FROM tsample8_@amname@ TABLESAMPLE SYSTEM(50) REPEAT
 -------
  0     
 (1 row)
+SELECT count(DISTINCT ctid) FROM tsample8_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(0);
+ count 
+-------
+ 0     
+(1 row)
+
+SELECT count(DISTINCT ctid) FROM tsample8_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 45    
+(1 row)
+
+CREATE INDEX ON tsample8_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT count(DISTINCT ctid) FROM tsample8_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(0);
+ count 
+-------
+ 0     
+(1 row)
+SELECT count(DISTINCT ctid) FROM tsample8_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(0);
+ count 
+-------
+ 0     
+(1 row)
 
 SELECT count(DISTINCT ctid) FROM tsample8_@amname@ TABLESAMPLE SYSTEM(100);
  count 
@@ -569,8 +770,6 @@ SELECT count(DISTINCT ctid) FROM tsample8_@amname@ TABLESAMPLE SYSTEM(100);
 -- Case 9: Logical heap blocks with deleted tuples on each QE
 CREATE TABLE tsample9_@amname@(i int, j int) USING @amname@;
 CREATE TABLE
-CREATE INDEX ON tsample9_@amname@(i) WHERE i != i;
-CREATE INDEX
 INSERT INTO tsample9_@amname@ SELECT 1, j FROM generate_series(1, 32767 + 32768 + 100) j;
 INSERT 0 65635
 DELETE FROM tsample9_@amname@ WHERE j < 32767/2;
@@ -631,16 +830,32 @@ SELECT count(DISTINCT ctid) FROM tsample8_@amname@ TABLESAMPLE SYSTEM(100);
  45    
 (1 row)
 
+CREATE INDEX ON tsample9_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT count(DISTINCT ctid) FROM tsample8_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(5);
+ count 
+-------
+ 45    
+(1 row)
+SELECT count(DISTINCT ctid) FROM tsample8_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(5);
+ count 
+-------
+ 45    
+(1 row)
+
+SELECT count(DISTINCT ctid) FROM tsample8_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 45    
+(1 row)
+
 -- Case 10: Test rescans (similar to upstream test in regress/tablesample.sql)
 
 CREATE TABLE ttr1 (a int, b int) USING @amname@ DISTRIBUTED BY (a);
 CREATE TABLE
 CREATE TABLE ttr2 (a int, b int) USING @amname@ DISTRIBUTED BY (a);
 CREATE TABLE
-CREATE INDEX ON ttr1(a);
-CREATE INDEX
-CREATE INDEX ON ttr2(a);
-CREATE INDEX
 
 INSERT INTO ttr1 VALUES (1, 1), (12, 1), (31, 1), (NULL, NULL);
 INSERT 0 4
@@ -674,6 +889,32 @@ SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (50) REPEATABLE (2), ttr2 TABLESAMPLE B
 ----+---+----+---
  31 | 1 | 31 | 2 
 (1 row)
+
+EXPLAIN (COSTS OFF) SELECT * FROM ttr1 TABLESAMPLE SYSTEM (100), ttr2 TABLESAMPLE SYSTEM (100) WHERE ttr1.a = ttr2.a;
+ QUERY PLAN                                         
+----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)           
+   ->  Nested Loop                                  
+         Join Filter: (ttr1.a = ttr2.a)             
+         ->  Sample Scan on ttr1                    
+               Sampling: system ('100'::real)       
+         ->  Materialize                            
+               ->  Sample Scan on ttr2              
+                     Sampling: system ('100'::real) 
+ Optimizer: Postgres-based planner                  
+(9 rows)
+SELECT * FROM ttr1 TABLESAMPLE SYSTEM (100), ttr2 TABLESAMPLE SYSTEM (100) WHERE ttr1.a = ttr2.a;
+ a  | b | a  | b 
+----+---+----+---
+ 1  | 1 | 1  | 2 
+ 12 | 1 | 12 | 2 
+ 31 | 1 | 31 | 2 
+(3 rows)
+
+CREATE INDEX ON ttr1(a);
+CREATE INDEX
+CREATE INDEX ON ttr2(a);
+CREATE INDEX
 
 EXPLAIN (COSTS OFF) SELECT * FROM ttr1 TABLESAMPLE SYSTEM (100), ttr2 TABLESAMPLE SYSTEM (100) WHERE ttr1.a = ttr2.a;
  QUERY PLAN                                         
