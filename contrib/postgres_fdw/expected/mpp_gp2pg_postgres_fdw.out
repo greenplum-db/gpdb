@@ -346,8 +346,8 @@ SELECT sum(c1 * (random() <= 1)::int) as sum, avg(c1) FROM mpp_ft2;
 */
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT c2/2, sum(c2) * (c2/2) FROM mpp_ft2 GROUP BY c2/2 ORDER BY c2/2;
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: ((c2 / 2)), ((sum(c2) * ((c2 / 2))))
    Merge Key: ((c2 / 2))
@@ -358,17 +358,15 @@ SELECT c2/2, sum(c2) * (c2/2) FROM mpp_ft2 GROUP BY c2/2 ORDER BY c2/2;
                Output: ((c2 / 2)), (sum(c2) * ((c2 / 2)))
                Group Key: ((mpp_ft2.c2 / 2))
                ->  Redistribute Motion 2:3  (slice2; segments: 2)
-                     Output: ((c2 / 2)), (PARTIAL sum(c2)), c2
+                     Output: ((c2 / 2)), (PARTIAL sum(c2))
                      Hash Key: ((c2 / 2))
-                     ->  Partial HashAggregate
-                           Output: ((c2 / 2)), PARTIAL sum(c2), c2
-                           Group Key: (mpp_ft2.c2 / 2)
-                           ->  Foreign Scan on public.mpp_ft2
-                                 Output: (c2 / 2), c2
-                                 Remote SQL: SELECT c2 FROM "MPP_S 1"."T 2"
- Optimizer: Postgres query optimizer
- Settings: gp_enable_minmax_optimization = 'off', optimizer = 'off'
-(20 rows)
+                     ->  Foreign Scan
+                           Output: ((c2 / 2)), (PARTIAL sum(c2))
+                           Relations: Aggregate on (public.mpp_ft2)
+                           Remote SQL: SELECT (c2 / 2), sum(c2) FROM "MPP_S 1"."T 2" GROUP BY 1
+ Optimizer: Postgres-based planner
+ Settings: gp_enable_minmax_optimization = 'off'
+(18 rows)
 
 SELECT c2/2, sum(c2) * (c2/2) FROM mpp_ft2 GROUP BY c2/2 ORDER BY c2/2;
  ?column? | ?column? 

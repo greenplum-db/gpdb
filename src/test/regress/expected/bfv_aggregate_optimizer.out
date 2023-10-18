@@ -1862,36 +1862,30 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into ex1 select i,i,i from generate_series(1, 10) i;
 insert into ex2 select i,i,i from generate_series(1, 10) i;
 explain (verbose on, costs off) select ex2.b/2, sum(ex1.a) from ex1, (select a, coalesce(b, 1) b from ex2) ex2 where ex1.a = ex2.a group by ex2.b/2;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
+                             QUERY PLAN                              
+---------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: (((COALESCE(ex2.b, 1)) / 2)), (sum(ex1.a))
-   ->  Finalize GroupAggregate
+   ->  GroupAggregate
          Output: (((COALESCE(ex2.b, 1)) / 2)), sum(ex1.a)
          Group Key: (((COALESCE(ex2.b, 1)) / 2))
          ->  Sort
-               Output: (((COALESCE(ex2.b, 1)) / 2)), (PARTIAL sum(ex1.a))
+               Output: ex1.a, (((COALESCE(ex2.b, 1)) / 2))
                Sort Key: (((COALESCE(ex2.b, 1)) / 2))
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Output: (((COALESCE(ex2.b, 1)) / 2)), (PARTIAL sum(ex1.a))
+                     Output: ex1.a, (((COALESCE(ex2.b, 1)) / 2))
                      Hash Key: (((COALESCE(ex2.b, 1)) / 2))
-                     ->  Partial GroupAggregate
-                           Output: (((COALESCE(ex2.b, 1)) / 2)), PARTIAL sum(ex1.a)
-                           Group Key: (((COALESCE(ex2.b, 1)) / 2))
-                           ->  Sort
-                                 Output: (((COALESCE(ex2.b, 1)) / 2)), ex1.a
-                                 Sort Key: (((COALESCE(ex2.b, 1)) / 2))
-                                 ->  Hash Join
-                                       Output: ((COALESCE(ex2.b, 1)) / 2), ex1.a
-                                       Hash Cond: (ex2.a = ex1.a)
-                                       ->  Seq Scan on bfv_aggregate.ex2
-                                             Output: COALESCE(ex2.b, 1), ex2.a
-                                       ->  Hash
-                                             Output: ex1.a
-                                             ->  Seq Scan on bfv_aggregate.ex1
-                                                   Output: ex1.a
- Optimizer: Pivotal Optimizer (GPORCA)
-(27 rows)
+                     ->  Hash Join
+                           Output: ex1.a, ((COALESCE(ex2.b, 1)) / 2)
+                           Hash Cond: (ex2.a = ex1.a)
+                           ->  Seq Scan on bfv_aggregate.ex2
+                                 Output: COALESCE(ex2.b, 1), ex2.a
+                           ->  Hash
+                                 Output: ex1.a
+                                 ->  Seq Scan on bfv_aggregate.ex1
+                                       Output: ex1.a
+ Optimizer: GPORCA
+(21 rows)
 
 select ex2.b/2, sum(ex1.a) from ex1, (select a, coalesce(b, 1) b from ex2) ex2 where ex1.a = ex2.a group by ex2.b/2;
  ?column? | sum 
@@ -1905,29 +1899,23 @@ select ex2.b/2, sum(ex1.a) from ex1, (select a, coalesce(b, 1) b from ex2) ex2 w
 (6 rows)
 
 explain (verbose on, costs off) SELECT b/2, sum(b) * (b/2) FROM ex1  GROUP BY b/2;
-                            QUERY PLAN                             
--------------------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: ((b / 2)), ((sum(b) * ((b / 2))))
-   ->  Finalize GroupAggregate
+   ->  GroupAggregate
          Output: ((b / 2)), (sum(b) * ((b / 2)))
          Group Key: ((ex1.b / 2))
          ->  Sort
-               Output: ((b / 2)), (PARTIAL sum(b))
+               Output: b, ((b / 2))
                Sort Key: ((ex1.b / 2))
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Output: ((b / 2)), (PARTIAL sum(b))
+                     Output: b, ((b / 2))
                      Hash Key: ((b / 2))
-                     ->  Partial GroupAggregate
-                           Output: ((b / 2)), PARTIAL sum(b)
-                           Group Key: ((ex1.b / 2))
-                           ->  Sort
-                                 Output: ((b / 2)), b
-                                 Sort Key: ((ex1.b / 2))
-                                 ->  Seq Scan on bfv_aggregate.ex1
-                                       Output: (b / 2), b
- Optimizer: Pivotal Optimizer (GPORCA)
-(20 rows)
+                     ->  Seq Scan on bfv_aggregate.ex1
+                           Output: b, (b / 2)
+ Optimizer: GPORCA
+(14 rows)
 
 SELECT b/2, sum(b) * (b/2) FROM ex1  GROUP BY b/2;
  ?column? | ?column? 
