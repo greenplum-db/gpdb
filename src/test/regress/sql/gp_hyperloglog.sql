@@ -53,3 +53,22 @@ SELECT gp_hyperloglog_get_estimate('8gYCAP////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 -- b) Test convert an invalid hloglog counter.
 SELECT gp_hyperloglog_get_estimate('blah');
+
+-- 5. Test gp_hyperloglog_merge as aggregate function
+-- a) Test aggregate three rows
+SELECT gp_hyperloglog_get_estimate(gp_hyperloglog_merge(c)) FROM (
+    SELECT gp_hyperloglog_accum(i) c FROM generate_series(1, 10000) i
+    UNION ALL
+    SELECT gp_hyperloglog_accum(i) c FROM generate_series(1, 100) i
+    UNION ALL
+    SELECT gp_hyperloglog_accum(i) c FROM generate_series(1, 10) i
+) T;
+
+-- b) Test aggregate with nulls
+SELECT gp_hyperloglog_get_estimate(gp_hyperloglog_merge(c)) FROM (
+    SELECT NULL c
+    UNION ALL
+    SELECT gp_hyperloglog_accum(i) c FROM generate_series(1, 100) i
+    UNION ALL
+    SELECT gp_hyperloglog_accum(i) c FROM generate_series(1, 10) i
+) T;
