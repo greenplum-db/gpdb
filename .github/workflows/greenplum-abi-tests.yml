@@ -42,7 +42,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: exception_lists
-          path: '.abi-check/${{ outputs.BASELINE_VERSION }}/'
+          path: '.abi-check/${{ steps.vars.outputs.BASELINE_VERSION }}/'
 
   abi-dump:
     needs: abi-dump-setup
