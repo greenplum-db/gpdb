@@ -253,6 +253,12 @@ class GpRecoverSegmentProgram:
         if self.__options.differentialResynchronization and self.__options.outputSampleConfigFile:
             raise ProgramArgumentValidationException("Invalid -o provided with --differential argument")
 
+        if self.__options.recoveryConfigFile and self.__options.outputSampleConfigFile:
+            raise ProgramArgumentValidationException("Invalid -i provided with -o argument")
+
+        if self.__options.rebalanceSegments and self.__options.outputSampleConfigFile:
+            raise ProgramArgumentValidationException("Invalid -r provided with -o argument")
+
         if self.__options.replayLag and not self.__options.rebalanceSegments:
             raise ProgramArgumentValidationException("--replay-lag should be used only with -r")
 

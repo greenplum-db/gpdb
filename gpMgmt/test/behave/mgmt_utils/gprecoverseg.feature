@@ -682,6 +682,19 @@ Feature: gprecoverseg tests
         | differential | -a --differential  |
         | full         | -aF                |
 
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg throws exception when -o flag used with invalid flags
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    When the user runs "gprecoverseg -o output_config -i input_config"
+    Then gprecoverseg should return a return code of 2
+    And gprecoverseg should print "Invalid -i provided with -o argument" to stdout
+    When the user runs "gprecoverseg -o /tmp/output_config -r"
+    Then gprecoverseg should return a return code of 2
+    And gprecoverseg should print "Invalid -r provided with -o argument" to stdout
+
   @concourse_cluster
   Scenario Outline: <scenario> incremental recovery works with tablespaces on a multi-host environment
     Given the database is running
