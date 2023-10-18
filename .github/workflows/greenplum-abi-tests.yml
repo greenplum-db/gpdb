@@ -38,6 +38,12 @@ jobs:
           echo "ABI_LIBS=postgres" | tee -a $GITHUB_OUTPUT
           echo "ABI_HEADERS=." | tee -a $GITHUB_OUTPUT
 
+      - name: Upload symbol/type checking exception list
+        uses: actions/upload-artifact@v3
+        with:
+          name: exception_lists
+          path: '.abi-check/${{ outputs.BASELINE_VERSION }}/'
+
   abi-dump:
     needs: abi-dump-setup
     runs-on: ubuntu-latest
@@ -112,11 +118,6 @@ jobs:
     runs-on: ubuntu-latest
     container: gcr.io/data-gpdb-public-images/gpdb6-rocky8-build
     steps:
-      ## We need to fetch the source again since we need to skip checking some symbols
-      ## which are defined under the 'gpdb_src/.abi-check/' directory.
-      - name: Fetch source
-        uses: actions/checkout@v3
-
       - name: Download baseline
         uses: actions/download-artifact@v3
         with:
@@ -128,6 +129,12 @@ jobs:
           name: build-latest
           path: build-latest/
 
+      - name: Download exception lists
+        uses: actions/download-artifact@v3
+        with:
+          name: exception_lists
+          path: exception_lists/
+
       - name: Install abi-compliance-checker and report viewer (lynx)
         run: |
           yum install -y epel-release
@@ -136,12 +143,13 @@ jobs:
 
       - name: Compare ABI
         run: |
-          SKIP_POSTGRES_SYMBOLS_LIST=".abi-check/${{ needs.abi-dump-setup.outputs.BASELINE_VERSION }}/postgres.symbols.ignore"
+          ls -alR exception_lists/
+          SKIP_POSTGRES_SYMBOLS_LIST="exception_lists/postgres.symbols.ignore"
           SKIP_POSTGRES_SYMBOLS_OPTION=""
           if [[ -f "$SKIP_POSTGRES_SYMBOLS_LIST" ]]; then
             SKIP_POSTGRES_SYMBOLS_OPTION="-skip-symbols ${SKIP_POSTGRES_SYMBOLS_LIST}"
           fi
-          SKIP_POSTGRES_TYPES_LIST=".abi-check/${{ needs.abi-dump-setup.outputs.BASELINE_VERSION }}/postgres.types.ignore"
+          SKIP_POSTGRES_TYPES_LIST="exception_lists/postgres.types.ignore"
           SKIP_POSTGRES_TYPES_OPTION=""
           if [[ -f "$SKIP_POSTGRES_TYPES_LIST" ]]; then
             SKIP_POSTGRES_TYPES_OPTION="-skip-types ${SKIP_POSTGRES_TYPES_LIST}"
