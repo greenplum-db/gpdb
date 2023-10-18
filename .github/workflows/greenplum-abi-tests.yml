@@ -143,7 +143,6 @@ jobs:
 
       - name: Compare ABI
         run: |
-          ls -alR exception_lists/
           SKIP_POSTGRES_SYMBOLS_LIST="exception_lists/postgres.symbols.ignore"
           SKIP_POSTGRES_SYMBOLS_OPTION=""
           if [[ -f "$SKIP_POSTGRES_SYMBOLS_LIST" ]]; then
