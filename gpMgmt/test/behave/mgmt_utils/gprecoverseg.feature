@@ -682,6 +682,39 @@ Feature: gprecoverseg tests
         | differential | -a --differential  |
         | full         | -aF                |
 
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg creates output sample config file correctly when failed segment hosts are unreachable
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    And the primary on content 1 is stopped
+    And user can start transactions
+    And the primary on content 2 is stopped
+    And user can start transactions
+    And the status of the primary on content 1 should be "d"
+    And the status of the primary on content 2 should be "d"
+    And the host for the primary on content 1 is made unreachable
+    When the user runs "gprecoverseg -o /tmp/output_config"
+    Then gprecoverseg should return a return code of 0
+    And gprecoverseg should print "One or more hosts are not reachable via SSH." to stdout
+    And gprecoverseg should print "Host invalid_host is unreachable" to stdout
+    And the created config file /tmp/output_config contains the row for unreachable failed segment
+    And the cluster is returned to a good state
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg throws exception when -o flag used with invalid flags
+    Given the database is running
+    And all the segments are running
+    And the segments are synchronized
+    When the user runs "gprecoverseg -o output_config -i input_config"
+    Then gprecoverseg should return a return code of 2
+    And gprecoverseg should print "Invalid -i provided with -o argument" to stdout
+    When the user runs "gprecoverseg -o /tmp/output_config -r"
+    Then gprecoverseg should return a return code of 2
+    And gprecoverseg should print "Invalid -r provided with -o argument" to stdout
+
   @concourse_cluster
   Scenario Outline: <scenario> incremental recovery works with tablespaces on a multi-host environment
     Given the database is running

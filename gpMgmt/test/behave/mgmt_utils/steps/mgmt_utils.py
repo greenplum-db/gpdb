@@ -42,6 +42,7 @@ from test.behave_utils.cluster_expand import Gpexpand
 from test.behave_utils.gpexpand_dml import TestDML
 from gppylib.commands.base import Command, REMOTE
 from gppylib import pgconf
+from gppylib.parseutils import canonicalize_address
 
 
 master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
@@ -4337,4 +4338,28 @@ def impl(context, dbname):
         datname, oid = dbconn.execSQLForSingletonRow(conn, query)
         context.db_name = datname
         context.db_oid = oid
+
+@then('the created config file {output_config_file} contains the row for unreachable failed segment')
+def impl(context, output_config_file):
+    all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
+    failed_segments = filter(lambda seg: seg.getSegmentStatus() == 'd', all_segments)
+
+    expected_seg_rows = []
+    actual_seg_rows = []
+    for seg in failed_segments:
+        addr = canonicalize_address(seg.getSegmentAddress())
+        expected_seg_rows.append('{}|{}|{}'.format(addr, seg.getSegmentPort(), seg.getSegmentDataDirectory()))
+
+    if os.path.exists(output_config_file):
+        with open(output_config_file, 'r') as fp:
+            config_lines = fp.readlines()
+
+        for line in config_lines:
+            actual_seg_rows.append(line.strip())
+    else:
+        raise Exception("{} file does not exist".format(output_config_file))
+
+    if set(expected_seg_rows) != set(actual_seg_rows):
+        raise Exception("created config file {} does not contain all of the expected rows".format(output_config_file))
+
 

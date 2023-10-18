@@ -99,16 +99,15 @@ class GpRecoverSegmentProgram:
     def getRecoveryActionsBasedOnOptions(self, gpEnv, gpArray):
         if self.__options.rebalanceSegments:
             return GpSegmentRebalanceOperation(gpEnv, gpArray, self.__options.parallelDegree, self.__options.parallelPerHost, self.__options.replayLag)
-        else:
-            instance = RecoveryTripletsFactory.instance(gpArray, self.__options.recoveryConfigFile, self.__options.newRecoverHosts, self.__options.parallelDegree)
-            segs = [GpMirrorToBuild(t.failed, t.live, t.failover, self.__options.forceFullResynchronization, self.__options.differentialResynchronization)
-                    for t in instance.getTriplets()]
-            return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
-                                       self.__options.parallelDegree,
-                                       instance.getInterfaceHostnameWarnings(),
-                                       forceoverwrite=True,
-                                       progressMode=self.getProgressMode(),
-                                       parallelPerHost=self.__options.parallelPerHost)
+        instance = RecoveryTripletsFactory.instance(gpArray, self.__options.recoveryConfigFile, self.__options.newRecoverHosts, self.__options.outputSampleConfigFile, self.__options.parallelDegree)
+        segs = [GpMirrorToBuild(t.failed, t.live, t.failover, self.__options.forceFullResynchronization, self.__options.differentialResynchronization)
+                for t in instance.getTriplets()]
+        return GpMirrorListToBuild(segs, self.__pool, self.__options.quiet,
+                                   self.__options.parallelDegree,
+                                   instance.getInterfaceHostnameWarnings(),
+                                   forceoverwrite=True,
+                                   progressMode=self.getProgressMode(),
+                                   parallelPerHost=self.__options.parallelPerHost)
 
     def syncPackages(self, new_hosts):
         # The design decision here is to squash any exceptions resulting from the
