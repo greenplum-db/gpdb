@@ -4166,16 +4166,23 @@ CXformUtils::FCoverIndex(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
 // CXformUtils::ComputeOrderSpecForIndexKey
 //
 // Determine the OrderSpec for an index key based on the direction of
-// the index scan and the position of the index key.
+// the index scan and the position of the index key. This function
+// creates a new OrderSpec object and computes its value if a nullptr is
+// passed; otherwise, it appends to the existing OrderSpec object.
 //---------------------------------------------------------------------------
-COrderSpec *
+void
 CXformUtils::ComputeOrderSpecForIndexKey(CMemoryPool *mp,
+										 COrderSpec **order_spec,
 										 const IMDIndex *pmdindex,
 										 EIndexScanDirection scan_direction,
 										 const CColRef *colref,
 										 ULONG key_position)
 {
-	COrderSpec *order_spec = GPOS_NEW(mp) COrderSpec(mp);
+	// Create a new OrderSpec object if a nullptr is passed
+	if (*order_spec == nullptr)
+	{
+		(*order_spec) = GPOS_NEW(mp) COrderSpec(mp);
+	}
 	IMDId *mdid = nullptr;
 	COrderSpec::ENullTreatment ent = COrderSpec::EntLast;
 	// if scan direction is forward, order spec computed should match
@@ -4213,7 +4220,6 @@ CXformUtils::ComputeOrderSpecForIndexKey(CMemoryPool *mp,
 				: COrderSpec::EntLast;
 	}
 	mdid->AddRef();
-	order_spec->Append(mdid, colref, ent);
-	return order_spec;
+	(*order_spec)->Append(mdid, colref, ent);
 }
 // EOF

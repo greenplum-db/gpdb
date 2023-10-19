@@ -170,9 +170,11 @@ CXformMinMax2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 
 		if (pexprIndexGet != nullptr)
 		{
-			// Compute the required OrderSpec for first index key
-			COrderSpec *pos = CXformUtils::ComputeOrderSpecForIndexKey(
-				mp, pmdindex, scan_direction, agg_colref, 0 /*key position*/);
+			COrderSpec *pos = nullptr;
+			// Compute and update the required OrderSpec for first index key
+			CXformUtils::ComputeOrderSpecForIndexKey(mp, &pos, pmdindex,
+													 scan_direction, agg_colref,
+													 0 /*key position*/);
 
 			// build Limit expression
 			CExpression *pexprLimit = CUtils::BuildLimitExprWithOrderSpec(

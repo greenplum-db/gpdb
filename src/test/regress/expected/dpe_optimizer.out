@@ -307,7 +307,7 @@ select disable_xform('CXformSelect2DynamicIndexGet');
 (1 row)
 
 explain (costs off, timing off, summary off, analyze) select * from pt where exists (select 1 from t where tid = ptid and t1 = 'hello' || tid);
-                                         QUERY PLAN
+                                         QUERY PLAN                                          
 ---------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=18 loops=1)
    ->  Hash Semi Join (actual rows=8 loops=1)
@@ -323,7 +323,7 @@ explain (costs off, timing off, summary off, analyze) select * from pt where exi
                      ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=2 loops=1)
                            ->  Seq Scan on t (actual rows=2 loops=1)
                                  Filter: (t1 = ('hello'::text || (tid)::text))
- Optimizer: GPORCA
+ Optimizer: Pivotal Optimizer (GPORCA)
 (15 rows)
 
 select * from pt where exists (select 1 from t where tid = ptid and t1 = 'hello' || tid);
