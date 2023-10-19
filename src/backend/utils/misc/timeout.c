@@ -382,14 +382,23 @@ RegisterTimeout(TimeoutId id, timeout_handler_proc handler)
 	Assert(all_timeouts_initialized);
 
 	/* There's no need to disable the signal handler here. */
-
-	if (id >= USER_TIMEOUT)
+	/*
+	 * GP_ABI_BUMP_FIXME
+	 *
+	 * all the GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT here were MAX_TIMEOUTS,
+	 * we did the change to avoid ABI break via putting the
+	 * GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT after the reserved
+	 * USER_TIMEOUTs and before MAX_TIMEOUTS.
+	 *
+	 * restore to the original shape once we are fine to bump the ABI version.
+	 */
+	if (id >= USER_TIMEOUT && id < GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT)
 	{
 		/* Allocate a user-defined timeout reason */
-		for (id = USER_TIMEOUT; id < MAX_TIMEOUTS; id++)
+		for (id = USER_TIMEOUT; id < GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT; id++)
 			if (all_timeouts[id].timeout_handler == NULL)
 				break;
-		if (id >= MAX_TIMEOUTS)
+		if (id >= GP_PARALLEL_RETRIEVE_CURSOR_CHECK_TIMEOUT)
 			ereport(FATAL,
 					(errcode(ERRCODE_CONFIGURATION_LIMIT_EXCEEDED),
 					 errmsg("cannot add more timeout reasons")));
