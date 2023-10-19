@@ -266,7 +266,7 @@ COptTasks::LogExceptionMessageAndDelete(CHAR *err_buf)
 PlannedStmt *
 COptTasks::ConvertToPlanStmtFromDXL(
 	CMemoryPool *mp, CMDAccessor *md_accessor, const Query *orig_query,
-	const CDXLNode *dxlnode, bool can_set_tag,
+	const CDXLNode *dxlnode, Query *query,
 	DistributionHashOpsKind distribution_hashops)
 {
 	GPOS_ASSERT(nullptr != md_accessor);
@@ -288,7 +288,7 @@ COptTasks::ConvertToPlanStmtFromDXL(
 	CTranslatorDXLToPlStmt dxl_to_plan_stmt_translator(
 		mp, md_accessor, &dxl_to_plan_stmt_ctxt, gpdb::GetGPSegmentCount());
 	return dxl_to_plan_stmt_translator.GetPlannedStmtFromDXL(
-		dxlnode, orig_query, can_set_tag);
+		dxlnode, orig_query, query->canSetTag, query->queryId);
 }
 
 
@@ -585,8 +585,7 @@ COptTasks::OptimizeTask(void *ptr)
 				// that may not have the correct can_set_tag
 				opt_ctxt->m_plan_stmt =
 					(PlannedStmt *) gpdb::CopyObject(ConvertToPlanStmtFromDXL(
-						mp, &mda, opt_ctxt->m_query, plan_dxl,
-						opt_ctxt->m_query->canSetTag,
+						mp, &mda, opt_ctxt->m_query, plan_dxl, opt_ctxt->m_query,
 						query_to_dxl_translator->GetDistributionHashOpsKind()));
 			}
 
