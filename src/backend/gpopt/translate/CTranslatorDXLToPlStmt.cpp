@@ -1125,6 +1125,11 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 	{
 		CDXLNode *index_cond_dxlnode = (*index_cond_list_dxlnode)[ul];
 		CDXLNode *modified_null_test_cond_dxlnode = nullptr;
+
+		// FIXME: Remove this translation from BoolExpr to NullTest when ORCA gets rid of
+		// translation of 'x IS NOT NULL' to 'NOT (x IS NULL)'. Here's the ticket that tracks
+		// the issue: https://github.com/greenplum-db/gpdb/issues/16294
+
 		// Translate index condition CDXLScalarBoolExpr of format 'NOT (col IS NULL)'
 		// to CDXLScalarNullTest 'col IS NOT NULL', because IndexScan only
 		// supports indexquals of types: OpExpr, RowCompareExpr,
@@ -1139,9 +1144,11 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 					EdxlopScalarNullTest)
 			{
 				CDXLNode *null_test_cond_dxlnode = (*index_cond_dxlnode)[0];
+				CDXLNode *scalar_ident_dxlnode = (*null_test_cond_dxlnode)[0];
+				scalar_ident_dxlnode->AddRef();
 				modified_null_test_cond_dxlnode = GPOS_NEW(m_mp) CDXLNode(
 					m_mp, GPOS_NEW(m_mp) CDXLScalarNullTest(m_mp, false),
-					(*null_test_cond_dxlnode)[0]);
+					scalar_ident_dxlnode);
 				index_cond_dxlnode = modified_null_test_cond_dxlnode;
 			}
 		}
