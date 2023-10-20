@@ -2180,8 +2180,6 @@ CPredicateUtils::ExtractIndexPredicates(
 			// Expression is not transformed to a comparison as 'col IS NULL'
 			// or 'col IS NOT NULL' are not equivalent to 'col = NULL' or
 			// 'col!=NULL' respectively.
-			pdrgpexprTarget->Append(pexprCond);
-			continue;
 		}
 		else
 		{
