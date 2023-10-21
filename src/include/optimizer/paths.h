@@ -237,12 +237,13 @@ extern DistributionKey *cdb_make_distkey_for_expr(PlannerInfo  *root,
 												  RelOptInfo *rel,
 												  Node *expr, Oid opfamily /* hash opfamily */, int sortref);
 extern EquivalenceClass *
-cdb_pull_up_eclass(PlannerInfo    *root,
-					EquivalenceClass *eclass,
-                    Relids          relids,
-                    List           *targetlist,
-                    List           *newvarlist,
-                    Index           newrelid);
+cdb_pull_up_eclass(PlannerInfo *root,
+				   EquivalenceClass *eclass,
+				   Relids relids,
+				   List *targetlist,
+				   List *newvarlist,
+				   Index newrelid,
+				   Oid opfamily);
 
 extern List *make_pathkeys_for_sortclauses(PlannerInfo *root,
 										   List *sortclauses,

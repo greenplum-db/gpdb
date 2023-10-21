@@ -489,7 +489,8 @@ cdbpathlocus_from_subquery(struct PlannerInfo *root,
 											  rel->relids,
 											  usable_subtlist,
 											  new_vars,
-											  -1 /* not used */);
+											  -1 /* not used */,
+											  sub_dk->dk_opfamily);
 				if (outer_ec)
 				{
 					outer_dk = makeNode(DistributionKey);
@@ -637,7 +638,8 @@ cdbpathlocus_pull_above_projection(struct PlannerInfo *root,
 											relids,
 											targetlist,
 											newvarlist,
-											newrelid);
+											newrelid,
+											olddistkey->dk_opfamily);
 				if (new_ec)
 					break;
 			}

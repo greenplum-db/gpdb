@@ -1494,8 +1494,13 @@ cdb_pull_up_eclass(PlannerInfo *root,
 				   Relids relids,
 				   List *targetlist,
 				   List *newvarlist,
-				   Index newrelid)
+				   Index newrelid,
+				   Oid opfamily)
 {
+	Oid			typeoid;
+	Oid			eqopoid;
+	Oid			lefttype;
+	Oid			righttype;
 	Expr	   *sub_distkeyexpr;
 	EquivalenceClass *outer_ec;
 	Expr	   *newexpr = NULL;
@@ -1538,6 +1543,27 @@ cdb_pull_up_eclass(PlannerInfo *root,
 	if (!newexpr)
 		elog(ERROR, "could not pull up equivalence class using projected target list");
 
+	/* Get the expr's data type. */
+	typeoid = exprType((Node *) newexpr);
+
+	/* If it's a domain, look at the base type instead */
+	typeoid = getBaseType(typeoid);
+
+	eqopoid = cdb_eqop_in_hash_opfamily(opfamily, typeoid);
+
+	/*
+	 * Get the equality operator's operand type. It might be different from the
+	 * original datatype, if the datatype itself doesn't have an equivalence
+	 * operator, but relies on casts. For example with two varchars, "a = b" uses
+	 * the text equals operator, i.e. "a::text = b::text".
+	 */
+	op_input_types(eqopoid, &lefttype, &righttype);
+	Assert(lefttype == righttype);
+
+	/* If this type is a domain type, get its base type. */
+	if (get_typtype(lefttype) == TYPTYPE_DOMAIN)
+		lefttype = getBaseType(lefttype);
+
 	/*
 	 * It should be OK to set nullable_relids = NULL, since this eclass is only
 	 * used for DistributionKey, so it would not participate in qual deduction.
@@ -1546,7 +1572,7 @@ cdb_pull_up_eclass(PlannerInfo *root,
 										newexpr,
 										NULL,
 										eclass->ec_opfamilies,
-										exprType((Node *) newexpr),
+										lefttype,
 										exprCollation((Node *) newexpr),
 										0,
 										relids,
