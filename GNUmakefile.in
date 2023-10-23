@@ -31,6 +31,7 @@ all:
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo all
 endif
+	$(MAKE) -C contrib/tablefunc all
 ifneq ($(with_uuid),no)
 	$(MAKE) -C contrib/uuid-ossp all
 endif
@@ -77,6 +78,7 @@ install:
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo $@
 endif
+	$(MAKE) -C contrib/tablefunc $@
 ifneq ($(with_uuid),no)
 	$(MAKE) -C contrib/uuid-ossp $@
 endif
@@ -181,6 +183,7 @@ ICW_TARGETS += contrib/indexscan contrib/hstore contrib/ltree contrib/pgcrypto c
 ifeq ($(with_openssl), yes)
 ICW_TARGETS += contrib/sslinfo
 endif
+ICW_TARGETS += contrib/tablefunc
 ifneq ($(with_uuid),no)
 ICW_TARGETS += contrib/uuid-ossp
 endif
