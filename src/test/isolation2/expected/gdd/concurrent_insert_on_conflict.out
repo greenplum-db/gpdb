@@ -1,0 +1,21 @@
+--
+-- Test case for concurrent insert on conflict and drop a table
+--
+CREATE TABLE t_concurrent_insert(a int primary key, b int);
+CREATE TABLE
+
+1: BEGIN;
+BEGIN
+1: DROP TABLE t_concurrent_insert;
+DROP TABLE
+2&: INSERT INTO t_concurrent_insert VALUES(1, 1) ON CONFLICT(a) DO UPDATE SET b = excluded.b;  <waiting ...>
+1: COMMIT;
+COMMIT
+
+-- insert failed, rather than segment fault
+2<:  <... completed>
+ERROR:  relation "t_concurrent_insert" does not exist
+LINE 1: INSERT INTO t_concurrent_insert VALUES(1, 1) ON CONFLICT(a) ...
+                    ^
+1q: ... <quitting>
+2q: ... <quitting>

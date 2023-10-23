@@ -222,7 +222,9 @@ CdbTryOpenTable(Oid relid, LOCKMODE reqmode, bool *lockUpgraded)
 		{
 			lockmode = RowExclusiveLock;
 			rel = try_table_open(relid, lockmode, false);
-			if (RelationIsAppendOptimized(rel))
+
+			if (RelationIsValid(rel) &&
+				RelationIsAppendOptimized(rel))
 			{
 				/*
 				 * AO|AOCO table does not support concurrently
