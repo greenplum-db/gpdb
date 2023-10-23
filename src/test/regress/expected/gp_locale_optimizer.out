@@ -1,0 +1,62 @@
+DROP DATABASE IF EXISTS testdb3;
+CREATE DATABASE testdb3 WITH LC_COLLATE='C' LC_CTYPE='C' TEMPLATE=template0;
+\c testdb3
+CREATE TABLE hi_안녕세계 (a int, 안녕세계 text) DISTRIBUTED BY (a);
+INSERT INTO hi_안녕세계 VALUES(1, '안녕세계 1');
+INSERT INTO hi_안녕세계 VALUES(42, '안녕세계 42');
+SET optimizer_trace_fallback=on;
+-- without setting optimizer_locale_for_query_to_dxl_translation the following queries should fall back.
+SHOW optimizer_locale_for_query_to_dxl_translation;
+ optimizer_locale_for_query_to_dxl_translation 
+-----------------------------------------------
+ 
+(1 row)
+
+EXPLAIN DELETE FROM hi_안녕세계 WHERE a=42;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Invalid multibyte character for locale encountered in metadata name
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Delete on "hi_안녕세계"  (cost=0.00..240.67 rows=17 width=10)
+   ->  Seq Scan on "hi_안녕세계"  (cost=0.00..240.67 rows=17 width=10)
+         Filter: (a = 42)
+ Optimizer: Postgres-based planner
+(4 rows)
+
+EXPLAIN SELECT * FROM hi_안녕세계;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Invalid multibyte character for locale encountered in metadata name
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..860.67 rows=49600 width=36)
+   ->  Seq Scan on "hi_안녕세계"  (cost=0.00..199.33 rows=16533 width=36)
+ Optimizer: Postgres-based planner
+(3 rows)
+
+-- with valid optimizer_locale_for_query_to_dxl_translation setting the following queries shouldn't fall back.
+SET optimizer_locale_for_query_to_dxl_translation='en_US.UTF-8';
+EXPLAIN DELETE FROM hi_안녕세계 WHERE a=42;
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Delete on "hi_안녕세계"  (cost=0.00..431.03 rows=1 width=1)
+   ->  Seq Scan on "hi_안녕세계"  (cost=0.00..431.00 rows=1 width=22)
+         Filter: (a = 42)
+ Optimizer: GPORCA
+(4 rows)
+
+DELETE FROM hi_안녕세계 WHERE a=42;
+EXPLAIN SELECT * FROM hi_안녕세계;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=12)
+   ->  Seq Scan on "hi_안녕세계"  (cost=0.00..431.00 rows=1 width=12)
+ Optimizer: GPORCA
+(3 rows)
+
+SELECT * FROM hi_안녕세계;
+ a |  안녕세계  
+---+------------
+ 1 | 안녕세계 1
+(1 row)
+
+RESET optimizer_locale_for_query_to_dxl_translation;
