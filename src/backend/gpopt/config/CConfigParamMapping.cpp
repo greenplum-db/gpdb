@@ -517,6 +517,10 @@ CConfigParamMapping::PackConfigParamInBitset(
 	// enable using opfamilies in distribution specs for GPDB 6
 	traceflag_bitset->ExchangeSet(EopttraceConsiderOpfamiliesForDistribution);
 
+	// set optimizer locale for vswprintf() used in query to DXL translation
+	ITask::Self()->SetLocaleForQueryToDXLTranslation(
+		optimizer_locale_for_query_to_dxl_translation);
+
 	return traceflag_bitset;
 }
 

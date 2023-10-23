@@ -276,6 +276,7 @@ int			optimizer_cost_model;
 bool		optimizer_metadata_caching;
 int			optimizer_mdcache_size;
 bool		optimizer_use_gpdb_allocators;
+char	   *optimizer_locale_for_query_to_dxl_translation;
 
 /* Optimizer debugging GUCs */
 bool		optimizer_print_query;
@@ -4494,6 +4495,17 @@ struct config_string ConfigureNamesString_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
 		},
 		&qdHostname,
+		"",
+		NULL, NULL, NULL
+	},
+
+	{
+		{"optimizer_locale_for_query_to_dxl_translation", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Set backend locale for multibyte to wide string conversion."),
+			gettext_noop("Valid values align with setlocale() 'locale' argument (e.g. 'en_US.UTF-8')"),
+			GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_locale_for_query_to_dxl_translation,
 		"",
 		NULL, NULL, NULL
 	},

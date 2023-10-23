@@ -11,6 +11,8 @@
 #ifndef GPOS_CTask_H
 #define GPOS_CTask_H
 
+#include <string>
+
 #include "gpos/base.h"
 #include "gpos/common/CList.h"
 #include "gpos/error/CErrorContext.h"
@@ -124,6 +126,10 @@ private:
 		m_reported = true;
 	}
 
+	// locale setting used while calling vswprintf/wcstombs for query to DXL
+	// translation
+	std::string m_localeForQueryToDXLTranslation;
+
 public:
 	CTask(const CTask &) = delete;
 
@@ -189,6 +195,18 @@ public:
 	Locale() const override
 	{
 		return m_task_ctxt->Locale();
+	}
+
+	const char *
+	LocaleForQueryToDXLTranslation() const override
+	{
+		return m_localeForQueryToDXLTranslation.c_str();
+	}
+
+	void
+	SetLocaleForQueryToDXLTranslation(char *locale) override
+	{
+		m_localeForQueryToDXLTranslation = locale;
 	}
 
 	// check if task is canceled

@@ -24,12 +24,52 @@
 #include <unistd.h>
 #include <wchar.h>
 
+#include <functional>
+
 #include "gpos/assert.h"
 #include "gpos/base.h"
 #include "gpos/error/CException.h"
+#include "gpos/task/ITask.h"
 #include "gpos/utils.h"
 
 using namespace gpos;
+
+static INT
+setlocal_wrapper(std::function<INT()> func)
+{
+	char *cached_ctype = nullptr;
+	char *cached_collate = nullptr;
+
+	if (ITask::Self() &&
+		strcmp(ITask::Self()->LocaleForQueryToDXLTranslation(), "") != 0)
+	{
+		cached_ctype = setlocale(LC_CTYPE, nullptr);
+		cached_collate = setlocale(LC_COLLATE, nullptr);
+
+		setlocale(LC_CTYPE, ITask::Self()->LocaleForQueryToDXLTranslation());
+		setlocale(LC_COLLATE, ITask::Self()->LocaleForQueryToDXLTranslation());
+	}
+
+	INT res = func();
+
+	if (nullptr != cached_ctype || nullptr != cached_collate)
+	{
+		GPOS_ASSERT(nullptr != cached_ctype);
+		GPOS_ASSERT(nullptr != cached_collate);
+
+		setlocale(LC_CTYPE, cached_ctype);
+		setlocale(LC_COLLATE, cached_collate);
+	}
+
+	if (-1 == res && EILSEQ == errno)
+	{
+		// Invalid multibyte character encountered. This can happen if the byte
+		// sequence does not match with the server encoding.
+		GPOS_RAISE(CException::ExmaSystem, CException::ExmiIllegalByteSequence);
+	}
+
+	return res;
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -353,15 +393,8 @@ gpos::clib::Vswprintf(WCHAR *wcstr, SIZE_T max_len, const WCHAR *format,
 	GPOS_ASSERT(nullptr != wcstr);
 	GPOS_ASSERT(nullptr != format);
 
-	INT res = vswprintf(wcstr, max_len, format, vaArgs);
-	if (-1 == res && EILSEQ == errno)
-	{
-		// Invalid multibyte character encountered. This can happen if the byte sequence does not
-		// match with the server encoding.
-		GPOS_RAISE(CException::ExmaSystem, CException::ExmiIllegalByteSequence);
-	}
-
-	return res;
+	auto func = std::bind(vswprintf, wcstr, max_len, format, vaArgs);
+	return setlocal_wrapper(func);
 }
 
 
@@ -549,7 +582,8 @@ gpos::clib::Mbstowcs(WCHAR *dest, const CHAR *src, SIZE_T len)
 LINT
 gpos::clib::Wcstombs(CHAR *dest, WCHAR *src, ULONG_PTR dest_size)
 {
-	return wcstombs(dest, src, dest_size);
+	auto func = std::bind(wcstombs, dest, src, dest_size);
+	return setlocal_wrapper(func);
 }
 
 

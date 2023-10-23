@@ -447,6 +447,7 @@ extern int optimizer_minidump;
 extern int  optimizer_cost_model;
 extern bool optimizer_metadata_caching;
 extern int	optimizer_mdcache_size;
+extern char *optimizer_locale_for_query_to_dxl_translation;
 
 /* Optimizer debugging GUCs */
 extern bool optimizer_print_query;

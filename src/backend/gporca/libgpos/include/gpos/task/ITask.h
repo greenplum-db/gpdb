@@ -72,6 +72,8 @@ public:
 
 	// current locale
 	virtual ELocale Locale() const = 0;
+	virtual const char *LocaleForQueryToDXLTranslation() const = 0;
+	virtual void SetLocaleForQueryToDXLTranslation(char *locale) = 0;
 
 	// error context
 	virtual IErrorContext *GetErrCtxt() const = 0;

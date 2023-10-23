@@ -399,6 +399,7 @@
 		"optimizer_force_three_stage_scalar_dqa",
 		"optimizer_join_arity_for_associativity_commutativity",
 		"optimizer_join_order",
+		"optimizer_locale_for_query_to_dxl_translation",
 		"optimizer_join_order_threshold",
 		"optimizer_log",
 		"optimizer_log_failure",
