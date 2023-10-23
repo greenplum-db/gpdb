@@ -154,7 +154,7 @@ public:
 	}
 
 	// print function
-	IOstream &OsPrint(IOstream &os) const;
+	virtual IOstream &OsPrint(IOstream &os) const;
 
 };	// class CBitSet
 
