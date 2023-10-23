@@ -204,10 +204,10 @@ CXformJoin2IndexApply::CreateAlternativesForBtreeIndex(
 	// We consider ForwardScan here because, BackwardScan is only supported
 	// in the case where we have Order by clause in the query, but this xform
 	// doesn't have one.
-	CExpression *pexprLogicalIndexGet = CXformUtils::PexprLogicalIndexGet(
+	CExpression *pexprLogicalIndexGet = CXformUtils::PexprBuildBtreeIndexPlan(
 		mp, md_accessor, pexprInner, joinOp->UlOpId(), pdrgpexprConjuncts,
-		pcrsScalarExpr, outer_refs, pmdindex, pmdrel, false /*indexForOrderBy*/,
-		EForwardScan /*indexScanDirection*/);
+		pcrsScalarExpr, outer_refs, pmdindex, pmdrel,
+		EForwardScan /*indexScanDirection*/, false /*indexForOrderBy*/);
 	if (nullptr != pexprLogicalIndexGet)
 	{
 		// second child has residual predicates, create an apply of outer and inner

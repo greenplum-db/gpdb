@@ -177,15 +177,6 @@ private:
 									   CColRefSet *pcrsGrpByUsed,
 									   CColRefSet *pcrsFKey);
 
-	// construct an expression representing a new access path using the given functors for
-	// operator constructors and rewritten access path
-	static CExpression *PexprBuildBtreeIndexPlan(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprGet,
-		ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
-		CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
-		const IMDIndex *pmdindex, const IMDRelation *pmdrel,
-		EIndexScanDirection indexScanDirection, BOOL indexForOrderBy);
-
 	// create a dynamic operator for a btree index plan
 	static CLogical *
 	PopDynamicBtreeIndexOpConstructor(
@@ -432,22 +423,6 @@ public:
 			   CXform::ExfSequenceProject2Apply == exfid;
 	}
 
-	// helper for creating IndexGet/DynamicIndexGet expression
-	static CExpression *
-	PexprLogicalIndexGet(CMemoryPool *mp, CMDAccessor *md_accessor,
-						 CExpression *pexprGet, ULONG ulOriginOpId,
-						 CExpressionArray *pdrgpexprConds,
-						 CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
-						 const IMDIndex *pmdindex, const IMDRelation *pmdrel,
-						 BOOL indexForOrderBy,
-						 EIndexScanDirection indexScanDirection)
-	{
-		return PexprBuildBtreeIndexPlan(mp, md_accessor, pexprGet, ulOriginOpId,
-										pdrgpexprConds, pcrsScalarExpr,
-										outer_refs, pmdindex, pmdrel,
-										indexScanDirection, indexForOrderBy);
-	}
-
 	// helper for creating bitmap bool op expressions
 	static CExpression *PexprScalarBitmapBoolOp(
 		CMemoryPool *mp, CMDAccessor *md_accessor,
@@ -577,6 +552,15 @@ public:
 											EIndexScanDirection scan_direction,
 											const CColRef *colref,
 											ULONG key_position);
+
+	// construct an expression representing a new access path using the given functors for
+	// operator constructors and rewritten access path
+	static CExpression *PexprBuildBtreeIndexPlan(
+		CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprGet,
+		ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
+		CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
+		const IMDIndex *pmdindex, const IMDRelation *pmdrel,
+		EIndexScanDirection indexScanDirection, BOOL indexForOrderBy);
 
 };	// class CXformUtils
 
