@@ -191,7 +191,7 @@ You must set this parameter at Greenplum Database server start time.
 
 A Greenplum table \(including a partitioned table’s child tables\) is distributed to all segments as a shard. `diskquota` counts each table shard as a *table segment*. The `diskquota.max_table_segments` server configuration parameter identifies the maximum number of *table segments* in the Greenplum Database cluster, which in turn can gate the maximum number of tables that `diskquota` can monitor.
 
-The runtime value of `diskquota.max_table_segments` equals the maximum number of tables multiplied by \(number\_of\_segments + 1\). The default value is `10 * 1024 * 1024`.
+The runtime value of `diskquota.max_table_segments` equals $max\_number\_tables$ $\times$ $\lceil \frac{number\_segments + 1}{100} \rceil$ $\times$ $100$. The default value is `10 * 1024 * 1024`.
 
 
 ## <a id="using"></a>Using the diskquota Module 
