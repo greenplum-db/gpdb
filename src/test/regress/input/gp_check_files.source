@@ -7,6 +7,12 @@
 -- s/aocsseg_\d+/aocsseg_xxx/g
 -- m/aovisimap_\d+/
 -- s/aovisimap_\d+/aovisimap_xxx/g
+-- m/seg1_pg_tblspc_.*/
+-- s/seg1_pg_tblspc_.*/seg1_pg_tblspc_XXX/g
+-- m/ERROR\:  could not rename .*/
+-- s/ERROR\:  could not rename .*/ERROR\:  could not rename XXX/g
+-- m/ERROR\:  cannot rename .*/
+-- s/ERROR\:  cannot rename .*/ERROR\:  cannot rename XXX/g
 -- end_matchsubs
 
 create extension gp_check_functions;
@@ -40,9 +46,14 @@ $$ LANGUAGE plpgsql;
 CREATE TABLESPACE checkfile_ts LOCATION '@testtablespace@';
 set default_tablespace = checkfile_ts;
 
--- create a table that we'll delete the files 
+-- create a table that we'll delete the files to test missing files.
+-- this have to be created beforehand in order for the tablespace directories to be created.
 CREATE TABLE checkmissing_heap(a int, b int, c int);
 insert into checkmissing_heap select i,i,i from generate_series(1,100)i;
+
+--
+-- Tests for orphaned files
+--
 
 -- go to seg1's data directory for the tablespace we just created
 \cd @testtablespace@
@@ -62,9 +73,57 @@ set client_min_messages = ERROR;
 select gp_segment_id, filename from run_orphaned_files_view();
 reset client_min_messages;
 
--- remove the orphaned files so not affect subsequent tests
-\! rm 987654
-\! rm 987654.3
+-- test moving the orphaned files
+
+-- firstly, should not move anything if the target directory doesn't exist
+select * from gp_move_orphaned_files('@testtablespace@/non_exist_dir');
+select gp_segment_id, filename from run_orphaned_files_view();
+
+-- should also fail to move if no proper permission to the target directory
+\! mkdir @testtablespace@/moving_orphaned_file_test
+\! chmod 000 @testtablespace@/moving_orphaned_file_test
+select * from gp_move_orphaned_files('@testtablespace@/moving_orphaned_file_test');
+select gp_segment_id, filename from run_orphaned_files_view();
+
+-- should not allow non-superuser to run,
+-- though it would complain as soon as non-superuser tries to lock pg_class in gp_move_orphaned_files
+create role check_file_test_role nosuperuser;
+set role = check_file_test_role;
+select * from gp_move_orphaned_files('@testtablespace@/moving_orphaned_file_test');
+reset role;
+drop role check_file_test_role;
+
+\! chmod 700 @testtablespace@/moving_orphaned_file_test
+-- should correctly move the orphaned files,
+-- filter out exact paths as that could vary
+\a
+select gp_segment_id, move_success, regexp_replace(oldpath, '^.*/(.+)$', '\1') as oldpath, regexp_replace(newpath, '^.*/(.+)$', '\1') as newpath
+from gp_move_orphaned_files('@testtablespace@/moving_orphaned_file_test');
+\a
+
+-- The moved orphaned files are in the target directory tree with a name that indicates its original location in data directory
+\cd @testtablespace@/moving_orphaned_file_test/
+
+-- should see the orphaned files being moved
+\! ls
+-- no orphaned files can be found now
+select gp_segment_id, filename from run_orphaned_files_view();
+
+-- should not affect existing tables
+select count(*) from checkmissing_heap;
+
+-- go back to the valid data directory
+\cd @testtablespace@
+select dbid from gp_segment_configuration where content = 1 and role = 'p' \gset
+\cd :dbid
+select get_tablespace_version_directory_name() as version_dir \gset
+\cd :version_dir
+select oid from pg_database where datname = current_database() \gset
+\cd :oid
+
+--
+-- Tests for missing files
+--
 
 -- Now remove the data file for the table we just created.
 -- But check to see if the working directory is what we expect (under
