@@ -59,7 +59,7 @@ typedef struct
  * absolute paths that match DataDir or Log_directory.
  */
 static char *
-convert_and_check_filename(text *arg)
+convert_and_check_filename(text *arg, bool abs_ok)
 {
 	char	   *filename;
 
@@ -68,6 +68,19 @@ convert_and_check_filename(text *arg)
 
 	if (is_absolute_path(filename))
 	{
+		/*
+		 * Allow absolute path if caller indicates so. Only for superuser.
+		 * This is to support utility function gp_move_orphaned_files which
+		 * can move files between absolute paths. So far only pg_file_rename
+		 * requires abs_ok=true.
+		 *
+		 * P.S. in 7X superuser can do the same but it is achieved via a new
+		 * role 'pg_read_server_files' which is not in 6X. So adding the 
+		 * superuser() check instead.
+		 */
+		if (abs_ok && superuser())
+			return filename;
+
 		/* Disallow '/a/b/data/..' */
 		if (path_contains_parent_reference(filename))
 			ereport(ERROR,
@@ -237,7 +250,7 @@ pg_read_file(PG_FUNCTION_ARGS)
 	if (PG_NARGS() >= 4)
 		missing_ok = PG_GETARG_BOOL(3);
 
-	filename = convert_and_check_filename(filename_t);
+	filename = convert_and_check_filename(filename_t, false);
 
 	result = read_text_file(filename, seek_offset, bytes_to_read, missing_ok);
 	if (result)
@@ -278,7 +291,7 @@ pg_read_binary_file(PG_FUNCTION_ARGS)
 	if (PG_NARGS() >= 4)
 		missing_ok = PG_GETARG_BOOL(3);
 
-	filename = convert_and_check_filename(filename_t);
+	filename = convert_and_check_filename(filename_t, false);
 
 	result = read_binary_file(filename, seek_offset,
 							  bytes_to_read, missing_ok);
@@ -345,7 +358,7 @@ pg_stat_file(PG_FUNCTION_ARGS)
 	if (PG_NARGS() == 2)
 		missing_ok = PG_GETARG_BOOL(1);
 
-	filename = convert_and_check_filename(filename_t);
+	filename = convert_and_check_filename(filename_t, false);
 
 	if (stat(filename, &fst) < 0)
 	{
@@ -445,7 +458,7 @@ pg_ls_dir(PG_FUNCTION_ARGS)
 		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
 
 		fctx = palloc(sizeof(directory_fctx));
-		fctx->location = convert_and_check_filename(PG_GETARG_TEXT_P(0));
+		fctx->location = convert_and_check_filename(PG_GETARG_TEXT_P(0), false);
 
 		fctx->include_dot_dirs = include_dot_dirs;
 		fctx->dirdesc = AllocateDir(fctx->location);
@@ -512,7 +525,7 @@ pg_file_write(PG_FUNCTION_ARGS)
 
 	requireSuperuser();
 
-	filename = convert_and_check_filename(PG_GETARG_TEXT_P(0));
+	filename = convert_and_check_filename(PG_GETARG_TEXT_P(0), false);
 	data = PG_GETARG_TEXT_P(1);
 
 	if (!PG_GETARG_BOOL(2))
@@ -563,12 +576,12 @@ pg_file_rename(PG_FUNCTION_ARGS)
 	if (PG_ARGISNULL(0) || PG_ARGISNULL(1))
 		PG_RETURN_NULL();
 
-	fn1 = convert_and_check_filename(PG_GETARG_TEXT_P(0));
-	fn2 = convert_and_check_filename(PG_GETARG_TEXT_P(1));
+	fn1 = convert_and_check_filename(PG_GETARG_TEXT_P(0), true);
+	fn2 = convert_and_check_filename(PG_GETARG_TEXT_P(1), true);
 	if (PG_ARGISNULL(2))
 		fn3 = 0;
 	else
-		fn3 = convert_and_check_filename(PG_GETARG_TEXT_P(2));
+		fn3 = convert_and_check_filename(PG_GETARG_TEXT_P(2), true);
 
 	if (access(fn1, W_OK) < 0)
 	{
@@ -647,7 +660,7 @@ pg_file_unlink(PG_FUNCTION_ARGS)
 
 	requireSuperuser();
 
-	filename = convert_and_check_filename(PG_GETARG_TEXT_P(0));
+	filename = convert_and_check_filename(PG_GETARG_TEXT_P(0), false);
 
 	if (access(filename, W_OK) < 0)
 	{
@@ -818,7 +831,7 @@ pg_file_length(PG_FUNCTION_ARGS)
 
 	requireSuperuser();
 
-	filename = convert_and_check_filename(filename_t);
+	filename = convert_and_check_filename(filename_t, false);
 
 	if (stat(filename, &fst) < 0)
 		ereport(ERROR,
