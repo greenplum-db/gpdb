@@ -1718,7 +1718,7 @@ jobs:
         <<: *ccp_default_params
         vars:
           <<: *ccp_default_vars
-          instance_type: n1-standard-4
+          instance_type: n1-highmem-4
           number_of_nodes: 2
     - task: gen_cluster
       file: ccp_src/ci/tasks/gen_cluster.yml
