@@ -68,14 +68,13 @@ SELECT * FROM tbl_gist where c4 <@ box(point(1,1),point(10,10));
 
 SET enable_bitmapscan TO off;
 EXPLAIN  (costs off) SELECT * FROM tbl_gist where c4 <@ box(point(1,1),point(10,10));
-                  QUERY PLAN                  
-----------------------------------------------
+                      QUERY PLAN                      
+------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Scan using tbl_gist_idx on tbl_gist
+   ->  Index Only Scan using tbl_gist_idx on tbl_gist
          Index Cond: (c4 <@ '(10,10),(1,1)'::box)
-         Filter: (c4 <@ '(10,10),(1,1)'::box)
- Optimizer: Pivotal Optimizer (GPORCA)
-(5 rows)
+ Optimizer: GPORCA
+(4 rows)
 
 SET enable_bitmapscan TO default;
 DROP TABLE tbl_gist;

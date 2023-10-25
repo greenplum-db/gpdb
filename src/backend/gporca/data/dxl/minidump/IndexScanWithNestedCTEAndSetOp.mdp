@@ -429,7 +429,7 @@ SELECT a FROM y WHERE (a IN (SELECT b FROM bar WHERE b = 2));
                 </dxl:TableDescriptor>
               </dxl:TableScan>
             </dxl:Append>
-            <dxl:IndexScan IndexScanDirection="Forward">
+            <dxl:IndexOnlyScan IndexScanDirection="Forward">
               <dxl:Properties>
                 <dxl:Cost StartupCost="0" TotalCost="6.000289" Rows="1.000000" Width="4"/>
               </dxl:Properties>
@@ -445,7 +445,7 @@ SELECT a FROM y WHERE (a IN (SELECT b FROM bar WHERE b = 2));
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
                 </dxl:Comparison>
               </dxl:IndexCondList>
-	<dxl:Partitions/>
+              <dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.53653.1.0" IndexName="idx1"/>
               <dxl:TableDescriptor Mdid="6.53639.1.0" TableName="bar">
                 <dxl:Columns>
@@ -459,7 +459,7 @@ SELECT a FROM y WHERE (a IN (SELECT b FROM bar WHERE b = 2));
                   <dxl:Column ColId="57" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
                 </dxl:Columns>
               </dxl:TableDescriptor>
-            </dxl:IndexScan>
+            </dxl:IndexOnlyScan>
           </dxl:HashJoin>
         </dxl:Result>
       </dxl:GatherMotion>

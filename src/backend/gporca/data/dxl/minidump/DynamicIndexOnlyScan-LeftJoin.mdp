@@ -957,10 +957,10 @@
         </dxl:LogicalJoin>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="63">
+    <dxl:Plan Id="0" SpaceSize="45">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="12.001663" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="12.000457" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -972,9 +972,9 @@
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
-        <dxl:HashJoin JoinType="Left">
+        <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="true" OuterRefAsParam="true">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="12.001633" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="12.000427" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -985,16 +985,12 @@
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:JoinFilter/>
-          <dxl:HashCondList>
-            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
-              <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
-              <dxl:Ident ColId="10" ColName="a" TypeMdid="0.23.1.0"/>
-            </dxl:Comparison>
-          </dxl:HashCondList>
+          <dxl:JoinFilter>
+            <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+          </dxl:JoinFilter>
           <dxl:DynamicIndexOnlyScan IndexScanDirection="Forward" SelectorIds="">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000300" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000301" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">
@@ -1040,17 +1036,17 @@
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:DynamicIndexOnlyScan>
-          <dxl:IndexOnlyScan IndexScanDirection="Forward">
+          <dxl:IndexScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000544" Rows="9.090900" Width="4"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000111" Rows="1.000000" Width="1"/>
             </dxl:Properties>
-            <dxl:ProjList>
-              <dxl:ProjElem ColId="10" Alias="a">
-                <dxl:Ident ColId="10" ColName="a" TypeMdid="0.23.1.0"/>
-              </dxl:ProjElem>
-            </dxl:ProjList>
+            <dxl:ProjList/>
             <dxl:Filter/>
             <dxl:IndexCondList>
+              <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
+                <dxl:Ident ColId="10" ColName="a" TypeMdid="0.23.1.0"/>
+                <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
+              </dxl:Comparison>
               <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.97.1.0">
                 <dxl:Ident ColId="10" ColName="a" TypeMdid="0.23.1.0"/>
                 <dxl:ConstValue TypeMdid="0.23.1.0" Value="10"/>
@@ -1070,8 +1066,11 @@
                 <dxl:Column ColId="19" Attno="-7" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
               </dxl:Columns>
             </dxl:TableDescriptor>
-          </dxl:IndexOnlyScan>
-        </dxl:HashJoin>
+          </dxl:IndexScan>
+          <dxl:NLJIndexParamList>
+            <dxl:NLJIndexParam ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
+          </dxl:NLJIndexParamList>
+        </dxl:NestedLoopJoin>
       </dxl:GatherMotion>
     </dxl:Plan>
   </dxl:Thread>

@@ -293,7 +293,7 @@ SELECT * FROM test WHERE a in (1, 47);
         </dxl:LogicalGet>
       </dxl:LogicalSelect>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="4">
+    <dxl:Plan Id="0" SpaceSize="3">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="6.000228" Rows="2.000000" Width="4"/>
@@ -305,7 +305,7 @@ SELECT * FROM test WHERE a in (1, 47);
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
-        <dxl:IndexScan IndexScanDirection="Forward">
+        <dxl:IndexOnlyScan IndexScanDirection="Forward">
           <dxl:Properties>
             <dxl:Cost StartupCost="0" TotalCost="6.000193" Rows="2.000000" Width="4"/>
           </dxl:Properties>
@@ -338,7 +338,7 @@ SELECT * FROM test WHERE a in (1, 47);
               <dxl:Column ColId="7" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
             </dxl:Columns>
           </dxl:TableDescriptor>
-        </dxl:IndexScan>
+        </dxl:IndexOnlyScan>
       </dxl:GatherMotion>
     </dxl:Plan>
   </dxl:Thread>
