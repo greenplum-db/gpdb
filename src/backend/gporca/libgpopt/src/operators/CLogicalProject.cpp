@@ -13,6 +13,7 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/base/CCastUtils.h"
 #include "gpopt/base/CColRefSet.h"
 #include "gpopt/base/CColRefTable.h"
 #include "gpopt/base/CConstraintInterval.h"
@@ -343,6 +344,8 @@ CLogicalProject::PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
 ) const
 {
 	UlongToIDatumMap *phmuldatum = GPOS_NEW(mp) UlongToIDatumMap(mp);
+	UlongToConstColRefMap *colidToColrefMapForNDVExpr =
+		GPOS_NEW(mp) UlongToConstColRefMap(mp);
 
 	// extract scalar constant expression that can be used for
 	// statistics calculation
@@ -368,12 +371,33 @@ CLogicalProject::PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
 				GPOS_ASSERT(fInserted);
 			}
 		}
+		else if (COperator::EopScalarOp == pop->Eopid())
+		{
+			// If the expression is an ndv-preserving scalar op with a constant, such as a+5,
+			// we want to use the statistics of the underlying colref in order to get an accurate estimate.
+			// Joins use NDVs, so while the actual statistics will be different, the NDVs will be
+			// the same--allowing Orca to produce a better estimate for joins with such expressions.
+			// Note that we only do this for expressions with a constant and with operators that are
+			// ndv-preserving, in other cases we will use a default (empty) histogram and overestimate cardinality
+			// to be more conservative
+
+			const CColRef *underlying_colref =
+				CCastUtils::PcrExtractFromScIdOrCastScId(pexprScalar);
+			if (underlying_colref == nullptr &&
+				CUtils::IsExprNDVPreserving(pexprScalar, &underlying_colref))
+			{
+				colidToColrefMapForNDVExpr->Insert(
+					GPOS_NEW(mp) ULONG(colref->Id()),
+					const_cast<CColRef *>(underlying_colref));
+			}
+		}
 	}
 
-	IStatistics *stats = PstatsDeriveProject(mp, exprhdl, phmuldatum);
-
+	IStatistics *stats = PstatsDeriveProject(mp, exprhdl, phmuldatum,
+											 colidToColrefMapForNDVExpr);
 	// clean up
 	phmuldatum->Release();
+	colidToColrefMapForNDVExpr->Release();
 
 	return stats;
 }

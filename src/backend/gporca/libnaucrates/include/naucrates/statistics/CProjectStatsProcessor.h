@@ -20,10 +20,10 @@ class CProjectStatsProcessor
 {
 public:
 	// project
-	static CStatistics *CalcProjStats(CMemoryPool *mp,
-									  const CStatistics *input_stats,
-									  ULongPtrArray *projection_colids,
-									  UlongToIDatumMap *datum_map);
+	static CStatistics *CalcProjStats(
+		CMemoryPool *mp, const CStatistics *input_stats,
+		ULongPtrArray *projection_colids, UlongToIDatumMap *datum_map,
+		UlongToConstColRefMap *colidToColrefMapForNDVExpr);
 };
 }  // namespace gpnaucrates
 

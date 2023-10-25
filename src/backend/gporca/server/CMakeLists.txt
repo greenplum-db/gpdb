@@ -166,7 +166,7 @@ SingleColumnHomogenousIndexOnRoot-AO SingleColumnHomogenousIndexOnRoot-HEAP;
 
 CStatsTest:
 Stat-Derivation-Leaf-Pattern MissingBoolColStats JoinColWithOnlyNDV UnsupportedStatsPredicate
-StatsFilter-AnyWithNewColStats EquiJoinOnExpr-Supported EquiJoinOnExpr-Unsupported;
+StatsFilter-AnyWithNewColStats EquiJoinOnExpr-Supported EquiJoinOnExpr-Unsupported NdvPreservingExprProjectionEquiJoin NdvPreservingExprProjectionNonEquiJoin;
 
 CCorrelatedStatsTest:
 Correlated-Stat-Function-Dependency Correlated-Stat-Function-Dependency-2 Correlated-Stat-Function-Dependency-3

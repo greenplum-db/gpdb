@@ -19,10 +19,10 @@ using namespace gpopt;
 
 //  return a statistics object for a project operation
 CStatistics *
-CProjectStatsProcessor::CalcProjStats(CMemoryPool *mp,
-									  const CStatistics *input_stats,
-									  ULongPtrArray *projection_colids,
-									  UlongToIDatumMap *datum_map)
+CProjectStatsProcessor::CalcProjStats(
+	CMemoryPool *mp, const CStatistics *input_stats,
+	ULongPtrArray *projection_colids, UlongToIDatumMap *datum_map,
+	UlongToConstColRefMap *colidToColrefMapForNDVExpr)
 {
 	GPOS_ASSERT(nullptr != projection_colids);
 
@@ -39,6 +39,17 @@ CProjectStatsProcessor::CalcProjStats(CMemoryPool *mp,
 	{
 		ULONG colid = *(*projection_colids)[ul];
 		const CHistogram *histogram = input_stats->GetHistogram(colid);
+
+		// If histogram doesn't exist for given colid, check if colid exists in mapping
+		// and use that
+		if (nullptr == histogram && nullptr != colidToColrefMapForNDVExpr)
+		{
+			const CColRef *colref = colidToColrefMapForNDVExpr->Find(&colid);
+			if (nullptr != colref)
+			{
+				histogram = input_stats->GetHistogram(colref->Id());
+			}
+		}
 
 		if (nullptr == histogram)
 		{
@@ -94,6 +105,17 @@ CProjectStatsProcessor::CalcProjStats(CMemoryPool *mp,
 
 		// look up width
 		const CDouble *width = input_stats->GetWidth(colid);
+
+		// If width doesn't exist for given colid, check if colid exists in mapping
+		// and use that
+		if (nullptr == width && nullptr != colidToColrefMapForNDVExpr)
+		{
+			const CColRef *colref = colidToColrefMapForNDVExpr->Find(&colid);
+			if (nullptr != colref)
+			{
+				width = input_stats->GetWidth(colref->Id());
+			}
+		}
 		if (nullptr == width)
 		{
 			CColRef *colref = col_factory->LookupColRef(colid);
