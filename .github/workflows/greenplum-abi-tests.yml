@@ -2,6 +2,14 @@ name: Greenplum ABI Tests
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'concourse/scripts/**'
+      - 'src/**'
+      - '.github/workflows/**'
+      - '.github/scripts/**'
+      - '.abi-check/**'
+
   push:
     branches:
       - 6X_STABLE
@@ -157,7 +165,9 @@ jobs:
                                  -old build-baseline/postgres*.abi \
                                  -new build-latest/postgres*.abi
 
-          ## Dump the reports to stdout.
+      - name: Print out ABI report
+        if: always()
+        run: |
           lynx -dump $(find compat_reports/ | grep html)
 
       - name: Upload ABI Comparison
