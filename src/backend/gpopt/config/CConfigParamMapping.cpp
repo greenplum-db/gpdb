@@ -437,14 +437,14 @@ CConfigParamMapping::PackConfigParamInBitset(
 	{
 		// disable index only scan if the corresponding GUC is turned off
 		traceflag_bitset->ExchangeSet(
-			GPOPT_DISABLE_XFORM_TF(CXform::ExfIndexGet2IndexOnlyScan));
+			GPOPT_DISABLE_XFORM_TF(CXform::ExfIndexOnlyGet2IndexOnlyScan));
 	}
 
 	if (!optimizer_enable_dynamicindexonlyscan)
 	{
 		// disable dynamic index only scan if the corresponding GUC is turned off
 		traceflag_bitset->ExchangeSet(GPOPT_DISABLE_XFORM_TF(
-			CXform::ExfDynamicIndexGet2DynamicIndexOnlyScan));
+			CXform::ExfDynamicIndexOnlyGet2DynamicIndexOnlyScan));
 	}
 
 	if (!optimizer_enable_hashagg)

@@ -29,6 +29,7 @@
 #include "gpopt/operators/CLogicalCTEProducer.h"
 #include "gpopt/operators/CLogicalDynamicBitmapTableGet.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
+#include "gpopt/operators/CLogicalDynamicIndexOnlyGet.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CLogicalGbAggDeduplicate.h"
 #include "gpopt/operators/CLogicalGet.h"
@@ -347,11 +348,13 @@ CXformUtils::PexprRedundantSelectForDynamicIndex(
 
 	COperator::EOperatorId op_id = pexpr->Pop()->Eopid();
 	GPOS_ASSERT(COperator::EopLogicalDynamicIndexGet == op_id ||
+				COperator::EopLogicalDynamicIndexOnlyGet == op_id ||
 				COperator::EopLogicalDynamicBitmapTableGet == op_id ||
 				COperator::EopLogicalSelect == op_id);
 
 	CExpression *pexprRedundantScalar = nullptr;
 	if (COperator::EopLogicalDynamicIndexGet == op_id ||
+		COperator::EopLogicalDynamicIndexOnlyGet == op_id ||
 		COperator::EopLogicalDynamicBitmapTableGet == op_id)
 	{
 		// no residual predicate, use index lookup predicate only
@@ -370,6 +373,7 @@ CXformUtils::PexprRedundantSelectForDynamicIndex(
 #ifdef GPOS_DEBUG
 	COperator::EOperatorId eopidChild = pexprChild->Pop()->Eopid();
 	GPOS_ASSERT(COperator::EopLogicalDynamicIndexGet == eopidChild ||
+				COperator::EopLogicalDynamicIndexOnlyGet == eopidChild ||
 				COperator::EopLogicalDynamicBitmapTableGet == eopidChild);
 #endif	// GPOS_DEBUG
 
@@ -2404,12 +2408,15 @@ CXformUtils::FProcessGPDBAntiSemiHashJoin(
 //
 //---------------------------------------------------------------------------
 CExpression *
-CXformUtils::PexprBuildBtreeIndexPlan(
-	CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprGet,
-	ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
-	CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
-	const IMDIndex *pmdindex, const IMDRelation *pmdrel,
-	EIndexScanDirection indexscanDirection, BOOL indexForOrderBy)
+CXformUtils::PexprBuildBtreeIndexPlan(CMemoryPool *mp, CMDAccessor *md_accessor,
+									  CExpression *pexprGet, ULONG ulOriginOpId,
+									  CExpressionArray *pdrgpexprConds,
+									  CColRefSet *pcrsScalarExpr,
+									  CColRefSet *outer_refs,
+									  const IMDIndex *pmdindex,
+									  const IMDRelation *pmdrel,
+									  EIndexScanDirection indexscanDirection,
+									  BOOL indexForOrderBy, BOOL indexonly)
 {
 	GPOS_ASSERT(nullptr != pexprGet);
 	GPOS_ASSERT(nullptr != pdrgpexprConds);
@@ -2540,17 +2547,42 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 	{
 		pdrgpdrgpcrPart->AddRef();
 		partition_mdids->AddRef();
-		popLogicalGet = PopDynamicBtreeIndexOpConstructor(
-			mp, pmdindex, ptabdesc, ulOriginOpId,
-			GPOS_NEW(mp) CName(mp, CName(alias)), ulPartIndex, pdrgpcrOutput,
-			pdrgpdrgpcrPart, partition_mdids, ulUnindexedPredColCount);
+		if (indexonly)
+		{
+			popLogicalGet =
+				PopDynamicBtreeIndexOpConstructor<CLogicalDynamicIndexOnlyGet>(
+					mp, pmdindex, ptabdesc, ulOriginOpId,
+					GPOS_NEW(mp) CName(mp, CName(alias)), ulPartIndex,
+					pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids,
+					ulUnindexedPredColCount);
+		}
+		else
+		{
+			popLogicalGet =
+				PopDynamicBtreeIndexOpConstructor<CLogicalDynamicIndexGet>(
+					mp, pmdindex, ptabdesc, ulOriginOpId,
+					GPOS_NEW(mp) CName(mp, CName(alias)), ulPartIndex,
+					pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids,
+					ulUnindexedPredColCount);
+		}
 	}
 	else
 	{
-		popLogicalGet = PopStaticBtreeIndexOpConstructor(
-			mp, pmdindex, ptabdesc, ulOriginOpId,
-			GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput,
-			ulUnindexedPredColCount, indexscanDirection);
+		if (indexonly)
+		{
+			popLogicalGet =
+				PopStaticBtreeIndexOpConstructor<CLogicalIndexOnlyGet>(
+					mp, pmdindex, ptabdesc, ulOriginOpId,
+					GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput,
+					ulUnindexedPredColCount, indexscanDirection);
+		}
+		else
+		{
+			popLogicalGet = PopStaticBtreeIndexOpConstructor<CLogicalIndexGet>(
+				mp, pmdindex, ptabdesc, ulOriginOpId,
+				GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput,
+				ulUnindexedPredColCount, indexscanDirection);
+		}
 	}
 
 	// clean up

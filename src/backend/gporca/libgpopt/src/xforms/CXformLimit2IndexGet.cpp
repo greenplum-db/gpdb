@@ -141,11 +141,12 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		// Proceed if index is applicable
 		if (scan_direction != EisdSentinel)
 		{
+			BOOL indexonly = Exfid() == ExfLimit2IndexOnlyGet;
 			// build IndexGet expression
 			CExpression *pexprIndexGet = CXformUtils::PexprBuildBtreeIndexPlan(
 				mp, md_accessor, pexprUpdtdRltn, popLimit->UlOpId(), pdrgpexpr,
 				pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel,
-				scan_direction, true);
+				scan_direction, true, indexonly);
 
 			if (pexprIndexGet != nullptr)
 			{

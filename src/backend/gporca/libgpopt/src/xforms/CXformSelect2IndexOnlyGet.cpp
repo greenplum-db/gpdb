@@ -1,20 +1,21 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2012 EMC Corp.
+//	Copyright (c) 2023 VMware, Inc. or its affiliates. All Rights Reserved.
 //
 //	@filename:
-//		CXformSelect2IndexGet.cpp
+//		CXformSelect2IndexOnlyGet.cpp
 //
 //	@doc:
-//		Implementation of select over a table to an index get transformation
+//		Implementation of select over a table to an index only get transformation
 //---------------------------------------------------------------------------
 
-#include "gpopt/xforms/CXformSelect2IndexGet.h"
+#include "gpopt/xforms/CXformSelect2IndexOnlyGet.h"
 
 #include "gpos/base.h"
 
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalSelect.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/md/CMDIndexGPDB.h"
 #include "naucrates/md/CMDRelationGPDB.h"
@@ -22,15 +23,8 @@
 using namespace gpopt;
 using namespace gpmd;
 
-//---------------------------------------------------------------------------
-//	@function:
-//		CXformSelect2IndexGet::CXformSelect2IndexGet
-//
-//	@doc:
-//		Ctor
-//
-//---------------------------------------------------------------------------
-CXformSelect2IndexGet::CXformSelect2IndexGet(CMemoryPool *mp)
+
+CXformSelect2IndexOnlyGet::CXformSelect2IndexOnlyGet(CMemoryPool *mp)
 	:  // pattern
 	  CXformExploration(GPOS_NEW(mp) CExpression(
 		  mp, GPOS_NEW(mp) CLogicalSelect(mp),
@@ -42,17 +36,8 @@ CXformSelect2IndexGet::CXformSelect2IndexGet(CMemoryPool *mp)
 {
 }
 
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CXformSelect2IndexGet::Exfp
-//
-//	@doc:
-//		Compute xform promise for a given expression handle
-//
-//---------------------------------------------------------------------------
 CXform::EXformPromise
-CXformSelect2IndexGet::Exfp(CExpressionHandle &exprhdl) const
+CXformSelect2IndexOnlyGet::Exfp(CExpressionHandle &exprhdl) const
 {
 	if (exprhdl.DeriveHasSubquery(1))
 	{
@@ -64,15 +49,16 @@ CXformSelect2IndexGet::Exfp(CExpressionHandle &exprhdl) const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformSelect2IndexGet::Transform
+//		CXformSelect2IndexOnlyGet::Transform
 //
 //	@doc:
 //		Actual transformation
 //
 //---------------------------------------------------------------------------
 void
-CXformSelect2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
-								 CExpression *pexpr) const
+CXformSelect2IndexOnlyGet::Transform(CXformContext *pxfctxt,
+									 CXformResult *pxfres,
+									 CExpression *pexpr) const
 {
 	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
@@ -116,7 +102,7 @@ CXformSelect2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 			mp, md_accessor, pexprRelational, pexpr->Pop()->UlOpId(), pdrgpexpr,
 			pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel,
 			EForwardScan /*indexScanDirection*/, false /*indexForOrderBy*/,
-			false /*indexonly*/);
+			true /*indexonly*/);
 		if (nullptr != pexprIndexGet)
 		{
 			pxfres->Add(pexprIndexGet);

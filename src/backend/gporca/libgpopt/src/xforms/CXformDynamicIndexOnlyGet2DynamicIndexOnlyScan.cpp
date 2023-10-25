@@ -3,19 +3,19 @@
 //	Copyright (C) 2023 VMware, Inc. or its affiliates. All Rights Reserved.
 //
 //	@filename:
-//		CXformDynamicIndexGet2DynamicIndexOnlyScan.cpp
+//		CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan.cpp
 //
 //	@doc:
 //		Implementation of transform
 //---------------------------------------------------------------------------
 
-#include "gpopt/xforms/CXformDynamicIndexGet2DynamicIndexOnlyScan.h"
+#include "gpopt/xforms/CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan.h"
 
 #include "gpos/base.h"
 
 #include "gpopt/metadata/CPartConstraint.h"
 #include "gpopt/metadata/CTableDescriptor.h"
-#include "gpopt/operators/CLogicalDynamicIndexGet.h"
+#include "gpopt/operators/CLogicalDynamicIndexOnlyGet.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalDynamicIndexOnlyScan.h"
 #include "gpopt/xforms/CXformUtils.h"
@@ -25,18 +25,18 @@ using namespace gpopt;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformDynamicIndexGet2DynamicIndexOnlyScan::CXformDynamicIndexGet2DynamicIndexOnlyScan
+//		CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan::CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CXformDynamicIndexGet2DynamicIndexOnlyScan::
-	CXformDynamicIndexGet2DynamicIndexOnlyScan(CMemoryPool *mp)
+CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan::
+	CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan(CMemoryPool *mp)
 	: CXformImplementation(
 		  // pattern
 		  GPOS_NEW(mp) CExpression(
-			  mp, GPOS_NEW(mp) CLogicalDynamicIndexGet(mp),
+			  mp, GPOS_NEW(mp) CLogicalDynamicIndexOnlyGet(mp),
 			  GPOS_NEW(mp) CExpression(
 				  mp, GPOS_NEW(mp) CPatternLeaf(mp))  // index lookup predicate
 			  ))
@@ -44,11 +44,11 @@ CXformDynamicIndexGet2DynamicIndexOnlyScan::
 }
 
 CXform::EXformPromise
-CXformDynamicIndexGet2DynamicIndexOnlyScan::Exfp(
+CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan::Exfp(
 	CExpressionHandle &exprhdl) const
 {
-	CLogicalDynamicIndexGet *popGet =
-		CLogicalDynamicIndexGet::PopConvert(exprhdl.Pop());
+	CLogicalDynamicIndexOnlyGet *popGet =
+		CLogicalDynamicIndexOnlyGet::PopConvert(exprhdl.Pop());
 	CIndexDescriptor *pindexdesc = popGet->Pindexdesc();
 	CTableDescriptor *ptabdesc = popGet->Ptabdesc();
 
@@ -67,14 +67,14 @@ CXformDynamicIndexGet2DynamicIndexOnlyScan::Exfp(
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformDynamicIndexGet2DynamicIndexOnlyScan::Transform
+//		CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan::Transform
 //
 //	@doc:
 //		Actual transformation
 //
 //---------------------------------------------------------------------------
 void
-CXformDynamicIndexGet2DynamicIndexOnlyScan::Transform(
+CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan::Transform(
 	CXformContext *pxfctxt GPOS_ASSERTS_ONLY, CXformResult *pxfres GPOS_UNUSED,
 	CExpression *pexpr GPOS_ASSERTS_ONLY) const
 {
@@ -84,8 +84,8 @@ CXformDynamicIndexGet2DynamicIndexOnlyScan::Transform(
 
 	CExpression *pexprIndexCond = (*pexpr)[0];
 
-	CLogicalDynamicIndexGet *popIndexGet =
-		CLogicalDynamicIndexGet::PopConvert(pexpr->Pop());
+	CLogicalDynamicIndexOnlyGet *popIndexGet =
+		CLogicalDynamicIndexOnlyGet::PopConvert(pexpr->Pop());
 	CMemoryPool *mp = pxfctxt->Pmp();
 
 	CTableDescriptor *ptabdesc = popIndexGet->Ptabdesc();

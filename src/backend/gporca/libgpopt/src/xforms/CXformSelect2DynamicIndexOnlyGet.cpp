@@ -1,15 +1,15 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2012 EMC Corp.
+//	Copyright (c) 2023 VMware, Inc. or its affiliates. All Rights Reserved.
 //
 //	@filename:
-//		CXformSelect2DynamicIndexGet.cpp
+//		CXformSelect2DynamicIndexOnlyGet.cpp
 //
 //	@doc:
-//		Implementation of select over a partitioned table to a dynamic index get
+//		Implementation of select over a partitioned table to a dynamic index only get
 //---------------------------------------------------------------------------
 
-#include "gpopt/xforms/CXformSelect2DynamicIndexGet.h"
+#include "gpopt/xforms/CXformSelect2DynamicIndexOnlyGet.h"
 
 #include "gpos/base.h"
 
@@ -17,7 +17,9 @@
 #include "gpopt/base/CUtils.h"
 #include "gpopt/metadata/CPartConstraint.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
+#include "gpopt/operators/CLogicalDynamicIndexOnlyGet.h"
 #include "gpopt/operators/CLogicalSelect.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/md/CMDIndexGPDB.h"
 #include "naucrates/md/CMDRelationGPDB.h"
@@ -28,13 +30,14 @@ using namespace gpmd;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformSelect2DynamicIndexGet::CXformSelect2DynamicIndexGet
+//		CXformSelect2DynamicIndexOnlyGet::CXformSelect2DynamicIndexOnlyGet
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CXformSelect2DynamicIndexGet::CXformSelect2DynamicIndexGet(CMemoryPool *mp)
+CXformSelect2DynamicIndexOnlyGet::CXformSelect2DynamicIndexOnlyGet(
+	CMemoryPool *mp)
 	:  // pattern
 	  CXformExploration(GPOS_NEW(mp) CExpression(
 		  mp, GPOS_NEW(mp) CLogicalSelect(mp),
@@ -49,14 +52,14 @@ CXformSelect2DynamicIndexGet::CXformSelect2DynamicIndexGet(CMemoryPool *mp)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformSelect2DynamicIndexGet::Exfp
+//		CXformSelect2DynamicIndexOnlyGet::Exfp
 //
 //	@doc:
 //		Compute xform promise for a given expression handle
 //
 //---------------------------------------------------------------------------
 CXform::EXformPromise
-CXformSelect2DynamicIndexGet::Exfp(CExpressionHandle &exprhdl) const
+CXformSelect2DynamicIndexOnlyGet::Exfp(CExpressionHandle &exprhdl) const
 {
 	if (exprhdl.DeriveHasSubquery(1))
 	{
@@ -68,16 +71,16 @@ CXformSelect2DynamicIndexGet::Exfp(CExpressionHandle &exprhdl) const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformSelect2DynamicIndexGet::Transform
+//		CXformSelect2DynamicIndexOnlyGet::Transform
 //
 //	@doc:
 //		Actual transformation
 //
 //---------------------------------------------------------------------------
 void
-CXformSelect2DynamicIndexGet::Transform(CXformContext *pxfctxt,
-										CXformResult *pxfres,
-										CExpression *pexpr) const
+CXformSelect2DynamicIndexOnlyGet::Transform(CXformContext *pxfctxt,
+											CXformResult *pxfres,
+											CExpression *pexpr) const
 {
 	GPOS_ASSERT(nullptr != pxfctxt);
 	GPOS_ASSERT(FPromising(pxfctxt->Pmp(), this, pexpr));
@@ -133,7 +136,7 @@ CXformSelect2DynamicIndexGet::Transform(CXformContext *pxfctxt,
 				mp, md_accessor, pexprRelational, pexpr->Pop()->UlOpId(),
 				pdrgpexpr, pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex,
 				pmdrel, EForwardScan /*indexScanDirection*/,
-				false /*indexForOrderBy*/, false /*indexonly*/);
+				false /*indexForOrderBy*/, true /*indexonly*/);
 		if (nullptr != pexprDynamicIndexGet)
 		{
 			// create a redundant SELECT on top of DynamicIndexGet to be able to use predicate in partition elimination

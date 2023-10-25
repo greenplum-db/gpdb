@@ -3,13 +3,13 @@
 //	Copyright (C) 2020 VMware, Inc.
 //
 //	@filename:
-//		CXformIndexGet2IndexOnlyScan.h
+//		CXformIndexOnlyGet2IndexOnlyScan.h
 //
 //	@doc:
 //		Transform Index Get to Index Only Scan
 //---------------------------------------------------------------------------
-#ifndef GPOPT_CXformIndexGet2IndexOnlyScan_H
-#define GPOPT_CXformIndexGet2IndexOnlyScan_H
+#ifndef GPOPT_CXformIndexOnlyGet2IndexOnlyScan_H
+#define GPOPT_CXformIndexOnlyGet2IndexOnlyScan_H
 
 #include "gpos/base.h"
 
@@ -21,36 +21,37 @@ using namespace gpos;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CXformIndexGet2IndexOnlyScan
+//		CXformIndexOnlyGet2IndexOnlyScan
 //
 //	@doc:
-//		Transform Index Get to Index Scan
+//		Transform Index Only Get to Index Only Scan
 //
 //---------------------------------------------------------------------------
-class CXformIndexGet2IndexOnlyScan : public CXformImplementation
+class CXformIndexOnlyGet2IndexOnlyScan : public CXformImplementation
 {
 private:
 public:
-	CXformIndexGet2IndexOnlyScan(const CXformIndexGet2IndexOnlyScan &) = delete;
+	CXformIndexOnlyGet2IndexOnlyScan(const CXformIndexOnlyGet2IndexOnlyScan &) =
+		delete;
 
 	// ctor
-	explicit CXformIndexGet2IndexOnlyScan(CMemoryPool *);
+	explicit CXformIndexOnlyGet2IndexOnlyScan(CMemoryPool *);
 
 	// dtor
-	~CXformIndexGet2IndexOnlyScan() override = default;
+	~CXformIndexOnlyGet2IndexOnlyScan() override = default;
 
 	// ident accessors
 	EXformId
 	Exfid() const override
 	{
-		return ExfIndexGet2IndexOnlyScan;
+		return ExfIndexOnlyGet2IndexOnlyScan;
 	}
 
 	// xform name
 	const CHAR *
 	SzId() const override
 	{
-		return "CXformIndexGet2IndexOnlyScan";
+		return "CXformIndexOnlyGet2IndexOnlyScan";
 	}
 
 	// compute xform promise for a given expression handle
@@ -61,10 +62,10 @@ public:
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 				   CExpression *pexpr) const override;
 
-};	// class CXformIndexGet2IndexOnlyScan
+};	// class CXformIndexOnlyGet2IndexOnlyScan
 
 }  // namespace gpopt
 
-#endif	// !GPOPT_CXformIndexGet2IndexOnlyScan_H
+#endif	// !GPOPT_CXformIndexOnlyGet2IndexOnlyScan_H
 
 // EOF

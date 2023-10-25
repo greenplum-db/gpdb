@@ -215,7 +215,7 @@ public:
 		ExfLeftOuterJoin2DynamicIndexGetApply____removed,
 		ExfLeftOuterJoinWithInnerSelect2DynamicBitmapIndexGetApply____removed,
 		ExfLeftOuterJoinWithInnerSelect2DynamicIndexGetApply____removed,
-		ExfIndexGet2IndexOnlyScan,
+		ExfIndexOnlyGet2IndexOnlyScan,
 		ExfJoin2BitmapIndexGetApply,
 		ExfJoin2IndexGetApply,
 		ExfMultiExternalGet2MultiExternalScan____removed,
@@ -228,8 +228,12 @@ public:
 		ExfPushJoinBelowLeftUnionAll,
 		ExfPushJoinBelowRightUnionAll,
 		ExfLimit2IndexGet,
-		ExfDynamicIndexGet2DynamicIndexOnlyScan,
+		ExfLimit2IndexOnlyGet,
+		ExfDynamicIndexOnlyGet2DynamicIndexOnlyScan,
 		ExfMinMax2IndexGet,
+		ExfMinMax2IndexOnlyGet,
+		ExfSelect2IndexOnlyGet,
+		ExfSelect2DynamicIndexOnlyGet,
 		ExfInvalid,
 		ExfSentinel = ExfInvalid
 	};

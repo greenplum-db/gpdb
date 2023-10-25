@@ -24,7 +24,9 @@
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CExpressionUtils.h"
 #include "gpopt/operators/CLogicalDynamicIndexGet.h"
+#include "gpopt/operators/CLogicalDynamicIndexOnlyGet.h"
 #include "gpopt/operators/CLogicalIndexGet.h"
+#include "gpopt/operators/CLogicalIndexOnlyGet.h"
 #include "gpopt/operators/CPhysicalDynamicScan.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
@@ -1149,6 +1151,8 @@ CStatisticsUtils::DeriveStatsForIndexGet(CMemoryPool *mp,
 {
 	COperator::EOperatorId operator_id = expr_handle.Pop()->Eopid();
 	GPOS_ASSERT(CLogical::EopLogicalIndexGet == operator_id ||
+				CLogical::EopLogicalIndexOnlyGet == operator_id ||
+				CLogical::EopLogicalDynamicIndexOnlyGet == operator_id ||
 				CLogical::EopLogicalDynamicIndexGet == operator_id);
 
 	// collect columns used by index conditions and distribution of the table
@@ -1160,6 +1164,26 @@ CStatisticsUtils::DeriveStatsForIndexGet(CMemoryPool *mp,
 	{
 		CLogicalIndexGet *index_get_op =
 			CLogicalIndexGet::PopConvert(expr_handle.Pop());
+		table_descriptor = index_get_op->Ptabdesc();
+		if (nullptr != index_get_op->PcrsDist())
+		{
+			used_col_refset->Include(index_get_op->PcrsDist());
+		}
+	}
+	else if (CLogical::EopLogicalIndexOnlyGet == operator_id)
+	{
+		CLogicalIndexOnlyGet *index_get_op =
+			CLogicalIndexOnlyGet::PopConvert(expr_handle.Pop());
+		table_descriptor = index_get_op->Ptabdesc();
+		if (nullptr != index_get_op->PcrsDist())
+		{
+			used_col_refset->Include(index_get_op->PcrsDist());
+		}
+	}
+	else if (CLogical::EopLogicalDynamicIndexOnlyGet == operator_id)
+	{
+		CLogicalDynamicIndexOnlyGet *index_get_op =
+			CLogicalDynamicIndexOnlyGet::PopConvert(expr_handle.Pop());
 		table_descriptor = index_get_op->Ptabdesc();
 		if (nullptr != index_get_op->PcrsDist())
 		{
