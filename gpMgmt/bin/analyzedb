@@ -160,14 +160,14 @@ SELECT schemaname, tablename FROM
 ORDER BY tableoid DESC;
 """
 
-def validate_schema_exists(pg_port, dbname, schema):
+def validate_schema_exists(dbname, schema, hostname, port):
     conn = None
     try:
-        dburl = dbconn.DbURL(port=pg_port, dbname=dbname)
+        dburl = dbconn.DbURL(dbname=dbname, hostname=hostname, port=port)
         conn = dbconn.connect(dburl)
         count = dbconn.execSQLForSingleton(conn, "select count(*) from pg_namespace where nspname='%s';" % pg.escape_string(schema))
         if count == 0:
-            raise ExceptionNoStackTraceNeeded("Schema %s does not exist in database %s." % (schema, dbname))
+            raise ExceptionNoStackTraceNeeded("Schema %s does not exist in database %s on %s:%s." % (schema, dbname, hostname, port))
     finally:
         if conn:
             conn.close()
@@ -203,7 +203,7 @@ def verify_lines_in_file(fname, expected):
     if lines != expected:
         raise Exception("After writing file '%s' contents not as expected.\nLines read from file: %s\nLines expected from file: %s\n" % (fname, lines, expected))
 
-def get_partition_state_tuples(pg_port, dbname, catalog_schema, partition_info):
+def get_partition_state_tuples(dbname, hostname, port, catalog_schema, partition_info):
     """
     Reads the partition state for an AO or AOCS relation, which is the sum of
     the modication counters over all ao segment files.
@@ -222,7 +222,7 @@ def get_partition_state_tuples(pg_port, dbname, catalog_schema, partition_info):
     The result is a list of tuples, of the format (schema_schema, partition_name, modcount)
     """
     partition_list = list()
-    dburl = dbconn.DbURL(port=pg_port, dbname=dbname)
+    dburl = dbconn.DbURL(dbname=dbname, hostname=hostname, port=port)
     num_sqls = 0
     with dbconn.connect(dburl) as conn:
         for (oid, schemaname, partition_name, tupletable) in partition_info:
@@ -267,8 +267,9 @@ class AnalyzeDb(Operation):
             options.masterDataDirectory = gp.get_masterdatadir()
         self.master_datadir = options.masterDataDirectory
         self.analyze_dir = STATEFILE_DIR
-        self.pg_port = self._get_pgport()
         self.dbname = options.dbname
+        self.hostname = options.hostname
+        self.port = options.port
         self.schema = options.schema
         self.single_table = options.single_table
         self.config_file = options.config_file
@@ -291,7 +292,7 @@ class AnalyzeDb(Operation):
         self._validate_options()
         self._preprocess_options()
 
-        self.conn = dbconn.connect(dbconn.DbURL(port=self.pg_port, dbname=self.dbname), utility=False)
+        self.conn = dbconn.connect(dbconn.DbURL(dbname=self.dbname, hostname=self.hostname, port=self.port), utility=False)
 
     def _validate_options(self):
         """
@@ -488,12 +489,12 @@ class AnalyzeDb(Operation):
             can_schema, can_table = can[0], can[1]
             if can in candidates:
                 target = self._get_tablename_with_cols(can_schema, can_table, input_col_dict)
-                cmd = create_psql_command(self.dbname, self.analyze_gucs + ANALYZE_SQL % target)
+                cmd = create_psql_command(self.dbname, self.hostname, self.port, self.analyze_gucs + ANALYZE_SQL % target)
                 non_root_pool.addCommand(cmd)
 
             else:  # can in root_partition_col_dict
                 target = self._get_tablename_with_cols(can_schema, can_table, root_partition_col_dict)
-                cmd = create_psql_command(self.dbname, ANALYZE_ROOT_SQL % target)
+                cmd = create_psql_command(self.dbname, self.hostname, self.port, ANALYZE_ROOT_SQL % target)
                 root_pool.addCommand(cmd)
 
             # Also stash the name of the target table in the object, so that it can be extracted
@@ -581,7 +582,7 @@ class AnalyzeDb(Operation):
             self._parse_column(col_dict, self.single_table, schema, table, self.include_cols, self.exclude_cols, True)
 
         elif self.schema:  # all tables in a schema
-            validate_schema_exists(self.pg_port, self.dbname, self.schema)
+            validate_schema_exists(self.dbname, self.schema, self.hostname, self.port)
             logger.debug("getting all tables in the schema...")
             all_schema_tables = run_sql(self.conn, GET_ALL_DATA_TABLES_IN_SCHEMA_SQL % self.schema)
             # convert table name from ['public','foo'] to 'public.foo' and populate col_dict as all columns requested
@@ -687,7 +688,7 @@ class AnalyzeDb(Operation):
         logger.debug("getting ao state...")
         oid_str = get_oid_str(input_tables_set)
         ao_partition_info = run_sql(self.conn, GET_REQUESTED_AO_DATA_TABLE_INFO_SQL % oid_str)
-        return get_partition_state_tuples(self.pg_port, self.dbname, 'pg_aoseg', ao_partition_info)
+        return get_partition_state_tuples(self.dbname, self.hostname, self.port, 'pg_aoseg', ao_partition_info)
 
     def _get_lastop_state(self, input_tables_set):
         # oid, action, subtype, timestamp
@@ -956,8 +957,8 @@ class AnalyzeDb(Operation):
 
 
 # Create a Command object that executes a query using psql.
-def create_psql_command(dbname, query):
-    psql_cmd = """psql %s -c %s""" % (pipes.quote(dbname), pipes.quote(query))
+def create_psql_command(dbname, hostname, port, query):
+    psql_cmd = """psql %s -h %s -p %s -c %s""" % (pipes.quote(dbname), pipes.quote(hostname), pipes.quote(port), pipes.quote(query))
     return Command(query, psql_cmd)
 
 
@@ -1314,6 +1315,10 @@ def create_parser():
                       help="Database name. Required.")
     parser.add_option('-s', dest='schema', metavar="<schema name>",
                       help="Specify a schema to analyze. All tables in the schema will be analyzed.")
+    parser.add_option('--host', dest='hostname', metavar="<host name>", default="localhost",
+                      help="Hostname. Optional, localhost by default.")
+    parser.add_option('--port', dest='port', metavar="<port>", default="5432", # TODO should be pg_port by default
+                      help="Port. Optional, 5432 by default.")
     parser.add_option('-t', dest='single_table', metavar="<schema name>.<table name>",
                       help="Analyze a single table. Table name needs to be qualified with schema name.")
     parser.add_option('-i', type='string', dest='include_cols', metavar="<column1>,<column2>,...",
