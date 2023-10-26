@@ -338,7 +338,7 @@ cdbmutate_warn_ctid_without_segid(struct PlannerInfo *root, struct RelOptInfo *r
  * to a tree.
  *
  * Next, we will need to decide if the share is cross slices.  If the share
- * is not cross slice, we do not need the syncrhonization, and it is possible to
+ * is not cross slice, we do not need the synchronization, and it is possible to
  * keep the Material/Sort in memory to save a sort.
  *
  * It is essential that we walk the tree in the same order as the ExecProcNode start
