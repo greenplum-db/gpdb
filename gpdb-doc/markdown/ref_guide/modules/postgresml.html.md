@@ -62,9 +62,9 @@ Refer to [Installing Additional Supplied Modules](../../install_guide/install_mo
 
 The `postgresml` extension currently supports just a subset of all of the user-defined functions provided by PostgresML. They are these three:
 
-- `pgml.load_dataset()`: Loads a dataset into tables in VMware Greenplum using the `INSERT` SQL command. Read more about loading data [here](https://postgresml.org/docs/guides/transformers/fine_tuning#header-2).
-- `pgml.embed()` - Generates an embedding for the dataset. Read more about PostgresML embeddings [here](https://postgresml.org/docs/guides/transformers/embeddings). 
-- `pgml.transform()`: Applies a pre-trained transformer to process data. Read more about PostgresML pre-trained models [here](https://postgresml.org/docs/guides/transformers/pre_trained_models).
+- `pgml.load_dataset()`: Loads a dataset into tables in VMware Greenplum using the `INSERT` SQL command. Read more about loading data [here](https://postgresml.org/docs/guides/machine-learning/natural-language-processing/).
+- `pgml.embed()` - Generates an embedding for the dataset. Read more about PostgresML embeddings [here](https://postgresml.org/docs/guides/machine-learning/natural-language-processing/embeddings). 
+- `pgml.transform()`: Applies a pre-trained transformer to process data. Read more about PostgresML pre-trained models [here](https://postgresml.org/docs/guides/machine-learning/natural-language-processing/).
 
 VMware anticipates adding support for the additional PostgresML functions in future releases. 
 
