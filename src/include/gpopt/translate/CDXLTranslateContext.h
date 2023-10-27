@@ -19,6 +19,7 @@
 
 extern "C" {
 #include "postgres.h"
+
 #include "nodes/plannodes.h"
 }
 

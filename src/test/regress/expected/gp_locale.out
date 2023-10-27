@@ -1,31 +1,116 @@
 DROP DATABASE IF EXISTS testdb3;
 CREATE DATABASE testdb3 WITH LC_COLLATE='C' LC_CTYPE='C' TEMPLATE=template0;
 \c testdb3
-CREATE TABLE hi_안녕세계 (a int, 안녕세계 text) DISTRIBUTED BY (a);
-INSERT INTO hi_안녕세계 VALUES(1, '안녕세계 1');
-INSERT INTO hi_안녕세계 VALUES(42, '안녕세계 42');
+CREATE TABLE hi_안녕세계 (a int, 안녕세계1 text, 안녕세계2 text, 안녕세계3 text) DISTRIBUTED BY (a);
+-- DROP/ADD/RENAME columns
+ALTER TABLE hi_안녕세계 DROP COLUMN 안녕세계2;
+ALTER TABLE hi_안녕세계 ADD COLUMN 안녕세계2_ADD_COLUMN text;
+ALTER TABLE hi_안녕세계 RENAME COLUMN 안녕세계3 TO 안녕세계3_RENAME;
+INSERT INTO hi_안녕세계 VALUES(1, '안녕세계1 first', '안녕세2 first', '안녕세계3 first');
+INSERT INTO hi_안녕세계 VALUES(42, '안녕세계1 second', '안녕세2 second', '안녕세계3 second');
 SET optimizer_trace_fallback=on;
+-- DELETE
 EXPLAIN DELETE FROM hi_안녕세계 WHERE a=42;
-                              QUERY PLAN                               
------------------------------------------------------------------------
- Delete on "hi_안녕세계"  (cost=0.00..240.67 rows=17 width=10)
-   ->  Seq Scan on "hi_안녕세계"  (cost=0.00..240.67 rows=17 width=10)
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Delete on "hi_안녕세계"  (cost=0.00..138.58 rows=8 width=10)
+   ->  Seq Scan on "hi_안녕세계"  (cost=0.00..138.58 rows=8 width=10)
          Filter: (a = 42)
  Optimizer: Postgres-based planner
 (4 rows)
 
 DELETE FROM hi_안녕세계 WHERE a=42;
+-- UPDATE
+EXPLAIN UPDATE hi_안녕세계 SET 안녕세계1='안녕세계1 first UPDATE' WHERE 안녕세계1='안녕세계1 first';
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
+ Update on "hi_안녕세계"  (cost=0.00..138.58 rows=8 width=114)
+   ->  Seq Scan on "hi_안녕세계"  (cost=0.00..138.58 rows=8 width=114)
+         Filter: ("안녕세계1" = '안녕세계1 first'::text)
+ Optimizer: Postgres-based planner
+(4 rows)
+
+UPDATE hi_안녕세계 SET 안녕세계1='안녕세계1 first UPDATE' WHERE 안녕세계1='안녕세계1 first';
+-- SELECT
 EXPLAIN SELECT * FROM hi_안녕세계;
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..860.67 rows=49600 width=36)
-   ->  Seq Scan on "hi_안녕세계"  (cost=0.00..199.33 rows=16533 width=36)
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..452.33 rows=25100 width=100)
+   ->  Seq Scan on "hi_안녕세계"  (cost=0.00..117.67 rows=8367 width=100)
  Optimizer: Postgres-based planner
 (3 rows)
 
 SELECT * FROM hi_안녕세계;
- a |  안녕세계  
----+------------
- 1 | 안녕세계 1
+ a |       안녕세계1        | 안녕세계3_rename | 안녕세계2_add_column 
+---+------------------------+------------------+----------------------
+ 1 | 안녕세계1 first UPDATE | 안녕세2 first    | 안녕세계3 first
+(1 row)
+
+-- SELECT ALIAS
+EXPLAIN SELECT 안녕세계1 AS 안녕세계1_Alias FROM hi_안녕세계;
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..452.33 rows=25100 width=32)
+   ->  Seq Scan on "hi_안녕세계"  (cost=0.00..117.67 rows=8367 width=32)
+ Optimizer: Postgres-based planner
+(3 rows)
+
+SELECT 안녕세계1 AS 안녕세계1_Alias FROM hi_안녕세계;
+    안녕세계1_alias     
+------------------------
+ 안녕세계1 first UPDATE
+(1 row)
+
+-- SUBQUERY
+EXPLAIN SELECT * FROM (SELECT 안녕세계1 FROM hi_안녕세계) t;
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..452.33 rows=25100 width=32)
+   ->  Seq Scan on "hi_안녕세계"  (cost=0.00..117.67 rows=8367 width=32)
+ Optimizer: Postgres-based planner
+(3 rows)
+
+SELECT * FROM (SELECT 안녕세계1 FROM hi_안녕세계) t;
+       안녕세계1        
+------------------------
+ 안녕세계1 first UPDATE
+(1 row)
+
+-- CTE
+EXPLAIN WITH cte AS
+(SELECT 안녕세계1, 안녕세계2_ADD_COLUMN FROM hi_안녕세계) SELECT * FROM cte WHERE 안녕세계1 LIKE '안녕세계1%';
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..155.32 rows=1255 width=64)
+   ->  Seq Scan on "hi_안녕세계"  (cost=0.00..138.58 rows=418 width=64)
+         Filter: ("안녕세계1" ~~ '안녕세계1%'::text)
+ Optimizer: Postgres-based planner
+(4 rows)
+
+WITH cte AS
+(SELECT 안녕세계1, 안녕세계2_ADD_COLUMN FROM hi_안녕세계) SELECT * FROM cte WHERE 안녕세계1 LIKE '안녕세계1%';
+       안녕세계1        | 안녕세계2_add_column 
+------------------------+----------------------
+ 안녕세계1 first UPDATE | 안녕세계3 first
+(1 row)
+
+-- JOIN
+EXPLAIN SELECT * FROM hi_안녕세계 hi_안녕세계1, hi_안녕세계 hi_안녕세계2 WHERE hi_안녕세계1.안녕세계1 LIKE '%UPDATE';
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000001379.72 rows=63001 width=200)
+   ->  Nested Loop  (cost=10000000000.00..10000000539.71 rows=21000 width=200)
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..138.62 rows=3 width=100)
+               ->  Seq Scan on "hi_안녕세계" "hi_안녕세계1"  (cost=0.00..138.58 rows=1 width=100)
+                     Filter: ("안녕세계1" ~~ '%UPDATE'::text)
+         ->  Materialize  (cost=0.00..159.50 rows=8367 width=100)
+               ->  Seq Scan on "hi_안녕세계" "hi_안녕세계2"  (cost=0.00..117.67 rows=8367 width=100)
+ Optimizer: Postgres-based planner
+(8 rows)
+
+SELECT * FROM hi_안녕세계 hi_안녕세계1, hi_안녕세계 hi_안녕세계2 WHERE hi_안녕세계1.안녕세계1 LIKE '%UPDATE';
+ a |       안녕세계1        | 안녕세계3_rename | 안녕세계2_add_column | a |       안녕세계1        | 안녕세계3_rename | 안녕세계2_add_column 
+---+------------------------+------------------+----------------------+---+------------------------+------------------+----------------------
+ 1 | 안녕세계1 first UPDATE | 안녕세2 first    | 안녕세계3 first      | 1 | 안녕세계1 first UPDATE | 안녕세2 first    | 안녕세계3 first
 (1 row)
 

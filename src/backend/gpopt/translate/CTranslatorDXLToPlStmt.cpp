@@ -5318,6 +5318,51 @@ CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 
 //---------------------------------------------------------------------------
 //	@function:
+//		update_unknown_locale_walker
+//
+//	@doc:
+//		Given an expression tree and a TargetEntry pointer context, look for a
+//		matching target entry in the expression tree and overwrite the given
+//		TargetEntry context's resname with the original found in the expression
+//		tree.
+//
+//---------------------------------------------------------------------------
+static bool
+update_unknown_locale_walker(Node *node, void *context)
+{
+	if (node == nullptr)
+	{
+		return false;
+	}
+
+	TargetEntry *unknown_target_entry = (TargetEntry *) context;
+
+	if (IsA(node, TargetEntry))
+	{
+		TargetEntry *te = (TargetEntry *) node;
+
+		if (te->resorigtbl == unknown_target_entry->resorigtbl &&
+			te->resno == unknown_target_entry->resno)
+		{
+			unknown_target_entry->resname = te->resname;
+			return false;
+		}
+	}
+	else if (IsA(node, Query))
+	{
+		Query *query = (Query *) node;
+
+		return gpdb::WalkExpressionTree(
+			(Node *) query->targetList,
+			(bool (*)()) update_unknown_locale_walker, (void *) context);
+	}
+
+	return gpdb::WalkExpressionTree(
+		node, (bool (*)()) update_unknown_locale_walker, (void *) context);
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CTranslatorDXLToPlStmt::TranslateDXLProjList
 //
 //	@doc:
@@ -5429,22 +5474,11 @@ CTranslatorDXLToPlStmt::TranslateDXLProjList(
 				// bypasses the failure by using a generic "UNKNOWN" string.
 				// When that happens, the following code translates it back to
 				// the original multibyte string.
-				if (strcmp(target_entry->resname, "UNKNOWN") == 0 &&
-					nullptr != output_context->GetQuery())
+				if (strcmp(target_entry->resname, "UNKNOWN") == 0)
 				{
-					ListCell *lc_rte = nullptr;
-					ForEach(lc_rte, output_context->GetQuery()->rtable)
-					{
-						RangeTblEntry *pRTE = (RangeTblEntry *) lfirst(lc_rte);
-						if (target_entry->resorigtbl == pRTE->relid &&
-							nullptr != pRTE->eref)
-						{
-							target_entry->resname = strVal(
-								gpdb::ListNth(pRTE->eref->colnames,
-											  target_entry->resorigcol - 1));
-							break;
-						}
-					}
+					update_unknown_locale_walker(
+						(Node *) output_context->GetQuery(),
+						(void *) target_entry);
 				}
 			}
 		}
