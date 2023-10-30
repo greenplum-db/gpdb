@@ -1677,8 +1677,8 @@ gpdb::IsOpNDVPreserving(Oid opno)
 {
 	switch (opno)
 	{
-		// operators are NDV preserving if the operation does not change the numeber
-		// of NDVs when performing the operation when performed with a constant
+		// operators are NDV-preserving if the operation does not change the number
+		// of NDVs when one argument is a constant.
 		// note that we do additional checks later, e.g. col || 'const' is
 		// NDV-preserving, while col1 || col2 is not, same with arithmatic
 		// operators
