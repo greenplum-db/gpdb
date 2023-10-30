@@ -602,8 +602,8 @@ copylibs :
 	    echo "INFO: Python not found on this platform, $(BLD_ARCH), not copying it into the GPDB package."; \
 	fi
 	# Create the python3.9 directory to flag to build scripts that python has been handled
-	mkdir -p $(INSTLOC)/ext/python3.9
 	@if [ ! -z "$(PYTHONHOME39)" ]; then \
+	    mkdir -p $(INSTLOC)/ext/python3.9; \
 	    echo "Copying python3.9, ., from $(PYTHONHOME39) into $(INSTLOC)/ext/python3.9..."; \
 	    (cd $(PYTHONHOME39) && tar cf - .) | (cd $(INSTLOC)/ext/python3.9/ && tar xpf -); \
 		echo "...DONE"; \
