@@ -6,9 +6,9 @@
 --
 -- Create a database that sets the minimum locale
 --
-DROP DATABASE IF EXISTS testdb3;
-CREATE DATABASE testdb3 WITH LC_COLLATE='C' LC_CTYPE='C' TEMPLATE=template0;
-\c testdb3
+DROP DATABASE IF EXISTS test_locale;
+CREATE DATABASE test_locale WITH LC_COLLATE='C' LC_CTYPE='C' TEMPLATE=template0;
+\c test_locale
 
 --
 -- drop/add/remove columns
@@ -36,6 +36,8 @@ UPDATE hi_안녕세계 SET 안녕세계1='안녕세계1 first UPDATE' WHERE 안�
 -- SELECT
 SELECT * FROM hi_안녕세계;
 
+SELECT 안녕세계1 || こんにちわ3 FROM hi_안녕세계;
+
 -- SELECT ALIAS
 SELECT 안녕세계1 AS 안녕세계1_Alias FROM hi_안녕세계;
 
@@ -45,6 +47,9 @@ SELECT * FROM (SELECT 안녕세계1 FROM hi_안녕세계) t;
 -- CTE
 WITH cte AS
 (SELECT 안녕세계1, こんにちわ3 FROM hi_안녕세계) SELECT * FROM cte WHERE 안녕세계1 LIKE '안녕세계1%';
+
+WITH cte(안녕세계x, こんにちわx) AS
+(SELECT 안녕세계1, こんにちわ3 FROM hi_안녕세계) SELECT * FROM cte WHERE 안녕세계x LIKE '안녕세계1%';
 
 -- JOIN
 SELECT * FROM hi_안녕세계 hi_안녕세계1, hi_안녕세계 hi_안녕세계2 WHERE hi_안녕세계1.안녕세계1 LIKE '%UPDATE';
