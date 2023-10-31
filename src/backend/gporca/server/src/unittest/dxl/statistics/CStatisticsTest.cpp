@@ -597,8 +597,8 @@ CStatisticsTest::Pdrgpstatspred2(CMemoryPool *mp)
 		GPOS_NEW(mp) CWStringDynamic(mp, GPOS_WSZ_LIT("HxEAAA=="));
 	CWStringDynamic *pstrUpperDate =
 		GPOS_NEW(mp) CWStringDynamic(mp, GPOS_WSZ_LIT("LREAAA=="));
-	LINT lLowerDate = LINT(4383);
-	LINT lUpperDate = LINT(4397);
+	LINT lLowerDate = LINT(INT64_C(378691200000000));
+	LINT lUpperDate = LINT(INT64_C(379900800000000));
 	StatsFilterGeneric(mp, 4, GPDB_DATE, pstrLowerDate, pstrUpperDate,
 					   lLowerDate, lUpperDate, pdrgpstatspred);
 

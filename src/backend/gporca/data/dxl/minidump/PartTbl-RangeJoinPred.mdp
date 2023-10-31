@@ -664,8 +664,8 @@ where d.msisdn=f.subscriberaddress and f.sessioncreationtimestamp >= d.start_dtm
       </dxl:Type>
       <dxl:ColumnStatistics Mdid="1.1277041.1.1.17" Name="row_effective_from_dtm" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">
         <dxl:StatsBucket Frequency="1.000000" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" LintValue="5338"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" LintValue="5338"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" DoubleValue="461203200000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" DoubleValue="461203200000000.000000"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.1277041.1.1.16" Name="process_run_id" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">
@@ -676,14 +676,14 @@ where d.msisdn=f.subscriberaddress and f.sessioncreationtimestamp >= d.start_dtm
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.1277041.1.1.9" Name="update_dtm" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">
         <dxl:StatsBucket Frequency="1.000000" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" LintValue="5338"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" LintValue="5338"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" DoubleValue="461203200000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" DoubleValue="461203200000000.000000"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.1277041.1.1.8" Name="create_dtm" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">
         <dxl:StatsBucket Frequency="1.000000" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" LintValue="5338"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" LintValue="5338"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" DoubleValue="461203200000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" DoubleValue="461203200000000.000000"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.1277041.1.1.1" Name="imsi_number" Width="18.000000" NullFreq="0.000000" NdvRemain="101915.000000" FreqRemain="0.990332">
@@ -1667,8 +1667,8 @@ where d.msisdn=f.subscriberaddress and f.sessioncreationtimestamp >= d.start_dtm
       <dxl:ColumnStatistics Mdid="1.1277041.1.1.19" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.1277041.1.1.18" Name="row_effective_to_dtm" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">
         <dxl:StatsBucket Frequency="1.000000" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" LintValue="5338"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" LintValue="5338"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" DoubleValue="461203200000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2hQAAA==" DoubleValue="461203200000000.000000"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.1277041.1.1.3" Name="imei_number" Width="15.000000" NullFreq="0.000000" NdvRemain="87302.000000" FreqRemain="0.985436">

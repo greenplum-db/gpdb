@@ -521,34 +521,34 @@ select * from customer_address, store where customer_address.ca_county::text = s
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.516672.1.1.3" Name="s_rec_end_date" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">
         <dxl:StatsBucket Frequency="0.642215" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2v7//w==" LintValue="-294"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2v7//w==" LintValue="-294"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2v7//w==" DoubleValue="-25401600000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2v7//w==" DoubleValue="-25401600000000.000000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.214072" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="RwAAAA==" LintValue="71"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="RwAAAA==" LintValue="71"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="RwAAAA==" DoubleValue="6134400000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="RwAAAA==" DoubleValue="6134400000000.000000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.142714" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tAEAAA==" LintValue="436"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="tAEAAA==" LintValue="436"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tAEAAA==" DoubleValue="37670400000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="tAEAAA==" DoubleValue="37670400000000.000000"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.516672.1.1.2" Name="s_rec_start_date" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">
         <dxl:StatsBucket Frequency="0.570858" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="APz//w==" LintValue="-1024"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="APz//w==" LintValue="-1024"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="APz//w==" DoubleValue="-88473600000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="APz//w==" DoubleValue="-88473600000000.000000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.142714" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2/7//w==" LintValue="-293"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2/7//w==" LintValue="-293"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2/7//w==" DoubleValue="-25315200000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2/7//w==" DoubleValue="-25315200000000.000000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.142714" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="SAAAAA==" LintValue="72"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="SAAAAA==" LintValue="72"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="SAAAAA==" DoubleValue="6220800000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="SAAAAA==" DoubleValue="6220800000000.000000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.142714" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tQEAAA==" LintValue="437"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="tQEAAA==" LintValue="437"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tQEAAA==" DoubleValue="37756800000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="tQEAAA==" DoubleValue="37756800000000.000000"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:Type Mdid="0.1700.1.0" Name="numeric" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="false" Length="-1" PassByValue="false">

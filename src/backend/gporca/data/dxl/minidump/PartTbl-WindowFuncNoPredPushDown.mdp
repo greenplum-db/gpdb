@@ -313,7 +313,7 @@
           <dxl:And>
             <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.1097.1.0">
               <dxl:Ident ColId="14" ColName="date" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" LintValue="4077"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" DoubleValue="352252800000000.000000"/>
             </dxl:Comparison>
             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
               <dxl:Ident ColId="16" ColName="region" TypeMdid="0.25.1.0"/>
@@ -350,7 +350,7 @@
           <dxl:And>
             <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.1097.1.0">
               <dxl:Ident ColId="13" ColName="date" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" LintValue="4077"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" DoubleValue="352252800000000.000000"/>
             </dxl:Comparison>
             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
               <dxl:Ident ColId="15" ColName="region" TypeMdid="0.25.1.0"/>

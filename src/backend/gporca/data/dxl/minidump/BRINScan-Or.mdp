@@ -367,7 +367,7 @@
           </dxl:And>
           <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
             <dxl:Ident ColId="4" ColName="dt" TypeMdid="0.1082.1.0"/>
-            <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+B0AAA==" LintValue="7672"/>
+            <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+B0AAA==" DoubleValue="662860800000000.000000"/>
           </dxl:Comparison>
           <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.1324.1.0">
             <dxl:Ident ColId="5" ColName="ts" TypeMdid="0.1184.1.0"/>
@@ -465,7 +465,7 @@
               </dxl:And>
               <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
                 <dxl:Ident ColId="3" ColName="dt" TypeMdid="0.1082.1.0"/>
-                <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+B0AAA==" LintValue="7672"/>
+                <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+B0AAA==" DoubleValue="662860800000000.000000"/>
               </dxl:Comparison>
               <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.1324.1.0">
                 <dxl:Ident ColId="4" ColName="ts" TypeMdid="0.1184.1.0"/>
@@ -497,7 +497,7 @@
                   <dxl:IndexCondList>
                     <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
                       <dxl:Ident ColId="3" ColName="dt" TypeMdid="0.1082.1.0"/>
-                      <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+B0AAA==" LintValue="7672"/>
+                      <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+B0AAA==" DoubleValue="662860800000000.000000"/>
                     </dxl:Comparison>
                   </dxl:IndexCondList>
                   <dxl:IndexDescriptor Mdid="0.180254.1.0" IndexName="foo_brin"/>
