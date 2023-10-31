@@ -70,4 +70,4 @@ $$ LANGUAGE plpythonu;
 
 SELECT elog_test_string_truncate();
 
-SELECT logseverity FROM gp_toolkit.__gp_log_coordinator_ext order by logtime desc limit 5;
+SELECT logseverity FROM gp_toolkit.__gp_log_master_ext order by logtime desc limit 5;
