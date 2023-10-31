@@ -1811,7 +1811,6 @@ jobs:
         - unit_tests_gporca_[[ os_type ]]
         - gpdb_pitr_[[ os_type ]]
         - interconnect_[[ os_type ]]
-        - icw_extensions_gpcloud_[[ os_type ]]
         - gpexpand_[[ os_type ]]
         - pg_upgrade_[[ os_type ]]
       - get: gpdb_src
@@ -1835,7 +1834,6 @@ jobs:
         - unit_tests_gporca_[[ os_type ]]
         - gpdb_pitr_[[ os_type ]]
         - interconnect_[[ os_type ]]
-        - icw_extensions_gpcloud_[[ os_type ]]
         - gpexpand_[[ os_type ]]
         - pg_upgrade_[[ os_type ]]
         trigger: true
