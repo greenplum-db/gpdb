@@ -78,6 +78,7 @@ static bool pull_varnos_walker(Node *node,
 static bool pull_varattnos_walker(Node *node, pull_varattnos_context *context);
 static bool pull_vars_walker(Node *node, pull_vars_context *context);
 static bool contain_var_clause_walker(Node *node, void *context);
+static bool contain_all_vars_clause_walker(Node *node, void *context);
 static bool contain_vars_of_level_walker(Node *node, int *sublevels_up);
 static bool locate_var_of_level_walker(Node *node,
 						   locate_var_of_level_context *context);
@@ -478,6 +479,24 @@ contain_var_clause_walker(Node *node, void *context)
 	return expression_tree_walker(node, contain_var_clause_walker, context);
 }
 
+bool
+contain_all_vars_clause(Node *node)
+{
+	return contain_all_vars_clause_walker(node, NULL);
+}
+
+static bool
+contain_all_vars_clause_walker(Node *node, void *context)
+{
+	if (node == NULL)
+		return false;
+	if (IsA(node, Var))
+		return true;		/* abort the tree traversal and return true */
+	if (IsA(node, CurrentOfExpr))
+		return true;
+
+	return expression_tree_walker(node, contain_all_vars_clause_walker, context);
+}
 
 /*
  * contain_vars_of_level

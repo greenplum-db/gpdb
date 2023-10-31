@@ -2353,6 +2353,21 @@ is_pseudo_constant_clause(Node *clause)
 	return false;
 }
 
+bool
+is_dummy_constant_clause(Node *clause)
+{
+	/*
+	 * We could implement this check in one recursive scan.  But since the
+	 * check for volatile functions is both moderately expensive and unlikely
+	 * to fail, it seems better to look for Vars first and only check for
+	 * volatile functions if we find no Vars.
+	 */
+	if (!contain_all_vars_clause(clause) &&
+		!contain_volatile_functions(clause))
+		return true;
+	return false;
+}
+
 /*
  * is_pseudo_constant_clause_relids
  *	  Same as above, except caller already has available the var membership

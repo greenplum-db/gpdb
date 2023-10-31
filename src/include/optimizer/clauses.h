@@ -97,6 +97,7 @@ extern char check_execute_on_functions(Node *clause);
 
 extern bool is_pseudo_constant_clause(Node *clause);
 extern bool is_pseudo_constant_clause_relids(Node *clause, Relids relids);
+extern bool is_dummy_constant_clause(Node *clause);
 
 extern int	NumRelids(Node *clause);
 

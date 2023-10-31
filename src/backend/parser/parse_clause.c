@@ -2904,10 +2904,19 @@ transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
 		 * append remaining group clauses to the end of group clause list
 		 */
 		ListCell *lc = NULL;
+		int nums = list_length(group_tlist_remainder);
+		int counts = 0;
 
 		foreach(lc, group_tlist_remainder)
 		{
 			TargetEntry *tle = (TargetEntry *) lfirst(lc);
+
+			if (is_dummy_constant_clause((Node *)tle->expr))
+			{
+				counts++;
+				continue;
+			}
+
 			if (!tle->resjunk)
 			{
 				SortBy sortby;
@@ -2921,6 +2930,30 @@ transformDistinctToGroupBy(ParseState *pstate, List **targetlist,
 				group_clause_list = addTargetToSortList(pstate, tle,
 														group_clause_list, *targetlist,
 														&sortby, true);
+			}
+		}
+
+		/* If targetlist are all constant, then add them all to group by clause */
+		if (counts == nums)
+		{
+			foreach(lc, group_tlist_remainder)
+			{
+				TargetEntry *tle = (TargetEntry *) lfirst(lc);
+
+				if (!tle->resjunk)
+				{
+					SortBy sortby;
+
+					sortby.type = T_SortBy;
+					sortby.sortby_dir = SORTBY_DEFAULT;
+					sortby.sortby_nulls = SORTBY_NULLS_DEFAULT;
+					sortby.useOp = NIL;
+					sortby.location = -1;
+					sortby.node = (Node *) tle->expr;
+					group_clause_list = addTargetToSortList(pstate, tle,
+															group_clause_list, *targetlist,
+															&sortby, true);
+				}
 			}
 		}
 	}

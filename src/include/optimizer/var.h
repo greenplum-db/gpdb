@@ -52,6 +52,7 @@ extern void pull_varattnos(Node *node, Index varno, Bitmapset **varattnos);
 extern List *pull_vars_of_level(Node *node, int levelsup);
 extern bool contain_ctid_var_reference(Scan *scan);
 extern bool contain_var_clause(Node *node);
+extern bool contain_all_vars_clause(Node *node);
 extern bool contain_vars_of_level(Node *node, int levelsup);
 extern bool contain_vars_of_level_or_above(Node *node, int levelsup);
 extern int	locate_var_of_level(Node *node, int levelsup);
