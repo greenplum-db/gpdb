@@ -637,3 +637,17 @@ reset gp_force_random_redistribution;
 CREATE TABLE atsdby_multiple(i int, j int);
 ALTER TABLE atsdby_multiple SET DISTRIBUTED BY(j), ADD COLUMN k int;
 ALTER TABLE atsdby_multiple SET WITH (reorganize=true), ADD COLUMN k int;
+
+-- Check that after AT SET DISTRIBUTED BY, the toast table name is still 'pg_toast_<tableoid>'
+create table atsdby_toastname(a text, b int);
+alter table atsdby_toastname set distributed by (b);
+select reltoastrelid::regclass = ('pg_toast.pg_toast_' || oid::text)::regclass
+from pg_class where relname = 'atsdby_toastname';
+
+-- Check that after AT SET DISTRIBUTED BY, index is being re-indexed. Verify one of the segments is enough.
+create table atsdby_reindex(a text, b int);
+create index atsdby_reindex_i on atsdby_reindex(b);
+select relfilenode from gp_dist_random('pg_class') where relname = 'atsdby_reindex' and gp_segment_id = 0
+\gset
+alter table atsdby_reindex set distributed by (b);
+select :relfilenode = relfilenode from gp_dist_random('pg_class') where relname = 'atsdby_reindex' and gp_segment_id = 0;
