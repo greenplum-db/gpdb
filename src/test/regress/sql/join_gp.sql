@@ -737,3 +737,26 @@ drop table random_dis_char;
 set optimizer_enable_hashjoin to on;
 reset enable_hashjoin;
 reset enable_nestloop;
+
+-- Test lateral join when subquery contains limit and where clause
+-- Greenplum cannot pass params across motion so one need to prevent
+-- the bottom scan node from appending to its targetlist outer relation
+-- refs. Otherwise it may lead to segfault at the exectution stage.
+
+--start_ignore
+drop table if exists t1;
+drop table if exists t2;
+--end_ignore
+create table t1 (c text) distributed by (c);
+create table t2 (c text) distributed by (c);
+insert into t1 values ('1'), ('2'), ('3');
+insert into t2 values ('3'), ('4');
+
+explain (verbose, costs off) select * from t2 join lateral
+(select * from t1 where t2.c = t1.c limit 1) s on true;
+
+select * from t2 join lateral
+(select * from t1 where t2.c = t1.c limit 1) s on true;
+
+drop table t1;
+drop table t2;
