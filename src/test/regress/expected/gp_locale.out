@@ -53,6 +53,18 @@ SELECT * FROM (SELECT 안녕세계1 FROM hi_안녕세계) t;
  안녕세계1 first UPDATE
 (1 row)
 
+SELECT (SELECT こんにちわ3 FROM hi_안녕세계) FROM (SELECT 1) AS q;
+  こんにちわ3  
+---------------
+ 안녕세2 first
+(1 row)
+
+SELECT (SELECT (SELECT こんにちわ3 FROM hi_안녕세계) FROM  hi_안녕세계) FROM (SELECT 1) AS q;
+  こんにちわ3  
+---------------
+ 안녕세2 first
+(1 row)
+
 -- CTE
 WITH cte AS
 (SELECT 안녕세계1, こんにちわ3 FROM hi_안녕세계) SELECT * FROM cte WHERE 안녕세계1 LIKE '안녕세계1%';

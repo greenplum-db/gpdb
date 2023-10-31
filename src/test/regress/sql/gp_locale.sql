@@ -44,6 +44,10 @@ SELECT 안녕세계1 AS 안녕세계1_Alias FROM hi_안녕세계;
 -- SUBQUERY
 SELECT * FROM (SELECT 안녕세계1 FROM hi_안녕세계) t;
 
+SELECT (SELECT こんにちわ3 FROM hi_안녕세계) FROM (SELECT 1) AS q;
+
+SELECT (SELECT (SELECT こんにちわ3 FROM hi_안녕세계) FROM  hi_안녕세계) FROM (SELECT 1) AS q;
+
 -- CTE
 WITH cte AS
 (SELECT 안녕세계1, こんにちわ3 FROM hi_안녕세계) SELECT * FROM cte WHERE 안녕세계1 LIKE '안녕세계1%';
