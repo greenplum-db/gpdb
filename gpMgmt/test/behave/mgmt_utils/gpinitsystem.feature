@@ -366,3 +366,10 @@ Feature: gpinitsystem tests
         Then grep should return a return code of 0
         And the user runs command "mv ../gpAux/gpdemo/clusterConfigFile.bak ../gpAux/gpdemo/clusterConfigFile"
 
+    @postmaster
+    Scenario: gpinitsystem creates a cluster with GUC gp_postmaster_inet_address_family
+        Given the database is initialized with checksum "off"
+        When the user runs "gpconfig -s gp_postmaster_inet_address_family"
+        Then gpconfig should return a return code of 0
+        And gpconfig should print "Coordinator value: auto" to stdout
+        And gpconfig should print "Segment     value: auto" to stdout
