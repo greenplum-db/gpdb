@@ -16,7 +16,7 @@ The following Greenplum Database and PostgreSQL `contrib` modules are installed;
 -   [diskquota](diskquota.html) - Allows administrators to set disk usage quotas for Greenplum Database roles and schemas.
 -   [fuzzystrmatch](fuzzystrmatch.html) - Determines similarities and differences between strings.
 -   [gp\_array\_agg](gp_array_agg.html) - Implements a parallel `array_agg()` aggregate function for Greenplum Database.
--   [gp\_check\_functions](gp_check_functions.html) - Provides views to check for orphaned and missing relation files.
+-   [gp\_check\_functions](gp_check_functions.html) - Provides views to check for orphaned and missing relation files and a user-defined function to move orphaned files.
 -   [gp\_legacy\_string\_agg](gp_legacy_string_agg.html) - Implements a legacy, single-argument `string_agg()` aggregate function that was present in Greenplum Database 5.
 -   [gp\_parallel\_retrieve\_cursor](gp_parallel_retrieve_cursor.html) - Provides extended cursor functionality to retrieve data, in parallel, directly from Greenplum Database segments.
 -   [gp\_percentile\_agg](gp_percentile_agg.html) - Improves GPORCA performance for ordered-set aggregate functions.
