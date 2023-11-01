@@ -1202,6 +1202,7 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 			// NullTest only has one arg
 			left_arg = (Node *) (((NullTest *) index_cond_expr)->arg);
 			is_null_test_type = true;
+			right_arg = nullptr;
 		}
 		else
 		{
