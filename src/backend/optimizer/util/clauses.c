@@ -2363,7 +2363,8 @@ is_dummy_constant_clause(Node *clause)
 	 * volatile functions if we find no Vars.
 	 */
 	if (!contain_all_vars_clause(clause) &&
-		!contain_volatile_functions(clause))
+		!contain_volatile_functions(clause) &&
+		!contain_subplans(clause))
 		return true;
 	return false;
 }
