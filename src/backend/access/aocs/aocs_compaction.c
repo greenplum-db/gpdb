@@ -38,6 +38,7 @@
 #include "utils/snapmgr.h"
 #include "utils/guc.h"
 #include "miscadmin.h"
+#include "storage/procarray.h"
 
 /*
  * Drops a segment file.
@@ -501,6 +502,9 @@ AOCSCollectDeadSegments(Relation aorel,
 	AOCSFileSegInfo **segfile_array;
 	Snapshot appendOnlyMetaDataSnapshot = SnapshotSelf;
 	Bitmapset *dead_segs = NULL;
+	TransactionId xmin;
+	TransactionId cutoff_xid = InvalidTransactionId;
+	bool		visible_to_all;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(RelationIsAoCols(aorel));
@@ -515,7 +519,18 @@ AOCSCollectDeadSegments(Relation aorel,
 	{
 		AOCSFileSegInfo *fsinfo = segfile_array[i];
 
-		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
+		xmin = fsinfo->tupleVisibilitySummary.xmin;
+		if (xmin == FrozenTransactionId)
+			visible_to_all = true;
+		else
+		{
+			if (cutoff_xid == InvalidTransactionId)
+				cutoff_xid = GetOldestXmin(NULL, true);
+
+			visible_to_all = TransactionIdPrecedes(xmin, cutoff_xid);
+		}
+
+		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP && visible_to_all)
 			dead_segs = bms_add_member(dead_segs, fsinfo->segno);
 	}
 

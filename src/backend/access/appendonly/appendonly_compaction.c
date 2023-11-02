@@ -514,6 +514,9 @@ AppendOnlyCollectDeadSegments(Relation aorel, List *compaction_segno)
 	FileSegInfo **segfile_array;
 	Snapshot appendOnlyMetaDataSnapshot = SnapshotSelf;
 	Bitmapset *dead_segs = NULL;
+	TransactionId xmin;
+	TransactionId cutoff_xid = InvalidTransactionId;
+	bool		visible_to_all;
 
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
@@ -529,10 +532,19 @@ AppendOnlyCollectDeadSegments(Relation aorel, List *compaction_segno)
 	{
 		FileSegInfo *fsinfo = segfile_array[i];
 
-		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
-			dead_segs = bms_add_member(dead_segs, fsinfo->segno);
+		xmin = fsinfo->tupleVisibilitySummary.xmin;
+		if (xmin == FrozenTransactionId)
+			visible_to_all = true;
+		else
+		{
+			if (cutoff_xid == InvalidTransactionId)
+				cutoff_xid = GetOldestXmin(NULL, true);
 
-		pfree(fsinfo);
+			visible_to_all = TransactionIdPrecedes(xmin, cutoff_xid);
+		}
+
+		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP && visible_to_all)
+			dead_segs = bms_add_member(dead_segs, fsinfo->segno);
 	}
 
 	if (segfile_array)
