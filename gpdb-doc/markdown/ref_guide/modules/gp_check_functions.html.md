@@ -87,7 +87,7 @@ Greenplum Database renames each moved data file to one that reflects the origina
 For example, if a file named `12345` in the default tablespace is orphaned on primary segment 2,
 
 ```
-SELECT * FROM gp_move_orphaned_files('/home/gpadmin/orphaned')`;
+SELECT * FROM gp_move_orphaned_files('/home/gpadmin/orphaned');
 ```
 
 moves and renames the file as follows:
