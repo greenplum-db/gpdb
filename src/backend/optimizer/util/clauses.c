@@ -2353,6 +2353,15 @@ is_pseudo_constant_clause(Node *clause)
 	return false;
 }
 
+/*
+ * is_dummy_constant_clause
+ *    Detect whether an expression is "pseudo constant" as converting DISTINCT
+ *    to GROUP BY specially in GPDB.
+ *
+ *    1. Detect Vars in clause include outer-level and current-level Vars
+ *    2. Detect volatile_functions
+ *    3. Detect Subplans exist in clasue
+ */
 bool
 is_dummy_constant_clause(Node *clause)
 {
@@ -2360,7 +2369,7 @@ is_dummy_constant_clause(Node *clause)
 	 * We could implement this check in one recursive scan.  But since the
 	 * check for volatile functions is both moderately expensive and unlikely
 	 * to fail, it seems better to look for Vars first and only check for
-	 * volatile functions if we find no Vars.
+	 * volatile functions if we find no Vars and check subplans in final.
 	 */
 	if (!contain_all_vars_clause(clause) &&
 		!contain_volatile_functions(clause) &&
