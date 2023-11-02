@@ -527,11 +527,10 @@ AppendOnlyCollectDeadSegments(Relation aorel, List *compaction_segno)
 
 	for (int i = 0; i < total_segfiles; i++)
 	{
-		int segno = segfile_array[i]->segno;
+		FileSegInfo *fsinfo = segfile_array[i];
 
-		FileSegInfo *fsinfo = GetFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
 		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
-			dead_segs = bms_add_member(dead_segs, segno);
+			dead_segs = bms_add_member(dead_segs, fsinfo->segno);
 
 		pfree(fsinfo);
 	}
