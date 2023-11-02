@@ -626,6 +626,18 @@ Feature: gprecoverseg tests
     And gprecoverseg should return a return code of 0
     Then the cluster is rebalanced
 
+  Scenario: gprecoverseg errors out with restricted options
+    Given the database is running
+    And user stops all primary processes
+    And user can start transactions
+    When the user runs "gprecoverseg xyz"
+    Then gprecoverseg should return a return code of 2
+    And gprecoverseg should print "Recovers a primary or mirror segment instance" to stdout
+    And gprecoverseg should print "too many arguments: only options may be specified" to stdout
+    When the user runs "gprecoverseg -a"
+    Then gprecoverseg should return a return code of 0
+    And the segments are synchronized
+    And the cluster is rebalanced
 
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
