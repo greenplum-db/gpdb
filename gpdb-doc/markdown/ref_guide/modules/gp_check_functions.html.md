@@ -39,7 +39,7 @@ The `gp_check_orphaned_files` view scans the default and user-defined tablespace
 | gp_segment_id | The Greenplum Database segment identifier. |
 | tablespace | The identifier of the tablespace in which the orphaned file resides. |
 | filename | The file name of the orphaned data file. |
-| filepath | The file system path of the orphaned data file, relative to `$MASTER_DATA_DIRECTORY`. |
+| filepath | The file system path of the orphaned data file, relative to the data directory of the master or segment. |
 
 > **Caution** Use this view as one of many data points to identify orphaned data files. Do not delete files based solely on results from querying this view.
 
@@ -74,7 +74,7 @@ The `gp_move_orphaned_files()` user-defined function (UDF) moves orphaned files 
 
 The function signature is: `gp_move_orphaned_files( <target_directory> TEXT )`.
 
-`<target_directory>` must exist on all segment hosts before you move the files, and the specified directory must be accessible by the `gpadmin` user. If you specify a relative path for `<target_directory>`, it is considered relative to the data directories of the coordinator and segments.
+`<target_directory>` must exist on all segment hosts before you move the files, and the specified directory must be accessible by the `gpadmin` user. If you specify a relative path for `<target_directory>`, it is considered relative to the data directory of the master or segment.
 
 Greenplum Database renames each moved data file to one that reflects the original location of the file in the data directory. The file name format differs depending on the tablespace in which the orphaned file resides:
 
