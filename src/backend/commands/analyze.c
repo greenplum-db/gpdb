@@ -4197,11 +4197,13 @@ merge_leaf_stats(VacAttrStatsP stats,
 	int fullhll_count = 0;
 	int samplehll_count = 0;
 	int totalhll_count = 0;
+	double max_part_distinct = 0.0;
 	foreach (lc, oid_list)
 	{
 		Oid		leaf_relid = lfirst_oid(lc);
 		int32	stawidth = 0;
 		float4	stanullfrac = 0.0;
+		float4	stadistinct = 0.0;
 
 		const char *attname = get_attname(stats->attr->attrelid, stats->attr->attnum, false);
 
@@ -4237,6 +4239,7 @@ merge_leaf_stats(VacAttrStatsP stats,
 
 		stawidth = ((Form_pg_statistic) GETSTRUCT(heaptupleStats[i]))->stawidth;
 		stanullfrac = ((Form_pg_statistic) GETSTRUCT(heaptupleStats[i]))->stanullfrac;
+
 		colAvgWidth = colAvgWidth + (stawidth > 0 ? stawidth : 0) * relTuples[i];
 		nullCount = nullCount + (stanullfrac > 0.0 ? stanullfrac : 0.0) * relTuples[i];
 
@@ -4278,6 +4281,13 @@ merge_leaf_stats(VacAttrStatsP stats,
 			free_attstatsslot(&hllSlot);
 			samplehll_count++;
 			totalhll_count++;
+
+			// get the max ndistinct value from a single partition
+			stadistinct = ((Form_pg_statistic) GETSTRUCT(heaptupleStats[i]))->stadistinct;
+			if (stadistinct < 0)
+				stadistinct = -1 * stadistinct * relTuples[i];
+			if (stadistinct > max_part_distinct)
+				max_part_distinct = stadistinct;
 		}
 		i++;
 	}
@@ -4529,6 +4539,11 @@ merge_leaf_stats(VacAttrStatsP stats,
 		if (stadistinct > totalTuples)
 			stadistinct = totalTuples;
 		ndistinct = floor(stadistinct + 0.5);
+
+		// if there's data skew, the estimated ndistinct value may be heavily underestimated
+		// thus ensure partitioned table's ndistinct is at least the maximum ndistinct value among its partitions
+		if (max_part_distinct > ndistinct)
+			ndistinct = max_part_distinct;
 	}
 
 	ndistinct = round(ndistinct);
