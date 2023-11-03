@@ -1967,10 +1967,13 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 	{
 		dPartialVisFrac = 0;
 	}
-	else if (stats->RelPages() != 0)
+	else
 	{
-		dPartialVisFrac =
-			1 - (CDouble(stats->RelAllVisible()) / CDouble(stats->RelPages()));
+		if (stats->RelPages() != 0)
+		{
+			dPartialVisFrac = 1 - (CDouble(stats->RelAllVisible()) /
+								   CDouble(stats->RelPages()));
+		}
 
 		// An index-only-scan on a heap table requires a visibility map lookup.
 		// It's a bitmap with compact size, so the cost is mostly negligible.

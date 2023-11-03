@@ -1139,7 +1139,7 @@ ORDER BY key1;
    Merge Key: key1
    ->  Sort
          Sort Key: key1
-         ->  Dynamic Index Only Scan on multikey_idx on pt_with_multikey_index
+         ->  Dynamic Index Scan on multikey_idx on pt_with_multikey_index
                Index Cond: (key1 = ANY ('{KEY55,KEY65,KEY5}'::bpchar[]))
                Number of partitions to scan: 3 (out of 3)
  Optimizer: Pivotal Optimizer (GPORCA)

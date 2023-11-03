@@ -162,11 +162,6 @@ CXformMinMax2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		EIndexScanDirection scan_direction =
 			GetScanDirection(pmdindex, popScAggFunc, agg_func_type);
 
-		COrderSpec *pos = nullptr;
-		// Compute and update the required OrderSpec for first index key
-		CXformUtils::ComputeOrderSpecForIndexKey(
-			mp, &pos, pmdindex, scan_direction, agg_colref, 0 /*key position*/);
-
 		BOOL indexonly = Exfid() == ExfMinMax2IndexOnlyGet;
 		// build IndexGet expression
 		CExpression *pexprIndexGet = CXformUtils::PexprBuildBtreeIndexPlan(
@@ -176,6 +171,12 @@ CXformMinMax2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 
 		if (pexprIndexGet != nullptr)
 		{
+			COrderSpec *pos = nullptr;
+			// Compute and update the required OrderSpec for first index key
+			CXformUtils::ComputeOrderSpecForIndexKey(mp, &pos, pmdindex,
+													 scan_direction, agg_colref,
+													 0 /*key position*/);
+
 			// build Limit expression
 			CExpression *pexprLimit = CUtils::BuildLimitExprWithOrderSpec(
 				mp, pexprIndexGet, pos, 0 /*limitOffset*/, 1 /*limitCount*/);

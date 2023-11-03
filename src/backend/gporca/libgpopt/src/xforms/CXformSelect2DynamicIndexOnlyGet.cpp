@@ -13,17 +13,9 @@
 
 #include "gpos/base.h"
 
-#include "gpopt/base/CConstraint.h"
-#include "gpopt/base/CUtils.h"
-#include "gpopt/metadata/CPartConstraint.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
-#include "gpopt/operators/CLogicalDynamicIndexOnlyGet.h"
 #include "gpopt/operators/CLogicalSelect.h"
-#include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/xforms/CXformUtils.h"
-#include "naucrates/md/CMDIndexGPDB.h"
-#include "naucrates/md/CMDRelationGPDB.h"
-#include "naucrates/md/IMDPartConstraint.h"
 
 using namespace gpopt;
 using namespace gpmd;

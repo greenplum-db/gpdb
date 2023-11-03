@@ -75,7 +75,7 @@ public:
 	BOOL
 	Matches(COperator *pop) const override
 	{
-		return CUtils::FMatchIndex(this, pop);
+		return CUtils::FMatchDynamicIndex(this, pop);
 	}
 
 	//-------------------------------------------------------------------------------------

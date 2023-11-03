@@ -1923,7 +1923,7 @@ explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on 
                Index Cond: (b > 300)
          ->  Materialize  (cost=0.00..6.00 rows=1 width=1)
                ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..6.00 rows=1 width=1)
-                     ->  Index Only Scan using idx3 on barjoinpruning  (cost=0.00..6.00 rows=1 width=1)
+                     ->  Index Scan using idx3 on barjoinpruning  (cost=0.00..6.00 rows=1 width=1)
                            Index Cond: ((p > 100) AND (q > 200))
  Optimizer: Pivotal Optimizer (GPORCA)
 (10 rows)

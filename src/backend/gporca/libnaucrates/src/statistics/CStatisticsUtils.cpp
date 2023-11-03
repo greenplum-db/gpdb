@@ -1172,22 +1172,22 @@ CStatisticsUtils::DeriveStatsForIndexGet(CMemoryPool *mp,
 	}
 	else if (CLogical::EopLogicalIndexOnlyGet == operator_id)
 	{
-		CLogicalIndexOnlyGet *index_get_op =
+		CLogicalIndexOnlyGet *index_only_get_op =
 			CLogicalIndexOnlyGet::PopConvert(expr_handle.Pop());
-		table_descriptor = index_get_op->Ptabdesc();
-		if (nullptr != index_get_op->PcrsDist())
+		table_descriptor = index_only_get_op->Ptabdesc();
+		if (nullptr != index_only_get_op->PcrsDist())
 		{
-			used_col_refset->Include(index_get_op->PcrsDist());
+			used_col_refset->Include(index_only_get_op->PcrsDist());
 		}
 	}
 	else if (CLogical::EopLogicalDynamicIndexOnlyGet == operator_id)
 	{
-		CLogicalDynamicIndexOnlyGet *index_get_op =
+		CLogicalDynamicIndexOnlyGet *dynamic_index_only_get_op =
 			CLogicalDynamicIndexOnlyGet::PopConvert(expr_handle.Pop());
-		table_descriptor = index_get_op->Ptabdesc();
-		if (nullptr != index_get_op->PcrsDist())
+		table_descriptor = dynamic_index_only_get_op->Ptabdesc();
+		if (nullptr != dynamic_index_only_get_op->PcrsDist())
 		{
-			used_col_refset->Include(index_get_op->PcrsDist());
+			used_col_refset->Include(dynamic_index_only_get_op->PcrsDist());
 		}
 	}
 	else
