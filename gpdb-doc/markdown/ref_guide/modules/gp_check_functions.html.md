@@ -74,7 +74,7 @@ The `gp_move_orphaned_files()` user-defined function (UDF) moves orphaned files 
 
 The function signature is: `gp_move_orphaned_files( <target_directory> TEXT )`.
 
-`<target_directory>` must exist on all segment hosts before you move the files, and the specified directory must be accessible by the `gpadmin` user. If you specify a relative path for `<target_directory>`, it is considered relative to the data directory, `$COORDINATOR_DATA_DIRECTORY`.
+`<target_directory>` must exist on all segment hosts before you move the files, and the specified directory must be accessible by the `gpadmin` user. If you specify a relative path for `<target_directory>`, it is considered relative to the data directories of the coordinator and segments.
 
 Greenplum Database renames each moved data file to one that reflects the original location of the file in the data directory. The file name format differs depending on the tablespace in which the orphaned file resides:
 
@@ -94,7 +94,7 @@ moves and renames the file as follows:
 
 | Original Location | New Location and File Name |
 |------|-----------|
-| `$COORDINATOR_DATA_DIRECTORY/base/13700/12345` | `/home/gpadmin/orphaned/seg2_base_13700_12345` |
+| `<data_directory>/base/13700/12345` | `/home/gpadmin/orphaned/seg2_base_13700_12345` |
 
 `gp_move_orphaned_files()` returns both the original and the new file system locations for each file that it moves, and also provides an indication of the success or failure of the move operation.
 
