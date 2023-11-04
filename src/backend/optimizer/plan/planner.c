@@ -2949,7 +2949,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 				base_cost = motion_cost_per_row * result_plan->plan_rows;
 				alt_cost = motion_cost_per_row * numDistinct;
 				cost_sort(&sort_path, root, NIL, alt_cost,
-						  numDistinct, result_plan->plan_rows,
+						  numDistinct, result_plan->plan_width,
 						  0, work_mem, -1.0);
 				alt_cost += sort_path.startup_cost;
 				alt_cost += cpu_operator_cost * numDistinct
