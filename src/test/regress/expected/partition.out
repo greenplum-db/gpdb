@@ -2452,9 +2452,9 @@ alter table rank_settemp add partition f1 values ('N');
 alter table rank_settemp set subpartition template (start (date '2007-01-01') with (appendonly=true, compresslevel=5));
 alter table rank_settemp add partition f2 values ('C');
 select relid::regclass, level, pg_get_expr(template, relid) from gp_partition_template where relid = 'rank_settemp'::regclass;
-    relid     | level |                                                  pg_get_expr                                                   
---------------+-------+----------------------------------------------------------------------------------------------------------------
- rank_settemp |     1 | SUBPARTITION TEMPLATE( START ('01-01-2007'::date) WITH (appendonly=true, orientation=column, compresslevel=5))
+    relid     | level |                                                 pg_get_expr                                                 
+--------------+-------+-------------------------------------------------------------------------------------------------------------
+ rank_settemp |     1 | SUBPARTITION TEMPLATE( START ('01-01-2007'::date) WITH (appendonly=true, orientation=row, compresslevel=5))
 (1 row)
 
 drop table rank_settemp;
@@ -6553,7 +6553,7 @@ PARTITION BY RANGE(log_date)
 );
 ALTER TABLE public.logs_issue_16558 SET SUBPARTITION TEMPLATE
 (
-    SUBPARTITION "1 2" VALUES ('1', '2', '3')
+    SUBPARTITION "1 2" VALUES ('1', '2', '3') WITH (APPENDONLY=TRUE, ORIENTATION=COLUMN)
 );
 SELECT level, pg_get_expr(template, relid, true) FROM gp_partition_template WHERE relid = 'public.logs_issue_16558'::regclass ORDER BY 1 DESC;
  level |                           pg_get_expr                            
