@@ -1,3 +1,10 @@
+-- start_matchsubs
+--
+-- m/ERROR:  array size exceeds the maximum allowed \(.*\)/
+-- s/ERROR:  array size exceeds the maximum allowed \(.*\)/ERROR:  array size exceeds the maximum allowed (#####)/
+--
+-- end_matchsubs
+
 --
 -- ARRAYS
 --
@@ -279,6 +286,19 @@ select * from arr_tbl where f1 >= '{1,2,3}' and f1 < '{1,5,3}' ORDER BY 1;
 -- then you didn't get an indexscan plan, and something is busted.
 reset enable_seqscan;
 reset enable_bitmapscan;
+
+-- test subscript overflow detection
+create temp table arr_pk_tbl (pk int4 primary key, f1 int[]);
+insert into arr_pk_tbl values(10, '[-2147483648:-2147483647]={1,2}');
+update arr_pk_tbl set f1[2147483647] = 42 where pk = 10;
+update arr_pk_tbl set f1[2147483646:2147483647] = array[4,2] where pk = 10;
+
+-- also exercise the expanded-array case
+do $$ declare a int[];
+begin
+  a := '[-2147483648:-2147483647]={1,2}'::int[];
+  a[2147483647] := 42;
+end $$;
 
 -- test [not] (like|ilike) (any|all) (...)
 select 'foo' like any (array['%a', '%o']); -- t
