@@ -1,8 +1,10 @@
 from collections import defaultdict
 import datetime
 import json
+import re
 
 from gppylib import gplog
+from gppylib.commands.base import Command, REMOTE
 
 
 class RecoveryInfo(object):
@@ -187,8 +189,39 @@ class RecoveryResult(object):
                     self._logger.error(setup_recovery_error_pattern.format(hostname, error.port, error.error_msg))
         self._print_invalid_errors()
 
+    def get_error_from_progress_file(self, progress_file, hostname):
+        """
+        Traverse the file in reverse order to fetch last registered occurence of 'error, panic or fatal' from the progress file.
+        'fatal: postgres single-user mode of target instance failed for command' is removed from the search pattern
+        as it is logged after every failed pg_rewind operation.
+        with open(progress_file, 'r') as fp:
+            reverseList = reversed(list(fp))
+            for errorLine in reverseList:
+                if re.search(r'ERROR|PANIC|FATAL|error:|fatal:', errorLine) and \
+                   not re.search(r'fatal: postgres single-user mode of target instance failed for command', errorLine):
+                   return errorLine
+            return None
+        """
+        cmdStr = 'ssh %s "tac %s"' %(hostname, progress_file)
+        cmd = Command(name="Parse logfile for errors on a remote host", cmdStr=cmdStr, ctxt=REMOTE, remoteHost=hostname)
+        cmd.run()
+        results = cmd.get_results()
+        if results.rc != 0:
+            self.logger.warning("Unable to prase the logfile %s" % progress_file)
+
+        print("SHIRISHA")
+        print(results)
+        print("END")
+
+        for errorLine in results:
+            if re.search(r'ERROR|PANIC|FATAL|error:|fatal:', errorLine) and \
+               not re.search(r'fatal: postgres single-user mode of target instance failed for command', errorLine):
+                return errorLine
+
+        return None
+
     def print_bb_rewind_differential_update_and_start_errors(self):
-        bb_rewind_differential_error_pattern = " hostname: {}; port: {}; logfile: {}; recoverytype: {}"
+        bb_rewind_differential_error_pattern = " hostname: {}; port: {}; logfile: {}; recoverytype: {}; error: {}"
         if len(self._bb_errors) > 0 or len(self._rewind_errors) > 0 or len(self._differential_errors) > 0:
             self._logger.info("----------------------------------------------------------")
             if len(self._rewind_errors) > 0:
@@ -202,16 +235,16 @@ class RecoveryResult(object):
             for hostname, errors in self._rewind_errors.items():
                 for error in errors:
                     self._logger.info(bb_rewind_differential_error_pattern.format(hostname, error.port, error.progress_file,
-                                                                     error.error_type))
+                                                                     error.error_type, self.get_error_from_progress_file(error.progress_file, hostname)))
 
             for hostname, errors in self._differential_errors.items():
                 for error in errors:
                     self._logger.info(bb_rewind_differential_error_pattern.format(hostname, error.port, error.progress_file,
-                                                                     error.error_type))
+                                                                     error.error_type, self.get_error_from_progress_file(error.progress_file, hostname)))
             for hostname, errors in self._bb_errors.items():
                 for error in errors:
                     self._logger.info(bb_rewind_differential_error_pattern.format(hostname, error.port, error.progress_file,
-                                                                 error.error_type))
+                                                                 error.error_type, self.get_error_from_progress_file(error.progress_file, hostname)))
 
         if len(self._start_errors) > 0:
             start_error_pattern = " hostname: {}; port: {}; datadir: {}"

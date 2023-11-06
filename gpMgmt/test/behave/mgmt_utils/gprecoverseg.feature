@@ -117,6 +117,7 @@ Feature: gprecoverseg tests
 
     @demo_cluster
     @concourse_cluster
+    @shi
     Scenario: Differential recovery succeeds if previous incremental recovery failed
         Given the database is running
           And user stops all primary processes
@@ -1429,6 +1430,8 @@ Feature: gprecoverseg tests
     And check if incremental recovery failed for mirrors with content 0 for gprecoverseg
     And check if full recovery was successful for mirrors with content 1
     And check if full recovery failed for mirrors with content 2 for gprecoverseg
+    And gprecoverseg should print "error:.*required WAL directory ""pg_wal"" does not exist" to stdout
+    And gprecoverseg should print "error: pg_basebackup: error: could not access directory.* Permission denied" to stdout
     And gprecoverseg should not print "Segments successfully recovered" to stdout
     And check if mirrors on content 0,1,2 are in their original configuration
     And the gp_configuration_history table should contain a backout entry for the primary segment for contents 2
