@@ -805,7 +805,23 @@ retryForFtsFailed(fts_segment_info *ftsInfo, pg_time_t now)
 		return;
 	}
 
-	ftsInfo->retry_count++;
+	/*
+	 * If the segment is in resseting mode, we shouldn't count this
+	 * round into `retry_conout`, since we wouldn't mark it down if FTS
+	 * max retries exhausted in this mode. More importantly, before this
+	 * commit, if the segment is in resetting mode at the last FTS probe
+	 * before it reaches the max retries, and when the next round comes,
+	 * the segment enters recovery mode, it may take serveral seconds to
+	 * fork the startup process and finish the replay of the first XLOG
+	 * when the system load is comparative high. At this moment, FTS may
+	 * mark it down with only one probe failure in "recovery mode making
+	 * no progress" state.
+	 *
+	 * To avoid this, we'd better keep the `retry_conout` unchanged when
+	 * the segment is in resetting mode.
+	 */
+	if (ftsInfo->restart_state != PM_IN_RESETTING)
+		ftsInfo->retry_count++;
 	if (ftsInfo->state == FTS_PROBE_SUCCESS ||
 		ftsInfo->state == FTS_PROBE_FAILED)
 		ftsInfo->state = FTS_PROBE_RETRY_WAIT;
