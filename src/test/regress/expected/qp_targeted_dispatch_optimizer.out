@@ -95,8 +95,7 @@ update key_value_table set value=300 where key =200;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 rollback to s;
 commit;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 2 0 1
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 2 0 1
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 Begin;
 SELECT * FROM key_value_table WHERE key = 200 FOR UPDATE;
 INFO:  (slice 1) Dispatch command to SINGLE content
@@ -109,7 +108,7 @@ savepoint s;
 update key_value_table set value=200 where key =300;
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 rollback;
-INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 2 0 1
+INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 0 1 2
 savepoint s;
 ERROR:  SAVEPOINT can only be used in transaction blocks
 abort;
@@ -175,8 +174,7 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 insert into boolean values ('t', 1);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 alter table boolean set distributed by (boo, b);
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
@@ -320,8 +318,7 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into bytea values ('e','0.0.1.0');
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 select * from bytea where bytea1='d' and cidr1='0.0.0.1';
 INFO:  (slice 1) Dispatch command to SINGLE content
  bytea1 |   cidr1    
@@ -355,8 +352,7 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into inetmac values ('0.0.0.2','AA:AA:AA:AA:AA:AC');
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 select * from inetmac where inet1='0.0.0.0' and macaddr1 ='AA:AA:AA:AA:AA:AA';
 INFO:  (slice 1) Dispatch command to SINGLE content
   inet1  |     macaddr1      
@@ -391,8 +387,7 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into time2 values ('00:00:00+1352', 'abcd');
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 select * from time2 where time2='00:00:00+1359' and text1='abcg';
 INFO:  (slice 1) Dispatch command to SINGLE content
      time2      | text1 
@@ -427,8 +422,7 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into timestamp values ('2004-12-13 01:51:25','2004-12-12 01:51:15+1359');
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 select * from timestamp where timestamp1='2004-12-13 01:51:25' and time2 ='2004-12-12 01:51:15+1359';
 INFO:  (slice 1) Dispatch command to SINGLE content
         timestamp1        |            time2             
@@ -462,8 +456,7 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into bit1 values ('0', 24);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 select * from bit1 where a='0' and b =24;
 INFO:  (slice 1) Dispatch command to SINGLE content
  a | b  
@@ -627,9 +620,7 @@ distributed by (key);
 insert into mpp7620 values (200, 'horse');
 -- enable printing of printing info
 set test_print_direct_dispatch_info=on;
-Create table zoompp7620 as select * from mpp7620 where key=200;
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+Create table zoompp7620 as select * from mpp7620 where key=200 distributed by (key);
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
@@ -637,15 +628,11 @@ insert into mpp7620 values (200, 200);
 INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into zoompp7620 select * from mpp7620 where key=200;
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
-INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=200;
-INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
-INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  (slice 0) Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 select key from mpp7620 where mpp7620.key=200;
 INFO:  (slice 1) Dispatch command to SINGLE content
  key 
@@ -676,10 +663,8 @@ explain insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=20
                                            QUERY PLAN                                           
 ------------------------------------------------------------------------------------------------
  Insert on zoompp7620  (cost=0.00..431.02 rows=1 width=4)
-   ->  Result  (cost=0.00..431.00 rows=1 width=16)
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-               ->  Seq Scan on mpp7620  (cost=0.00..431.00 rows=1 width=4)
-                     Filter: (key = 200)
+   ->  Seq Scan on mpp7620  (cost=0.00..431.00 rows=1 width=4)
+         Filter: (key = 200)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (6 rows)
 

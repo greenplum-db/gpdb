@@ -467,7 +467,6 @@ doPrepareTransaction(void)
 
 	elog(DTM_DEBUG5, "doPrepareTransaction moved to state = %s", DtxStateToString(MyTmGxactLocal->state));
 
-	Assert(MyTmGxactLocal->dtxSegments != NIL);
 	succeeded = currentDtxDispatchProtocolCommand(DTX_PROTOCOL_COMMAND_PREPARE, true);
 
 	/*
@@ -515,7 +514,7 @@ doNotifyingOnePhaseCommit(void)
 {
 	bool		succeeded;
 
-	if (MyTmGxactLocal->dtxSegments == NIL)
+	if (MyTmGxactLocal->writerSegments == NIL && MyTmGxactLocal->readerSegments == NIL)
 		return;
 
 	elog(DTM_DEBUG5, "doNotifyingOnePhaseCommit entering in state = %s", DtxStateToString(MyTmGxactLocal->state));
@@ -560,7 +559,6 @@ doNotifyingCommitPrepared(void)
 
 	savedInterruptHoldoffCount = InterruptHoldoffCount;
 
-	Assert(MyTmGxactLocal->dtxSegments != NIL);
 	PG_TRY();
 	{
 		succeeded = currentDtxDispatchProtocolCommand(DTX_PROTOCOL_COMMAND_COMMIT_PREPARED, true);
@@ -695,7 +693,6 @@ retryAbortPrepared(void)
 		savedInterruptHoldoffCount = InterruptHoldoffCount;
 		PG_TRY();
 		{
-			MyTmGxactLocal->dtxSegments = cdbcomponent_getCdbComponentsList();
 			succeeded = currentDtxDispatchProtocolCommand(DTX_PROTOCOL_COMMAND_RETRY_ABORT_PREPARED, true);
 			if (!succeeded)
 				ereport(WARNING,
@@ -866,7 +863,7 @@ prepareDtxTransaction(void)
 	 * Otherwise, broadcast PREPARE TRANSACTION to the segments.
 	 */
 	if (!TopXactExecutorDidWriteXLog() ||
-		(!markXidCommitted && list_length(MyTmGxactLocal->dtxSegments) < 2))
+		(!markXidCommitted && list_length(MyTmGxactLocal->writerSegments) < 2))
 	{
 		setCurrentDtxState(DTX_STATE_ONE_PHASE_COMMIT);
 		/*
@@ -914,7 +911,9 @@ rollbackDtxTransaction(void)
 		case DTX_STATE_ACTIVE_DISTRIBUTED:
 		case DTX_STATE_ONE_PHASE_COMMIT:
 		case DTX_STATE_NOTIFYING_ONE_PHASE_COMMIT:
-			if (!MyTmGxactLocal->dtxSegments || currentGxactWriterGangLost())
+			if ((MyTmGxactLocal->writerSegments == NIL &&
+				 MyTmGxactLocal->readerSegments == NIL) ||
+				currentGxactWriterGangLost())
 			{
 				ereport(DTM_DEBUG5,
 						(errmsg("The distributed transaction 'Abort' broadcast was omitted (segworker group already dead)"),
@@ -1215,11 +1214,32 @@ compare_int(const void *va, const void *vb)
 bool
 currentDtxDispatchProtocolCommand(DtxProtocolCommand dtxProtocolCommand, bool raiseError)
 {
-	char gid[TMGIDSIZE];
+	char	gid[TMGIDSIZE];
+	List   *dtxSegments = list_copy(MyTmGxactLocal->writerSegments);
+	bool	result = false;
 
 	dtxFormGid(gid, getDistributedTransactionId());
-	return doDispatchDtxProtocolCommand(dtxProtocolCommand, gid, raiseError,
-										MyTmGxactLocal->dtxSegments, NULL, 0);
+
+	if (dtxProtocolCommand == DTX_PROTOCOL_COMMAND_PREPARE)
+	{
+		/*
+		 * If the current command is 'PREPARE', we only dispatch it to writer segments
+		 * to improve performance.
+		 */
+		result =  doDispatchDtxProtocolCommand(dtxProtocolCommand, gid, raiseError,
+											   dtxSegments, NULL, 0);
+	}
+	else
+	{
+		dtxSegments = list_concat(dtxSegments,
+								  list_copy(MyTmGxactLocal->readerSegments));
+		result =  doDispatchDtxProtocolCommand(dtxProtocolCommand, gid, raiseError,
+											   dtxSegments, NULL, 0);
+	}
+
+	if (dtxSegments)
+		list_free(dtxSegments);
+	return result;
 }
 
 bool
@@ -1247,9 +1267,11 @@ doDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 	dtxProtocolCommandStr = DtxProtocolCommandToString(dtxProtocolCommand);
 
 	if (Test_print_direct_dispatch_info)
+	{
 		elog(INFO, "Distributed transaction command '%s' to %s",
-			 								dtxProtocolCommandStr,
-											segmentsToContentStr(dtxSegments));
+			 dtxProtocolCommandStr,
+			 segmentsToContentStr(dtxSegments));
+	}
 
 	ereport(DTM_DEBUG5,
 			(errmsg("dispatchDtxProtocolCommand: %d ('%s'), direct content #: %s",
@@ -1448,8 +1470,10 @@ resetTmGxact(void)
 
 	MyTmGxactLocal->explicitBeginRemembered = false;
 	MyTmGxactLocal->writerGangLost = false;
-	MyTmGxactLocal->dtxSegmentsMap = NULL;
-	MyTmGxactLocal->dtxSegments = NIL;
+	MyTmGxactLocal->writerSegmentsMap = NULL;
+	MyTmGxactLocal->writerSegments = NIL;
+	MyTmGxactLocal->readerSegmentsMap = NULL;
+	MyTmGxactLocal->readerSegments = NIL;
 	MyTmGxactLocal->isOnePhaseCommit = false;
 	if (MyTmGxactLocal->waitGxids != NULL)
 	{
@@ -2271,15 +2295,55 @@ performDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 			break;
 
 		case DTX_PROTOCOL_COMMAND_COMMIT_PREPARED:
-			requireDistributedTransactionContext(DTX_CONTEXT_QE_PREPARED);
-			setDistributedTransactionContext(DTX_CONTEXT_QE_FINISH_PREPARED);
-			performDtxProtocolCommitPrepared(gid, /* raiseErrorIfNotFound */ true);
+			switch (DistributedTransactionContext)
+			{
+				/*
+				 * In the two-phase commit, the context of involved segment is
+				 * DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER/DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER.
+				 * Read-only segments just need to execute one-phase commit and do not perform
+				 * prepare phase. So their context will keep DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER
+				 * or DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER in the commit phase.
+				 * In this case, we just run the commit one-phase operation for these segments.
+				 */
+				case DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER:
+				case DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER:
+					performDtxProtocolCommitOnePhase(gid);
+					break;
+				/*
+				 * Write segments executed prepare phase, so their context is DTX_CONTEXT_QE_PREPARED.
+				 * In this case, we run the commit prepared operation for these segments.
+				 */
+				default:
+					requireDistributedTransactionContext(DTX_CONTEXT_QE_PREPARED);
+					setDistributedTransactionContext(DTX_CONTEXT_QE_FINISH_PREPARED);
+					performDtxProtocolCommitPrepared(gid, /* raiseErrorIfNotFound */ true);
+					break;
+			}
 			break;
 
 		case DTX_PROTOCOL_COMMAND_ABORT_PREPARED:
-			requireDistributedTransactionContext(DTX_CONTEXT_QE_PREPARED);
-			setDistributedTransactionContext(DTX_CONTEXT_QE_FINISH_PREPARED);
-			performDtxProtocolAbortPrepared(gid, /* raiseErrorIfNotFound */ true);
+			switch (DistributedTransactionContext)
+			{
+				/*
+				 * In the two-phase commit, the context of involved segment is
+				 * DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER/DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER.
+				 * Read-only segments just need to execute one-phase commit and do not perform
+				 * prepare phase. So their context will keep DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER
+				 * or DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER in the commit phase.
+				 */
+				case DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER:
+				case DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER:
+					AbortOutOfAnyTransaction();
+					break;
+				/*
+				 * Write segments executed prepare phase, so their context is DTX_CONTEXT_QE_PREPARED.
+				 */
+				default:
+					requireDistributedTransactionContext(DTX_CONTEXT_QE_PREPARED);
+					setDistributedTransactionContext(DTX_CONTEXT_QE_FINISH_PREPARED);
+					performDtxProtocolAbortPrepared(gid, /* raiseErrorIfNotFound */ true);
+					break;
+			}
 			break;
 
 		case DTX_PROTOCOL_COMMAND_RETRY_COMMIT_PREPARED:
@@ -2387,44 +2451,62 @@ currentGxactWriterGangLost(void)
 
 /*
  * Record which segment involved in the two phase commit.
+ * If the status of segment is DTX_SEG_WRITER, the segment will
+ * be added to dtxSegments and writerSegments.
+ * If the status of segment is DTX_SEG_READER, the segment will
+ * be added to dtxSegments.
  */
 void
-addToGxactDtxSegments(Gang *gang)
+addToGxactDtxSegments(int totalSegments, DtxSegmentState *dtxSegmentsState)
 {
-	SegmentDatabaseDescriptor *segdbDesc;
-	MemoryContext oldContext;
-	int segindex;
-	int i;
+	int				segindex;
+	MemoryContext	oldcontext;
 
 	if (!isCurrentDtxActivated())
 		return;
 
-	/* skip if all segdbs are in the list */
-	if (list_length(MyTmGxactLocal->dtxSegments) >= getgpsegmentCount())
-		return;
-
-	oldContext = MemoryContextSwitchTo(TopTransactionContext);
-	for (i = 0; i < gang->size; i++)
+	oldcontext = MemoryContextSwitchTo(TopTransactionContext);
+	for (segindex = 0; segindex < totalSegments; segindex++)
 	{
-		segdbDesc = gang->db_descriptors[i];
-		Assert(segdbDesc);
-		segindex = segdbDesc->segindex;
-
-		/* entry db is just a reader, will not involve in two phase commit */
-		if (segindex == -1)
+		if (dtxSegmentsState[segindex] == DTX_SEG_NOT_INVOLVED)
 			continue;
 
-		/* skip if record already */
-		if (bms_is_member(segindex, MyTmGxactLocal->dtxSegmentsMap))
+		/* Skip if we've recorded the current segment. */
+		if (bms_is_member(segindex, MyTmGxactLocal->writerSegmentsMap) ||
+			(dtxSegmentsState[segindex] == DTX_SEG_READER &&
+			 bms_is_member(segindex, MyTmGxactLocal->readerSegmentsMap)))
+		{
 			continue;
+		}
 
-		MyTmGxactLocal->dtxSegmentsMap =
-			bms_add_member(MyTmGxactLocal->dtxSegmentsMap, segindex);
+		if (dtxSegmentsState[segindex] == DTX_SEG_READER)
+		{
+			MyTmGxactLocal->readerSegmentsMap =
+				bms_add_member(MyTmGxactLocal->readerSegmentsMap, segindex);
 
-		MyTmGxactLocal->dtxSegments =
-			lappend_int(MyTmGxactLocal->dtxSegments, segindex);
+			MyTmGxactLocal->readerSegments =
+				lappend_int(MyTmGxactLocal->readerSegments, segindex);
+		}
+		else if (dtxSegmentsState[segindex] == DTX_SEG_WRITER)
+		{
+			if (bms_is_member(segindex, MyTmGxactLocal->readerSegmentsMap))
+			{
+				MyTmGxactLocal->readerSegments =
+					list_delete_int(MyTmGxactLocal->readerSegments, segindex);
+				MyTmGxactLocal->readerSegmentsMap =
+					bms_del_member(MyTmGxactLocal->readerSegmentsMap, segindex);
+			}
+
+			MyTmGxactLocal->writerSegmentsMap =
+				bms_add_member(MyTmGxactLocal->writerSegmentsMap, segindex);
+
+			MyTmGxactLocal->writerSegments =
+				lappend_int(MyTmGxactLocal->writerSegments, segindex);
+		}
 	}
-	MemoryContextSwitchTo(oldContext);
+	Assert(list_length(MyTmGxactLocal->writerSegments) +
+		   list_length(MyTmGxactLocal->readerSegments) <= totalSegments);
+	MemoryContextSwitchTo(oldcontext);
 }
 
 bool

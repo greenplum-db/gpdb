@@ -316,7 +316,7 @@ distributed by (key);
 insert into mpp7620 values (200, 'horse');
 -- enable printing of printing info
 set test_print_direct_dispatch_info=on;
-Create table zoompp7620 as select * from mpp7620 where key=200;
+Create table zoompp7620 as select * from mpp7620 where key=200 distributed by (key);
 insert into mpp7620 values (200, 200);
 insert into zoompp7620 select * from mpp7620 where key=200;
 insert into zoompp7620(key) select key from mpp7620 where mpp7620.key=200;

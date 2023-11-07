@@ -445,6 +445,8 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 	StringInfoData io_err_msg;
 	List           *oidList = NIL;
 	int				nest_level;
+	int				totalSegments = getgpsegmentCount();
+	DtxSegmentState *dtxSegmentsState = NULL;
 
 	SIMPLE_FAULT_INJECTOR("cdb_copy_end_internal_start");
 
@@ -512,6 +514,8 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 	nest_level = GetCurrentTransactionNestLevel();
 
 	pollRead = (struct pollfd *) palloc(sizeof(struct pollfd));
+	dtxSegmentsState =
+		(DtxSegmentState *) palloc0(sizeof(DtxSegmentState) * totalSegments);
 	for (seg = 0; seg < gp->size; seg++)
 	{
 		SegmentDatabaseDescriptor *q = gp->db_descriptors[seg];
@@ -575,6 +579,14 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 			if (q->conn->wrote_xlog)
 			{
 				MarkTopTransactionWriteXLogOnExecutor();
+
+				/*
+				 * Here is a little different from processResults, COPY command
+				 * must use dtx, no need to judge if this is a dtx. And cdbCopyStart
+				 * will call processResults, which will add the read-only segments to
+				 * dtxSegments list.
+				 */
+				dtxSegmentsState[q->segindex] = DTX_SEG_WRITER;
 
 				/*
 				* Reset the worte_xlog here. Since if the received pgresult not process
@@ -720,6 +732,9 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 			num_bad_connections++;
 		}
 	}
+
+	addToGxactDtxSegments(totalSegments, dtxSegmentsState);
+	pfree(dtxSegmentsState);
 
 	CdbDispatchCopyEnd(c);
 

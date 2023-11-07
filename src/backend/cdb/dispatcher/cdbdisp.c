@@ -132,6 +132,9 @@ cdbdisp_checkDispatchResult(struct CdbDispatcherState *ds,
 {
 	(pDispatchFuncs->checkResults) (ds, waitMode);
 
+	if (ds->shouldRecordDtxSegments)
+		addToGxactDtxSegments(ds->totalSegments, ds->dtxSegmentsState);
+
 	if (log_dispatch_stats)
 		ShowUsage("DISPATCH STATISTICS");
 
@@ -298,13 +301,16 @@ CdbDispatchHandleError(struct CdbDispatcherState *ds)
 
 /*
  * Allocate memory and initialize CdbDispatcherState.
+ * shouldRecordDtxSegments: whether need to record the segments involved in the
+ * current transaction to MyTmGxactLocal.
  *
  * Call cdbdisp_destroyDispatcherState to free it.
  */
 CdbDispatcherState *
-cdbdisp_makeDispatcherState(bool isExtendedQuery)
+cdbdisp_makeDispatcherState(bool isExtendedQuery, bool shouldRecordDtxSegments)
 {
 	dispatcher_handle_t *handle;
+	int segmentsCount = getgpsegmentCount();
 
 	if (!isExtendedQuery)
 	{
@@ -331,6 +337,10 @@ cdbdisp_makeDispatcherState(bool isExtendedQuery)
 	handle->dispatcherState->largestGangSize = 0;
 	handle->dispatcherState->rootGangSize = 0;
 	handle->dispatcherState->destroyIdleReaderGang = false;
+	handle->dispatcherState->totalSegments = segmentsCount;
+	handle->dispatcherState->dtxSegmentsState =
+		MemoryContextAllocZero(DispatcherContext, sizeof(DtxSegmentState) * segmentsCount);
+	handle->dispatcherState->shouldRecordDtxSegments = shouldRecordDtxSegments || isDtxExplicitBegin();
 
 	return handle->dispatcherState;
 }
@@ -413,11 +423,17 @@ cdbdisp_destroyDispatcherState(CdbDispatcherState *ds)
 	if (ds->destroyIdleReaderGang)
 		cdbcomponent_cleanupIdleQEs(false);
 
+	if (ds->dtxSegmentsState)
+		pfree(ds->dtxSegmentsState);
+
 	ds->allocatedGangs = NIL;
 	ds->dispatchParams = NULL;
 	ds->primaryResults = NULL;
 	ds->largestGangSize = 0;
 	ds->rootGangSize = 0;
+	ds->totalSegments = 0;
+	ds->dtxSegmentsState = NULL;
+	ds->shouldRecordDtxSegments = false;
 
 	if (h != NULL)
 		destroy_dispatcher_handle(h);
@@ -620,17 +636,35 @@ segmentsListToString(const char *prefix, List *segments)
 	return string.data;
 }
 
+static int
+compare_int(const void *va, const void *vb)
+{
+	int			a = lfirst_int(*(ListCell **) va);
+	int			b = lfirst_int(*(ListCell **) vb);
+
+	if (a == b)
+		return 0;
+	return (a > b) ? 1 : -1;
+}
+
 char*
 segmentsToContentStr(List *segments)
 {
-	int size = list_length(segments);
+	int		size = list_length(segments);
+	List   *sortedSegments = list_qsort(segments, compare_int);
+	char   *segmentContent = NULL;
 
 	if (size == 0)
-		return "ALL contents";
+		segmentContent = pstrdup("NO content");
 	else if (size == 1)
-		return "SINGLE content";
+		segmentContent = pstrdup("SINGLE content");
 	else if (size < getgpsegmentCount())
-		return segmentsListToString("PARTIAL contents", segments);
+		segmentContent = segmentsListToString("PARTIAL contents", sortedSegments);
 	else
-		return segmentsListToString("ALL contents", segments);
+		segmentContent = segmentsListToString("ALL contents", sortedSegments);
+
+	if (sortedSegments)
+		list_free(sortedSegments);
+
+	return segmentContent;
 }

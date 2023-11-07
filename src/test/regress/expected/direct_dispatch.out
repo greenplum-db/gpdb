@@ -165,8 +165,7 @@ INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 
 delete from direct_test where value = '123123';
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 --------------------------------------------------------------------------------
 -- Multiple row update, where clause lists multiple values which hash differently so no direct dispatch
 --
@@ -174,14 +173,14 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 --                hash all these values to the same content! (and so test would change)
 --
 update direct_test set value = 'pig' where key in (1,2,3,4,5);
-INFO:  (slice 0) Dispatch command to ALL contents: 1 0 2
-INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 1 0 2
+INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 update direct_test_two_column set value = 'pig' where key1 = 100 and key2 in (1,2,3,4);
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 1 2
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 1 2
 update direct_test_two_column set value = 'pig' where key1 in (100,101,102,103,104) and key2 in (1);
-INFO:  (slice 0) Dispatch command to ALL contents: 1 0 2
-INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 1 0 2
+INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 update direct_test_two_column set value = 'pig' where key1 in (100,101) and key2 in (1,2);
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 1 2
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 1 2
@@ -206,7 +205,7 @@ INFO:  (slice 0) Dispatch command to SINGLE content
 insert into direct_test values (3,100);
 INFO:  (slice 0) Dispatch command to SINGLE content
 rollback;
-INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to PARTIAL contents: 1 0
+INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to PARTIAL contents: 0 1
 -------------------
 -- MPP-7634: bitmap index scan
 --
@@ -311,7 +310,7 @@ SELECT * FROM direct_dispatch_foo WHERE id IN
                       SELECT id1, id2 FROM direct_dispatch_bar WHERE direct_dispatch_bar.id1 = 2) AS s) ORDER BY 1;
 INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
-INFO:  (slice 3) Dispatch command to PARTIAL contents: 1 0
+INFO:  (slice 3) Dispatch command to PARTIAL contents: 0 1
  id 
 ----
   1
@@ -349,12 +348,12 @@ INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTI
 delete from direct_dispatch_foo where id = (select max(id2) from direct_dispatch_bar where id1 = 5);
 INFO:  (slice 2) Dispatch command to SINGLE content
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 2 0 1
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dispatch_bar where id1 = 5) AND id = 3;
 INFO:  (slice 2) Dispatch command to SINGLE content
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 2 0
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 0 2
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dispatch_bar) AND id = 3;
 INFO:  (slice 2) Dispatch command to ALL contents: 0 1 2
@@ -427,18 +426,16 @@ INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
 insert into ddtesttab values (1, 1, 5 + random()); -- volatile expression as distribution key
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 insert into ddtesttab values (1, 1, nextval('ddtestseq'));
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into ddtesttab values (1, 1, 5 + nextval('ddtestseq'));
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 drop table ddtesttab;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
@@ -457,13 +454,11 @@ INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGL
 insert into ddtesttab values (1, 1, nextval('ddtestseq'));
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 insert into ddtesttab values (1, 1, 5 + nextval('ddtestseq'));
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 -- One partition is randomly distributed, while others are distributed by key.
 alter table ddtesttab_1_prt_2 set distributed randomly;
 ERROR:  can't set the distribution policy of "ddtesttab_1_prt_2"
@@ -477,13 +472,11 @@ INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGL
 insert into ddtesttab values (1, 1, nextval('ddtestseq'));
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 insert into ddtesttab values (1, 1, 5 + nextval('ddtestseq'));
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
 drop table ddtesttab;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
@@ -998,7 +991,7 @@ explain (costs off) select gp_segment_id, * from t_test_dd_via_segid_conj where 
 (4 rows)
 
 select gp_segment_id, * from t_test_dd_via_segid_conj where a =3 and b between 1 and 10 and gp_segment_id in (0,1);
-INFO:  (slice 1) Dispatch command to PARTIAL contents: 1 0
+INFO:  (slice 1) Dispatch command to PARTIAL contents: 0 1
  gp_segment_id | a | b 
 ---------------+---+---
              0 | 3 | 3
@@ -1046,7 +1039,7 @@ explain (costs off) select gp_segment_id, * from t_test_dd_via_segid_conj where 
 (4 rows)
 
 select gp_segment_id, * from t_test_dd_via_segid_conj where a in (1,3) and gp_segment_id <> 0;
-INFO:  (slice 1) Dispatch command to PARTIAL contents: 1 0
+INFO:  (slice 1) Dispatch command to PARTIAL contents: 0 1
  gp_segment_id | a | b 
 ---------------+---+---
              1 | 1 | 1
@@ -1062,7 +1055,7 @@ explain (costs off) select gp_segment_id, * from t_test_dd_via_segid_conj where 
 (4 rows)
 
 select gp_segment_id, * from t_test_dd_via_segid_conj where a in (1,3) and gp_segment_id in (0,1);
-INFO:  (slice 1) Dispatch command to PARTIAL contents: 1 0
+INFO:  (slice 1) Dispatch command to PARTIAL contents: 0 1
  gp_segment_id | a | b 
 ---------------+---+---
              0 | 3 | 3

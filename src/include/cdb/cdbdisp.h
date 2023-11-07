@@ -51,6 +51,9 @@ typedef struct CdbDispatcherState
 	bool isGangDestroying;
 #endif
 	bool destroyIdleReaderGang;
+	int  totalSegments;					/* total segments involved the current transaction */
+	DtxSegmentState *dtxSegmentsState;	/* an array maintaining the status of each involved segments */
+	bool shouldRecordDtxSegments;
 } CdbDispatcherState;
 
 typedef struct DispatcherInternalFuncs
@@ -183,10 +186,13 @@ cdbdisp_cancelDispatch(CdbDispatcherState *ds);
 
 /*
  * Allocate memory and initialize CdbDispatcherState.
+ * shouldRecordDtxSegments: whether need to record the segments involved in the
+ * current transaction to MyTmGxactLocal.
  *
  * Call cdbdisp_destroyDispatcherState to free it.
  */
-CdbDispatcherState * cdbdisp_makeDispatcherState(bool isExtendedQuery);
+CdbDispatcherState *
+cdbdisp_makeDispatcherState(bool isExtendedQuery, bool shouldRecordDtxSegments);
 
 /*
  * Free memory in CdbDispatcherState

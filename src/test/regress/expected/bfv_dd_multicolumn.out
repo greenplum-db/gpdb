@@ -61,7 +61,7 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 (1 row)
 
 select * from dd_multicol_1 where (a=1 and b=1) or (a=2 and b=2);
-INFO:  (slice 1) Dispatch command to PARTIAL contents: 1 0
+INFO:  (slice 1) Dispatch command to PARTIAL contents: 0 1
  a | b 
 ---+---
  1 | 1

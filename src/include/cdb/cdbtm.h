@@ -232,8 +232,26 @@ typedef struct TMGXACTLOCAL
 
 	bool						writerGangLost;
 
-	Bitmapset					*dtxSegmentsMap;
-	List						*dtxSegments;
+	/* 
+	 * Used to record segments which has persisted WAL during a dtx.
+	 * writerSegmentsMap: used to check whether a segment is stored
+	 * in writerSegments on QD. For example,
+	 * (bms_is_member(0, writerSegmentsMap) == true) means seg0 is
+	 * stored in writerSegments.
+	 */
+	Bitmapset					*writerSegmentsMap;
+	List						*writerSegments;
+
+	/*
+	 * Used to record segments which are read only during a dtx,
+	 * and those segments don't need prepare phase.
+	 * readerSegmentsMap: used to check whether a segment is stored
+	 * in readerSegments on QD. For example,
+	 * (bms_is_member(0, readerSegmentsMap) == true) means seg0 is
+	 * stored in readerSegments.
+	 */
+	Bitmapset					*readerSegmentsMap;
+	List						*readerSegments;
 	List						*waitGxids;
 }	TMGXACTLOCAL;
 
@@ -258,6 +276,19 @@ typedef enum
 	DTX_RECOVERY_EVENT_ABORT_PREPARED	= 1 << 0,
 	DTX_RECOVERY_EVENT_BUMP_GXID			= 1 << 1
 } DtxRecoveryEvent;
+
+/*
+ * The status for segs in a distributed transaction(dtx).
+ * DTX_SEG_NOT_INVOLVED: the seg is not recorded yet or it's not involved in the dtx.
+ * DTX_SEG_WRITER: the seg has persisted WAL during a dtx.
+ * DTX_SEG_READER: the seg is read-only during a dtx.
+ */
+typedef enum
+{
+	DTX_SEG_NOT_INVOLVED = 0,	/* segment does not involve the current transaction */
+	DTX_SEG_WRITER,				/* segment has written xlog in the current transaction */
+	DTX_SEG_READER,				/* segment only execute read operation in the current transaction */
+} DtxSegmentState;
 
 #define DTM_DEBUG3 (Debug_print_full_dtm ? LOG : DEBUG3)
 #define DTM_DEBUG5 (Debug_print_full_dtm ? LOG : DEBUG5)
@@ -351,7 +382,8 @@ extern void markCurrentGxactWriterGangLost(void);
 
 extern bool currentGxactWriterGangLost(void);
 
-extern void addToGxactDtxSegments(struct Gang* gp);
+extern void addToGxactDtxSegments(int totalSegments,
+								  DtxSegmentState *dtxSegmentsState);
 extern bool CurrentDtxIsRollingback(void);
 
 extern pid_t DtxRecoveryPID(void);

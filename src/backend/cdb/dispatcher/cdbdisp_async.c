@@ -129,7 +129,8 @@ static void dispatchCommand(CdbDispatchResult *dispatchResult,
 
 static void checkDispatchResult(CdbDispatcherState *ds, int timeout_sec);
 
-static bool processResults(CdbDispatchResult *dispatchResult);
+static bool processResults(CdbDispatchResult *dispatchResult,
+						   DtxSegmentState *dtxSegmentState);
 
 static void
 			signalQEs(CdbDispatchCmdAsync *pParms);
@@ -141,7 +142,9 @@ static void
 			handlePollError(CdbDispatchCmdAsync *pParms);
 
 static void
-			handlePollSuccess(CdbDispatchCmdAsync *pParms, WaitEvent *revents, int nready);
+			handlePollSuccess(CdbDispatchCmdAsync *pParms,
+							  WaitEvent *revents, int nready,
+							  DtxSegmentState *dtxSegmentsState);
 
 static bool
 			checkAckMessage(CdbDispatchResult *dispatchResult, const char *message);
@@ -682,7 +685,9 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 		}
 		/* We have data waiting on one or more of the connections. */
 		else
-			handlePollSuccess(pParms, revents, n);
+		{
+			handlePollSuccess(pParms, revents, n, ds->dtxSegmentsState);
+		}
 	} /* for (;;) */
 
 	pfree(revents);
@@ -826,7 +831,8 @@ handlePollError(CdbDispatchCmdAsync *pParms)
  */
 static void
 handlePollSuccess(CdbDispatchCmdAsync *pParms,
-				  WaitEvent *revents, int nready)
+				  WaitEvent *revents, int nready,
+				  DtxSegmentState *dtxSegmentsState)
 {
 	int			i = 0;
 
@@ -870,7 +876,7 @@ handlePollSuccess(CdbDispatchCmdAsync *pParms,
 		/*
 		 * Receive and process results from this QE.
 		 */
-		finished = processResults(dispatchResult);
+		finished = processResults(dispatchResult, dtxSegmentsState);
 
 		/*
 		 * Are we through with this QE now?
@@ -1024,7 +1030,7 @@ send_sequence_response(PGconn *conn, Oid oid, int64 last, int64 cached, int64 in
  * Return false if there'er still more data expected.
  */
 static bool
-processResults(CdbDispatchResult *dispatchResult)
+processResults(CdbDispatchResult *dispatchResult, DtxSegmentState *dtxSegmentsState)
 {
 	SegmentDatabaseDescriptor *segdbDesc = dispatchResult->segdbDesc;
 	char	   *msg;
@@ -1095,6 +1101,13 @@ processResults(CdbDispatchResult *dispatchResult)
 		{
 			MarkTopTransactionWriteXLogOnExecutor();
 
+			if (segdbDesc->segindex >= 0)
+			{
+				Assert(dtxSegmentsState != NULL);
+				Assert(segdbDesc->segindex < getgpsegmentCount());
+				dtxSegmentsState[segdbDesc->segindex] = DTX_SEG_WRITER;
+			}
+
 			/*
 			 * Reset the worte_xlog here. Since if the received pgresult not process
 			 * the xlog write message('x' message sends from QE in ReadyForQuery),
@@ -1102,6 +1115,16 @@ processResults(CdbDispatchResult *dispatchResult)
 			 * always mark current top transaction has wrote xlog on executor.
 			 */
 			segdbDesc->conn->wrote_xlog = false;
+		}
+		else
+		{
+			if (segdbDesc->segindex >= 0 &&
+				dtxSegmentsState[segdbDesc->segindex] == DTX_SEG_NOT_INVOLVED)
+			{
+				Assert(dtxSegmentsState);
+				Assert(segdbDesc->segindex < getgpsegmentCount());
+				dtxSegmentsState[segdbDesc->segindex] = DTX_SEG_READER;
+			}
 		}
 
 		/*
