@@ -298,6 +298,8 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 
 	fsinfo->segno = segno;
 
+	GetTupleVisibilitySummary(fstuple, &fsinfo->tupleVisibilitySummary);
+
 	/* Finish up scan and close appendonly catalog. */
 	heap_freetuple(fstuple);
 	heap_endscan(aoscan);
