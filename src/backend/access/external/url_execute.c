@@ -481,7 +481,12 @@ interpretError(int rc, char *buf, size_t buflen, char *err, size_t errlen)
 			/* Exit codes from commands rarely map to strerror() strings. In here
 			 * we show the error string returned from pclose, and omit the non
 			 * friendly exit code interpretation */
-			snprintf(buf, buflen, "error. %s", err);
+			int len = snprintf(buf, buflen, "error. %s", err);
+
+			if (len >= buflen)
+			{
+				buf[pg_mbcliplen(buf, len, buflen - 1)] = '\0';
+			}
 		}
 	}
 	else if (WIFSIGNALED(rc))

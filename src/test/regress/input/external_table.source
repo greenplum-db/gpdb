@@ -131,6 +131,15 @@ FETCH FORWARD 1 FROM _psql_cursor;
 CLOSE _psql_cursor;
 COMMIT;
 
+-- ensure correct truncate error log according to database encoding
+CREATE EXTERNAL WEB TABLE table_test (text text) EXECUTE $$ (echo -n ‘ && seq 1 500 | cut -b1 | tr -d '\n' && echo -n ’) >/dev/stderr && false $$ ON ALL FORMAT 'CSV';
+SELECT true FROM table_test;
+DROP EXTERNAL TABLE IF EXISTS table_test;
+CREATE EXTERNAL WEB TABLE table_test (text text) EXECUTE $$ (echo -n ‘ && seq 1 2006 | cut -b1 | tr -d '\n' && echo -n ’) >/dev/stderr && true $$ ON ALL FORMAT 'CSV';
+SELECT true FROM table_test;
+SELECT logseverity FROM gp_toolkit.gp_log_system WHERE logmessage LIKE 'read err msg from pipe%' AND logdatabase = current_database() LIMIT 1;
+DROP EXTERNAL TABLE IF EXISTS table_test;
+
 -- echo will behave differently on different platforms, force to use bash with -E option
 CREATE EXTERNAL WEB TABLE table_qry (val TEXT)
   EXECUTE E'/usr/bin/env bash -c ''echo -E "$GP_QUERY_STRING"''' ON SEGMENT 0
