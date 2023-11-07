@@ -5530,8 +5530,8 @@ CTranslatorDXLToPlStmt::TranslateDXLProjList(
 				target_entry->resorigtbl = pteOriginal->resorigtbl;
 				target_entry->resorigcol = pteOriginal->resorigcol;
 
-				// Hack! ORCA represents strings using wide characters. That
-				// can require converting from multibyte characters using
+				// ORCA represents strings using wide characters. That can
+				// require converting from multibyte characters using
 				// vswprintf(). However, vswprintf() is dependent on the system
 				// locale which is set at the database level. When that locale
 				// cannot interpret the string correctly, it fails. ORCA
