@@ -3838,12 +3838,6 @@ check_output_expressions(Query *subquery, pushdown_safety_info *safetyInfo)
 			continue;
 		}
 
-		/* Refuse subplans */
-		if (contain_subplans((Node *) tle->expr))
-		{
-			safetyInfo->unsafeColumns[tle->resno] = true;
-			continue;
-		}
 	}
 }
 
