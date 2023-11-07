@@ -2575,12 +2575,12 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 				/* this was a "pseudo" compaction phase. */
 			}
 			else
-				UpdateMasterAosegTotalsFromSegments(onerel, appendOnlyMetaDataSnapshot, vacstmt->appendonly_compaction_insert_segno, 0, AOVAC_COMPACT);
+				UpdateMasterAosegTotalsFromSegments(onerel, appendOnlyMetaDataSnapshot, vacstmt->appendonly_compaction_insert_segno, 0);
 		}
 		else if (vacstmt->appendonly_phase == AOVAC_DROP)
 		{
 			/* In the drop phase, we need to update the information of the compacted segment file(s) */
-			UpdateMasterAosegTotalsFromSegments(onerel, appendOnlyMetaDataSnapshot, vacstmt->appendonly_compaction_segno, 0, AOVAC_DROP);
+			UpdateMasterAosegTotalsFromSegments_DropPhase(onerel, appendOnlyMetaDataSnapshot, vacstmt->appendonly_compaction_segno, 0);
 		}
 
 		UnregisterSnapshot(appendOnlyMetaDataSnapshot);

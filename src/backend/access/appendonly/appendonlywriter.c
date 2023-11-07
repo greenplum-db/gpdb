@@ -65,6 +65,11 @@ static bool AORelCreateHashEntry(Oid relid);
 static bool *get_awaiting_drop_status_from_segments(Relation parentrel);
 static int64 *GetTotalTupleCountFromSegments(Relation parentrel, int segno, List **awaiting_drop);
 
+List *
+UpdateMasterAosegTotalsFromSegments_guts(Relation parentrel,
+										 Snapshot appendOnlyMetaDataSnapshot,
+										 const List *segmentNumList,
+										 int64 modcount_added);
 static void
 acquire_lightweight_lock() {
 	LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
@@ -1580,21 +1585,52 @@ get_awaiting_drop_status_from_segments(Relation parentrel)
 	return awaiting_drop;
 }
 
-/*
- * Updates the tupcount information from the segments.
- * Should only be called in rare circumstances from the QD.
- */
+
 void
 UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 									Snapshot appendOnlyMetaDataSnapshot,
 									List *segmentNumList,
-									int64 modcount_added,
-									AOVacuumPhase appendonly_phase)
+									int64 modcount_added)
 {
-	ListCell   *l;
-	int64	   *total_tupcount;
-	List	   *awaiting_drop = NIL;
 
+	List *awaiting_drop = UpdateMasterAosegTotalsFromSegments_guts(parentrel,
+																   appendOnlyMetaDataSnapshot,
+																   segmentNumList,
+																   modcount_added);
+
+	list_free(awaiting_drop);
+}
+
+
+void
+UpdateMasterAosegTotalsFromSegments_DropPhase(Relation parentrel,
+									Snapshot appendOnlyMetaDataSnapshot,
+									List *segmentNumList,
+									int64 modcount_added)
+{
+
+	List *awaiting_drop = UpdateMasterAosegTotalsFromSegments_guts(parentrel,
+															 appendOnlyMetaDataSnapshot,
+															 segmentNumList,
+															 modcount_added);
+
+	DeregisterSegnoForCompactionDrop(RelationGetRelid(parentrel), awaiting_drop);
+	list_free(awaiting_drop);
+}
+
+/*
+ * Updates the tupcount information from the segments.
+ * Should only be called in rare circumstances from the QD.
+ */
+List *
+UpdateMasterAosegTotalsFromSegments_guts(Relation parentrel,
+										 Snapshot appendOnlyMetaDataSnapshot,
+										 const List *segmentNumList,
+										 int64 modcount_added)
+{
+	ListCell *l;
+	int64    *total_tupcount;
+	List	   *awaiting_drop = NIL;
 	Assert(RelationIsAppendOptimized(parentrel));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
@@ -1663,11 +1699,8 @@ UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 									tupcount_diff, modcount_added);
 		}
 	}
-	if (appendonly_phase == AOVAC_DROP)
-		DeregisterSegnoForCompactionDrop(RelationGetRelid(parentrel), awaiting_drop);
-
 	pfree(total_tupcount);
-	list_free(awaiting_drop);
+	return awaiting_drop;
 }
 
 /*
