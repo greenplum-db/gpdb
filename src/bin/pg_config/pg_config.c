@@ -64,7 +64,7 @@ static const InfoItem info_items[] = {
 	{"--ldflags_sl", "LDFLAGS_SL"},
 	{"--libs", "LIBS"},
 	{"--version", "VERSION"},
-	{"--gp_version", "GP_VERSION"},
+	{"--gpversion", "GPVERSION"},
 	{NULL, NULL}
 };
 
@@ -101,7 +101,7 @@ help(void)
 	printf(_("  --ldflags_sl          show LDFLAGS_SL value used when PostgreSQL was built\n"));
 	printf(_("  --libs                show LIBS value used when PostgreSQL was built\n"));
 	printf(_("  --version             show the PostgreSQL version\n"));
-	printf(_("  --gp_version          show the Greenplum version\n"));
+	printf(_("  --gpversion           show the Greenplum version\n"));
 	printf(_("  -?, --help            show this help, then exit\n"));
 	printf(_("\nWith no arguments, all known items are shown.\n\n"));
 	printf(_("Report bugs to <bugs@greenplum.org>.\n"));
