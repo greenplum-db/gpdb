@@ -30,6 +30,7 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbgang.h"
 
+extern int  client_connection_check_interval;
 
 static uint32 cdbconn_get_motion_listener_port(PGconn *conn);
 static void cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc);
@@ -316,7 +317,7 @@ cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc)
 		if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 			elog(LOG, "Finishing connection with %s; %s", segdbDesc->whoami, transStatusToString(status));
 
-		if (status == PQTRANS_ACTIVE)
+		if (status == PQTRANS_ACTIVE && 0 == client_connection_check_interval)
 		{
 			char		errbuf[256];
 			bool		sent;
