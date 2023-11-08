@@ -2630,30 +2630,38 @@ explain (verbose, costs off) with run_dt as (
 )
 select * from run_dt, extra_flow_dist1
 where dt < '2010-01-01'::date;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Output: run_dt.dt, extra_flow_dist1.a, extra_flow_dist1.b
+   Output: ((SubPlan 1)), extra_flow_dist1.a, extra_flow_dist1.b
    ->  Nested Loop
-         Output: run_dt.dt, extra_flow_dist1.a, extra_flow_dist1.b
-         ->  Subquery Scan on run_dt
-               Output: run_dt.dt
-               Filter: (run_dt.dt < '01-01-2010'::date)
-               ->  Subquery Scan on a
-                     Output: (SubPlan 1)
-                     ->  Aggregate
-                           Output: max(1)
-                           ->  Result
-                     SubPlan 1
-                       ->  Result
-                             Output: extra_flow_dist.c
-                             Filter: (extra_flow_dist.b = a.x)
-                             ->  Materialize
+         Output: ((SubPlan 1)), extra_flow_dist1.a, extra_flow_dist1.b
+         ->  Subquery Scan on a
+               Output: (SubPlan 1)
+               Filter: ((SubPlan 2) < '01-01-2010'::date)
+               ->  Aggregate
+                     Output: max(1)
+                     ->  Result
+               SubPlan 1
+                 ->  Result
+                       Output: extra_flow_dist.c
+                       Filter: (extra_flow_dist.b = a.x)
+                       ->  Materialize
+                             Output: extra_flow_dist.c, extra_flow_dist.b
+                             ->  Broadcast Motion 3:3  (slice2; segments: 3)
                                    Output: extra_flow_dist.c, extra_flow_dist.b
-                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                   ->  Seq Scan on subselect_gp.extra_flow_dist
                                          Output: extra_flow_dist.c, extra_flow_dist.b
-                                         ->  Seq Scan on subselect_gp.extra_flow_dist
-                                               Output: extra_flow_dist.c, extra_flow_dist.b
+               SubPlan 2
+                 ->  Result
+                       Output: extra_flow_dist_1.c
+                       Filter: (extra_flow_dist_1.b = a.x)
+                       ->  Materialize
+                             Output: extra_flow_dist_1.c, extra_flow_dist_1.b
+                             ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                   Output: extra_flow_dist_1.c, extra_flow_dist_1.b
+                                   ->  Seq Scan on subselect_gp.extra_flow_dist extra_flow_dist_1
+                                         Output: extra_flow_dist_1.c, extra_flow_dist_1.b
          ->  Seq Scan on subselect_gp.extra_flow_dist1
                Output: extra_flow_dist1.a, extra_flow_dist1.b
  Optimizer: Postgres query optimizer
@@ -2687,27 +2695,35 @@ explain (verbose, costs off) with run_dt as (
 )
 select * from run_dt, extra_flow_dist1
 where dt < '2010-01-01'::date;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Output: run_dt.dt, extra_flow_dist1.a, extra_flow_dist1.b
+   Output: ((SubPlan 1)), extra_flow_dist1.a, extra_flow_dist1.b
    ->  Nested Loop
-         Output: run_dt.dt, extra_flow_dist1.a, extra_flow_dist1.b
-         ->  Subquery Scan on run_dt
-               Output: run_dt.dt
-               Filter: (run_dt.dt < '01-01-2010'::date)
-               ->  Seq Scan on subselect_gp.extra_flow_rand
-                     Output: (SubPlan 1)
-                     SubPlan 1
-                       ->  Result
-                             Output: extra_flow_dist.c
-                             Filter: (extra_flow_dist.b = extra_flow_rand.a)
-                             ->  Materialize
+         Output: ((SubPlan 1)), extra_flow_dist1.a, extra_flow_dist1.b
+         ->  Seq Scan on subselect_gp.extra_flow_rand
+               Output: (SubPlan 1)
+               Filter: ((SubPlan 2) < '01-01-2010'::date)
+               SubPlan 1
+                 ->  Result
+                       Output: extra_flow_dist.c
+                       Filter: (extra_flow_dist.b = extra_flow_rand.a)
+                       ->  Materialize
+                             Output: extra_flow_dist.c, extra_flow_dist.b
+                             ->  Broadcast Motion 3:3  (slice2; segments: 3)
                                    Output: extra_flow_dist.c, extra_flow_dist.b
-                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                   ->  Seq Scan on subselect_gp.extra_flow_dist
                                          Output: extra_flow_dist.c, extra_flow_dist.b
-                                         ->  Seq Scan on subselect_gp.extra_flow_dist
-                                               Output: extra_flow_dist.c, extra_flow_dist.b
+               SubPlan 2
+                 ->  Result
+                       Output: extra_flow_dist_1.c
+                       Filter: (extra_flow_dist_1.b = extra_flow_rand.a)
+                       ->  Materialize
+                             Output: extra_flow_dist_1.c, extra_flow_dist_1.b
+                             ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                   Output: extra_flow_dist_1.c, extra_flow_dist_1.b
+                                   ->  Seq Scan on subselect_gp.extra_flow_dist extra_flow_dist_1
+                                         Output: extra_flow_dist_1.c, extra_flow_dist_1.b
          ->  Materialize
                Output: extra_flow_dist1.a, extra_flow_dist1.b
                ->  Seq Scan on subselect_gp.extra_flow_dist1
@@ -2741,33 +2757,41 @@ explain (verbose, costs off) with run_dt as (
 )
 select * from run_dt, extra_flow_dist1
 where dt < '2010-01-01'::date;
-                                            QUERY PLAN                                            
---------------------------------------------------------------------------------------------------
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Output: run_dt.dt, extra_flow_dist1.a, extra_flow_dist1.b
+   Output: ((SubPlan 1)), extra_flow_dist1.a, extra_flow_dist1.b
    ->  Nested Loop
-         Output: run_dt.dt, extra_flow_dist1.a, extra_flow_dist1.b
+         Output: ((SubPlan 1)), extra_flow_dist1.a, extra_flow_dist1.b
          ->  Broadcast Motion 1:3  (slice2)
-               Output: run_dt.dt
-               ->  Subquery Scan on run_dt
-                     Output: run_dt.dt
-                     Filter: (run_dt.dt < '01-01-2010'::date)
-                     ->  Subquery Scan on a
-                           Output: (SubPlan 1)
-                           ->  Limit
+               Output: ((SubPlan 1))
+               ->  Subquery Scan on a
+                     Output: (SubPlan 1)
+                     Filter: ((SubPlan 2) < '01-01-2010'::date)
+                     ->  Limit
+                           Output: 1
+                           ->  Seq Scan on pg_catalog.pg_class
                                  Output: 1
-                                 ->  Seq Scan on pg_catalog.pg_class
-                                       Output: 1
-                           SubPlan 1
-                             ->  Result
-                                   Output: extra_flow_dist.c
-                                   Filter: (extra_flow_dist.b = a.x)
-                                   ->  Materialize
+                     SubPlan 1
+                       ->  Result
+                             Output: extra_flow_dist.c
+                             Filter: (extra_flow_dist.b = a.x)
+                             ->  Materialize
+                                   Output: extra_flow_dist.c, extra_flow_dist.b
+                                   ->  Gather Motion 3:1  (slice3; segments: 3)
                                          Output: extra_flow_dist.c, extra_flow_dist.b
-                                         ->  Gather Motion 3:1  (slice3; segments: 3)
+                                         ->  Seq Scan on subselect_gp.extra_flow_dist
                                                Output: extra_flow_dist.c, extra_flow_dist.b
-                                               ->  Seq Scan on subselect_gp.extra_flow_dist
-                                                     Output: extra_flow_dist.c, extra_flow_dist.b
+                     SubPlan 2
+                       ->  Result
+                             Output: extra_flow_dist_1.c
+                             Filter: (extra_flow_dist_1.b = a.x)
+                             ->  Materialize
+                                   Output: extra_flow_dist_1.c, extra_flow_dist_1.b
+                                   ->  Gather Motion 3:1  (slice4; segments: 3)
+                                         Output: extra_flow_dist_1.c, extra_flow_dist_1.b
+                                         ->  Seq Scan on subselect_gp.extra_flow_dist extra_flow_dist_1
+                                               Output: extra_flow_dist_1.c, extra_flow_dist_1.b
          ->  Seq Scan on subselect_gp.extra_flow_dist1
                Output: extra_flow_dist1.a, extra_flow_dist1.b
  Optimizer: Postgres query optimizer
@@ -2894,18 +2918,20 @@ where dt < '2010-01-01'::date;
                                                      QUERY PLAN                                                     
 --------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Output: tbl.dt, extra_flow_dist1.a, extra_flow_dist1.b
+   Output: ((SubPlan 1)), extra_flow_dist1.a, extra_flow_dist1.b
    ->  Nested Loop
-         Output: tbl.dt, extra_flow_dist1.a, extra_flow_dist1.b
-         ->  Subquery Scan on tbl
-               Output: tbl.dt
-               Filter: (tbl.dt < '01-01-2010'::date)
+         Output: ((SubPlan 1)), extra_flow_dist1.a, extra_flow_dist1.b
+         ->  Seq Scan on subselect_gp.extra_flow_dist1
+               Output: extra_flow_dist1.a, extra_flow_dist1.b
+         ->  Materialize
+               Output: ((SubPlan 1))
                ->  HashAggregate
                      Output: ((SubPlan 1))
                      Group Key: ((SubPlan 1))
                      ->  Append
                            ->  Subquery Scan on a
                                  Output: (SubPlan 1)
+                                 Filter: ((SubPlan 2) < '01-01-2010'::date)
                                  ->  Aggregate
                                        Output: max(1)
                                        ->  Result
@@ -2919,25 +2945,45 @@ where dt < '2010-01-01'::date;
                                                      Output: extra_flow_dist.c, extra_flow_dist.b
                                                      ->  Seq Scan on subselect_gp.extra_flow_dist
                                                            Output: extra_flow_dist.c, extra_flow_dist.b
-                           ->  Subquery Scan on aa
-                                 Output: (SubPlan 2)
-                                 ->  Aggregate
-                                       Output: max(1)
-                                       ->  Result
                                  SubPlan 2
                                    ->  Result
                                          Output: extra_flow_dist_1.c
-                                         Filter: (extra_flow_dist_1.b = aa.x)
+                                         Filter: (extra_flow_dist_1.b = a.x)
                                          ->  Materialize
                                                Output: extra_flow_dist_1.c, extra_flow_dist_1.b
                                                ->  Broadcast Motion 3:3  (slice3; segments: 3)
                                                      Output: extra_flow_dist_1.c, extra_flow_dist_1.b
                                                      ->  Seq Scan on subselect_gp.extra_flow_dist extra_flow_dist_1
                                                            Output: extra_flow_dist_1.c, extra_flow_dist_1.b
-         ->  Seq Scan on subselect_gp.extra_flow_dist1
-               Output: extra_flow_dist1.a, extra_flow_dist1.b
- Optimizer: Postgres query optimizer
-(44 rows)
+                           ->  Subquery Scan on aa
+                                 Output: (SubPlan 3)
+                                 Filter: ((SubPlan 4) < '01-01-2010'::date)
+                                 ->  Aggregate
+                                       Output: max(1)
+                                       ->  Result
+                                 SubPlan 3
+                                   ->  Result
+                                         Output: extra_flow_dist_2.c
+                                         Filter: (extra_flow_dist_2.b = aa.x)
+                                         ->  Materialize
+                                               Output: extra_flow_dist_2.c, extra_flow_dist_2.b
+                                               ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                                     Output: extra_flow_dist_2.c, extra_flow_dist_2.b
+                                                     ->  Seq Scan on subselect_gp.extra_flow_dist extra_flow_dist_2
+                                                           Output: extra_flow_dist_2.c, extra_flow_dist_2.b
+                                 SubPlan 4
+                                   ->  Result
+                                         Output: extra_flow_dist_3.c
+                                         Filter: (extra_flow_dist_3.b = aa.x)
+                                         ->  Materialize
+                                               Output: extra_flow_dist_3.c, extra_flow_dist_3.b
+                                               ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                                                     Output: extra_flow_dist_3.c, extra_flow_dist_3.b
+                                                     ->  Seq Scan on subselect_gp.extra_flow_dist extra_flow_dist_3
+                                                           Output: extra_flow_dist_3.c, extra_flow_dist_3.b
+ Optimizer: Postgres-based planner
+ Settings: optimizer_enable_coordinator_only_queries = 'on', optimizer_enable_master_only_queries = 'on'
+(66 rows)
 
 -- Check DISTINCT ON clause and ORDER BY clause in SubLink, See https://github.com/greenplum-db/gpdb/issues/12656.
 -- For EXISTS SubLink, we don’t need to care about the data deduplication problem, we can delete DISTINCT ON clause and
