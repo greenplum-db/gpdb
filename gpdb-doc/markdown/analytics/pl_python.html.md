@@ -18,7 +18,7 @@ PL/Python is a loadable procedural language. With the Greenplum Database PL/Pyth
 
 You can run PL/Python code blocks as anonymous code blocks. See the [DO](../ref_guide/sql_commands/DO.html) command in the *Greenplum Database Reference Guide*.
 
-The Greenplum Database PL/Python extension is installed by default with Greenplum Database. `plpython3u` supports developing functions using Python 3.9. To use `plpython3u`, Python 3.9 should be installed with the system package manager. Normally, Python 3.9 is a dependency of Greenplum package, which will be installed automatically with the Greenplum installation process.
+The Greenplum Database PL/Python extension is installed by default with Greenplum Database. `plpython3u` supports developing functions using Python 3.9. The VMware Greenplum installation process installs a Python 3.9 environment to your system as one of its dependencies.
 
 ### <a id="topic3"></a>Greenplum Database PL/Python Limitations
 
