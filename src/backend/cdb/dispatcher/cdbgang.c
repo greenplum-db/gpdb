@@ -324,11 +324,9 @@ addOneOption(StringInfo option, StringInfo diff, struct config_generic *guc)
 				 * See PR #16694 for the details.
 				 */
 				struct config_string *sguc = (struct config_string *) guc;
-				sguc->boot_val = sguc->boot_val ? sguc->boot_val : "";
-				sguc->reset_val = sguc->reset_val ? sguc->reset_val : "";
-				*sguc->variable = *sguc->variable ? *sguc->variable : "";
+				const char *reset_val = sguc->reset_val ? sguc->reset_val : "";
+				const char *variable = *sguc->variable ? *sguc->variable : "";
 				int			i;
-				const char *str = sguc->reset_val;
 
 				appendStringInfo(option, " -c %s=", guc->name);
 
@@ -336,23 +334,22 @@ addOneOption(StringInfo option, StringInfo diff, struct config_generic *guc)
 				 * All whitespace characters must be escaped. See
 				 * pg_split_opts() in the backend.
 				 */
-				for (i = 0; str[i] != '\0'; i++)
+				for (i = 0; reset_val[i] != '\0'; i++)
 				{
-					if (isspace((unsigned char) str[i]))
+					if (isspace((unsigned char) reset_val[i]))
 						appendStringInfoChar(option, '\\');
 
-					appendStringInfoChar(option, str[i]);
+					appendStringInfoChar(option, reset_val[i]);
 				}
-				if (strcmp(str, *sguc->variable) != 0)
+				if (strcmp(reset_val, variable) != 0)
 				{
-					const char *p = *sguc->variable;
 					appendStringInfo(diff, " %s=", guc->name);
-					for (i = 0; p[i] != '\0'; i++)
+					for (i = 0; variable[i] != '\0'; i++)
 					{
-						if (isspace((unsigned char) p[i]))
+						if (isspace((unsigned char) variable[i]))
 							appendStringInfoChar(diff, '\\');
 
-						appendStringInfoChar(diff, p[i]);
+						appendStringInfoChar(diff, variable[i]);
 					}
 				}
 				break;
