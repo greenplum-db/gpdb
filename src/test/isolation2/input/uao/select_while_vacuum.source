@@ -30,3 +30,71 @@ DELETE FROM ao WHERE a < 128;
 2: VACUUM ao;
 1<:
 3: INSERT INTO ao VALUES (0);
+
+
+-- Check if SELECT tx stops VACUUM dropping segfiles if they are visible on SELECT
+DROP TABLE IF EXISTS ao_vacuum_drop;
+CREATE TABLE ao_vacuum_drop (a int, b int) WITH (appendonly=true, orientation=@orientation@) PARTITION BY range(b) (start (1) end (10) every (5));
+INSERT INTO ao_vacuum_drop SELECT i, i%9+1 FROM generate_series(1, 2000000)i;
+UPDATE ao_vacuum_drop SET a = a + 2 WHERE a % 2 = 1;
+UPDATE ao_vacuum_drop SET a = a + 2 WHERE a % 2 = 0;
+
+SELECT gp_inject_fault('locks_check_at_select_portal_create', 'suspend', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+
+1>: SELECT count(*) FROM ao_vacuum_drop;
+2: VACUUM ANALYZE ao_vacuum_drop_1_prt_1;
+-- VACUUM shouldn't drop the files and SELECT should complete fine
+
+SELECT gp_inject_fault('locks_check_at_select_portal_create', 'reset', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+1<:
+SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_drop_1_prt_1');
+0U: SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_drop_1_prt_1');
+
+-- Check if insert works fine on inserting data into the correct available files
+INSERT INTO ao_vacuum_drop SELECT i, i%9+1 FROM generate_series(1, 200)i;
+SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_drop_1_prt_1');
+0U: SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_drop_1_prt_1');
+
+-- VACUUM now should drop the files
+VACUUM ANALYZE ao_vacuum_drop_1_prt_1;
+SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_drop_1_prt_1');
+0U: SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_drop_1_prt_1');
+
+INSERT INTO ao_vacuum_drop SELECT i, i%9+1 FROM generate_series(1, 200)i;
+SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_drop_1_prt_1');
+0U: SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_drop_1_prt_1');
+
+
+-- Check if SELECT tx stops VACUUM FULL dropping segfiles if they are visible on SELECT
+DROP TABLE IF EXISTS ao_vacuum_full_drop;
+CREATE TABLE ao_vacuum_full_drop (a int, b int) WITH (appendonly=true, orientation=@orientation@)
+PARTITION BY range(b) (start (1) end (10) every (5));
+INSERT INTO ao_vacuum_full_drop SELECT i, i%9+1 FROM generate_series(1, 2000000)i;
+UPDATE ao_vacuum_full_drop SET a = a + 2 WHERE a % 2 = 1;
+UPDATE ao_vacuum_full_drop SET a = a + 2 WHERE a % 2 = 0;
+
+SELECT gp_inject_fault('locks_check_at_select_portal_create', 'suspend', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+
+1>: SELECT count(*) FROM ao_vacuum_full_drop;
+2: VACUUM FULL ao_vacuum_full_drop_1_prt_1;
+-- VACUUM shouldn't drop the files and SELECT should complete fine
+
+SELECT gp_inject_fault('locks_check_at_select_portal_create', 'reset', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+1<:
+SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_full_drop_1_prt_1');
+0U: SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_full_drop_1_prt_1');
+
+-- Check if insert works fine on inserting data into the correct available files
+INSERT INTO ao_vacuum_full_drop SELECT i, i%9+1 FROM generate_series(1, 200)i;
+SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_full_drop_1_prt_1');
+0U: SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_full_drop_1_prt_1');
+
+-- VACUUM now should drop the files
+VACUUM FULL ao_vacuum_full_drop_1_prt_1;
+SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_full_drop_1_prt_1');
+0U: SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_full_drop_1_prt_1');
+
+-- Check if insert works fine on inserting data into the files
+INSERT INTO ao_vacuum_full_drop SELECT i, i%9+1 FROM generate_series(1, 200)i;
+SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_full_drop_1_prt_1');
+0U: SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_full_drop_1_prt_1');

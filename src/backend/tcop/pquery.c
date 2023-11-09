@@ -666,6 +666,7 @@ PortalStart(Portal portal, ParamListInfo params,
 											params,
 											GP_INSTRUMENT_OPTS);
 				queryDesc->ddesc = ddesc;
+				SIMPLE_FAULT_INJECTOR("locks_check_at_select_portal_create");
 				
 				if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
 				{			
