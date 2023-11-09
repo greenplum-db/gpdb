@@ -418,8 +418,8 @@ select paramsegment,paramname from gp_toolkit.gp_param_settings() where paramnam
 
 -- Expected to have no results
 -- However it will show there is a difference if segment guc is different
--- primary_conninfo can be different due to failovers in isolation2 tests
-select * from gp_toolkit.gp_param_settings_seg_value_diffs where psdname != 'primary_conninfo';
+-- primary_slot_name/primary_conninfo can be different due to failovers.
+select * from gp_toolkit.gp_param_settings_seg_value_diffs where psdname != 'primary_conninfo' and psdname != 'primary_slot_name';
  psdname | psdvalue | psdcount 
 ---------+----------+----------
 (0 rows)
