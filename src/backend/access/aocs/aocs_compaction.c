@@ -519,19 +519,46 @@ AOCSCollectDeadSegments(Relation aorel,
 	{
 		AOCSFileSegInfo *fsinfo = segfile_array[i];
 
-		xmin = fsinfo->tupleVisibilitySummary.xmin;
-		if (xmin == FrozenTransactionId)
-			visible_to_all = true;
-		else
+		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
 		{
-			if (cutoff_xid == InvalidTransactionId)
-				cutoff_xid = GetOldestXmin(NULL, true);
+			/*
+			 * Cutoff XID Screening
+			 *
+			 * It's in awaiting-drop state, but does everyone see it that way?
+			 *
+			 * Compare the tuple's xmin with the oldest-xmin horizon. We don't bother
+			 * checking the xmax; we never update or lock awaiting-drop tuples, so it
+			 * should not be set. Even if the tuple was update, presumably an AO
+			 * segment that's in awaiting-drop state won't be resurrected, so even if
+			 * someone updates or locks the tuple, it's still safe to drop.
+			 *
+			 * a) When there was a reader accessing a segment file which was changed to
+			 * AWAITING_DROP in later VACUUM compaction, the reader's xid should be earlier
+			 * than this tuple's xmin hence would set visible_to_all to false. Then the
+			 * AWAITING_DROP segment file wouldn't be dropped in this VACUUM cleanup and
+			 * the earlier reader could still be able to access old tuples.
+			 *
+			 * b) Continue above, so there was a segment file in AWAITING_DROP state, the
+			 * subsequent transactions can't see that hence it wouldn't be touched until
+			 * next VACUUM is arrived. Therefore no later transaction's xid could be earlier
+			 * than this dead segment tuple's xmin hence it would be true on visible_to_all.
+			 * Then the corresponding dead segment file could be dropped later at that time.
+			 */
 
-			visible_to_all = TransactionIdPrecedes(xmin, cutoff_xid);
+			xmin = fsinfo->tupleVisibilitySummary.xmin;
+			if (xmin == FrozenTransactionId)
+				visible_to_all = true;
+			else
+			{
+				if (cutoff_xid == InvalidTransactionId)
+					cutoff_xid = GetOldestXmin(aorel, true);
+
+				visible_to_all = TransactionIdPrecedes(xmin, cutoff_xid);
+			}
+
+			if (visible_to_all)
+				dead_segs = bms_add_member(dead_segs, fsinfo->segno);
 		}
-
-		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP && visible_to_all)
-			dead_segs = bms_add_member(dead_segs, fsinfo->segno);
 	}
 
 	if (segfile_array)
