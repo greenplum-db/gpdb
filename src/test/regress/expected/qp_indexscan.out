@@ -1939,7 +1939,7 @@ create index hash_b on test_multi_index_types_table using hash(b);
 create index brin_c on test_multi_index_types_table using brin(c);
 -- create a spgist index
 create index spgist_d on test_multi_index_types_table using spgist(d);
--- create a gin index
+-- create a gist index
 create index gist_e on test_multi_index_types_table using gist(e);
 -- create a gin index
 create index gin_f on test_multi_index_types_table using gin(f);

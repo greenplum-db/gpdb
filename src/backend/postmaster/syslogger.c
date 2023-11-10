@@ -2415,7 +2415,7 @@ logfile_getname(pg_time_t timestamp, const char *suffix,
 	 * replace ".csv" with ".log".
 	 *
 	 * If the logging format is 'CSV' and the filename does not end with ".csv",
-	 * replace the last four characters in the filename with ".cvs".
+	 * replace the last four characters in the filename with ".csv".
 	 */
 	if (strlen(filename) - sizeof(CSV_SUFFIX) + 1 > 0)
 	{
