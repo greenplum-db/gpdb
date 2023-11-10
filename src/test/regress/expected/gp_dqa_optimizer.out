@@ -3166,15 +3166,15 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
  Finalize Aggregate
    Output: sum(b), count(c) FILTER (WHERE (c > 1)), sum(a)
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         Output: b, (PARTIAL count(c) FILTER (WHERE (c > 1))), (PARTIAL sum(a))
+         Output: b, c, a, (PARTIAL count(c) FILTER (WHERE (c > 1))), (PARTIAL sum(a))
          ->  Partial HashAggregate
-               Output: b, PARTIAL count(c) FILTER (WHERE (c > 1)), PARTIAL sum(a)
+               Output: b, c, a, PARTIAL count(c) FILTER (WHERE (c > 1)), PARTIAL sum(a)
                Group Key: dqa_f3.b
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Output: b, (PARTIAL count(c) FILTER (WHERE (c > 1))), (PARTIAL sum(a))
+                     Output: b, c, a, (PARTIAL count(c) FILTER (WHERE (c > 1))), (PARTIAL sum(a))
                      Hash Key: b
                      ->  Streaming Partial HashAggregate
-                           Output: b, PARTIAL count(c) FILTER (WHERE (c > 1)), PARTIAL sum(a)
+                           Output: b, c, a, PARTIAL count(c) FILTER (WHERE (c > 1)), PARTIAL sum(a)
                            Group Key: dqa_f3.b
                            ->  Seq Scan on public.dqa_f3
                                  Output: a, b, c, d, e
@@ -3266,3 +3266,298 @@ select count(distinct a), count(distinct b) from dqa_f4 group by c;
 
 reset optimizer_enable_multiple_distinct_aggs;
 drop table dqa_f4;
+-- Test multi-dqa with normal agg
+create table dqa_f3(a int, b int, c int, d int, e int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into dqa_f3 select i%23, i%12, i % 10, i %5, i % 3 from generate_series(0, 99) i;
+analyze dqa_f3;
+-- Test normal case
+explain (verbose on, costs off) select count(distinct a), count(distinct b), sum(c), sum(d), count(*) from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Finalize HashAggregate
+   Output: count(a), count(b), sum(c), sum(d), count(*)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL count(a)), (PARTIAL count(b)), (PARTIAL sum(c)), (PARTIAL sum(d)), (PARTIAL count(*))
+         ->  Partial HashAggregate
+               Output: PARTIAL count(a), PARTIAL count(b), PARTIAL sum(c), PARTIAL sum(d), PARTIAL count(*)
+               ->  Partial HashAggregate
+                     Output: a, b, c, d, (AggExprId), PARTIAL sum(c), PARTIAL sum(d), PARTIAL count(*)
+                     Group Key: (AggExprId), dqa_f3.a, dqa_f3.b
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Output: a, b, c, d, (AggExprId), (PARTIAL sum(c)), (PARTIAL sum(d)), (PARTIAL count(*))
+                           Hash Key: a, b, (AggExprId)
+                           ->  Streaming Partial HashAggregate
+                                 Output: a, b, c, d, (AggExprId), PARTIAL sum(c), PARTIAL sum(d), PARTIAL count(*)
+                                 Group Key: AggExprId, dqa_f3.a, dqa_f3.b
+                                 ->  TupleSplit
+                                       Output: a, b, c, d, AggExprId
+                                       Split by Col: (dqa_f3.a), (dqa_f3.b)
+                                       ->  Seq Scan on public.dqa_f3
+                                             Output: a, b, c, d, e
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1'
+(22 rows)
+
+select count(distinct a), count(distinct b), sum(c), sum(d), count(*) from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ count | count | sum | sum | count 
+-------+-------+-----+-----+-------
+    23 |    12 | 450 | 200 |   100
+(1 row)
+
+select count(distinct a), count(distinct b), sum(c), sum(d), count(*) from dqa_f3 group by e;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ count | count | sum | sum | count 
+-------+-------+-----+-----+-------
+    23 |     4 | 153 |  68 |    34
+    23 |     4 | 147 |  67 |    33
+    23 |     4 | 150 |  65 |    33
+(3 rows)
+
+select count(distinct a), count(distinct b), sum(a), sum(b), count(*) from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ count | count | sum  | sum | count 
+-------+-------+------+-----+-------
+    23 |    12 | 1040 | 534 |   100
+(1 row)
+
+-- Test multi distinct in aggregation
+explain (verbose on, costs off) select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + a), count(*) from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+                                                                              QUERY PLAN                                                                              
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize HashAggregate
+   Output: count(c), count(d), to_char(corr(((b)::double precision), ((a)::double precision)), '9.99999999999999'::text), sum((b + a)), count(*)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL count(c)), (PARTIAL count(d)), (PARTIAL corr(((b)::double precision), ((a)::double precision))), (PARTIAL sum((b + a))), (PARTIAL count(*))
+         ->  Partial HashAggregate
+               Output: PARTIAL count(c), PARTIAL count(d), PARTIAL corr(((b)::double precision), ((a)::double precision)), PARTIAL sum((b + a)), PARTIAL count(*)
+               ->  Partial HashAggregate
+                     Output: c, d, b, a, ((b)::double precision), ((a)::double precision), (AggExprId), PARTIAL sum((b + a)), PARTIAL count(*)
+                     Group Key: (AggExprId), dqa_f3.c, dqa_f3.d, ((dqa_f3.b)::double precision), ((dqa_f3.a)::double precision)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Output: c, d, b, a, ((b)::double precision), ((a)::double precision), (AggExprId), (PARTIAL sum((b + a))), (PARTIAL count(*))
+                           Hash Key: c, d, ((b)::double precision), ((a)::double precision), (AggExprId)
+                           ->  Streaming Partial HashAggregate
+                                 Output: c, d, b, a, ((b)::double precision), ((a)::double precision), (AggExprId), PARTIAL sum((b + a)), PARTIAL count(*)
+                                 Group Key: AggExprId, dqa_f3.c, dqa_f3.d, ((dqa_f3.b)::double precision), ((dqa_f3.a)::double precision)
+                                 ->  TupleSplit
+                                       Output: c, d, b, a, ((b)::double precision), ((a)::double precision), AggExprId
+                                       Split by Col: (dqa_f3.c), (dqa_f3.d), (((dqa_f3.b)::double precision),((dqa_f3.a)::double precision))
+                                       ->  Seq Scan on public.dqa_f3
+                                             Output: c, d, b, a, b, a
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1'
+(22 rows)
+
+select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + a), count(*) from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ count | count |      to_char      | sum  | count 
+-------+-------+-------------------+------+-------
+    10 |     5 |   .08240133414600 | 1574 |   100
+(1 row)
+
+select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + a), count(*) from dqa_f3 group by e;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ count | count |      to_char      | sum | count 
+-------+-------+-------------------+-----+-------
+    10 |     5 |   .24290685786516 | 496 |    34
+    10 |     5 |   .09921127288971 | 529 |    33
+    10 |     5 |  -.09315718628293 | 549 |    33
+(3 rows)
+
+-- Test order by mixed
+explain (verbose on, costs off) select count(distinct a), count(distinct b), sum(a), sum(b), count(*) from dqa_f3 group by c order by c;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
+ Sort
+   Output: (count(a)), (count(b)), (sum(a)), (sum(b)), (count(*)), c
+   Sort Key: dqa_f3.c
+   ->  Finalize HashAggregate
+         Output: count(a), count(b), sum(a), sum(b), count(*), c
+         Group Key: dqa_f3.c
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Output: c, (PARTIAL count(a)), (PARTIAL count(b)), (PARTIAL sum(a)), (PARTIAL sum(b)), (PARTIAL count(*))
+               ->  Partial HashAggregate
+                     Output: c, PARTIAL count(a), PARTIAL count(b), PARTIAL sum(a), PARTIAL sum(b), PARTIAL count(*)
+                     Group Key: dqa_f3.c
+                     ->  Partial HashAggregate
+                           Output: c, a, b, (AggExprId), PARTIAL sum(a), PARTIAL sum(b), PARTIAL count(*)
+                           Group Key: (AggExprId), dqa_f3.a, dqa_f3.b, dqa_f3.c
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                 Output: c, a, b, (AggExprId), (PARTIAL sum(a)), (PARTIAL sum(b)), (PARTIAL count(*))
+                                 Hash Key: c, a, b, (AggExprId)
+                                 ->  Streaming Partial HashAggregate
+                                       Output: c, a, b, (AggExprId), PARTIAL sum(a), PARTIAL sum(b), PARTIAL count(*)
+                                       Group Key: AggExprId, dqa_f3.a, dqa_f3.b, dqa_f3.c
+                                       ->  TupleSplit
+                                             Output: c, a, b, AggExprId
+                                             Split by Col: (dqa_f3.a), (dqa_f3.b)
+                                             Group Key: dqa_f3.c
+                                             ->  Seq Scan on public.dqa_f3
+                                                   Output: a, b, c, d, e
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1'
+(28 rows)
+
+select count(distinct a), count(distinct b), sum(a), sum(b), count(*) from dqa_f3 group by c order by c;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ count | count | sum | sum | count 
+-------+-------+-----+-----+-------
+    10 |     6 | 105 |  54 |    10
+    10 |     6 | 115 |  64 |    10
+    10 |     6 | 102 |  50 |    10
+    10 |     6 |  89 |  60 |    10
+    10 |     6 |  99 |  46 |    10
+    10 |     6 | 109 |  56 |    10
+    10 |     6 |  96 |  42 |    10
+    10 |     6 | 106 |  52 |    10
+    10 |     6 | 116 |  50 |    10
+    10 |     6 | 103 |  60 |    10
+(10 rows)
+
+-- test unsupport case
+explain (verbose on, costs off) select count(distinct a), count(distinct b), sum(c), sum(a + b) from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Aggregate
+   Output: count(DISTINCT a), count(DISTINCT b), sum(c), sum((a + b))
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: a, b, c
+         ->  Seq Scan on public.dqa_f3
+               Output: a, b, c
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1'
+(8 rows)
+
+select count(distinct a), count(distinct b), sum(c), sum(a + b) from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ count | count | sum | sum  
+-------+-------+-----+------
+    23 |    12 | 450 | 1574
+(1 row)
+
+explain (verbose on, costs off) select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + c) from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+                                                                          QUERY PLAN                                                                          
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate
+   Output: count(DISTINCT c), count(DISTINCT d), to_char(corr(DISTINCT (b)::double precision, (a)::double precision), '9.99999999999999'::text), sum((b + c))
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: c, d, b, a
+         ->  Seq Scan on public.dqa_f3
+               Output: c, d, b, a
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1'
+(8 rows)
+
+select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + c) from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ count | count |      to_char      | sum 
+-------+-------+-------------------+-----
+    10 |     5 |   .08240133414600 | 984
+(1 row)
+
+explain (verbose on, costs off) select count(distinct a) filter(where a > 1), count(distinct b), sum(c) from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Aggregate functions with FILTER
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Aggregate
+   Output: count(DISTINCT a) FILTER (WHERE (a > 1)), count(DISTINCT b), sum(c)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: a, b, c
+         ->  Seq Scan on public.dqa_f3
+               Output: a, b, c
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1'
+(8 rows)
+
+select count(distinct a) filter(where a > 1), count(distinct b), sum(c) from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Aggregate functions with FILTER
+ count | count | sum 
+-------+-------+-----
+    21 |    12 | 450
+(1 row)
+
+set gp_enable_agg_distinct_pruning = off;
+set gp_eager_two_phase_agg = on;
+explain (verbose on, costs off) select count(distinct a), count(distinct b), sum(c), sum(d), count(*) from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+                                                               QUERY PLAN                                                               
+----------------------------------------------------------------------------------------------------------------------------------------
+ Finalize HashAggregate
+   Output: count(a), count(b), sum(c), sum(d), count(*)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL count(a)), (PARTIAL count(b)), (PARTIAL sum(c)), (PARTIAL sum(d)), (PARTIAL count(*))
+         ->  Partial HashAggregate
+               Output: PARTIAL count(a), PARTIAL count(b), PARTIAL sum(c), PARTIAL sum(d), PARTIAL count(*)
+               ->  Partial HashAggregate
+                     Output: a, b, c, d, (AggExprId), PARTIAL sum(c), PARTIAL sum(d), PARTIAL count(*)
+                     Group Key: (AggExprId), dqa_f3.a, dqa_f3.b
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Output: a, b, c, d, (AggExprId)
+                           Hash Key: a, b, (AggExprId)
+                           ->  TupleSplit
+                                 Output: a, b, c, d, AggExprId
+                                 Split by Col: (dqa_f3.a), (dqa_f3.b)
+                                 ->  Seq Scan on public.dqa_f3
+                                       Output: a, b, c, d, e
+ Optimizer: Postgres-based planner
+ Settings: enable_groupagg = 'off', gp_eager_two_phase_agg = 'on', gp_enable_agg_distinct_pruning = 'off', gp_motion_cost_per_row = '1'
+(19 rows)
+
+select count(distinct a), count(distinct b), sum(c), sum(d), count(*) from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ count | count | sum | sum | count 
+-------+-------+-----+-----+-------
+    23 |    12 | 450 | 200 |   100
+(1 row)
+
+select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + a), count(*) from dqa_f3;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ count | count |      to_char      | sum  | count 
+-------+-------+-------------------+------+-------
+    10 |     5 |   .08240133414600 | 1574 |   100
+(1 row)
+
+select count(distinct a), count(distinct b), sum(a), sum(b), count(*) from dqa_f3 group by c order by c;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+ count | count | sum | sum | count 
+-------+-------+-----+-----+-------
+    10 |     6 | 105 |  54 |    10
+    10 |     6 | 115 |  64 |    10
+    10 |     6 | 102 |  50 |    10
+    10 |     6 |  89 |  60 |    10
+    10 |     6 |  99 |  46 |    10
+    10 |     6 | 109 |  56 |    10
+    10 |     6 |  96 |  42 |    10
+    10 |     6 | 106 |  52 |    10
+    10 |     6 | 116 |  50 |    10
+    10 |     6 | 103 |  60 |    10
+(10 rows)
+
+drop table dqa_f3;

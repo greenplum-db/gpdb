@@ -3282,6 +3282,7 @@ _readDQAExpr(void)
     READ_INT_FIELD(agg_expr_id);
     READ_BITMAPSET_FIELD(agg_args_id_bms);
     READ_NODE_FIELD(agg_filter);
+	READ_BITMAPSET_FIELD(agg_vars_ref);
 
     READ_DONE();
 }

@@ -2556,18 +2556,18 @@ analyze dqa_f3;
  *
  */
 explain (verbose on, costs off)select sum(Distinct a), count(b), sum(c) from dqa_f3 group by e;
-                             QUERY PLAN                             
---------------------------------------------------------------------
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: (sum(a)), (count(b)), (sum(c)), e
    ->  Finalize HashAggregate
          Output: sum(a), count(b), sum(c), e
          Group Key: dqa_f3.e
          ->  Redistribute Motion 3:3  (slice2; segments: 3)
-               Output: e, a, (PARTIAL count(b)), (PARTIAL sum(c))
+               Output: e, a, b, c, (PARTIAL count(b)), (PARTIAL sum(c))
                Hash Key: e
                ->  Partial HashAggregate
-                     Output: e, a, PARTIAL count(b), PARTIAL sum(c)
+                     Output: e, a, b, c, PARTIAL count(b), PARTIAL sum(c)
                      Group Key: dqa_f3.e, dqa_f3.a
                      ->  Seq Scan on public.dqa_f3
                            Output: a, b, c, d, e
@@ -2588,15 +2588,15 @@ select sum(Distinct a), count(b), sum(c) from dqa_f3 group by e;
 (7 rows)
 
 explain (verbose on, costs off) select sum(Distinct e), count(b), sum(c) from dqa_f3 group by a;
-                           QUERY PLAN                            
------------------------------------------------------------------
+                             QUERY PLAN                             
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: (sum(e)), (count(b)), (sum(c)), a
    ->  Finalize HashAggregate
          Output: sum(e), count(b), sum(c), a
          Group Key: dqa_f3.a
          ->  Partial HashAggregate
-               Output: a, e, PARTIAL count(b), PARTIAL sum(c)
+               Output: a, e, b, c, PARTIAL count(b), PARTIAL sum(c)
                Group Key: dqa_f3.a, dqa_f3.e
                ->  Seq Scan on public.dqa_f3
                      Output: a, b, c, d, e
@@ -2637,21 +2637,21 @@ select sum(Distinct e), count(b), sum(c) from dqa_f3 group by a;
  *
  */
 explain (verbose on, costs off) select sum(Distinct c), count(a), sum(d) from dqa_f3 group by b;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: (sum(c)), (count(a)), (sum(d)), b
    ->  Finalize HashAggregate
          Output: sum(c), count(a), sum(d), b
          Group Key: dqa_f3.b
          ->  Partial HashAggregate
-               Output: b, c, PARTIAL count(a), PARTIAL sum(d)
+               Output: b, c, a, d, PARTIAL count(a), PARTIAL sum(d)
                Group Key: dqa_f3.b, dqa_f3.c
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Output: b, c, (PARTIAL count(a)), (PARTIAL sum(d))
+                     Output: b, c, a, d, (PARTIAL count(a)), (PARTIAL sum(d))
                      Hash Key: b
                      ->  Streaming Partial HashAggregate
-                           Output: b, c, PARTIAL count(a), PARTIAL sum(d)
+                           Output: b, c, a, d, PARTIAL count(a), PARTIAL sum(d)
                            Group Key: dqa_f3.b, dqa_f3.c
                            ->  Seq Scan on public.dqa_f3
                                  Output: a, b, c, d, e
@@ -2670,8 +2670,8 @@ select sum(Distinct c), count(a), sum(d) from dqa_f3 group by b;
 (5 rows)
 
 explain (verbose on, costs off) select sum(Distinct c), count(a), sum(d) from dqa_f3 group by b order by b;
-                                   QUERY PLAN                                   
---------------------------------------------------------------------------------
+                                      QUERY PLAN                                      
+--------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: (sum(c)), (count(a)), (sum(d)), b
    Merge Key: b
@@ -2682,13 +2682,13 @@ explain (verbose on, costs off) select sum(Distinct c), count(a), sum(d) from dq
                Output: sum(c), count(a), sum(d), b
                Group Key: dqa_f3.b
                ->  Partial HashAggregate
-                     Output: b, c, PARTIAL count(a), PARTIAL sum(d)
+                     Output: b, c, a, d, PARTIAL count(a), PARTIAL sum(d)
                      Group Key: dqa_f3.b, dqa_f3.c
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                           Output: b, c, (PARTIAL count(a)), (PARTIAL sum(d))
+                           Output: b, c, a, d, (PARTIAL count(a)), (PARTIAL sum(d))
                            Hash Key: b
                            ->  Streaming Partial HashAggregate
-                                 Output: b, c, PARTIAL count(a), PARTIAL sum(d)
+                                 Output: b, c, a, d, PARTIAL count(a), PARTIAL sum(d)
                                  Group Key: dqa_f3.b, dqa_f3.c
                                  ->  Seq Scan on public.dqa_f3
                                        Output: a, b, c, d, e
@@ -2707,8 +2707,8 @@ select sum(Distinct c), count(a), sum(d) from dqa_f3 group by b order by b;
 (5 rows)
 
 explain (verbose on, costs off) select distinct sum(Distinct c), count(a), sum(d) from dqa_f3 group by b;
-                                      QUERY PLAN                                      
---------------------------------------------------------------------------------------
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
  HashAggregate
    Output: (sum(c)), (count(a)), (sum(d)), b
    Group Key: (sum(dqa_f3.c)), (count(dqa_f3.a)), (sum(dqa_f3.d))
@@ -2721,13 +2721,13 @@ explain (verbose on, costs off) select distinct sum(Distinct c), count(a), sum(d
                      Output: sum(c), count(a), sum(d), b
                      Group Key: dqa_f3.b
                      ->  Partial HashAggregate
-                           Output: b, c, PARTIAL count(a), PARTIAL sum(d)
+                           Output: b, c, a, d, PARTIAL count(a), PARTIAL sum(d)
                            Group Key: dqa_f3.b, dqa_f3.c
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                 Output: b, c, (PARTIAL count(a)), (PARTIAL sum(d))
+                                 Output: b, c, a, d, (PARTIAL count(a)), (PARTIAL sum(d))
                                  Hash Key: b
                                  ->  Streaming Partial HashAggregate
-                                       Output: b, c, PARTIAL count(a), PARTIAL sum(d)
+                                       Output: b, c, a, d, PARTIAL count(a), PARTIAL sum(d)
                                        Group Key: dqa_f3.b, dqa_f3.c
                                        ->  Seq Scan on public.dqa_f3
                                              Output: a, b, c, d, e
@@ -2746,8 +2746,8 @@ select distinct sum(Distinct c), count(a), sum(d) from dqa_f3 group by b;
 (5 rows)
 
 explain (verbose on, costs off) select sum(Distinct c), count(a), sum(d) from dqa_f3 group by b having avg(e) > 3;
-                                        QUERY PLAN                                        
-------------------------------------------------------------------------------------------
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: (sum(c)), (count(a)), (sum(d)), b
    ->  Finalize HashAggregate
@@ -2755,13 +2755,13 @@ explain (verbose on, costs off) select sum(Distinct c), count(a), sum(d) from dq
          Group Key: dqa_f3.b
          Filter: (avg(dqa_f3.e) > '3'::numeric)
          ->  Partial HashAggregate
-               Output: b, c, PARTIAL count(a), PARTIAL sum(d), PARTIAL avg(e)
+               Output: b, c, a, d, e, PARTIAL count(a), PARTIAL sum(d), PARTIAL avg(e)
                Group Key: dqa_f3.b, dqa_f3.c
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Output: b, c, (PARTIAL count(a)), (PARTIAL sum(d)), (PARTIAL avg(e))
+                     Output: b, c, a, d, e, (PARTIAL count(a)), (PARTIAL sum(d)), (PARTIAL avg(e))
                      Hash Key: b
                      ->  Streaming Partial HashAggregate
-                           Output: b, c, PARTIAL count(a), PARTIAL sum(d), PARTIAL avg(e)
+                           Output: b, c, a, d, e, PARTIAL count(a), PARTIAL sum(d), PARTIAL avg(e)
                            Group Key: dqa_f3.b, dqa_f3.c
                            ->  Seq Scan on public.dqa_f3
                                  Output: a, b, c, d, e
@@ -2781,21 +2781,21 @@ explain (verbose on, costs off)
 select sum(Distinct sub.c), count(a), sum(d)
             from dqa_f3 left join(select x, coalesce(y, 5) as c from dqa_f2) as sub
             on sub.x = dqa_f3.e group by b;
-                                                     QUERY PLAN                                                      
----------------------------------------------------------------------------------------------------------------------
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: (sum((COALESCE(dqa_f2.y, 5)))), (count(dqa_f3.a)), (sum(dqa_f3.d)), dqa_f3.b
    ->  Finalize HashAggregate
          Output: sum((COALESCE(dqa_f2.y, 5))), count(dqa_f3.a), sum(dqa_f3.d), dqa_f3.b
          Group Key: dqa_f3.b
          ->  Partial HashAggregate
-               Output: dqa_f3.b, (COALESCE(dqa_f2.y, 5)), PARTIAL count(dqa_f3.a), PARTIAL sum(dqa_f3.d)
+               Output: dqa_f3.b, (COALESCE(dqa_f2.y, 5)), dqa_f3.a, dqa_f3.d, PARTIAL count(dqa_f3.a), PARTIAL sum(dqa_f3.d)
                Group Key: dqa_f3.b, (COALESCE(dqa_f2.y, 5))
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Output: dqa_f3.b, (COALESCE(dqa_f2.y, 5)), (PARTIAL count(dqa_f3.a)), (PARTIAL sum(dqa_f3.d))
+                     Output: dqa_f3.b, (COALESCE(dqa_f2.y, 5)), dqa_f3.a, dqa_f3.d, (PARTIAL count(dqa_f3.a)), (PARTIAL sum(dqa_f3.d))
                      Hash Key: dqa_f3.b
                      ->  Streaming Partial HashAggregate
-                           Output: dqa_f3.b, (COALESCE(dqa_f2.y, 5)), PARTIAL count(dqa_f3.a), PARTIAL sum(dqa_f3.d)
+                           Output: dqa_f3.b, (COALESCE(dqa_f2.y, 5)), dqa_f3.a, dqa_f3.d, PARTIAL count(dqa_f3.a), PARTIAL sum(dqa_f3.d)
                            Group Key: dqa_f3.b, (COALESCE(dqa_f2.y, 5))
                            ->  Hash Left Join
                                  Output: dqa_f3.b, (COALESCE(dqa_f2.y, 5)), dqa_f3.a, dqa_f3.d
@@ -2836,7 +2836,7 @@ explain (verbose on, costs off) select sum(Distinct c), count(a), sum(d) from dq
          Output: sum(c), count(a), sum(d), b
          Group Key: dqa_f3.b
          ->  Partial HashAggregate
-               Output: b, c, PARTIAL count(a), PARTIAL sum(d)
+               Output: b, c, a, d, PARTIAL count(a), PARTIAL sum(d)
                Group Key: dqa_f3.b, dqa_f3.c
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Output: b, c, a, d
@@ -2870,20 +2870,20 @@ reset gp_enable_agg_distinct_pruning;
  *                          -> input
  */
 explain (verbose on, costs off) select sum(Distinct b), count(c), sum(a) from dqa_f3;
-                              QUERY PLAN                               
------------------------------------------------------------------------
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
  Finalize Aggregate
    Output: sum(b), count(c), sum(a)
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         Output: b, (PARTIAL count(c)), (PARTIAL sum(a))
+         Output: b, c, a, (PARTIAL count(c)), (PARTIAL sum(a))
          ->  Partial HashAggregate
-               Output: b, PARTIAL count(c), PARTIAL sum(a)
+               Output: b, c, a, PARTIAL count(c), PARTIAL sum(a)
                Group Key: dqa_f3.b
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Output: b, (PARTIAL count(c)), (PARTIAL sum(a))
+                     Output: b, c, a, (PARTIAL count(c)), (PARTIAL sum(a))
                      Hash Key: b
                      ->  Streaming Partial HashAggregate
-                           Output: b, PARTIAL count(c), PARTIAL sum(a)
+                           Output: b, c, a, PARTIAL count(c), PARTIAL sum(a)
                            Group Key: dqa_f3.b
                            ->  Seq Scan on public.dqa_f3
                                  Output: a, b, c, d, e
@@ -2898,8 +2898,8 @@ select sum(Distinct b), count(c), sum(a) from dqa_f3;
 (1 row)
 
 explain (verbose on, costs off) select distinct sum(Distinct b), count(c), sum(a) from dqa_f3;
-                                    QUERY PLAN                                     
------------------------------------------------------------------------------------
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
  Unique
    Output: (sum(b)), (count(c)), (sum(a))
    Group Key: (sum(b)), (count(c)), (sum(a))
@@ -2909,15 +2909,15 @@ explain (verbose on, costs off) select distinct sum(Distinct b), count(c), sum(a
          ->  Finalize Aggregate
                Output: sum(b), count(c), sum(a)
                ->  Gather Motion 3:1  (slice1; segments: 3)
-                     Output: b, (PARTIAL count(c)), (PARTIAL sum(a))
+                     Output: b, c, a, (PARTIAL count(c)), (PARTIAL sum(a))
                      ->  Partial HashAggregate
-                           Output: b, PARTIAL count(c), PARTIAL sum(a)
+                           Output: b, c, a, PARTIAL count(c), PARTIAL sum(a)
                            Group Key: dqa_f3.b
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                 Output: b, (PARTIAL count(c)), (PARTIAL sum(a))
+                                 Output: b, c, a, (PARTIAL count(c)), (PARTIAL sum(a))
                                  Hash Key: b
                                  ->  Streaming Partial HashAggregate
-                                       Output: b, PARTIAL count(c), PARTIAL sum(a)
+                                       Output: b, c, a, PARTIAL count(c), PARTIAL sum(a)
                                        Group Key: dqa_f3.b
                                        ->  Seq Scan on public.dqa_f3
                                              Output: a, b, c, d, e
@@ -2932,20 +2932,20 @@ select distinct sum(Distinct b), count(c), sum(a) from dqa_f3;
 (1 row)
 
 explain (verbose on, costs off) select sum(Distinct b), count(c) filter(where c > 1), sum(a) from dqa_f3;
-                                          QUERY PLAN                                          
-----------------------------------------------------------------------------------------------
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
  Finalize Aggregate
    Output: sum(b), count(c) FILTER (WHERE (c > 1)), sum(a)
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         Output: b, (PARTIAL count(c) FILTER (WHERE (c > 1))), (PARTIAL sum(a))
+         Output: b, c, a, (PARTIAL count(c) FILTER (WHERE (c > 1))), (PARTIAL sum(a))
          ->  Partial HashAggregate
-               Output: b, PARTIAL count(c) FILTER (WHERE (c > 1)), PARTIAL sum(a)
+               Output: b, c, a, PARTIAL count(c) FILTER (WHERE (c > 1)), PARTIAL sum(a)
                Group Key: dqa_f3.b
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Output: b, (PARTIAL count(c) FILTER (WHERE (c > 1))), (PARTIAL sum(a))
+                     Output: b, c, a, (PARTIAL count(c) FILTER (WHERE (c > 1))), (PARTIAL sum(a))
                      Hash Key: b
                      ->  Streaming Partial HashAggregate
-                           Output: b, PARTIAL count(c) FILTER (WHERE (c > 1)), PARTIAL sum(a)
+                           Output: b, c, a, PARTIAL count(c) FILTER (WHERE (c > 1)), PARTIAL sum(a)
                            Group Key: dqa_f3.b
                            ->  Seq Scan on public.dqa_f3
                                  Output: a, b, c, d, e
@@ -3017,3 +3017,260 @@ select count(distinct a), count(distinct b) from dqa_f4 group by c;
 
 reset optimizer_enable_multiple_distinct_aggs;
 drop table dqa_f4;
+-- Test multi-dqa with normal agg
+create table dqa_f3(a int, b int, c int, d int, e int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into dqa_f3 select i%23, i%12, i % 10, i %5, i % 3 from generate_series(0, 99) i;
+analyze dqa_f3;
+-- Test normal case
+explain (verbose on, costs off) select count(distinct a), count(distinct b), sum(c), sum(d), count(*) from dqa_f3;
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Finalize HashAggregate
+   Output: count(a), count(b), sum(c), sum(d), count(*)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL count(a)), (PARTIAL count(b)), (PARTIAL sum(c)), (PARTIAL sum(d)), (PARTIAL count(*))
+         ->  Partial HashAggregate
+               Output: PARTIAL count(a), PARTIAL count(b), PARTIAL sum(c), PARTIAL sum(d), PARTIAL count(*)
+               ->  Partial HashAggregate
+                     Output: a, b, c, d, (AggExprId), PARTIAL sum(c), PARTIAL sum(d), PARTIAL count(*)
+                     Group Key: (AggExprId), dqa_f3.a, dqa_f3.b
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Output: a, b, c, d, (AggExprId), (PARTIAL sum(c)), (PARTIAL sum(d)), (PARTIAL count(*))
+                           Hash Key: a, b, (AggExprId)
+                           ->  Streaming Partial HashAggregate
+                                 Output: a, b, c, d, (AggExprId), PARTIAL sum(c), PARTIAL sum(d), PARTIAL count(*)
+                                 Group Key: AggExprId, dqa_f3.a, dqa_f3.b
+                                 ->  TupleSplit
+                                       Output: a, b, c, d, AggExprId
+                                       Split by Col: (dqa_f3.a), (dqa_f3.b)
+                                       ->  Seq Scan on public.dqa_f3
+                                             Output: a, b, c, d, e
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1'
+(22 rows)
+
+select count(distinct a), count(distinct b), sum(c), sum(d), count(*) from dqa_f3;
+ count | count | sum | sum | count 
+-------+-------+-----+-----+-------
+    23 |    12 | 450 | 200 |   100
+(1 row)
+
+select count(distinct a), count(distinct b), sum(c), sum(d), count(*) from dqa_f3 group by e;
+ count | count | sum | sum | count 
+-------+-------+-----+-----+-------
+    23 |     4 | 153 |  68 |    34
+    23 |     4 | 147 |  67 |    33
+    23 |     4 | 150 |  65 |    33
+(3 rows)
+
+select count(distinct a), count(distinct b), sum(a), sum(b), count(*) from dqa_f3;
+ count | count | sum  | sum | count 
+-------+-------+------+-----+-------
+    23 |    12 | 1040 | 534 |   100
+(1 row)
+
+-- Test multi distinct in aggregation
+explain (verbose on, costs off) select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + a), count(*) from dqa_f3;
+                                                                              QUERY PLAN                                                                              
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize HashAggregate
+   Output: count(c), count(d), to_char(corr(((b)::double precision), ((a)::double precision)), '9.99999999999999'::text), sum((b + a)), count(*)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL count(c)), (PARTIAL count(d)), (PARTIAL corr(((b)::double precision), ((a)::double precision))), (PARTIAL sum((b + a))), (PARTIAL count(*))
+         ->  Partial HashAggregate
+               Output: PARTIAL count(c), PARTIAL count(d), PARTIAL corr(((b)::double precision), ((a)::double precision)), PARTIAL sum((b + a)), PARTIAL count(*)
+               ->  Partial HashAggregate
+                     Output: c, d, b, a, ((b)::double precision), ((a)::double precision), (AggExprId), PARTIAL sum((b + a)), PARTIAL count(*)
+                     Group Key: (AggExprId), dqa_f3.c, dqa_f3.d, ((dqa_f3.b)::double precision), ((dqa_f3.a)::double precision)
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Output: c, d, b, a, ((b)::double precision), ((a)::double precision), (AggExprId), (PARTIAL sum((b + a))), (PARTIAL count(*))
+                           Hash Key: c, d, ((b)::double precision), ((a)::double precision), (AggExprId)
+                           ->  Streaming Partial HashAggregate
+                                 Output: c, d, b, a, ((b)::double precision), ((a)::double precision), (AggExprId), PARTIAL sum((b + a)), PARTIAL count(*)
+                                 Group Key: AggExprId, dqa_f3.c, dqa_f3.d, ((dqa_f3.b)::double precision), ((dqa_f3.a)::double precision)
+                                 ->  TupleSplit
+                                       Output: c, d, b, a, ((b)::double precision), ((a)::double precision), AggExprId
+                                       Split by Col: (dqa_f3.c), (dqa_f3.d), (((dqa_f3.b)::double precision),((dqa_f3.a)::double precision))
+                                       ->  Seq Scan on public.dqa_f3
+                                             Output: c, d, b, a, b, a
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1'
+(22 rows)
+
+select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + a), count(*) from dqa_f3;
+ count | count |      to_char      | sum  | count 
+-------+-------+-------------------+------+-------
+    10 |     5 |   .08240133414600 | 1574 |   100
+(1 row)
+
+select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + a), count(*) from dqa_f3 group by e;
+ count | count |      to_char      | sum | count 
+-------+-------+-------------------+-----+-------
+    10 |     5 |   .24290685786516 | 496 |    34
+    10 |     5 |   .09921127288971 | 529 |    33
+    10 |     5 |  -.09315718628293 | 549 |    33
+(3 rows)
+
+-- Test order by mixed
+explain (verbose on, costs off) select count(distinct a), count(distinct b), sum(a), sum(b), count(*) from dqa_f3 group by c order by c;
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
+ Sort
+   Output: (count(a)), (count(b)), (sum(a)), (sum(b)), (count(*)), c
+   Sort Key: dqa_f3.c
+   ->  Finalize HashAggregate
+         Output: count(a), count(b), sum(a), sum(b), count(*), c
+         Group Key: dqa_f3.c
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Output: c, (PARTIAL count(a)), (PARTIAL count(b)), (PARTIAL sum(a)), (PARTIAL sum(b)), (PARTIAL count(*))
+               ->  Partial HashAggregate
+                     Output: c, PARTIAL count(a), PARTIAL count(b), PARTIAL sum(a), PARTIAL sum(b), PARTIAL count(*)
+                     Group Key: dqa_f3.c
+                     ->  Partial HashAggregate
+                           Output: c, a, b, (AggExprId), PARTIAL sum(a), PARTIAL sum(b), PARTIAL count(*)
+                           Group Key: (AggExprId), dqa_f3.a, dqa_f3.b, dqa_f3.c
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                 Output: c, a, b, (AggExprId), (PARTIAL sum(a)), (PARTIAL sum(b)), (PARTIAL count(*))
+                                 Hash Key: c, a, b, (AggExprId)
+                                 ->  Streaming Partial HashAggregate
+                                       Output: c, a, b, (AggExprId), PARTIAL sum(a), PARTIAL sum(b), PARTIAL count(*)
+                                       Group Key: AggExprId, dqa_f3.a, dqa_f3.b, dqa_f3.c
+                                       ->  TupleSplit
+                                             Output: c, a, b, AggExprId
+                                             Split by Col: (dqa_f3.a), (dqa_f3.b)
+                                             Group Key: dqa_f3.c
+                                             ->  Seq Scan on public.dqa_f3
+                                                   Output: a, b, c, d, e
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1', optimizer = 'off'
+(28 rows)
+
+select count(distinct a), count(distinct b), sum(a), sum(b), count(*) from dqa_f3 group by c order by c;
+ count | count | sum | sum | count 
+-------+-------+-----+-----+-------
+    10 |     6 | 105 |  54 |    10
+    10 |     6 | 115 |  64 |    10
+    10 |     6 | 102 |  50 |    10
+    10 |     6 |  89 |  60 |    10
+    10 |     6 |  99 |  46 |    10
+    10 |     6 | 109 |  56 |    10
+    10 |     6 |  96 |  42 |    10
+    10 |     6 | 106 |  52 |    10
+    10 |     6 | 116 |  50 |    10
+    10 |     6 | 103 |  60 |    10
+(10 rows)
+
+-- test unsupport case
+explain (verbose on, costs off) select count(distinct a), count(distinct b), sum(c), sum(a + b) from dqa_f3;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Aggregate
+   Output: count(DISTINCT a), count(DISTINCT b), sum(c), sum((a + b))
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: a, b, c
+         ->  Seq Scan on public.dqa_f3
+               Output: a, b, c
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1', optimizer = 'off'
+(8 rows)
+
+select count(distinct a), count(distinct b), sum(c), sum(a + b) from dqa_f3;
+ count | count | sum | sum  
+-------+-------+-----+------
+    23 |    12 | 450 | 1574
+(1 row)
+
+explain (verbose on, costs off) select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + c) from dqa_f3;
+                                                                          QUERY PLAN                                                                          
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate
+   Output: count(DISTINCT c), count(DISTINCT d), to_char(corr(DISTINCT (b)::double precision, (a)::double precision), '9.99999999999999'::text), sum((b + c))
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: c, d, b, a
+         ->  Seq Scan on public.dqa_f3
+               Output: c, d, b, a
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1', optimizer = 'off'
+(8 rows)
+
+select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + c) from dqa_f3;
+ count | count |      to_char      | sum 
+-------+-------+-------------------+-----
+    10 |     5 |   .08240133414600 | 984
+(1 row)
+
+explain (verbose on, costs off) select count(distinct a) filter(where a > 1), count(distinct b), sum(c) from dqa_f3;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Aggregate
+   Output: count(DISTINCT a) FILTER (WHERE (a > 1)), count(DISTINCT b), sum(c)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: a, b, c
+         ->  Seq Scan on public.dqa_f3
+               Output: a, b, c
+ Optimizer: Postgres query optimizer
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1', optimizer = 'off'
+(8 rows)
+
+select count(distinct a) filter(where a > 1), count(distinct b), sum(c) from dqa_f3;
+ count | count | sum 
+-------+-------+-----
+    21 |    12 | 450
+(1 row)
+
+set gp_enable_agg_distinct_pruning = off;
+set gp_eager_two_phase_agg = on;
+explain (verbose on, costs off) select count(distinct a), count(distinct b), sum(c), sum(d), count(*) from dqa_f3;
+                                                                        QUERY PLAN                                                                         
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize HashAggregate
+   Output: count(a), count(b), sum(c), sum(d), count(*)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL count(a)), (PARTIAL count(b)), (PARTIAL sum(c)), (PARTIAL sum(d)), (PARTIAL count(*))
+         ->  Partial HashAggregate
+               Output: PARTIAL count(a), PARTIAL count(b), PARTIAL sum(c), PARTIAL sum(d), PARTIAL count(*)
+               ->  Partial HashAggregate
+                     Output: a, b, c, d, (AggExprId), PARTIAL sum(c), PARTIAL sum(d), PARTIAL count(*)
+                     Group Key: (AggExprId), dqa_f3.a, dqa_f3.b
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Output: a, b, c, d, (AggExprId)
+                           Hash Key: a, b, (AggExprId)
+                           ->  TupleSplit
+                                 Output: a, b, c, d, AggExprId
+                                 Split by Col: (dqa_f3.a), (dqa_f3.b)
+                                 ->  Seq Scan on public.dqa_f3
+                                       Output: a, b, c, d, e
+ Optimizer: Postgres-based planner
+ Settings: enable_groupagg = 'off', gp_eager_two_phase_agg = 'on', gp_enable_agg_distinct_pruning = 'off', gp_motion_cost_per_row = '1', optimizer = 'off'
+(19 rows)
+
+select count(distinct a), count(distinct b), sum(c), sum(d), count(*) from dqa_f3;
+ count | count | sum | sum | count 
+-------+-------+-----+-----+-------
+    23 |    12 | 450 | 200 |   100
+(1 row)
+
+select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + a), count(*) from dqa_f3;
+ count | count |      to_char      | sum  | count 
+-------+-------+-------------------+------+-------
+    10 |     5 |   .08240133414600 | 1574 |   100
+(1 row)
+
+select count(distinct a), count(distinct b), sum(a), sum(b), count(*) from dqa_f3 group by c order by c;
+ count | count | sum | sum | count 
+-------+-------+-----+-----+-------
+    10 |     6 | 105 |  54 |    10
+    10 |     6 | 115 |  64 |    10
+    10 |     6 | 102 |  50 |    10
+    10 |     6 |  89 |  60 |    10
+    10 |     6 |  99 |  46 |    10
+    10 |     6 | 109 |  56 |    10
+    10 |     6 |  96 |  42 |    10
+    10 |     6 | 106 |  52 |    10
+    10 |     6 | 116 |  50 |    10
+    10 |     6 | 103 |  60 |    10
+(10 rows)
+
+drop table dqa_f3;

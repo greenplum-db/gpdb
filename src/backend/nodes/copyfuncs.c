@@ -1302,6 +1302,7 @@ _copyDQAExpr(const DQAExpr *from)
     COPY_SCALAR_FIELD(agg_expr_id);
     COPY_BITMAPSET_FIELD(agg_args_id_bms);
     COPY_NODE_FIELD(agg_filter);
+	COPY_BITMAPSET_FIELD(agg_vars_ref);
 
     return newnode;
 }

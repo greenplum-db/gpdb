@@ -876,6 +876,17 @@ _equalOnConflictExpr(const OnConflictExpr *a, const OnConflictExpr *b)
 	return true;
 }
 
+static bool
+_equalDQAExpr(const DQAExpr *a, const DQAExpr *b)
+{
+	COMPARE_SCALAR_FIELD(agg_expr_id);
+	COMPARE_BITMAPSET_FIELD(agg_args_id_bms);
+	COMPARE_NODE_FIELD(agg_filter);
+	COMPARE_BITMAPSET_FIELD(agg_vars_ref);
+
+	return true;
+}
+
 /*
  * Stuff from pathnodes.h
  */
@@ -3460,6 +3471,9 @@ equal(const void *a, const void *b)
 			break;
 		case T_JoinExpr:
 			retval = _equalJoinExpr(a, b);
+			break;
+		case T_DQAExpr:
+			retval = _equalDQAExpr(a, b);
 			break;
 
 			/*

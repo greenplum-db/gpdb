@@ -590,3 +590,41 @@ select count(distinct a), count(distinct b) from dqa_f4 group by c;
 reset optimizer_enable_multiple_distinct_aggs;
 
 drop table dqa_f4;
+
+-- Test multi-dqa with normal agg
+create table dqa_f3(a int, b int, c int, d int, e int);
+insert into dqa_f3 select i%23, i%12, i % 10, i %5, i % 3 from generate_series(0, 99) i;
+analyze dqa_f3;
+
+-- Test normal case
+explain (verbose on, costs off) select count(distinct a), count(distinct b), sum(c), sum(d), count(*) from dqa_f3;
+select count(distinct a), count(distinct b), sum(c), sum(d), count(*) from dqa_f3;
+select count(distinct a), count(distinct b), sum(c), sum(d), count(*) from dqa_f3 group by e;
+
+select count(distinct a), count(distinct b), sum(a), sum(b), count(*) from dqa_f3;
+
+-- Test multi distinct in aggregation
+explain (verbose on, costs off) select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + a), count(*) from dqa_f3;
+select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + a), count(*) from dqa_f3;
+select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + a), count(*) from dqa_f3 group by e;
+
+-- Test order by mixed
+explain (verbose on, costs off) select count(distinct a), count(distinct b), sum(a), sum(b), count(*) from dqa_f3 group by c order by c;
+select count(distinct a), count(distinct b), sum(a), sum(b), count(*) from dqa_f3 group by c order by c;
+
+-- test unsupport case
+explain (verbose on, costs off) select count(distinct a), count(distinct b), sum(c), sum(a + b) from dqa_f3;
+select count(distinct a), count(distinct b), sum(c), sum(a + b) from dqa_f3;
+explain (verbose on, costs off) select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + c) from dqa_f3;
+select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + c) from dqa_f3;
+explain (verbose on, costs off) select count(distinct a) filter(where a > 1), count(distinct b), sum(c) from dqa_f3;
+select count(distinct a) filter(where a > 1), count(distinct b), sum(c) from dqa_f3;
+
+set gp_enable_agg_distinct_pruning = off;
+set gp_eager_two_phase_agg = on;
+explain (verbose on, costs off) select count(distinct a), count(distinct b), sum(c), sum(d), count(*) from dqa_f3;
+select count(distinct a), count(distinct b), sum(c), sum(d), count(*) from dqa_f3;
+select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.99999999999999'), sum(b + a), count(*) from dqa_f3;
+select count(distinct a), count(distinct b), sum(a), sum(b), count(*) from dqa_f3 group by c order by c;
+
+drop table dqa_f3;
