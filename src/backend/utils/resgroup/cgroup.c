@@ -285,12 +285,12 @@ lockDir(const char *path, bool block)
  * Create cgroup dir
  */
 bool
-createDir(Oid group, CGroupComponentType component)
+createDir(Oid group, CGroupComponentType component, char *filename)
 {
 	char path[MAX_CGROUP_PATHLEN];
 	size_t path_size = sizeof(path);
 
-	buildPath(group, BASEDIR_GPDB, component, "", path, path_size);
+	buildPath(group, BASEDIR_GPDB, component, filename, path, path_size);
 
 	if (mkdir(path, 0755) && errno != EEXIST)
 		return false;

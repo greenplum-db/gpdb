@@ -384,7 +384,8 @@ createcgroup_v2(Oid group)
 {
 	int retry = 0;
 
-	if (!createDir(group, CGROUP_COMPONENT_PLAIN))
+	if (!createDir(group, CGROUP_COMPONENT_PLAIN, "") ||
+		!createDir(group, CGROUP_COMPONENT_PLAIN, CGROUPV2_LEAF_INDENTIFIER))
 	{
 		CGROUP_ERROR("can't create cgroup for resource group '%d': %m", group);
 	}
@@ -416,7 +417,7 @@ create_default_cpuset_group_v2(void)
 	CGroupComponentType component = CGROUP_COMPONENT_PLAIN;
 	int retry = 0;
 
-	if (!createDir(DEFAULT_CPUSET_GROUP_ID, component))
+	if (!createDir(DEFAULT_CPUSET_GROUP_ID, component, ""))
 	{
 		CGROUP_ERROR("can't create cpuset cgroup for resgroup '%d': %m",
 					 DEFAULT_CPUSET_GROUP_ID);
@@ -464,6 +465,7 @@ create_default_cpuset_group_v2(void)
 static void
 attachcgroup_v2(Oid group, int pid, bool is_cpuset_enabled)
 {
+	char path_of_leaf[MAXPATHLEN];
 	/*
 	 * needn't write to file if the pid has already been written in.
 	 * Unless it has not been written or the group has changed or
@@ -472,8 +474,9 @@ attachcgroup_v2(Oid group, int pid, bool is_cpuset_enabled)
 	if (IsUnderPostmaster && group == currentGroupIdInCGroup)
 		return;
 
+	pg_sprintf(path_of_leaf, "%s/cgroup.procs", CGROUPV2_LEAF_INDENTIFIER);
 	writeInt64(group, BASEDIR_GPDB, CGROUP_COMPONENT_PLAIN,
-			   "cgroup.procs", pid);
+			   path_of_leaf, pid);
 
 	/*
 	 * Do not assign the process to cgroup/memory for now.
@@ -497,6 +500,7 @@ detachcgroup_v2(Oid group, CGroupComponentType component, int fd_dir)
 {
 	char 	path[MAX_CGROUP_PATHLEN];
 	size_t 	path_size = sizeof(path);
+	char	path_of_leaf[MAXPATHLEN];
 
 	char 	*buf;
 	size_t 	buf_size;
@@ -531,7 +535,8 @@ detachcgroup_v2(Oid group, CGroupComponentType component, int fd_dir)
 	} \
 } while (0)
 
-	buildPath(group, BASEDIR_GPDB, component, "cgroup.procs", path, path_size);
+	pg_sprintf(path_of_leaf, "%s/cgroup.procs", CGROUPV2_LEAF_INDENTIFIER);
+	buildPath(group, BASEDIR_GPDB, component, path_of_leaf, path, path_size);
 
 	fdr = open(path, O_RDONLY);
 
@@ -559,7 +564,7 @@ detachcgroup_v2(Oid group, CGroupComponentType component, int fd_dir)
 	if (buf_len == 0)
 		return;
 
-	buildPath(DEFAULTRESGROUP_OID, BASEDIR_GPDB, component, "cgroup.procs",
+	buildPath(DEFAULTRESGROUP_OID, BASEDIR_GPDB, component, path_of_leaf,
 			  path, path_size);
 
 	fdw = open(path, O_WRONLY);

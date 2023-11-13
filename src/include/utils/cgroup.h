@@ -47,6 +47,8 @@
 /* This is the default value about Linux Control Group */
 #define DEFAULT_CPU_PERIOD_US 100000LL
 
+/* The name of leaf cgroup when use cgroup v2 */
+#define CGROUPV2_LEAF_INDENTIFIER "queries"
 
 /*
  * Resource Group underlying component types.
@@ -168,7 +170,7 @@ extern void setComponentDir(CGroupComponentType component, const char *dir);
 extern int lockDir(const char *path, bool block);
 
 /* Create cgroup dir. */
-extern bool createDir(Oid group, CGroupComponentType comp);
+extern bool createDir(Oid group, CGroupComponentType comp, char *filename);
 /* Delete cgroup dir. */
 extern bool deleteDir(Oid group, CGroupComponentType component, const char *filename, bool unassign,
 					  void (*detachcgroup) (Oid group, CGroupComponentType component, int fd_dir));

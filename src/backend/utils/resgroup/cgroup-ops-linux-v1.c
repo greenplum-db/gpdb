@@ -649,11 +649,11 @@ createcgroup_v1(Oid group)
 {
 	int retry = 0;
 
-	if (!createDir(group, CGROUP_COMPONENT_CPU) ||
-		!createDir(group, CGROUP_COMPONENT_CPUACCT) ||
-		!createDir(group, CGROUP_COMPONENT_MEMORY) ||
+	if (!createDir(group, CGROUP_COMPONENT_CPU, "") ||
+		!createDir(group, CGROUP_COMPONENT_CPUACCT, "") ||
+		!createDir(group, CGROUP_COMPONENT_MEMORY, "") ||
 		(gp_resource_group_enable_cgroup_cpuset &&
-		 !createDir(group, CGROUP_COMPONENT_CPUSET)))
+		 !createDir(group, CGROUP_COMPONENT_CPUSET, "")))
 	{
 		CGROUP_ERROR("can't create cgroup for resource group '%d': %m", group);
 	}
@@ -702,7 +702,7 @@ create_default_cpuset_group_v1(void)
 	CGroupComponentType component = CGROUP_COMPONENT_CPUSET;
 	int retry = 0;
 
-	if (!createDir(DEFAULT_CPUSET_GROUP_ID, component))
+	if (!createDir(DEFAULT_CPUSET_GROUP_ID, component, ""))
 	{
 		CGROUP_ERROR("can't create cpuset cgroup for resgroup '%d': %m",
 					 DEFAULT_CPUSET_GROUP_ID);
