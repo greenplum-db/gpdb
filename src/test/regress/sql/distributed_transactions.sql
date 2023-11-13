@@ -608,3 +608,36 @@ end;
 reset test_print_direct_dispatch_info;
 reset optimizer;
 select count(gp_segment_id) from distxact1_4 group by gp_segment_id; -- sanity check: tuples should be in > 1 segments
+
+-- Explicit transaction block will send Distributed Commit, even if there is only SET command in it.
+-- On the other hand, implicit transaction block involving only SET command will not send it.
+create table tbl_dtx(a int, b int) distributed by (a);
+insert into tbl_dtx values(1,1);
+
+create or replace function dtx_set_bug()
+  returns void
+  language plpgsql
+as $function$
+begin
+    execute 'update tbl_dtx set b = 1 where a = 1;';
+    set optimizer=off;
+end;
+$function$;
+
+set Test_print_direct_dispatch_info = true;
+
+-- 1. explicit BEGIN/END
+begin;
+set optimizer=false;
+end;
+
+-- 2. implicit transaction block with just SET
+set optimizer=false;
+
+-- 3. still implicit transaction block, but with UPDATE that will send DTX protocol command to *some* QEs
+-- due to direct dispatch. Planner needs to be used for direct dispatch here.
+-- This is to verify that the QEs that are not involved in the UDPATE won't receive DTX protocol command 
+-- that they are not supposed to see.
+select dtx_set_bug();
+
+reset Test_print_direct_dispatch_info;
