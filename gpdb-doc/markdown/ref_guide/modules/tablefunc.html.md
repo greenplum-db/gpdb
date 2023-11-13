@@ -16,5 +16,5 @@ CREATE EXTENSION tablefunc;
 
 ## <a id="topic_info"></a>Module Documentation 
 
-See [tablefunc](https://www.postgresql.org/docs/9.4/tablefunc.html) in the PostgreSQL documentation for detailed information about the individual functions in this module.
+See [tablefunc](https://www.postgresql.org/docs/12/tablefunc.html) in the PostgreSQL documentation for detailed information about the individual functions in this module.
 
