@@ -375,13 +375,13 @@ Feature: gpinitsystem tests
         And gpconfig should print "Segment     value: auto" to stdout
         When the user runs "gpconfig --skipvalidation -c gp_postmaster_inet_address_family -v ipv4"
         Then gpconfig should return a return code of 0
-        When the user runs "gpstop -ari"
-        Then gpstart should return a return code of 0
+        When the user runs "gpstop -ar"
+        Then gpstop should return a return code of 0
         When the user runs "gpconfig -s gp_postmaster_inet_address_family"
         Then gpconfig should return a return code of 0
         And gpconfig should print "Coordinator value: ipv4" to stdout
         And gpconfig should print "Segment     value: ipv4" to stdout
         When the user runs "gpconfig --skipvalidation -c gp_postmaster_inet_address_family -v auto"
         Then gpconfig should return a return code of 0
-        When the user runs "gpstop -ari"
-        Then gpstart should return a return code of 0
+        When the user runs "gpstop -ar"
+        Then gpstop should return a return code of 0
