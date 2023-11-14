@@ -97,6 +97,7 @@ extern int	MaxAppendOnlyTables;	/* Max # of concurrently used AO rels */
  * 4 -> 1 (compaction transaction aborted)
  * 5 -> 1 (drop transaction committed)
  * 5 -> 2 (drop transaction aborted)
+ * 5 -> 2 (drop transaction skipped)
  * 6 -> 5 (drop transaction started)
  * 6 -> 7 (pseudo compaction transaction started)
  * 6 -> 8 (drop transaction skipped)

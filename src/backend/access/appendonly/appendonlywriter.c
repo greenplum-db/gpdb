@@ -727,7 +727,11 @@ DeregisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList)
 							  "relation \"%s\" (%d)", i,
 							  get_rel_name(relid), relid)));
 
-			Assert(segfilestat->state == COMPACTED_AWAITING_DROP || segfilestat->state == DROP_USE || segfilestat->state == AWAITING_DROP_READY);
+			/*
+			 * We can now reach here in the drop phase either when we check
+			 * serializable backends or when we update the aoseg totals on master
+			 */
+			Assert(segfilestat->state == COMPACTED_AWAITING_DROP || segfilestat->state == DROP_USE);
 			segfilestat->xid = CurrentXid;
 			appendOnlyInsertXact = true;
 			segfilestat->state = COMPACTED_DROP_SKIPPED;
@@ -1328,6 +1332,8 @@ assignPerRelSegno(List *all_relids)
  * total tupcount for corresponding segfile.  This fills elements for all
  * segfiles that are available in segments if segno is negative, otherwise
  * tries to fetch the tupcount for only the segfile that is passed by segno.
+ * Also fill the list awaiting_drop with all segfile nos. that are marked as
+ * AWAITING_DROP on any of the QEs
  */
 static int64 *
 GetTotalTupleCountFromSegments(Relation parentrel,
@@ -1585,7 +1591,9 @@ get_awaiting_drop_status_from_segments(Relation parentrel)
 	return awaiting_drop;
 }
 
-
+/*
+ * Updates the tupcount information from the segments.
+ */
 void
 UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 									Snapshot appendOnlyMetaDataSnapshot,
@@ -1601,7 +1609,12 @@ UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 	list_free(awaiting_drop);
 }
 
-
+/*
+ * This is only called during the AOVAC_DROP phase.
+ * Updates the tupcount information from the segments and
+ * deregister any segfiles with AWAITING_DROP state on QEs
+ * This prevents them from dropping by marking them as COMPACTED_DROP_SKIPPED.
+ */
 void
 UpdateMasterAosegTotalsFromSegments_DropPhase(Relation parentrel,
 									Snapshot appendOnlyMetaDataSnapshot,
@@ -1620,7 +1633,10 @@ UpdateMasterAosegTotalsFromSegments_DropPhase(Relation parentrel,
 
 /*
  * Updates the tupcount information from the segments.
+ * Also gets the segfiles with AWAITING_DROP state on the segments.
  * Should only be called in rare circumstances from the QD.
+ * Returns a list of segfile nos. if any of the QEs have the segfile in
+ * AWAITING_DROP state
  */
 List *
 UpdateMasterAosegTotalsFromSegments_guts(Relation parentrel,
@@ -1634,7 +1650,7 @@ UpdateMasterAosegTotalsFromSegments_guts(Relation parentrel,
 	Assert(RelationIsAppendOptimized(parentrel));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
-	/* Give -1 for segno, so that we'll have all segfile tupcount. */
+	/* Give -1 for segno, so that we'll have all segfile tupcount and state. */
 	total_tupcount = GetTotalTupleCountFromSegments(parentrel, -1, &awaiting_drop);
 
 	/*
