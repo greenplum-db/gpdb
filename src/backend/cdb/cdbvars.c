@@ -80,7 +80,7 @@ int			gp_external_max_segs;	/* max segdbs per gpfdist/gpfdists URI */
 int			gp_cached_gang_threshold;	/* How many gangs to keep around from
 										 * stmt to stmt. */
 
-bool		Gp_write_shared_snapshot;	/* tell the writer QE to write the
+int			Gp_write_shared_snapshot;	/* tell the writer QE to write the
 										 * shared snapshot */
 
 bool		gp_reraise_signal = false;	/* try to dump core when we get

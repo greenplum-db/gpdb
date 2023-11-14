@@ -283,10 +283,6 @@ transformOptionalSelectInto(ParseState *pstate, Node *parseTree)
 		 * statement with locking clause contains only one table, we are
 		 * sure that there are no motions. For such simple cases, we could
 		 * make the behavior just the same as Postgres.
-		 *
-		 * For extended protocal (like jdbc), we do not try to do such
-		 * optimization since these queries will be considered as cursor
-		 * and dispatched to reader gangs.
 		 */
 		pstate->p_canOptSelectLockingClause = checkCanOptSelectLockingClause(stmt);
 
@@ -3644,14 +3640,6 @@ checkCanOptSelectLockingClause(SelectStmt *stmt)
 		return false;
 
 	if (!gp_enable_global_deadlock_detector && Gp_role != GP_ROLE_UTILITY)
-		return false;
-
-	/*
-	 * The disableLockingOptimization field is set true
-	 * in exec_parse_message to mark queries that using extended
-	 * protocal.
-	 */
-	if (stmt->disableLockingOptimization)
 		return false;
 
 	/*

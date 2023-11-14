@@ -191,6 +191,12 @@ typedef enum
 	DTX_CONTEXT_QE_FINISH_PREPARED
 } DtxContext;
 
+typedef enum DumpSharedSnapshotOption
+{
+	SHAREDSNAPSHOT_NONE,     /* No need to dump shared snapshot. */
+	SHAREDSNAPSHOT_DUMP,     /* Dump shared snapshot only. */
+	SHAREDSNAPSHOT_DUMP_XID  /* Dump shared snapshot and get local xid. */
+} DumpSharedSnapshotOption;
 
 
 typedef struct TMGXACT_UTILITY_MODE_REDO
@@ -324,7 +330,7 @@ extern bool dispatchDtxCommand(const char *cmd);
 extern void tmShmemInit(void);
 extern int	tmShmemSize(void);
 
-extern void verify_shared_snapshot_ready(int cid);
+extern void verify_shared_snapshot_ready(int cid, bool has_lockrows);
 
 int			mppTxnOptions(bool needDtx);
 int			mppTxOptions_IsoLevel(int txnOptions);

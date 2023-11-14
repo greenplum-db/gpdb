@@ -800,7 +800,7 @@ extern void assign_xlog_sync_method(int new_sync_method, void *extra);
 extern bool check_gp_role(char **newval, void **extra, GucSource source);
 extern void assign_gp_role(const char *newval, void *extra);
 extern const char *show_gp_role(void);
-extern void assign_gp_write_shared_snapshot(bool newval, void *extra);
+extern void assign_gp_write_shared_snapshot(int newval, void *extra);
 extern bool gpvars_check_gp_resource_manager_policy(char **newval, void **extra, GucSource source);
 extern void gpvars_assign_gp_resource_manager_policy(const char *newval, void *extra);
 extern const char *gpvars_show_gp_resource_manager_policy(void);

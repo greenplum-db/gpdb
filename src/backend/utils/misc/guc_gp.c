@@ -566,6 +566,13 @@ static const struct config_enum_entry gp_autovacuum_scope_options[] = {
 	{NULL, 0}
 };
 
+static const struct config_enum_entry gp_write_shared_snapshot_options[] = {
+	{"none", SHAREDSNAPSHOT_NONE},
+	{"snapshot", SHAREDSNAPSHOT_DUMP}, /* Force writer dump shared snapshot */
+	{"snapshot_xid", SHAREDSNAPSHOT_DUMP_XID}, /* Force writer dump shared snapshot and get local xid */
+	{NULL, 0}
+};
+
 IndexCheckType gp_indexcheck_insert = INDEX_CHECK_NONE;
 
 struct config_bool ConfigureNamesBool_gp[] =
@@ -963,17 +970,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&Gp_is_writer,
 		false,
 		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_write_shared_snapshot", PGC_USERSET, UNGROUPED,
-			gettext_noop("Forces the writer gang to set the shared snapshot."),
-			NULL,
-			GUC_NO_SHOW_ALL | GUC_NO_RESET_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
-		},
-		&Gp_write_shared_snapshot,
-		false,
-		NULL, assign_gp_write_shared_snapshot, NULL
 	},
 
 	{
@@ -4859,6 +4855,17 @@ struct config_enum ConfigureNamesEnum_gp[] =
 		AV_SCOPE_CATALOG, gp_autovacuum_scope_options,
 		NULL, NULL, NULL
 	},
+	{
+		{"gp_write_shared_snapshot", PGC_USERSET, UNGROUPED,
+			gettext_noop("Forces the writer gang to set the shared snapshot."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NO_RESET_ALL | GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
+		},
+		&Gp_write_shared_snapshot,
+		0, gp_write_shared_snapshot_options,
+		NULL, assign_gp_write_shared_snapshot, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, 0, NULL, NULL, NULL
