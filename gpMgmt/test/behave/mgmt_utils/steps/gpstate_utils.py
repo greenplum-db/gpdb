@@ -22,9 +22,13 @@ def impl(context):
 @then('a sample {lock_file} directory is created using the background pid in coordinator_data_directory')
 @given('a sample {lock_file} directory is created using the background pid in coordinator_data_directory')
 def impl(context, lock_file):
-    bg_pid = context.bg_pid
-    if not unix.check_pid(bg_pid):
-        raise Exception("The background process with PID {} is not running.".format(bg_pid))
+    if 'bg_pid' in context:
+        bg_pid = context.bg_pid
+        if not unix.check_pid(bg_pid):
+            raise Exception("The background process with PID {} is not running.".format(bg_pid))
+    else:
+        bg_pid = ""
+
     lock_dir = os.path.join(get_coordinatordatadir() + '/{0}'.format(lock_file))
     os.mkdir(lock_dir)
 

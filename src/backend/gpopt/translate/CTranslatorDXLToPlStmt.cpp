@@ -90,6 +90,7 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLScalarBoolExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarFuncExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarHashExpr.h"
+#include "naucrates/dxl/operators/CDXLScalarNullTest.h"
 #include "naucrates/dxl/operators/CDXLScalarOpExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarProjElem.h"
 #include "naucrates/dxl/operators/CDXLScalarSortCol.h"
@@ -166,7 +167,7 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL(const CDXLNode *dxlnode,
 {
 	GPOS_ASSERT(nullptr != dxlnode);
 
-	CDXLTranslateContext dxl_translate_ctxt(m_mp, false);
+	CDXLTranslateContext dxl_translate_ctxt(m_mp, false, orig_query);
 
 	PlanSlice *topslice;
 
@@ -1123,16 +1124,45 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
 		CDXLNode *index_cond_dxlnode = (*index_cond_list_dxlnode)[ul];
+		CDXLNode *modified_null_test_cond_dxlnode = nullptr;
 
+		// FIXME: Remove this translation from BoolExpr to NullTest when ORCA gets rid of
+		// translation of 'x IS NOT NULL' to 'NOT (x IS NULL)'. Here's the ticket that tracks
+		// the issue: https://github.com/greenplum-db/gpdb/issues/16294
+
+		// Translate index condition CDXLScalarBoolExpr of format 'NOT (col IS NULL)'
+		// to CDXLScalarNullTest 'col IS NOT NULL', because IndexScan only
+		// supports indexquals of types: OpExpr, RowCompareExpr,
+		// ScalarArrayOpExpr and NullTest
+		if (index_cond_dxlnode->GetOperator()->GetDXLOperator() ==
+			EdxlopScalarBoolExpr)
+		{
+			CDXLScalarBoolExpr *boolexpr_dxlop =
+				CDXLScalarBoolExpr::Cast(index_cond_dxlnode->GetOperator());
+			if (boolexpr_dxlop->GetDxlBoolTypeStr() == Edxlnot &&
+				(*index_cond_dxlnode)[0]->GetOperator()->GetDXLOperator() ==
+					EdxlopScalarNullTest)
+			{
+				CDXLNode *null_test_cond_dxlnode = (*index_cond_dxlnode)[0];
+				CDXLNode *scalar_ident_dxlnode = (*null_test_cond_dxlnode)[0];
+				scalar_ident_dxlnode->AddRef();
+				modified_null_test_cond_dxlnode = GPOS_NEW(m_mp) CDXLNode(
+					m_mp, GPOS_NEW(m_mp) CDXLScalarNullTest(m_mp, false),
+					scalar_ident_dxlnode);
+				index_cond_dxlnode = modified_null_test_cond_dxlnode;
+			}
+		}
 		Expr *original_index_cond_expr =
 			m_translator_dxl_to_scalar->TranslateDXLToScalar(
 				index_cond_dxlnode, &colid_var_mapping);
 		Expr *index_cond_expr =
 			m_translator_dxl_to_scalar->TranslateDXLToScalar(
 				index_cond_dxlnode, &colid_var_mapping);
-		GPOS_ASSERT((IsA(index_cond_expr, OpExpr) ||
-					 IsA(index_cond_expr, ScalarArrayOpExpr)) &&
-					"expected OpExpr or ScalarArrayOpExpr in index qual");
+		GPOS_ASSERT(
+			(IsA(index_cond_expr, OpExpr) ||
+			 IsA(index_cond_expr, ScalarArrayOpExpr) ||
+			 IsA(index_cond_expr, NullTest)) &&
+			"expected OpExpr or ScalarArrayOpExpr or NullTest in index qual");
 
 		// allow Index quals with scalar array only for bitmap and btree indexes
 		if (!is_bitmap_index_probe && IsA(index_cond_expr, ScalarArrayOpExpr) &&
@@ -1154,39 +1184,59 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 		{
 			args_list = ((OpExpr *) index_cond_expr)->args;
 		}
-		else
+		else if (IsA(index_cond_expr, ScalarArrayOpExpr))
 		{
 			args_list = ((ScalarArrayOpExpr *) index_cond_expr)->args;
 		}
-
-		Node *left_arg = (Node *) lfirst(gpdb::ListHead(args_list));
-		Node *right_arg = (Node *) lfirst(gpdb::ListTail(args_list));
-
-		BOOL is_relabel_type = false;
-		if (IsA(left_arg, RelabelType) &&
-			IsA(((RelabelType *) left_arg)->arg, Var))
+		else
 		{
-			left_arg = (Node *) ((RelabelType *) left_arg)->arg;
-			is_relabel_type = true;
-		}
-		else if (IsA(right_arg, RelabelType) &&
-				 IsA(((RelabelType *) right_arg)->arg, Var))
-		{
-			right_arg = (Node *) ((RelabelType *) right_arg)->arg;
-			is_relabel_type = true;
+			// NullTest struct doesn't have List argument, hence ignoring
+			// assignment for that type
 		}
 
-		if (is_relabel_type)
+		Node *left_arg;
+		Node *right_arg;
+		bool is_null_test_type = false;
+		if (IsA(index_cond_expr, NullTest))
 		{
-			List *new_args_list = ListMake2(left_arg, right_arg);
-			gpdb::GPDBFree(args_list);
-			if (IsA(index_cond_expr, OpExpr))
+			// NullTest only has one arg
+			left_arg = (Node *) (((NullTest *) index_cond_expr)->arg);
+			is_null_test_type = true;
+			right_arg = nullptr;
+		}
+		else
+		{
+			left_arg = (Node *) lfirst(gpdb::ListHead(args_list));
+			right_arg = (Node *) lfirst(gpdb::ListTail(args_list));
+			// Type Coercion doesn't add much value for IS NULL and IS NOT NULL
+			// conditions, and is not supported by ORCA currently
+			BOOL is_relabel_type = false;
+			if (IsA(left_arg, RelabelType) &&
+				IsA(((RelabelType *) left_arg)->arg, Var))
 			{
-				((OpExpr *) index_cond_expr)->args = new_args_list;
+				left_arg = (Node *) ((RelabelType *) left_arg)->arg;
+				is_relabel_type = true;
 			}
-			else
+			else if (IsA(right_arg, RelabelType) &&
+					 IsA(((RelabelType *) right_arg)->arg, Var))
 			{
-				((ScalarArrayOpExpr *) index_cond_expr)->args = new_args_list;
+				right_arg = (Node *) ((RelabelType *) right_arg)->arg;
+				is_relabel_type = true;
+			}
+
+			if (is_relabel_type)
+			{
+				List *new_args_list = ListMake2(left_arg, right_arg);
+				gpdb::GPDBFree(args_list);
+				if (IsA(index_cond_expr, OpExpr))
+				{
+					((OpExpr *) index_cond_expr)->args = new_args_list;
+				}
+				else
+				{
+					((ScalarArrayOpExpr *) index_cond_expr)->args =
+						new_args_list;
+				}
 			}
 		}
 
@@ -1213,23 +1263,37 @@ CTranslatorDXLToPlStmt::TranslateIndexConditions(
 			attno = ((Var *) right_arg)->varattno;
 		}
 
-		// retrieve index strategy and subtype
-		StrategyNumber strategy_num;
-		OID index_subtype_oid = InvalidOid;
+		// NullTest indexqual doesn't need strategy or subtype
+		if (is_null_test_type)
+		{
+			index_qual_info_array->Append(GPOS_NEW(m_mp) CIndexQualInfo(
+				attno, index_cond_expr, original_index_cond_expr,
+				InvalidStrategy, InvalidOid));
+		}
+		else
+		{
+			// retrieve index strategy and subtype
+			StrategyNumber strategy_num;
+			OID index_subtype_oid = InvalidOid;
 
-		OID cmp_operator_oid =
-			CTranslatorUtils::OidCmpOperator(index_cond_expr);
-		GPOS_ASSERT(InvalidOid != cmp_operator_oid);
-		OID op_family_oid = CTranslatorUtils::GetOpFamilyForIndexQual(
-			attno, CMDIdGPDB::CastMdid(index->MDId())->Oid());
-		GPOS_ASSERT(InvalidOid != op_family_oid);
-		gpdb::IndexOpProperties(cmp_operator_oid, op_family_oid, &strategy_num,
-								&index_subtype_oid);
+			OID cmp_operator_oid =
+				CTranslatorUtils::OidCmpOperator(index_cond_expr);
+			GPOS_ASSERT(InvalidOid != cmp_operator_oid);
+			OID op_family_oid = CTranslatorUtils::GetOpFamilyForIndexQual(
+				attno, CMDIdGPDB::CastMdid(index->MDId())->Oid());
+			GPOS_ASSERT(InvalidOid != op_family_oid);
+			gpdb::IndexOpProperties(cmp_operator_oid, op_family_oid,
+									&strategy_num, &index_subtype_oid);
 
-		// create index qual
-		index_qual_info_array->Append(GPOS_NEW(m_mp) CIndexQualInfo(
-			attno, index_cond_expr, original_index_cond_expr, strategy_num,
-			index_subtype_oid));
+			// create index qual
+			index_qual_info_array->Append(GPOS_NEW(m_mp) CIndexQualInfo(
+				attno, index_cond_expr, original_index_cond_expr, strategy_num,
+				index_subtype_oid));
+		}
+		if (modified_null_test_cond_dxlnode != nullptr)
+		{
+			modified_null_test_cond_dxlnode->Release();
+		}
 	}
 
 	// the index quals much be ordered by attribute number
@@ -5318,6 +5382,51 @@ CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 
 //---------------------------------------------------------------------------
 //	@function:
+//		update_unknown_locale_walker
+//
+//	@doc:
+//		Given an expression tree and a TargetEntry pointer context, look for a
+//		matching target entry in the expression tree and overwrite the given
+//		TargetEntry context's resname with the original found in the expression
+//		tree.
+//
+//---------------------------------------------------------------------------
+static bool
+update_unknown_locale_walker(Node *node, void *context)
+{
+	if (node == nullptr)
+	{
+		return false;
+	}
+
+	TargetEntry *unknown_target_entry = (TargetEntry *) context;
+
+	if (IsA(node, TargetEntry))
+	{
+		TargetEntry *te = (TargetEntry *) node;
+
+		if (te->resorigtbl == unknown_target_entry->resorigtbl &&
+			te->resno == unknown_target_entry->resno)
+		{
+			unknown_target_entry->resname = te->resname;
+			return false;
+		}
+	}
+	else if (IsA(node, Query))
+	{
+		Query *query = (Query *) node;
+
+		return gpdb::WalkExpressionTree(
+			(Node *) query->targetList,
+			(bool (*)()) update_unknown_locale_walker, (void *) context);
+	}
+
+	return gpdb::WalkExpressionTree(
+		node, (bool (*)()) update_unknown_locale_walker, (void *) context);
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CTranslatorDXLToPlStmt::TranslateDXLProjList
 //
 //	@doc:
@@ -5420,6 +5529,21 @@ CTranslatorDXLToPlStmt::TranslateDXLProjList(
 				}
 				target_entry->resorigtbl = pteOriginal->resorigtbl;
 				target_entry->resorigcol = pteOriginal->resorigcol;
+
+				// ORCA represents strings using wide characters. That can
+				// require converting from multibyte characters using
+				// vswprintf(). However, vswprintf() is dependent on the system
+				// locale which is set at the database level. When that locale
+				// cannot interpret the string correctly, it fails. ORCA
+				// bypasses the failure by using a generic "UNKNOWN" string.
+				// When that happens, the following code translates it back to
+				// the original multibyte string.
+				if (strcmp(target_entry->resname, "UNKNOWN") == 0)
+				{
+					update_unknown_locale_walker(
+						(Node *) output_context->GetQuery(),
+						(void *) target_entry);
+				}
 			}
 		}
 

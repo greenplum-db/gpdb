@@ -65,7 +65,8 @@ public:
 	{
 		GPOS_ASSERT((IsA(m_expr, OpExpr) && IsA(m_original_expr, OpExpr)) ||
 					(IsA(m_expr, ScalarArrayOpExpr) &&
-					 IsA(original_expr, ScalarArrayOpExpr)));
+					 IsA(original_expr, ScalarArrayOpExpr)) ||
+					(IsA(m_expr, NullTest) && IsA(original_expr, NullTest)));
 	}
 
 	// dtor

@@ -358,7 +358,11 @@ gpos::clib::Vswprintf(WCHAR *wcstr, SIZE_T max_len, const WCHAR *format,
 	{
 		// Invalid multibyte character encountered. This can happen if the byte sequence does not
 		// match with the server encoding.
-		GPOS_RAISE(CException::ExmaSystem, CException::ExmiIllegalByteSequence);
+		//
+		// Rather than fail/fall-back here, ORCA uses a generic "UNKNOWN"
+		// string. During DXL to PlStmt translation this will be translated
+		// back using the original query tree (see TranslateDXLProjList)
+		res = swprintf(wcstr, max_len, format, "UNKNOWN");
 	}
 
 	return res;

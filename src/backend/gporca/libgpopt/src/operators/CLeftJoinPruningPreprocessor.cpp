@@ -417,6 +417,7 @@ CLeftJoinPruningPreprocessor::ComputeOutputColumns(
 	}
 
 	// Computing output columns of the child tree
+	childs_output_columns->Include(output_columns);
 	ULONG arity = pexpr->Arity();
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
@@ -425,7 +426,6 @@ CLeftJoinPruningPreprocessor::ComputeOutputColumns(
 		{
 			CColRefSet *derived_used_columns_scalar =
 				pexpr_child->DeriveUsedColumns();
-			childs_output_columns->Include(output_columns);
 			childs_output_columns->Include(derived_used_columns_scalar);
 		}
 	}

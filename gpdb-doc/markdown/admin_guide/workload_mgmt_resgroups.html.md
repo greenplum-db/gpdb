@@ -485,7 +485,7 @@ SELECT * FROM gp_toolkit.gp_resgroup_iostats_per_host;
 To view a resource group's running queries, pending queries, and how long the pending queries have been queued, examine the [pg\_stat\_activity](../ref_guide/system_catalogs/catalog_ref-views.html#pg_stat_activity) system catalog table:
 
 ```
-SELECT query, waiting, rsgname, rsgqueueduration 
+SELECT query, rsgname,wait_event_type, wait_event 
 FROM pg_stat_activity;
 ```
 

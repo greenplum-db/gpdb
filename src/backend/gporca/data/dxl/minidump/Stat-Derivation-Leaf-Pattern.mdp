@@ -743,7 +743,7 @@ AND
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="692">
+    <dxl:Plan Id="0" SpaceSize="1006">
       <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1373.907573" Rows="512.000000" Width="106"/>

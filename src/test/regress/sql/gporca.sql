@@ -1935,6 +1935,7 @@ CREATE INDEX btree_test_index ON btree_test(a);
 set optimizer_enable_tablescan = off;
 -- start_ignore
 select disable_xform('CXformSelect2IndexGet');
+select disable_xform('CXformSelect2IndexOnlyGet');
 -- end_ignore
 EXPLAIN SELECT * FROM btree_test WHERE a in (1, 47);
 EXPLAIN SELECT * FROM btree_test WHERE a in ('2', 47);
@@ -1946,6 +1947,7 @@ EXPLAIN SELECT * FROM btree_test WHERE a in (1, 2, 47) AND b > 1;
 SELECT * FROM btree_test WHERE a in (1, 2, 47) AND b > 1;
 -- start_ignore
 select enable_xform('CXformSelect2IndexGet');
+select enable_xform('CXformSelect2IndexOnlyGet');
 -- end_ignore
 reset optimizer_enable_tablescan;
 

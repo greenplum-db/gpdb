@@ -445,7 +445,7 @@ SELECT a FROM y WHERE (a IN (SELECT b FROM bar WHERE b = 2));
                   <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
                 </dxl:Comparison>
               </dxl:IndexCondList>
-	<dxl:Partitions/>
+              <dxl:Partitions/>
               <dxl:IndexDescriptor Mdid="0.53653.1.0" IndexName="idx1"/>
               <dxl:TableDescriptor Mdid="6.53639.1.0" TableName="bar">
                 <dxl:Columns>

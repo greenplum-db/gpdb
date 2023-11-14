@@ -1302,9 +1302,9 @@ CREATE TABLE co_wt_sub_partrle_type8192_1
  WITH (appendonly=true, orientation=column) distributed randomly  Partition by range(a1) Subpartition by list(a2) subpartition template ( default subpartition df_sp, subpartition sp1 values('M') , subpartition sp2 values('F')  
  WITH (appendonly=true, orientation=column,compresstype=rle_type,compresslevel=1,blocksize=8192)) (start(1)  end(5000) every(1000) );
 SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'co_wt_sub_partrle_type8192_1'::regclass;
- level |                                                                                                       pg_get_expr                                                                                                       
--------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-     1 | SUBPARTITION TEMPLATE(DEFAULT SUBPARTITION df_sp, SUBPARTITION sp1 VALUES ('M    '), SUBPARTITION sp2 VALUES ('F    ') WITH (appendonly=true, orientation=row, compresstype=rle_type, compresslevel=1, blocksize=8192))
+ level |                                                                                                        pg_get_expr                                                                                                         
+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | SUBPARTITION TEMPLATE(DEFAULT SUBPARTITION df_sp, SUBPARTITION sp1 VALUES ('M    '), SUBPARTITION sp2 VALUES ('F    ') WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=1, blocksize=8192))
 (1 row)
 
 -- 
@@ -1695,9 +1695,9 @@ CREATE TABLE co_wt_sub_partrle_type8192_1_2
  WITH (appendonly=true, orientation=column) distributed randomly  Partition by list(a2) Subpartition by range(a1) subpartition template (default subpartition df_sp, start(1)  end(5000) every(1000) 
  WITH (appendonly=true, orientation=column,compresstype=rle_type,compresslevel=1,blocksize=8192)) (partition p1 values ('M'), partition p2 values ('F'));
 SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'co_wt_sub_partrle_type8192_1_2'::regclass;
- level |                                                                                               pg_get_expr                                                                                               
--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-     1 | SUBPARTITION TEMPLATE(DEFAULT SUBPARTITION df_sp,  START (1::integer) END (5000::integer) Every (1000) WITH (appendonly=true, orientation=row, compresstype=rle_type, compresslevel=1, blocksize=8192))
+ level |                                                                                                pg_get_expr                                                                                                 
+-------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | SUBPARTITION TEMPLATE(DEFAULT SUBPARTITION df_sp,  START (1::integer) END (5000::integer) Every (1000) WITH (appendonly=true, orientation=column, compresstype=rle_type, compresslevel=1, blocksize=8192))
 (1 row)
 
 -- 
@@ -2140,9 +2140,9 @@ CREATE TABLE ao_wt_sub_partzlib8192_5
  WITH (appendonly=true, orientation=row) distributed randomly  Partition by range(a1) Subpartition by list(a2) subpartition template ( default subpartition df_sp, subpartition sp1 values('M') , subpartition sp2 values('F')  
  WITH (appendonly=true, orientation=row,compresstype=zlib,compresslevel=5,blocksize=8192)) (start(1)  end(5000) every(1000) );
 SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ao_wt_sub_partzlib8192_5'::regclass;
- level |                                                                                                      pg_get_expr                                                                                                       
--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-     1 | SUBPARTITION TEMPLATE(DEFAULT SUBPARTITION df_sp, SUBPARTITION sp1 VALUES ('M    '), SUBPARTITION sp2 VALUES ('F    ') WITH (appendonly=true, orientation=column, compresstype=zlib, compresslevel=5, blocksize=8192))
+ level |                                                                                                     pg_get_expr                                                                                                     
+-------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | SUBPARTITION TEMPLATE(DEFAULT SUBPARTITION df_sp, SUBPARTITION sp1 VALUES ('M    '), SUBPARTITION sp2 VALUES ('F    ') WITH (appendonly=true, orientation=row, compresstype=zlib, compresslevel=5, blocksize=8192))
 (1 row)
 
 -- 
@@ -2527,9 +2527,9 @@ CREATE TABLE ao_wt_sub_partzlib8192_5_2
  WITH (appendonly=true, orientation=row) distributed randomly  Partition by list(a2) Subpartition by range(a1) subpartition template (default subpartition df_sp, start(1)  end(5000) every(1000) 
  WITH (appendonly=true, orientation=row,compresstype=zlib,compresslevel=5,blocksize=8192)) (partition p1 values ('M'), partition p2 values ('F'));
 SELECT level, pg_get_expr(template, relid) from gp_partition_template t WHERE t.relid = 'ao_wt_sub_partzlib8192_5_2'::regclass;
- level |                                                                                              pg_get_expr                                                                                               
--------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-     1 | SUBPARTITION TEMPLATE(DEFAULT SUBPARTITION df_sp,  START (1::integer) END (5000::integer) Every (1000) WITH (appendonly=true, orientation=column, compresstype=zlib, compresslevel=5, blocksize=8192))
+ level |                                                                                             pg_get_expr                                                                                             
+-------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 | SUBPARTITION TEMPLATE(DEFAULT SUBPARTITION df_sp,  START (1::integer) END (5000::integer) Every (1000) WITH (appendonly=true, orientation=row, compresstype=zlib, compresslevel=5, blocksize=8192))
 (1 row)
 
 -- 

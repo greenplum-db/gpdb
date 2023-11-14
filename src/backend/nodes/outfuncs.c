@@ -1090,6 +1090,7 @@ _outDQAExpr(StringInfo str, const DQAExpr *node)
     WRITE_INT_FIELD(agg_expr_id);
     WRITE_BITMAPSET_FIELD(agg_args_id_bms);
     WRITE_NODE_FIELD(agg_filter);
+	WRITE_BITMAPSET_FIELD(agg_vars_ref);
 }
 
 static void

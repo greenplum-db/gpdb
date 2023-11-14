@@ -171,11 +171,30 @@ CXformJoin2IndexApply::CreateHomogeneousBtreeIndexApplyAlternatives(
 		IMDId *pmdidIndex = pmdrel->IndexMDidAt(ul);
 		const IMDIndex *pmdindex = md_accessor->RetrieveIndex(pmdidIndex);
 
+		// We consider ForwardScan here because, BackwardScan is only supported
+		// in the case where we have Order by clause in the query, but this xform
+		// doesn't have one.
 		CreateAlternativesForBtreeIndex(
-			mp, joinOp, pexprOuter, pexprInner, origJoinPred,
+			mp,
+			CXformUtils::PexprBuildBtreeIndexPlan(
+				mp, md_accessor, pexprInner, joinOp->UlOpId(), pdrgpexpr,
+				pcrsScalarExpr, outer_refs, pmdindex, pmdrel,
+				EForwardScan /*indexScanDirection*/, false /*indexForOrderBy*/,
+				false /* indexonly */),
+			joinOp, pexprOuter, pexprInner, origJoinPred,
 			nodesToInsertAboveIndexGet, endOfNodesToInsertAboveIndexGet,
-			md_accessor, pdrgpexpr, pcrsScalarExpr, outer_refs, pmdrel,
-			pmdindex, pxfres);
+			outer_refs, pxfres);
+
+		CreateAlternativesForBtreeIndex(
+			mp,
+			CXformUtils::PexprBuildBtreeIndexPlan(
+				mp, md_accessor, pexprInner, joinOp->UlOpId(), pdrgpexpr,
+				pcrsScalarExpr, outer_refs, pmdindex, pmdrel,
+				EForwardScan /*indexScanDirection*/, false /*indexForOrderBy*/,
+				true /* indexonly */),
+			joinOp, pexprOuter, pexprInner, origJoinPred,
+			nodesToInsertAboveIndexGet, endOfNodesToInsertAboveIndexGet,
+			outer_refs, pxfres);
 	}
 
 	//clean-up
@@ -193,21 +212,12 @@ CXformJoin2IndexApply::CreateHomogeneousBtreeIndexApplyAlternatives(
 //---------------------------------------------------------------------------
 void
 CXformJoin2IndexApply::CreateAlternativesForBtreeIndex(
-	CMemoryPool *mp, COperator *joinOp, CExpression *pexprOuter,
-	CExpression *pexprInner, CExpression *origJoinPred,
+	CMemoryPool *mp, CExpression *pexprLogicalIndexGet, COperator *joinOp,
+	CExpression *pexprOuter, CExpression *pexprInner, CExpression *origJoinPred,
 	CExpression *nodesToInsertAboveIndexGet,
-	CExpression *endOfNodesToInsertAboveIndexGet, CMDAccessor *md_accessor,
-	CExpressionArray *pdrgpexprConjuncts, CColRefSet *pcrsScalarExpr,
-	CColRefSet *outer_refs, const IMDRelation *pmdrel, const IMDIndex *pmdindex,
+	CExpression *endOfNodesToInsertAboveIndexGet, CColRefSet *outer_refs,
 	CXformResult *pxfres)
 {
-	// We consider ForwardScan here because, BackwardScan is only supported
-	// in the case where we have Order by clause in the query, but this xform
-	// doesn't have one.
-	CExpression *pexprLogicalIndexGet = CXformUtils::PexprLogicalIndexGet(
-		mp, md_accessor, pexprInner, joinOp->UlOpId(), pdrgpexprConjuncts,
-		pcrsScalarExpr, outer_refs, pmdindex, pmdrel, false /*indexForOrderBy*/,
-		EForwardScan /*indexScanDirection*/);
 	if (nullptr != pexprLogicalIndexGet)
 	{
 		// second child has residual predicates, create an apply of outer and inner

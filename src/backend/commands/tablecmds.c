@@ -17332,9 +17332,8 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 	 * d) Update our parse tree to include the details of the newly created
 	 *    table
 	 * e) Update the ownership of the temporary table
-	 * f) Swap the relfilenodes of the existing table and the temporary table
-	 * g) Update the policy on the QD to reflect the underlying data
-	 * h) Drop the temporary table -- and with it, the old copy of the data
+	 * f) Finish swapping the relfilenodes of the existing table and the temporary
+	 *    table, and other cleanup tasks.
 	 *--
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -17442,33 +17441,15 @@ ATExecExpandTableCTAS(AlterTableCmd *rootCmd, Relation rel, AlterTableCmd *cmd)
 	 * Step (f) - swap relfilenodes and MORE !!!
 	 */
 	tmprelid = RangeVarGetRelid(tmprv, NoLock, false);
-	swap_relation_files(relid, tmprelid,
-						false, /* target_is_pg_class */
+	finish_heap_swap(relid, tmprelid,
+						false, /* is_system_catalog */
 						false, /* swap_toast_by_content */
 						false, /* swap_stats */
-						true,
+						false, /* check_constraints */
+						true, /* is_internal */
 						RecentXmin,
 						ReadNextMultiXactId(),
-						NULL);
-
-	/*
-	 * Make changes from swapping relation files visible before updating
-	 * options below or else we get an already updated tuple error.
-	 */
-	CommandCounterIncrement();
-
-	/* now, reindex */
-	reindex_relation(relid, 0, 0);
-
-	/* Step (h) Drop the table */
-	{
-		ObjectAddress object;
-		object.classId = RelationRelationId;
-		object.objectId = tmprelid;
-		object.objectSubId = 0;
-
-		performDeletion(&object, DROP_RESTRICT, 0);
-	}
+						rel->rd_rel->relpersistence);
 }
 
 /*
@@ -17936,9 +17917,9 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	 * d) Update our parse tree to include the details of the newly created
 	 *    table
 	 * e) Update the ownership of the temporary table
-	 * f) Swap the relfilenodes of the existing table and the temporary table
+	 * f) Finish swapping the relfilenodes of the existing table and the temporary
+	 *    table, and other cleanup tasks.
 	 * g) Update the policy on the QD to reflect the underlying data
-	 * h) Drop the temporary table -- and with it, the old copy of the data
 	 *--
 	 */
 	if (Gp_role == GP_ROLE_DISPATCH)
@@ -18246,22 +18227,16 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		/*
 		 * Step (f) - swap relfilenodes and MORE !!!
 		 */
-		rel = NULL;
 		tmprelid = RangeVarGetRelid(tmprv, NoLock, false);
-		swap_relation_files(tarrelid, tmprelid,
-							false, /* target_is_pg_class */
-							true, /* swap_toast_by_content */
+		finish_heap_swap(tarrelid, tmprelid,
+						 	false, /* is_system_catalog */
+							false, /* swap_toast_by_content */
 							false, /* swap_stats */
-							true,
+						 	false, /* check_constraints */
+						 	true, /* is_internal */
 							RecentXmin,
 							ReadNextMultiXactId(),
-							NULL);
-
-		/* Make changes from swapping relation files visible. */
-		CommandCounterIncrement();
-
-		/* now, reindex */
-		reindex_relation(tarrelid, 0, 0);
+						 	rel->rd_rel->relpersistence);
 	}
 
 	/* Step (g) */
@@ -18273,17 +18248,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		cmd->policy = policy;
 	}
 
-	/* Step (h) Drop the table */
-	if (need_reorg)
-	{
-		ObjectAddress object;
-		object.classId = RelationRelationId;
-		object.objectId = tmprelid;
-		object.objectSubId = 0;
-
-		performDeletion(&object, DROP_RESTRICT, 0);
-	}
-	
 l_distro_fini:
 
 	/* MPP-6929: metadata tracking */

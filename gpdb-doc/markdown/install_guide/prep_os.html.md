@@ -4,8 +4,6 @@ title: Configuring Your Systems
 
 Describes how to prepare your operating system environment for Greenplum Database software installation.
 
-> **Caution** Do not install anti-virus software of any type on Greenplum Database hosts. VMware Greenplum is not supported for use with anti-virus software because the additional CPU and IO load interferes with Greenplum Database operations.
-
 Perform the following tasks in order:
 
 1.  Make sure your host systems meet the requirements described in [On-Premise Hardware Requirements](./platform-requirements-overview.html#on-prem).

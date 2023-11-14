@@ -49,38 +49,6 @@ gp_trycompress(uint8 *sourceData, int32 sourceLen, uint8 *compressedBuffer, int3
 }
 
 /*---------------------------------------------------------------------------*/
-static void gp_decompress_generic(
-	  uint8	 *compressed,
-	  int32	 compressedLen,
-	  uint8	 *uncompressed,
-	  int32	 uncompressedLen,
-	  PGFunction	 decompressor,
-	  CompressionState *compressionState,
-	  int64	 bufferCount
-	  )
-{
-	int32				 resultingUncompressedLen;
-
-	callCompressionActuator(decompressor,
-							(const void *)compressed,
-							(size_t)compressedLen,
-							(char*)uncompressed,
-							uncompressedLen,
-							&resultingUncompressedLen,
-							compressionState);
-
-
-	if (resultingUncompressedLen != uncompressedLen)
-		elog(ERROR,
-			 "Uncompress returned length %d which is different than the "
-			 "expected length %d (block count " INT64_FORMAT ")",
-			 resultingUncompressedLen,
-			 uncompressedLen,
-			 bufferCount);
-
-}  /* end gp_decompress_generic */
-
-/*---------------------------------------------------------------------------*/
 void gp_decompress(
 		uint8 *compressed,
 		int32 compressedLen,
@@ -90,22 +58,15 @@ void gp_decompress(
 		CompressionState *compressionState,
 		int64 bufferCount)
 {
-	unsigned long uncompressedSize;
-
 	int32 resultingUncompressedLen;
 
-	uncompressedSize = (unsigned long)uncompressedLen;
-
-	gp_decompress_generic( compressed
-						, compressedLen
-						, uncompressed
-						, uncompressedLen
-						, decompressor
-						, compressionState
-						, bufferCount
-	);
-
-	resultingUncompressedLen = (int32)uncompressedSize;
+	callCompressionActuator(decompressor,
+							(const void *) compressed,
+							(size_t) compressedLen,
+							(char*) uncompressed,
+							uncompressedLen,
+							&resultingUncompressedLen,
+							compressionState);
 
 	if (resultingUncompressedLen != uncompressedLen)
 		elog(ERROR,

@@ -1197,8 +1197,8 @@ sub atmsort_bigloop
                 next;
             }
 
-            # EXPLAIN (COSTS OFF) ...
-            if ($ini =~ m/explain\s*\(.*costs\s+off.*\)/i)
+            # EXPLAIN (COSTS OFF/FALSE/0) ...
+            if ($ini =~ m/explain\s*\(.*costs\s+(?:off|false|0).*\)/i)
             {
                 $directive->{explain} = "costs_off";
             }

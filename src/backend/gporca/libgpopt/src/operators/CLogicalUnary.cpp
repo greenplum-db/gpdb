@@ -64,8 +64,9 @@ CLogicalUnary::Esp(CExpressionHandle &exprhdl) const
 //
 //---------------------------------------------------------------------------
 IStatistics *
-CLogicalUnary::PstatsDeriveProject(CMemoryPool *mp, CExpressionHandle &exprhdl,
-								   UlongToIDatumMap *phmuldatum) const
+CLogicalUnary::PstatsDeriveProject(
+	CMemoryPool *mp, CExpressionHandle &exprhdl, UlongToIDatumMap *phmuldatum,
+	UlongToConstColRefMap *colidToColrefMapForNDVExpr) const
 {
 	GPOS_ASSERT(Esp(exprhdl) > EspNone);
 	IStatistics *child_stats = exprhdl.Pstats(0);
@@ -76,7 +77,8 @@ CLogicalUnary::PstatsDeriveProject(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	pcrs->ExtractColIds(mp, colids);
 
 	IStatistics *stats = CProjectStatsProcessor::CalcProjStats(
-		mp, dynamic_cast<CStatistics *>(child_stats), colids, phmuldatum);
+		mp, dynamic_cast<CStatistics *>(child_stats), colids, phmuldatum,
+		colidToColrefMapForNDVExpr);
 
 	// clean up
 	colids->Release();

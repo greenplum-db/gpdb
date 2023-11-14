@@ -2580,6 +2580,12 @@ typedef struct TupleSplitState
 
 	ExprState       **agg_filter_array; /* DQA filter which push down from aggref */
 	int             *dqa_id_array; /* DQA id for each each split tuple */
+
+	/*
+	 * For each splitting tuple is mapping to a bitmap set depends on vars of normal agg,
+	 * Only the input AttrNum in the bitmap set, other column set to null.
+	 */
+	Bitmapset       **agg_vars_ref;
 } TupleSplitState;
 
 typedef struct AggExprIdState

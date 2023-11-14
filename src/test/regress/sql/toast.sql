@@ -15,17 +15,17 @@ CREATE FUNCTION randomtext(len int) returns text as $$
 $$ language sql;
 
 create function get_rel_toast_count(relname text) returns int as $$
-reltoastoid = plpy.execute("select \'"+ relname +"\'::regclass::oid;")[0]['oid']
-count = plpy.execute("select count(*) from pg_toast.pg_toast_"+str(reltoastoid)+";")[0]['count']
+reltoastname = plpy.execute("select reltoastrelid::regclass from pg_class where oid = \'"+ relname +"\'::regclass::oid;")[0]['reltoastrelid']
+count = plpy.execute("select count(*) from "+str(reltoastname)+";")[0]['count']
 return count
 $$ language plpython3u;
 
 -- INSERT 
 -- uses the toast call to store the large tuples
-INSERT INTO toastable_heap VALUES(repeat('a',100000), repeat('b',100001), 1);
-INSERT INTO toastable_heap VALUES(repeat('A',100000), repeat('B',100001), 2);
-INSERT INTO toastable_ao VALUES(repeat('a',100000), repeat('b',100001), 1);
-INSERT INTO toastable_ao VALUES(repeat('A',100000), repeat('B',100001), 2);
+INSERT INTO toastable_heap VALUES(repeat('a',1000000), repeat('b',1000001), 1);
+INSERT INTO toastable_heap VALUES(repeat('A',1000000), repeat('B',1000001), 2);
+INSERT INTO toastable_ao VALUES(repeat('a',1000000), repeat('b',1000001), 1);
+INSERT INTO toastable_ao VALUES(repeat('A',1000000), repeat('B',1000001), 2);
 
 -- uncompressable values
 INSERT INTO toastable_heap VALUES(randomtext(10000000), randomtext(10000032), 3);
@@ -47,7 +47,7 @@ SELECT gp_segment_id, get_rel_toast_count('toastable_ao2') FROM gp_dist_random('
 
 -- UPDATE 
 -- (heap rel only) and toast the large tuple
-UPDATE toastable_heap SET a=repeat('A',100000) WHERE c=1;
+UPDATE toastable_heap SET a=repeat('A',1000000) WHERE c=1;
 UPDATE toastable_heap SET a=randomtext(100032) WHERE c=3;
 SELECT char_length(a), char_length(b) FROM toastable_heap ORDER BY c;
 
@@ -60,6 +60,10 @@ ALTER TABLE toastable_ao ADD COLUMN d int DEFAULT 10;
 SELECT char_length(a), char_length(b), c, d FROM toastable_heap ORDER BY c;
 SELECT char_length(a), char_length(b), c, d FROM toastable_ao ORDER BY c;
 
+-- ALTER Distributed key
+ALTER TABLE toastable_heap SET DISTRIBUTED BY (a);
+SELECT char_length(a), char_length(b), c, d FROM toastable_heap ORDER BY c;
+
 -- TRUNCATE
 -- remove reference to toast table and create a new one with different values
 TRUNCATE toastable_heap;
@@ -68,8 +72,8 @@ TRUNCATE toastable_ao;
 select gp_segment_id, get_rel_toast_count('toastable_heap') from gp_dist_random('gp_id') order by gp_segment_id;
 select gp_segment_id, get_rel_toast_count('toastable_ao') from gp_dist_random('gp_id') order by gp_segment_id;
 
-INSERT INTO toastable_heap VALUES(repeat('a',100002), repeat('b',100003), 2, 20);
-INSERT INTO toastable_ao VALUES(repeat('a',100002), repeat('b',100003), 2, 20);
+INSERT INTO toastable_heap VALUES(repeat('a',1000002), repeat('b',1000003), 2, 20);
+INSERT INTO toastable_ao VALUES(repeat('a',1000002), repeat('b',1000003), 2, 20);
 
 SELECT char_length(a), char_length(b), c, d FROM toastable_heap;
 SELECT char_length(a), char_length(b), c, d FROM toastable_ao;

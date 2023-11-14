@@ -48,7 +48,7 @@ using IntToColRefMap =
 //		member functions inaccessible
 //
 //---------------------------------------------------------------------------
-class CColRefSet : public CBitSet, public DbgPrintMixin<CColRefSet>
+class CColRefSet : public CBitSet
 {
 	// bitset iter needs to access internals
 	friend class CColRefSetIter;
@@ -127,7 +127,7 @@ public:
 	ULONG HashValue();
 
 	// debug print
-	IOstream &OsPrint(IOstream &os) const;
+	IOstream &OsPrint(IOstream &os) const override;
 	IOstream &OsPrint(IOstream &os, ULONG ulLenMax) const;
 
 	// extract all column ids

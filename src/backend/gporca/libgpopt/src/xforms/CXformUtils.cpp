@@ -29,6 +29,7 @@
 #include "gpopt/operators/CLogicalCTEProducer.h"
 #include "gpopt/operators/CLogicalDynamicBitmapTableGet.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
+#include "gpopt/operators/CLogicalDynamicIndexOnlyGet.h"
 #include "gpopt/operators/CLogicalGbAgg.h"
 #include "gpopt/operators/CLogicalGbAggDeduplicate.h"
 #include "gpopt/operators/CLogicalGet.h"
@@ -347,11 +348,13 @@ CXformUtils::PexprRedundantSelectForDynamicIndex(
 
 	COperator::EOperatorId op_id = pexpr->Pop()->Eopid();
 	GPOS_ASSERT(COperator::EopLogicalDynamicIndexGet == op_id ||
+				COperator::EopLogicalDynamicIndexOnlyGet == op_id ||
 				COperator::EopLogicalDynamicBitmapTableGet == op_id ||
 				COperator::EopLogicalSelect == op_id);
 
 	CExpression *pexprRedundantScalar = nullptr;
 	if (COperator::EopLogicalDynamicIndexGet == op_id ||
+		COperator::EopLogicalDynamicIndexOnlyGet == op_id ||
 		COperator::EopLogicalDynamicBitmapTableGet == op_id)
 	{
 		// no residual predicate, use index lookup predicate only
@@ -370,6 +373,7 @@ CXformUtils::PexprRedundantSelectForDynamicIndex(
 #ifdef GPOS_DEBUG
 	COperator::EOperatorId eopidChild = pexprChild->Pop()->Eopid();
 	GPOS_ASSERT(COperator::EopLogicalDynamicIndexGet == eopidChild ||
+				COperator::EopLogicalDynamicIndexOnlyGet == eopidChild ||
 				COperator::EopLogicalDynamicBitmapTableGet == eopidChild);
 #endif	// GPOS_DEBUG
 
@@ -2404,12 +2408,15 @@ CXformUtils::FProcessGPDBAntiSemiHashJoin(
 //
 //---------------------------------------------------------------------------
 CExpression *
-CXformUtils::PexprBuildBtreeIndexPlan(
-	CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprGet,
-	ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
-	CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
-	const IMDIndex *pmdindex, const IMDRelation *pmdrel,
-	EIndexScanDirection indexscanDirection, BOOL indexForOrderBy)
+CXformUtils::PexprBuildBtreeIndexPlan(CMemoryPool *mp, CMDAccessor *md_accessor,
+									  CExpression *pexprGet, ULONG ulOriginOpId,
+									  CExpressionArray *pdrgpexprConds,
+									  CColRefSet *pcrsScalarExpr,
+									  CColRefSet *outer_refs,
+									  const IMDIndex *pmdindex,
+									  const IMDRelation *pmdrel,
+									  EIndexScanDirection indexscanDirection,
+									  BOOL indexForOrderBy, BOOL indexonly)
 {
 	GPOS_ASSERT(nullptr != pexprGet);
 	GPOS_ASSERT(nullptr != pdrgpexprConds);
@@ -2540,17 +2547,42 @@ CXformUtils::PexprBuildBtreeIndexPlan(
 	{
 		pdrgpdrgpcrPart->AddRef();
 		partition_mdids->AddRef();
-		popLogicalGet = PopDynamicBtreeIndexOpConstructor(
-			mp, pmdindex, ptabdesc, ulOriginOpId,
-			GPOS_NEW(mp) CName(mp, CName(alias)), ulPartIndex, pdrgpcrOutput,
-			pdrgpdrgpcrPart, partition_mdids, ulUnindexedPredColCount);
+		if (indexonly)
+		{
+			popLogicalGet =
+				PopDynamicBtreeIndexOpConstructor<CLogicalDynamicIndexOnlyGet>(
+					mp, pmdindex, ptabdesc, ulOriginOpId,
+					GPOS_NEW(mp) CName(mp, CName(alias)), ulPartIndex,
+					pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids,
+					ulUnindexedPredColCount);
+		}
+		else
+		{
+			popLogicalGet =
+				PopDynamicBtreeIndexOpConstructor<CLogicalDynamicIndexGet>(
+					mp, pmdindex, ptabdesc, ulOriginOpId,
+					GPOS_NEW(mp) CName(mp, CName(alias)), ulPartIndex,
+					pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids,
+					ulUnindexedPredColCount);
+		}
 	}
 	else
 	{
-		popLogicalGet = PopStaticBtreeIndexOpConstructor(
-			mp, pmdindex, ptabdesc, ulOriginOpId,
-			GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput,
-			ulUnindexedPredColCount, indexscanDirection);
+		if (indexonly)
+		{
+			popLogicalGet =
+				PopStaticBtreeIndexOpConstructor<CLogicalIndexOnlyGet>(
+					mp, pmdindex, ptabdesc, ulOriginOpId,
+					GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput,
+					ulUnindexedPredColCount, indexscanDirection);
+		}
+		else
+		{
+			popLogicalGet = PopStaticBtreeIndexOpConstructor<CLogicalIndexGet>(
+				mp, pmdindex, ptabdesc, ulOriginOpId,
+				GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput,
+				ulUnindexedPredColCount, indexscanDirection);
+		}
 	}
 
 	// clean up
@@ -4162,4 +4194,64 @@ CXformUtils::FCoverIndex(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
 	return true;
 }
 
+//---------------------------------------------------------------------------
+// CXformUtils::ComputeOrderSpecForIndexKey
+//
+// Determine the OrderSpec for an index key based on the direction of
+// the index scan and the position of the index key. This function
+// creates a new OrderSpec object and computes its value if a nullptr is
+// passed; otherwise, it appends to the existing OrderSpec object.
+//---------------------------------------------------------------------------
+void
+CXformUtils::ComputeOrderSpecForIndexKey(CMemoryPool *mp,
+										 COrderSpec **order_spec,
+										 const IMDIndex *pmdindex,
+										 EIndexScanDirection scan_direction,
+										 const CColRef *colref,
+										 ULONG key_position)
+{
+	// Create a new OrderSpec object if a nullptr is passed
+	if (*order_spec == nullptr)
+	{
+		(*order_spec) = GPOS_NEW(mp) COrderSpec(mp);
+	}
+	IMDId *mdid = nullptr;
+	COrderSpec::ENullTreatment ent = COrderSpec::EntLast;
+	// if scan direction is forward, order spec computed should match
+	// the index's sort and nulls order.
+	if (scan_direction == EForwardScan)
+	{
+		// if sort direction of key is 0(ASC), choose MDID for less than
+		// type and vice-versa
+		mdid = (pmdindex->KeySortDirectionAt(key_position) == SORT_ASC)
+				   ? colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptL)
+				   : colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG);
+
+		// if nulls direction of key is 0, choose ENTLast and
+		// vice-versa
+		ent =
+			(pmdindex->KeyNullsDirectionAt(key_position) == COrderSpec::EntLast)
+				? COrderSpec::EntLast
+				: COrderSpec::EntFirst;
+	}
+	// if scan direction is backward, order spec computed should be
+	// commutative to index's sort and nulls order.
+	else if (scan_direction == EBackwardScan)
+	{
+		// if sort order of key is 0(ASC), choose MDID for greater than
+		// type and vice-versa
+		mdid = (pmdindex->KeySortDirectionAt(key_position) == SORT_ASC)
+				   ? colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptG)
+				   : colref->RetrieveType()->GetMdidForCmpType(IMDType::EcmptL);
+
+		// if nulls direction of key is 0, choose ENTFirst and
+		// vice-versa
+		ent =
+			(pmdindex->KeyNullsDirectionAt(key_position) == COrderSpec::EntLast)
+				? COrderSpec::EntFirst
+				: COrderSpec::EntLast;
+	}
+	mdid->AddRef();
+	(*order_spec)->Append(mdid, colref, ent);
+}
 // EOF

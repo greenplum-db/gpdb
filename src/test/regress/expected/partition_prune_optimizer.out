@@ -3496,15 +3496,18 @@ explain (analyze, costs off, summary off, timing off) select * from ma_test wher
                Join Filter: (ma_test.a >= (min(ma_test_p2.b)))
                Rows Removed by Join Filter: 3
                ->  Broadcast Motion 1:3  (slice2) (actual rows=1 loops=1)
-                     ->  Finalize Aggregate (actual rows=1 loops=1)
-                           ->  Gather Motion 3:1  (slice3; segments: 3) (actual rows=3 loops=1)
-                                 ->  Partial Aggregate (actual rows=1 loops=1)
-                                       ->  Seq Scan on ma_test_p2 (actual rows=5 loops=1)
+                     ->  Aggregate (actual rows=1 loops=1)
+                           ->  Limit (actual rows=1 loops=1)
+                                 ->  Gather Motion 3:1  (slice3; segments: 3) (actual rows=1 loops=1)
+                                       Merge Key: ma_test_p2.b
+                                       ->  Limit (actual rows=1 loops=1)
+                                             ->  Index Scan using ma_test_p2_b_idx on ma_test_p2 (actual rows=1 loops=1)
+                                                   Index Cond: (b IS NOT NULL)
                ->  Dynamic Seq Scan on ma_test (actual rows=6 loops=2)
                      Number of partitions to scan: 3 (out of 3)
                      Partitions scanned:  Avg 2.0 x 3 workers of 2 scans.  Max 2 parts (seg0).
- Optimizer: Pivotal Optimizer (GPORCA)
-(18 rows)
+ Optimizer: GPORCA
+(21 rows)
 
 reset enable_seqscan;
 reset enable_sort;

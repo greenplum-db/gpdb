@@ -45,8 +45,7 @@ ALTER TABLE [ IF EXISTS ] [ONLY] name SET
    | DISTRIBUTED REPLICATED
 
 ALTER TABLE name 
-   [ ALTER PARTITION { partition_name | FOR (RANK(number)) 
-                     | FOR (value) } partition_action [...] ] 
+   [ ALTER PARTITION { partition_name | FOR (value) } partition_action [...] ] 
    partition_action
 
 <phrase>where <replaceable class="parameter">action</replaceable> is one of:</phrase>
@@ -61,6 +60,7 @@ ALTER TABLE name
     ALTER [ COLUMN ] <replaceable class="parameter">column_name</replaceable> SET ( <replaceable class="parameter">attribute_option</replaceable> = <replaceable class="parameter">value</replaceable> [, ... ] )
     ALTER [ COLUMN ] <replaceable class="parameter">column_name</replaceable> RESET ( <replaceable class="parameter">attribute_option</replaceable> [, ... ] )
     ALTER [ COLUMN ] <replaceable class="parameter">column_name</replaceable> SET STORAGE { PLAIN | EXTERNAL | EXTENDED | MAIN }
+    ALTER [ COLUMN ] <replaceable class="parameter">column_name</replaceable> SET ENCODING ( storage_directive> [, ...] )
     ADD <replaceable class="parameter">table_constraint</replaceable> [ NOT VALID ]
     ADD <replaceable class="parameter">table_constraint_using_index</replaceable>
     ALTER CONSTRAINT <replaceable class="parameter">constraint_name</replaceable> [ DEFERRABLE | NOT DEFERRABLE ] [ INITIALLY DEFERRED | INITIALLY IMMEDIATE ]
@@ -79,6 +79,7 @@ ALTER TABLE name
     FORCE ROW LEVEL SECURITY
     NO FORCE ROW LEVEL SECURITY
     CLUSTER ON <replaceable class="parameter">index_name</replaceable>
+    REPACK BY COLUMNS (<replaceable class="parameter">column_name_1</replaceable> [ASC|DESC], <replaceable class="parameter">column_name_2</replaceable> [ASC|DESC], ...)
     SET WITHOUT CLUSTER
     SET WITHOUT OIDS
     SET ACCESS METHOD <replaceable class="parameter">new_access_method</replaceable>
@@ -146,17 +147,17 @@ where partition_action is one of:
   ALTER DEFAULT PARTITION
   DROP DEFAULT PARTITION [IF EXISTS]
   DROP PARTITION [IF EXISTS] { partition_name | 
-      FOR (RANK(number)) | FOR (value) } [CASCADE]
+      FOR (value) } [CASCADE]
   TRUNCATE DEFAULT PARTITION
-  TRUNCATE PARTITION { partition_name | FOR (RANK(number)) | 
+  TRUNCATE PARTITION { partition_name | 
       FOR (value) }
   RENAME DEFAULT PARTITION TO new_partition_name
-  RENAME PARTITION { partition_name | FOR (RANK(number)) | 
+  RENAME PARTITION { partition_name | 
       FOR (value) } TO new_partition_name
   ADD DEFAULT PARTITION name [ ( subpartition_spec ) ]
   ADD PARTITION [name] partition_element
       [ ( subpartition_spec ) ]
-  EXCHANGE PARTITION { partition_name | FOR (RANK(number)) | 
+  EXCHANGE PARTITION { partition_name | 
        FOR (value) } WITH TABLE table_name 
         [ WITH | WITHOUT VALIDATION ]
   EXCHANGE DEFAULT PARTITION WITH TABLE table_name
@@ -168,8 +169,7 @@ where partition_action is one of:
         END([datatype] range_value) [INCLUSIVE | EXCLUSIVE] }
     [ INTO ( PARTITION new_partition_name, 
              PARTITION default_partition_name ) ]
-  SPLIT PARTITION { partition_name | FOR (RANK(number)) | 
-     FOR (value) } AT (value) 
+  SPLIT PARTITION { partition_name | FOR (value) } AT (value) 
     [ INTO (PARTITION partition_name, PARTITION partition_name)]  
 
 where partition_element is:

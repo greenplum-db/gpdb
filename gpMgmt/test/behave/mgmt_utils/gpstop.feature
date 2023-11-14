@@ -207,3 +207,10 @@ Feature: gpstop behave tests
         And the user runs gpstop -a and selects f
         And gpstop should return a return code of 0
 
+    @concourse_cluster
+    @demo_cluster
+    Scenario: gpstop removes the lock directory when it is empty
+        Given the database is running
+        Then a sample gpstop.lock directory is created using the background pid in coordinator_data_directory
+        And the user runs "gpstop -a"
+        And gpstop should return a return code of 0

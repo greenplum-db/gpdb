@@ -829,6 +829,16 @@ explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on 
 drop table fooJoinPruning;
 drop table barJoinPruning;
 
+--
+-- Cases where join under union
+--
+create table foo(a int primary key, b int);
+create table bar(a int primary key, b int);
+explain  select foo.a, bar.b from foo left join bar on foo.a = bar.a
+ union
+   select foo.a, bar.b from foo join bar on foo.a = bar.a;
+drop table foo;
+drop table bar;
 -----------------------------------------------------------------
 -- Test cases on Dynamic Partition Elimination(DPE) for Right Joins
 -----------------------------------------------------------------

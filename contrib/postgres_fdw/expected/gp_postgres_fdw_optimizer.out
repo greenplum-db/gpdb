@@ -152,6 +152,32 @@ EXPLAIN ANALYZE SELECT * FROM gp_ft1;
  Execution Time: 45.320 ms
 (8 rows)
 
+-- test whether segment index in slice->segments is valid or not when
+-- the value of option num_segments is larger than the number of gpdb actual segments.
+CREATE TABLE table_dist_in_3_segments (
+	f1 int,
+	f2 text,
+	f3 text
+) DISTRIBUTED BY (f1);
+EXPLAIN (VERBOSE, COSTS FALSE) INSERT INTO table_dist_in_3_segments SELECT * FROM gp_ft1 LIMIT 5;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Insert on postgres_fdw_gp.table_dist_in_3_segments
+   ->  Redistribute Motion 1:3  (slice1; segments: 1)
+         Output: gp_ft1.f1, gp_ft1.f2, gp_ft1.f3
+         Hash Key: gp_ft1.f1
+         ->  Limit
+               Output: gp_ft1.f1, gp_ft1.f2, gp_ft1.f3
+               ->  Gather Motion 4:1  (slice2; segments: 4)
+                     Output: gp_ft1.f1, gp_ft1.f2, gp_ft1.f3
+                     ->  Foreign Scan on postgres_fdw_gp.gp_ft1
+                           Output: gp_ft1.f1, gp_ft1.f2, gp_ft1.f3
+                           Remote SQL: SELECT f1, f2, f3 FROM postgres_fdw_gp."GP 1" LIMIT 5::bigint
+ Optimizer: Postgres-based planner
+(12 rows)
+
+INSERT INTO table_dist_in_3_segments SELECT * FROM gp_ft1 LIMIT 5;
+DROP TABLE table_dist_in_3_segments;
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT count(*) FROM gp_ft1;
                               QUERY PLAN                               
 -----------------------------------------------------------------------

@@ -128,7 +128,7 @@ explain  select word1 from text_csv_coordinator ft1, bar where ft1.word1 = bar.a
          Hash Cond: (word1 = bar.a)
          ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=8)
                Hash Key: word1
-               ->  Foreign Scan on text_csv_coordinator  (cost=0.00..431.00 rows=1 width=8)
+               ->  Foreign Scan on text_csv_coordinator ft1  (cost=0.00..431.00 rows=1 width=8)
                      Foreign File: @abs_srcdir@/file_fdw/data/text.csv
                      Foreign File Size: 86 b
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)

@@ -23,3 +23,9 @@ Describes how to encrypt data at rest in the database or in transit over the net
 -   **[Security Best Practices](../topics/BestPractices.html)**  
 Describes basic security best practices that you should follow to ensure the highest level of system security. 
 
+## <a id="endpoint_security"></a>About Endpoint Security Software
+
+If you install any endpoint security software on your Greenplum Database hosts, such as anti-virus, data protection, network security, or other security related software, the additional CPU, IO, network or memory load can interfere with Greenplum Database operations and may affect database performance and stability.
+
+Refer to your endpoint security vendor and perform careful testing in a non-production environment to ensure it does not have any negative impact on Greenplum Database operations.
+

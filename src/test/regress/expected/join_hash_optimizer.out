@@ -1009,7 +1009,7 @@ explain (costs off)
  Finalize Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
-               ->  Hash Left Join
+               ->  Hash Right Join
                      Hash Cond: (wide.id = wide_1.id)
                      ->  Redistribute Motion 3:3  (slice2; segments: 3)
                            Hash Key: wide.id

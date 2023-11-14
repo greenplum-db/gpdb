@@ -63,7 +63,7 @@ Most likely, you will want to run `gpfdist` on your ETL machines rather than the
 :   Sets the number of seconds that `gpfdist` waits before cleaning up the session when there are no `POST` requests from the segments. Default is 300. Allowed values are 300 to 86400. You may increase this value when experiencing heavy network traffic.
 
 -m max\_length
-:   Sets the maximum allowed data row length in bytes. Default is 32768. Should be used when user data includes very wide rows \(or when `line too long` error message occurs\). Should not be used otherwise as it increases resource allocation. Valid range is 32K to 256MB. \(The upper limit is 1MB on Windows systems.\)
+:   Sets the maximum allowed data row length in bytes. Default is 32768. Should be used when user data includes very wide rows \(or when `line too long` error message occurs\). Should not be used otherwise as it increases resource allocation. Valid range is 32K to 256MB. The upper limit is 1MB on Windows systems.
 
 :   > **Note** Memory issues might occur if you specify a large maximum row length and run a large number of `gpfdist` concurrent connections. For example, setting this value to the maximum of 256MB with 96 concurrent `gpfdist` processes requires approximately 24GB of memory \(`(96 + 1) x 246MB`\).
 

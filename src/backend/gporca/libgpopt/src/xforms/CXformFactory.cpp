@@ -282,7 +282,7 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformExpandNAryJoinDPv2(m_mp));
 	Add(GPOS_NEW(m_mp) CXformImplementFullOuterMergeJoin(m_mp));
 	SkipUnused(4);
-	Add(GPOS_NEW(m_mp) CXformIndexGet2IndexOnlyScan(m_mp));
+	Add(GPOS_NEW(m_mp) CXformIndexOnlyGet2IndexOnlyScan(m_mp));
 	Add(GPOS_NEW(m_mp) CXformJoin2BitmapIndexGetApply(m_mp));
 	Add(GPOS_NEW(m_mp) CXformJoin2IndexGetApply(m_mp));
 	SkipUnused(2);
@@ -294,7 +294,12 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformPushJoinBelowLeftUnionAll(m_mp));
 	Add(GPOS_NEW(m_mp) CXformPushJoinBelowRightUnionAll(m_mp));
 	Add(GPOS_NEW(m_mp) CXformLimit2IndexGet(m_mp));
-	Add(GPOS_NEW(m_mp) CXformDynamicIndexGet2DynamicIndexOnlyScan(m_mp));
+	Add(GPOS_NEW(m_mp) CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan(m_mp));
+	Add(GPOS_NEW(m_mp) CXformMinMax2IndexGet(m_mp));
+	Add(GPOS_NEW(m_mp) CXformMinMax2IndexOnlyGet(m_mp));
+	Add(GPOS_NEW(m_mp) CXformSelect2IndexOnlyGet(m_mp));
+	Add(GPOS_NEW(m_mp) CXformSelect2DynamicIndexOnlyGet(m_mp));
+	Add(GPOS_NEW(m_mp) CXformLimit2IndexOnlyGet(m_mp));
 
 	GPOS_ASSERT(nullptr != m_rgpxf[CXform::ExfSentinel - 1] &&
 				"Not all xforms have been instantiated");

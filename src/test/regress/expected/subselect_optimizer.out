@@ -970,20 +970,20 @@ where (exists(select 1 from tenk1 k where k.unique1 = t.unique2) or ten < 0)
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  GroupAggregate
-               Group Key: tenk1_1.unique1, tenk1_1.unique2, tenk1_1.ten, tenk1_1.thousand, tenk1_1.ctid, tenk1_1.gp_segment_id, (true)
+               Group Key: tenk1.unique1, tenk1.unique2, tenk1.ten, tenk1.thousand, tenk1.ctid, tenk1.gp_segment_id, (true)
                ->  Sort
-                     Sort Key: tenk1_1.unique1, tenk1_1.unique2, tenk1_1.ten, tenk1_1.thousand, tenk1_1.ctid, tenk1_1.gp_segment_id, (true)
+                     Sort Key: tenk1.unique1, tenk1.unique2, tenk1.ten, tenk1.thousand, tenk1.ctid, tenk1.gp_segment_id, (true)
                      ->  Result
-                           Filter: (CASE WHEN (NOT ((true) IS NULL)) THEN true ELSE false END OR (tenk1_1.ten < 0))
-                           ->  Hash Right Join
-                                 Hash Cond: (tenk1.unique1 = tenk1_1.unique2)
-                                 ->  Seq Scan on tenk1
-                                 ->  Hash
-                                       ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                             Hash Key: tenk1_1.unique2
-                                             ->  Index Scan using tenk1_thous_tenthous on tenk1 tenk1_1
-                                                   Index Cond: (thousand = 1)
- Optimizer: Pivotal Optimizer (GPORCA)
+                           Filter: (CASE WHEN (NOT ((true) IS NULL)) THEN true ELSE false END OR (tenk1.ten < 0))
+                           ->  Nested Loop Left Join
+                                 Join Filter: true
+                                 ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                       Hash Key: tenk1.unique2
+                                       ->  Index Scan using tenk1_thous_tenthous on tenk1
+                                             Index Cond: (thousand = 1)
+                                 ->  Index Scan using tenk1_unique1 on tenk1 tenk1_1
+                                       Index Cond: (unique1 = tenk1.unique2)
+ Optimizer: GPORCA
 (17 rows)
 
 select count(*) from tenk1 t

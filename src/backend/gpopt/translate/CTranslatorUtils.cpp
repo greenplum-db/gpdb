@@ -124,10 +124,12 @@ CTranslatorUtils::GetTableDescr(CMemoryPool *mp, CMDAccessor *md_accessor,
 	CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(IMDId::EmdidRel, rel_oid);
 
 	const IMDRelation *rel = md_accessor->RetrieveRel(mdid);
-
 	// look up table name
-	const CWStringConst *tablename = rel->Mdname().GetMDName();
-	CMDName *table_mdname = GPOS_NEW(mp) CMDName(mp, tablename);
+	CMDName *table_mdname =
+		rte->alias
+			? GPOS_NEW(mp) CMDName(
+				  GPOS_NEW(mp) CWStringConst(mp, rte->alias->aliasname), true)
+			: GPOS_NEW(mp) CMDName(mp, rel->Mdname().GetMDName());
 
 	ULONG required_perms = static_cast<ULONG>(rte->requiredPerms);
 	CDXLTableDescr *table_descr = GPOS_NEW(mp) CDXLTableDescr(

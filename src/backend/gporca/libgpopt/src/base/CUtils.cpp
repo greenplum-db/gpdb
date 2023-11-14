@@ -2539,6 +2539,16 @@ CUtils::FScalarConstOrBinaryCoercible(CExpression *pexpr)
 	return CUtils::FScalarConst(pexpr) ||
 		   CCastUtils::FBinaryCoercibleCastedConst(pexpr);
 }
+
+// checks to see if expression is a NullTest check on a column (ex: col IS NULL)
+BOOL
+CUtils::FScalarIdentNullTest(CExpression *pexpr)
+{
+	GPOS_ASSERT(nullptr != pexpr);
+	return (CUtils::FScalarNullTest(pexpr) &&
+			CUtils::FScalarIdent((*pexpr)[0]));
+}
+
 // checks to see if the expression is a scalar const TRUE
 BOOL
 CUtils::FScalarConstTrue(CExpression *pexpr)
@@ -4458,6 +4468,25 @@ CUtils::PexprLimit(CMemoryPool *mp, CExpression *pexpr, ULONG ulOffSet,
 	GPOS_ASSERT(pexpr);
 
 	COrderSpec *pos = GPOS_NEW(mp) COrderSpec(mp);
+	CLogicalLimit *popLimit = GPOS_NEW(mp)
+		CLogicalLimit(mp, pos, true /* fGlobal */, true /* fHasCount */,
+					  false /*fTopLimitUnderDML*/);
+	CExpression *pexprLimitOffset = CUtils::PexprScalarConstInt8(mp, ulOffSet);
+	CExpression *pexprLimitCount = CUtils::PexprScalarConstInt8(mp, count);
+
+	return GPOS_NEW(mp)
+		CExpression(mp, popLimit, pexpr, pexprLimitOffset, pexprLimitCount);
+}
+
+// generate a limit expression on top of the given relational child with given offset, limit count and OrderSpec
+CExpression *
+CUtils::BuildLimitExprWithOrderSpec(CMemoryPool *mp, CExpression *pexpr,
+									COrderSpec *pos, ULONG ulOffSet,
+									ULONG count)
+{
+	GPOS_ASSERT(pexpr);
+	GPOS_ASSERT(nullptr != pos);
+
 	CLogicalLimit *popLimit = GPOS_NEW(mp)
 		CLogicalLimit(mp, pos, true /* fGlobal */, true /* fHasCount */,
 					  false /*fTopLimitUnderDML*/);

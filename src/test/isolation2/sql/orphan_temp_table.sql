@@ -1,6 +1,6 @@
 -- Test orphan temp table on coordinator. 
--- Before the fix, when backend process panic on the segment, the temp table will be left on the coordinator.
 
+-- case 1: Before the fix, when backend process panic on the segment, the temp table will be left on the coordinator.
 -- create a temp table
 1: CREATE TEMP TABLE test_temp_table_cleanup(a int);
 
@@ -23,3 +23,13 @@
 1U: SELECT oid, relname, relnamespace FROM pg_class where relname = 'test_temp_table_cleanup';
 
 1: SELECT gp_inject_fault('before_exec_scan', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content = 0;
+1q:
+
+-- case 2: Test if temp table will be left on the coordinator, when session exits in coordinator within a transaction block.
+2: CREATE TEMP TABLE test_temp_table_cleanup(a int);
+2: begin;
+2: select * from test_temp_table_cleanup;
+2q:
+
+3: select count(*) from pg_class where relname = 'test_temp_table_cleanup';
+3q:

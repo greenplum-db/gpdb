@@ -26,7 +26,7 @@ OBJS        = CDecorrelator.o \
               CXformDifference2LeftAntiSemiJoin.o \
               CXformDifferenceAll2LeftAntiSemiJoin.o \
               CXformDynamicGet2DynamicTableScan.o \
-              CXformDynamicIndexGet2DynamicIndexOnlyScan.o \
+              CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan.o \
               CXformDynamicIndexGet2DynamicIndexScan.o \
               CXformEagerAgg.o \
               CXformExpandDynamicGetWithForeignPartitions.o \
@@ -64,7 +64,7 @@ OBJS        = CDecorrelator.o \
               CXformImplementUnionAll.o \
               CXformImplementation.o \
               CXformIndexGet2IndexScan.o \
-              CXformIndexGet2IndexOnlyScan.o \
+              CXformIndexOnlyGet2IndexOnlyScan.o \
               CXformInlineCTEConsumer.o \
               CXformInlineCTEConsumerUnderSelect.o \
               CXformInnerApply2InnerJoin.o \
@@ -104,6 +104,7 @@ OBJS        = CDecorrelator.o \
               CXformLeftSemiJoin2NLJoin.o \
               CXformLimit2IndexGet.o \
               CXformMaxOneRow2Assert.o \
+              CXformMinMax2IndexGet.o \
               CXformDynamicForeignGet2DynamicForeignScan.o \
               CXformProject2Apply.o \
               CXformProject2ComputeScalar.o \
@@ -117,8 +118,10 @@ OBJS        = CDecorrelator.o \
               CXformSelect2Apply.o \
               CXformSelect2BitmapBoolOp.o \
               CXformSelect2DynamicIndexGet.o \
+              CXformSelect2DynamicIndexOnlyGet.o \
               CXformSelect2Filter.o \
               CXformSelect2IndexGet.o \
+              CXformSelect2IndexOnlyGet.o \
               CXformSequenceProject2Apply.o \
               CXformSimplifyGbAgg.o \
               CXformSimplifyLeftOuterJoin.o \

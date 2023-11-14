@@ -1944,6 +1944,7 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 		dIndexCostConversionFactor;
 
 	pdrgpcrIndexColumns->Release();
+
 	// The cost of index-only-scan is similar to index-scan with the additional
 	// dimension of variable size I/O. More specifically, index-scan I/O is
 	// bound to the fixed width of the relation times the number of output
@@ -1961,14 +1962,25 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 	// cdb_estimate_rel_size(). So consider dPartialVisFrac as 0.
 
 	CDouble dPartialVisFrac(1);
+	CDouble dCostVisibilityMapLookup(0);
 	if (isAO)
 	{
 		dPartialVisFrac = 0;
 	}
-	else if (stats->RelPages() != 0)
+	else
 	{
-		dPartialVisFrac =
-			1 - (CDouble(stats->RelAllVisible()) / CDouble(stats->RelPages()));
+		if (stats->RelPages() != 0)
+		{
+			dPartialVisFrac = 1 - (CDouble(stats->RelAllVisible()) /
+								   CDouble(stats->RelPages()));
+		}
+
+		// An index-only-scan on a heap table requires a visibility map lookup.
+		// It's a bitmap with compact size, so the cost is mostly negligible.
+		// However, if the projected columns is the same between the two scans,
+		// then there is no advantage to index-only-scan. Here an epsilon cost
+		// is added to tip the cost towards index-scan for that scenario.
+		dCostVisibilityMapLookup = 0.000001;
 	}
 
 	CDouble dCostPerIndexRow =
@@ -1979,8 +1991,9 @@ CCostModelGPDB::CostIndexOnlyScan(CMemoryPool *mp GPOS_UNUSED,	  // mp
 		ulIncludedColWidth * dIndexOnlyScanTupCostUnit;
 
 	return CCost(pci->NumRebinds() *
-				 (dRowsIndex * dCostPerIndexRow + dIndexScanTupRandomFactor +
-				  dUnusedIndexCost));
+					 (dRowsIndex * dCostPerIndexRow +
+					  dIndexScanTupRandomFactor + dUnusedIndexCost) +
+				 dCostVisibilityMapLookup);
 }
 
 CCost

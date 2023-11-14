@@ -30,6 +30,7 @@
 #include "gpopt/operators/CScalarCmp.h"
 #include "gpopt/operators/CScalarFunc.h"
 #include "gpopt/operators/CScalarIdent.h"
+#include "gpopt/operators/CScalarNullTest.h"
 #include "naucrates/dxl/gpdb_types.h"
 #include "naucrates/md/CMDArrayCoerceCastGPDB.h"
 #include "naucrates/md/CMDIdGPDB.h"
@@ -2034,9 +2035,11 @@ CPredicateUtils::PexprIndexLookupKeyOnRight(
 // Check if given expression is a valid index lookup predicate, and
 // return modified (as needed) expression to be used for index lookup,
 // a scalar expression is a valid index lookup predicate if it is in one
-// the two forms:
+// the below forms:
 //	[index-key CMP expr]
 //	[expr CMP index-key]
+//	[index-key IS NULL]
+//	[index-key IS NOT NULL]
 // where expr is a scalar expression that is free of index keys and
 // may have outer references (in the case of index nested loops)
 CExpression *
@@ -2049,6 +2052,21 @@ CPredicateUtils::PexprIndexLookup(CMemoryPool *mp, CMDAccessor *md_accessor,
 {
 	GPOS_ASSERT(nullptr != pexprScalar);
 	GPOS_ASSERT(nullptr != pdrgpcrIndex);
+
+	// Predicate of form 'col IS NULL' or 'col IS NOT NULL'.
+	// This check is to enable support of "IS NULL/IS NOT NULL" conditions
+	// for btree indices.
+	if (((CUtils::FScalarIdentNullTest(pexprScalar)) ||
+		 (FNot(pexprScalar) &&
+		  CUtils::FScalarIdentNullTest((*pexprScalar)[0]))) &&
+		pmdindex->IndexType() == gpmd::IMDIndex::EmdindBtree)
+	{
+		// Expression is not transformed to a comparison as 'col IS NULL'
+		// or 'col IS NOT NULL' are not equivalent to 'col = NULL' or
+		// 'col!=NULL' respectively.
+		pexprScalar->AddRef();
+		return pexprScalar;
+	}
 
 	IMDType::ECmpType cmptype = IMDType::EcmptOther;
 

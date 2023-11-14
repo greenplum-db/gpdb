@@ -3,13 +3,13 @@
 //	Copyright (C) 2023 VMware, Inc. or its affiliates. All Rights Reserved.
 //
 //	@filename:
-//		CXformDynamicIndexGet2DynamicIndexOnlyScan.h
+//		CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan.h
 //
 //	@doc:
-//		Transform DynamicIndexGet to DynamicIndexOnlyScan
+//		Transform DynamicIndexOnlyGet to DynamicIndexOnlyScan
 //---------------------------------------------------------------------------
-#ifndef GPOPT_CXformDynamicIndexGet2DynamicIndexOnlyScan_H
-#define GPOPT_CXformDynamicIndexGet2DynamicIndexOnlyScan_H
+#ifndef GPOPT_CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan_H
+#define GPOPT_CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan_H
 
 #include "gpos/base.h"
 
@@ -21,37 +21,38 @@ using namespace gpos;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CXformDynamicIndexGet2DynamicIndexOnlyScan
+//		CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan
 //
 //	@doc:
-//		Transform DynamicIndexGet to DynamicIndexOnlyScan
+//		Transform DynamicIndexOnlyGet to DynamicIndexOnlyScan
 //
 //---------------------------------------------------------------------------
-class CXformDynamicIndexGet2DynamicIndexOnlyScan : public CXformImplementation
+class CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan
+	: public CXformImplementation
 {
 private:
 public:
-	CXformDynamicIndexGet2DynamicIndexOnlyScan(
-		const CXformDynamicIndexGet2DynamicIndexOnlyScan &) = delete;
+	CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan(
+		const CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan &) = delete;
 
 	// ctor
-	explicit CXformDynamicIndexGet2DynamicIndexOnlyScan(CMemoryPool *mp);
+	explicit CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan(CMemoryPool *mp);
 
 	// dtor
-	~CXformDynamicIndexGet2DynamicIndexOnlyScan() override = default;
+	~CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan() override = default;
 
 	// ident accessors
 	EXformId
 	Exfid() const override
 	{
-		return ExfDynamicIndexGet2DynamicIndexOnlyScan;
+		return ExfDynamicIndexOnlyGet2DynamicIndexOnlyScan;
 	}
 
 	// return a string for xform name
 	const CHAR *
 	SzId() const override
 	{
-		return "CXformDynamicIndexGet2DynamicIndexOnlyScan";
+		return "CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan";
 	}
 
 	// compute xform promise for a given expression handle
@@ -61,11 +62,11 @@ public:
 	void Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 				   CExpression *pexpr) const override;
 
-};	// class CXformDynamicIndexGet2DynamicIndexOnlyScan
+};	// class CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan
 
 }  // namespace gpopt
 
 
-#endif	// !GPOPT_CXformDynamicIndexGet2DynamicIndexOnlyScan_H
+#endif	// !GPOPT_CXformDynamicIndexOnlyGet2DynamicIndexOnlyScan_H
 
 // EOF

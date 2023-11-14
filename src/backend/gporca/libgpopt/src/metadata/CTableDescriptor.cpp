@@ -293,7 +293,7 @@ CTableDescriptor::OsPrint(IOstream &os) const
 //		CTableDescriptor::IndexCount
 //
 //	@doc:
-//		 Returns number of b-tree indices
+//		 Returns number of indices in the relation
 //
 //
 //---------------------------------------------------------------------------

@@ -131,9 +131,6 @@ public:
 		// unknown exception
 		ExmiUnhandled,
 
-		// illegal byte sequence
-		ExmiIllegalByteSequence,
-
 		ExmiSentinel
 	};
 

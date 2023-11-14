@@ -36,6 +36,10 @@ using CColRef2dArray = CDynamicPtrArray<CColRefArray, CleanupRelease>;
 using UlongToColRefMap =
 	CHashMap<ULONG, CColRef, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
 			 CleanupDelete<ULONG>, CleanupNULL<CColRef>>;
+// hash map mapping ULONG -> const CColRef
+using UlongToConstColRefMap =
+	CHashMap<ULONG, const CColRef, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,
+			 CleanupDelete<ULONG>, CleanupNULL<const CColRef>>;
 // iterator
 using UlongToColRefMapIter =
 	CHashMapIter<ULONG, CColRef, gpos::HashValue<ULONG>, gpos::Equals<ULONG>,

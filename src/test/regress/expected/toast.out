@@ -8,16 +8,16 @@ CREATE FUNCTION randomtext(len int) returns text as $$
   select string_agg(md5(random()::text),'') from generate_series(1, $1 / 32)
 $$ language sql;
 create function get_rel_toast_count(relname text) returns int as $$
-reltoastoid = plpy.execute("select \'"+ relname +"\'::regclass::oid;")[0]['oid']
-count = plpy.execute("select count(*) from pg_toast.pg_toast_"+str(reltoastoid)+";")[0]['count']
+reltoastname = plpy.execute("select reltoastrelid::regclass from pg_class where oid = \'"+ relname +"\'::regclass::oid;")[0]['reltoastrelid']
+count = plpy.execute("select count(*) from "+str(reltoastname)+";")[0]['count']
 return count
 $$ language plpython3u;
 -- INSERT 
 -- uses the toast call to store the large tuples
-INSERT INTO toastable_heap VALUES(repeat('a',100000), repeat('b',100001), 1);
-INSERT INTO toastable_heap VALUES(repeat('A',100000), repeat('B',100001), 2);
-INSERT INTO toastable_ao VALUES(repeat('a',100000), repeat('b',100001), 1);
-INSERT INTO toastable_ao VALUES(repeat('A',100000), repeat('B',100001), 2);
+INSERT INTO toastable_heap VALUES(repeat('a',1000000), repeat('b',1000001), 1);
+INSERT INTO toastable_heap VALUES(repeat('A',1000000), repeat('B',1000001), 2);
+INSERT INTO toastable_ao VALUES(repeat('a',1000000), repeat('b',1000001), 1);
+INSERT INTO toastable_ao VALUES(repeat('A',1000000), repeat('B',1000001), 2);
 -- uncompressable values
 INSERT INTO toastable_heap VALUES(randomtext(10000000), randomtext(10000032), 3);
 INSERT INTO toastable_ao VALUES(randomtext(10000000), randomtext(10000032), 3);
@@ -26,16 +26,16 @@ INSERT INTO toastable_ao VALUES(randomtext(10000000), randomtext(10000032), 3);
 SELECT char_length(a), char_length(b), c FROM toastable_heap ORDER BY c;
  char_length | char_length | c 
 -------------+-------------+---
-      100000 |      100001 | 1
-      100000 |      100001 | 2
+     1000000 |     1000001 | 1
+     1000000 |     1000001 | 2
     10000000 |    10000032 | 3
 (3 rows)
 
 SELECT char_length(a), char_length(b), c FROM toastable_ao ORDER BY c;
  char_length | char_length | c 
 -------------+-------------+---
-      100000 |      100001 | 1
-      100000 |      100001 | 2
+     1000000 |     1000001 | 1
+     1000000 |     1000001 | 2
     10000000 |    10000032 | 3
 (3 rows)
 
@@ -54,13 +54,13 @@ SELECT gp_segment_id, get_rel_toast_count('toastable_ao2') FROM gp_dist_random('
 
 -- UPDATE 
 -- (heap rel only) and toast the large tuple
-UPDATE toastable_heap SET a=repeat('A',100000) WHERE c=1;
+UPDATE toastable_heap SET a=repeat('A',1000000) WHERE c=1;
 UPDATE toastable_heap SET a=randomtext(100032) WHERE c=3;
 SELECT char_length(a), char_length(b) FROM toastable_heap ORDER BY c;
  char_length | char_length 
 -------------+-------------
-      100000 |      100001
-      100000 |      100001
+     1000000 |     1000001
+     1000000 |     1000001
       100032 |    10000032
 (3 rows)
 
@@ -72,17 +72,27 @@ ALTER TABLE toastable_ao ADD COLUMN d int DEFAULT 10;
 SELECT char_length(a), char_length(b), c, d FROM toastable_heap ORDER BY c;
  char_length | char_length | c | d  
 -------------+-------------+---+----
-      100000 |      100001 | 1 | 10
-      100000 |      100001 | 2 | 10
+     1000000 |     1000001 | 1 | 10
+     1000000 |     1000001 | 2 | 10
       100032 |    10000032 | 3 | 10
 (3 rows)
 
 SELECT char_length(a), char_length(b), c, d FROM toastable_ao ORDER BY c;
  char_length | char_length | c | d  
 -------------+-------------+---+----
-      100000 |      100001 | 1 | 10
-      100000 |      100001 | 2 | 10
+     1000000 |     1000001 | 1 | 10
+     1000000 |     1000001 | 2 | 10
     10000000 |    10000032 | 3 | 10
+(3 rows)
+
+-- ALTER Distributed key
+ALTER TABLE toastable_heap SET DISTRIBUTED BY (a);
+SELECT char_length(a), char_length(b), c, d FROM toastable_heap ORDER BY c;
+ char_length | char_length | c | d  
+-------------+-------------+---+----
+     1000000 |     1000001 | 1 | 10
+     1000000 |     1000001 | 2 | 10
+      100032 |    10000032 | 3 | 10
 (3 rows)
 
 -- TRUNCATE
@@ -105,18 +115,18 @@ select gp_segment_id, get_rel_toast_count('toastable_ao') from gp_dist_random('g
              2 |                   0
 (3 rows)
 
-INSERT INTO toastable_heap VALUES(repeat('a',100002), repeat('b',100003), 2, 20);
-INSERT INTO toastable_ao VALUES(repeat('a',100002), repeat('b',100003), 2, 20);
+INSERT INTO toastable_heap VALUES(repeat('a',1000002), repeat('b',1000003), 2, 20);
+INSERT INTO toastable_ao VALUES(repeat('a',1000002), repeat('b',1000003), 2, 20);
 SELECT char_length(a), char_length(b), c, d FROM toastable_heap;
  char_length | char_length | c | d  
 -------------+-------------+---+----
-      100002 |      100003 | 2 | 20
+     1000002 |     1000003 | 2 | 20
 (1 row)
 
 SELECT char_length(a), char_length(b), c, d FROM toastable_ao;
  char_length | char_length | c | d  
 -------------+-------------+---+----
-      100002 |      100003 | 2 | 20
+     1000002 |     1000003 | 2 | 20
 (1 row)
 
 select gp_segment_id, get_rel_toast_count('toastable_heap') from gp_dist_random('gp_id') order by gp_segment_id;
@@ -124,13 +134,13 @@ select gp_segment_id, get_rel_toast_count('toastable_heap') from gp_dist_random(
 ---------------+---------------------
              0 |                   0
              1 |                   0
-             2 |                   0
+             2 |                   4
 (3 rows)
 
 select gp_segment_id, get_rel_toast_count('toastable_ao') from gp_dist_random('gp_id') order by gp_segment_id;
  gp_segment_id | get_rel_toast_count 
 ---------------+---------------------
-             0 |                  13
+             0 |                 125
              1 |                   0
              2 |                   0
 (3 rows)

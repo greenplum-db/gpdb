@@ -960,3 +960,31 @@ select numsegments from gp_distribution_policy where localoid='expand_domain_tab
 reset search_path;
 drop schema test_reshuffle cascade;
 -- end_ignore
+-- Check that after EXPAND TABLE, the toast table name is still 'pg_toast_<tableoid>'
+select gp_debug_set_create_table_default_numsegments(2);
+ gp_debug_set_create_table_default_numsegments 
+------------
+ 2
+(1 row)
+
+create table atexpand_toastname(a text, b int);
+alter table atexpand_toastname expand table;
+select reltoastrelid::regclass = ('pg_toast.pg_toast_' || oid::text)::regclass
+from pg_class where relname = 'atexpand_toastname';
+ ?column? 
+----------
+ t
+(1 row)
+
+-- Check that after EXPAND TABLE, index is being re-indexed. Verify one of the segments is enough.
+create table atexpand_reindex(a text, b int);
+create index atexpand_reindex_i on atexpand_reindex(b);
+select relfilenode from gp_dist_random('pg_class') where relname = 'atexpand_reindex' and gp_segment_id = 0
+\gset
+alter table atexpand_reindex expand table;
+select :relfilenode = relfilenode from gp_dist_random('pg_class') where relname = 'atexpand_reindex' and gp_segment_id = 0;
+ ?column? 
+----------
+ f
+(1 row)
+

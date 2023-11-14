@@ -22,7 +22,7 @@ Several key performance factors influence database performance. Understanding th
 
 Database performance relies heavily on disk I/O and memory usage. To accurately set performance expectations, you need to know the baseline performance of the hardware on which your DBMS is deployed. Performance of hardware components such as CPUs, hard disks, disk controllers, RAM, and network interfaces will significantly affect how fast your database performs.
 
-> **Caution** Do not install anti-virus software of any type on Greenplum Database hosts. VMware Greenplum is not supported for use with anti-virus software because the additional CPU and IO load interferes with Greenplum Database operations.
+> **Note** If you use endpoint security software on your Greenplum Database hosts, it may affect your database performance and stability. See [About Endpoint Security Sofware](../security-guide/topics/preface.html#endpoint_security) for more information.
 
 ### <a id="topic4"></a>Workload 
 

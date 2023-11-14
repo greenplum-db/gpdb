@@ -112,10 +112,11 @@ CXformSelect2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 		// We consider ForwardScan here because, BackwardScan is only supported
 		// in the case where we have Order by clause in the query, but this
 		// xform handles scenario of a filter on top of a regular table
-		CExpression *pexprIndexGet = CXformUtils::PexprLogicalIndexGet(
+		CExpression *pexprIndexGet = CXformUtils::PexprBuildBtreeIndexPlan(
 			mp, md_accessor, pexprRelational, pexpr->Pop()->UlOpId(), pdrgpexpr,
 			pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel,
-			false /*indexForOrderBy*/, EForwardScan /*indexScanDirection*/);
+			EForwardScan /*indexScanDirection*/, false /*indexForOrderBy*/,
+			false /*indexonly*/);
 		if (nullptr != pexprIndexGet)
 		{
 			pxfres->Add(pexprIndexGet);

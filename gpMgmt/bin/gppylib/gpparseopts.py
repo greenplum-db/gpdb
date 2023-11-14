@@ -85,7 +85,7 @@ class OptChecker(Option):
     def regexCheck(option, opt, value):
         # value is a string to be compiled as a regular expression pattern
         global _gCase
-        flags = re.LOCALE
+        flags = 0
         if _gCase and _gCase.startswith('i'):
             flags |= re.IGNORECASE
         try:

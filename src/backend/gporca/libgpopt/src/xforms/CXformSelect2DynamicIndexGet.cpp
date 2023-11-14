@@ -128,10 +128,12 @@ CXformSelect2DynamicIndexGet::Transform(CXformContext *pxfctxt,
 		// only supported in the case where we have Order by clause in the
 		// query, but this xform handles scenario of a filter on top of a
 		// partitioned table.
-		CExpression *pexprDynamicIndexGet = CXformUtils::PexprLogicalIndexGet(
-			mp, md_accessor, pexprRelational, pexpr->Pop()->UlOpId(), pdrgpexpr,
-			pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex, pmdrel,
-			false /*indexForOrderBy*/, EForwardScan /*indexScanDirection*/);
+		CExpression *pexprDynamicIndexGet =
+			CXformUtils::PexprBuildBtreeIndexPlan(
+				mp, md_accessor, pexprRelational, pexpr->Pop()->UlOpId(),
+				pdrgpexpr, pcrsScalarExpr, nullptr /*outer_refs*/, pmdindex,
+				pmdrel, EForwardScan /*indexScanDirection*/,
+				false /*indexForOrderBy*/, false /*indexonly*/);
 		if (nullptr != pexprDynamicIndexGet)
 		{
 			// create a redundant SELECT on top of DynamicIndexGet to be able to use predicate in partition elimination

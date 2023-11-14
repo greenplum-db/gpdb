@@ -1,6 +1,6 @@
 -- Test orphan temp table on coordinator.
--- Before the fix, when backend process panic on the segment, the temp table will be left on the coordinator.
 
+-- case 1: Before the fix, when backend process panic on the segment, the temp table will be left on the coordinator.
 -- create a temp table
 1: CREATE TEMP TABLE test_temp_table_cleanup(a int);
 CREATE TABLE
@@ -47,3 +47,22 @@ ERROR:  fault triggered, fault name:'before_exec_scan' fault type:'panic'  (seg0
 -----------------
  Success:        
 (1 row)
+1q: ... <quitting>
+
+-- case 2: Test if temp table will be left on the coordinator, when session exits in coordinator within a transaction block.
+2: CREATE TEMP TABLE test_temp_table_cleanup(a int);
+CREATE TABLE
+2: begin;
+BEGIN
+2: select * from test_temp_table_cleanup;
+ a 
+---
+(0 rows)
+2q: ... <quitting>
+
+3: select count(*) from pg_class where relname = 'test_temp_table_cleanup';
+ count 
+-------
+ 0     
+(1 row)
+3q: ... <quitting>

@@ -476,7 +476,7 @@ SELECT a, b FROM test_cover_index_on_pt WHERE a<10 and b=2;
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
--- Expect both sides of join to perform index only scan
+-- Expect join to perform dynamic index only scan
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt JOIN test_basic_cover_index AS t ON pt.a=t.a WHERE pt.a<10 and pt.b=2;
                                                                 QUERY PLAN                                                                 
@@ -484,18 +484,16 @@ SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt JOIN test_basic_cover_index 
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=1 loops=1)
    ->  Nested Loop (actual rows=1 loops=1)
          Join Filter: true
-         ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual rows=1 loops=1)
-               ->  Dynamic Index Only Scan on i_test_cover_index_scan_on_partition_table on test_cover_index_on_pt (actual rows=1 loops=1)
-                     Index Cond: (a < 10)
-                     Filter: ((a < 10) AND (b = 2))
-                     Heap Fetches: 0
-                     Number of partitions to scan: 1 (out of 4)
-                     Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
-         ->  Index Only Scan using i_test_basic_index on test_basic_cover_index (actual rows=1 loops=1)
-               Index Cond: ((a = test_cover_index_on_pt.a) AND (a < 10))
+         ->  Dynamic Index Only Scan on i_test_cover_index_scan_on_partition_table on test_cover_index_on_pt (actual rows=1 loops=1)
+               Index Cond: (a < 10)
+               Filter: ((a < 10) AND (b = 2))
                Heap Fetches: 0
- Optimizer: Pivotal Optimizer (GPORCA)
-(14 rows)
+               Number of partitions to scan: 1 (out of 4)
+               Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
+         ->  Index Scan using i_test_basic_index on test_basic_cover_index (actual rows=1 loops=1)
+               Index Cond: ((a = test_cover_index_on_pt.a) AND (a < 10))
+ Optimizer: GPORCA
+(12 rows)
 
 SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt JOIN test_basic_cover_index AS t ON pt.a=t.a WHERE pt.a<10 and pt.b=2;
  a | b 
@@ -503,28 +501,24 @@ SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt JOIN test_basic_cover_index 
  4 | 2
 (1 row)
 
--- Expect both sides of join to perform index only scan
+-- Expect join to perform dynamic index only scan
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt LEFT JOIN test_basic_cover_index AS t ON pt.a=t.a WHERE pt.a<10 and pt.b=2;
                                                              QUERY PLAN                                                              
 -------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=1 loops=1)
-   ->  Hash Left Join (actual rows=1 loops=1)
-         Hash Cond: (test_cover_index_on_pt.a = test_basic_cover_index.a)
-         Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 5 of 524288 buckets.
+   ->  Nested Loop Left Join (actual rows=1 loops=1)
+         Join Filter: true
          ->  Dynamic Index Only Scan on i_test_cover_index_scan_on_partition_table on test_cover_index_on_pt (actual rows=1 loops=1)
                Index Cond: (a < 10)
                Filter: ((a < 10) AND (b = 2))
                Heap Fetches: 0
                Number of partitions to scan: 1 (out of 4)
                Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
-         ->  Hash (actual rows=5 loops=1)
-               Buckets: 524288  Batches: 1  Memory Usage: 4097kB
-               ->  Index Only Scan using i_test_basic_index on test_basic_cover_index (actual rows=5 loops=1)
-                     Index Cond: (a < 10)
-                     Heap Fetches: 0
- Optimizer: Pivotal Optimizer (GPORCA)
-(16 rows)
+         ->  Index Scan using i_test_basic_index on test_basic_cover_index (actual rows=1 loops=1)
+               Index Cond: ((a = test_cover_index_on_pt.a) AND (a < 10))
+ Optimizer: GPORCA
+(12 rows)
 
 SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt LEFT JOIN test_basic_cover_index AS t ON pt.a=t.a WHERE pt.a<10 and pt.b=2;
  a | b 

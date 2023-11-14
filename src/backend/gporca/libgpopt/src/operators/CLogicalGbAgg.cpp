@@ -600,6 +600,8 @@ CLogicalGbAgg::PxfsCandidates(CMemoryPool *mp) const
 	(void) xform_set->ExchangeSet(CXform::ExfGbAgg2StreamAgg);
 	(void) xform_set->ExchangeSet(CXform::ExfGbAgg2ScalarAgg);
 	(void) xform_set->ExchangeSet(CXform::ExfEagerAgg);
+	(void) xform_set->ExchangeSet(CXform::ExfMinMax2IndexGet);
+	(void) xform_set->ExchangeSet(CXform::ExfMinMax2IndexOnlyGet);
 	return xform_set;
 }
 

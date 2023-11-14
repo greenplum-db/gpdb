@@ -9318,12 +9318,12 @@ get_rule_expr(Node *node, deparse_context *context,
 						appendStringInfoString(buf, " WITH (");
 						if (elem->accessMethod)
 						{
-							if (pg_strcasecmp(elem->accessMethod, "ao_row") != 0)
+							if (pg_strcasecmp(elem->accessMethod, "ao_row") == 0)
 							{
 								appendStringInfoString(buf, "appendonly=true, orientation=row");
 								sep = ", ";
 							}
-							else if (pg_strcasecmp(elem->accessMethod, "ao_column") != 0)
+							else if (pg_strcasecmp(elem->accessMethod, "ao_column") == 0)
 							{
 								appendStringInfoString(buf, "appendonly=true, orientation=column");
 								sep = ", ";

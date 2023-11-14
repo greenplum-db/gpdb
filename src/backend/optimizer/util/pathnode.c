@@ -3132,8 +3132,6 @@ create_ctescan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->parallel_aware = false;
 	pathnode->parallel_safe = rel->consider_parallel;
 	pathnode->parallel_workers = 0;
-	// GPDB_96_MERGE_FIXME: Why do we set pathkeys in GPDB, but not in Postgres?
-	// pathnode->pathkeys = NIL;	/* XXX for now, result is always unordered */
 	pathnode->pathkeys = pathkeys;
 	pathnode->locus = locus;
 

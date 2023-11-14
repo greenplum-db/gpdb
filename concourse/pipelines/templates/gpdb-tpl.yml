@@ -232,6 +232,7 @@ groups:
   - gpexpand_[[ os_type ]]
   - pg_upgrade_[[ os_type ]]
   - interconnect_[[ os_type ]]
+  - pg_filedump_[[ os_type ]]
   - icw_planner_resgroup_[[ os_type ]]
   - icw_gporca_resgroup_[[ os_type ]]
   - gate_icw_end
@@ -303,6 +304,7 @@ groups:
   - gpexpand_[[ os_type ]]
   - pg_upgrade_[[ os_type ]]
   - interconnect_[[ os_type ]]
+  - pg_filedump_[[ os_type ]]
   - icw_planner_resgroup_[[ os_type ]]
   - icw_gporca_resgroup_[[ os_type ]]
   - gate_icw_end
@@ -414,6 +416,12 @@ resources:
     ignore_paths:
     - gpdb-doc/*
     - README*
+
+- name: filedump_src
+  type: git
+  source:
+    branch: main
+    uri: https://github.com/greenplum-db/filedump.git
 
 {% if os_type == compile_platform or (os_type != compile_platform and "icw" in test_sections) %}
 - name: gpdb7-[[ os_type ]]-build
@@ -1169,6 +1177,25 @@ jobs:
           BUILD_TYPE=((rc-build-type)) -C src/test/regress installcheck-icudp
         TEST_OS: [[ test_os ]]
 
+- name: pg_filedump_[[ os_type ]]
+  plan:
+    - in_parallel:
+        steps:
+          - get: gpdb_src
+            passed: [gate_icw_start]
+          - get: filedump_src
+          - get: bin_gpdb
+            passed: [gate_icw_start]
+            trigger: true
+          - get: gpdb7-[[ os_type ]]-test
+    - task: ic_filedump
+      file: gpdb_src/concourse/tasks/compile_gpdb_with_filedump.yml
+      image: gpdb7-[[ os_type ]]-test
+      params:
+        MAKE_TEST_COMMAND: -k
+          BUILD_TYPE=((rc-build-type)) installcheck
+        TEST_OS: [[ test_os ]]
+
 - name: icw_extensions_gpcloud_[[ os_type ]]
   plan:
     - in_parallel:
@@ -1395,12 +1422,12 @@ jobs:
         - icw_planner_icproxy_[[ os_type ]]
         - icw_gporca_ictcp_[[ os_type ]]
         - icw_mirrorless_[[ os_type ]]
-        - icw_extensions_gpcloud_[[ os_type ]]
         - unit_tests_gporca_[[ os_type ]]
         - gpdb_pitr_[[ os_type ]]
         - gpexpand_[[ os_type ]]
         - pg_upgrade_[[ os_type ]]
         - interconnect_[[ os_type ]]
+        - pg_filedump_[[ os_type ]]
       - get: icw_planner_[[ os_type ]]_dump
         params:
           skip_download: 'true'
@@ -1419,7 +1446,6 @@ jobs:
         - icw_planner_icproxy_[[ os_type ]]
         - icw_gporca_ictcp_[[ os_type ]]
         - icw_mirrorless_[[ os_type ]]
-        - icw_extensions_gpcloud_[[ os_type ]]
         - unit_tests_gporca_[[ os_type ]]
         - gpdb_pitr_[[ os_type ]]
         - gpexpand_[[ os_type ]]
@@ -1427,6 +1453,7 @@ jobs:
         - icw_planner_resgroup_[[ os_type ]]
         - icw_gporca_resgroup_[[ os_type ]]
         - interconnect_[[ os_type ]]
+        - pg_filedump_[[ os_type ]]
         trigger: true
       - get: bin_gpdb_clients
         params:

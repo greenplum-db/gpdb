@@ -935,7 +935,7 @@ SELECT enable_xform('CXformGet2TableScan');
 SELECT enable_xform('CXformIndexGet2IndexScan');
 """,
                             """
-SELECT enable_xform('CXformIndexGet2IndexOnlyScan');
+SELECT enable_xform('CXformIndexOnlyGet2IndexOnlyScan');
 """ ]
 
 _force_sequential_scan = ["""
@@ -945,7 +945,7 @@ SELECT disable_xform('CXformImplementBitmapTableGet');
 SELECT disable_xform('CXformIndexGet2IndexScan');
 """,
                             """
-SELECT disable_xform('CXformIndexGet2IndexOnlyScan');
+SELECT disable_xform('CXformIndexOnlyGet2IndexOnlyScan');
 """]
 
 _force_index_scan = ["""
@@ -955,14 +955,14 @@ SELECT disable_xform('CXformGet2TableScan');
 SELECT disable_xform('CXformImplementBitmapTableGet');
 """,
                             """
-SELECT disable_xform('CXformIndexGet2IndexOnlyScan');
+SELECT disable_xform('CXformIndexOnlyGet2IndexOnlyScan');
 """]
 
 _force_bitmap_scan = ["""
 SELECT disable_xform('CXformGet2TableScan');
 """,
                             """
-SELECT disable_xform('CXformIndexGet2IndexOnlyScan');
+SELECT disable_xform('CXformIndexOnlyGet2IndexOnlyScan');
 """]
 
 _force_index_only_scan = ["SELECT disable_xform('CXformGet2TableScan');",

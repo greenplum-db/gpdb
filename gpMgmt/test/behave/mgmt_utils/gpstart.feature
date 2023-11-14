@@ -191,3 +191,13 @@ Feature: gpstart behave tests
 
           When the user runs psql with "-c 'drop user foouser;'" against database "postgres"
           Then psql should return a return code of 0
+
+
+    @concourse_cluster
+    Scenario: gpstart with batch size is less than the number of segments host
+        Given the database is not running
+         When the user runs "gpstart -a -B 1"
+         Then "gpstart -a -B 1" should return a return code of 0
+          And gpcheckcat should not print "Number of segments which failed to start:.*" to stdout
+
+

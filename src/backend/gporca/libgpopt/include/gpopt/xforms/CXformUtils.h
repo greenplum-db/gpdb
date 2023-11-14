@@ -19,7 +19,9 @@
 #include "gpopt/base/CUtils.h"
 #include "gpopt/operators/CLogicalDML.h"
 #include "gpopt/operators/CLogicalDynamicIndexGet.h"
+#include "gpopt/operators/CLogicalDynamicIndexOnlyGet.h"
 #include "gpopt/operators/CLogicalIndexGet.h"
+#include "gpopt/operators/CLogicalIndexOnlyGet.h"
 #include "gpopt/operators/CLogicalJoin.h"
 #include "gpopt/operators/CPhysicalJoin.h"
 #include "gpopt/operators/CPredicateUtils.h"
@@ -176,17 +178,8 @@ private:
 									   CColRefSet *pcrsGrpByOutput,
 									   CColRefSet *pcrsGrpByUsed,
 									   CColRefSet *pcrsFKey);
-
-	// construct an expression representing a new access path using the given functors for
-	// operator constructors and rewritten access path
-	static CExpression *PexprBuildBtreeIndexPlan(
-		CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprGet,
-		ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
-		CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
-		const IMDIndex *pmdindex, const IMDRelation *pmdrel,
-		EIndexScanDirection indexScanDirection, BOOL indexForOrderBy);
-
 	// create a dynamic operator for a btree index plan
+	template <class T>
 	static CLogical *
 	PopDynamicBtreeIndexOpConstructor(
 		CMemoryPool *mp, const IMDIndex *pmdindex, CTableDescriptor *ptabdesc,
@@ -194,13 +187,13 @@ private:
 		CColRefArray *pdrgpcrOutput, CColRef2dArray *pdrgpdrgpcrPart,
 		IMdIdArray *partition_mdids, ULONG ulUnindexedPredColCount)
 	{
-		return GPOS_NEW(mp)
-			CLogicalDynamicIndexGet(mp, pmdindex, ptabdesc, ulOriginOpId, pname,
-									ulPartIndex, pdrgpcrOutput, pdrgpdrgpcrPart,
-									partition_mdids, ulUnindexedPredColCount);
+		return GPOS_NEW(mp) T(mp, pmdindex, ptabdesc, ulOriginOpId, pname,
+							  ulPartIndex, pdrgpcrOutput, pdrgpdrgpcrPart,
+							  partition_mdids, ulUnindexedPredColCount);
 	}
 
 	//	create a static operator for a btree index plan
+	template <class T>
 	static CLogical *
 	PopStaticBtreeIndexOpConstructor(CMemoryPool *mp, const IMDIndex *pmdindex,
 									 CTableDescriptor *ptabdesc,
@@ -209,9 +202,9 @@ private:
 									 ULONG ulUnindexedPredColCount,
 									 EIndexScanDirection indexScanDirection)
 	{
-		return GPOS_NEW(mp) CLogicalIndexGet(
-			mp, pmdindex, ptabdesc, ulOriginOpId, pname, pdrgpcrOutput,
-			ulUnindexedPredColCount, indexScanDirection);
+		return GPOS_NEW(mp)
+			T(mp, pmdindex, ptabdesc, ulOriginOpId, pname, pdrgpcrOutput,
+			  ulUnindexedPredColCount, indexScanDirection);
 	}
 
 	//	produce an expression representing a new btree index path
@@ -432,22 +425,6 @@ public:
 			   CXform::ExfSequenceProject2Apply == exfid;
 	}
 
-	// helper for creating IndexGet/DynamicIndexGet expression
-	static CExpression *
-	PexprLogicalIndexGet(CMemoryPool *mp, CMDAccessor *md_accessor,
-						 CExpression *pexprGet, ULONG ulOriginOpId,
-						 CExpressionArray *pdrgpexprConds,
-						 CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
-						 const IMDIndex *pmdindex, const IMDRelation *pmdrel,
-						 BOOL indexForOrderBy,
-						 EIndexScanDirection indexScanDirection)
-	{
-		return PexprBuildBtreeIndexPlan(mp, md_accessor, pexprGet, ulOriginOpId,
-										pdrgpexprConds, pcrsScalarExpr,
-										outer_refs, pmdindex, pmdrel,
-										indexScanDirection, indexForOrderBy);
-	}
-
 	// helper for creating bitmap bool op expressions
 	static CExpression *PexprScalarBitmapBoolOp(
 		CMemoryPool *mp, CMDAccessor *md_accessor,
@@ -570,6 +547,23 @@ public:
 	static BOOL FCoverIndex(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
 							CTableDescriptor *ptabdesc,
 							CColRefArray *pdrgpcrOutput);
+
+	static void ComputeOrderSpecForIndexKey(CMemoryPool *mp,
+											COrderSpec **order_spec,
+											const IMDIndex *pmdindex,
+											EIndexScanDirection scan_direction,
+											const CColRef *colref,
+											ULONG key_position);
+
+	// construct an expression representing a new access path using the given functors for
+	// operator constructors and rewritten access path
+	static CExpression *PexprBuildBtreeIndexPlan(
+		CMemoryPool *mp, CMDAccessor *md_accessor, CExpression *pexprGet,
+		ULONG ulOriginOpId, CExpressionArray *pdrgpexprConds,
+		CColRefSet *pcrsScalarExpr, CColRefSet *outer_refs,
+		const IMDIndex *pmdindex, const IMDRelation *pmdrel,
+		EIndexScanDirection indexScanDirection, BOOL indexForOrderBy,
+		BOOL indexonly);
 
 };	// class CXformUtils
 

@@ -379,7 +379,7 @@ create index hash_b on test_multi_index_types_table using hash(b);
 create index brin_c on test_multi_index_types_table using brin(c);
 -- create a spgist index
 create index spgist_d on test_multi_index_types_table using spgist(d);
--- create a gin index
+-- create a gist index
 create index gist_e on test_multi_index_types_table using gist(e);
 -- create a gin index
 create index gin_f on test_multi_index_types_table using gin(f);
@@ -791,3 +791,269 @@ explain(costs off) select a from part_table1 union all select a from part_table2
 reset enable_seqscan;
 DROP TABLE part_table1;
 DROP TABLE part_table2;
+
+-- Purpose: This section includes tests related to min(), max() aggregates optimization.
+CREATE TABLE min_max_aggregates(a int, b int, c int);
+CREATE INDEX multi_key_index_b_c on min_max_aggregates using btree(b DESC, c);
+ANALYZE min_max_aggregates;
+
+-- Testing min/max functions when table doesn't have any tuples to
+-- ensure they return 1 NULL row indicating no min or max value exists.
+-- This test is eligible for optimization.
+explain(costs off) select min(b) from min_max_aggregates;
+select min(b) from min_max_aggregates;
+explain(costs off) select max(b) from min_max_aggregates;
+select max(b) from min_max_aggregates;
+
+INSERT INTO min_max_aggregates select i, i, i from generate_series(1,100)i;
+INSERT INTO min_max_aggregates values(null, null, null);
+
+-- Creating this index to show that both 'multi_key_index_b_c' and
+-- 'single_key_b_desc' are eligible for min/max on column 'b' and
+-- ORCA picks the lower cost index
+CREATE INDEX single_key_b_desc on min_max_aggregates using btree(b DESC);
+ANALYZE min_max_aggregates;
+
+-- This query is eligible for optimization and it leverages Backward
+-- IndexScan as column 'b' in 'single_key_b_desc' is sorted in
+-- descending order and therefore, minimum value can be found at
+-- the bottom of the index
+explain(costs off) select min(b) from min_max_aggregates;
+select min(b) from min_max_aggregates;
+-- This query is eligible for optimization and it leverages Forward
+-- IndexScan as column 'b' in 'single_key_b_desc' is sorted in
+-- descending order and therefore, maximum value can be found
+-- at the top of the index
+explain(costs off) select max(b) from min_max_aggregates;
+select max(b) from min_max_aggregates;
+
+DROP INDEX single_key_b_desc;
+
+-- Test min/max optimization behavior on index with key direction ASC
+CREATE INDEX single_key_b_asc on min_max_aggregates using btree(b);
+ANALYZE min_max_aggregates;
+
+-- This query is eligible for optimization and it leverages Forward
+-- IndexScan as column 'b' in 'single_key_b_asc' is sorted in
+-- ascending order and therefore, minimum value can be found at the
+-- top of the index
+explain(costs off) select min(b) from min_max_aggregates;
+select min(b) from min_max_aggregates;
+-- This query is eligible for optimization and it leverages Backward
+-- IndexScan as column 'b' in 'single_key_b_asc' is sorted in
+-- ascending order and therefore, maximum value can be found
+-- at the bottom of the index
+explain(costs off) select max(b) from min_max_aggregates;
+select max(b) from min_max_aggregates;
+
+DROP INDEX single_key_b_asc;
+
+-- This query is not eligible for optimization as min/max aggregates
+-- are applied on non-leading keys in the index.
+explain(costs off) select min(c) from min_max_aggregates;
+explain(costs off) select max(c) from min_max_aggregates;
+
+-- This query is not eligible for optimization as min/max aggregates
+-- are applied on non index column.
+explain(costs off) select min(a) from min_max_aggregates;
+explain(costs off) select max(a) from min_max_aggregates;
+
+-- Test min/max on a constant. This query is not eligible for
+-- optimization as it is not necessary for min/max on constants
+explain(costs off) select min(100) from min_max_aggregates;
+explain(costs off) select max(100) from min_max_aggregates;
+
+-- Test min/max optimization behavior with empty group by. This query
+-- is eligible for optimization as it doesn't specify any grouping columns
+explain(costs off) select min(b) from min_max_aggregates group by ();
+select min(b) from min_max_aggregates group by ();
+explain(costs off) select max(b) from min_max_aggregates group by ();
+select max(b) from min_max_aggregates group by ();
+
+-- Test min/max with non-empty group by. This query is not eligible for
+-- optimization as it has grouping columns. This check is made while
+-- computing xform promise by validating size of grouping columns and
+-- there by avoiding application of transform
+explain(costs off) select min(b) from min_max_aggregates group by b;
+explain(costs off) select max(b) from min_max_aggregates group by b;
+
+-- Test min/max optimization with CTE
+
+-- Test min/max optimization when used in CTE producer. This query is
+-- eligible for optimization as producer computes min aggregate on a
+-- btree index key
+explain (costs off) with cte_producer as (select min(b) as min_b from min_max_aggregates) select min_b from cte_producer;
+with cte_producer as (select min(b) as min_b from min_max_aggregates) select min_b from cte_producer;
+
+-- Test min/max optimization when used in CTE consumer. This query is
+-- eligible for optimization as CTE consumer computes min aggregate on a
+-- btree index key projected by CTE producer
+explain (costs off) with cte_consumer as (select b as col_b from min_max_aggregates) select min(col_b) from cte_consumer;
+with cte_consumer as (select b as col_b from min_max_aggregates) select min(col_b) from cte_consumer;
+
+-- Test min/max optimization when used in CTE consumer. This query is not
+-- eligible for optimization, because the subquery projects 'col_b' as 'b/2'
+-- upon which the min is computed, but none of the indices store values
+-- of column 'b/2' so that IndexScan could be used on that index
+explain (costs off) with cte_consumer as (select b/2 as col_b from min_max_aggregates) select min(col_b) from cte_consumer;
+
+-- Test min/max optimization with Casts
+
+-- Case where result of min/max is casted to a different data type.
+-- This query is eligible for optimization as casting happens after
+-- aggregation.
+explain (costs off) select min(b)::int8 from min_max_aggregates;
+select min(b)::int8 from min_max_aggregates;
+
+-- Case where min/max is computed on a column casted to a different data type.
+-- This query is eligible for optimization as column type int4 and casted
+-- type int8 belong to same opfamily
+explain (costs off) select min(b::int8) from min_max_aggregates;
+select min(b::int8) from min_max_aggregates;
+
+-- This query is not eligible for optimization as there is no operator
+-- that handles comparison of a int4 and varchar type
+explain (costs off) select min(b::varchar) from min_max_aggregates;
+
+-- Cases with more than one min/max aggregates in query
+
+-- These queries aren't eligible for optimization because the transform's
+-- pattern only contains a single Scalar Project Element that matches only
+-- a single aggregate function whereas, these queries have more than one
+-- aggregate function. Support for these queries is beyond the scope of
+-- the current PR
+explain(costs off) select min(b), max(b) from min_max_aggregates;
+explain(costs off) select min(a) + max(a) from min_max_aggregates;
+
+-- Clean Up
+drop table min_max_aggregates;
+
+-- Test min/max optimization with union all, subqueries, joins and outer references
+CREATE TABLE table1 (a int, b int, c int);
+CREATE INDEX t1_c_idx on table1 using btree(c);
+CREATE TABLE table2 (a int, b int, c int);
+CREATE INDEX t2_c_idx on table2 using btree(c);
+INSERT INTO table1 select i, i, i from generate_series(1,100) i;
+INSERT INTO table2 select i, i, i from generate_series(1,100) i;
+ANALYZE table1;
+ANALYZE table2;
+
+-- Test min/max optimization when used in subqueries
+
+-- This query is eligible for optimization as subquery computes max
+-- aggregate on a btree index key
+explain (costs off) select b from table1 where c = (select max(c) from table1);
+select b from table1 where c = (select max(c) from table1);
+
+-- Test min/max optimization in a subquery along with a predicate.
+-- This query isn't eligible to use optimization because predicate's
+-- pattern has a Select over LogicalGet and it doesn't match with the
+-- transform's pattern
+explain (costs off) select b, (select min(c) from table1 where table1.a > 5) as min_c from table2;
+
+explain (costs off) select b, (select min(c) from table1 where table1.b = table2.b) as min_c from table2;
+
+-- Test min/max optimization on result of union all present as part of
+-- subquery. This query is not eligible to use min/max optimization as
+-- it performs min/max on result of union all, and not directly on a table's
+-- column due to which there is mismatch in query and transform's pattern.
+-- The query pattern has LogicalUnionAll as first child of GbAgg whereas
+-- transforms pattern has LogicalGet.
+explain (costs off) select max(c) from (select c from table1 union all select c from table2) subquery;
+
+-- Test min/max optimization on outer references.
+
+-- This query is eligible to use optimization as it only has single
+-- aggregate function on an index column
+explain (costs off) select (select b from table1 t1_alias where t1_alias.a = min(t1.c)) as min_val_for_c from table1 t1;
+
+-- This query uses more than one aggregate function, and is not eligible
+-- to use optimization. This is because, query's pattern doesn't
+-- match the transforms pattern of a single Scalar Project Element.
+explain (costs off) select min(t1.c) as min_c,
+                            (select b from table1 t1_alias where t1_alias.c = max(t1.c)) as b_val
+                    from table1 t1;
+
+-- Test min/max optimization used as part of projected columns in join.
+-- This query is not eligible to use the optimization as it involves
+-- join result which is not guaranteed to be sorted, unless it is an NL join.
+explain (costs off) select min(table1.c) from table1 join table2 on table1.a=table2.a;
+
+-- Clean up
+drop table table1;
+drop table table2;
+
+-- Purpose: This section tests IS NULL/IS NOT NULL predicate on btree and non-index columns
+CREATE TABLE test_nulltype_predicates(a int, b int);
+CREATE INDEX index_b on test_nulltype_predicates using btree(b DESC);
+INSERT INTO test_nulltype_predicates select i, i from generate_series(1,3)i;
+INSERT INTO test_nulltype_predicates values(null, null);
+ANALYZE test_nulltype_predicates;
+
+-- Tests with IS NULL on btree index columns
+explain(costs off) select * from test_nulltype_predicates where b is null;
+select * from test_nulltype_predicates where b is null;
+
+-- Tests with IS NULL on non-index columns
+explain(costs off) select * from test_nulltype_predicates where a is null;
+
+-- Tests with IS NOT NULL on btree index columns
+explain(costs off) select * from test_nulltype_predicates where b is not null;
+select * from test_nulltype_predicates where b is not null;
+
+-- Tests with IS NOT NULL on non-index columns
+explain(costs off) select * from test_nulltype_predicates where a is not null;
+
+-- Clean Up
+drop table test_nulltype_predicates;
+
+-- Purpose: Test min/max optimization on AO table.
+-- IndexOnlyScans are supported but IndexScans aren't supported on AO tables
+CREATE TABLE test_ao_table(a int, b int) WITH (appendonly=true) DISTRIBUTED BY (a);
+CREATE INDEX ao_index_b on test_ao_table using btree(b desc);
+INSERT INTO test_ao_table SELECT i, i from generate_series(1,100) i;
+ANALYZE test_ao_table;
+
+-- Test max() aggregate. This query is eligible to use optimization
+explain(costs off) select max(b) from test_ao_table;
+select max(b) from test_ao_table;
+
+-- Test min() aggregate. This query is eligible to use optimization
+explain(costs off) select min(b) from test_ao_table;
+select min(b) from test_ao_table;
+
+-- Clean Up
+drop table test_ao_table;
+
+
+-- Purpose: Test min/max optimization on partition tables.
+CREATE TABLE test_partition_table(a int, b int) DISTRIBUTED BY (a) PARTITION BY range(b);
+CREATE TABLE partition1 PARTITION OF test_partition_table FOR VALUES FROM (1) TO (3);
+CREATE TABLE partition2 PARTITION OF test_partition_table FOR VALUES FROM (3) TO (6);
+CREATE TABLE default_partition PARTITION OF test_partition_table DEFAULT;
+CREATE INDEX part_index_b on test_partition_table using btree(b desc);
+INSERT INTO test_partition_table SELECT i, i from generate_series(1,4) i;
+-- Insert into default partition to show partition pruning
+-- for IS NULL conditions
+INSERT INTO test_partition_table values (0, NULL);
+ANALYZE test_partition_table;
+
+-- Test min/max aggregate on partition tables. This query is not
+-- eligible for optimization because the query's pattern has LogicalDynamicGet
+-- as first child of LogicalGbAgg whereas transform's pattern has LogicalGet.
+-- Support for these queries is beyond the scope of the current PR.
+explain(costs off) select max(b) from test_partition_table;
+
+explain(costs off) select min(b) from test_partition_table;
+
+-- Test IS NULL, IS NOT NULL on partition table btree index column.
+-- For IS NULL predicate on partition column, pruning happens
+-- whereas, for IS NOT NULL it doesn't because the Non null values
+-- could be in all of the partitions
+explain(costs off) select * from test_partition_table where b is null;
+select * from test_partition_table where b is null;
+explain(costs off) select * from test_partition_table where b is not null;
+select * from test_partition_table where b is not null;
+
+-- Clean Up
+drop table test_partition_table;

@@ -1481,13 +1481,13 @@ select * from fix_param_a left join fix_param_b on
                Hash Cond: (fix_param_b.i = fix_param_a.i)
                ->  Hash Semi Join
                      Hash Cond: ((fix_param_b.i = fix_param_c.i) AND (fix_param_b.j = fix_param_c.j))
-                     ->  Seq Scan on fix_param_b
-                           Filter: (NOT (i IS NULL))
+                     ->  Index Scan using fix_param_b_i_key on fix_param_b
+                           Index Cond: (i IS NOT NULL)
                      ->  Hash
                            ->  Seq Scan on fix_param_c
                ->  Hash
                      ->  Seq Scan on fix_param_a
- Optimizer: Pivotal Optimizer (GPORCA)
+ Optimizer: GPORCA
 (15 rows)
 
 select * from fix_param_a left join fix_param_b on
@@ -1986,6 +1986,37 @@ explain select fooJoinPruning.* from fooJoinPruning left join barJoinPruning on 
 
 drop table fooJoinPruning;
 drop table barJoinPruning;
+--
+-- Cases where join under union
+--
+create table foo(a int primary key, b int);
+create table bar(a int primary key, b int);
+explain  select foo.a, bar.b from foo left join bar on foo.a = bar.a
+ union
+   select foo.a, bar.b from foo join bar on foo.a = bar.a;
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..874.00 rows=1 width=8)
+   ->  GroupAggregate  (cost=0.00..874.00 rows=1 width=8)
+         Group Key: foo.a, bar.b
+         ->  Sort  (cost=0.00..874.00 rows=1 width=8)
+               Sort Key: foo.a, bar.b
+               ->  Append  (cost=0.00..874.00 rows=1 width=8)
+                     ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=8)
+                           Join Filter: true
+                           ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Index Scan using bar_pkey on bar  (cost=0.00..6.00 rows=1 width=4)
+                                 Index Cond: (a = foo.a)
+                     ->  Nested Loop  (cost=0.00..437.00 rows=1 width=8)
+                           Join Filter: true
+                           ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Index Scan using bar_pkey on bar bar_1  (cost=0.00..6.00 rows=1 width=4)
+                                 Index Cond: (a = foo_1.a)
+ Optimizer: GPORCA
+(17 rows)
+
+drop table foo;
+drop table bar;
 -----------------------------------------------------------------
 -- Test cases on Dynamic Partition Elimination(DPE) for Right Joins
 -----------------------------------------------------------------
