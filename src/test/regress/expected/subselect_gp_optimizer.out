@@ -3581,3 +3581,37 @@ SELECT c FROM t0;
  Optimizer: Postgres-based planner
 (15 rows)
 
+-- Test push predicate into subquery
+-- more details could be found at https://github.com/greenplum-db/gpdb/issues/8429
+CREATE TABLE foo_predicate_pushdown (a int, b  int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE bar_predicate_pushdown (c int, d int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+explain (costs off) select * from (   
+ select distinct (select bar.c from bar_predicate_pushdown bar where c = foo.b) as ss from foo_predicate_pushdown foo
+) ABC where ABC.ss = 5;
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
+         Group Key: ((SubPlan 1))
+         ->  Sort
+               Sort Key: ((SubPlan 1))
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: ((SubPlan 1))
+                     ->  Result
+                           Filter: (((SubPlan 1)) = 5)
+                           ->  Seq Scan on foo_predicate_pushdown
+                                 SubPlan 1
+                                   ->  Result
+                                         Filter: (bar_predicate_pushdown.c = foo_predicate_pushdown.b)
+                                         ->  Materialize
+                                               ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                                     ->  Seq Scan on bar_predicate_pushdown
+ Optimizer: GPORCA
+(17 rows)
+
+DROP TABLE foo_predicate_pushdown;
+DROP TABLE bar_predicate_pushdown;
