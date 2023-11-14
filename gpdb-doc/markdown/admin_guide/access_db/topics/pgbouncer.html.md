@@ -193,6 +193,51 @@ auth_hba_file = hba_bouncer_for_ldap.conf
 ...
 ```
 
+#### <a id="pgb_ldap_encrypt_passwd"></a>About Specifying an Encrypted LDAP Password
+
+Starting in Greenplum Database version 6.26, PgBouncer supports encrypted LDAP passwords. To utilize an encrypted LDAP password with PgBouncer, you must:
+
+- Place the encrypted password in the `${HOME}/.ldapbindpass` file.
+- Specify `ldapbindpasswd="$bindpasswd"` in the HBA-based authentication file for PgBouncer.
+- Specify the file system path to the encryption key in the `auth_key_file` setting in the `pgbouncer.ini` configuration file.
+- Specify the encryption cipher in the `auth_cipher` setting in the `pgbouncer.ini` configuration file.
+
+The following example commands create an encrypted password and place it in `${HOME}/.ldapbindpass`:
+
+```
+# generate a key file named ldkeyfile
+$ openssl rand -base64 256 | tr -d '\n' > ldkeyfile
+
+# encrypt the password
+$ encrypted_passwd=$(echo -n "your_secret_password_here" | openssl enc -aes-256-cbc -base64 -md sha256 -pass file:ldkeyfile
+
+# copy the encrypted password to required location
+$ echo -n $encrypted_passwd > "${HOME}/.ldapbindpass"
+```
+
+An excerpt of an example PgBouncer HBA file named `hba_bouncer_with_ldap_encrypted.conf` that specifies LDAP authentication with an encrypted password follows:
+
+``` pre
+host all user2 0.0.0.0/0 ldap ldapserver=<ldap-server-address> ldapbindpasswd="\$bindpasswd" ldapbasedn="CN=Users,DC=greenplum,DC=org" ldapbinddn="CN=Administrator,CN=Users,DC=greenplum,DC=org" ldapsearchattribute="SomeAttrName"
+```
+
+Example excerpt from the related `pgbouncer.ini` configuration file:
+
+``` pre
+[databases]
+* = port = 6000 host=127.0.0.1
+
+[pgbouncer]
+listen_addr = 0.0.0.0
+listen_port = 6432
+
+auth_type = hba
+auth_hba_file = hba_bouncer_with_ldap_encrypted.conf
+auth_key_file = /home/user2/ldkeyfile
+auth_cipher = -aes-128-ecb
+...
+```
+
 ## <a id="pgb_start"></a>Starting PgBouncer 
 
 You can run PgBouncer on the Greenplum Database master or on another server. If you install PgBouncer on a separate server, you can easily switch clients to the standby master by updating the PgBouncer configuration file and reloading the configuration using the PgBouncer Administration Console.
