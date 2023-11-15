@@ -184,12 +184,12 @@ auth\_type
     - `any`: Like the `trust` method, but the username supplied is ignored. Requires that all databases are configured to log in with a specific user. Additionally, the console database allows any user to log in as admin.
 
 auth_key_file
-:   If you are connecting to LDAP with an encrypted password, `auth_key_file` identifies the file system location of the encryption key. Refer to the [About Specifying an Encrypted LDAP Password](../../admin_guide/access_db/topics/pgbouncer.html#pgb_ldap_encrypt_passwd) for more information.
+:   If you are connecting to LDAP with an encrypted password, `auth_key_file` identifies the file system location of the encryption key. Refer to [About Specifying an Encrypted LDAP Password](../../admin_guide/access_db/topics/pgbouncer.html#pgb_ldap_encrypt_passwd) for more information.
 
     Default: not set
 
 auth_cipher
-:   If you are connecting to LDAP with an encrypted password, `auth_cipher` identifies the cipher algorithm for password authentication. PgBouncer accepts any cipher supported by OpenSSL on the system. When FIPS mode is enabled, specify only a cipher that is considered safe in FIPS mode. Refer to the [About Specifying an Encrypted LDAP Password](../../admin_guide/access_db/topics/pgbouncer.html#pgb_ldap_encrypt_passwd) for more information.
+:   If you are connecting to LDAP with an encrypted password, `auth_cipher` identifies the cipher algorithm for password authentication. PgBouncer accepts any cipher supported by OpenSSL on the system. When FIPS mode is enabled, specify only a cipher that is considered safe in FIPS mode. Refer to [About Specifying an Encrypted LDAP Password](../../admin_guide/access_db/topics/pgbouncer.html#pgb_ldap_encrypt_passwd) for more information.
 
     Default: `aes-256-cbc`
 
