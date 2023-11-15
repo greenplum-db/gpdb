@@ -4239,7 +4239,6 @@ merge_leaf_stats(VacAttrStatsP stats,
 
 		stawidth = ((Form_pg_statistic) GETSTRUCT(heaptupleStats[i]))->stawidth;
 		stanullfrac = ((Form_pg_statistic) GETSTRUCT(heaptupleStats[i]))->stanullfrac;
-
 		colAvgWidth = colAvgWidth + (stawidth > 0 ? stawidth : 0) * relTuples[i];
 		nullCount = nullCount + (stanullfrac > 0.0 ? stanullfrac : 0.0) * relTuples[i];
 
@@ -4282,7 +4281,9 @@ merge_leaf_stats(VacAttrStatsP stats,
 			samplehll_count++;
 			totalhll_count++;
 
-			// get the max ndistinct value from a single partition
+			// get the max ndistinct value from a single partition. If stadistinct < 0, it represents
+			// the fraction of tuples that are distinct. We multiply this by the number of tuples
+			// to get the number of distinct values to compare later on
 			stadistinct = ((Form_pg_statistic) GETSTRUCT(heaptupleStats[i]))->stadistinct;
 			if (stadistinct < 0)
 				stadistinct = -1 * stadistinct * relTuples[i];
