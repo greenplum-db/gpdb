@@ -218,7 +218,7 @@ $ echo -n $encrypted_passwd > "${HOME}/.ldapbindpass"
 An excerpt of an example PgBouncer HBA file named `hba_bouncer_with_ldap_encrypted.conf` that specifies LDAP authentication with an encrypted password follows:
 
 ``` pre
-host all user2 0.0.0.0/0 ldap ldapserver=<ldap-server-address> ldapbindpasswd="\$bindpasswd" ldapbasedn="CN=Users,DC=greenplum,DC=org" ldapbinddn="CN=Administrator,CN=Users,DC=greenplum,DC=org" ldapsearchattribute="SomeAttrName"
+host all user2 0.0.0.0/0 ldap ldapserver=<ldap-server-address> ldapbindpasswd="$bindpasswd" ldapbasedn="CN=Users,DC=greenplum,DC=org" ldapbinddn="CN=Administrator,CN=Users,DC=greenplum,DC=org" ldapsearchattribute="SomeAttrName"
 ```
 
 Example excerpt from the related `pgbouncer.ini` configuration file:
