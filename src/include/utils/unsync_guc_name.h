@@ -222,6 +222,7 @@
 		"gp_resource_group_bypass_direct_dispatch",
 		"gp_resource_group_queuing_timeout",
 		"gp_resource_group_move_timeout",
+		"gp_resource_group_cgroup_parent",
 		"gp_resource_manager",
 		"gp_resqueue_memory_policy",
 		"gp_resqueue_priority",

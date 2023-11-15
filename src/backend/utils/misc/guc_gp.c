@@ -224,6 +224,7 @@ double		gp_resource_group_cpu_limit;
 bool		gp_resource_group_bypass;
 bool		gp_resource_group_bypass_catalog_query;
 bool		gp_resource_group_bypass_direct_dispatch;
+char	   *gp_resource_group_cgroup_parent;
 
 /* Metrics collector debug GUC */
 bool		vmem_process_interrupt = false;
@@ -4573,6 +4574,17 @@ struct config_string ConfigureNamesString_gp[] =
 		gpvars_check_gp_resource_manager_policy,
 		gpvars_assign_gp_resource_manager_policy,
 		gpvars_show_gp_resource_manager_policy,
+	},
+
+	{
+		{"gp_resource_group_cgroup_parent", PGC_POSTMASTER, RESOURCES,
+			gettext_noop("The root of gpdb cgroup hierarchy."),
+			NULL,
+			GUC_SUPERUSER_ONLY
+		},
+		&gp_resource_group_cgroup_parent,
+		"gpdb.service",
+		NULL, NULL, NULL
 	},
 
 	/* for pljava */

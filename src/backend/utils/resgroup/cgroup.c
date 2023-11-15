@@ -174,7 +174,7 @@ buildPathSafe(Oid group,
 		 * for cgroup v2, we just have the top level and child level,
 		 * don't need to care about the component.
 		 */
-		base_dir = base == BASEDIR_GPDB ? "gpdb" : "";
+		base_dir = base == BASEDIR_GPDB ? gp_resource_group_cgroup_parent : "";
 		len = snprintf(path, path_size, "%s/%s%s/%s",
 					   cgroupSystemInfo->cgroup_dir, base_dir, group_dir, filename);
 	}
