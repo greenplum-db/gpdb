@@ -404,6 +404,13 @@ show_version(bool all)
 	printf("PostgreSQL " PG_VERSION "\n");
 }
 
+static void
+show_gp_version(bool all)
+{
+	if (all)
+		printf("GP_VERSION = ");
+	printf("Greenplum " GP_VERSION "\n");
+}
 
 /*
  * Table of known information items
@@ -440,6 +447,7 @@ static const InfoItem info_items[] = {
 	{"--ldflags_sl", show_ldflags_sl},
 	{"--libs", show_libs},
 	{"--version", show_version},
+	{"--gp_version", show_gp_version},
 	{NULL, NULL}
 };
 
@@ -476,6 +484,7 @@ help(void)
 	printf(_("  --ldflags_sl          show LDFLAGS_SL value used when PostgreSQL was built\n"));
 	printf(_("  --libs                show LIBS value used when PostgreSQL was built\n"));
 	printf(_("  --version             show the PostgreSQL version\n"));
+	printf(_("  --gp_version          show the Greenplum version\n"));
 	printf(_("  -?, --help            show this help, then exit\n"));
 	printf(_("\nWith no arguments, all known items are shown.\n\n"));
 	printf(_("Report bugs to <bugs@greenplum.org>.\n"));
