@@ -60,8 +60,8 @@ CPhysicalLeftOuterHashJoin::~CPhysicalLeftOuterHashJoin() = default;
 //---------------------------------------------------------------------------
 CDistributionSpec *
 CPhysicalLeftOuterHashJoin::PdsDeriveFromHashedChildren(
-	CMemoryPool *mp, CDistributionSpec *pdsOuter,
-	CDistributionSpec *pdsInner) const
+	CMemoryPool *mp, CDistributionSpec *pdsOuter, CDistributionSpec *pdsInner,
+	BOOL isselfjoin) const
 {
 	GPOS_ASSERT(nullptr != pdsOuter);
 	GPOS_ASSERT(nullptr != pdsInner);
@@ -77,9 +77,12 @@ CPhysicalLeftOuterHashJoin::PdsDeriveFromHashedChildren(
 		// if both sides are hashed on subsets of hash join keys, join's output can be
 		// seen as distributed on outer spec or (equivalently) on inner spec,
 		// so create a new spec and mark outer and inner as equivalent
-
-		CDistributionSpecHashed *pdshashedInnerCopy =
-			pdshashedInner->Copy(mp, false);
+		//
+		// if this is a self join and both sides are null colocated then we can
+		// assume the result is also null colocated.
+		CDistributionSpecHashed *pdshashedInnerCopy = pdshashedInner->Copy(
+			mp, pdshashedOuter->FNullsColocated() &&
+					pdshashedInner->FNullsColocated() && isselfjoin);
 		CDistributionSpecHashed *combined_hashed_spec =
 			pdshashedOuter->Combine(mp, pdshashedInnerCopy);
 		pdshashedInnerCopy->Release();
@@ -116,8 +119,15 @@ CPhysicalLeftOuterHashJoin::PdsDerive(CMemoryPool *mp,
 	if (CDistributionSpec::EdtHashed == pdsOuter->Edt() &&
 		CDistributionSpec::EdtHashed == pdsInner->Edt())
 	{
+		CTableDescriptor *tabOuter =
+			exprhdl.DeriveTableDescriptor(0 /*child_index*/);
+		CTableDescriptor *tabInner =
+			exprhdl.DeriveTableDescriptor(1 /*child_index*/);
+		BOOL isselfjoin = (nullptr != tabOuter && nullptr != tabInner)
+							  ? tabOuter->MDId()->Equals(tabInner->MDId())
+							  : false;
 		CDistributionSpec *pdsDerived =
-			PdsDeriveFromHashedChildren(mp, pdsOuter, pdsInner);
+			PdsDeriveFromHashedChildren(mp, pdsOuter, pdsInner, isselfjoin);
 		if (nullptr != pdsDerived)
 		{
 			return pdsDerived;

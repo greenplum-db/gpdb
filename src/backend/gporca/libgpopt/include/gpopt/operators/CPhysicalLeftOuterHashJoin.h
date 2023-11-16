@@ -31,7 +31,7 @@ private:
 	// helper for deriving hash join distribution from hashed children
 	CDistributionSpec *PdsDeriveFromHashedChildren(
 		CMemoryPool *mp, CDistributionSpec *pdsOuter,
-		CDistributionSpec *pdsInner) const;
+		CDistributionSpec *pdsInner, BOOL isselfjoin = false) const;
 
 public:
 	CPhysicalLeftOuterHashJoin(const CPhysicalLeftOuterHashJoin &) = delete;
