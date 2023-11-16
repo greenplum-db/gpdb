@@ -86,6 +86,9 @@ bool build_gpqeid_param(char *buf, int bufsz, bool is_writer, int identifier, in
 extern void makeOptions(char **options, char **diff_options);
 extern bool segment_failure_due_to_recovery(const char *error_message);
 extern bool segment_failure_due_to_missing_writer(const char *error_message);
+#ifdef FAULT_INJECTOR
+extern bool segment_failure_due_to_fault_injector(const char *error_message);
+#endif
 
 /*
  * cdbgang_parse_gpqeid_params

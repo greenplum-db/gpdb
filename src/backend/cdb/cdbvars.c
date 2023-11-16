@@ -160,6 +160,7 @@ int			gp_dtx_recovery_prepared_period = 300;
  * that a segment is in recovery mode we may be able to retry.
  */
 int			gp_gang_creation_retry_count = 5;	/* disable by default */
+bool		gp_gang_creation_retry_non_recovery = true; /* enable non-recovery retries by default */
 int			gp_gang_creation_retry_timer = 2000;	/* 2000ms */
 
 /*

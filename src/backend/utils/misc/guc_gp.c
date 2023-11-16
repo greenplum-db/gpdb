@@ -913,6 +913,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		NULL, NULL, NULL
 	},
 
+	{
+		{"gp_gang_creation_retry_non_recovery", PGC_USERSET, QUERY_TUNING_METHOD,
+		 gettext_noop("Retry gang creation if non-recovery failures are encountered during dispatch."),
+		 NULL,
+		 GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_gang_creation_retry_non_recovery,
+		true,
+		NULL, NULL, NULL
+	},
 
 #ifdef USE_ASSERT_CHECKING
 	{

@@ -318,6 +318,7 @@ extern int	gp_dtx_recovery_interval;
 extern int	gp_dtx_recovery_prepared_period;
 
 extern int gp_gang_creation_retry_count; /* How many retries ? */
+extern bool gp_gang_creation_retry_non_recovery; /* Retry non-recovery related failures ? */
 extern int gp_gang_creation_retry_timer; /* How long between retries */
 
 /* GUCs to control TCP keepalive settings for dispatch libpq connections */

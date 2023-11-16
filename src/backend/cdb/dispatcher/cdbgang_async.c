@@ -51,6 +51,7 @@ cdbgang_createGang_async(List *segments, SegmentType segmentType)
 	Gang	*newGangDefinition;
 	int		create_gang_retry_counter = 0;
 	int		in_recovery_mode_count = 0;
+	int		other_failures = 0;
 	int		successful_connections = 0;
 	int		poll_timeout = 0;
 	int		i = 0;
@@ -106,6 +107,7 @@ create_gang_retry:
 	Assert(newGangDefinition->size == size);
 	successful_connections = 0;
 	in_recovery_mode_count = 0;
+	other_failures = 0;
 	retry = false;
 
 	/*
@@ -240,16 +242,49 @@ create_gang_retry:
 						if (segment_failure_due_to_recovery(PQerrorMessage(segdbDesc->conn)))
 						{
 							in_recovery_mode_count++;
+							/* Mark it as done, so we can consider retrying */
 							connStatusDone[i] = true;
 							elog(LOG, "segment is in reset/recovery mode (%s)", segdbDesc->whoami);
 						}
-						else
+						else if (segment_failure_due_to_missing_writer(PQerrorMessage(segdbDesc->conn)))
 						{
-							if (segment_failure_due_to_missing_writer(PQerrorMessage(segdbDesc->conn)))
-								markCurrentGxactWriterGangLost();
+							markCurrentGxactWriterGangLost();
 							ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 											errmsg("failed to acquire resources on one or more segments"),
 											errdetail("%s (%s)", PQerrorMessage(segdbDesc->conn), segdbDesc->whoami)));
+						}
+#ifdef FAULT_INJECTOR
+						else if (segment_failure_due_to_fault_injector(PQerrorMessage(segdbDesc->conn)))
+						{
+							ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+								errmsg("failed to acquire resources on one or more segments: fault injector"),
+								errdetail("%s (%s)", PQerrorMessage(segdbDesc->conn), segdbDesc->whoami)));
+						}
+#endif
+						else if (gp_gang_creation_retry_non_recovery)
+						{
+							/* Failed for some other reason */
+							if (gp_gang_creation_retry_count <= 0 ||
+								create_gang_retry_counter >= gp_gang_creation_retry_count)
+							{
+								/*
+								 * If we exhausted all of our retries, ERROR out
+								 * with the appropriate message.
+								 */
+								ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+									errmsg("failed to acquire resources on one or more segments"),
+									errdetail("%s (%s)", PQerrorMessage(segdbDesc->conn), segdbDesc->whoami)));
+							}
+
+							/* Mark it as done, so we can consider retrying below */
+							connStatusDone[i] = true;
+							other_failures++;
+						}
+						else
+						{
+							ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+								errmsg("failed to acquire resources on one or more segments"),
+								errdetail("%s (%s)", PQerrorMessage(segdbDesc->conn), segdbDesc->whoami)));
 						}
 						break;
 
@@ -316,7 +351,7 @@ create_gang_retry:
 		/* some segments are in reset/recovery mode */
 		if (successful_connections != size)
 		{
-			Assert(successful_connections + in_recovery_mode_count == size);
+			Assert(successful_connections + in_recovery_mode_count + other_failures == size);
 
 			if (gp_gang_creation_retry_count <= 0 ||
 				create_gang_retry_counter++ >= gp_gang_creation_retry_count)

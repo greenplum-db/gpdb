@@ -219,6 +219,29 @@ segment_failure_due_to_missing_writer(const char *error_message)
 	return false;
 }
 
+#ifdef FAULT_INJECTOR
+bool
+segment_failure_due_to_fault_injector(const char *error_message)
+{
+	char	   *fatal = NULL,
+			   *ptr = NULL;
+	int			fatal_len = 0;
+
+	if (error_message == NULL)
+		return false;
+
+	fatal = _("FATAL");
+	fatal_len = strlen(fatal);
+
+	ptr = strstr(error_message, fatal);
+	if ((ptr != NULL) && ptr[fatal_len] == ':' &&
+		strstr(error_message, "fault triggered"))
+		return true;
+
+	return false;
+}
+#endif
+
 
 /*
  * Reads the GP catalog tables and build a CdbComponentDatabases structure.
