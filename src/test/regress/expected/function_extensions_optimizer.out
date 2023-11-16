@@ -501,11 +501,12 @@ CREATE TABLE t4_function_scan AS SELECT 444, (1 / (0* random()))::text UNION ALL
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named '?column?' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ERROR:  division by zero  (entry db 10.146.0.4:7000 pid=20360)
--- Temp file number after running INITPLAN function. All the files should've
--- been cleaned up
+-- Temp file number after running INITPLAN function. All the files generated during this time should've
+-- been cleaned up, so the number of files should not be more than previously (it could be less, if some
+-- existing temp file happens to be cleaned up at the same time).
 SELECT get_temp_file_num() AS num_temp_files_after
 \gset
-SELECT :num_temp_files_before = :num_temp_files_after;
+SELECT :num_temp_files_before >= :num_temp_files_after;
  ?column? 
 ----------
  t
