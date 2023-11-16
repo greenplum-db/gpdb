@@ -428,6 +428,24 @@ explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not disti
 explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 is distinct from b3;
 explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 = b3;
 
+-- Test hashed distribution spec derived from a self join
+truncate o1;
+truncate o2;
+
+insert into o1 select i, i from generate_series(1,9) i;
+insert into o1 values (NULL, NULL);
+insert into o2 select i, NULL from generate_series(11,100) i;
+
+analyze o1;
+analyze o2;
+
+-- Self LOJ on distribution keys of null colocated children produces a null
+-- colocated result. If the join result is joined against another table on
+-- distribution keys then an additional redistribute motion is not needed
+-- because the null values are already colocated.
+explain select * from o1 t1 left outer join o1 on t1.a1=o1.a1 left outer join o2 on o1.a1=o2.a2;
+select * from o1 t1 left outer join o1 on t1.a1=o1.a1 left outer join o2 on o1.a1=o2.a2;
+
 -- Test case from community Github PR 13722
 create table t_13722(id int, tt timestamp)
   distributed by (id);

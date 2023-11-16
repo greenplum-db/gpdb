@@ -3807,6 +3807,49 @@ explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not disti
  Optimizer: Postgres query optimizer
 (18 rows)
 
+-- Test hashed distribution spec derived from a self join
+truncate o1;
+truncate o2;
+insert into o1 select i, i from generate_series(1,9) i;
+insert into o1 values (NULL, NULL);
+insert into o2 select i, NULL from generate_series(11,100) i;
+analyze o1;
+analyze o2;
+-- Self LOJ on distribution keys of null colocated children produces a null
+-- colocated result. If the join result is joined against another table on
+-- distribution keys then an additional redistribute motion is not needed
+-- because the null values are already colocated.
+explain select * from o1 t1 left outer join o1 on t1.a1=o1.a1 left outer join o2 on o1.a1=o2.a2;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2.15..3.74 rows=10 width=24)
+   ->  Hash Right Join  (cost=2.15..3.61 rows=3 width=24)
+         Hash Cond: (o1.a1 = t1.a1)
+         ->  Hash Right Join  (cost=1.08..2.49 rows=3 width=16)
+               Hash Cond: (o2.a2 = o1.a1)
+               ->  Seq Scan on o2  (cost=0.00..1.30 rows=30 width=8)
+               ->  Hash  (cost=1.03..1.03 rows=3 width=8)
+                     ->  Seq Scan on o1  (cost=0.00..1.03 rows=3 width=8)
+         ->  Hash  (cost=1.03..1.03 rows=3 width=8)
+               ->  Seq Scan on o1 t1  (cost=0.00..1.03 rows=3 width=8)
+ Optimizer: Postgres-based planner
+(11 rows)
+
+select * from o1 t1 left outer join o1 on t1.a1=o1.a1 left outer join o2 on o1.a1=o2.a2;
+ a1 | b1 | a1 | b1 | a2 | b2 
+----+----+----+----+----+----
+  1 |  1 |  1 |  1 |    |   
+  6 |  6 |  6 |  6 |    |   
+  5 |  5 |  5 |  5 |    |   
+  9 |  9 |  9 |  9 |    |   
+  8 |  8 |  8 |  8 |    |   
+  4 |  4 |  4 |  4 |    |   
+  7 |  7 |  7 |  7 |    |   
+  2 |  2 |  2 |  2 |    |   
+  3 |  3 |  3 |  3 |    |   
+    |    |    |    |    |   
+(10 rows)
+
 -- Test case from community Github PR 13722
 create table t_13722(id int, tt timestamp)
   distributed by (id);
