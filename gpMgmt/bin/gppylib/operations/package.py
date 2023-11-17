@@ -27,7 +27,7 @@ class SyncPackages(Operation):
     def __init__(self):
         self.gppkg_path = None
         try:
-            self.gppkg_path = findCmdInPath('gppkg')
+            self.gppkg_path = findCmdInPath('gppkg', missing_ok=True)
         except CommandNotFoundException:
             pass
 
