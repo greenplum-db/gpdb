@@ -3139,8 +3139,7 @@ create_ctescan_path(PlannerInfo *root, RelOptInfo *rel,
 	 * We can't extract these two values from the subplan, so we simple set
 	 * them to their worst case here.
 	 *
-	 * GPDB_96_MERGE_FIXME: we do have the subpath, at least if it's not a
-	 * shared cte
+	 * GPDB: we do have the subpath, at least if it's not a shared cte.
 	 */
 	pathnode->motionHazard = true;
 	pathnode->rescannable = false;
