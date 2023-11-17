@@ -804,8 +804,7 @@ class GpStop:
         else:
             base.join_and_indicate_progress(self.pool)
 
-        self.pool.check_results()
-        self.pool.empty_completed_items()
+        self.pool.empty_completed_items(throw_on_error=True)
 
         if len(self.pool.failed) < 1:
             return 0

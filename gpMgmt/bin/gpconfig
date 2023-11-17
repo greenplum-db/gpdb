@@ -353,8 +353,6 @@ def do_change(options):
                 LOGGER.error('failed updating the postgresql.conf files on host: %s msg:%s' %
                              (i.remoteHost, i.get_results().stderr))
                 failure = True
-
-        pool.check_results()
     except Exception as err:
         failure = True
         LOGGER.error('errors in job:')
@@ -485,7 +483,7 @@ def get_gucs_from_files(guc):
                 FileSegmentGuc([cmd.segInfo.getSegmentContentId(), guc, cmd.get_value(),
                                 cmd.segInfo.getSegmentDbId()]))
 
-    pool.check_results()
+    pool.empty_completed_items(throw_on_error=True)
     pool.haltWork()
     pool.joinWorkers()
 

@@ -82,8 +82,7 @@ class WorkerPoolTest(unittest.TestCase):
         result.wasSuccessful.return_value = True
 
         self.pool.addCommand(cmd)
-        self.pool.join()
-        self.pool.check_results()
+        self.pool.join_and_check_results()
 
     def test_check_results_throws_exception_at_first_failure(self):
         cmd = mock.Mock(spec=Command)
@@ -95,10 +94,9 @@ class WorkerPoolTest(unittest.TestCase):
         result.wasSuccessful.return_value = False
 
         self.pool.addCommand(cmd)
-        self.pool.join()
 
         with self.assertRaises(ExecutionError):
-            self.pool.check_results()
+            self.pool.join_and_check_results()
 
     def test_join_with_timeout_returns_done_immediately_if_there_is_nothing_to_do(self):
         start = time.time()
@@ -195,8 +193,7 @@ class WorkerPoolTest(unittest.TestCase):
 
         self.pool.addCommand(cmd)
 
-        self.pool.join()
-        self.pool.check_results()
+        self.pool.join_and_check_results()
 
         self.assertEqual(self.pool.assigned, 0)
 

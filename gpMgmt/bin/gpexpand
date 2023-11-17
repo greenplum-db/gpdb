@@ -783,8 +783,7 @@ class SegmentTemplate:
                         whole_file=True)
             self.pool.addCommand(cpCmd)
 
-        self.pool.join()
-        self.pool.check_results()
+        self.pool.join_and_check_results()
 
     def _start_new_primary_segments(self):
         newSegments = self.gparray.getExpansionSegDbList()
@@ -805,8 +804,7 @@ class SegmentTemplate:
                 , pg_ctl_wait=True
                 , timeout=SEGMENT_TIMEOUT_DEFAULT)
             self.pool.addCommand(segStartCmd)
-        self.pool.join()
-        self.pool.check_results()
+        self.pool.join_and_check_results()
 
     def _stop_new_primary_segments(self):
         newSegments = self.gparray.getExpansionSegDbList()
@@ -822,8 +820,7 @@ class SegmentTemplate:
                 , remoteHost=seg.getSegmentHostName()
             )
             self.pool.addCommand(segStopCmd)
-        self.pool.join()
-        self.pool.check_results()
+        self.pool.join_and_check_results()
 
     def _configure_new_segments(self):
         """Configures new segments.  This includes modifying the postgresql.conf file
@@ -842,8 +839,7 @@ class SegmentTemplate:
                                             ctxt=REMOTE, remoteHost=host)
             self.pool.addCommand(segCfgCmd)
 
-        self.pool.join()
-        self.pool.check_results()
+        self.pool.join_and_check_results()
 
         # Map primary and mirror hostnames to expanded segment's contentid
         expanded_host_content = defaultdict(lambda: [])
@@ -917,8 +913,7 @@ class SegmentTemplate:
                 rmCmd = RemoveDirectory('gpexpand remove new segment data directory: %s:%s' % (hostname, datadir),
                                         datadir, ctxt=REMOTE, remoteHost=hostname)
                 pool.addCommand(rmCmd)
-        pool.join()
-        pool.check_results()
+        pool.join_and_check_results()
 
     def cleanup(self):
         """Cleans up temporary files from the local system and new segment hosts"""
@@ -1423,8 +1418,7 @@ class gpexpand:
                 , pg_ctl_wait=True
                 , timeout=SEGMENT_TIMEOUT_DEFAULT)
             self.pool.addCommand(segStartCmd)
-        self.pool.join()
-        self.pool.check_results()
+        self.pool.join_and_check_results()
 
         """
         Build the list of delete statements based on the COORDINATOR_ONLY_TABLES
@@ -1453,10 +1447,7 @@ class gpexpand:
                                                          )
                 self.pool.addCommand(execSQLCmd)
 
-        self.pool.join()
-        ### need to fix self.pool.check_results(). Call getCompletedItems to clear the queue for now.
-        self.pool.check_results()
-        self.pool.getCompletedItems()
+        self.pool.join_and_check_results()
 
     # --------------------------------------------------------------------------
     def restore_coordinator(self):

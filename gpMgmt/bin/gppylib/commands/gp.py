@@ -1177,8 +1177,7 @@ def distribute_tarball(queue,list,tarball):
             (head,tail)=os.path.split(datadir)
             rsync_cmd=Rsync(name="copy coordinator",srcFile=tarball,dstHost=hostname,dstFile=head, ignore_times=True, whole_file=True)
             queue.addCommand(rsync_cmd)
-        queue.join()
-        queue.check_results()
+        queue.join_and_check_results()
         logger.debug("distributeTarBall finished")
 
 
