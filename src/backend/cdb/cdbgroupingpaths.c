@@ -248,6 +248,9 @@ fetch_multi_dqas_info(PlannerInfo *root,
 static bool
 check_multi_dqas_with_agg(cdb_agg_planning_context *ctx);
 
+static bool
+check_multi_dqas_pk(cdb_agg_planning_context *ctx);
+
 static DQAType
 recognize_dqa_type(cdb_agg_planning_context *ctx);
 
@@ -513,13 +516,16 @@ cdb_create_multistage_grouping_paths(PlannerInfo *root,
 			break;
 		case MULTI_DQAS:
 			{
-				fetch_multi_dqas_info(root, cheapest_path, &ctx, &info);
+				if (check_multi_dqas_pk(&ctx))
+				{
+					fetch_multi_dqas_info(root, cheapest_path, &ctx, &info);
 
-				add_multi_dqas_hash_agg_path(root,
+					add_multi_dqas_hash_agg_path(root,
 											 cheapest_path,
 											 &ctx,
 											 output_rel,
 											 &info);
+				}
 			}
 			break;
 		case MULTI_DQAS_WITHAGG:
@@ -2359,6 +2365,26 @@ recognize_dqa_type(cdb_agg_planning_context *ctx)
 	return ctx->type;
 }
 
+static bool
+check_multi_dqas_pk(cdb_agg_planning_context *ctx)
+{
+	ListCell 	*lc = NULL;
+	Index 		idx = 0;
+
+	foreach_with_count(lc, ctx->partial_grouping_target->exprs, idx)
+	{
+		Node 	*node = lfirst(lc);
+
+		if (IsA(node, Aggref))
+			continue;
+
+		if (!ctx->partial_grouping_target->sortgrouprefs[idx])
+			return false;
+	}
+
+	return true;
+}
+
 /*
  * check_multi_dqas_with_agg
  * 		check support multi-dqa with normal agg or not
@@ -2379,6 +2405,9 @@ check_multi_dqas_with_agg(cdb_agg_planning_context *ctx)
 	ListCell 	*lc = NULL;
 	ListCell 	*lcc = NULL;
 	List 		*nvars = NULL;
+
+	if (!check_multi_dqas_pk(ctx))
+		return false;
 
 	foreach(lc, ctx->partial_grouping_target->exprs)
 	{

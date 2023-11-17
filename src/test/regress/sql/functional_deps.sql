@@ -210,3 +210,44 @@ EXECUTE foo;
 ALTER TABLE articles DROP CONSTRAINT articles_pkey RESTRICT;
 
 EXECUTE foo;  -- fail
+
+-- OK, test GPDB case especially on multi-stage agg plan
+set enable_groupagg = off;
+set gp_eager_two_phase_agg = on;
+
+create table funcdep1(a int primary key, b int, c int, d int);
+create table funcdep2(a int, b int, c int, d int);
+
+insert into funcdep1 values(1,1,1,1);
+insert into funcdep1 values(2,1,1,1);
+insert into funcdep1 values(3,1,1,1);
+insert into funcdep2 values(1,1,1,1);
+insert into funcdep2 values(2,1,1,1);
+insert into funcdep2 values(3,1,1,1);
+
+explain (costs off) select sum(t2.a), t1.a, t1.b, t1.c from funcdep1 t1 join funcdep2 t2 on t1.b = t2.b group by t1.a;
+select sum(t2.a), t1.a, t1.b, t1.c from funcdep1 t1 join funcdep2 t2 on t1.b = t2.b group by t1.a;
+select distinct(t1.b), sum(t2.a), t1.a, t1.b, t1.c from funcdep1 t1 join funcdep2 t2 on t1.b = t2.b group by t1.a;
+select distinct(t1.b), count(distinct t1.c), sum(t2.a), t1.a, t1.b, t1.c from funcdep1 t1 join funcdep2 t2 on t1.b = t2.b group by t1.a;
+
+-- something wrong if we refre table t2 column
+select sum(t2.a), t2.a, t1.b, t1.c from funcdep1 t1 join funcdep2 t2 on t1.b = t2.b group by t1.a;
+
+-- Error for grouping sets that is align to upstream
+select sum(b), c, d, grouping(a) from funcdep1 group by grouping sets((a), ());
+select sum(b), c, d, grouping(a) from funcdep1 group by rollup(a);
+select sum(b), c, d, grouping(a) from funcdep1 group by cube(a);
+
+explain (costs off) select count(distinct b), c, d from funcdep1 group by a;
+select count(distinct b), c, d from funcdep1 group by a;
+explain (costs off) select count(distinct b), sum(b), b, c from funcdep1 group by a;
+select count(distinct b), sum(b), c from funcdep1 group by a;
+explain (costs off) select count(distinct b), count(distinct c), b, c from funcdep1 group by a;
+select count(distinct b), count(distinct c), b, c from funcdep1 group by a;
+explain (costs off) select count(distinct b), count(distinct c), sum(b), b, c from funcdep1 group by a;
+select count(distinct b), count(distinct c), sum(b), b, c from funcdep1 group by a;
+
+reset enable_groupagg;
+reset gp_eager_two_phase_agg;
+drop table funcdep1;
+drop table funcdep2;
