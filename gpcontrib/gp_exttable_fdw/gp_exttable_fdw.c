@@ -324,7 +324,7 @@ Datum pg_exttable(PG_FUNCTION_ARGS)
 			nulls[4] = true;
 
 		/*
-		 * options. Since our document not contains the OPTION caluse, so we
+		 * options. Since our document not contains the OPTION clause, so we
 		 * assume no external table options in used for now.  Except
 		 * gpextprotocol.c.
 		 */
