@@ -75,13 +75,6 @@ extern char *regexp_fixed_prefix(text *text_re, bool case_insensitive,
 /* ruleutils.c */
 extern bool quote_all_identifiers;
 extern char *pg_get_constraintexpr_string(Oid constraintId);
-extern const char *quote_identifier(const char *ident);
-extern char *quote_qualified_identifier(const char *qualifier,
-						   const char *ident);
-extern void generate_operator_clause(fmStringInfo buf,
-						 const char *leftop, Oid leftoptype,
-						 Oid opoid,
-						 const char *rightop, Oid rightoptype);
 
 extern const char *quote_identifier(const char *ident);
 extern char *quote_qualified_identifier(const char *qualifier,
