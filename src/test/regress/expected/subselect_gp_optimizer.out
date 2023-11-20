@@ -3614,7 +3614,7 @@ explain (costs off) select * from (
 (17 rows)
 
 DROP TABLE foo_predicate_pushdown;
-DROP TABLE bar_predicate_pushdown
+DROP TABLE bar_predicate_pushdown;
 --
 -- Test case for ORCA semi join with random table
 -- See https://github.com/greenplum-db/gpdb/issues/16611
