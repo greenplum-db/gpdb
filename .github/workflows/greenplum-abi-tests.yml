@@ -12,7 +12,7 @@ on:
 
   push:
     branches:
-      - 6X_STABLE
+      - main
     paths:
       - 'concourse/scripts/**'
       - 'src/**'
