@@ -778,16 +778,31 @@ dumpResGroups(PGconn *conn)
 			i_cpu_weight,
 			i_cpuset;
 
-	printfPQExpBuffer(buf, "SELECT g.rsgname AS groupname, "
-					  "t1.value AS concurrency, "
-					  "t2.value AS cpu_max_percent, "
-					  "t3.value AS cpu_weight, "
-					  "t4.value AS cpuset "
-					  "FROM pg_resgroup g "
-					  "     JOIN pg_resgroupcapability t1 ON g.oid = t1.resgroupid AND t1.reslimittype = 1 "
-					  "     JOIN pg_resgroupcapability t2 ON g.oid = t2.resgroupid AND t2.reslimittype = 2 "
-					  "     JOIN pg_resgroupcapability t3 ON g.oid = t3.resgroupid AND t3.reslimittype = 3 "
-					  "LEFT JOIN pg_resgroupcapability t4 ON g.oid = t4.resgroupid AND t4.reslimittype = 4;");
+	if (server_version >= GPDB7_MAJOR_PGVERSION)
+	{
+		printfPQExpBuffer(buf, "SELECT g.rsgname AS groupname, "
+						  "t1.value AS concurrency, "
+						  "t2.value AS cpu_max_percent, "
+						  "t3.value AS cpu_weight, "
+						  "t4.value AS cpuset "
+						  "FROM pg_resgroup g "
+						  "     JOIN pg_resgroupcapability t1 ON g.oid = t1.resgroupid AND t1.reslimittype = 1 "
+						  "     JOIN pg_resgroupcapability t2 ON g.oid = t2.resgroupid AND t2.reslimittype = 2 "
+						  "     JOIN pg_resgroupcapability t3 ON g.oid = t3.resgroupid AND t3.reslimittype = 3 "
+						  "LEFT JOIN pg_resgroupcapability t4 ON g.oid = t4.resgroupid AND t4.reslimittype = 4;");
+	}
+	else
+	{
+		printfPQExpBuffer(buf, "SELECT g.rsgname AS groupname, "
+						  "t1.value AS concurrency, "
+						  "t2.value AS cpu_max_percent, "
+						  "     100 AS cpu_weight, "
+						  "t7.value AS cpuset "
+						  "FROM pg_resgroup g "
+						  "     JOIN pg_resgroupcapability t1 ON g.oid = t1.resgroupid AND t1.reslimittype = 1 "
+						  "     JOIN pg_resgroupcapability t2 ON g.oid = t2.resgroupid AND t2.reslimittype = 2 "
+						  "LEFT JOIN pg_resgroupcapability t7 ON g.oid = t7.resgroupid AND t7.reslimittype = 7;");
+	}
 
 	res = executeQuery(conn, buf->data);
 
