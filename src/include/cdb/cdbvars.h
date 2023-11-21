@@ -692,6 +692,7 @@ typedef enum
 									 * insert if no stats are present */
 } GpAutoStatsModeValue;
 
+extern bool	gp_autostats_lock_wait;
 extern int	gp_autostats_mode;
 extern int	gp_autostats_mode_in_functions;
 extern int	gp_autostats_on_change_threshold;

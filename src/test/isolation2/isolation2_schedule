@@ -255,6 +255,7 @@ test: analyze_progress
 test: appendonly_analyze_progress
 test: aoco_analyze_progress
 test: ao_index_build_progress
+test: autostats_locking
 
 # this test contains some fault injection that might get mis-hit by autovacuum process,
 # so it needs to be run with autovacuum being disabled

@@ -589,6 +589,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
+		{"gp_autostats_lock_wait", PGC_USERSET, DEVELOPER_OPTIONS,
+		 gettext_noop("autostats generated ANALYZE statements to wait for lock acquisition."),
+		 NULL
+		},
+		&gp_autostats_lock_wait,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
 		{"gp_maintenance_conn", PGC_BACKEND, CUSTOM_OPTIONS,
 			gettext_noop("Maintenance Connection"),
 			NULL,

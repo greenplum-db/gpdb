@@ -132,6 +132,7 @@
 		"gp_allow_non_uniform_partitioning_ddl",
 		"gp_auth_time_override",
 		"gp_autostats_allow_nonowner",
+		"gp_autostats_lock_wait",
 		"gp_autostats_mode",
 		"gp_autostats_mode_in_functions",
 		"gp_autostats_on_change_threshold",

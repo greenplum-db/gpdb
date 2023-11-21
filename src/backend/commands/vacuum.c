@@ -187,6 +187,10 @@ ExecVacuum(ParseState *pstate, VacuumStmt *vacstmt, bool isTopLevel, bool auto_s
 					 parser_errposition(pstate, opt->location)));
 	}
 
+	/* GPDB: autotstats related modifications */
+	if (!gp_autostats_lock_wait)
+		skip_locked |= auto_stats;
+
 	/* Set vacuum options */
 	params.options =
 		(vacstmt->is_vacuumcmd ? VACOPT_VACUUM : VACOPT_ANALYZE) |

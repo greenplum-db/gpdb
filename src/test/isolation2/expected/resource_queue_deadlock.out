@@ -5,6 +5,8 @@
 CREATE QUEUE
 0: CREATE role role_deadlock_test RESOURCE QUEUE rq_deadlock_test;
 CREATE ROLE
+0: SET gp_autostats_lock_wait TO ON;
+SET
 
 0: SELECT gp_inject_fault_infinite('before_auto_stats', 'suspend', dbid) FROM gp_segment_configuration WHERE content = -1 AND role = 'p';
  gp_inject_fault_infinite 
@@ -18,6 +20,8 @@ SET
 -- We need gp_autostats_mode to be ON_NO_STATS in this test.
 1: SET gp_autostats_mode = ON_NO_STATS;
 SET
+1: SET gp_autostats_lock_wait TO ON;
+SET
 1: SHOW gp_autostats_mode;
  gp_autostats_mode 
 -------------------
@@ -27,6 +31,8 @@ SET
 CREATE TABLE
 1&: INSERT INTO t_deadlock_test VALUES (1);  <waiting ...>
 2: SET role role_deadlock_test;
+SET
+2: SET gp_autostats_lock_wait TO ON;
 SET
 2: BEGIN;
 BEGIN
