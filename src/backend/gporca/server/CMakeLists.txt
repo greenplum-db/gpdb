@@ -59,7 +59,7 @@ NestedInSubqWithPrjListOuterRefNoInnerRef  InEqualityJoin Correlated-SemiJoin
 CorrelatedSemiJoin-True CorrelatedIN-LeftSemiJoin-True CorrelatedIN-LeftSemiNotIn-True
 InSubqWithPrjListOuterRefNoInnerRefColumnPlusConstIn CorrelatedIN-LeftSemiJoin-Limit
 CorrelatedLeftSemiNLJoinWithLimit PushFilterToSemiJoinLeftChild SubqOuterReferenceInClause
-SemiJoinDPE InSubqWithPrjListReturnSet;
+SemiJoinDPE InSubqWithPrjListReturnSet LeftSemiJoinWithRepOuterTab;
 
 CAntiSemiJoinTest:
 AntiSemiJoin2Select-1 AntiSemiJoin2Select-2 NOT-IN-NotNullBoth NOT-IN-NullInner NOT-IN-NullOuter
