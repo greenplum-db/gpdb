@@ -471,5 +471,174 @@ FROM duplicate_memo_group_test_t3 a2;
 ---------+---------
 (0 rows)
 
+-- Tests ORCA coverage for time-related cross-type stats calculation
+--
+-- Previously, ORCA didn't support stats calculation for time-related
+-- cross-type predicates. It used default scale factor for cardinality 
+-- estimate, that could sometimes be off by a few orders of magnitude,
+-- thence affecting plan performance. This was because date type was
+-- converted to int internally, whereas other time-related types were
+-- converted to double.
+--
+-- Using int for date type allows an equality predicate that only 
+-- involves the date type to be always viewed as a singleton, rather 
+-- than a range in double in ORCA's constraint framework. This provided
+-- convenience of implementing stats derivation. However, such choice
+-- prevented ORCA from deriving stats from predicates that involve both 
+-- date type and other time-related types. Now, in an attempt of
+-- supporting cross-type stats calcualtion, we convert date type to 
+-- double as well.
+--
+-- Test filter stats derivation in table scans
+drop table if exists t1, t2;
+NOTICE:  table "t2" does not exist, skipping
+create table t1 (a int, b date);
+create table t2 (a int, b date);
+insert into t1 select i, j::date from generate_series(1, 10) i, generate_series('2015-01-01','2021-12-31', '1 day'::interval) j;
+insert into t2 select i, j::date from generate_series(1, 10) i, generate_series('2021-01-01','2021-12-31', '1 day'::interval) j;
+analyze t1, t2;
+-- The following two queries should generate the same plan, now that 
+-- we support time-related cross-type stats calculation. ORCA should 
+-- derive the same stats for t1 (small subset of the total) based on 
+-- predicates on t1.b. Prior to this commit, the date-timestamp cross
+-- type predicates used in the following queries yielded a cardinality
+-- estimate in the order of 3000.
+--
+-- inequality predicates:
+explain select * from t1, t2 where t1.a = t2.a and t1.b < '2015-01-05'::date;
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=116.71..375.05 rows=14349 width=16)
+   ->  Hash Join  (cost=116.71..183.74 rows=4783 width=16)
+         Hash Cond: (t2.a = t1.a)
+         ->  Seq Scan on t2  (cost=0.00..14.17 rows=1217 width=8)
+         ->  Hash  (cost=116.54..116.54 rows=13 width=8)
+               ->  Seq Scan on t1  (cost=0.00..116.54 rows=13 width=8)
+                     Filter: (b < '01-05-2015'::date)
+ Optimizer: Postgres-based planner
+(8 rows)
+
+explain select * from t1, t2 where t1.a = t2.a and t1.b < '2015-01-05'::timestamp;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=116.71..375.05 rows=14349 width=16)
+   ->  Hash Join  (cost=116.71..183.74 rows=4783 width=16)
+         Hash Cond: (t2.a = t1.a)
+         ->  Seq Scan on t2  (cost=0.00..14.17 rows=1217 width=8)
+         ->  Hash  (cost=116.54..116.54 rows=13 width=8)
+               ->  Seq Scan on t1  (cost=0.00..116.54 rows=13 width=8)
+                     Filter: (b < 'Mon Jan 05 00:00:00 2015'::timestamp without time zone)
+ Optimizer: Postgres-based planner
+(8 rows)
+
+-- equality predicates:
+explain select * from t1, t2 where t1.a = t2.a and t1.b = '2015-01-05'::date;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=116.58..195.13 rows=3650 width=16)
+   ->  Hash Join  (cost=116.58..146.47 rows=1217 width=16)
+         Hash Cond: (t2.a = t1.a)
+         ->  Seq Scan on t2  (cost=0.00..14.17 rows=1217 width=8)
+         ->  Hash  (cost=116.54..116.54 rows=3 width=8)
+               ->  Seq Scan on t1  (cost=0.00..116.54 rows=3 width=8)
+                     Filter: (b = '01-05-2015'::date)
+ Optimizer: Postgres-based planner
+(8 rows)
+
+explain select * from t1, t2 where t1.a = t2.a and t1.b = '2015-01-05'::timestamp;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=116.58..195.13 rows=3650 width=16)
+   ->  Hash Join  (cost=116.58..146.47 rows=1217 width=16)
+         Hash Cond: (t2.a = t1.a)
+         ->  Seq Scan on t2  (cost=0.00..14.17 rows=1217 width=8)
+         ->  Hash  (cost=116.54..116.54 rows=3 width=8)
+               ->  Seq Scan on t1  (cost=0.00..116.54 rows=3 width=8)
+                     Filter: (b = 'Mon Jan 05 00:00:00 2015'::timestamp without time zone)
+ Optimizer: Postgres-based planner
+(8 rows)
+
+-- Test filter stats derivation in dynamic table scans
+drop table if exists t1, t2;
+create table t1 (a int, b date)
+partition by range (b) (
+  start (date '2015-01-01') end (date '2021-01-01') every (interval '1' year),
+  default partition d);
+create table t2 (a int, b date);
+insert into t1 select i, j::date from generate_series(1, 10) i, generate_series('2015-01-01','2021-12-31', '1 day'::interval) j;
+insert into t2 select i, j::date from generate_series(1, 10) i, generate_series('2015-01-01','2021-12-31', '1 day'::interval) j;
+analyze t1, t2;
+-- The following two queries should generate the same plan, now that 
+-- we support time-related cross-type comparison. ORCA should derive
+-- the same stats for t1 (small number of partitions) and t2 (small
+-- subset of the total) based on the predicates and allow DPE. Prior
+-- to this commit, the date-timestamp cross-type predicates used in
+-- the following queries yielded a cardinality estimate in the order
+-- of 500~1000. Consequently, the partition selector wasn't propagated.
+--
+-- inequality predicates (2 out of 7 partitions):
+explain select * from t1, t2 where t1.a = t2.a and t1.b = t2.b and t1.b < '2015-01-05'::date;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=34.71..151.40 rows=5 width=16)
+   ->  Hash Join  (cost=34.71..151.33 rows=2 width=16)
+         Hash Cond: ((t2.a = t1_1_prt_2.a) AND (t2.b = t1_1_prt_2.b))
+         ->  Seq Scan on t2  (cost=0.00..116.54 rows=13 width=8)
+               Filter: (b < '01-05-2015'::date)
+         ->  Hash  (cost=34.49..34.49 rows=14 width=8)
+               ->  Append  (cost=0.00..34.49 rows=14 width=8)
+                     ->  Seq Scan on t1_1_prt_2  (cost=0.00..17.21 rows=13 width=8)
+                           Filter: (b < '01-05-2015'::date)
+                     ->  Seq Scan on t1_1_prt_d  (cost=0.00..17.21 rows=1 width=8)
+                           Filter: (b < '01-05-2015'::date)
+ Optimizer: Postgres-based planner
+(12 rows)
+
+explain select * from t1, t2 where t1.a = t2.a and t1.b = t2.b and t1.b < '2015-01-05'::timestamp;
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=34.71..151.40 rows=5 width=16)
+   ->  Hash Join  (cost=34.71..151.33 rows=2 width=16)
+         Hash Cond: ((t2.a = t1_1_prt_2.a) AND (t2.b = t1_1_prt_2.b))
+         ->  Seq Scan on t2  (cost=0.00..116.54 rows=13 width=8)
+               Filter: (b < 'Mon Jan 05 00:00:00 2015'::timestamp without time zone)
+         ->  Hash  (cost=34.49..34.49 rows=14 width=8)
+               ->  Append  (cost=0.00..34.49 rows=14 width=8)
+                     ->  Seq Scan on t1_1_prt_2  (cost=0.00..17.21 rows=13 width=8)
+                           Filter: (b < 'Mon Jan 05 00:00:00 2015'::timestamp without time zone)
+                     ->  Seq Scan on t1_1_prt_d  (cost=0.00..17.21 rows=1 width=8)
+                           Filter: (b < 'Mon Jan 05 00:00:00 2015'::timestamp without time zone)
+ Optimizer: Postgres-based planner
+(12 rows)
+
+-- equality predicates (1 out of 7 partitions):
+explain select * from t1, t2 where t1.a = t2.a and t1.b = t2.b and t1.b = '2015-01-05'::date;
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=17.25..133.97 rows=10 width=16)
+   ->  Hash Join  (cost=17.25..133.83 rows=3 width=16)
+         Hash Cond: (t2.a = t1_1_prt_2.a)
+         ->  Seq Scan on t2  (cost=0.00..116.54 rows=3 width=8)
+               Filter: (b = '01-05-2015'::date)
+         ->  Hash  (cost=17.21..17.21 rows=3 width=8)
+               ->  Seq Scan on t1_1_prt_2  (cost=0.00..17.21 rows=3 width=8)
+                     Filter: (b = '01-05-2015'::date)
+ Optimizer: Postgres-based planner
+(9 rows)
+
+explain select * from t1, t2 where t1.a = t2.a and t1.b = t2.b and t1.b = '2015-01-05'::timestamp;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=17.25..133.97 rows=10 width=16)
+   ->  Hash Join  (cost=17.25..133.83 rows=3 width=16)
+         Hash Cond: (t2.a = t1_1_prt_2.a)
+         ->  Seq Scan on t2  (cost=0.00..116.54 rows=3 width=8)
+               Filter: (b = 'Mon Jan 05 00:00:00 2015'::timestamp without time zone)
+         ->  Hash  (cost=17.21..17.21 rows=3 width=8)
+               ->  Seq Scan on t1_1_prt_2  (cost=0.00..17.21 rows=3 width=8)
+                     Filter: (b = 'Mon Jan 05 00:00:00 2015'::timestamp without time zone)
+ Optimizer: Postgres-based planner
+(9 rows)
+
 RESET optimizer_join_order;
 RESET optimizer_trace_fallback;

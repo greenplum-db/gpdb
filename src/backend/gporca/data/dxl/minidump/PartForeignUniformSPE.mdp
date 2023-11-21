@@ -305,7 +305,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="456.474133" Rows="320000.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000255" Rows="3.200000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -319,7 +319,7 @@
         <dxl:SortingColumnList/>
         <dxl:DynamicForeignScan SelectorIds="" ForeignServerOid="13212">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="446.933867" Rows="320000.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000159" Rows="3.200000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

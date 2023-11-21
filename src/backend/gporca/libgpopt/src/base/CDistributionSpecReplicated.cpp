@@ -51,8 +51,7 @@ CDistributionSpecReplicated::FSatisfies(const CDistributionSpec *pdss) const
 	{
 		// TaintedReplicated::FSatisfies logic is similar to Replicated::FSatisifes
 		// except that Replicated can match and satisfy another Replicated Spec.
-		// However, Tainted will never satisfy another TaintedReplicated or
-		// Replicated.
+		// However, Tainted will never satisfy another Replicated.
 		switch (pdss->Edt())
 		{
 			default:

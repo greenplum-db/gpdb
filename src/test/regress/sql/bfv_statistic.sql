@@ -373,5 +373,68 @@ FROM duplicate_memo_group_test_t1
 ) AS column2
 FROM duplicate_memo_group_test_t3 a2;
 
+-- Tests ORCA coverage for time-related cross-type stats calculation
+--
+-- Previously, ORCA didn't support stats calculation for time-related
+-- cross-type predicates. It used default scale factor for cardinality 
+-- estimate, that could sometimes be off by a few orders of magnitude,
+-- thence affecting plan performance. This was because date type was
+-- converted to int internally, whereas other time-related types were
+-- converted to double.
+--
+-- Using int for date type allows an equality predicate that only 
+-- involves the date type to be always viewed as a singleton, rather 
+-- than a range in double in ORCA's constraint framework. This provided
+-- convenience of implementing stats derivation. However, such choice
+-- prevented ORCA from deriving stats from predicates that involve both 
+-- date type and other time-related types. Now, in an attempt of
+-- supporting cross-type stats calcualtion, we convert date type to 
+-- double as well.
+--
+-- Test filter stats derivation in table scans
+drop table if exists t1, t2;
+create table t1 (a int, b date);
+create table t2 (a int, b date);
+insert into t1 select i, j::date from generate_series(1, 10) i, generate_series('2015-01-01','2021-12-31', '1 day'::interval) j;
+insert into t2 select i, j::date from generate_series(1, 10) i, generate_series('2021-01-01','2021-12-31', '1 day'::interval) j;
+analyze t1, t2;
+-- The following two queries should generate the same plan, now that 
+-- we support time-related cross-type stats calculation. ORCA should 
+-- derive the same stats for t1 (small subset of the total) based on 
+-- predicates on t1.b. Prior to this commit, the date-timestamp cross
+-- type predicates used in the following queries yielded a cardinality
+-- estimate in the order of 3000.
+--
+-- inequality predicates:
+explain select * from t1, t2 where t1.a = t2.a and t1.b < '2015-01-05'::date;
+explain select * from t1, t2 where t1.a = t2.a and t1.b < '2015-01-05'::timestamp;
+-- equality predicates:
+explain select * from t1, t2 where t1.a = t2.a and t1.b = '2015-01-05'::date;
+explain select * from t1, t2 where t1.a = t2.a and t1.b = '2015-01-05'::timestamp;
+-- Test filter stats derivation in dynamic table scans
+drop table if exists t1, t2;
+create table t1 (a int, b date)
+partition by range (b) (
+  start (date '2015-01-01') end (date '2021-01-01') every (interval '1' year),
+  default partition d);
+create table t2 (a int, b date);
+insert into t1 select i, j::date from generate_series(1, 10) i, generate_series('2015-01-01','2021-12-31', '1 day'::interval) j;
+insert into t2 select i, j::date from generate_series(1, 10) i, generate_series('2015-01-01','2021-12-31', '1 day'::interval) j;
+analyze t1, t2;
+-- The following two queries should generate the same plan, now that 
+-- we support time-related cross-type comparison. ORCA should derive
+-- the same stats for t1 (small number of partitions) and t2 (small
+-- subset of the total) based on the predicates and allow DPE. Prior
+-- to this commit, the date-timestamp cross-type predicates used in
+-- the following queries yielded a cardinality estimate in the order
+-- of 500~1000. Consequently, the partition selector wasn't propagated.
+--
+-- inequality predicates (2 out of 7 partitions):
+explain select * from t1, t2 where t1.a = t2.a and t1.b = t2.b and t1.b < '2015-01-05'::date;
+explain select * from t1, t2 where t1.a = t2.a and t1.b = t2.b and t1.b < '2015-01-05'::timestamp;
+-- equality predicates (1 out of 7 partitions):
+explain select * from t1, t2 where t1.a = t2.a and t1.b = t2.b and t1.b = '2015-01-05'::date;
+explain select * from t1, t2 where t1.a = t2.a and t1.b = t2.b and t1.b = '2015-01-05'::timestamp;
+
 RESET optimizer_join_order;
 RESET optimizer_trace_fallback;
