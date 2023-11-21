@@ -912,6 +912,8 @@ set optimizer=false;
 -- that they are not supposed to see.
 select dtx_set_bug();
 INFO:  (slice 0) Dispatch command to SINGLE content
+CONTEXT:  SQL statement "update tbl_dtx set b = 1 where a = 1;"
+PL/pgSQL function dtx_set_bug() line 3 at EXECUTE statement
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to SINGLE content
  dtx_set_bug 
 -------------
