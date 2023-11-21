@@ -1,0 +1,178 @@
+name: Greenplum ABI Tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'concourse/scripts/**'
+      - 'src/**'
+      - '.github/workflows/**'
+      - '.github/scripts/**'
+      - '.abi-check/**'
+
+  push:
+    branches:
+      - 6X_STABLE
+    paths:
+      - 'concourse/scripts/**'
+      - 'src/**'
+      - '.github/workflows/**'
+      - '.github/scripts/**'
+      - '.abi-check/**'
+
+jobs:
+  abi-dump-setup:
+    runs-on: ubuntu-latest
+    outputs:
+      BASELINE_REF: ${{ steps.vars.outputs.BASELINE_REF }}
+      BASELINE_VERSION: ${{ steps.vars.outputs.BASELINE_VERSION }}
+      ABI_LIBS: ${{ steps.vars.outputs.ABI_LIBS }}
+      ABI_HEADERS: ${{ steps.vars.outputs.ABI_HEADERS }}
+    steps:
+      - name: Fetch source
+        uses: actions/checkout@v3
+
+      - name: Get Greenplum version variables
+        id: vars
+        run: |
+          remote_repo='https://github.com/greenplum-db/gpdb.git'
+          git ls-remote --tags --refs --sort='v:refname' $remote_repo '7.*' | tail -n 1  > baseline_version_ref
+          baseline_ref=$(cat baseline_version_ref | awk '{print $1}')
+          baseline_version=$(cat baseline_version_ref | awk '{print $2}')
+          echo "BASELINE_REF=${baseline_ref}" | tee -a $GITHUB_OUTPUT
+          echo "BASELINE_VERSION=${baseline_version#'refs/tags/'}" | tee -a $GITHUB_OUTPUT
+          echo "ABI_LIBS=postgres" | tee -a $GITHUB_OUTPUT
+          echo "ABI_HEADERS=." | tee -a $GITHUB_OUTPUT
+
+      - name: Upload symbol/type checking exception list
+        uses: actions/upload-artifact@v3
+        with:
+          name: exception_lists
+          path: '.abi-check/${{ steps.vars.outputs.BASELINE_VERSION }}/'
+
+  abi-dump:
+    needs: abi-dump-setup
+    runs-on: ubuntu-latest
+    container: gcr.io/data-gpdb-public-images/gpdb7-rocky8-build
+    strategy:
+      matrix:
+        name:
+          - build-baseline
+          - build-latest
+        include:
+          - name: build-baseline
+            repo: greenplum-db/gpdb
+            ref: ${{ needs.abi-dump-setup.outputs.BASELINE_VERSION }}
+          - name: build-latest
+            repo: ${{ github.repository }}
+            ref: ${{ github.sha }}
+
+    steps:
+      ## FIXME: abi-dumper requires 'Universal Ctags' but the package manager only provides
+      ## 'Exuberant Ctags'.
+      - name: Install universal-ctags.
+        run: |
+          wget 'https://github.com/universal-ctags/ctags-nightly-build/releases/download/2023.07.05%2Bafdae39c0c2e508d113cbc570f4635b96159840c/uctags-2023.07.05-linux-x86_64.tar.xz'
+          tar -xf uctags-2023.07.05-linux-x86_64.tar.xz
+          cp uctags-2023.07.05-linux-x86_64/bin/* /usr/bin/
+          which ctags
+
+      - name: Download Greenplum source code
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ matrix.repo }}
+          ref: ${{ matrix.ref }}
+          submodules: recursive
+          fetch-depth: 0 # Specify '0' to fetch all history for all branches and tags.
+          path: gpdb_src
+
+      - name: Install abi-dumper
+        run: |
+          yum install -y epel-release
+          yum install -y abi-dumper
+
+      - name: Build Greenplum
+        run: |
+          ## TODO: Since abi-dumper requires debug info and it's hard to inject CFLAGS via the script for
+          ## releasing Greenplum, we have to manually configure it here. Probably we can improve it in future.
+          export PATH=/opt/python-3.9.13/bin:/opt/python-2.7.18/bin:$PATH
+          pushd gpdb_src
+          CC='gcc -m64' \
+          CFLAGS='-Og -g3 -Wno-maybe-uninitialized' LDFLAGS='-Wl,--enable-new-dtags -Wl,--export-dynamic' \
+          ./configure --with-quicklz --disable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce --enable-ic-proxy \
+                      --enable-orca --with-libxml --with-pythonsrc-ext --with-uuid=e2fs --with-pgport=5432 --enable-tap-tests \
+                      --enable-debug-extensions --with-perl --with-python --with-openssl --with-pam --with-ldap --with-includes="" \
+                      --with-libraries="" --disable-rpath \
+                      --prefix=/usr/local/greenplum-db-devel \
+                      --mandir=/usr/local/greenplum-db-devel/man
+          make -j`nproc` && make install
+
+      - name: Dump ABI
+        run: |
+          abi-dumper -lver ${{ matrix.ref }} -skip-cxx -public-headers /usr/local/greenplum-db-devel/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o postgres-${{ matrix.ref }}.abi /usr/local/greenplum-db-devel/bin/postgres
+
+      - name: Upload ABI files
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.name }}
+          path: '*${{ matrix.ref }}.abi'
+
+  abi-compare:
+    needs:
+      - abi-dump-setup
+      - abi-dump
+    runs-on: ubuntu-latest
+    container: gcr.io/data-gpdb-public-images/gpdb7-rocky8-build
+    steps:
+      - name: Download baseline
+        uses: actions/download-artifact@v3
+        with:
+          name: build-baseline
+          path: build-baseline/
+      - name: Download latest
+        uses: actions/download-artifact@v3
+        with:
+          name: build-latest
+          path: build-latest/
+
+      - name: Download exception lists
+        uses: actions/download-artifact@v3
+        with:
+          name: exception_lists
+          path: exception_lists/
+
+      - name: Install abi-compliance-checker and report viewer (lynx)
+        run: |
+          yum install -y epel-release
+          yum install -y abi-compliance-checker
+          yum install -y --enablerepo=powertools lynx
+
+      - name: Compare ABI
+        run: |
+          SKIP_POSTGRES_SYMBOLS_LIST="exception_lists/postgres.symbols.ignore"
+          SKIP_POSTGRES_SYMBOLS_OPTION=""
+          if [[ -f "$SKIP_POSTGRES_SYMBOLS_LIST" ]]; then
+            SKIP_POSTGRES_SYMBOLS_OPTION="-skip-symbols ${SKIP_POSTGRES_SYMBOLS_LIST}"
+          fi
+          SKIP_POSTGRES_TYPES_LIST="exception_lists/postgres.types.ignore"
+          SKIP_POSTGRES_TYPES_OPTION=""
+          if [[ -f "$SKIP_POSTGRES_TYPES_LIST" ]]; then
+            SKIP_POSTGRES_TYPES_OPTION="-skip-types ${SKIP_POSTGRES_TYPES_LIST}"
+          fi
+          abi-compliance-checker ${SKIP_POSTGRES_SYMBOLS_OPTION} \
+                                 ${SKIP_POSTGRES_TYPES_OPTION} \
+                                 -lib postgres \
+                                 -old build-baseline/postgres*.abi \
+                                 -new build-latest/postgres*.abi
+
+      - name: Print out ABI report
+        if: always()
+        run: |
+          lynx -dump $(find compat_reports/ | grep html)
+
+      - name: Upload ABI Comparison
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: compat-report-${{ github.sha }}
+          path: compat_reports/
