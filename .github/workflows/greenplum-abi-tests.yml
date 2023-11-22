@@ -36,7 +36,7 @@ jobs:
         id: vars
         run: |
           remote_repo='https://github.com/greenplum-db/gpdb.git'
-          git ls-remote --tags --refs --sort='v:refname' $remote_repo '7.*' | tail -n 1  > baseline_version_ref
+          git ls-remote --tags --refs --sort='v:refname' $remote_repo '7.*' | grep -v '-' | tail -n 1  > baseline_version_ref
           baseline_ref=$(cat baseline_version_ref | awk '{print $1}')
           baseline_version=$(cat baseline_version_ref | awk '{print $2}')
           echo "BASELINE_REF=${baseline_ref}" | tee -a $GITHUB_OUTPUT
