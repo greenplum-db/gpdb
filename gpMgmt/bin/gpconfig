@@ -171,7 +171,7 @@ class Guc:
             elif newval != "'queue'" and newval != "'none'":
                 return "the value of gp_resource_manager must be 'none', 'queue', 'group', or 'group-v2'"
         elif self.name == "gp_resource_group_cgroup_parent":
-            base = newval.strip('\'')
+            base = newval.strip("'")
             path = None
             for partition in psutil.disk_partitions(all=True):
                 if partition.fstype == "cgroup2":
