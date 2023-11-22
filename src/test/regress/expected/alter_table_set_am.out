@@ -821,6 +821,8 @@ CREATE TEMP TABLE relfilebeforeco2heap AS
     SELECT -1 segid, relfilenode FROM pg_class WHERE relname LIKE 'co2heap%'
     UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
     WHERE relname LIKE 'co2heap%' ORDER BY segid;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'segid' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- Various cases of altering AOCO to AO:
 -- 1. Basic ATSETAMs:
 ALTER TABLE co2heap SET ACCESS METHOD heap;
@@ -1951,3 +1953,163 @@ EXECUTE attribute_encoding_check ('at_with_addedcols');
 (0 rows)
 
 DROP TABLE at_with_addedcols;
+--
+-- Ensure that the array type of the base table type is removed when moving from
+-- heap -> ao_row | ao_column
+--
+CREATE TABLE at_array_type_heap_to_ao(i int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_heap_to_ao';
+         typname          | typnamespace | typcategory |          typarray          
+--------------------------+--------------+-------------+----------------------------
+ at_array_type_heap_to_ao | public       | C           | at_array_type_heap_to_ao[]
+(1 row)
+
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_heap_to_ao';
+          typname          | typnamespace | typcategory |         typelem          
+---------------------------+--------------+-------------+--------------------------
+ _at_array_type_heap_to_ao | public       | A           | at_array_type_heap_to_ao
+(1 row)
+
+ALTER TABLE at_array_type_heap_to_ao SET ACCESS METHOD ao_row;
+-- The array type should be gone.
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_heap_to_ao';
+         typname          | typnamespace | typcategory | typarray 
+--------------------------+--------------+-------------+----------
+ at_array_type_heap_to_ao | public       | C           | -
+(1 row)
+
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_heap_to_ao';
+ typname | typnamespace | typcategory | typelem 
+---------+--------------+-------------+---------
+(0 rows)
+
+-- A successful drop indicates that the array type -> base type dependency
+-- should have been removed successfully by the ALTER TABLE SET AM above.
+DROP TABLE at_array_type_heap_to_ao;
+CREATE TABLE at_array_type_heap_to_co(i int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_heap_to_co';
+         typname          | typnamespace | typcategory |          typarray          
+--------------------------+--------------+-------------+----------------------------
+ at_array_type_heap_to_co | public       | C           | at_array_type_heap_to_co[]
+(1 row)
+
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_heap_to_co';
+          typname          | typnamespace | typcategory |         typelem          
+---------------------------+--------------+-------------+--------------------------
+ _at_array_type_heap_to_co | public       | A           | at_array_type_heap_to_co
+(1 row)
+
+ALTER TABLE at_array_type_heap_to_co SET ACCESS METHOD ao_column;
+-- The array type should be gone.
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_heap_to_co';
+         typname          | typnamespace | typcategory | typarray 
+--------------------------+--------------+-------------+----------
+ at_array_type_heap_to_co | public       | C           | -
+(1 row)
+
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_heap_to_co';
+ typname | typnamespace | typcategory | typelem 
+---------+--------------+-------------+---------
+(0 rows)
+
+-- A successful drop indicates that the array type -> base type dependency
+-- should have been removed successfully by the ALTER TABLE SET AM above.
+DROP TABLE at_array_type_heap_to_co;
+--
+-- Ensure that the array type of the base table type is created when moving from
+-- ao_row | ao_column -> heap
+--
+CREATE TABLE at_array_type_ao_to_heap(i int) USING ao_row;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_ao_to_heap';
+         typname          | typnamespace | typcategory | typarray 
+--------------------------+--------------+-------------+----------
+ at_array_type_ao_to_heap | public       | C           | -
+(1 row)
+
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_ao_to_heap';
+ typname | typnamespace | typcategory | typelem 
+---------+--------------+-------------+---------
+(0 rows)
+
+ALTER TABLE at_array_type_ao_to_heap SET ACCESS METHOD heap;
+-- The array type should have been created and linked.
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_ao_to_heap';
+         typname          | typnamespace | typcategory |          typarray          
+--------------------------+--------------+-------------+----------------------------
+ at_array_type_ao_to_heap | public       | C           | at_array_type_ao_to_heap[]
+(1 row)
+
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_ao_to_heap';
+          typname          | typnamespace | typcategory |         typelem          
+---------------------------+--------------+-------------+--------------------------
+ _at_array_type_ao_to_heap | public       | A           | at_array_type_ao_to_heap
+(1 row)
+
+SELECT objid::regtype, refobjid::regtype FROM pg_depend
+    WHERE objid = '_at_array_type_ao_to_heap'::regtype AND refobjid = 'at_array_type_ao_to_heap'::regtype;
+           objid            |         refobjid         
+----------------------------+--------------------------
+ at_array_type_ao_to_heap[] | at_array_type_ao_to_heap
+(1 row)
+
+-- Alter it back to ao_row so that we test the upgrade path
+ALTER TABLE at_array_type_ao_to_heap SET ACCESS METHOD ao_row;
+CREATE TABLE at_array_type_co_to_heap(i int) USING ao_column;
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_co_to_heap';
+         typname          | typnamespace | typcategory | typarray 
+--------------------------+--------------+-------------+----------
+ at_array_type_co_to_heap | public       | C           | -
+(1 row)
+
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_co_to_heap';
+ typname | typnamespace | typcategory | typelem 
+---------+--------------+-------------+---------
+(0 rows)
+
+ALTER TABLE at_array_type_co_to_heap SET ACCESS METHOD heap;
+-- The array type should have been created and linked.
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_co_to_heap';
+         typname          | typnamespace | typcategory |          typarray          
+--------------------------+--------------+-------------+----------------------------
+ at_array_type_co_to_heap | public       | C           | at_array_type_co_to_heap[]
+(1 row)
+
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_co_to_heap';
+          typname          | typnamespace | typcategory |         typelem          
+---------------------------+--------------+-------------+--------------------------
+ _at_array_type_co_to_heap | public       | A           | at_array_type_co_to_heap
+(1 row)
+
+SELECT objid::regtype, refobjid::regtype FROM pg_depend
+    WHERE objid = '_at_array_type_co_to_heap'::regtype AND refobjid = 'at_array_type_co_to_heap'::regtype;
+           objid            |         refobjid         
+----------------------------+--------------------------
+ at_array_type_co_to_heap[] | at_array_type_co_to_heap
+(1 row)
+
+-- Alter it back to ao_column so that we test the upgrade path
+ALTER TABLE at_array_type_co_to_heap SET ACCESS METHOD ao_column;

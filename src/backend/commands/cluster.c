@@ -46,6 +46,7 @@
 #include "commands/cluster.h"
 #include "commands/progress.h"
 #include "commands/tablecmds.h"
+#include "commands/typecmds.h"
 #include "commands/vacuum.h"
 #include "miscadmin.h"
 #include "optimizer/optimizer.h"
@@ -1280,6 +1281,22 @@ swap_relation_files(Oid r1, Oid r2, bool target_is_pg_class,
 	if (relform1->relam == AO_ROW_TABLE_AM_OID || relform1->relam == AO_COLUMN_TABLE_AM_OID ||
 		relform2->relam == AO_ROW_TABLE_AM_OID || relform2->relam == AO_COLUMN_TABLE_AM_OID)
 		ATAOEntries(relform1, relform2);
+
+
+	/*
+	 * GPDB: Array type handling (needed since append-optimized tables don't
+	 * have array types auto-created for them)
+	 *
+	 * Add a new array type if we are moving from ao_row/ao_column -> heap and
+	 * remove the array type if we are moving from heap -> ao_row/ao_column.
+	 */
+	if ((relform1->relam == AO_ROW_TABLE_AM_OID ||
+		relform1->relam == AO_COLUMN_TABLE_AM_OID) && relform2->relam == HEAP_TABLE_AM_OID)
+		AlterAMAddArrayType(relform1);
+
+	if (relform1->relam == HEAP_TABLE_AM_OID &&
+		(relform2->relam == AO_ROW_TABLE_AM_OID || relform2->relam == AO_COLUMN_TABLE_AM_OID))
+		AlterAMRemoveArrayType(relform1);
 
 	/* Also swap reloptions */
 	{

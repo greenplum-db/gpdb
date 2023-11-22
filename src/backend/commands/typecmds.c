@@ -3906,3 +3906,108 @@ AlterType(AlterTypeStmt *stmt)
 									NIL,
 									NULL);
 }
+
+/*
+ * Create the type oldrelform[] during an AT SET AM operation from an
+ * append-optimized to a heap table. This is necessary here since we omit
+ * creating the array type for append-optimized tables.
+ */
+void
+AlterAMAddArrayType(Form_pg_class oldrelform)
+{
+	Oid          	new_array_oid = InvalidOid;
+	char         	*relarrayname = NULL;
+	HeapTuple    	base_type_tup;
+	Form_pg_type 	base_type;
+	Relation     	pg_type_desc;
+
+	Assert(oldrelform->relam == AO_ROW_TABLE_AM_OID ||
+			oldrelform->relam == AO_COLUMN_TABLE_AM_OID);
+
+	/* Assign the array type name and array type oid first */
+	relarrayname =
+		makeArrayTypeName(NameStr(oldrelform->relname), oldrelform->relnamespace);
+	new_array_oid =
+		AssignTypeArrayOid(relarrayname, oldrelform->relnamespace);
+
+	/* Look up the base type oid */
+	base_type_tup = SearchSysCacheCopy1(TYPEOID,
+										ObjectIdGetDatum(oldrelform->reltype));
+	if (!HeapTupleIsValid(base_type_tup))
+		elog(ERROR, "cache lookup failed for type %u", oldrelform->reltype);
+	base_type = (Form_pg_type) GETSTRUCT(base_type_tup);
+
+	TypeCreate(new_array_oid,    /* force the type's OID to this */
+			   relarrayname,    /* Array type name */
+			   oldrelform->relnamespace,    /* Same namespace as parent */
+			   InvalidOid,    /* Not composite, no relationOid */
+			   0,            /* relkind, also N/A here */
+			   oldrelform->relowner,        /* owner's ID */
+			   -1,            /* Internal size (varlena) */
+			   TYPTYPE_BASE,    /* Not composite - typelem is */
+			   TYPCATEGORY_ARRAY,    /* type-category (array) */
+			   false,        /* array types are never preferred */
+			   DEFAULT_TYPDELIM,    /* default array delimiter */
+			   F_ARRAY_IN,    /* array input proc */
+			   F_ARRAY_OUT, /* array output proc */
+			   F_ARRAY_RECV,    /* array recv (bin) proc */
+			   F_ARRAY_SEND,    /* array send (bin) proc */
+			   InvalidOid,    /* typmodin procedure - none */
+			   InvalidOid,    /* typmodout procedure - none */
+			   F_ARRAY_TYPANALYZE,    /* array analyze procedure */
+			   base_type->oid,    /* array element type - the rowtype */
+			   true,        /* yes, this is an array type */
+			   InvalidOid,    /* this has no array type */
+			   InvalidOid,    /* domain base type - irrelevant */
+			   NULL,        /* default value - none */
+			   NULL,        /* default binary representation */
+			   false,        /* passed by reference */
+			   'd',            /* alignment - must be the largest! */
+			   'x',            /* fully TOASTable */
+			   -1,            /* typmod */
+			   0,            /* array dimensions for typBaseType */
+			   false,        /* Type NOT NULL */
+			   InvalidOid); /* rowtypes never have a collation */
+
+	/* Now open the base type and get ready to update the typarray field */
+	pg_type_desc = table_open(TypeRelationId, RowExclusiveLock);
+	base_type->typarray = new_array_oid;
+	CatalogTupleUpdate(pg_type_desc, &base_type_tup->t_self, base_type_tup);
+	table_close(pg_type_desc, RowExclusiveLock);
+
+	pfree(relarrayname);
+	heap_freetuple(base_type_tup);
+}
+
+/*
+ * While altering the access method from heap -> append-optimized, remove the
+ * array type of the table from the catalog. This is because we don't maintain
+ * array types for append-optimized tables.
+ */
+void
+AlterAMRemoveArrayType(Form_pg_class oldrelform)
+{
+	HeapTuple    	base_type_tup;
+	Form_pg_type 	base_type;
+	Relation		pg_type_desc;
+
+	Assert(oldrelform->relam == HEAP_TABLE_AM_OID);
+
+	base_type_tup = SearchSysCacheCopy1(TYPEOID, ObjectIdGetDatum(oldrelform->reltype));
+	if (!HeapTupleIsValid(base_type_tup))
+		elog(ERROR, "cache lookup failed for type %u", oldrelform->reltype);
+	base_type = (Form_pg_type) GETSTRUCT(base_type_tup);
+
+	/* delete array type -> base type pg_depend dependency */
+	deleteDependencyRecordsFor(TypeRelationId, base_type->typarray, true);
+
+	/* remove array type */
+	RemoveTypeById(base_type->typarray);
+
+	/* now update base type's typarray linkage */
+	pg_type_desc = table_open(TypeRelationId, RowExclusiveLock);
+	base_type->typarray = InvalidOid;
+	CatalogTupleUpdate(pg_type_desc, &base_type_tup->t_self, base_type_tup);
+	heap_freetuple(base_type_tup);
+	table_close(pg_type_desc, RowExclusiveLock);
+}

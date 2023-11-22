@@ -57,7 +57,6 @@ CREATE TEMP TABLE relfilebeforeao AS
     SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('heap2ao', 'heap2ao2', 'heapi')
     UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
     WHERE relname in ('heap2ao', 'heap2ao2', 'heapi') ORDER BY segid;
-
 -- Set default storage options for the table to inherit from
 SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
 
@@ -86,7 +85,6 @@ CREATE TEMP TABLE relfileafterao AS
     WHERE relname in ('heap2ao', 'heap2ao2', 'heapi') ORDER BY segid;
 
 SELECT * FROM relfilebeforeao INTERSECT SELECT * FROM relfileafterao;
-
 -- aux tables are created, pg_appendonly row is created
 SELECT * FROM gp_toolkit.__gp_aoseg('heap2ao');
 SELECT gp_segment_id, (gp_toolkit.__gp_aovisimap('heap2ao')).* FROM gp_dist_random('gp_id');
@@ -185,7 +183,6 @@ CREATE TEMP TABLE relfilebeforeao2heap AS
     SELECT -1 segid, relfilenode FROM pg_class WHERE relname in ('ao2heap', 'ao2heap2', 'aoi')
     UNION SELECT gp_segment_id segid, relfilenode FROM gp_dist_random('pg_class')
     WHERE relname in ('ao2heap', 'ao2heap2', 'aoi') ORDER BY segid;
-
 -- Altering AO to heap
 ALTER TABLE ao2heap SET ACCESS METHOD heap;
 ALTER TABLE ao2heap2 SET WITH (appendoptimized=false);
@@ -936,3 +933,91 @@ SELECT * FROM at_with_addedcols;
 -- pg_attribute_encoding should not have any entries
 EXECUTE attribute_encoding_check ('at_with_addedcols');
 DROP TABLE at_with_addedcols;
+
+--
+-- Ensure that the array type of the base table type is removed when moving from
+-- heap -> ao_row | ao_column
+--
+
+CREATE TABLE at_array_type_heap_to_ao(i int);
+
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_heap_to_ao';
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_heap_to_ao';
+
+ALTER TABLE at_array_type_heap_to_ao SET ACCESS METHOD ao_row;
+
+-- The array type should be gone.
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_heap_to_ao';
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_heap_to_ao';
+
+-- A successful drop indicates that the array type -> base type dependency
+-- should have been removed successfully by the ALTER TABLE SET AM above.
+DROP TABLE at_array_type_heap_to_ao;
+
+CREATE TABLE at_array_type_heap_to_co(i int);
+
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_heap_to_co';
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_heap_to_co';
+
+ALTER TABLE at_array_type_heap_to_co SET ACCESS METHOD ao_column;
+
+-- The array type should be gone.
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_heap_to_co';
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_heap_to_co';
+
+-- A successful drop indicates that the array type -> base type dependency
+-- should have been removed successfully by the ALTER TABLE SET AM above.
+DROP TABLE at_array_type_heap_to_co;
+
+--
+-- Ensure that the array type of the base table type is created when moving from
+-- ao_row | ao_column -> heap
+--
+
+CREATE TABLE at_array_type_ao_to_heap(i int) USING ao_row;
+
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_ao_to_heap';
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_ao_to_heap';
+
+ALTER TABLE at_array_type_ao_to_heap SET ACCESS METHOD heap;
+
+-- The array type should have been created and linked.
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_ao_to_heap';
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_ao_to_heap';
+SELECT objid::regtype, refobjid::regtype FROM pg_depend
+    WHERE objid = '_at_array_type_ao_to_heap'::regtype AND refobjid = 'at_array_type_ao_to_heap'::regtype;
+
+-- Alter it back to ao_row so that we test the upgrade path
+ALTER TABLE at_array_type_ao_to_heap SET ACCESS METHOD ao_row;
+
+CREATE TABLE at_array_type_co_to_heap(i int) USING ao_column;
+
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_co_to_heap';
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_co_to_heap';
+
+ALTER TABLE at_array_type_co_to_heap SET ACCESS METHOD heap;
+
+-- The array type should have been created and linked.
+SELECT typname, typnamespace::regnamespace, typcategory, typarray::regtype FROM pg_type
+    WHERE typname = 'at_array_type_co_to_heap';
+SELECT typname, typnamespace::regnamespace, typcategory, typelem::regtype FROM pg_type
+    WHERE typname = '_at_array_type_co_to_heap';
+SELECT objid::regtype, refobjid::regtype FROM pg_depend
+    WHERE objid = '_at_array_type_co_to_heap'::regtype AND refobjid = 'at_array_type_co_to_heap'::regtype;
+
+-- Alter it back to ao_column so that we test the upgrade path
+ALTER TABLE at_array_type_co_to_heap SET ACCESS METHOD ao_column;
