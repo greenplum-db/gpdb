@@ -468,12 +468,14 @@ deleteDir(Oid group, CGroupComponentType component, const char *filename, bool u
 {
 
 	char path[MAX_CGROUP_PATHLEN];
+	char leaf_path[MAX_CGROUP_PATHLEN];
 	size_t path_size = sizeof(path);
 
 	int retry = unassign ? 0 : MAX_RETRY - 1;
 	int fd_dir;
 
 	buildPath(group, BASEDIR_GPDB, component, "", path, path_size);
+	buildPath(group, BASEDIR_GPDB, component, CGROUPV2_LEAF_INDENTIFIER, leaf_path, path_size);
 
 	/*
 	 * To prevent race condition between multiple processes we require a dir
@@ -497,7 +499,7 @@ deleteDir(Oid group, CGroupComponentType component, const char *filename, bool u
 		if (unassign)
 			detachcgroup(group, component, fd_dir);
 
-		if (rmdir(path))
+		if (rmdir(leaf_path) || rmdir(path))
 		{
 			int err = errno;
 
