@@ -578,6 +578,16 @@ gpvars_show_gp_resource_manager_policy(void)
 	}
 }
 
+bool gpvars_check_gp_resource_group_cgroup_parent(char **newval, void **extra, GucSource source)
+{
+	if (strstr(*newval, "/") != NULL)
+	{
+		GUC_check_errmsg("gp_resource_group_cgroup_parent must be a valid folder name, cannot contain '/': '%s'", *newval);
+		return false;
+	}
+	return true;
+}
+
 /*
  * gpvars_assign_statement_mem
  */

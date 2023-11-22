@@ -4584,7 +4584,7 @@ struct config_string ConfigureNamesString_gp[] =
 		},
 		&gp_resource_group_cgroup_parent,
 		"gpdb.service",
-		NULL, NULL, NULL
+		gpvars_check_gp_resource_group_cgroup_parent, NULL, NULL
 	},
 
 	/* for pljava */
