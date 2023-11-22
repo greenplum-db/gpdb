@@ -139,6 +139,10 @@ typedef struct AppendOnlyBlockDirectory
 	ScanKey scanKeys;
 	StrategyNumber *strategyNumbers;
 
+	/*
+	 * This field should NOT be used. It is only for ABI compatibility
+	 */
+	int _abi_compatibility;
 }	AppendOnlyBlockDirectory;
 
 
