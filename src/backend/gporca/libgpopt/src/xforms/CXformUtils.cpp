@@ -2522,6 +2522,25 @@ CXformUtils::PexprBuildBtreeIndexPlan(CMemoryPool *mp, CMDAccessor *md_accessor,
 		return nullptr;
 	}
 
+	// Query : explain select * from foo where foo.b=20;
+	// Index Col: 'b' and Security Qual: foo.a=10
+	// Then foo.b=20 will be the index condition and foo.a=10 will be the
+	// filter. But if we have a non-leakproof index condition then it might
+	// cause data leak. Currently, ORCA will fall back to planner if an
+	// index plan is created for a relation with security quals.
+	if ((CLogical::EopLogicalGet == op_id &&
+		 CLogicalGet::PopConvert(pexprGet->Pop())->GetHasSecurityQuals()) ||
+		(fDynamicGet && CLogicalDynamicGet::PopConvert(pexprGet->Pop())
+							->GetHasSecurityQuals()))
+	{
+		GPOS_DELETE(alias);
+		pdrgppcrIndexCols->Release();
+		pdrgpexprResidual->Release();
+		pdrgpexprIndex->Release();
+		outer_refs_in_index_get->Release();
+		GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound);
+	}
+
 	// most GiST indexes are lossy, so conservatively re-add all the index quals to the residual so that they can be rechecked
 	if (pmdindex->IndexType() == IMDIndex::EmdindGist)
 	{
@@ -3434,6 +3453,22 @@ CXformUtils::PexprBitmapTableGet(CMemoryPool *mp, CLogical *popGet,
 		&pexprResidual, false /*isAPartialPredicate*/
 	);
 	CExpression *pexprResult = nullptr;
+
+	// Query : explain select * from foo where foo.b=20;
+	// Index Col: 'b' and Security Qual: foo.a=10
+	// Then foo.b=20 will be the index condition and foo.a=10 will be the
+	// filter. But if we have a non-leakproof index condition then it might
+	// cause data leak. Currently, ORCA will fall back to planner if an
+	// index plan is created for a relation with security quals.
+	if (nullptr != pexprBitmap &&
+		((CLogical::EopLogicalGet == popGet->Eopid() &&
+		  (dynamic_cast<CLogicalGet *>(popGet))->GetHasSecurityQuals()) ||
+		 (fDynamicGet &&
+		  (dynamic_cast<CLogicalDynamicGet *>(popGet))->GetHasSecurityQuals())))
+	{
+		pdrgpexpr->Release();
+		GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound);
+	}
 
 	if (nullptr != pexprBitmap)
 	{
