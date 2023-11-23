@@ -649,11 +649,13 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan(
 	List *targetlist = NIL;
 	List *qual = NIL;
 
-	TranslateProjListAndFilter(
-		project_list_dxlnode, filter_dxlnode,
-		&base_table_context,  // translate context for the base table
-		nullptr,			  // translate_ctxt_left and pdxltrctxRight,
-		&targetlist, &qual, output_context);
+	targetlist = TranslateDXLProjList(
+		project_list_dxlnode,
+		&base_table_context,  // base table translation context
+		nullptr, output_context);
+
+	TranslateFilterRemovingExplicitAnd(filter_dxlnode, &base_table_context,
+									   nullptr, &qual, output_context);
 
 	Plan *plan = nullptr;
 	Plan *plan_return = nullptr;
@@ -4398,11 +4400,13 @@ CTranslatorDXLToPlStmt::TranslateDXLDynTblScan(
 		(*dyn_tbl_scan_dxlnode)[EdxltsIndexProjList];
 	CDXLNode *filter_dxlnode = (*dyn_tbl_scan_dxlnode)[EdxltsIndexFilter];
 
-	TranslateProjListAndFilter(
-		project_list_dxlnode, filter_dxlnode,
-		&base_table_context,  // translate context for the base table
-		nullptr,			  // translate_ctxt_left and pdxltrctxRight,
-		&plan->targetlist, &plan->qual, output_context);
+	plan->targetlist = TranslateDXLProjList(
+		project_list_dxlnode,
+		&base_table_context,  // base table translation context
+		nullptr, output_context);
+
+	TranslateFilterRemovingExplicitAnd(filter_dxlnode, &base_table_context,
+									   nullptr, &plan->qual, output_context);
 
 	SetParamIds(plan);
 
@@ -4665,11 +4669,13 @@ CTranslatorDXLToPlStmt::TranslateDXLDynForeignScan(
 
 	List *targetlist = NIL;
 	List *qual = NIL;
-	TranslateProjListAndFilter(
-		project_list_dxlnode, filter_dxlnode,
-		&base_table_context,  // translate context for the base table
-		nullptr,			  // translate_ctxt_left and pdxltrctxRight,
-		&targetlist, &qual, output_context);
+	targetlist = TranslateDXLProjList(
+		project_list_dxlnode,
+		&base_table_context,  // base table translation context
+		nullptr, output_context);
+
+	TranslateFilterRemovingExplicitAnd(filter_dxlnode, &base_table_context,
+									   nullptr, &qual, output_context);
 
 	// set the rte relid to the child, since we need to call the fdw api
 	// which assumes we're working with a foreign table. The root partition is
@@ -5824,6 +5830,71 @@ CTranslatorDXLToPlStmt::TranslateProjListAndFilter(
 		child_contexts, output_context);
 }
 
+// Consider the below scenario:
+// [1] Scan{Qual=[a>1, b<2]} : Qual is a list with two clauses, implicitly-ANDed
+// [2] Scan{Qual=[{Bool_And,a>1,b<2}]} : Qual is a list with a single clause
+// which is a Bool AND expression.
+//
+// Case[1]:
+// Suppose a is NULL,  b = 0
+// evaluate a > 1 with a is NULL, result will be NULL.
+// As per the comments of ExecQual method, executor will short-circuit to
+// return false directly. The executor does not eval b<0 at all.
+//
+// Case[2]
+// Suppose a is NULL, b = 0
+// evaluate the 1st arg of the And, eval a > 1 with a is NULL, result will be
+// NULL.
+// Since null AND true --> null, null and false --> false. The executor has to
+// evaluate b<0. So if we have a qual like a>10 AND f_leak(a) where a>10 is a
+// security qual and f_leak(a) is an UDF which is not leakproof, then information
+// are leaked. The below method removes the parent AND operator from the qual
+// so that no data leak happens in the case of security quals evaluating to NULL.
+void
+CTranslatorDXLToPlStmt::TranslateFilterRemovingExplicitAnd(
+	const CDXLNode *filter_dxlnode,
+	const CDXLTranslateContextBaseTable *base_table_context,
+	CDXLTranslationContextArray *child_contexts, List **qual_out,
+	CDXLTranslateContext *output_context)
+{
+	GPOS_ASSERT(nullptr != filter_dxlnode);
+	ULONG filter_dxlnode_arity = filter_dxlnode->Arity();
+	if (0 < filter_dxlnode_arity)
+	{
+		GPOS_ASSERT(1 == filter_dxlnode_arity);
+		CDXLNode *filter_cond_dxlnode = (*filter_dxlnode)[0];
+		GPOS_ASSERT(CTranslatorDXLToScalar::HasBoolResult(filter_cond_dxlnode,
+														  m_md_accessor));
+		Edxlopid eopid = filter_cond_dxlnode->GetOperator()->GetDXLOperator();
+		if (EdxlopScalarBoolExpr == eopid &&
+			Edxland ==
+				CDXLScalarBoolExpr::Cast(filter_cond_dxlnode->GetOperator())
+					->GetDxlBoolTypeStr())
+		{
+			GPOS_ASSERT(2 <= filter_cond_dxlnode->Arity());
+			CMappingColIdVarPlStmt colid_var_mapping =
+				CMappingColIdVarPlStmt(m_mp, base_table_context, nullptr,
+									   output_context, m_dxl_to_plstmt_context);
+			ULONG filter_cond_dxlnode_arity = filter_cond_dxlnode->Arity();
+			for (ULONG ul = 0; ul < filter_cond_dxlnode_arity; ul++)
+			{
+				CDXLNode *and_op_child = (*filter_cond_dxlnode)[ul];
+
+				Expr *expr = m_translator_dxl_to_scalar->TranslateDXLToScalar(
+					and_op_child, &colid_var_mapping);
+
+				*qual_out = gpdb::LAppend(*qual_out, expr);
+			}
+		}
+		else
+		{
+			*qual_out = TranslateDXLFilterToQual(
+				filter_dxlnode,
+				base_table_context,	 // base table translation context
+				nullptr, output_context);
+		}
+	}
+}
 
 //---------------------------------------------------------------------------
 //	@function:

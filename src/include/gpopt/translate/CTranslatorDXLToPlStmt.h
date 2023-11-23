@@ -500,6 +500,12 @@ private:
 		CDXLTranslationContextArray *child_contexts, List **targetlist_out,
 		List **qual_out, CDXLTranslateContext *output_context);
 
+	void TranslateFilterRemovingExplicitAnd(
+		const CDXLNode *filter_dxlnode,
+		const CDXLTranslateContextBaseTable *base_table_context,
+		CDXLTranslationContextArray *child_contexts, List **qual_out,
+		CDXLTranslateContext *output_context);
+
 	// translate the hash expr list of a redistribute motion node
 	void TranslateHashExprList(const CDXLNode *hash_expr_list_dxlnode,
 							   const CDXLTranslateContext *child_context,
