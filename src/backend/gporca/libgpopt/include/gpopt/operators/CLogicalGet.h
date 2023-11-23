@@ -48,6 +48,9 @@ private:
 	// distribution columns (empty for coordinator only tables)
 	CColRefSet *m_pcrsDist;
 
+	// are security quals present
+	BOOL m_hasSecurityQuals{false};
+
 	void CreatePartCols(CMemoryPool *mp, const ULongPtrArray *pdrgpulPart);
 
 	// private copy ctor
@@ -113,6 +116,18 @@ public:
 	PdrgpdrgpcrPartColumns() const
 	{
 		return m_pdrgpdrgpcrPart;
+	}
+
+	void
+	SetHasSecurityQuals(BOOL hasSecurityQuals)
+	{
+		m_hasSecurityQuals = hasSecurityQuals;
+	}
+
+	BOOL
+	GetHasSecurityQuals()
+	{
+		return m_hasSecurityQuals;
 	}
 
 	// operator specific hash function

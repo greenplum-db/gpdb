@@ -42,6 +42,9 @@ protected:
 	// Indexes correspond to partitions
 	IMdIdArray *m_foreign_server_mdids{nullptr};
 
+	// are security quals present
+	BOOL m_hasSecurityQuals{false};
+
 public:
 	CLogicalDynamicGet(const CLogicalDynamicGet &) = delete;
 
@@ -89,6 +92,18 @@ public:
 	FStaticPruned() const
 	{
 		return m_static_pruned;
+	}
+
+	void
+	SetHasSecurityQuals(BOOL hasSecurityQuals)
+	{
+		m_hasSecurityQuals = hasSecurityQuals;
+	}
+
+	BOOL
+	GetHasSecurityQuals()
+	{
+		return m_hasSecurityQuals;
 	}
 
 	// operator specific hash function

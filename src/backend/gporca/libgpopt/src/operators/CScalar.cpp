@@ -417,4 +417,16 @@ CScalar::FHasScalarArrayCmp(CExpressionHandle &exprhdl)
 	return false;
 }
 
+void
+CScalar::SetIsSecurityQual(BOOL is_security_qual)
+{
+	m_is_security_qual = is_security_qual;
+}
+
+BOOL
+CScalar::GetIsSecurityQual()
+{
+	return m_is_security_qual;
+}
+
 // EOF
