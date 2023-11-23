@@ -38,6 +38,8 @@ using namespace gpopt;
 class CDXLScalar : public CDXLOperator
 {
 private:
+	BOOL m_is_security_qual{false};
+
 public:
 	CDXLScalar(CDXLScalar &) = delete;
 
@@ -50,6 +52,10 @@ public:
 
 	// does the operator return a boolean result
 	virtual BOOL HasBoolResult(CMDAccessor *md_accessor) const = 0;
+
+	void SetIsSecurityQual(BOOL is_security_qual);
+
+	BOOL GetIsSecurityQual();
 
 #ifdef GPOS_DEBUG
 	void AssertValid(const CDXLNode *dxlnode,

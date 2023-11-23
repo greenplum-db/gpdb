@@ -304,6 +304,12 @@ private:
 										  ULONG	 //current_query_level
 	);
 
+	// Marks the security quals to distinguish them from other quals
+	void MarkAsSecurityQuals(CDXLNode *node);
+
+	// translate the security quals present in a range table entry
+	CDXLNode *TranslateSecurityQualToDXL(const RangeTblEntry *rte);
+
 	void NoteDistributionPolicyOpclasses(const RangeTblEntry *rte);
 
 	// generate a DXL node from column values, where each column value is
