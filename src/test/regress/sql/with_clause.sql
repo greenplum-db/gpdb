@@ -461,3 +461,41 @@ UNION ALL
   SELECT 'sleep', 1 where pg_sleep(1) is not null
 UNION ALL
   SELECT 'c', j FROM cte;
+
+-- Test planner not pushing down quals to non-SELECT queries inside CTE. There
+-- can be a DML operation, and it's incorrect to push down upper quals to it.
+--start_ignore
+drop table if exists with_dml;
+--end_ignore
+create table with_dml (i int, j int) distributed by (i);
+explain (costs off)
+with cte as (
+    insert into with_dml select i, i * 100 from generate_series(1,5) i
+    returning *
+) select count(*) from cte where i > 2;
+with cte as (
+    insert into with_dml select i, i * 100 from generate_series(1,5) i
+    returning *
+) select count(*) from cte where i > 2;
+select count(*) from with_dml;
+explain (costs off)
+with cte as (
+    update with_dml set j = j + 1
+    returning i
+) select * from cte where i > 2 order by i;
+with cte as (
+    update with_dml set j = j + 1
+    returning i
+) select * from cte where i > 2 order by i;
+select * from with_dml order by i;
+explain (costs off)
+with cte as (
+    delete from with_dml
+    returning i
+) select * from cte where i > 2 order by i;
+with cte as (
+    delete from with_dml
+    returning i
+) select * from cte where i > 2 order by i;
+select count(*) from with_dml;
+drop table with_dml;

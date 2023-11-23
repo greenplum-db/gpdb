@@ -2359,3 +2359,118 @@ UNION ALL
  c      | 1
 (7 rows)
 
+-- Test planner not pushing down quals to non-SELECT queries inside CTE. There
+-- can be a DML operation, and it's incorrect to push down upper quals to it.
+--start_ignore
+drop table if exists with_dml;
+NOTICE:  table "with_dml" does not exist, skipping
+--end_ignore
+create table with_dml (i int, j int) distributed by (i);
+explain (costs off)
+with cte as (
+    insert into with_dml select i, i * 100 from generate_series(1,5) i
+    returning *
+) select count(*) from cte where i > 2;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Aggregate
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Subquery Scan on cte
+               Filter: (cte.i > 2)
+               ->  Insert on with_dml
+                     ->  Redistribute Motion 1:3  (slice2; segments: 1)
+                           Hash Key: i.i
+                           ->  Function Scan on generate_series i
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+with cte as (
+    insert into with_dml select i, i * 100 from generate_series(1,5) i
+    returning *
+) select count(*) from cte where i > 2;
+ count 
+-------
+     3
+(1 row)
+
+select count(*) from with_dml;
+ count 
+-------
+     5
+(1 row)
+
+explain (costs off)
+with cte as (
+    update with_dml set j = j + 1
+    returning i
+) select * from cte where i > 2 order by i;
+                  QUERY PLAN                  
+----------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: cte.i
+   ->  Sort
+         Sort Key: cte.i
+         ->  Subquery Scan on cte
+               Filter: (cte.i > 2)
+               ->  Update on with_dml
+                     ->  Seq Scan on with_dml
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+with cte as (
+    update with_dml set j = j + 1
+    returning i
+) select * from cte where i > 2 order by i;
+ i 
+---
+ 3
+ 4
+ 5
+(3 rows)
+
+select * from with_dml order by i;
+ i |  j  
+---+-----
+ 1 | 101
+ 2 | 201
+ 3 | 301
+ 4 | 401
+ 5 | 501
+(5 rows)
+
+explain (costs off)
+with cte as (
+    delete from with_dml
+    returning i
+) select * from cte where i > 2 order by i;
+                  QUERY PLAN                  
+----------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: cte.i
+   ->  Sort
+         Sort Key: cte.i
+         ->  Subquery Scan on cte
+               Filter: (cte.i > 2)
+               ->  Delete on with_dml
+                     ->  Seq Scan on with_dml
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+with cte as (
+    delete from with_dml
+    returning i
+) select * from cte where i > 2 order by i;
+ i 
+---
+ 3
+ 4
+ 5
+(3 rows)
+
+select count(*) from with_dml;
+ count 
+-------
+     0
+(1 row)
+
+drop table with_dml;

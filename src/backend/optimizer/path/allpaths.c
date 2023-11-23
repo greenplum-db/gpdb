@@ -2972,7 +2972,12 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 
 		config->honor_order_by = false;
 
-		if (!cte->cterecursive)
+		/*
+		 * Additionally to recursive CTE queries, don't try to push down quals
+		 * to non-SELECT queries. There can be DML operation with RETURNING
+		 * clause, and it's incorrect to push down upper quals to it.
+		 */
+		if (!cte->cterecursive && subquery->commandType == CMD_SELECT)
 		{
 			/*
 			 * Adjust the subquery so that 'root', i.e. this subquery, is the
