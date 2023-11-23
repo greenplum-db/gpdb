@@ -2918,6 +2918,8 @@ CExpressionPreprocessor::PrunePartitions(CMemoryPool *mp, CExpression *expr)
 			selected_partition_mdids, selected_part_cnstr_disj, true,
 			foreign_server_mdids);
 
+		new_dyn_get->SetHasSecurityQuals(dyn_get->GetHasSecurityQuals());
+
 		CExpressionArray *select_children = GPOS_NEW(mp) CExpressionArray(mp);
 		select_children->Append(GPOS_NEW(mp) CExpression(mp, new_dyn_get));
 		select_children->Append(PrunePartitions(mp, filter_pred));
@@ -3289,6 +3291,168 @@ CExpressionPreprocessor::ConvertSplitUpdateToInPlaceUpdate(CMemoryPool *mp,
 	return pexpr;
 }
 
+// This preprocessing method will iterate through all the quals for a relation
+// and will place the security quals before other quals. Eg.
+// Input Tree:
+//	CLogicalSelect
+//	|--CLogicalGet "foo"
+//	+--CScalarBoolOp (EboolopAnd)
+//			|--CScalarCmp (=)
+//			|  |--CScalarIdent "a" (0)
+//			|  +--CScalarConst (10)
+//			|--CScalarCmp (=)
+//			|  |--CScalarIdent "b" (1)
+//			|  +--CScalarConst (10)
+//			|--CScalarCmp (=) ------------> Is a security Qual
+//			|  |--CScalarIdent "a" (0)
+//			|  +--CScalarIdent "b" (1)
+//		  	+--CScalarCmp (>)
+//			|--CScalarIdent "c" (2)
+//				  +--CScalarConst (20)
+//
+// Output Tree:
+//	CLogicalSelect
+//	|--CLogicalGet "foo"
+//	+--CScalarBoolOp (EboolopAnd)
+//			|--CScalarCmp (=) ------------> Is a security Qual
+//			|  |--CScalarIdent "a" (0)
+//			|  +--CScalarIdent "b" (1)
+//			|--CScalarCmp (=)
+//			|  |--CScalarIdent "a" (0)
+//			|  +--CScalarConst (10)
+//			|--CScalarCmp (=)
+//			|  |--CScalarIdent "b" (1)
+//			|  +--CScalarConst (10)
+//			+--CScalarCmp (>)
+//			|--CScalarIdent "c" (2)
+//			+--CScalarConst (20)
+
+CExpression *
+CExpressionPreprocessor::PexprOrderSecurityQuals(CMemoryPool *mp,
+												 CExpression *pexpr)
+{
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != pexpr);
+	CExpressionArray *pdrgpexprChildren = GPOS_NEW(mp) CExpressionArray(mp);
+
+	if (COperator::EopLogicalSelect == pexpr->Pop()->Eopid())
+	{
+		CExpression *pexprLogicalChild = (*pexpr)[0];
+		CExpression *pexprScalarChild = (*pexpr)[1];
+		COperator::EOperatorId eopid = pexprLogicalChild->Pop()->Eopid();
+		if ((COperator::EopLogicalGet == eopid ||
+			 COperator::EopLogicalForeignGet == eopid ||
+			 COperator::EopLogicalDynamicGet == eopid) &&
+			pexprScalarChild->Pop()->FScalar())
+		{
+			pexprLogicalChild->AddRef();
+			pdrgpexprChildren->Append(pexprLogicalChild);
+			CExpression *pexprNewScalarChild =
+				PexprOrderSecurityQualsUtil(mp, pexprScalarChild);
+			pdrgpexprChildren->Append(pexprNewScalarChild);
+			COperator *pop = pexpr->Pop();
+			pop->AddRef();
+			return GPOS_NEW(mp) CExpression(mp, pop, pdrgpexprChildren);
+		}
+	}
+
+	// recursively process children
+	const ULONG arity = pexpr->Arity();
+	for (ULONG ul = 0; ul < arity; ul++)
+	{
+		CExpression *pexprChild = PexprOrderSecurityQuals(mp, (*pexpr)[ul]);
+		pdrgpexprChildren->Append(pexprChild);
+	}
+
+	COperator *pop = pexpr->Pop();
+	pop->AddRef();
+
+	return GPOS_NEW(mp) CExpression(mp, pop, pdrgpexprChildren);
+}
+
+CExpression *
+CExpressionPreprocessor::PexprOrderSecurityQualsUtil(CMemoryPool *mp,
+													 CExpression *pexpr)
+{
+	GPOS_ASSERT(nullptr != mp);
+	GPOS_ASSERT(nullptr != pexpr);
+	GPOS_ASSERT(pexpr->Pop()->FScalar());
+
+	if (CUtils::FScalarBoolOp(pexpr))
+	{
+		CScalarBoolOp *popScBoolOp = CScalarBoolOp::PopConvert(pexpr->Pop());
+		CScalarBoolOp::EBoolOperator eboolop = popScBoolOp->Eboolop();
+
+		// When the parent operator of the predicate is NOT, it
+		// indicates a single predicate. Conversely, if the parent
+		// operator is OR, it implies that all predicates are either
+		// security quals or user-provided quals. This is because if
+		// both security quals and normal quals are present then the
+		// parent will be AND between the two. In both scenarios,
+		// reordering is not required.
+		if (CScalarBoolOp::EboolopOr == eboolop ||
+			CScalarBoolOp::EboolopNot == eboolop)
+		{
+			return PexprOrderSecurityQuals(mp, pexpr);
+		}
+
+
+		// If the parent AND is a security qual then all the quals present below will
+		// be security quals. So no ordering required.
+		if ((dynamic_cast<CScalar *>(pexpr->Pop()))->GetIsSecurityQual())
+		{
+			return PexprOrderSecurityQuals(mp, pexpr);
+		}
+
+		// the main logic to order security quals
+		ULONG arity = pexpr->Arity();
+
+		// Array to hold the security quals present in the qual scalar tree
+		CExpressionArray *pdrgpexprSecurityQuals =
+			GPOS_NEW(mp) CExpressionArray(mp);
+
+		// Array to hold the normal quals present in the qual scalar tree
+		CExpressionArray *pdrgpexprNonSecurityQuals =
+			GPOS_NEW(mp) CExpressionArray(mp);
+
+		// Array to hold the quals having security quals first
+		CExpressionArray *pdrgpexprCombined = GPOS_NEW(mp) CExpressionArray(mp);
+		CExpression *pexprNew = nullptr;
+		for (ULONG ul = 0; ul < arity; ul++)
+		{
+			CExpression *pexprChild = (*pexpr)[ul];
+			CScalar *scalarOp = dynamic_cast<CScalar *>(pexprChild->Pop());
+			if (scalarOp->GetIsSecurityQual())
+			{
+				pexprNew = PexprOrderSecurityQuals(mp, pexprChild);
+				pdrgpexprSecurityQuals->Append(pexprNew);
+			}
+			else
+			{
+				pexprNew = PexprOrderSecurityQuals(mp, pexprChild);
+				pdrgpexprNonSecurityQuals->Append(pexprNew);
+			}
+		}
+
+		for (ULONG ul = 0; ul < pdrgpexprSecurityQuals->Size(); ul++)
+		{
+			((*pdrgpexprSecurityQuals)[ul])->AddRef();
+			pdrgpexprCombined->Append((*pdrgpexprSecurityQuals)[ul]);
+		}
+		for (ULONG ul = 0; ul < pdrgpexprNonSecurityQuals->Size(); ul++)
+		{
+			((*pdrgpexprNonSecurityQuals)[ul])->AddRef();
+			pdrgpexprCombined->Append((*pdrgpexprNonSecurityQuals)[ul]);
+		}
+		pdrgpexprSecurityQuals->Release();
+		pdrgpexprNonSecurityQuals->Release();
+		return CPredicateUtils::PexprConjunction(mp, pdrgpexprCombined);
+	}
+
+	// If its not a BOOL operator then no ordering is required
+	return PexprOrderSecurityQuals(mp, pexpr);
+}
+
 // main driver, pre-processing of input logical expression
 CExpression *
 CExpressionPreprocessor::PexprPreprocess(
@@ -3519,7 +3683,11 @@ CExpressionPreprocessor::PexprPreprocess(
 	GPOS_CHECK_ABORT;
 	pexprSplitUpdateToInplace->Release();
 
-	return pexprNormalized2;
+	// (31) Place security quals before any other quals
+	CExpression *pexprOrderSecurityQuals =
+		PexprOrderSecurityQuals(mp, pexprNormalized2);
+	pexprNormalized2->Release();
+	return pexprOrderSecurityQuals;
 }
 
 // EOF

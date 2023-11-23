@@ -226,6 +226,12 @@ private:
 													   CColRef *pcolref,
 													   CExpression *pprojExpr);
 
+	static CExpression *PexprOrderSecurityQuals(CMemoryPool *mp,
+												CExpression *pexpr);
+
+	static CExpression *PexprOrderSecurityQualsUtil(CMemoryPool *mp,
+													CExpression *pexpr);
+
 public:
 	CExpressionPreprocessor() = delete;
 
