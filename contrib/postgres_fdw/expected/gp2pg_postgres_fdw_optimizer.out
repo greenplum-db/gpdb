@@ -386,8 +386,8 @@ EXPLAIN (VERBOSE, COSTS OFF) SELECT * FROM ft1 t1 WHERE t1.c1 = 101 AND t1.c6 = 
 ----------------------------------------------------------------------------------------------------------------------------------------------
  Foreign Scan on public.ft1
    Output: c1, c2, c3, c4, c5, c6, c7, c8
-   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" WHERE ((("C 1" = 101) AND (c6 = '1'::text) AND (c7 >= '1'::bpchar)))
- Optimizer: Pivotal Optimizer (GPORCA)
+   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" WHERE (("C 1" = 101)) AND ((c6 = '1'::text)) AND ((c7 >= '1'::bpchar))
+ Optimizer: GPORCA
 (4 rows)
 
 SELECT * FROM ft1 t1 WHERE t1.c1 = 101 AND t1.c6 = '1' AND t1.c7 >= '1';
@@ -786,8 +786,8 @@ EXPLAIN (VERBOSE, COSTS OFF) SELECT * FROM ft1 t1 WHERE t1.c1 = 100 AND t1.c2 = 
 --------------------------------------------------------------------------------------------------------------
  Foreign Scan on public.ft1
    Output: c1, c2, c3, c4, c5, c6, c7, c8
-   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" WHERE ((("C 1" = 100) AND (c2 = 0)))
- Optimizer: Pivotal Optimizer (GPORCA)
+   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" WHERE (("C 1" = 100)) AND ((c2 = 0))
+ Optimizer: GPORCA
 (4 rows)
 
 EXPLAIN (VERBOSE, COSTS OFF) SELECT * FROM ft1 t1 WHERE c1 IS NULL;        -- NullTest
@@ -919,8 +919,8 @@ EXPLAIN (VERBOSE, COSTS OFF)
    Hash Cond: ((ft2.c1 = ft2_1.c1) AND (upper((ft2.c7)::text) = (ft2_1.c7)::text))
    ->  Foreign Scan on public.ft2
          Output: ft2.c1, ft2.c2, ft2.c3, ft2.c4, ft2.c5, ft2.c6, ft2.c7, ft2.c8
-         Filter: ((ft2.c2 = 6) AND (ft2.c8 = 'foo'::user_enum))
-         Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1"
+         Filter: (ft2.c8 = 'foo'::user_enum)
+         Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" WHERE ((c2 = 6))
    ->  Hash
          Output: ft2_1.c1, ft2_1.c2, ft2_1.c3, ft2_1.c4, ft2_1.c5, ft2_1.c6, ft2_1.c7, ft2_1.c8
          ->  Foreign Scan on public.ft2 ft2_1
@@ -1278,8 +1278,8 @@ WHERE c1 = 642 AND length(to_tsvector('custom_search'::regconfig, c3)) > 0;
 ----------------------------------------------------------------------------------------------------------------------------------------------
  Foreign Scan on public.ft1
    Output: c1, to_tsvector('custom_search'::regconfig, c3)
-   Remote SQL: SELECT "C 1", c3 FROM "S 1"."T 1" WHERE ((("C 1" = 642) AND (length(to_tsvector('public.custom_search'::regconfig, c3)) > 0)))
- Optimizer: Pivotal Optimizer (GPORCA)
+   Remote SQL: SELECT "C 1", c3 FROM "S 1"."T 1" WHERE (("C 1" = 642)) AND ((length(to_tsvector('public.custom_search'::regconfig, c3)) > 0))
+ Optimizer: GPORCA
 (4 rows)
 
 SELECT c1, to_tsvector('custom_search'::regconfig, c3) FROM ft1
@@ -1676,14 +1676,14 @@ SELECT t1.c1, t2.c1 FROM (SELECT c1 FROM ft4 WHERE c1 between 50 and 60) t1 FULL
                Sort Key: ft4.c1
                ->  Foreign Scan on public.ft4
                      Output: ft4.c1
-                     Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE (((c1 >= 50) AND (c1 <= 60)))
+                     Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE ((c1 >= 50)) AND ((c1 <= 60))
          ->  Sort
                Output: ft5.c1
                Sort Key: ft5.c1
                ->  Foreign Scan on public.ft5
                      Output: ft5.c1
-                     Remote SQL: SELECT c1 FROM "S 1"."T 4" WHERE (((c1 >= 50) AND (c1 <= 60)))
- Optimizer: Pivotal Optimizer (GPORCA)
+                     Remote SQL: SELECT c1 FROM "S 1"."T 4" WHERE ((c1 >= 50)) AND ((c1 <= 60))
+ Optimizer: GPORCA
 (19 rows)
 
 SELECT t1.c1, t2.c1 FROM (SELECT c1 FROM ft4 WHERE c1 between 50 and 60) t1 FULL JOIN (SELECT c1 FROM ft5 WHERE c1 between 50 and 60) t2 ON (t1.c1 = t2.c1) ORDER BY t1.c1, t2.c1;
@@ -1746,7 +1746,7 @@ SELECT t1.c1, ss.a, ss.b FROM (SELECT c1 FROM ft4 WHERE c1 between 50 and 60) t1
                Sort Key: ft4.c1
                ->  Foreign Scan on public.ft4
                      Output: ft4.c1
-                     Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE (((c1 >= 50) AND (c1 <= 60)))
+                     Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE ((c1 >= 50)) AND ((c1 <= 60))
          ->  Sort
                Output: ft4_1.c1, ft5.c1
                Sort Key: ft4_1.c1
@@ -1755,13 +1755,13 @@ SELECT t1.c1, ss.a, ss.b FROM (SELECT c1 FROM ft4 WHERE c1 between 50 and 60) t1
                      Hash Cond: (ft4_1.c1 = ft5.c1)
                      ->  Foreign Scan on public.ft4 ft4_1
                            Output: ft4_1.c1
-                           Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE (((c1 >= 50) AND (c1 <= 60)))
+                           Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE ((c1 >= 50)) AND ((c1 <= 60))
                      ->  Hash
                            Output: ft5.c1
                            ->  Foreign Scan on public.ft5
                                  Output: ft5.c1
-                                 Remote SQL: SELECT c1 FROM "S 1"."T 4" WHERE (((c1 >= 50) AND (c1 <= 60)))
- Optimizer: Pivotal Optimizer (GPORCA)
+                                 Remote SQL: SELECT c1 FROM "S 1"."T 4" WHERE ((c1 >= 50)) AND ((c1 <= 60))
+ Optimizer: GPORCA
 (27 rows)
 
 SELECT t1.c1, ss.a, ss.b FROM (SELECT c1 FROM ft4 WHERE c1 between 50 and 60) t1 FULL JOIN (SELECT t2.c1, t3.c1 FROM ft4 t2 LEFT JOIN ft5 t3 ON (t2.c1 = t3.c1) WHERE (t2.c1 between 50 and 60)) ss(a, b) ON (t1.c1 = ss.a) ORDER BY t1.c1, ss.a, ss.b;
@@ -1791,7 +1791,7 @@ SELECT t1.c1, ss.a, ss.b FROM (SELECT c1 FROM ft4 WHERE c1 between 50 and 60) t1
                Sort Key: ft4.c1
                ->  Foreign Scan on public.ft4
                      Output: ft4.c1
-                     Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE (((c1 >= 50) AND (c1 <= 60)))
+                     Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE ((c1 >= 50)) AND ((c1 <= 60))
          ->  Sort
                Output: ft4_1.c1, ft5.c1
                Sort Key: ft4_1.c1
@@ -1806,14 +1806,14 @@ SELECT t1.c1, ss.a, ss.b FROM (SELECT c1 FROM ft4 WHERE c1 between 50 and 60) t1
                                  Sort Key: ft4_1.c1
                                  ->  Foreign Scan on public.ft4 ft4_1
                                        Output: ft4_1.c1
-                                       Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE (((c1 >= 50) AND (c1 <= 60)))
+                                       Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE ((c1 >= 50)) AND ((c1 <= 60))
                            ->  Sort
                                  Output: ft5.c1
                                  Sort Key: ft5.c1
                                  ->  Foreign Scan on public.ft5
                                        Output: ft5.c1
-                                       Remote SQL: SELECT c1 FROM "S 1"."T 4" WHERE (((c1 >= 50) AND (c1 <= 60)))
- Optimizer: Pivotal Optimizer (GPORCA)
+                                       Remote SQL: SELECT c1 FROM "S 1"."T 4" WHERE ((c1 >= 50)) AND ((c1 <= 60))
+ Optimizer: GPORCA
 (34 rows)
 
 SELECT t1.c1, ss.a, ss.b FROM (SELECT c1 FROM ft4 WHERE c1 between 50 and 60) t1 FULL JOIN (SELECT t2.c1, t3.c1 FROM (SELECT c1 FROM ft4 WHERE c1 between 50 and 60) t2 FULL JOIN (SELECT c1 FROM ft5 WHERE c1 between 50 and 60) t3 ON (t2.c1 = t3.c1) WHERE t2.c1 IS NULL OR t2.c1 IS NOT NULL) ss(a, b) ON (t1.c1 = ss.a) ORDER BY t1.c1, ss.a, ss.b;
@@ -1857,7 +1857,7 @@ SELECT t1.c1, ss.a, ss.b FROM (SELECT c1 FROM "S 1"."T 3" WHERE c1 = 50) t1 INNE
                                        Hash Key: c1
                                        ->  Foreign Scan on public.ft4
                                              Output: c1
-                                             Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE (((c1 >= 50) AND (c1 <= 60)))
+                                             Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE ((c1 >= 50)) AND ((c1 <= 60))
                            ->  Sort
                                  Output: c1
                                  Sort Key: c1
@@ -1866,7 +1866,7 @@ SELECT t1.c1, ss.a, ss.b FROM (SELECT c1 FROM "S 1"."T 3" WHERE c1 = 50) t1 INNE
                                        Hash Key: c1
                                        ->  Foreign Scan on public.ft5
                                              Output: c1
-                                             Remote SQL: SELECT c1 FROM "S 1"."T 4" WHERE (((c1 >= 50) AND (c1 <= 60)))
+                                             Remote SQL: SELECT c1 FROM "S 1"."T 4" WHERE ((c1 >= 50)) AND ((c1 <= 60))
                ->  Materialize
                      Output: "T 3".c1
                      ->  Broadcast Motion 3:3  (slice2; segments: 3)
@@ -1916,7 +1916,7 @@ SELECT t1.c1, t2.c1, t3.c1 FROM ft4 t1 INNER JOIN ft5 t2 ON (t1.c1 = t2.c1 + 1 a
                                  Output: ft4.c1
                                  ->  Foreign Scan on public.ft4
                                        Output: ft4.c1
-                                       Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE (((c1 >= 50) AND (c1 <= 60)))
+                                       Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE ((c1 >= 50)) AND ((c1 <= 60))
                ->  Sort
                      Output: ft4_1.c1
                      Sort Key: ft4_1.c1
@@ -2956,7 +2956,7 @@ SELECT q.a, ft2.c1 FROM (SELECT 13 FROM ft1 WHERE c1 = 13) q(a) RIGHT JOIN ft2 O
    Hash Cond: (ft2.c1 = (13))
    ->  Foreign Scan on public.ft2
          Output: ft2.c1
-         Remote SQL: SELECT "C 1" FROM "S 1"."T 1" WHERE ((("C 1" >= 10) AND ("C 1" <= 15)))
+         Remote SQL: SELECT "C 1" FROM "S 1"."T 1" WHERE (("C 1" >= 10)) AND (("C 1" <= 15))
    ->  Hash
          Output: (13)
          ->  Result
@@ -2989,7 +2989,7 @@ SELECT ft4.c1, q.* FROM ft4 LEFT JOIN (SELECT 13, ft1.c1, ft2.c1 FROM ft1 RIGHT 
    Hash Cond: (ft4.c1 = ft1.c1)
    ->  Foreign Scan on public.ft4
          Output: ft4.c1
-         Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE (((c1 >= 10) AND (c1 <= 15)))
+         Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE ((c1 >= 10)) AND ((c1 <= 15))
    ->  Hash
          Output: (13), ft2.c1, ft1.c1
          ->  Hash Join
@@ -3767,8 +3767,8 @@ select array_agg(c5 order by c1 desc) from ft2 where c2 = 6 and c1 < 50;
    Output: array_agg(c5, c1 ORDER BY c1 DESC)
    ->  Foreign Scan on public.ft2
          Output: c1, c5
-         Remote SQL: SELECT "C 1", c5 FROM "S 1"."T 1" WHERE (((c2 = 6) AND ("C 1" < 50)))
- Optimizer: Pivotal Optimizer (GPORCA)
+         Remote SQL: SELECT "C 1", c5 FROM "S 1"."T 1" WHERE ((c2 = 6)) AND (("C 1" < 50))
+ Optimizer: GPORCA
 (6 rows)
 
 select array_agg(c5 order by c1 desc) from ft2 where c2 = 6 and c1 < 50;
@@ -4253,8 +4253,8 @@ select array_agg(c1 order by c1 using operator(public.<^)) from ft2 where c2 = 6
          Sort Key: ft2.c2
          ->  Foreign Scan on public.ft2
                Output: c1, c2
-               Remote SQL: SELECT "C 1", c2 FROM "S 1"."T 1" WHERE (((c2 = 6) AND ("C 1" < 100)))
- Optimizer: Pivotal Optimizer (GPORCA)
+               Remote SQL: SELECT "C 1", c2 FROM "S 1"."T 1" WHERE ((c2 = 6)) AND (("C 1" < 100))
+ Optimizer: GPORCA
 (10 rows)
 
 -- This should not be pushed either.
@@ -4469,14 +4469,14 @@ select count(*), sum(t1.c1), avg(t2.c1) from (select c1 from ft4 where c1 betwee
                Sort Key: ft4.c1
                ->  Foreign Scan on public.ft4
                      Output: ft4.c1
-                     Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE (((c1 >= 50) AND (c1 <= 60)))
+                     Remote SQL: SELECT c1 FROM "S 1"."T 3" WHERE ((c1 >= 50)) AND ((c1 <= 60))
          ->  Sort
                Output: ft5.c1
                Sort Key: ft5.c1
                ->  Foreign Scan on public.ft5
                      Output: ft5.c1
-                     Remote SQL: SELECT c1 FROM "S 1"."T 4" WHERE (((c1 >= 50) AND (c1 <= 60)))
- Optimizer: Pivotal Optimizer (GPORCA)
+                     Remote SQL: SELECT c1 FROM "S 1"."T 4" WHERE ((c1 >= 50)) AND ((c1 <= 60))
+ Optimizer: GPORCA
 (18 rows)
 
 select count(*), sum(t1.c1), avg(t2.c1) from (select c1 from ft4 where c1 between 50 and 60) t1 full join (select c1 from ft5 where c1 between 50 and 60) t2 on (t1.c1 = t2.c1);
@@ -4990,9 +4990,9 @@ EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st2(10, 20);
                Output: ft2.c3
                ->  Foreign Scan on public.ft2
                      Output: ft2.c3
-                     Filter: ((ft2.c1 > 10) AND (date(ft2.c4) = '01-17-1970'::date))
-                     Remote SQL: SELECT "C 1", c3, c4 FROM "S 1"."T 1"
- Optimizer: Pivotal Optimizer (GPORCA)
+                     Filter: (date(ft2.c4) = '01-17-1970'::date)
+                     Remote SQL: SELECT c3, c4 FROM "S 1"."T 1" WHERE (("C 1" > 10))
+ Optimizer: GPORCA
 (16 rows)
 
 EXECUTE st2(10, 20);
@@ -5025,8 +5025,8 @@ EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st3(10, 20);
                Output: ft2.c3
                ->  Foreign Scan on public.ft2
                      Output: ft2.c3
-                     Remote SQL: SELECT c3 FROM "S 1"."T 1" WHERE ((("C 1" > 10) AND (date(c5) = '1970-01-17'::date)))
- Optimizer: Pivotal Optimizer (GPORCA)
+                     Remote SQL: SELECT c3 FROM "S 1"."T 1" WHERE (("C 1" > 10)) AND ((date(c5) = '1970-01-17'::date))
+ Optimizer: GPORCA
 (15 rows)
 
 EXECUTE st3(10, 20);
@@ -5104,9 +5104,9 @@ EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st5('foo', 1);
 -------------------------------------------------------------------------
  Foreign Scan on public.ft1
    Output: c1, c2, c3, c4, c5, c6, c7, c8
-   Filter: ((ft1.c8 = 'foo'::user_enum) AND (ft1.c1 = 1))
-   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1"
- Optimizer: Pivotal Optimizer (GPORCA)
+   Filter: (ft1.c8 = 'foo'::user_enum)
+   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" WHERE (("C 1" = 1))
+ Optimizer: GPORCA
 (5 rows)
 
 EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st5('foo', 1);
@@ -5114,9 +5114,9 @@ EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st5('foo', 1);
 -------------------------------------------------------------------------
  Foreign Scan on public.ft1
    Output: c1, c2, c3, c4, c5, c6, c7, c8
-   Filter: ((ft1.c8 = 'foo'::user_enum) AND (ft1.c1 = 1))
-   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1"
- Optimizer: Pivotal Optimizer (GPORCA)
+   Filter: (ft1.c8 = 'foo'::user_enum)
+   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" WHERE (("C 1" = 1))
+ Optimizer: GPORCA
 (5 rows)
 
 EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st5('foo', 1);
@@ -5124,9 +5124,9 @@ EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st5('foo', 1);
 -------------------------------------------------------------------------
  Foreign Scan on public.ft1
    Output: c1, c2, c3, c4, c5, c6, c7, c8
-   Filter: ((ft1.c8 = 'foo'::user_enum) AND (ft1.c1 = 1))
-   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1"
- Optimizer: Pivotal Optimizer (GPORCA)
+   Filter: (ft1.c8 = 'foo'::user_enum)
+   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" WHERE (("C 1" = 1))
+ Optimizer: GPORCA
 (5 rows)
 
 EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st5('foo', 1);
@@ -5134,9 +5134,9 @@ EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st5('foo', 1);
 -------------------------------------------------------------------------
  Foreign Scan on public.ft1
    Output: c1, c2, c3, c4, c5, c6, c7, c8
-   Filter: ((ft1.c8 = 'foo'::user_enum) AND (ft1.c1 = 1))
-   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1"
- Optimizer: Pivotal Optimizer (GPORCA)
+   Filter: (ft1.c8 = 'foo'::user_enum)
+   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" WHERE (("C 1" = 1))
+ Optimizer: GPORCA
 (5 rows)
 
 EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st5('foo', 1);
@@ -5144,9 +5144,9 @@ EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st5('foo', 1);
 -------------------------------------------------------------------------
  Foreign Scan on public.ft1
    Output: c1, c2, c3, c4, c5, c6, c7, c8
-   Filter: ((ft1.c8 = 'foo'::user_enum) AND (ft1.c1 = 1))
-   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1"
- Optimizer: Pivotal Optimizer (GPORCA)
+   Filter: (ft1.c8 = 'foo'::user_enum)
+   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" WHERE (("C 1" = 1))
+ Optimizer: GPORCA
 (5 rows)
 
 EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st5('foo', 1);
@@ -5154,9 +5154,9 @@ EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st5('foo', 1);
 -------------------------------------------------------------------------
  Foreign Scan on public.ft1
    Output: c1, c2, c3, c4, c5, c6, c7, c8
-   Filter: ((ft1.c8 = 'foo'::user_enum) AND (ft1.c1 = 1))
-   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1"
- Optimizer: Pivotal Optimizer (GPORCA)
+   Filter: (ft1.c8 = 'foo'::user_enum)
+   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" WHERE (("C 1" = 1))
+ Optimizer: GPORCA
 (5 rows)
 
 EXECUTE st5('foo', 1);
