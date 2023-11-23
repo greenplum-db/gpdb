@@ -1,3 +1,8 @@
 struct workfile_set
 struct HashJoinTableData
 struct AppendOnlyBlockDirectory
+struct AOCSFetchDescData
+struct AOCSInsertDescData
+struct AOCSWriteColumnDescData
+struct AppendOnlyFetchDescData
+struct AppendOnlyInsertDescData
