@@ -163,7 +163,7 @@ jobs:
                                  ${SKIP_POSTGRES_TYPES_OPTION} \
                                  -lib postgres \
                                  -old build-baseline/postgres*.abi \
-                                 -new build-latest/postgres*.abi -abi
+                                 -new build-latest/postgres*.abi
 
       - name: Print out ABI report
         if: always()

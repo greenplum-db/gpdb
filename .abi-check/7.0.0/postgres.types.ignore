@@ -1,1 +1,3 @@
-DummyType
+struct workfile_set
+struct HashJoinTableData
+struct AppendOnlyBlockDirectory
