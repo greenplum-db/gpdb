@@ -46,7 +46,7 @@ CDXLScalar::SetIsSecurityQual(BOOL is_security_qual)
 }
 
 BOOL
-CDXLScalar::GetIsSecurityQual()
+CDXLScalar::GetIsSecurityQual() const
 {
 	return m_is_security_qual;
 }

@@ -424,7 +424,7 @@ CScalar::SetIsSecurityQual(BOOL is_security_qual)
 }
 
 BOOL
-CScalar::GetIsSecurityQual()
+CScalar::GetIsSecurityQual() const
 {
 	return m_is_security_qual;
 }

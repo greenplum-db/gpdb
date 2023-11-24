@@ -189,7 +189,7 @@ public:
 
 	void SetIsSecurityQual(BOOL is_security_qual);
 
-	BOOL GetIsSecurityQual();
+	BOOL GetIsSecurityQual() const;
 
 };	// class CScalar
 

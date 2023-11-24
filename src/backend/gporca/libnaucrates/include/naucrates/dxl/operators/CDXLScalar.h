@@ -55,7 +55,7 @@ public:
 
 	void SetIsSecurityQual(BOOL is_security_qual);
 
-	BOOL GetIsSecurityQual();
+	BOOL GetIsSecurityQual() const;
 
 #ifdef GPOS_DEBUG
 	void AssertValid(const CDXLNode *dxlnode,

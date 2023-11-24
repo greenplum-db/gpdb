@@ -125,7 +125,7 @@ public:
 	}
 
 	BOOL
-	GetHasSecurityQuals()
+	GetHasSecurityQuals() const
 	{
 		return m_hasSecurityQuals;
 	}
