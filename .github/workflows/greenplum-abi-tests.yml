@@ -103,7 +103,6 @@ jobs:
         run: |
           ## TODO: Since abi-dumper requires debug info and it's hard to inject CFLAGS via the script for
           ## releasing Greenplum, we have to manually configure it here. Probably we can improve it in future.
-          export PATH=/opt/python-3.9.13/bin:/opt/python-2.7.18/bin:$PATH
           pushd gpdb_src
           CC='gcc -m64' \
           CFLAGS='-Og -g3 -Wno-maybe-uninitialized' LDFLAGS='-Wl,--enable-new-dtags -Wl,--export-dynamic' \
