@@ -28,6 +28,7 @@ jobs:
       BASELINE_VERSION: ${{ steps.vars.outputs.BASELINE_VERSION }}
       ABI_LIBS: ${{ steps.vars.outputs.ABI_LIBS }}
       ABI_HEADERS: ${{ steps.vars.outputs.ABI_HEADERS }}
+      EXCEPTION_LISTS_COUNT: ${{ steps.check_exception_lists.outputs.EXCEPTION_LISTS_COUNT }}
     steps:
       - name: Fetch source
         uses: actions/checkout@v3
@@ -44,7 +45,14 @@ jobs:
           echo "ABI_LIBS=postgres" | tee -a $GITHUB_OUTPUT
           echo "ABI_HEADERS=." | tee -a $GITHUB_OUTPUT
 
+      - name: Check if exception list exists
+        id: check_exception_lists
+        run: |
+          exception_lists_count=$(ls .abi-check/${{ steps.vars.outputs.BASELINE_VERSION }}/ 2> /dev/null | wc -l)
+          echo "EXCEPTION_LISTS_COUNT=${exception_lists_count}" | tee -a $GITHUB_OUTPUT
+
       - name: Upload symbol/type checking exception list
+        if: steps.check_exception_lists.outputs.EXCEPTION_LISTS_COUNT != '0'
         uses: actions/upload-artifact@v3
         with:
           name: exception_lists
@@ -136,6 +144,7 @@ jobs:
           path: build-latest/
 
       - name: Download exception lists
+        if: needs.abi-dump-setup.outputs.EXCEPTION_LISTS_COUNT != '0'
         uses: actions/download-artifact@v3
         with:
           name: exception_lists
