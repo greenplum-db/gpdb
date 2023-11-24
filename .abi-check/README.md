@@ -23,8 +23,8 @@ Several binaries are shipped in Greenplum, e.g., `$GPHOME/bin/postgres`, `$GPHOM
    ```
    abi-dumper $GPHOME/bin/postgres -lver <version of the binary> -o <output file>
    ```
-   - `<version of the binary>`: The version of the binary. You can give it some reasonable name, e.g., `6.25.3` to indicate the binary is built from '6.25.3' tag.
-   - `<output file>`: The file path for dumping the ABI information, e.g., `greenplum-6.25.3.dump`
+   - `<version of the binary>`: The version of the binary. You can give it some reasonable name, e.g., `7.0.0` to indicate the binary is built from '7.0.0' tag.
+   - `<output file>`: The file path for dumping the ABI information, e.g., `greenplum-7.0.0.dump`
    
 2. Dump the ABI information of another `postgres` binary (same as the step 1).
 
@@ -44,10 +44,10 @@ Several binaries are shipped in Greenplum, e.g., `$GPHOME/bin/postgres`, `$GPHOM
 There might be "safe ABI breaking changes", e.g., some symbol being removed and not referenced by any extensions or programs. Here are steps on how to suppress such errors.
 
 1. Add ignored symbols to `gpdb_src/.abi-check/<base version>/postgres.symbols.ignore` (one symbol per line).
-   - `<base version>`: The baseline version of Greenplum. If we want to ensure the ABI isn't broken between the `6.25.3` release and the latest `6X_STABLE`. The baseline version of Greenplum is `6.25.3`. See: [./6.25.3/postgres.symbols.ignore](./6.25.3/postgres.symbols.ignore)
+   - `<base version>`: The baseline version of Greenplum. If we want to ensure the ABI isn't broken between the `7.0.0` release and the latest `main`. The baseline version of Greenplum is `7.0.0`. See: [./7.0.0/postgres.symbols.ignore](./7.0.0/postgres.symbols.ignore)
 
 2. Add ignored types to `gpdb_src/.abi-check/<base version>/postgres.types.ignore` (one type per line).
-   - `<base version>`: The baseline version of Greenplum. If we want to ensure the ABI isn't broken between the `6.25.3` release and the latest `6X_STABLE`. The baseline version of Greenplum is `6.25.3`. See: [./6.25.3/postgres.types.ignore](./6.25.3/postgres.types.ignore)
+   - `<base version>`: The baseline version of Greenplum. If we want to ensure the ABI isn't broken between the `7.0.0` release and the latest `6X_STABLE`. The baseline version of Greenplum is `7.0.0`. See: [./7.0.0/postgres.types.ignore](./7.0.0/postgres.types.ignore). Add the `struct` keyword in front of the struct name if we need to ignore a struct type.
 
 3. Pass these two files to `abi-compliance-checker` and it will produce a report in HTML format.
    ```
