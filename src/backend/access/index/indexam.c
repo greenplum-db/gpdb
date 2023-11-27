@@ -212,7 +212,7 @@ index_insert_cleanup(Relation indexRelation,
 	if (indexRelation->rd_rel->relam == BRIN_AM_OID && indexInfo->ii_AmCache)
 		brininsertcleanup(indexInfo);
 #if 0
-	if (indexRelation->rd_indam->aminsertcleanup)
+	if (indexRelation->rd_indam->aminsertcleanup && indexInfo->ii_AmCache)
 		indexRelation->rd_indam->aminsertcleanup(indexInfo);
 #endif
 }
