@@ -91,6 +91,7 @@ extern bool brininsert(Relation idxRel, Datum *values, bool *nulls,
 					   ItemPointer heaptid, Relation heapRel,
 					   IndexUniqueCheck checkUnique,
 					   struct IndexInfo *indexInfo);
+extern void brininsertcleanup(struct IndexInfo *indexInfo);
 extern IndexScanDesc brinbeginscan(Relation r, int nkeys, int norderbys);
 extern int64 bringetbitmap(IndexScanDesc scan, Node **bmNodeP);
 extern void brinrescan(IndexScanDesc scan, ScanKey scankey, int nscankeys,

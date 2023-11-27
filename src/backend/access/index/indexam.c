@@ -60,6 +60,9 @@
 #include "utils/snapmgr.h"
 #include "utils/fmgroids.h"
 
+/* GPDB_17_MERGE_FIXE: Remove, once we have aminsertcleanup() */
+#include "access/brin_internal.h"
+
 /* ----------------------------------------------------------------
  *					macros used in index_ routines
  *
@@ -188,6 +191,30 @@ index_insert(Relation indexRelation,
 	return indexRelation->rd_indam->aminsert(indexRelation, values, isnull,
 											 heap_t_ctid, heapRelation,
 											 checkUnique, indexInfo);
+}
+
+/* -------------------------
+ *		index_insert_cleanup - clean up after all index inserts are done
+ * -------------------------
+ */
+void
+index_insert_cleanup(Relation indexRelation,
+					 IndexInfo *indexInfo)
+{
+	RELATION_CHECKS;
+	Assert(indexInfo);
+
+	/*
+	 * GPDB_17_MERGE_FIXME: Call aminsertcleanup callback here, when it becomes
+	 * available. For now, assume that BRIN is the only index type for which we
+	 * clean up at the end of an insert session.
+	 */
+	if (indexRelation->rd_rel->relam == BRIN_AM_OID && indexInfo->ii_AmCache)
+		brininsertcleanup(indexInfo);
+#if 0
+	if (indexRelation->rd_indam->aminsertcleanup)
+		indexRelation->rd_indam->aminsertcleanup(indexInfo);
+#endif
 }
 
 /*
