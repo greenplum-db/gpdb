@@ -165,7 +165,6 @@ NOTICE:  Value of column is: 25
  25 | 25
 (6 rows)
 
-drop function f_leak(int);
 reset session authorization;
 drop policy p1 on foo;
 -- ORCA will fallback to planner for below cases
@@ -211,4 +210,285 @@ reset session authorization ;
 drop policy p1 on foo;
 drop index btindex;
 drop table foo;
+------------------------
+-- Partitioned Table ---
+------------------------
+create table foo_part ( a int, b int, c int) distributed by (a) partition by range(b) (start(0) end(20) every(5));
+create table bar_part ( p int, q int, r int) distributed by (p) partition by range(q) (start(0) end(100) every(20));
+grant select on foo_part to new_user;
+grant select on bar_part to new_user;
+alter table foo_part enable row level security;
+alter table bar_part enable row level security;
+-- Permissive policy
+create policy p1 on foo_part as permissive for select using (foo_part.b>11);
+set session authorization new_user;
+explain (costs off ) select * from foo_part;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on foo_part_1_prt_3
+               Filter: (b > 11)
+         ->  Seq Scan on foo_part_1_prt_4
+               Filter: (b > 11)
+ Optimizer: Postgres-based planner
+(7 rows)
+
+reset session authorization;
+drop policy p1 on foo_part;
+-- All permissive policies which are applicable to a given query
+-- will be combined together using the Boolean “OR” operator
+create policy p1 on foo_part as permissive for select using (foo_part.a=4);
+create policy p2 on foo_part as permissive for select using (foo_part.b=10);
+create policy p3 on foo_part as permissive for select using (foo_part.c=15);
+set session authorization new_user ;
+explain (costs off )select * from foo_part;
+                       QUERY PLAN                        
+---------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on foo_part_1_prt_1
+               Filter: ((c = 15) OR (b = 10) OR (a = 4))
+         ->  Seq Scan on foo_part_1_prt_2
+               Filter: ((c = 15) OR (b = 10) OR (a = 4))
+         ->  Seq Scan on foo_part_1_prt_3
+               Filter: ((c = 15) OR (b = 10) OR (a = 4))
+         ->  Seq Scan on foo_part_1_prt_4
+               Filter: ((c = 15) OR (b = 10) OR (a = 4))
+ Optimizer: Postgres-based planner
+(11 rows)
+
+reset session authorization;
+drop policy p1 on foo_part;
+drop policy p2 on foo_part;
+drop policy p3 on foo_part;
+-- Restrictive policies
+-- There needs to be at least one permissive policy to grant access to records
+create policy p1 on foo_part as restrictive for select using (foo_part.a>4);
+create policy p2 on foo_part as restrictive for select using (foo_part.a<>7);
+set session authorization new_user;
+explain (costs off ) select * from foo_part;
+            QUERY PLAN             
+-----------------------------------
+ Result
+   One-Time Filter: false
+ Optimizer: Postgres-based planner
+(3 rows)
+
+reset session authorization ;
+-- All restrictive policies which are applicable to a given query will be
+-- combined together using the Boolean “AND” operator
+create policy p3 on foo_part as permissive for select using (foo_part.b>=6);
+create policy p4 on foo_part as permissive for select using (foo_part.c>20);
+set session authorization new_user;
+explain (costs off ) select * from foo_part;
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on foo_part_1_prt_1
+               Filter: ((a > 4) AND (a <> 7) AND ((c > 20) OR (b >= 6)))
+         ->  Seq Scan on foo_part_1_prt_2
+               Filter: ((a > 4) AND (a <> 7) AND ((c > 20) OR (b >= 6)))
+         ->  Seq Scan on foo_part_1_prt_3
+               Filter: ((a > 4) AND (a <> 7) AND ((c > 20) OR (b >= 6)))
+         ->  Seq Scan on foo_part_1_prt_4
+               Filter: ((a > 4) AND (a <> 7) AND ((c > 20) OR (b >= 6)))
+ Optimizer: Postgres-based planner
+(11 rows)
+
+reset session authorization;
+drop policy p1 on foo_part;
+drop policy p2 on foo_part;
+drop policy p3 on foo_part;
+drop policy p4 on foo_part;
+-- Security Quals should be executed before any other quals
+create policy p1 on foo_part as permissive for select using (foo_part.a = foo_part.b);
+set session authorization new_user;
+explain (costs off ) select * from foo_part where foo_part.b=14;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Seq Scan on foo_part_1_prt_3
+         Filter: ((a = 14) AND (b = 14))
+ Optimizer: Postgres-based planner
+(4 rows)
+
+reset session authorization;
+drop policy p1 on foo_part;
+create policy p1 on foo_part as permissive for select using (foo_part.a=foo_part.b);
+create policy p2 on bar_part as permissive for select using (bar_part.p=bar_part.q);
+set session authorization new_user;
+explain (costs off) select * from foo_part join bar_part on foo_part.c=bar_part.r where foo_part.a=6 and bar_part.p>=40;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (bar_part_1_prt_3.r = foo_part_1_prt_2.c)
+         ->  Append
+               ->  Seq Scan on bar_part_1_prt_3
+                     Filter: ((p >= 40) AND (q >= 40) AND (p = q))
+               ->  Seq Scan on bar_part_1_prt_4
+                     Filter: ((p >= 40) AND (q >= 40) AND (p = q))
+               ->  Seq Scan on bar_part_1_prt_5
+                     Filter: ((p >= 40) AND (q >= 40) AND (p = q))
+         ->  Hash
+               ->  Broadcast Motion 1:3  (slice2; segments: 1)
+                     ->  Seq Scan on foo_part_1_prt_2
+                           Filter: ((a = 6) AND (b = 6))
+ Optimizer: Postgres-based planner
+(15 rows)
+
+reset session authorization;
+drop policy p1 on foo_part;
+drop policy p2 on bar_part;
+create policy p1 on foo_part as permissive for select using (foo_part.a > LEAST (foo_part.a,foo_part.b));
+set session authorization new_user;
+explain (costs off) with cte as (select * from foo_part where foo_part.b <>10) select * from cte where cte.c>30;
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on foo_part_1_prt_1
+               Filter: ((b <> 10) AND (c > 30) AND (a > LEAST(a, b)))
+         ->  Seq Scan on foo_part_1_prt_2
+               Filter: ((b <> 10) AND (c > 30) AND (a > LEAST(a, b)))
+         ->  Seq Scan on foo_part_1_prt_3
+               Filter: ((b <> 10) AND (c > 30) AND (a > LEAST(a, b)))
+         ->  Seq Scan on foo_part_1_prt_4
+               Filter: ((b <> 10) AND (c > 30) AND (a > LEAST(a, b)))
+ Optimizer: Postgres-based planner
+(11 rows)
+
+reset session authorization;
+drop policy p1 on foo_part;
+drop table foo_part;
+drop table bar_part;
+-- If there is a qual like
+-- {Qual=[{Bool_And,a>=20,UDF(b)}]} : Qual is a list with a single clause
+-- which is a Bool AND expression
+-- If a>=20 evaluates to NULL then the second arg UDF(b) needs to be evaluated
+-- which can cause data leak. So need to remove the explicit AND
+create table foo_part ( a int, b int) distributed by (a) partition by range(b) (start(0) end(20) every(5));
+grant select on foo_part to new_user;
+insert into foo_part (a,b) values(NULL,1),(NULL,2);
+insert into foo_part select i,i from generate_series(10,15)i;
+alter table foo_part enable row level security;
+create policy p1 on foo_part as permissive for select using (foo_part.a >= 10);
+set session authorization new_user;
+explain (costs off) select * from foo_part where f_leak(b);
+                   QUERY PLAN                    
+-------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on foo_part_1_prt_1
+               Filter: ((a >= 10) AND f_leak(b))
+         ->  Seq Scan on foo_part_1_prt_2
+               Filter: ((a >= 10) AND f_leak(b))
+         ->  Seq Scan on foo_part_1_prt_3
+               Filter: ((a >= 10) AND f_leak(b))
+         ->  Seq Scan on foo_part_1_prt_4
+               Filter: ((a >= 10) AND f_leak(b))
+ Optimizer: Postgres-based planner
+(11 rows)
+
+select * from foo_part where f_leak(b);
+NOTICE:  Value of column is: 12
+NOTICE:  Value of column is: 10
+NOTICE:  Value of column is: 11
+NOTICE:  Value of column is: 13
+NOTICE:  Value of column is: 14
+NOTICE:  Value of column is: 15
+ a  | b  
+----+----
+ 12 | 12
+ 15 | 15
+ 10 | 10
+ 11 | 11
+ 13 | 13
+ 14 | 14
+(6 rows)
+
+drop function f_leak(int);
+reset session authorization;
+drop policy p1 on foo_part;
+-- ORCA will fallback to planner for below cases
+create table bar_part ( p int, q int) distributed by (p) partition by range(q) (start(0) end(100) every(20));
+grant select on bar_part to new_user;
+-- Case 1: Sublink present in the query
+create policy p1 on foo_part as permissive for select using (foo_part.a in (select p from bar_part));
+set session authorization new_user;
+set optimizer_trace_fallback to on;
+explain (costs off) select * from foo_part;
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on foo_part_1_prt_1
+               Filter: (hashed SubPlan 1 (copy 2))
+               SubPlan 1 (copy 2)
+                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                       ->  Append
+                             ->  Seq Scan on bar_part_1_prt_1
+                             ->  Seq Scan on bar_part_1_prt_2
+                             ->  Seq Scan on bar_part_1_prt_3
+                             ->  Seq Scan on bar_part_1_prt_4
+                             ->  Seq Scan on bar_part_1_prt_5
+         ->  Seq Scan on foo_part_1_prt_2
+               Filter: (hashed SubPlan 1 (copy 3))
+               SubPlan 1 (copy 3)
+                 ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                       ->  Append
+                             ->  Seq Scan on bar_part_1_prt_1 bar_part_1_prt_1_1
+                             ->  Seq Scan on bar_part_1_prt_2 bar_part_1_prt_2_1
+                             ->  Seq Scan on bar_part_1_prt_3 bar_part_1_prt_3_1
+                             ->  Seq Scan on bar_part_1_prt_4 bar_part_1_prt_4_1
+                             ->  Seq Scan on bar_part_1_prt_5 bar_part_1_prt_5_1
+         ->  Seq Scan on foo_part_1_prt_3
+               Filter: (hashed SubPlan 1 (copy 4))
+               SubPlan 1 (copy 4)
+                 ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                       ->  Append
+                             ->  Seq Scan on bar_part_1_prt_1 bar_part_1_prt_1_2
+                             ->  Seq Scan on bar_part_1_prt_2 bar_part_1_prt_2_2
+                             ->  Seq Scan on bar_part_1_prt_3 bar_part_1_prt_3_2
+                             ->  Seq Scan on bar_part_1_prt_4 bar_part_1_prt_4_2
+                             ->  Seq Scan on bar_part_1_prt_5 bar_part_1_prt_5_2
+         ->  Seq Scan on foo_part_1_prt_4
+               Filter: (hashed SubPlan 1 (copy 5))
+               SubPlan 1 (copy 5)
+                 ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                       ->  Append
+                             ->  Seq Scan on bar_part_1_prt_1 bar_part_1_prt_1_3
+                             ->  Seq Scan on bar_part_1_prt_2 bar_part_1_prt_2_3
+                             ->  Seq Scan on bar_part_1_prt_3 bar_part_1_prt_3_3
+                             ->  Seq Scan on bar_part_1_prt_4 bar_part_1_prt_4_3
+                             ->  Seq Scan on bar_part_1_prt_5 bar_part_1_prt_5_3
+ Optimizer: Postgres-based planner
+(43 rows)
+
+reset session authorization ;
+drop policy p1 on foo_part;
+drop table bar_part;
+-- Case 2: While generating Index plans
+create index btindex_part on foo_part using btree(b);
+create policy p1 on foo_part as permissive for select using (foo_part.a = 20);
+set session authorization new_user;
+explain (costs off) select * from foo_part where foo_part.b=10;
+                       QUERY PLAN                        
+---------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Bitmap Heap Scan on foo_part_1_prt_3
+         Recheck Cond: (b = 10)
+         Filter: (a = 20)
+         ->  Bitmap Index Scan on foo_part_1_prt_3_b_idx
+               Index Cond: (b = 10)
+ Optimizer: Postgres-based planner
+(7 rows)
+
+reset optimizer_trace_fallback;
+reset session authorization ;
+drop policy p1 on foo_part;
+drop index btindex_part;
+drop table foo_part;
 drop user new_user;
