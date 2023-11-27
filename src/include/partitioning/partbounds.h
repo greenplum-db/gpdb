@@ -115,5 +115,20 @@ extern int	partition_range_datum_bsearch(FmgrInfo *partsupfunc,
 										  int nvalues, Datum *values, bool *is_equal);
 extern int	partition_hash_bsearch(PartitionBoundInfo boundinfo,
 								   int modulus, int remainder);
+static inline const char *
+PartitionStrategyGetName(char strategy)
+{
+	switch (strategy)
+	{
+		case PARTITION_STRATEGY_LIST:
+			return "list";
+		case PARTITION_STRATEGY_HASH:
+			return "hash";
+		case PARTITION_STRATEGY_RANGE:
+			return "range";
+		default:
+			ereport(ERROR, (errmsg("unrecognized partitioning strategy")));
+	}
+}
 
 #endif							/* PARTBOUNDS_H */

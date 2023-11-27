@@ -27,11 +27,11 @@
 #include "optimizer/optimizer.h"
 #include "partitioning/partbounds.h"
 #include "rewrite/rewriteManip.h"
+#include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/partcache.h"
 #include "utils/rel.h"
 #include "utils/syscache.h"
-
 
 static Oid	get_partition_parent_worker(Relation inhRel, Oid relid);
 static void get_partition_ancestors_worker(Relation inhRel, Oid relid,
@@ -394,4 +394,48 @@ get_proposed_default_constraint(List *new_part_constraints)
 	defPartConstraint = canonicalize_qual(defPartConstraint, true);
 
 	return make_ands_implicit(defPartConstraint);
+}
+
+/*
+ * Is this a non-default range partition?
+ */
+bool
+rel_is_range_part_nondefault(Oid relid)
+{
+	HeapTuple			tuple;
+	Form_pg_class		classForm;
+	bool				retval = false;
+
+	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
+	if (!HeapTupleIsValid(tuple))
+		elog(ERROR, "cache lookup failed for relation %u", relid);
+
+	/* check if the relation is a partition */
+	classForm = (Form_pg_class) GETSTRUCT(tuple);
+	if ((classForm->relkind == RELKIND_RELATION ||
+		classForm->relkind == RELKIND_PARTITIONED_TABLE) &&
+		classForm->relispartition)
+	{
+		PartitionBoundSpec *boundspec = NULL;
+		Datum				datum;
+		bool				isnull;
+
+		datum = SysCacheGetAttr(RELOID, tuple, Anum_pg_class_relpartbound, &isnull);
+		if (!isnull)
+		{
+			boundspec = stringToNode(TextDatumGetCString(datum));
+			if (boundspec->strategy == PARTITION_STRATEGY_RANGE &&
+				!boundspec->is_default)
+				retval = true;
+		}
+
+		/* Sanity checks. */
+		if (!boundspec)
+			elog(ERROR, "missing relpartbound for relation %u", relid);
+		if (!IsA(boundspec, PartitionBoundSpec))
+			elog(ERROR, "invalid relpartbound for relation %u", relid);
+	}
+
+	ReleaseSysCache(tuple);
+	return retval;
 }

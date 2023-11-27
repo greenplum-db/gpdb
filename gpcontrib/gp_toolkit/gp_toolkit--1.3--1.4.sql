@@ -128,3 +128,307 @@ EXCEPTION
 END;
 $$;
 
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.pg_partition_rank
+-- @in:
+--        oid - oid of table for which to determine range partition rank
+-- @out:
+--        int - range partition rank
+--
+-- @doc:
+--        Get range partition child rank for given table
+--
+--------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION gp_toolkit.pg_partition_rank(rp regclass)
+    RETURNS int
+AS 'gp_toolkit.so', 'pg_partition_rank'
+    LANGUAGE C VOLATILE STRICT NO SQL;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.pg_partition_rank(regclass) TO public;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.pg_partition_bound_value
+-- @in:
+--        oid - oid of the partition to get the bound value for
+--        text - bound type: 'from', 'to' for a range partition, or 'in' for a list partition
+-- @out:
+--        text - bound value
+--
+-- @doc:
+--        Get the partition bound value for a given partitioned table
+--
+--------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION gp_toolkit.pg_partition_bound_value(partrel regclass, bound_type text)
+    RETURNS text AS $$
+DECLARE
+v_relpartbound text;
+    v_bound_value text;
+    v_parent_table regclass;
+    v_nkeys int;
+BEGIN
+    -- Check if the given table is a non-default child partition
+SELECT inhparent INTO v_parent_table
+FROM pg_inherits
+WHERE inhrelid = partrel;
+
+IF v_parent_table IS NULL THEN
+        RETURN NULL;
+END IF;
+
+-- Check if the parent table is partitioned by a single key
+SELECT partnatts INTO v_nkeys
+FROM pg_partitioned_table
+WHERE partrelid = v_parent_table;
+
+IF v_nkeys IS NOT NULL AND v_nkeys != 1 THEN
+        RETURN NULL;
+END IF;
+
+-- Get the partition bounds
+SELECT pg_get_expr(relpartbound, oid) INTO v_relpartbound
+FROM pg_class
+WHERE oid = partrel;
+
+-- Parse the bound value from relpartbound
+IF lower(bound_type) = 'from' THEN
+SELECT (regexp_matches(v_relpartbound, 'FOR VALUES FROM \((.+)\) TO \((.+)\)'))[1] INTO v_bound_value;
+ELSIF lower(bound_type) = 'to' THEN
+SELECT (regexp_matches(v_relpartbound, 'FOR VALUES FROM \((.+)\) TO \((.+)\)'))[2] INTO v_bound_value;
+ELSIF lower(bound_type) = 'in' THEN
+SELECT (regexp_matches(v_relpartbound, 'FOR VALUES IN \((.+)\)'))[1] INTO v_bound_value;
+ELSE
+        RAISE EXCEPTION 'Invalid bound type: %', bound_type;
+END IF;
+
+RETURN v_bound_value;
+END;
+$$ LANGUAGE plpgsql;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.pg_partition_bound_value(regclass,text) TO public;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.pg_partition_range_from
+-- @in:
+--        oid - oid of the range partition to get the lower bound value for
+-- @out:
+--        text - bound value
+--
+-- @doc:
+--        Get the lower bound value for a given range partition child.
+--        wrapper around pg_partition_bound_value()
+--
+--------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION gp_toolkit.pg_partition_range_from(rp regclass)
+    RETURNS text AS $$
+SELECT gp_toolkit.pg_partition_bound_value(rp, 'from');
+$$ LANGUAGE sql;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.pg_partition_range_from(regclass) TO public;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.pg_partition_range_to
+-- @in:
+--        oid - oid of the range partition to get the upper bound value for
+-- @out:
+--        text - bound value
+--
+-- @doc:
+--        Get the upper bound value for a given range partition child.
+--        wrapper around pg_partition_bound_value()
+--
+--------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION gp_toolkit.pg_partition_range_to(rp regclass)
+    RETURNS text AS $$
+SELECT gp_toolkit.pg_partition_bound_value(rp, 'to');
+$$ LANGUAGE sql;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.pg_partition_range_to(regclass) TO public;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.pg_partition_list_values
+-- @in:
+--        oid - oid of the list partition to get the bound value for
+-- @out:
+--        text - bound value
+--
+-- @doc:
+--        Get the list of values for a given list partition child.
+--        wrapper around pg_partition_bound_value()
+--
+--------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION gp_toolkit.pg_partition_list_values(rp regclass)
+    RETURNS text AS $$
+SELECT gp_toolkit.pg_partition_bound_value(rp, 'in'::text);
+$$ LANGUAGE sql;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.pg_partition_list_values(regclass) TO public;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.pg_partition_isdefault
+-- @in:
+--        oid - oid of the partition to check
+-- @out:
+--        boolean - true if the partition is the default partition
+--
+-- @doc:
+--        Get whether a given partition is a default partition
+--
+--------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION gp_toolkit.pg_partition_isdefault(relid regclass)
+    RETURNS BOOLEAN AS $$
+DECLARE
+boundspec TEXT;
+BEGIN
+    -- Get the partition bound definition for the relation
+SELECT pg_get_expr(relpartbound, oid) INTO boundspec
+FROM pg_catalog.pg_class
+WHERE oid = relid;
+
+-- If partition_def is null, the relation is not a partition at all
+IF boundspec IS NULL THEN
+        RETURN FALSE;
+END IF;
+
+-- Check if the partition bound spec exactly matches 'DEFAULT'
+RETURN boundspec = 'DEFAULT';
+END;
+$$ LANGUAGE plpgsql;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.pg_partition_isdefault(regclass) TO public;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.pg_partition_lowest_child
+-- @in:
+--        oid - oid of a range partitioned table
+-- @out:
+--        oid - oid of the lowest child partition
+--
+-- @doc:
+--        Get the oid of the lowest child partition for a given partitioned table
+--
+--------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION gp_toolkit.pg_partition_lowest_child(rp regclass)
+    RETURNS regclass
+AS 'gp_toolkit.so', 'pg_partition_lowest_child'
+    LANGUAGE C VOLATILE STRICT NO SQL;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.pg_partition_lowest_child(regclass) TO public;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.pg_partition_highest_child
+-- @in:
+--        oid - oid of a range partitioned table
+-- @out:
+--        oid - oid of the highest child partition
+--
+-- @doc:
+--        Get the oid of the lowest child partition for a given partitioned table
+--
+--------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION gp_toolkit.pg_partition_highest_child(rp regclass)
+    RETURNS regclass
+AS 'gp_toolkit.so', 'pg_partition_highest_child'
+    LANGUAGE C VOLATILE STRICT NO SQL;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.pg_partition_highest_child(regclass) TO public;
+
+--------------------------------------------------------------------------------
+-- Supporting cast for gp_toolkit.gp_partitions
+--------------------------------------------------------------------------------
+CREATE TYPE get_partition_result AS (
+    relid regclass,
+    parentid regclass,
+    isleaf bool,
+    partitionlevel int,
+    partitiontype text,
+    partitionrank int,
+    is_default bool
+    );
+
+CREATE OR REPLACE FUNCTION gp_toolkit.gp_get_partitions(rp regclass)
+    RETURNS SETOF get_partition_result
+AS 'gp_toolkit.so', 'gp_get_partitions'
+    LANGUAGE C VOLATILE STRICT NO SQL;
+
+GRANT EXECUTE ON FUNCTION gp_toolkit.gp_get_partitions(regclass) TO public;
+
+--------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.gp_partitions
+--
+-- @doc:
+--        This view provides necessary information about all the child
+--        partitions. It plays similar role as the pg_partitions view in 6X and
+--        has most of the same columns.
+--
+--        Notable differences from 6X:
+--        (1) The root is level = 0, its immediate children are level 1 and so on.
+--        (2) Immediate children of the root have parentpartitiontablename equal
+--            to that of the root (instead of being null).
+--------------------------------------------------------------------------------
+CREATE OR REPLACE VIEW gp_toolkit.gp_partitions AS
+WITH default_ts(default_spcname) AS
+(select s.spcname
+    from pg_database, pg_tablespace s
+    where datname = current_database() and dattablespace = s.oid),
+partitions AS
+(SELECT p.*,
+        pg_get_expr(pc.relpartbound, pc.oid) AS bound,
+        rns.nspname AS rootnamespacename,
+        pns.nspname AS partitionschemaname,
+        pc.relname AS partitiontablename,
+        coalesce(rt.spcname, default_spcname) AS parenttablespacename,
+        coalesce(pt.spcname, default_spcname) AS partitiontablespacename
+    FROM
+    (SELECT relnamespace,
+            relname AS roottablename,
+            (gp_toolkit.gp_get_partitions(oid)).*
+     FROM pg_class
+            WHERE relkind = 'p'
+            AND oid NOT IN (SELECT inhrelid FROM pg_inherits)) p
+     JOIN pg_class pc ON p.relid = pc.oid
+     JOIN pg_class parentc ON parentc.oid = p.parentid
+     LEFT JOIN pg_namespace rns ON p.relnamespace = rns.oid
+     LEFT JOIN pg_namespace pns ON pc.relnamespace = pns.oid
+     LEFT JOIN pg_tablespace rt ON parentc.reltablespace = rt.oid
+     LEFT JOIN pg_tablespace pt ON pc.reltablespace = pt.oid
+     JOIN default_ts ON 1=1)
+
+SELECT
+    rootnamespacename AS schemaname,
+    roottablename AS tablename,
+    partitionschemaname,
+    partitiontablename,
+    parentid::regclass AS parentpartitiontablename,
+        partitiontype,
+    partitionlevel,
+    partitionrank,
+    CASE
+        WHEN partitiontype = 'list'
+            THEN substring(bound FROM 'FOR VALUES IN \((.+)\)')
+        END AS partitionlistvalues,
+    CASE
+        WHEN partitiontype = 'range'
+            THEN substring(bound FROM 'FOR VALUES FROM \((.+)\) TO \((.+)\)')
+        END AS partitionrangestart,
+    CASE
+        WHEN partitiontype = 'range'
+            THEN substring(bound FROM 'TO \((.+)\)')
+        END AS partitionrangeend,
+    is_default AS partitionisdefault,
+    bound AS partitionboundary,
+    parenttablespacename AS parenttablespace,
+    partitiontablespacename AS partitiontablespace
+
+FROM partitions;
+
+GRANT SELECT ON gp_toolkit.gp_partitions TO public;
+

@@ -1,0 +1,334 @@
+-- Classic Syntax
+-- Multi-level range-list partitioned table
+DROP TABLE IF EXISTS partrl;
+NOTICE:  table "partrl" does not exist, skipping
+CREATE TABLE partrl (a int, b int, c int)
+DISTRIBUTED BY (a)
+PARTITION BY range(b)
+SUBPARTITION BY list(c)
+(
+	PARTITION p1 START (10) END (20) EVERY (5)
+	(
+		SUBPARTITION sp1 VALUES (1, 2)
+	),
+	PARTITION p2 START (0) END (10)
+	(
+		SUBPARTITION sp2 VALUES (3, 4),
+		SUBPARTITION sp1 VALUES (1, 2),
+		DEFAULT SUBPARTITION others
+	)
+);
+SELECT relid, level, gp_toolkit.pg_partition_rank(relid) as rank,
+       pg_get_expr(relpartbound, c.oid) as relpartbound,
+       gp_toolkit.pg_partition_range_from(c.oid) as range_from,
+       gp_toolkit.pg_partition_range_to(c.oid) as range_to,
+       gp_toolkit.pg_partition_lowest_child(c.oid),
+       gp_toolkit.pg_partition_highest_child(c.oid)
+    from pg_partition_tree('partrl') pt join pg_class c on pt.relid = c.oid;
+            relid             | level | rank |         relpartbound         | range_from | range_to | pg_partition_lowest_child | pg_partition_highest_child 
+------------------------------+-------+------+------------------------------+------------+----------+---------------------------+----------------------------
+ partrl                       |     0 |      |                              |            |          | partrl_1_prt_p2           | partrl_1_prt_p1_2
+ partrl_1_prt_p1_1            |     1 |    2 | FOR VALUES FROM (10) TO (15) | 10         | 15       |                           | 
+ partrl_1_prt_p1_2            |     1 |    3 | FOR VALUES FROM (15) TO (20) | 15         | 20       |                           | 
+ partrl_1_prt_p2              |     1 |    1 | FOR VALUES FROM (0) TO (10)  | 0          | 10       |                           | 
+ partrl_1_prt_p1_1_2_prt_sp1  |     2 |      | FOR VALUES IN (1, 2)         |            |          |                           | 
+ partrl_1_prt_p1_2_2_prt_sp1  |     2 |      | FOR VALUES IN (1, 2)         |            |          |                           | 
+ partrl_1_prt_p2_2_prt_others |     2 |      | DEFAULT                      |            |          |                           | 
+ partrl_1_prt_p2_2_prt_sp2    |     2 |      | FOR VALUES IN (3, 4)         |            |          |                           | 
+ partrl_1_prt_p2_2_prt_sp1    |     2 |      | FOR VALUES IN (1, 2)         |            |          |                           | 
+(9 rows)
+
+SELECT * from gp_toolkit.gp_partitions where schemaname = 'public' and tablename = 'partrl' and partitionlevel = 1 order by partitionrank;
+ schemaname | tablename | partitionschemaname | partitiontablename | parentpartitiontablename | partitiontype | partitionlevel | partitionrank | partitionlistvalues | partitionrangestart | partitionrangeend | partitionisdefault |      partitionboundary       | parenttablespace | partitiontablespace 
+------------+-----------+---------------------+--------------------+--------------------------+---------------+----------------+---------------+---------------------+---------------------+-------------------+--------------------+------------------------------+------------------+---------------------
+ public     | partrl    | public              | partrl_1_prt_p2    | partrl                   | range         |              1 |             1 |                     | 0                   | 10                | f                  | FOR VALUES FROM (0) TO (10)  | pg_default       | pg_default
+ public     | partrl    | public              | partrl_1_prt_p1_1  | partrl                   | range         |              1 |             2 |                     | 10                  | 15                | f                  | FOR VALUES FROM (10) TO (15) | pg_default       | pg_default
+ public     | partrl    | public              | partrl_1_prt_p1_2  | partrl                   | range         |              1 |             3 |                     | 15                  | 20                | f                  | FOR VALUES FROM (15) TO (20) | pg_default       | pg_default
+(3 rows)
+
+SELECT * from gp_toolkit.gp_partitions where schemaname = 'public' and tablename = 'partrl' and partitionlevel = 2;
+ schemaname | tablename | partitionschemaname |      partitiontablename      | parentpartitiontablename | partitiontype | partitionlevel | partitionrank | partitionlistvalues | partitionrangestart | partitionrangeend | partitionisdefault |  partitionboundary   | parenttablespace | partitiontablespace 
+------------+-----------+---------------------+------------------------------+--------------------------+---------------+----------------+---------------+---------------------+---------------------+-------------------+--------------------+----------------------+------------------+---------------------
+ public     | partrl    | public              | partrl_1_prt_p2_2_prt_sp1    | partrl_1_prt_p2          | list          |              2 |               | 1, 2                |                     |                   | f                  | FOR VALUES IN (1, 2) | pg_default       | pg_default
+ public     | partrl    | public              | partrl_1_prt_p2_2_prt_sp2    | partrl_1_prt_p2          | list          |              2 |               | 3, 4                |                     |                   | f                  | FOR VALUES IN (3, 4) | pg_default       | pg_default
+ public     | partrl    | public              | partrl_1_prt_p2_2_prt_others | partrl_1_prt_p2          | list          |              2 |               |                     |                     |                   | t                  | DEFAULT              | pg_default       | pg_default
+ public     | partrl    | public              | partrl_1_prt_p1_1_2_prt_sp1  | partrl_1_prt_p1_1        | list          |              2 |               | 1, 2                |                     |                   | f                  | FOR VALUES IN (1, 2) | pg_default       | pg_default
+ public     | partrl    | public              | partrl_1_prt_p1_2_2_prt_sp1  | partrl_1_prt_p1_2        | list          |              2 |               | 1, 2                |                     |                   | f                  | FOR VALUES IN (1, 2) | pg_default       | pg_default
+(5 rows)
+
+-- Classic Syntax
+-- Multi-level range-range partitioned table
+CREATE TABLE partrr (a int, b int, c int)
+DISTRIBUTED BY (a)
+PARTITION BY range(b)
+SUBPARTITION BY range(c)
+(
+	PARTITION p1 START (0) END (10)
+	(
+		DEFAULT SUBPARTITION other_c
+	),
+	PARTITION p2 START (10) END (20)
+	(
+		SUBPARTITION sp2 START (300) END (600),
+		SUBPARTITION sp1 START (100) END (300),
+		DEFAULT SUBPARTITION other_c
+	)
+);
+SELECT relid, level, gp_toolkit.pg_partition_rank(relid) as rank,
+       pg_get_expr(relpartbound, c.oid) as relpartbound,
+       gp_toolkit.pg_partition_range_from(c.oid) as range_from,
+       gp_toolkit.pg_partition_range_to(c.oid) as range_to,
+       gp_toolkit.pg_partition_lowest_child(c.oid),
+       gp_toolkit.pg_partition_highest_child(c.oid)
+  from pg_partition_tree('partrr') pt join pg_class c on pt.relid = c.oid;
+             relid             | level | rank |          relpartbound          | range_from | range_to | pg_partition_lowest_child | pg_partition_highest_child 
+-------------------------------+-------+------+--------------------------------+------------+----------+---------------------------+----------------------------
+ partrr                        |     0 |      |                                |            |          | partrr_1_prt_p1           | partrr_1_prt_p2
+ partrr_1_prt_p1               |     1 |    1 | FOR VALUES FROM (0) TO (10)    | 0          | 10       |                           | 
+ partrr_1_prt_p2               |     1 |    2 | FOR VALUES FROM (10) TO (20)   | 10         | 20       | partrr_1_prt_p2_2_prt_sp1 | partrr_1_prt_p2_2_prt_sp2
+ partrr_1_prt_p1_2_prt_other_c |     2 |      | DEFAULT                        |            |          |                           | 
+ partrr_1_prt_p2_2_prt_other_c |     2 |      | DEFAULT                        |            |          |                           | 
+ partrr_1_prt_p2_2_prt_sp2     |     2 |    2 | FOR VALUES FROM (300) TO (600) | 300        | 600      |                           | 
+ partrr_1_prt_p2_2_prt_sp1     |     2 |    1 | FOR VALUES FROM (100) TO (300) | 100        | 300      |                           | 
+(7 rows)
+
+SELECT * from gp_toolkit.gp_partitions where schemaname = 'public' and tablename = 'partrr' and partitionlevel = 1 order by partitionrank;
+ schemaname | tablename | partitionschemaname | partitiontablename | parentpartitiontablename | partitiontype | partitionlevel | partitionrank | partitionlistvalues | partitionrangestart | partitionrangeend | partitionisdefault |      partitionboundary       | parenttablespace | partitiontablespace 
+------------+-----------+---------------------+--------------------+--------------------------+---------------+----------------+---------------+---------------------+---------------------+-------------------+--------------------+------------------------------+------------------+---------------------
+ public     | partrr    | public              | partrr_1_prt_p1    | partrr                   | range         |              1 |             1 |                     | 0                   | 10                | f                  | FOR VALUES FROM (0) TO (10)  | pg_default       | pg_default
+ public     | partrr    | public              | partrr_1_prt_p2    | partrr                   | range         |              1 |             2 |                     | 10                  | 20                | f                  | FOR VALUES FROM (10) TO (20) | pg_default       | pg_default
+(2 rows)
+
+SELECT * from gp_toolkit.gp_partitions where schemaname = 'public' and tablename = 'partrr' and partitionlevel = 2 order by partitionrank;
+ schemaname | tablename | partitionschemaname |      partitiontablename       | parentpartitiontablename | partitiontype | partitionlevel | partitionrank | partitionlistvalues | partitionrangestart | partitionrangeend | partitionisdefault |       partitionboundary        | parenttablespace | partitiontablespace 
+------------+-----------+---------------------+-------------------------------+--------------------------+---------------+----------------+---------------+---------------------+---------------------+-------------------+--------------------+--------------------------------+------------------+---------------------
+ public     | partrr    | public              | partrr_1_prt_p2_2_prt_sp1     | partrr_1_prt_p2          | range         |              2 |             1 |                     | 100                 | 300               | f                  | FOR VALUES FROM (100) TO (300) | pg_default       | pg_default
+ public     | partrr    | public              | partrr_1_prt_p2_2_prt_sp2     | partrr_1_prt_p2          | range         |              2 |             2 |                     | 300                 | 600               | f                  | FOR VALUES FROM (300) TO (600) | pg_default       | pg_default
+ public     | partrr    | public              | partrr_1_prt_p1_2_prt_other_c | partrr_1_prt_p1          | range         |              2 |               |                     |                     |                   | t                  | DEFAULT                        | pg_default       | pg_default
+ public     | partrr    | public              | partrr_1_prt_p2_2_prt_other_c | partrr_1_prt_p2          | range         |              2 |               |                     |                     |                   | t                  | DEFAULT                        | pg_default       | pg_default
+(4 rows)
+
+-- w/ minvalue and maxvalue
+CREATE TABLE range_parted2 (
+    a int
+) PARTITION BY RANGE (a);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE part1 PARTITION OF range_parted2 FOR VALUES FROM (1) TO (10);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE part2 PARTITION OF range_parted2 FOR VALUES FROM (10) TO (20);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE part3 PARTITION OF range_parted2 FOR VALUES FROM (20) TO (30);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE part4 PARTITION OF range_parted2 FOR VALUES FROM (30) TO (40);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE part5 PARTITION OF range_parted2 FOR VALUES FROM (40) TO (50);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE part6 PARTITION OF range_parted2 FOR VALUES FROM (60) TO (maxvalue);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE part7 PARTITION OF range_parted2 FOR VALUES FROM (minvalue) TO (1);
+NOTICE:  table has parent, setting distribution columns to match parent table
+SELECT relid, level, gp_toolkit.pg_partition_rank(relid) as rank,
+       pg_get_expr(relpartbound, c.oid) as relpartbound,
+       gp_toolkit.pg_partition_range_from(c.oid) as range_from,
+       gp_toolkit.pg_partition_range_to(c.oid) as range_to,
+       gp_toolkit.pg_partition_lowest_child(c.oid),
+       gp_toolkit.pg_partition_highest_child(c.oid)
+from pg_partition_tree('range_parted2') pt join pg_class c on pt.relid = c.oid;
+     relid     | level | rank |            relpartbound            | range_from | range_to | pg_partition_lowest_child | pg_partition_highest_child 
+---------------+-------+------+------------------------------------+------------+----------+---------------------------+----------------------------
+ range_parted2 |     0 |      |                                    |            |          | part7                     | part6
+ part1         |     1 |    2 | FOR VALUES FROM (1) TO (10)        | 1          | 10       |                           | 
+ part2         |     1 |    3 | FOR VALUES FROM (10) TO (20)       | 10         | 20       |                           | 
+ part3         |     1 |    4 | FOR VALUES FROM (20) TO (30)       | 20         | 30       |                           | 
+ part4         |     1 |    5 | FOR VALUES FROM (30) TO (40)       | 30         | 40       |                           | 
+ part5         |     1 |    6 | FOR VALUES FROM (40) TO (50)       | 40         | 50       |                           | 
+ part6         |     1 |    7 | FOR VALUES FROM (60) TO (MAXVALUE) | 60         | MAXVALUE |                           | 
+ part7         |     1 |    1 | FOR VALUES FROM (MINVALUE) TO (1)  | MINVALUE   | 1        |                           | 
+(8 rows)
+
+SELECT * from gp_toolkit.gp_partitions where schemaname = 'public' and tablename = 'range_parted2' order by partitionrank;
+ schemaname |   tablename   | partitionschemaname | partitiontablename | parentpartitiontablename | partitiontype | partitionlevel | partitionrank | partitionlistvalues | partitionrangestart | partitionrangeend | partitionisdefault |         partitionboundary          | parenttablespace | partitiontablespace 
+------------+---------------+---------------------+--------------------+--------------------------+---------------+----------------+---------------+---------------------+---------------------+-------------------+--------------------+------------------------------------+------------------+---------------------
+ public     | range_parted2 | public              | part7              | range_parted2            | range         |              1 |             1 |                     | MINVALUE            | 1                 | f                  | FOR VALUES FROM (MINVALUE) TO (1)  | pg_default       | pg_default
+ public     | range_parted2 | public              | part1              | range_parted2            | range         |              1 |             2 |                     | 1                   | 10                | f                  | FOR VALUES FROM (1) TO (10)        | pg_default       | pg_default
+ public     | range_parted2 | public              | part2              | range_parted2            | range         |              1 |             3 |                     | 10                  | 20                | f                  | FOR VALUES FROM (10) TO (20)       | pg_default       | pg_default
+ public     | range_parted2 | public              | part3              | range_parted2            | range         |              1 |             4 |                     | 20                  | 30                | f                  | FOR VALUES FROM (20) TO (30)       | pg_default       | pg_default
+ public     | range_parted2 | public              | part4              | range_parted2            | range         |              1 |             5 |                     | 30                  | 40                | f                  | FOR VALUES FROM (30) TO (40)       | pg_default       | pg_default
+ public     | range_parted2 | public              | part5              | range_parted2            | range         |              1 |             6 |                     | 40                  | 50                | f                  | FOR VALUES FROM (40) TO (50)       | pg_default       | pg_default
+ public     | range_parted2 | public              | part6              | range_parted2            | range         |              1 |             7 |                     | 60                  | MAXVALUE          | f                  | FOR VALUES FROM (60) TO (MAXVALUE) | pg_default       | pg_default
+(7 rows)
+
+-- w/ expressions
+CREATE TABLE range_parted3 (
+    a int,
+    b int
+) PARTITION BY RANGE (abs(a - b));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE range_parted3_part1 PARTITION OF range_parted3 FOR VALUES FROM (1) TO (10);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE range_parted3_part2 PARTITION OF range_parted3 FOR VALUES FROM (10) TO (20);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE range_parted3_part3 PARTITION OF range_parted3 FOR VALUES FROM (20) TO (30);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE range_parted3_part4 PARTITION OF range_parted3 FOR VALUES FROM (30) TO (40);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE range_parted3_part5 PARTITION OF range_parted3 FOR VALUES FROM (40) TO (50);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE range_parted3_part6 PARTITION OF range_parted3 FOR VALUES FROM (60) TO (maxvalue);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE range_parted3_part7 PARTITION OF range_parted3 FOR VALUES FROM (minvalue) TO (1);
+NOTICE:  table has parent, setting distribution columns to match parent table
+SELECT relid, level, gp_toolkit.pg_partition_rank(relid) as rank,
+       pg_get_expr(relpartbound, c.oid) as relpartbound,
+       gp_toolkit.pg_partition_range_from(c.oid) as range_from,
+       gp_toolkit.pg_partition_range_to(c.oid) as range_to,
+       gp_toolkit.pg_partition_lowest_child(c.oid),
+       gp_toolkit.pg_partition_highest_child(c.oid)
+from pg_partition_tree('range_parted3') pt join pg_class c on pt.relid = c.oid;
+        relid        | level | rank |            relpartbound            | range_from | range_to | pg_partition_lowest_child | pg_partition_highest_child 
+---------------------+-------+------+------------------------------------+------------+----------+---------------------------+----------------------------
+ range_parted3       |     0 |      |                                    |            |          | range_parted3_part7       | range_parted3_part6
+ range_parted3_part1 |     1 |    2 | FOR VALUES FROM (1) TO (10)        | 1          | 10       |                           | 
+ range_parted3_part2 |     1 |    3 | FOR VALUES FROM (10) TO (20)       | 10         | 20       |                           | 
+ range_parted3_part3 |     1 |    4 | FOR VALUES FROM (20) TO (30)       | 20         | 30       |                           | 
+ range_parted3_part4 |     1 |    5 | FOR VALUES FROM (30) TO (40)       | 30         | 40       |                           | 
+ range_parted3_part5 |     1 |    6 | FOR VALUES FROM (40) TO (50)       | 40         | 50       |                           | 
+ range_parted3_part6 |     1 |    7 | FOR VALUES FROM (60) TO (MAXVALUE) | 60         | MAXVALUE |                           | 
+ range_parted3_part7 |     1 |    1 | FOR VALUES FROM (MINVALUE) TO (1)  | MINVALUE   | 1        |                           | 
+(8 rows)
+
+SELECT * from gp_toolkit.gp_partitions where schemaname = 'public' and tablename = 'range_parted3' order by partitionrank;
+ schemaname |   tablename   | partitionschemaname | partitiontablename  | parentpartitiontablename | partitiontype | partitionlevel | partitionrank | partitionlistvalues | partitionrangestart | partitionrangeend | partitionisdefault |         partitionboundary          | parenttablespace | partitiontablespace 
+------------+---------------+---------------------+---------------------+--------------------------+---------------+----------------+---------------+---------------------+---------------------+-------------------+--------------------+------------------------------------+------------------+---------------------
+ public     | range_parted3 | public              | range_parted3_part7 | range_parted3            | range         |              1 |             1 |                     | MINVALUE            | 1                 | f                  | FOR VALUES FROM (MINVALUE) TO (1)  | pg_default       | pg_default
+ public     | range_parted3 | public              | range_parted3_part1 | range_parted3            | range         |              1 |             2 |                     | 1                   | 10                | f                  | FOR VALUES FROM (1) TO (10)        | pg_default       | pg_default
+ public     | range_parted3 | public              | range_parted3_part2 | range_parted3            | range         |              1 |             3 |                     | 10                  | 20                | f                  | FOR VALUES FROM (10) TO (20)       | pg_default       | pg_default
+ public     | range_parted3 | public              | range_parted3_part3 | range_parted3            | range         |              1 |             4 |                     | 20                  | 30                | f                  | FOR VALUES FROM (20) TO (30)       | pg_default       | pg_default
+ public     | range_parted3 | public              | range_parted3_part4 | range_parted3            | range         |              1 |             5 |                     | 30                  | 40                | f                  | FOR VALUES FROM (30) TO (40)       | pg_default       | pg_default
+ public     | range_parted3 | public              | range_parted3_part5 | range_parted3            | range         |              1 |             6 |                     | 40                  | 50                | f                  | FOR VALUES FROM (40) TO (50)       | pg_default       | pg_default
+ public     | range_parted3 | public              | range_parted3_part6 | range_parted3            | range         |              1 |             7 |                     | 60                  | MAXVALUE          | f                  | FOR VALUES FROM (60) TO (MAXVALUE) | pg_default       | pg_default
+(7 rows)
+
+-- date partitioned table
+CREATE TABLE sales (trans_id int, date date, amount
+                             decimal(9,2), region text)
+    DISTRIBUTED BY (trans_id)
+    PARTITION BY RANGE (date)
+        (START (date '2023-01-01')
+        END (date '2023-05-01') EVERY (INTERVAL '7 day'),
+        DEFAULT PARTITION other_date);
+SELECT relid, level, gp_toolkit.pg_partition_rank(relid) as rank,
+       pg_get_expr(relpartbound, c.oid) as relpartbound,
+       gp_toolkit.pg_partition_range_from(c.oid) as range_from,
+       gp_toolkit.pg_partition_range_to(c.oid) as range_to,
+       gp_toolkit.pg_partition_lowest_child(c.oid),
+       gp_toolkit.pg_partition_highest_child(c.oid)
+from pg_partition_tree('sales') pt join pg_class c on pt.relid = c.oid;
+         relid          | level | rank |                   relpartbound                   |  range_from  |   range_to   | pg_partition_lowest_child | pg_partition_highest_child 
+------------------------+-------+------+--------------------------------------------------+--------------+--------------+---------------------------+----------------------------
+ sales_1_prt_2          |     1 |    1 | FOR VALUES FROM ('01-01-2023') TO ('01-08-2023') | '01-01-2023' | '01-08-2023' |                           | 
+ sales_1_prt_3          |     1 |    2 | FOR VALUES FROM ('01-08-2023') TO ('01-15-2023') | '01-08-2023' | '01-15-2023' |                           | 
+ sales_1_prt_4          |     1 |    3 | FOR VALUES FROM ('01-15-2023') TO ('01-22-2023') | '01-15-2023' | '01-22-2023' |                           | 
+ sales_1_prt_5          |     1 |    4 | FOR VALUES FROM ('01-22-2023') TO ('01-29-2023') | '01-22-2023' | '01-29-2023' |                           | 
+ sales_1_prt_6          |     1 |    5 | FOR VALUES FROM ('01-29-2023') TO ('02-05-2023') | '01-29-2023' | '02-05-2023' |                           | 
+ sales_1_prt_7          |     1 |    6 | FOR VALUES FROM ('02-05-2023') TO ('02-12-2023') | '02-05-2023' | '02-12-2023' |                           | 
+ sales_1_prt_8          |     1 |    7 | FOR VALUES FROM ('02-12-2023') TO ('02-19-2023') | '02-12-2023' | '02-19-2023' |                           | 
+ sales_1_prt_9          |     1 |    8 | FOR VALUES FROM ('02-19-2023') TO ('02-26-2023') | '02-19-2023' | '02-26-2023' |                           | 
+ sales_1_prt_10         |     1 |    9 | FOR VALUES FROM ('02-26-2023') TO ('03-05-2023') | '02-26-2023' | '03-05-2023' |                           | 
+ sales_1_prt_11         |     1 |   10 | FOR VALUES FROM ('03-05-2023') TO ('03-12-2023') | '03-05-2023' | '03-12-2023' |                           | 
+ sales_1_prt_12         |     1 |   11 | FOR VALUES FROM ('03-12-2023') TO ('03-19-2023') | '03-12-2023' | '03-19-2023' |                           | 
+ sales_1_prt_13         |     1 |   12 | FOR VALUES FROM ('03-19-2023') TO ('03-26-2023') | '03-19-2023' | '03-26-2023' |                           | 
+ sales_1_prt_14         |     1 |   13 | FOR VALUES FROM ('03-26-2023') TO ('04-02-2023') | '03-26-2023' | '04-02-2023' |                           | 
+ sales_1_prt_15         |     1 |   14 | FOR VALUES FROM ('04-02-2023') TO ('04-09-2023') | '04-02-2023' | '04-09-2023' |                           | 
+ sales_1_prt_16         |     1 |   15 | FOR VALUES FROM ('04-09-2023') TO ('04-16-2023') | '04-09-2023' | '04-16-2023' |                           | 
+ sales_1_prt_17         |     1 |   16 | FOR VALUES FROM ('04-16-2023') TO ('04-23-2023') | '04-16-2023' | '04-23-2023' |                           | 
+ sales_1_prt_18         |     1 |   17 | FOR VALUES FROM ('04-23-2023') TO ('04-30-2023') | '04-23-2023' | '04-30-2023' |                           | 
+ sales_1_prt_19         |     1 |   18 | FOR VALUES FROM ('04-30-2023') TO ('05-01-2023') | '04-30-2023' | '05-01-2023' |                           | 
+ sales_1_prt_other_date |     1 |      | DEFAULT                                          |              |              |                           | 
+ sales                  |     0 |      |                                                  |              |              | sales_1_prt_2             | sales_1_prt_19
+(20 rows)
+
+SELECT * from gp_toolkit.gp_partitions where schemaname = 'public' and tablename = 'sales' order by partitionrank;
+ schemaname | tablename | partitionschemaname |   partitiontablename   | parentpartitiontablename | partitiontype | partitionlevel | partitionrank | partitionlistvalues | partitionrangestart | partitionrangeend | partitionisdefault |                partitionboundary                 | parenttablespace | partitiontablespace 
+------------+-----------+---------------------+------------------------+--------------------------+---------------+----------------+---------------+---------------------+---------------------+-------------------+--------------------+--------------------------------------------------+------------------+---------------------
+ public     | sales     | public              | sales_1_prt_2          | sales                    | range         |              1 |             1 |                     | '01-01-2023'        | '01-08-2023'      | f                  | FOR VALUES FROM ('01-01-2023') TO ('01-08-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_3          | sales                    | range         |              1 |             2 |                     | '01-08-2023'        | '01-15-2023'      | f                  | FOR VALUES FROM ('01-08-2023') TO ('01-15-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_4          | sales                    | range         |              1 |             3 |                     | '01-15-2023'        | '01-22-2023'      | f                  | FOR VALUES FROM ('01-15-2023') TO ('01-22-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_5          | sales                    | range         |              1 |             4 |                     | '01-22-2023'        | '01-29-2023'      | f                  | FOR VALUES FROM ('01-22-2023') TO ('01-29-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_6          | sales                    | range         |              1 |             5 |                     | '01-29-2023'        | '02-05-2023'      | f                  | FOR VALUES FROM ('01-29-2023') TO ('02-05-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_7          | sales                    | range         |              1 |             6 |                     | '02-05-2023'        | '02-12-2023'      | f                  | FOR VALUES FROM ('02-05-2023') TO ('02-12-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_8          | sales                    | range         |              1 |             7 |                     | '02-12-2023'        | '02-19-2023'      | f                  | FOR VALUES FROM ('02-12-2023') TO ('02-19-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_9          | sales                    | range         |              1 |             8 |                     | '02-19-2023'        | '02-26-2023'      | f                  | FOR VALUES FROM ('02-19-2023') TO ('02-26-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_10         | sales                    | range         |              1 |             9 |                     | '02-26-2023'        | '03-05-2023'      | f                  | FOR VALUES FROM ('02-26-2023') TO ('03-05-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_11         | sales                    | range         |              1 |            10 |                     | '03-05-2023'        | '03-12-2023'      | f                  | FOR VALUES FROM ('03-05-2023') TO ('03-12-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_12         | sales                    | range         |              1 |            11 |                     | '03-12-2023'        | '03-19-2023'      | f                  | FOR VALUES FROM ('03-12-2023') TO ('03-19-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_13         | sales                    | range         |              1 |            12 |                     | '03-19-2023'        | '03-26-2023'      | f                  | FOR VALUES FROM ('03-19-2023') TO ('03-26-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_14         | sales                    | range         |              1 |            13 |                     | '03-26-2023'        | '04-02-2023'      | f                  | FOR VALUES FROM ('03-26-2023') TO ('04-02-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_15         | sales                    | range         |              1 |            14 |                     | '04-02-2023'        | '04-09-2023'      | f                  | FOR VALUES FROM ('04-02-2023') TO ('04-09-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_16         | sales                    | range         |              1 |            15 |                     | '04-09-2023'        | '04-16-2023'      | f                  | FOR VALUES FROM ('04-09-2023') TO ('04-16-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_17         | sales                    | range         |              1 |            16 |                     | '04-16-2023'        | '04-23-2023'      | f                  | FOR VALUES FROM ('04-16-2023') TO ('04-23-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_18         | sales                    | range         |              1 |            17 |                     | '04-23-2023'        | '04-30-2023'      | f                  | FOR VALUES FROM ('04-23-2023') TO ('04-30-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_19         | sales                    | range         |              1 |            18 |                     | '04-30-2023'        | '05-01-2023'      | f                  | FOR VALUES FROM ('04-30-2023') TO ('05-01-2023') | pg_default       | pg_default
+ public     | sales     | public              | sales_1_prt_other_date | sales                    | range         |              1 |               |                     |                     |                   | t                  | DEFAULT                                          | pg_default       | pg_default
+(19 rows)
+
+-- Multi-column range partitioned table
+-- multi-column keys
+create table mc3p (a int, b int, c int) partition by range (a, abs(b), c);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table mc3p_default partition of mc3p default;
+NOTICE:  table has parent, setting distribution columns to match parent table
+create table mc3p0 partition of mc3p for values from (minvalue, minvalue, minvalue) to (1, 1, 1);
+NOTICE:  table has parent, setting distribution columns to match parent table
+create table mc3p1 partition of mc3p for values from (1, 1, 1) to (10, 5, 10);
+NOTICE:  table has parent, setting distribution columns to match parent table
+create table mc3p2 partition of mc3p for values from (10, 5, 10) to (10, 10, 10);
+NOTICE:  table has parent, setting distribution columns to match parent table
+create table mc3p3 partition of mc3p for values from (10, 10, 10) to (10, 10, 20);
+NOTICE:  table has parent, setting distribution columns to match parent table
+create table mc3p4 partition of mc3p for values from (10, 10, 20) to (10, maxvalue, maxvalue);
+NOTICE:  table has parent, setting distribution columns to match parent table
+create table mc3p5 partition of mc3p for values from (11, 1, 1) to (20, 10, 10);
+NOTICE:  table has parent, setting distribution columns to match parent table
+create table mc3p6 partition of mc3p for values from (20, 10, 10) to (20, 20, 20);
+NOTICE:  table has parent, setting distribution columns to match parent table
+create table mc3p7 partition of mc3p for values from (20, 20, 20) to (maxvalue, maxvalue, maxvalue);
+NOTICE:  table has parent, setting distribution columns to match parent table
+SELECT relid, level, gp_toolkit.pg_partition_rank(relid) as rank,
+       pg_get_expr(relpartbound, c.oid) as relpartbound,
+       gp_toolkit.pg_partition_range_from(c.oid) as range_from,
+       gp_toolkit.pg_partition_range_to(c.oid) as range_to,
+       gp_toolkit.pg_partition_lowest_child(c.oid),
+       gp_toolkit.pg_partition_highest_child(c.oid)
+from pg_partition_tree('mc3p') pt join pg_class c on pt.relid = c.oid;
+    relid     | level | rank |                          relpartbound                          | range_from | range_to | pg_partition_lowest_child | pg_partition_highest_child 
+--------------+-------+------+----------------------------------------------------------------+------------+----------+---------------------------+----------------------------
+ mc3p         |     0 |      |                                                                |            |          | mc3p0                     | mc3p7
+ mc3p_default |     1 |      | DEFAULT                                                        |            |          |                           | 
+ mc3p0        |     1 |    1 | FOR VALUES FROM (MINVALUE, MINVALUE, MINVALUE) TO (1, 1, 1)    |            |          |                           | 
+ mc3p1        |     1 |    2 | FOR VALUES FROM (1, 1, 1) TO (10, 5, 10)                       |            |          |                           | 
+ mc3p2        |     1 |    3 | FOR VALUES FROM (10, 5, 10) TO (10, 10, 10)                    |            |          |                           | 
+ mc3p3        |     1 |    4 | FOR VALUES FROM (10, 10, 10) TO (10, 10, 20)                   |            |          |                           | 
+ mc3p4        |     1 |    5 | FOR VALUES FROM (10, 10, 20) TO (10, MAXVALUE, MAXVALUE)       |            |          |                           | 
+ mc3p5        |     1 |    6 | FOR VALUES FROM (11, 1, 1) TO (20, 10, 10)                     |            |          |                           | 
+ mc3p6        |     1 |    7 | FOR VALUES FROM (20, 10, 10) TO (20, 20, 20)                   |            |          |                           | 
+ mc3p7        |     1 |    8 | FOR VALUES FROM (20, 20, 20) TO (MAXVALUE, MAXVALUE, MAXVALUE) |            |          |                           | 
+(10 rows)
+
+SELECT * from gp_toolkit.gp_partitions where schemaname = 'public' and tablename = 'mc3p' order by partitionrank;
+ schemaname | tablename | partitionschemaname | partitiontablename | parentpartitiontablename | partitiontype | partitionlevel | partitionrank | partitionlistvalues |     partitionrangestart      |      partitionrangeend       | partitionisdefault |                       partitionboundary                        | parenttablespace | partitiontablespace 
+------------+-----------+---------------------+--------------------+--------------------------+---------------+----------------+---------------+---------------------+------------------------------+------------------------------+--------------------+----------------------------------------------------------------+------------------+---------------------
+ public     | mc3p      | public              | mc3p0              | mc3p                     | range         |              1 |             1 |                     | MINVALUE, MINVALUE, MINVALUE | 1, 1, 1                      | f                  | FOR VALUES FROM (MINVALUE, MINVALUE, MINVALUE) TO (1, 1, 1)    | pg_default       | pg_default
+ public     | mc3p      | public              | mc3p1              | mc3p                     | range         |              1 |             2 |                     | 1, 1, 1                      | 10, 5, 10                    | f                  | FOR VALUES FROM (1, 1, 1) TO (10, 5, 10)                       | pg_default       | pg_default
+ public     | mc3p      | public              | mc3p2              | mc3p                     | range         |              1 |             3 |                     | 10, 5, 10                    | 10, 10, 10                   | f                  | FOR VALUES FROM (10, 5, 10) TO (10, 10, 10)                    | pg_default       | pg_default
+ public     | mc3p      | public              | mc3p3              | mc3p                     | range         |              1 |             4 |                     | 10, 10, 10                   | 10, 10, 20                   | f                  | FOR VALUES FROM (10, 10, 10) TO (10, 10, 20)                   | pg_default       | pg_default
+ public     | mc3p      | public              | mc3p4              | mc3p                     | range         |              1 |             5 |                     | 10, 10, 20                   | 10, MAXVALUE, MAXVALUE       | f                  | FOR VALUES FROM (10, 10, 20) TO (10, MAXVALUE, MAXVALUE)       | pg_default       | pg_default
+ public     | mc3p      | public              | mc3p5              | mc3p                     | range         |              1 |             6 |                     | 11, 1, 1                     | 20, 10, 10                   | f                  | FOR VALUES FROM (11, 1, 1) TO (20, 10, 10)                     | pg_default       | pg_default
+ public     | mc3p      | public              | mc3p6              | mc3p                     | range         |              1 |             7 |                     | 20, 10, 10                   | 20, 20, 20                   | f                  | FOR VALUES FROM (20, 10, 10) TO (20, 20, 20)                   | pg_default       | pg_default
+ public     | mc3p      | public              | mc3p7              | mc3p                     | range         |              1 |             8 |                     | 20, 20, 20                   | MAXVALUE, MAXVALUE, MAXVALUE | f                  | FOR VALUES FROM (20, 20, 20) TO (MAXVALUE, MAXVALUE, MAXVALUE) | pg_default       | pg_default
+ public     | mc3p      | public              | mc3p_default       | mc3p                     | range         |              1 |               |                     |                              |                              | t                  | DEFAULT                                                        | pg_default       | pg_default
+(9 rows)
+
