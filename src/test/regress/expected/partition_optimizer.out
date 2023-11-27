@@ -6543,3 +6543,18 @@ SELECT level, pg_get_expr(template, relid, true) FROM gp_partition_template WHER
 (1 row)
 
 DROP TABLE public.logs_issue_16558;
+-- We should not allow subpartition by clause when creating empty partition hierarchy
+-- Should error out
+CREATE TABLE empty_partition_disallow_subpartition(i int, j int)
+PARTITION BY range(i) SUBPARTITION BY range(j);
+ERROR:  SUBPARTITION BY clause is not allowed when no partitions specified at depth 1
+-- Check with other Partition syntax
+CREATE TABLE empty_partition_disallow_subpartition_2(i int, j int)
+    DISTRIBUTED BY (i) PARTITION BY range(i) SUBPARTITION BY range(j);
+ERROR:  SUBPARTITION BY clause is not allowed when no partitions specified at depth 1
+-- Should work fine for empty hierarchy when subpartition is not specified
+CREATE TABLE empty_partition(i int, j int) PARTITION BY range(i);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+-- Check with other Partition syntax
+CREATE TABLE empty_partition2(i int, j int) DISTRIBUTED BY (i) PARTITION BY range(i);

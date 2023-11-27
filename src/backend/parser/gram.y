@@ -5461,6 +5461,10 @@ OptFirstPartitionSpec: PartitionSpec opt_list_subparts OptTabPartitionSpec
 					if ($1->gpPartDef)
 						check_expressions_in_partition_key($1, yyscanner);
 					$$ = $1;
+					/* Do not allow SUBPARTITION BY clause for empty partition hierarchy */
+					if (!$1->gpPartDef && $1->subPartSpec)
+						ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							errmsg("SUBPARTITION BY clause is not allowed when no partitions specified at depth 1")));
 
 					pg_yyget_extra(yyscanner)->tail_partition_magic = true;
 				}
@@ -5488,6 +5492,12 @@ OptSecondPartitionSpec:
 					 */
 					if (n->gpPartDef)
 						check_expressions_in_partition_key(n, yyscanner);
+
+					/* Do not allow SUBPARTITION BY clause for empty partition hierarchy */
+					if (!n->gpPartDef && n->subPartSpec)
+						ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							errmsg("SUBPARTITION BY clause is not allowed when no partitions specified at depth 1")));
+
 					$$ = n;
 
 					pg_yyget_extra(yyscanner)->tail_partition_magic = false;
