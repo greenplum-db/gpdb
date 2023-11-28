@@ -65,11 +65,10 @@ static bool AORelCreateHashEntry(Oid relid);
 static bool *get_awaiting_drop_status_from_segments(Relation parentrel);
 static int64 *GetTotalTupleCountFromSegments(Relation parentrel, int segno, List **awaiting_drop);
 
-List *
-UpdateMasterAosegTotalsFromSegments_guts(Relation parentrel,
-										 Snapshot appendOnlyMetaDataSnapshot,
-										 const List *segmentNumList,
-										 int64 modcount_added);
+static List * UpdateMasterAosegTotalsFromSegments_guts(Relation parentrel,
+													   Snapshot appendOnlyMetaDataSnapshot,
+													   List *segmentNumList,
+													   int64 modcount_added);
 static void
 acquire_lightweight_lock() {
 	LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
@@ -729,9 +728,11 @@ DeregisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList)
 
 			/*
 			 * We can now reach here in the drop phase either when we check
-			 * serializable backends or when we update the aoseg totals on master
+			 * serializable backends or when we update the aoseg totals on the QD.
 			 */
-			Assert(segfilestat->state == COMPACTED_AWAITING_DROP || segfilestat->state == DROP_USE);
+			Assert(segfilestat->state == COMPACTED_AWAITING_DROP ||
+				   segfilestat->state == DROP_USE ||
+				   segfilestat->state == AWAITING_DROP_READY);
 			segfilestat->xid = CurrentXid;
 			appendOnlyInsertXact = true;
 			segfilestat->state = COMPACTED_DROP_SKIPPED;
@@ -848,12 +849,10 @@ SetSegnoForCompaction(Relation rel,
 	if (!compactedSegmentFileList)
 	{
 		int64	   *total_tupcount;
-		List	   *awaiting_drop = NIL;
 
-		total_tupcount = GetTotalTupleCountFromSegments(rel, 0, &awaiting_drop);
+		total_tupcount = GetTotalTupleCountFromSegments(rel, 0, NULL);
 		segzero_tupcount = total_tupcount[0];
 		pfree(total_tupcount);
-		list_free(awaiting_drop);
 	}
 
 	acquire_lightweight_lock();
@@ -1426,7 +1425,8 @@ GetTotalTupleCountFromSegments(Relation parentrel,
 
 					if (qe_state == AOSEG_STATE_AWAITING_DROP)
 					{
-						*awaiting_drop = lappend_int(*awaiting_drop, qe_segno);
+						if (awaiting_drop)
+							*awaiting_drop = lappend_int(*awaiting_drop, qe_segno);
 						elogif(Debug_appendonly_print_segfile_choice, LOG,
 							   "Found awaiting drop segment file: "
 							   "relation %s (%d), segno = %d",
@@ -1611,8 +1611,9 @@ UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 
 /*
  * This is only called during the AOVAC_DROP phase.
- * Updates the tupcount information from the segments and
- * deregister any segfiles with AWAITING_DROP state on QEs
+ * Updates the tupcount information from the segments and deregisters any
+ * segfiles which remained in AWAITING_DROP state on QEs. (See
+ * AOCS|AppendOnlyCollectDeadSegments() for details)
  * This prevents them from dropping by marking them as COMPACTED_DROP_SKIPPED.
  */
 void
@@ -1638,10 +1639,10 @@ UpdateMasterAosegTotalsFromSegments_DropPhase(Relation parentrel,
  * Returns a list of segfile nos. if any of the QEs have the segfile in
  * AWAITING_DROP state
  */
-List *
+static List *
 UpdateMasterAosegTotalsFromSegments_guts(Relation parentrel,
 										 Snapshot appendOnlyMetaDataSnapshot,
-										 const List *segmentNumList,
+										 List *segmentNumList,
 										 int64 modcount_added)
 {
 	ListCell *l;

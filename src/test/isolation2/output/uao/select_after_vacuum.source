@@ -63,10 +63,10 @@ BEGIN
 -------
  1000  
 (1 row)
-0U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount = 1 then 'one' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg('ao');
- segno | case 
--------+------
- 1     | many 
+0U: SELECT segno, state, case when tupcount = 0 then 'zero' when tupcount = 1 then 'one' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg('ao');
+ segno | state | case 
+-------+-------+------
+ 1     | 1     | many 
 (1 row)
 2: VACUUM ao;
 VACUUM
@@ -94,9 +94,9 @@ COMMIT
 (1 row)
 3: INSERT INTO ao VALUES (0);
 INSERT 1
-1U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount = 1 then 'one' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg('ao');
- segno | case 
--------+------
- 1     | one  
- 2     | many 
+1U: SELECT segno, state, case when tupcount = 0 then 'zero' when tupcount = 1 then 'one' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg('ao');
+ segno | state | case 
+-------+-------+------
+ 1     | 2     | many 
+ 2     | 1     | many 
 (2 rows)

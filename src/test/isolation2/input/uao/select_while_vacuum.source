@@ -41,7 +41,9 @@ UPDATE ao_vacuum_drop SET a = a + 2 WHERE a % 2 = 0;
 
 SELECT gp_inject_fault('locks_check_at_select_portal_create', 'suspend', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
 
-1>: SELECT count(*) FROM ao_vacuum_drop;
+1&: SELECT count(*) FROM ao_vacuum_drop;
+2: SELECT gp_wait_until_triggered_fault('locks_check_at_select_portal_create', 1, dbid)
+     FROM gp_segment_configuration WHERE role='p' AND content = -1;
 2: VACUUM ANALYZE ao_vacuum_drop_1_prt_1;
 -- VACUUM shouldn't drop the files and SELECT should complete fine
 
@@ -75,7 +77,9 @@ UPDATE ao_vacuum_full_drop SET a = a + 2 WHERE a % 2 = 0;
 
 SELECT gp_inject_fault('locks_check_at_select_portal_create', 'suspend', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
 
-1>: SELECT count(*) FROM ao_vacuum_full_drop;
+1&: SELECT count(*) FROM ao_vacuum_full_drop;
+2: SELECT gp_wait_until_triggered_fault('locks_check_at_select_portal_create', 1, dbid)
+     FROM gp_segment_configuration WHERE role='p' AND content = -1;
 2: VACUUM FULL ao_vacuum_full_drop_1_prt_1;
 -- VACUUM shouldn't drop the files and SELECT should complete fine
 

@@ -163,7 +163,11 @@ test: uao/create_index_allows_readonly_row
 # Refer to the case comment for why it is commented out.
 # test: uao/bad_buffer_on_temp_ao_row
 
-test: reorganize_after_ao_vacuum_skip_drop truncate_after_ao_vacuum_skip_drop mark_all_aoseg_await_drop
+# The following tests depends on segfile state after VACUUM, so it should not be
+# run in parallel with other tests, as that might affect the xmin horizon.
+test: mark_all_aoseg_await_drop
+test: reorganize_after_ao_vacuum_skip_drop
+test: truncate_after_ao_vacuum_skip_drop
 # below test(s) inject faults so each of them need to be in a separate group
 test: segwalrep/master_xlog_switch
 test: idle_gang_cleaner

@@ -117,9 +117,7 @@ test: gpdiffcheck gptokencheck gp_hashagg sequence_gp tidscan co_nestloop_idxsca
 # at the 2nd phase of 2PC.
 test: dtm_retry
 
-# The appendonly test cannot be run concurrently with tests that have
-# serializable transactions (may conflict with AO vacuum operations).
-test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 gp_transactions olap_group olap_window_seq sirv_functions appendonly create_table_distpol alter_distpol_dropped query_finish partial_table subselect_gp_indexes
+test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 gp_transactions olap_group olap_window_seq sirv_functions create_table_distpol alter_distpol_dropped query_finish partial_table subselect_gp_indexes
 
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests.
@@ -238,11 +236,18 @@ test: uaocs_compaction/drop_column
 
 test: uao_ddl/cursor_row uao_ddl/cursor_column uao_ddl/alter_ao_table_statistics_row uao_ddl/analyze_ao_table_every_dml_row uao_ddl/analyze_ao_table_every_dml_column uao_ddl/alter_ao_table_statistics_column uao_ddl/alter_ao_table_setdefault_row uao_ddl/alter_ao_table_index_row uao_ddl/alter_ao_table_owner_column uao_ddl/spgist_over_ao_table_row
 test: uao_ddl/alter_ao_table_owner_row uao_ddl/alter_ao_table_setstorage_row uao_ddl/alter_ao_table_constraint_row uao_ddl/alter_ao_table_constraint_column uao_ddl/alter_ao_table_index_column uao_ddl/blocksize_row uao_ddl/compresstype_column uao_ddl/alter_ao_table_setdefault_column uao_ddl/blocksize_column uao_ddl/temp_on_commit_delete_rows_row uao_ddl/temp_on_commit_delete_rows_column uao_ddl/spgist_over_ao_table_column
-# Do not add the two uao*_catalog_tables tests to a group that runs
-# serializable transactions.  They run VACUUM FULL on append-optimized
-# tables and assume that no AWAITING_DROP segfiles exist at the end of
-# VACUUM FULL.
-test: uao_catalog_tables uaocs_catalog_tables uao_ddl/alter_ao_table_setstorage_column uao_ddl/alter_ao_table_col_ddl_row uao_ddl/compresstype_row uao_ddl/alter_ao_table_col_ddl_column uao_ddl/alter_ao_part_tables_splitpartition_row uao_ddl/alter_ao_part_tables_splitpartition_column uao_ddl/create_ao_tables_row uao_ddl/create_ao_table_500cols_row uao_ddl/create_ao_tables_column uao_ddl/alter_ao_part_exch_row
+
+# The following tests cannot be run in a group that runs serializable
+# transactions. They can't be run in parallel with other operations as well, as
+# they run VACUUM on append-optimized tables and assume that no AWAITING_DROP
+# segfiles exist at the end of VACUUM, or they depend on gp_fastsequence values
+# post VACUUM. We don't want concurrent transactions to lower the xmin horizon
+# and prevent certain segfiles from being dropped.
+test: uao_catalog_tables
+test: uaocs_catalog_tables
+test: appendonly
+
+test: uao_ddl/alter_ao_table_setstorage_column uao_ddl/alter_ao_table_col_ddl_row uao_ddl/compresstype_row uao_ddl/alter_ao_table_col_ddl_column uao_ddl/alter_ao_part_tables_splitpartition_row uao_ddl/alter_ao_part_tables_splitpartition_column uao_ddl/create_ao_tables_row uao_ddl/create_ao_table_500cols_row uao_ddl/create_ao_tables_column uao_ddl/alter_ao_part_exch_row
 test: uao_ddl/alter_ao_part_exch_column uao_ddl/alter_ao_part_tables_row uao_ddl/create_ao_table_500cols_column uao_ddl/alter_ao_part_tables_column
 
 test: uao_ddl/alter_drop_allcol_row uao_ddl/alter_drop_allcol_column uao_ddl/alter_rollback_row uao_ddl/alter_rollback_column uao_ddl/uao_allalter_row uao_ddl/uao_allalter_column uao_col/alter_ao_table_oid_column uao_row/alter_ao_table_oid_row

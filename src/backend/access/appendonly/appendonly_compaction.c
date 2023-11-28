@@ -571,6 +571,10 @@ AppendOnlyCollectDeadSegments(Relation aorel, List *compaction_segno)
 
 			if (visible_to_all)
 				dead_segs = bms_add_member(dead_segs, fsinfo->segno);
+			else
+				ereportif(Debug_appendonly_print_compaction, LOG,
+						  (errmsg("cannot drop segfile %d for relation %s due to concurrent transactions",
+								  fsinfo->segno, RelationGetRelationName(aorel))));
 		}
 	}
 
