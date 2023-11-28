@@ -134,6 +134,7 @@ test: select_views portals_p2 cluster dependency guc bitmapops combocid tsearch 
 
 # 'foreign_key' test is disabled, because it contains several tables with
 # multiple UNIQUE constraints, which is not supported in GPDB.
+# See the foreign_key_gp test in greenplum_schedule for the GPDB-specific behavior.
 #test: foreign_key
 
 # ----------

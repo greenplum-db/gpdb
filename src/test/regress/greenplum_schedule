@@ -51,7 +51,7 @@ test: instr_in_shmem_setup
 test: instr_in_shmem
 
 test: createdb
-test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp gp_types combocid_gp gp_sort gp_prepared_xacts gp_backend_info gp_locale
+test: gp_aggregates gp_aggregates_costs gp_metadata variadic_parameters default_parameters function_extensions spi gp_xml shared_scan update_gp triggers_gp returning_gp gp_types combocid_gp gp_sort gp_prepared_xacts gp_backend_info gp_locale foreign_key_gp
 test: spi_processed64bit
 test: gp_lock
 test: gp_tablespace_with_faults

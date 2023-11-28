@@ -2710,9 +2710,6 @@ ExecARInsertTriggers(EState *estate, ResultRelInfo *relinfo,
 	if ((trigdesc && trigdesc->trig_insert_after_row) ||
 		(transition_capture && transition_capture->tcs_insert_new_table))
 	{
-		if(RelationIsAoCols(relinfo->ri_RelationDesc))
-			elog(ERROR, "Trigger is not supported on AOCS yet");
-
 		AfterTriggerSaveEvent(estate, relinfo, TRIGGER_EVENT_INSERT,
 							  true, NULL, slot,
 							  recheckIndexes, NULL,

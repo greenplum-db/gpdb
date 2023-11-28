@@ -104,3 +104,14 @@ update parted_trig set partkey = partkey + 1, distkey = distkey + 1;
 
 -- Should fire the DELETE trigger.
 delete from parted_trig where nonkey = 2;
+
+--
+-- Triggers on AO/CO table.
+-- Currently disabled.
+--
+create table trigtest_ao(a int) using ao_row;
+create table trigtest_co(a int) using ao_column;
+create trigger trig_ao after insert on trigtest_ao for each row execute function insert_notice_trig();
+create trigger trig_co after insert on trigtest_co for each row execute function insert_notice_trig();
+insert into trigtest_ao values(1);
+insert into trigtest_co values(1);
