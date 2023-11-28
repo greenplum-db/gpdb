@@ -957,7 +957,7 @@ vacuumStatement_Relation(VacuumStmt *vacstmt, Oid relid,
 					   "Skipping freeing compacted append-only segment file "
 					   "because of concurrent serializable transaction");
 
-				DeregisterSegnoForCompactionDrop(relid, compactNowList);
+				DeregisterSegnoForCompactionDrop(relid, compactNowList, false);
 				break;
 			}
 

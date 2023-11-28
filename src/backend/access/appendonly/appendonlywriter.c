@@ -692,7 +692,7 @@ usedByConcurrentTransaction(AOSegfileStatus *segfilestat, int segno)
 }
 
 void
-DeregisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList)
+DeregisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList, bool update_tx_info)
 {
 	TransactionId CurrentXid = GetTopTransactionId();
 	AORelHashEntryData *aoentry;
@@ -713,7 +713,9 @@ DeregisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList)
 
 	aoentry = AORelGetOrCreateHashEntry(relid);
 	Assert(aoentry);
-	aoentry->txns_using_rel++;
+
+	if (update_tx_info)
+		aoentry->txns_using_rel++;
 
 	for (i = 0; i < MAX_AOREL_CONCURRENCY; i++)
 	{
@@ -733,8 +735,11 @@ DeregisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList)
 			Assert(segfilestat->state == COMPACTED_AWAITING_DROP ||
 				   segfilestat->state == DROP_USE ||
 				   segfilestat->state == AWAITING_DROP_READY);
-			segfilestat->xid = CurrentXid;
-			appendOnlyInsertXact = true;
+			if (update_tx_info)
+			{
+				segfilestat->xid = CurrentXid;
+				appendOnlyInsertXact = true;
+			}
 			segfilestat->state = COMPACTED_DROP_SKIPPED;
 		}
 	}
@@ -1628,7 +1633,7 @@ UpdateMasterAosegTotalsFromSegments_DropPhase(Relation parentrel,
 															 segmentNumList,
 															 modcount_added);
 
-	DeregisterSegnoForCompactionDrop(RelationGetRelid(parentrel), awaiting_drop);
+	DeregisterSegnoForCompactionDrop(RelationGetRelid(parentrel), awaiting_drop, false);
 	list_free(awaiting_drop);
 }
 
