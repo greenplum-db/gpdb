@@ -1019,8 +1019,20 @@ CJoinOrderDPv2::SearchJoinOrders(ULONG left_level, ULONG right_level)
 					current_level_info, join_bitset, join_expr_info);
 				AddExprToGroupIfNecessary(group_info, join_expr_info);
 
-				// We only want to consider linear trees when enumerating partition selector alternatives
-				if (right_level != 1)
+				// This ensures a 2-level bushy tree such that contains partition selectors is a valid candidate.
+				// Below, Adding HJ1 to the inner side of any tree would make it "bushy", and while we
+				// typically don't want to consider such plans, 2-level bushy trees can be good if DPE occurs
+				// Eg:
+				//	HJ3
+				//	 -HJ2
+				//		-PT2
+				//		-PS2
+				//		  -Scan with predicate
+				//	 -HJ1
+				//		-PT1
+				//		-PS1
+				//		  -Scan with predicate
+				if (right_level > 2)
 				{
 					continue;
 				}
@@ -1032,12 +1044,14 @@ CJoinOrderDPv2::SearchJoinOrders(ULONG left_level, ULONG right_level)
 				join_expr_info = GetJoinExprForProperties(
 					left_group_info, right_group_info, join_props);
 
-
-
-				// TODO: Reduce non-mandatory cross products
-
-				PopulateDPEInfo(join_expr_info, left_group_info,
-								right_group_info);
+				// Only consider DPE when the partition selector group has one atom
+				// It's possible to put a partition selector above a join, but it's
+				// much less common
+				if (right_level == 1)
+				{
+					PopulateDPEInfo(join_expr_info, left_group_info,
+									right_group_info);
+				}
 				// For the first level, we should consider joining both ways
 				if (left_level == 1 && right_level == 1)
 				{
@@ -1045,6 +1059,7 @@ CJoinOrderDPv2::SearchJoinOrders(ULONG left_level, ULONG right_level)
 									left_group_info);
 				}
 
+				// Add the partition selector property if the group contains any partition selectors
 				if (join_expr_info->m_contain_PS->Size() > 0)
 				{
 					AddNewPropertyToExpr(
