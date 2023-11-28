@@ -550,8 +550,6 @@ ExecEndShareInputScan(ShareInputScanState *node)
 	ShareInputScan *sisc = (ShareInputScan *) node->ss.ps.plan;
 	shareinput_local_state *local_state = node->local_state;
 
-	SIMPLE_FAULT_INJECTOR("get_shareinput_reference_done");
-
 	/* clean up tuple table */
 	ExecClearTuple(node->ss.ps.ps_ResultTupleSlot);
 
@@ -888,6 +886,8 @@ release_shareinput_reference(shareinput_Xslice_reference *ref, bool reader_squel
 		elog((Debug_shareinput_xslice ? LOG : DEBUG1), "SISC (shareid=%d, slice=%d): removed xslice state",
 			 state->tag.share_id, currentSliceId);
 	}
+	else if (state->refcount == 0)
+		SIMPLE_FAULT_INJECTOR("get_shareinput_reference_done");
 
 	dlist_delete(&ref->node);
 
