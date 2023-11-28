@@ -3407,46 +3407,40 @@ CExpressionPreprocessor::PexprOrderSecurityQualsUtil(CMemoryPool *mp,
 		// the main logic to order security quals
 		ULONG arity = pexpr->Arity();
 
-		// Array to hold the security quals present in the qual scalar tree
-		CExpressionArray *pdrgpexprSecurityQuals =
+		// Array to hold quals, with security quals placed before normal quals.
+		CExpressionArray *pdrgpexprOrderedSecurityQuals =
 			GPOS_NEW(mp) CExpressionArray(mp);
 
-		// Array to hold the normal quals present in the qual scalar tree
+		// Array to hold the normal quals present in the qual scalar tree.
 		CExpressionArray *pdrgpexprNonSecurityQuals =
 			GPOS_NEW(mp) CExpressionArray(mp);
 
-		// Array to hold the quals having security quals first
-		CExpressionArray *pdrgpexprCombined = GPOS_NEW(mp) CExpressionArray(mp);
 		CExpression *pexprNew = nullptr;
 		for (ULONG ul = 0; ul < arity; ul++)
 		{
 			CExpression *pexprChild = (*pexpr)[ul];
 			CScalar *scalarOp = dynamic_cast<CScalar *>(pexprChild->Pop());
+			pexprNew = PexprOrderSecurityQuals(mp, pexprChild);
 			if (scalarOp->GetIsSecurityQual())
 			{
-				pexprNew = PexprOrderSecurityQuals(mp, pexprChild);
-				pdrgpexprSecurityQuals->Append(pexprNew);
+				pdrgpexprOrderedSecurityQuals->Append(pexprNew);
 			}
 			else
 			{
-				pexprNew = PexprOrderSecurityQuals(mp, pexprChild);
 				pdrgpexprNonSecurityQuals->Append(pexprNew);
 			}
 		}
 
-		for (ULONG ul = 0; ul < pdrgpexprSecurityQuals->Size(); ul++)
-		{
-			((*pdrgpexprSecurityQuals)[ul])->AddRef();
-			pdrgpexprCombined->Append((*pdrgpexprSecurityQuals)[ul]);
-		}
 		for (ULONG ul = 0; ul < pdrgpexprNonSecurityQuals->Size(); ul++)
 		{
 			((*pdrgpexprNonSecurityQuals)[ul])->AddRef();
-			pdrgpexprCombined->Append((*pdrgpexprNonSecurityQuals)[ul]);
+			pdrgpexprOrderedSecurityQuals->Append(
+				(*pdrgpexprNonSecurityQuals)[ul]);
 		}
-		pdrgpexprSecurityQuals->Release();
+
 		pdrgpexprNonSecurityQuals->Release();
-		return CPredicateUtils::PexprConjunction(mp, pdrgpexprCombined);
+		return CPredicateUtils::PexprConjunction(mp,
+												 pdrgpexprOrderedSecurityQuals);
 	}
 
 	// If its not a BOOL operator then no ordering is required

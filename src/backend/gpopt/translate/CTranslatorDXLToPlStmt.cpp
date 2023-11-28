@@ -5839,14 +5839,14 @@ CTranslatorDXLToPlStmt::TranslateProjListAndFilter(
 // Suppose a is NULL,  b = 0
 // evaluate a > 1 with a is NULL, result will be NULL.
 // As per the comments of ExecQual method, executor will short-circuit to
-// return false directly. The executor does not eval b<0 at all.
+// return false directly. The executor does not eval b<2 at all.
 //
 // Case[2]
 // Suppose a is NULL, b = 0
 // evaluate the 1st arg of the And, eval a > 1 with a is NULL, result will be
 // NULL.
 // Since null AND true --> null, null and false --> false. The executor has to
-// evaluate b<0. So if we have a qual like a>10 AND f_leak(a) where a>10 is a
+// evaluate b<2. So if we have a qual like a>10 AND f_leak(a) where a>10 is a
 // security qual and f_leak(a) is an UDF which is not leakproof, then information
 // are leaked. The below method removes the parent AND operator from the qual
 // so that no data leak happens in the case of security quals evaluating to NULL.

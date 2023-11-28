@@ -503,7 +503,7 @@ CTranslatorQueryToDXL::CheckRangeTable(Query *query)
 			GPOS_RAISE(
 				gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				GPOS_WSZ_LIT(
-					"security quals present in rte without without row level security enabled"));
+					"security quals present in rte without row level security enabled"));
 		}
 
 		// ORCA will fallback to planner if row level security is
@@ -3515,6 +3515,8 @@ CTranslatorQueryToDXL::TranslateSecurityQualToDXL(const RangeTblEntry *rte)
 			(Node *) gpdb::ListNth(rte->securityQuals, 0);
 		security_qual_dxlnode = TranslateExprToDXL((Expr *) security_qual_node);
 	}
+	// When more than one element appears in the rte->securityQuals list, the
+	// elements should be translated to DXL and ANDed together.
 	else
 	{
 		CDXLNode *security_qual_and_dxlnode = GPOS_NEW(m_mp)
