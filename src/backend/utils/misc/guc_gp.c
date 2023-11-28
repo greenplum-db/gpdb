@@ -134,6 +134,7 @@ bool		Debug_appendonly_print_datumstream = false;
 bool		Debug_appendonly_print_visimap = false;
 bool		Debug_appendonly_print_compaction = false;
 bool		Debug_bitmap_print_insert = false;
+bool		Debug_aocotbl_sampling_notablescan = false;
 bool		Test_print_direct_dispatch_info = false;
 bool		Test_copy_qd_qe_split = false;
 bool		gp_permit_relation_node_change = false;
@@ -1474,6 +1475,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&Debug_bitmap_print_insert,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"debug_aocotbl_sampling_notablescan", PGC_SUSET, DEVELOPER_OPTIONS,
+			gettext_noop("Don't perform table scan for aoco table sampling, may cause incorrect sampling result"),
+			NULL,
+			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&Debug_aocotbl_sampling_notablescan,
 		false,
 		NULL, NULL, NULL
 	},

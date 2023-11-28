@@ -1683,6 +1683,32 @@ aoco_scan_analyze_next_tuple(TableScanDesc scan, TransactionId OldestXmin,
 			 errmsg("API not supported for appendoptimized relations")));
 }
 
+static int sort_int64_cmp(const void * a, const void * b) {
+	return ( *(int64*)a - *(int64*)b );
+}
+
+/*
+ * Sameple rows from AOCO table
+ *
+ * Basic algorithm:
+ *
+ * Let RowSampler works in the scope of a "filtered" table which includes only
+ * live tuples. e.g. there is a table with 100 tuples including 30 live tuples
+ * and 70 dead tuples. RowSampler can "see" a table with only 30 tuples.
+ * Use a global cursor (globalOffset) to remember the actual position.
+ * When RowSampler skipped n tuples before a selecting, move globalOffset 
+ * forward by n live tuples (ignoring all dead tuples in the scanning).
+ * When RowSampler selected a tuple which is dead, continue to move globalOffset
+ * till getting a live tuple.
+ *
+ * Peformance improvement:
+ *
+ * For now we use aocs_get_target_tuple() to walk through the table, which is
+ * unnecessary because we need just to fetch live tuples. A visimap scan
+ * without table scan will have better performance. However, it is not easy
+ * to implement since the code of visimap scan ties to table scan heavily.
+ * We can consider it for performance improvement in future.
+ */
 static int
 aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 						 int targrows, double *totalrows, double *totaldeadrows)
@@ -1701,9 +1727,9 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 	AOCSScanDesc aocoscan = (AOCSScanDesc) scan;
 
 	int64 totaltupcount = AOCSScanDesc_TotalTupCount(aocoscan);
-	int64 totaldeadtupcount = 0;
+	/*int64 totaldeadtupcount = 0;
 	if (aocoscan->total_seg > 0 )
-		totaldeadtupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&aocoscan->visibilityMap);
+		totaldeadtupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&aocoscan->visibilityMap);*/
 
 	/*
 	 * Get the total number of blocks for the table
@@ -1719,26 +1745,43 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 	 * AOTupleId is 48bits, the max value of totalrows is never greater than
 	 * AOTupleId_MaxSegmentFileNum * AOTupleId_MaxRowNum (< 48 significant bits).
 	 */
-	*totalrows = (double) (totaltupcount - totaldeadtupcount);
-	*totaldeadrows = (double) totaldeadtupcount;
+	/**totalrows = (double) (totaltupcount - totaldeadtupcount);
+	*totaldeadrows = (double) totaldeadtupcount; */
 
-	/* Prepare for sampling tuple numbers */
-	RowSamplerData rs;
-	RowSampler_Init(&rs, *totalrows, targrows, random());
+	/*
+	 * Prepare for sampling tuple numbers
+	 * Note that RowSampler works in the scope of live tuples
+	 */
+	VslSamplerData vs;
+	VslSampler_Init(&vs, totaltupcount, targrows);
+	int lastStepLength = 0;
+	bool reset = false;
+	int64 tupleIdIdx = 0;
+	//AOTupleId* tupleIdSet = palloc(sizeof(AOTupleId) * targrows);
+	AOTupleId tupleId;
+	int64* tupleIdSet = palloc(sizeof(int64) * targrows);
 
-	while (RowSampler_HasMore(&rs))
+	while (VslSampler_HasMore(&vs))
 	{
-		aocoscan->targrow = RowSampler_Next(&rs);
+		/* Selected row number in scope of live tuples */
+		aocoscan->targrow = VslSampler_Next(&vs);
 
-		vacuum_delay_point();
-
-		if (aocs_get_target_tuple(aocoscan, aocoscan->targrow, slot))
+		if (lastStepLength != vs.stepLength)
 		{
-			rows[numrows++] = ExecCopySlotHeapTuple(slot);
+			if (lastStepLength != 0)
+				reset = true;
+			lastStepLength = vs.stepLength;
+		}
+
+		if (aocs_get_target_tuple(aocoscan, aocoscan->targrow, slot, reset, true, &tupleId))
+		{
+			tupleIdSet[tupleIdIdx++] = aocoscan->targrow;
 			liverows++;
+			VslSampler_SetValid(&vs);
 		}
 		else
 			deadrows++;
+		reset = false;
 
 		/*
 		 * Even though we now do row based sampling,
@@ -1752,11 +1795,27 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 									 blksdone);
 		SIMPLE_FAULT_INJECTOR("analyze_block");
 
-		ExecClearTuple(slot);
+		vacuum_delay_point();
+	}
+
+	qsort(tupleIdSet, tupleIdIdx, sizeof(int64), sort_int64_cmp);
+	//aocs_rescan(aocoscan);
+	reset = true;
+	for (int i = 0; i < tupleIdIdx; i++)
+	{
+		if (aocs_get_target_tuple(aocoscan, tupleIdSet[i], slot, reset, false, &tupleId))
+		{
+			rows[numrows++] = ExecCopySlotHeapTuple(slot);
+			ExecClearTuple(slot);
+		}
+		else
+			elog(ERROR, "tuple was marked live in visimap but cannot be fetched");
+		reset = false;
 	}
 
 	ExecDropSingleTupleTableSlot(slot);
 	table_endscan(scan);
+	pfree(tupleIdSet);
 
 	/*
 	 * Emit some interesting relation info
@@ -1767,8 +1826,9 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 					"%d rows in sample, %.0f accurate total live rows, "
 					"%.f accurate total dead rows",
 					RelationGetRelationName(onerel),
-					rs.m, liverows, deadrows, numrows,
-					*totalrows, *totaldeadrows)));
+					vs.m, liverows, deadrows, numrows,
+					0.0, 0.0)));
+					//*totalrows, *totaldeadrows)));
 
 	return numrows;
 }

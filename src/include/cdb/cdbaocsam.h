@@ -422,7 +422,7 @@ extern void aocs_delete_finish(AOCSDeleteDesc desc);
 
 extern AOCSHeaderScanDesc aocs_begin_headerscan(
 		Relation rel, int colno);
-extern bool aocs_get_target_tuple(AOCSScanDesc aoscan, int64 targrow, TupleTableSlot *slot);
+extern bool aocs_get_target_tuple(AOCSScanDesc aoscan, int64 targrow, TupleTableSlot *slot, bool reset, bool checkVisiOnly, AOTupleId *tupleId);
 extern AOCSWriteColumnDesc aocs_writecol_init(Relation rel, List *newvals, AOCSWriteColumnOperation op);
 extern void aocs_writecol_add(Oid relid, List *newvals, List *constraints, TupleDesc oldDesc);
 extern void aocs_writecol_rewrite(Oid relid, List *newvals, TupleDesc oldDesc);
