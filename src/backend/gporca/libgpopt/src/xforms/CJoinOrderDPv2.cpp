@@ -46,6 +46,9 @@ using namespace gpopt;
 // prohibitively high penalty for cross products when in GreedyAvoidXProd
 #define GPOPT_DPV2_CROSS_JOIN_GREEDY_PENALTY 1e9
 
+// prohibitively high penalty for broadcast when it exceeds a threshold (similar to the real cost model)
+#define BROACAST_PENALTY 1e14
+
 // from cost model used during optimization in CCostModelParamsGPDB.cpp
 #define BCAST_SEND_COST 4.965e-05
 #define BCAST_RECV_COST 1.35e-06
@@ -853,6 +856,12 @@ CJoinOrderDPv2::PopulateDPEInfo(SExpressionInfo *join_expr_info,
 {
 	SGroupInfoArray *atom_groups = GetGroupsForLevel(1);
 
+
+	COptimizerConfig *optimizer_config =
+		COptCtxt::PoctxtFromTLS()->GetOptimizerConfig();
+	ULONG broadcast_threshold =
+		optimizer_config->GetHint()->UlBroadcastThreshold();
+
 	CBitSetIter iter_pt(*part_table_group_info->m_atoms);
 	SGroupInfo *pt_atom = nullptr;
 	CPartKeysArray *partition_keys = nullptr;
@@ -893,7 +902,9 @@ CJoinOrderDPv2::PopulateDPEInfo(SExpressionInfo *join_expr_info,
 						SExpressionInfo *atom_ps =
 							(*(*atom_groups)[iter_ps.Bit()]
 								  ->m_best_expr_info_array)[0];
-						// This is a bit simplistic. We calculate how much we are reducing the cardinality of the atom, but also take into account the cost of broadcasting the inner rows. If the number of rows broadcasted is much larger than the savings, then PS will likely not benefit in this case
+						// This is a bit simplistic. We calculate how much we are reducing the cardinality of the atom,
+						// but also take into account the cost of broadcasting the inner rows. If the number of rows
+						// broadcasted is much larger than the savings, then PS will likely not benefit in this case
 						// The numbers are from the cost model used during optimization
 
 						// for a select(some_non_get_node()) ==> 0.9
@@ -911,6 +922,14 @@ CJoinOrderDPv2::PopulateDPEInfo(SExpressionInfo *join_expr_info,
 						CDouble broadcast_penalty =
 							part_selector_group_info->m_cardinality *
 							distribution_cost_factor;
+						// penalize broadcast if it exceeds broadcast threshold (specified via GUC), just like
+						// in the cost model during optimization
+						if (part_selector_group_info->m_cardinality >
+							broadcast_threshold)
+						{
+							broadcast_penalty =
+								broadcast_penalty * BROACAST_PENALTY;
+						}
 
 						if (atom_ps->m_atom_base_table_rows.Get() > 0)
 						{
