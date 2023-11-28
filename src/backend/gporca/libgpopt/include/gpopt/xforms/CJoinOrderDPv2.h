@@ -516,6 +516,10 @@ private:
 
 	void FinalizeDPLevel(ULONG level);
 
+	CDouble CostJoinWithPartitionSelection(
+		SExpressionInfo *join_expr_info, SExpressionInfo *atom_ps,
+		SGroupInfo *pt_atom, SGroupInfo *part_selector_group_info);
+
 	SGroupInfoArray *
 	GetGroupsForLevel(ULONG level) const
 	{
