@@ -58,27 +58,8 @@ CLogicalGet::CLogicalGet(CMemoryPool *mp)
 //---------------------------------------------------------------------------
 CLogicalGet::CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
 						 CTableDescriptor *ptabdesc)
-	: CLogical(mp),
-	  m_pnameAlias(pnameAlias),
-	  m_ptabdesc(ptabdesc),
-	  m_pdrgpcrOutput(nullptr),
-	  m_pdrgpdrgpcrPart(nullptr),
-	  m_pcrsDist(nullptr)
+	: CLogicalGet(mp, pnameAlias, ptabdesc, nullptr, false)
 {
-	GPOS_ASSERT(nullptr != ptabdesc);
-	GPOS_ASSERT(nullptr != pnameAlias);
-
-	// generate a default column set for the table descriptor
-	m_pdrgpcrOutput = PdrgpcrCreateMapping(mp, m_ptabdesc->Pdrgpcoldesc(),
-										   UlOpId(), m_ptabdesc->MDId());
-
-	if (m_ptabdesc->IsPartitioned())
-	{
-		m_pdrgpdrgpcrPart = PdrgpdrgpcrCreatePartCols(
-			mp, m_pdrgpcrOutput, m_ptabdesc->PdrgpulPart());
-	}
-
-	m_pcrsDist = CLogical::PcrsDist(mp, m_ptabdesc, m_pdrgpcrOutput);
 }
 
 //---------------------------------------------------------------------------
@@ -92,14 +73,39 @@ CLogicalGet::CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
 CLogicalGet::CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
 						 CTableDescriptor *ptabdesc,
 						 CColRefArray *pdrgpcrOutput)
+	: CLogicalGet(mp, pnameAlias, ptabdesc, pdrgpcrOutput, false)
+{
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CLogicalGet::CLogicalGet
+//
+//	@doc:
+//		ctor
+//
+//---------------------------------------------------------------------------
+CLogicalGet::CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
+						 CTableDescriptor *ptabdesc,
+						 CColRefArray *pdrgpcrOutput, BOOL hasSecurityQuals)
 	: CLogical(mp),
 	  m_pnameAlias(pnameAlias),
 	  m_ptabdesc(ptabdesc),
 	  m_pdrgpcrOutput(pdrgpcrOutput),
-	  m_pdrgpdrgpcrPart(nullptr)
+	  m_pdrgpdrgpcrPart(nullptr),
+	  m_pcrsDist(nullptr),
+	  m_hasSecurityQuals(hasSecurityQuals)
 {
 	GPOS_ASSERT(nullptr != ptabdesc);
 	GPOS_ASSERT(nullptr != pnameAlias);
+
+
+	if (nullptr == m_pdrgpcrOutput)
+	{
+		// generate a default column set for the table descriptor
+		m_pdrgpcrOutput = PdrgpcrCreateMapping(mp, m_ptabdesc->Pdrgpcoldesc(),
+											   UlOpId(), m_ptabdesc->MDId());
+	}
 
 	if (m_ptabdesc->IsPartitioned())
 	{

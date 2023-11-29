@@ -2529,9 +2529,9 @@ CXformUtils::PexprBuildBtreeIndexPlan(CMemoryPool *mp, CMDAccessor *md_accessor,
 	// cause data leak. Currently, ORCA will fall back to planner if an
 	// index plan is created for a relation with security quals.
 	if ((CLogical::EopLogicalGet == op_id &&
-		 CLogicalGet::PopConvert(pexprGet->Pop())->GetHasSecurityQuals()) ||
-		(fDynamicGet && CLogicalDynamicGet::PopConvert(pexprGet->Pop())
-							->GetHasSecurityQuals()))
+		 CLogicalGet::PopConvert(pexprGet->Pop())->HasSecurityQuals()) ||
+		(fDynamicGet &&
+		 CLogicalDynamicGet::PopConvert(pexprGet->Pop())->HasSecurityQuals()))
 	{
 		GPOS_DELETE(alias);
 		pdrgppcrIndexCols->Release();
@@ -3462,9 +3462,9 @@ CXformUtils::PexprBitmapTableGet(CMemoryPool *mp, CLogical *popGet,
 	// index plan is created for a relation with security quals.
 	if (nullptr != pexprBitmap &&
 		((CLogical::EopLogicalGet == popGet->Eopid() &&
-		  (dynamic_cast<CLogicalGet *>(popGet))->GetHasSecurityQuals()) ||
+		  (dynamic_cast<CLogicalGet *>(popGet))->HasSecurityQuals()) ||
 		 (fDynamicGet &&
-		  (dynamic_cast<CLogicalDynamicGet *>(popGet))->GetHasSecurityQuals())))
+		  (dynamic_cast<CLogicalDynamicGet *>(popGet))->HasSecurityQuals())))
 	{
 		pdrgpexpr->Release();
 		GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiNoPlanFound);

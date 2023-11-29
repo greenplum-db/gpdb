@@ -635,32 +635,33 @@ CTranslatorDXLToExpr::PexprLogicalGet(const CDXLNode *dxlnode)
 		// generate a part index id
 		ULONG part_idx_id = COptCtxt::PoctxtFromTLS()->UlPartIndexNextVal();
 		partition_mdids->AddRef();
-		popGet = GPOS_NEW(m_mp)
-			CLogicalDynamicGet(m_mp, pname, ptabdesc, part_idx_id,
-							   partition_mdids, foreign_server_mdids);
+		popGet = GPOS_NEW(m_mp) CLogicalDynamicGet(
+			m_mp, pname, ptabdesc, part_idx_id, partition_mdids,
+			foreign_server_mdids, relationHasSecurityQuals);
 		CLogicalDynamicGet *popDynamicGet =
 			CLogicalDynamicGet::PopConvert(popGet);
 
 		// get the output column references from the dynamic get
 		colref_array = popDynamicGet->PdrgpcrOutput();
-		popDynamicGet->SetHasSecurityQuals(relationHasSecurityQuals);
 	}
 	else
 	{
 		if (EdxlopLogicalGet == edxlopid)
 		{
-			popGet = GPOS_NEW(m_mp) CLogicalGet(m_mp, pname, ptabdesc);
+			popGet = GPOS_NEW(m_mp)
+				CLogicalGet(m_mp, pname, ptabdesc, nullptr /*pdrgpcrOutput*/,
+							relationHasSecurityQuals);
 		}
 		else
 		{
 			GPOS_ASSERT(EdxlopLogicalForeignGet == edxlopid);
-			popGet = GPOS_NEW(m_mp) CLogicalForeignGet(m_mp, pname, ptabdesc);
+			popGet = GPOS_NEW(m_mp) CLogicalForeignGet(
+				m_mp, pname, ptabdesc, nullptr /*pdrgpcrOutput*/,
+				relationHasSecurityQuals);
 		}
 
 		// get the output column references
 		colref_array = CLogicalGet::PopConvert(popGet)->PdrgpcrOutput();
-		CLogicalGet::PopConvert(popGet)->SetHasSecurityQuals(
-			relationHasSecurityQuals);
 	}
 
 	CExpression *pexpr = GPOS_NEW(m_mp) CExpression(m_mp, popGet);

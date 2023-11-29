@@ -68,6 +68,22 @@ CLogicalForeignGet::CLogicalForeignGet(CMemoryPool *mp, const CName *pnameAlias,
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CLogicalForeignGet::CLogicalForeignGet
+//
+//	@doc:
+//		Ctor
+//
+//---------------------------------------------------------------------------
+CLogicalForeignGet::CLogicalForeignGet(CMemoryPool *mp, const CName *pnameAlias,
+									   CTableDescriptor *ptabdesc,
+									   CColRefArray *pdrgpcrOutput,
+									   BOOL hasSecurityQuals)
+	: CLogicalGet(mp, pnameAlias, ptabdesc, pdrgpcrOutput, hasSecurityQuals)
+{
+}
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CLogicalForeignGet::Matches
 //
 //	@doc:

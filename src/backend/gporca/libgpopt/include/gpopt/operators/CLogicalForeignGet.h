@@ -45,6 +45,10 @@ public:
 	CLogicalForeignGet(CMemoryPool *mp, const CName *pnameAlias,
 					   CTableDescriptor *ptabdesc, CColRefArray *pdrgpcrOutput);
 
+	CLogicalForeignGet(CMemoryPool *mp, const CName *pnameAlias,
+					   CTableDescriptor *ptabdesc, CColRefArray *pdrgpcrOutput,
+					   BOOL hasSecurityQuals);
+
 	// ident accessors
 	EOperatorId
 	Eopid() const override

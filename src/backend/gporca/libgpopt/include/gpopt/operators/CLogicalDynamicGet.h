@@ -57,11 +57,13 @@ public:
 					   CColRef2dArray *pdrgpdrgpcrPart,
 					   IMdIdArray *partition_mdids,
 					   CConstraint *partition_cnstrs_disj, BOOL static_pruned,
-					   IMdIdArray *foreign_server_mdids);
+					   IMdIdArray *foreign_server_mdids,
+					   BOOL hasSecurityQuals = false);
 	CLogicalDynamicGet(CMemoryPool *mp, const CName *pnameAlias,
 					   CTableDescriptor *ptabdesc, ULONG ulPartIndex,
 					   IMdIdArray *partition_mdids,
-					   IMdIdArray *foreign_server_mdids);
+					   IMdIdArray *foreign_server_mdids,
+					   BOOL hasSecurityQuals = false);
 
 	// dtor
 	~CLogicalDynamicGet() override;
@@ -94,14 +96,8 @@ public:
 		return m_static_pruned;
 	}
 
-	void
-	SetHasSecurityQuals(BOOL hasSecurityQuals)
-	{
-		m_hasSecurityQuals = hasSecurityQuals;
-	}
-
 	BOOL
-	GetHasSecurityQuals() const
+	HasSecurityQuals() const
 	{
 		return m_hasSecurityQuals;
 	}

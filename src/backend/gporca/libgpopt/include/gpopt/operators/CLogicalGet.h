@@ -66,6 +66,10 @@ public:
 	CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
 				CTableDescriptor *ptabdesc, CColRefArray *pdrgpcrOutput);
 
+	CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
+				CTableDescriptor *ptabdesc, CColRefArray *pdrgpcrOutput,
+				BOOL hasSecurityQuals);
+
 	// dtor
 	~CLogicalGet() override;
 
@@ -118,14 +122,8 @@ public:
 		return m_pdrgpdrgpcrPart;
 	}
 
-	void
-	SetHasSecurityQuals(BOOL hasSecurityQuals)
-	{
-		m_hasSecurityQuals = hasSecurityQuals;
-	}
-
 	BOOL
-	GetHasSecurityQuals() const
+	HasSecurityQuals() const
 	{
 		return m_hasSecurityQuals;
 	}
