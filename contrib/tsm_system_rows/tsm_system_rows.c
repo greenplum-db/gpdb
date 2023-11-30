@@ -36,6 +36,12 @@
 #include "optimizer/optimizer.h"
 #include "utils/sampling.h"
 
+/* GPDB */
+#include "cdb/cdbvars.h"
+#include "cdb/cdbutil.h"
+#include "catalog/gp_distribution_policy.h"
+#include "utils/rel.h"
+
 PG_MODULE_MAGIC;
 
 PG_FUNCTION_INFO_V1(tsm_system_rows_handler);
@@ -177,11 +183,27 @@ system_rows_beginsamplescan(SampleScanState *node,
 {
 	SystemRowsSamplerData *sampler = (SystemRowsSamplerData *) node->tsm_state;
 	int64		ntuples = DatumGetInt64(params[0]);
+	/* GPDB: additional parameters */
+	int			nsegs = getgpsegmentCount();
+	int			segindex = GpIdentity.segindex;
+	bool		policy_is_partitioned =
+		GpPolicyIsPartitioned(node->ss.ss_currentRelation->rd_cdbpolicy);
 
 	if (ntuples < 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLESAMPLE_ARGUMENT),
 				 errmsg("sample size must not be negative")));
+
+	/* GPDB: Scale down number of tuples by nsegs */
+	if (policy_is_partitioned)
+	{
+		int	save_ntuples = ntuples;
+
+		ntuples /= nsegs;
+		/* if this is the last segment, add on any remaining slack */
+		if (segindex == nsegs - 1)
+			ntuples += save_ntuples % nsegs;
+	}
 
 	sampler->seed = seed;
 	sampler->ntuples = ntuples;

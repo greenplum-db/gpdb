@@ -60,7 +60,11 @@ clean distclean:
 	rm -f data
 	rm -rf $(pg_regress_clean_files)
 
-install: all gpdiff.pl gpstringsubs.pl
+# GPDB: tsm_system_rows module is needed by some tests.
+install-tests:
+	$(MAKE) -C $(top_builddir)/contrib/tsm_system_rows install
+
+install: all gpdiff.pl gpstringsubs.pl install-tests
 
 installcheck: install installcheck-resource-queue installcheck-parallel-retrieve-cursor installcheck-ic-tcp installcheck-ic-proxy
 	$(pg_isolation2_regress_installcheck) --init-file=$(top_builddir)/src/test/regress/init_file --init-file=./init_file_isolation2 --schedule=$(srcdir)/isolation2_schedule

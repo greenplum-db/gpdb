@@ -1,5 +1,5 @@
--- Test Bernoulli and System sampling. For System sampling both blkdir and
--- without blkdir cases are considered.
+-- Test block-level and row-level sampling. For block-level sampling both blkdir
+-- and without blkdir cases are considered.
 
 CREATE TABLE tsample_@amname@(i int) USING @amname@;
 
@@ -270,3 +270,26 @@ RESET enable_mergejoin;
 RESET enable_nestloop;
 DROP TABLE ttr1;
 DROP TABLE ttr2;
+
+-- Case 8: Test tsm_system_rows on distributed tables
+CREATE EXTENSION IF NOT EXISTS tsm_system_rows;
+
+CREATE TABLE tsample8_@amname@(i int, j int) USING @amname@ DISTRIBUTED BY (i);
+
+INSERT INTO tsample8_@amname@ SELECT 1, j FROM generate_series(1, 32768) j;
+INSERT INTO tsample8_@amname@ SELECT 2, j + 32768 FROM generate_series(1, 32768) j;
+INSERT INTO tsample8_@amname@ SELECT 5, j + 32768 * 2 FROM generate_series(1, 32768) j;
+
+SELECT gp_segment_id, count(DISTINCT j) FROM tsample8_@amname@
+  TABLESAMPLE SYSTEM_ROWS(1000) GROUP BY gp_segment_id;
+SELECT count(DISTINCT j) FROM tsample8_@amname@ TABLESAMPLE SYSTEM_ROWS(32768 * 3);
+SELECT count(DISTINCT j) FROM tsample8_@amname@ TABLESAMPLE SYSTEM_ROWS(32768 * 3 + 1);
+
+-- Case 9: Test tsm_system_rows on replicated tables
+CREATE TABLE tsample9_@amname@(i int) USING @amname@ DISTRIBUTED REPLICATED;
+
+INSERT INTO tsample9_@amname@ SELECT * FROM generate_series(1, 32768);
+
+SELECT count(DISTINCT i) FROM tsample9_@amname@ TABLESAMPLE SYSTEM_ROWS(1000);
+SELECT count(DISTINCT i) FROM tsample9_@amname@ TABLESAMPLE SYSTEM_ROWS(32768);
+SELECT count(DISTINCT i) FROM tsample9_@amname@ TABLESAMPLE SYSTEM_ROWS(32768 + 1);
