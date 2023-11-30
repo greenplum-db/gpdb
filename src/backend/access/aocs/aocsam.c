@@ -651,7 +651,7 @@ aocs_beginscan_internal(Relation relation,
 		 */
 		if ((flags & SO_TYPE_ANALYZE) != 0 || (flags & SO_TYPE_SAMPLESCAN) != 0)
 		{
-			if (OidIsValid(blkdirrelid))
+			if (OidIsValid(blkdirrelid) && gp_enable_blkdir_sampling)
 				aocs_blkdirscan_init(scan);
 		}
 	}

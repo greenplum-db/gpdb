@@ -441,6 +441,9 @@ double		optimizer_jit_above_cost;
 double		optimizer_jit_inline_above_cost;
 double		optimizer_jit_optimize_above_cost;
 
+/* Switch to toggle block-directory based sampling for AO/CO tables */
+bool		gp_enable_blkdir_sampling;
+
 static const struct config_enum_entry gp_log_format_options[] = {
 	{"text", 0},
 	{"csv", 1},
@@ -636,6 +639,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 			NULL
 		},
 		&enable_groupagg,
+		true,
+		NULL, NULL, NULL
+	},
+	{
+		{"gp_enable_blkdir_sampling", PGC_USERSET, DEVELOPER_OPTIONS,
+		 gettext_noop("Enables the use of an append-optimized table's block "
+					  "directory for sampling (if one is present)."),
+		 NULL,
+		 GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_enable_blkdir_sampling,
 		true,
 		NULL, NULL, NULL
 	},
