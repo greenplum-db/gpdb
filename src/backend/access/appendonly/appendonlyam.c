@@ -1492,8 +1492,9 @@ appendonlygettup(AppendOnlyScanDesc scan,
 				 TupleTableSlot *slot)
 {
 	Assert(ScanDirectionIsForward(dir));
-	/* should not be in ANALYZE - we use a different API */
+	/* should not be in ANALYZE/SampleScan - we use a different API */
 	Assert((scan->rs_base.rs_flags & SO_TYPE_ANALYZE) == 0);
+	Assert((scan->rs_base.rs_flags & SO_TYPE_SAMPLESCAN) == 0);
 	Assert(scan->usableBlockSize > 0);
 
 	bool		isSnapshotAny = (scan->snapshot == SnapshotAny);
@@ -1805,12 +1806,14 @@ appendonly_beginrangescan_internal(Relation relation,
 
 	scan->blockDirectory = NULL;
 
-	if ((flags & SO_TYPE_ANALYZE) != 0)
+	if ((flags & SO_TYPE_ANALYZE) != 0 || (flags & SO_TYPE_SAMPLESCAN) != 0)
 	{
 		scan->segrowsprocessed = 0;
 		scan->segfirstrow = 0;
 		scan->targrow = 0;
 	}
+
+	scan->blkdirscan = NULL;
 
 	if (segfile_count > 0)
 	{
@@ -1827,7 +1830,11 @@ appendonly_beginrangescan_internal(Relation relation,
 							   AccessShareLock,
 							   appendOnlyMetaDataSnapshot);
 
-		if ((flags & SO_TYPE_ANALYZE) != 0)
+		/*
+		 * Initialize a AOBlkdirScan only if we are doing sampling and if we
+		 * have a blkdir relation.
+		 */
+		if ((flags & SO_TYPE_ANALYZE) != 0 || (flags & SO_TYPE_SAMPLESCAN) != 0)
 		{
 			if (OidIsValid(blkdirrelid))
 				appendonly_blkdirscan_init(scan);
@@ -1835,6 +1842,8 @@ appendonly_beginrangescan_internal(Relation relation,
 	}
 
 	scan->totalBytesRead = 0;
+
+	scan->sampleTargetBlk = -1;
 
 	return scan;
 }
@@ -1932,8 +1941,7 @@ appendonly_beginscan(Relation relation,
  * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: When doing an initial rescan with `table_rescan`,
  * the values for the new flags (introduced by Table AM API) are
  * set to false. This means that whichever ScanOptions flags that were initially set will be
- * used for the rescan. However with TABLESAMPLE, which is currently not
- * supported for AO/CO, the new flags may be modified.
+ * used for the rescan. However with TABLESAMPLE, the new flags may be modified.
  * Additionally, allow_sync, allow_strat, and allow_pagemode may
  * need to be implemented for AO/CO in order to properly use them.
  * You may view `syncscan.c` as an example to see how heap added scan
@@ -1961,6 +1969,17 @@ appendonly_rescan(TableScanDesc scan, ScanKey key,
 	 * reinitialize scan descriptor
 	 */
 	initscan(aoscan, key);
+
+	/* TABLESAMPLE related state */
+	aoscan->segrowsprocessed = 0;
+	aoscan->segfirstrow = 0;
+	aoscan->targrow = 0;
+	aoscan->sampleTargetBlk = -1;
+	if (aoscan->blkdirscan)
+	{
+		appendonly_blkdirscan_finish(aoscan);
+		appendonly_blkdirscan_init(aoscan);
+	}
 }
 
 /*

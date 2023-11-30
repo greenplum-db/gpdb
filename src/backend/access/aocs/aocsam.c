@@ -118,8 +118,9 @@ open_all_datumstreamread_segfiles(AOCSScanDesc scan, AOCSFileSegInfo *segInfo)
 
 		open_datumstreamread_segfile(basepath, rel, segInfo, ds[attno], attno);
 
-		/* skip reading block for ANALYZE */
-		if ((scan->rs_base.rs_flags & SO_TYPE_ANALYZE) != 0)
+		/* skip reading block for ANALYZE/SampleScan */
+		if ((scan->rs_base.rs_flags & SO_TYPE_ANALYZE) != 0 ||
+			(scan->rs_base.rs_flags & SO_TYPE_SAMPLESCAN) != 0)
 			continue;
 
 		datumstreamread_block(ds[attno], blockDirectory, attno);
@@ -618,7 +619,7 @@ aocs_beginscan_internal(Relation relation,
 
 	scan->columnScanInfo.ds = NULL;
 
-	if ((flags & SO_TYPE_ANALYZE) != 0)
+	if ((flags & SO_TYPE_ANALYZE) || (flags & SO_TYPE_SAMPLESCAN) != 0)
 	{
 		scan->segfirstrow = 0;
 		scan->targrow = 0;
@@ -635,6 +636,8 @@ aocs_beginscan_internal(Relation relation,
 							  &blkdirrelid,
 							  &visimaprelid);
 
+	scan->blkdirscan = NULL;
+
 	if (scan->total_seg != 0)
 	{
 		AppendOnlyVisimap_Init(&scan->visibilityMap,
@@ -642,12 +645,18 @@ aocs_beginscan_internal(Relation relation,
 							   AccessShareLock,
 							   appendOnlyMetaDataSnapshot);
 
-		if ((flags & SO_TYPE_ANALYZE) != 0)
+		/*
+		 * Initialize a AOBlkdirScan only if we are doing sampling and if we
+		 * have a blkdir relation.
+		 */
+		if ((flags & SO_TYPE_ANALYZE) != 0 || (flags & SO_TYPE_SAMPLESCAN) != 0)
 		{
 			if (OidIsValid(blkdirrelid))
 				aocs_blkdirscan_init(scan);
 		}
 	}
+
+	scan->sampleTargetBlk = -1;
 
 	return scan;
 }
@@ -659,6 +668,18 @@ aocs_rescan(AOCSScanDesc scan)
 	if (scan->columnScanInfo.ds)
 		close_ds_read(scan->columnScanInfo.ds, scan->columnScanInfo.relationTupleDesc->natts);
 	initscan_with_colinfo(scan);
+
+
+	/* TABLESAMPLE related state */
+	scan->segrowsprocessed = 0;
+	scan->segfirstrow = 0;
+	scan->targrow = 0;
+	scan->sampleTargetBlk = -1;
+	if (scan->blkdirscan)
+	{
+		aocs_blkdirscan_finish(scan);
+		aocs_blkdirscan_init(scan);
+	}
 }
 
 /*
@@ -1179,8 +1200,9 @@ aocs_getnext(AOCSScanDesc scan, ScanDirection direction, TupleTableSlot *slot)
 
 	Assert(ScanDirectionIsForward(direction));
 
-	/* should not be in ANALYZE - we use a different API */
+	/* should not be in ANALYZE/SampleScan - we use a different API */
 	Assert((scan->rs_base.rs_flags & SO_TYPE_ANALYZE) == 0);
+	Assert((scan->rs_base.rs_flags & SO_TYPE_SAMPLESCAN) == 0);
 
 	if (scan->columnScanInfo.relationTupleDesc == NULL)
 	{

@@ -1,0 +1,929 @@
+-- Test Bernoulli and System sampling. For System sampling both blkdir and
+-- without blkdir cases are considered.
+
+CREATE TABLE tsample_@amname@(i int) USING @amname@;
+CREATE TABLE
+
+-- Case 0: Empty table
+SELECT count(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 0     
+(1 row)
+SELECT * FROM tsample_@amname@ TABLESAMPLE BERNOULLI(10);
+ i 
+---
+(0 rows)
+
+SELECT count(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 0     
+(1 row)
+SELECT count(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE SYSTEM(10);
+ count 
+-------
+ 0     
+(1 row)
+
+CREATE INDEX ON tsample_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT count(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 0     
+(1 row)
+SELECT * FROM tsample_@amname@ TABLESAMPLE BERNOULLI(10);
+ i 
+---
+(0 rows)
+
+SELECT count(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 0     
+(1 row)
+SELECT count(DISTINCT i) FROM tsample_@amname@ TABLESAMPLE SYSTEM(10);
+ count 
+-------
+ 0     
+(1 row)
+
+-- Case 1: Single partially populated logical heap block on each QE
+CREATE TABLE tsample1_@amname@(i int) USING @amname@;
+CREATE TABLE
+INSERT INTO tsample1_@amname@ SELECT generate_series(1, 100);
+INSERT 0 100
+
+SELECT * FROM tsample1_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(1) ORDER BY i;
+ i   
+-----
+ 3   
+ 6   
+ 7   
+ 10  
+ 12  
+ 20  
+ 65  
+ 72  
+ 75  
+ 78  
+ 100 
+(11 rows)
+SELECT * FROM tsample1_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(1) ORDER BY i;
+ i   
+-----
+ 3   
+ 6   
+ 7   
+ 10  
+ 12  
+ 20  
+ 65  
+ 72  
+ 75  
+ 78  
+ 100 
+(11 rows)
+SELECT count(DISTINCT i) FROM tsample1_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 100   
+(1 row)
+
+SELECT count(DISTINCT i) FROM tsample1_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(1);
+ count 
+-------
+ 100   
+(1 row)
+SELECT count(DISTINCT i) FROM tsample1_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(1);
+ count 
+-------
+ 100   
+(1 row)
+SELECT count(DISTINCT i) FROM tsample1_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 100   
+(1 row)
+
+CREATE INDEX ON tsample1_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT * FROM tsample1_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(1) ORDER BY i;
+ i   
+-----
+ 3   
+ 6   
+ 7   
+ 10  
+ 12  
+ 20  
+ 65  
+ 72  
+ 75  
+ 78  
+ 100 
+(11 rows)
+SELECT * FROM tsample1_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(1) ORDER BY i;
+ i   
+-----
+ 3   
+ 6   
+ 7   
+ 10  
+ 12  
+ 20  
+ 65  
+ 72  
+ 75  
+ 78  
+ 100 
+(11 rows)
+SELECT count(DISTINCT i) FROM tsample1_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 100   
+(1 row)
+
+SELECT count(DISTINCT i) FROM tsample1_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(1);
+ count 
+-------
+ 100   
+(1 row)
+SELECT count(DISTINCT i) FROM tsample1_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(1);
+ count 
+-------
+ 100   
+(1 row)
+SELECT count(DISTINCT i) FROM tsample1_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 100   
+(1 row)
+
+-- Case 2: Multiple full logical heap blocks on a single QE
+CREATE TABLE tsample2_@amname@(i int) USING @amname@;
+CREATE TABLE
+INSERT INTO tsample2_@amname@ SELECT 1 FROM generate_series(1, 32768 * 3);
+INSERT 0 98304
+SELECT count(DISTINCT ctid) FROM tsample2_@amname@;
+ count 
+-------
+ 98304 
+(1 row)
+
+SELECT ctid FROM tsample2_@amname@ TABLESAMPLE BERNOULLI(0.001) REPEATABLE(15);
+ ctid             
+------------------
+ (33554432,22587) 
+ (33554432,28096) 
+ (33554433,15970) 
+ (33554434,26278) 
+(4 rows)
+SELECT ctid FROM tsample2_@amname@ TABLESAMPLE BERNOULLI(0.001) REPEATABLE(15);
+ ctid             
+------------------
+ (33554432,22587) 
+ (33554432,28096) 
+ (33554433,15970) 
+ (33554434,26278) 
+(4 rows)
+SELECT count(DISTINCT ctid) FROM tsample2_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 98304 
+(1 row)
+
+SELECT count(DISTINCT ctid) FROM tsample2_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(0);
+ count 
+-------
+ 65536 
+(1 row)
+SELECT count(DISTINCT ctid) FROM tsample2_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(0);
+ count 
+-------
+ 65536 
+(1 row)
+SELECT count(DISTINCT ctid) FROM tsample2_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 98304 
+(1 row)
+
+CREATE INDEX ON tsample2_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT ctid FROM tsample2_@amname@ TABLESAMPLE BERNOULLI(0.001) REPEATABLE(15);
+ ctid             
+------------------
+ (33554432,22587) 
+ (33554432,28096) 
+ (33554433,15970) 
+ (33554434,26278) 
+(4 rows)
+SELECT ctid FROM tsample2_@amname@ TABLESAMPLE BERNOULLI(0.001) REPEATABLE(15);
+ ctid             
+------------------
+ (33554432,22587) 
+ (33554432,28096) 
+ (33554433,15970) 
+ (33554434,26278) 
+(4 rows)
+SELECT count(DISTINCT ctid) FROM tsample2_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 98304 
+(1 row)
+
+SELECT COUNT(DISTINCT ctid) FROM tsample2_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(0);
+ count 
+-------
+ 65536 
+(1 row)
+SELECT COUNT(DISTINCT ctid) FROM tsample2_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(0);
+ count 
+-------
+ 65536 
+(1 row)
+SELECT COUNT(DISTINCT ctid) FROM tsample2_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 98304 
+(1 row)
+
+-- Case 3: Multiple full logical heap blocks + a final partial block on a single QE
+CREATE TABLE tsample3_@amname@(i int) USING @amname@;
+CREATE TABLE
+INSERT INTO tsample3_@amname@ SELECT 1 FROM generate_series(1, 32768 * 2 + 100);
+INSERT 0 65636
+SELECT count(DISTINCT ctid) FROM tsample3_@amname@;
+ count 
+-------
+ 65636 
+(1 row)
+SELECT count(DISTINCT ctid) FROM tsample3_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 65636 
+(1 row)
+
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample3_@amname@ GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 32767 
+ 33554433 | 32768 
+ 33554434 | 101   
+(3 rows)
+
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample3_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(7) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 3335  
+ 33554433 | 3221  
+ 33554434 | 13    
+(3 rows)
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample3_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(7) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 3335  
+ 33554433 | 3221  
+ 33554434 | 13    
+(3 rows)
+
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample3_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(7) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554433 | 32767 
+ 33554434 | 101   
+(2 rows)
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample3_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(7) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554433 | 32767 
+ 33554434 | 101   
+(2 rows)
+SELECT count(DISTINCT ctid) FROM tsample3_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 65636 
+(1 row)
+
+CREATE INDEX ON tsample3_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT count(DISTINCT ctid) FROM tsample3_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 65636 
+(1 row)
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample3_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(7) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 3335  
+ 33554433 | 3221  
+ 33554434 | 13    
+(3 rows)
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample3_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(7) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 3335  
+ 33554433 | 3221  
+ 33554434 | 13    
+(3 rows)
+
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample3_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(7) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554433 | 32767 
+ 33554434 | 101   
+(2 rows)
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample3_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(7) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554433 | 32767 
+ 33554434 | 101   
+(2 rows)
+SELECT count(DISTINCT ctid) FROM tsample3_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 65636 
+(1 row)
+
+-- Case 4: Logical heap blocks with holes on a single QE
+CREATE TABLE tsample4_@amname@(i int) USING @amname@;
+CREATE TABLE
+BEGIN;
+BEGIN
+INSERT INTO tsample4_@amname@ SELECT 1 FROM generate_series(1, 16384);
+INSERT 0 16384
+ABORT;
+ROLLBACK
+INSERT INTO tsample4_@amname@ SELECT 1 FROM generate_series(1, 16384);
+INSERT 0 16384
+BEGIN;
+BEGIN
+INSERT INTO tsample4_@amname@ SELECT 1 FROM generate_series(1, 32768);
+INSERT 0 32768
+ABORT;
+ROLLBACK
+INSERT INTO tsample4_@amname@ SELECT 1 FROM generate_series(1, 32768);
+INSERT 0 32768
+BEGIN;
+BEGIN
+INSERT INTO tsample4_@amname@ SELECT 1 FROM generate_series(1, 32768);
+INSERT 0 32768
+ABORT;
+ROLLBACK
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample4_@amname@ GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 16367 
+ 33554433 | 17    
+ 33554434 | 32703 
+ 33554435 | 65    
+(4 rows)
+SELECT count(DISTINCT ctid) FROM tsample4_@amname@;
+ count 
+-------
+ 49152 
+(1 row)
+
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample4_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 1604  
+ 33554433 | 2     
+ 33554434 | 3307  
+ 33554435 | 5     
+(4 rows)
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample4_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 1604  
+ 33554433 | 2     
+ 33554434 | 3307  
+ 33554435 | 5     
+(4 rows)
+
+SELECT count(DISTINCT ctid) FROM tsample4_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 49152 
+(1 row)
+
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample4_@amname@ TABLESAMPLE SYSTEM(66) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554434 | 16319 
+ 33554435 | 65    
+(2 rows)
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample4_@amname@ TABLESAMPLE SYSTEM(66) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554434 | 16319 
+ 33554435 | 65    
+(2 rows)
+SELECT count(DISTINCT ctid) FROM tsample4_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 49152 
+(1 row)
+
+CREATE INDEX ON tsample4_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample4_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 1604  
+ 33554433 | 2     
+ 33554434 | 3307  
+ 33554435 | 5     
+(4 rows)
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample4_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 1604  
+ 33554433 | 2     
+ 33554434 | 3307  
+ 33554435 | 5     
+(4 rows)
+
+SELECT count(DISTINCT ctid) FROM tsample4_@amname@ TABLESAMPLE BERNOULLI(100);
+ count 
+-------
+ 49152 
+(1 row)
+
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample4_@amname@ TABLESAMPLE SYSTEM(66) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554434 | 16319 
+ 33554435 | 65    
+(2 rows)
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample4_@amname@ TABLESAMPLE SYSTEM(66) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554434 | 16319 
+ 33554435 | 65    
+(2 rows)
+SELECT count(DISTINCT ctid) FROM tsample4_@amname@ TABLESAMPLE SYSTEM(100);
+ count 
+-------
+ 49152 
+(1 row)
+
+-- Case 5: Multiple full logical heap blocks across 2 aosegs on a single QE
+CREATE TABLE tsample5_@amname@(i int) USING @amname@;
+CREATE TABLE
+1: BEGIN;
+BEGIN
+2: BEGIN;
+BEGIN
+1: INSERT INTO tsample5_@amname@ SELECT 1 FROM generate_series(1, 32768 * 3);
+INSERT 0 98304
+2: INSERT INTO tsample5_@amname@ SELECT 20 FROM generate_series(1, 32768 * 3);
+INSERT 0 98304
+1: COMMIT;
+COMMIT
+2: COMMIT;
+COMMIT
+
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample5_@amname@ GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 32767 
+ 33554433 | 32768 
+ 33554434 | 32768 
+ 33554435 | 1     
+ 67108864 | 32767 
+ 67108865 | 32768 
+ 67108866 | 32768 
+ 67108867 | 1     
+(8 rows)
+SELECT count(DISTINCT ctid) FROM tsample5_@amname@;
+ count  
+--------
+ 196608 
+(1 row)
+
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample5_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 3289  
+ 33554433 | 3304  
+ 33554434 | 3348  
+ 67108864 | 3228  
+ 67108865 | 3393  
+ 67108866 | 3254  
+(6 rows)
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample5_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 3289  
+ 33554433 | 3304  
+ 33554434 | 3348  
+ 67108864 | 3228  
+ 67108865 | 3393  
+ 67108866 | 3254  
+(6 rows)
+
+SELECT count(DISTINCT ctid) FROM tsample5_@amname@ TABLESAMPLE BERNOULLI(100);
+ count  
+--------
+ 196608 
+(1 row)
+
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample5_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554433 | 32767 
+ 33554434 | 32768 
+ 33554435 | 1     
+ 67108865 | 32767 
+ 67108866 | 1     
+(5 rows)
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample5_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554433 | 32767 
+ 33554434 | 32768 
+ 33554435 | 1     
+ 67108865 | 32767 
+ 67108866 | 1     
+(5 rows)
+SELECT count(DISTINCT ctid) FROM tsample5_@amname@ TABLESAMPLE SYSTEM(100);
+ count  
+--------
+ 196608 
+(1 row)
+
+CREATE INDEX ON tsample5_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample5_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 3289  
+ 33554433 | 3304  
+ 33554434 | 3348  
+ 67108864 | 3228  
+ 67108865 | 3393  
+ 67108866 | 3254  
+(6 rows)
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample5_@amname@ TABLESAMPLE BERNOULLI(10) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554432 | 3289  
+ 33554433 | 3304  
+ 33554434 | 3348  
+ 67108864 | 3228  
+ 67108865 | 3393  
+ 67108866 | 3254  
+(6 rows)
+
+SELECT count(DISTINCT ctid) FROM tsample5_@amname@ TABLESAMPLE BERNOULLI(100);
+ count  
+--------
+ 196608 
+(1 row)
+
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample5_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554433 | 32767 
+ 33554434 | 32768 
+ 33554435 | 1     
+ 67108865 | 32767 
+ 67108866 | 1     
+(5 rows)
+SELECT right(split_part(ctid::text, ',', 1), -1) AS blknum, count(*) FROM tsample5_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(0) GROUP BY 1 ORDER BY 1;
+ blknum   | count 
+----------+-------
+ 33554433 | 32767 
+ 33554434 | 32768 
+ 33554435 | 1     
+ 67108865 | 32767 
+ 67108866 | 1     
+(5 rows)
+SELECT count(DISTINCT ctid) FROM tsample5_@amname@ TABLESAMPLE SYSTEM(100);
+ count  
+--------
+ 196608 
+(1 row)
+
+-- Case 6: 1 partially full logical block on a single QE with deleted rows
+CREATE TABLE tsample6_@amname@(i int, j int) USING @amname@;
+CREATE TABLE
+INSERT INTO tsample6_@amname@ SELECT 1, j FROM generate_series(1, 10) j;
+INSERT 0 10
+DELETE FROM tsample6_@amname@ WHERE j % 2 = 0;
+DELETE 5
+SELECT j FROM tsample6_@amname@;
+ j 
+---
+ 1 
+ 3 
+ 5 
+ 7 
+ 9 
+(5 rows)
+
+SELECT j FROM tsample6_@amname@ TABLESAMPLE BERNOULLI(20) REPEATABLE(1) ORDER BY j;
+ j 
+---
+ 9 
+(1 row)
+SELECT j FROM tsample6_@amname@ TABLESAMPLE BERNOULLI(20) REPEATABLE(1) ORDER BY j;
+ j 
+---
+ 9 
+(1 row)
+SELECT j FROM tsample6_@amname@ TABLESAMPLE BERNOULLI(100) ORDER BY j;
+ j 
+---
+ 1 
+ 3 
+ 5 
+ 7 
+ 9 
+(5 rows)
+
+SELECT j FROM tsample6_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(1) ORDER BY j;
+ j 
+---
+ 1 
+ 3 
+ 5 
+ 7 
+ 9 
+(5 rows)
+SELECT j FROM tsample6_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(1) ORDER BY j;
+ j 
+---
+ 1 
+ 3 
+ 5 
+ 7 
+ 9 
+(5 rows)
+SELECT j FROM tsample6_@amname@ TABLESAMPLE SYSTEM(100) ORDER BY j;
+ j 
+---
+ 1 
+ 3 
+ 5 
+ 7 
+ 9 
+(5 rows)
+
+CREATE INDEX ON tsample6_@amname@(i) WHERE i != i;
+CREATE INDEX
+
+SELECT j FROM tsample6_@amname@ TABLESAMPLE BERNOULLI(20) REPEATABLE(1) ORDER BY j;
+ j 
+---
+ 9 
+(1 row)
+SELECT j FROM tsample6_@amname@ TABLESAMPLE BERNOULLI(20) REPEATABLE(1) ORDER BY j;
+ j 
+---
+ 9 
+(1 row)
+SELECT j FROM tsample6_@amname@ TABLESAMPLE BERNOULLI(100) ORDER BY j;
+ j 
+---
+ 1 
+ 3 
+ 5 
+ 7 
+ 9 
+(5 rows)
+
+SELECT j FROM tsample6_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(1) ORDER BY j;
+ j 
+---
+ 1 
+ 3 
+ 5 
+ 7 
+ 9 
+(5 rows)
+SELECT j FROM tsample6_@amname@ TABLESAMPLE SYSTEM(50) REPEATABLE(1) ORDER BY j;
+ j 
+---
+ 1 
+ 3 
+ 5 
+ 7 
+ 9 
+(5 rows)
+SELECT j FROM tsample6_@amname@ TABLESAMPLE SYSTEM(100) ORDER BY j;
+ j 
+---
+ 1 
+ 3 
+ 5 
+ 7 
+ 9 
+(5 rows)
+
+-- Case 7: Test rescans (similar to upstream test in regress/tablesample.sql)
+
+CREATE TABLE ttr1 (a int, b int) USING @amname@ DISTRIBUTED BY (a);
+CREATE TABLE
+CREATE TABLE ttr2 (a int, b int) USING @amname@ DISTRIBUTED BY (a);
+CREATE TABLE
+
+INSERT INTO ttr1 VALUES (1, 1), (12, 1), (31, 1), (NULL, NULL);
+INSERT 0 4
+INSERT INTO ttr2 VALUES (1, 2), (12, 2), (31, 2), (NULL, 6);
+INSERT 0 4
+ANALYZE ttr1;
+ANALYZE
+ANALYZE ttr2;
+ANALYZE
+SET optimizer TO OFF;
+SET
+SET enable_hashjoin TO OFF;
+SET
+SET enable_mergejoin TO OFF;
+SET
+SET enable_nestloop TO ON;
+SET
+
+EXPLAIN (COSTS OFF) SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (50) REPEATABLE (2), ttr2 TABLESAMPLE BERNOULLI (50) REPEATABLE (2) WHERE ttr1.a = ttr2.a;
+ QUERY PLAN                                                                        
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)                                          
+   ->  Nested Loop                                                                 
+         Join Filter: (ttr1.a = ttr2.a)                                            
+         ->  Sample Scan on ttr1                                                   
+               Sampling: bernoulli ('50'::real) REPEATABLE ('2'::double precision) 
+         ->  Sample Scan on ttr2                                                   
+               Sampling: bernoulli ('50'::real) REPEATABLE ('2'::double precision) 
+ Optimizer: Postgres-based planner                                                 
+(8 rows)
+SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (50) REPEATABLE (2), ttr2 TABLESAMPLE BERNOULLI (50) REPEATABLE (2) WHERE ttr1.a = ttr2.a;
+ a  | b | a  | b 
+----+---+----+---
+ 1  | 1 | 1  | 2 
+ 31 | 1 | 31 | 2 
+(2 rows)
+
+EXPLAIN (COSTS OFF) SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (100), ttr2 TABLESAMPLE BERNOULLI (100) WHERE ttr1.a = ttr2.a;
+ QUERY PLAN                                            
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)              
+   ->  Nested Loop                                     
+         Join Filter: (ttr1.a = ttr2.a)                
+         ->  Sample Scan on ttr1                       
+               Sampling: bernoulli ('100'::real)       
+         ->  Materialize                               
+               ->  Sample Scan on ttr2                 
+                     Sampling: bernoulli ('100'::real) 
+ Optimizer: Postgres-based planner                     
+(9 rows)
+SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (100) REPEATABLE (2), ttr2 TABLESAMPLE BERNOULLI (100) WHERE ttr1.a = ttr2.a;
+ a  | b | a  | b 
+----+---+----+---
+ 1  | 1 | 1  | 2 
+ 12 | 1 | 12 | 2 
+ 31 | 1 | 31 | 2 
+(3 rows)
+
+EXPLAIN (COSTS OFF) SELECT * FROM ttr1 TABLESAMPLE SYSTEM (50) REPEATABLE (2), ttr2 TABLESAMPLE SYSTEM (50) REPEATABLE (2) WHERE ttr1.a = ttr2.a;
+ QUERY PLAN                                                                     
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)                                       
+   ->  Nested Loop                                                              
+         Join Filter: (ttr1.a = ttr2.a)                                         
+         ->  Sample Scan on ttr1                                                
+               Sampling: system ('50'::real) REPEATABLE ('2'::double precision) 
+         ->  Sample Scan on ttr2                                                
+               Sampling: system ('50'::real) REPEATABLE ('2'::double precision) 
+ Optimizer: Postgres-based planner                                              
+(8 rows)
+SELECT * FROM ttr1 TABLESAMPLE SYSTEM (50) REPEATABLE (2), ttr2 TABLESAMPLE SYSTEM (50) REPEATABLE (2) WHERE ttr1.a = ttr2.a;
+ a | b | a | b 
+---+---+---+---
+(0 rows)
+
+EXPLAIN (COSTS OFF) SELECT * FROM ttr1 TABLESAMPLE SYSTEM (100), ttr2 TABLESAMPLE SYSTEM (100) WHERE ttr1.a = ttr2.a;
+ QUERY PLAN                                         
+----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)           
+   ->  Nested Loop                                  
+         Join Filter: (ttr1.a = ttr2.a)             
+         ->  Sample Scan on ttr1                    
+               Sampling: system ('100'::real)       
+         ->  Materialize                            
+               ->  Sample Scan on ttr2              
+                     Sampling: system ('100'::real) 
+ Optimizer: Postgres-based planner                  
+(9 rows)
+SELECT * FROM ttr1 TABLESAMPLE SYSTEM (100), ttr2 TABLESAMPLE SYSTEM (100) WHERE ttr1.a = ttr2.a;
+ a  | b | a  | b 
+----+---+----+---
+ 1  | 1 | 1  | 2 
+ 12 | 1 | 12 | 2 
+ 31 | 1 | 31 | 2 
+(3 rows)
+
+CREATE INDEX ON ttr1(a);
+CREATE INDEX
+CREATE INDEX ON ttr2(a);
+CREATE INDEX
+
+EXPLAIN (COSTS OFF) SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (50) REPEATABLE (2), ttr2 TABLESAMPLE BERNOULLI (50) REPEATABLE (2) WHERE ttr1.a = ttr2.a;
+ QUERY PLAN                                                                        
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)                                          
+   ->  Nested Loop                                                                 
+         Join Filter: (ttr1.a = ttr2.a)                                            
+         ->  Sample Scan on ttr1                                                   
+               Sampling: bernoulli ('50'::real) REPEATABLE ('2'::double precision) 
+         ->  Sample Scan on ttr2                                                   
+               Sampling: bernoulli ('50'::real) REPEATABLE ('2'::double precision) 
+ Optimizer: Postgres-based planner                                                 
+(8 rows)
+SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (50) REPEATABLE (2), ttr2 TABLESAMPLE BERNOULLI (50) REPEATABLE (2) WHERE ttr1.a = ttr2.a;
+ a  | b | a  | b 
+----+---+----+---
+ 1  | 1 | 1  | 2 
+ 31 | 1 | 31 | 2 
+(2 rows)
+
+EXPLAIN (COSTS OFF) SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (100), ttr2 TABLESAMPLE BERNOULLI (100) WHERE ttr1.a = ttr2.a;
+ QUERY PLAN                                            
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)              
+   ->  Nested Loop                                     
+         Join Filter: (ttr1.a = ttr2.a)                
+         ->  Sample Scan on ttr1                       
+               Sampling: bernoulli ('100'::real)       
+         ->  Materialize                               
+               ->  Sample Scan on ttr2                 
+                     Sampling: bernoulli ('100'::real) 
+ Optimizer: Postgres-based planner                     
+(9 rows)
+SELECT * FROM ttr1 TABLESAMPLE BERNOULLI (100) REPEATABLE (2), ttr2 TABLESAMPLE BERNOULLI (100) WHERE ttr1.a = ttr2.a;
+ a  | b | a  | b 
+----+---+----+---
+ 1  | 1 | 1  | 2 
+ 12 | 1 | 12 | 2 
+ 31 | 1 | 31 | 2 
+(3 rows)
+
+EXPLAIN (COSTS OFF) SELECT * FROM ttr1 TABLESAMPLE SYSTEM (50) REPEATABLE (2), ttr2 TABLESAMPLE SYSTEM (50) REPEATABLE (2) WHERE ttr1.a = ttr2.a;
+ QUERY PLAN                                                                     
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)                                       
+   ->  Nested Loop                                                              
+         Join Filter: (ttr1.a = ttr2.a)                                         
+         ->  Sample Scan on ttr1                                                
+               Sampling: system ('50'::real) REPEATABLE ('2'::double precision) 
+         ->  Sample Scan on ttr2                                                
+               Sampling: system ('50'::real) REPEATABLE ('2'::double precision) 
+ Optimizer: Postgres-based planner                                              
+(8 rows)
+SELECT * FROM ttr1 TABLESAMPLE SYSTEM (50) REPEATABLE (2), ttr2 TABLESAMPLE SYSTEM (50) REPEATABLE (2) WHERE ttr1.a = ttr2.a;
+ a | b | a | b 
+---+---+---+---
+(0 rows)
+
+EXPLAIN (COSTS OFF) SELECT * FROM ttr1 TABLESAMPLE SYSTEM (100), ttr2 TABLESAMPLE SYSTEM (100) WHERE ttr1.a = ttr2.a;
+ QUERY PLAN                                         
+----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)           
+   ->  Nested Loop                                  
+         Join Filter: (ttr1.a = ttr2.a)             
+         ->  Sample Scan on ttr1                    
+               Sampling: system ('100'::real)       
+         ->  Materialize                            
+               ->  Sample Scan on ttr2              
+                     Sampling: system ('100'::real) 
+ Optimizer: Postgres-based planner                  
+(9 rows)
+SELECT * FROM ttr1 TABLESAMPLE SYSTEM (100), ttr2 TABLESAMPLE SYSTEM (100) WHERE ttr1.a = ttr2.a;
+ a  | b | a  | b 
+----+---+----+---
+ 1  | 1 | 1  | 2 
+ 12 | 1 | 12 | 2 
+ 31 | 1 | 31 | 2 
+(3 rows)
+
+RESET optimizer;
+RESET
+RESET enable_hashjoin;
+RESET
+RESET enable_mergejoin;
+RESET
+RESET enable_nestloop;
+RESET
+DROP TABLE ttr1;
+DROP TABLE
+DROP TABLE ttr2;
+DROP TABLE

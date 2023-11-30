@@ -19,6 +19,7 @@
 #include "access/heapam.h"
 #include "access/multixact.h"
 #include "access/tableam.h"
+#include "access/tsmapi.h"
 #include "access/xact.h"
 #include "catalog/aoseg.h"
 #include "catalog/catalog.h"
@@ -667,8 +668,7 @@ aoco_endscan(TableScanDesc scan)
  * GPDB_12_MERGE_FEATURE_NOT_SUPPORTED: When doing an initial rescan with `table_rescan`,
  * the values for the new flags (introduced by Table AM API) are
  * set to false. This means that whichever ScanOptions flags that were initially set will be
- * used for the rescan. However with TABLESAMPLE, which is currently not
- * supported for AO/CO, the new flags may be modified.
+ * used for the rescan. However with TABLESAMPLE, the new flags may be modified.
  * Additionally, allow_sync, allow_strat, and allow_pagemode may
  * need to be implemented for AO/CO in order to properly use them.
  * You may view `syncscan.c` as an example to see how heap added scan
@@ -2483,26 +2483,106 @@ aoco_scan_bitmap_next_tuple(TableScanDesc scan,
 static bool
 aoco_scan_sample_next_block(TableScanDesc scan, SampleScanState *scanstate)
 {
-	/*
-	 * GPDB_95_MERGE_FIXME: Add support for AO_COLUMN tables
-	 */
-	ereport(ERROR,
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 errmsg("invalid relation type"),
-			 errhint("Sampling is only supported in heap tables.")));
+	TsmRoutine 			*tsm = scanstate->tsmroutine;
+	AOCSScanDesc 		aoscan = (AOCSScanDesc) scan;
+	int64 				totalrows = AOCSScanDesc_TotalTupCount(aoscan);
+
+	/* return false immediately if relation is empty */
+	if (aoscan->targrow >= totalrows)
+		return false;
+
+	if (tsm->NextSampleBlock)
+	{
+		int64 nblocks = (totalrows + (AO_MAX_TUPLES_PER_HEAP_BLOCK - 1)) / AO_MAX_TUPLES_PER_HEAP_BLOCK;
+
+		aoscan->sampleTargetBlk = tsm->NextSampleBlock(scanstate, nblocks);
+
+		/* ran out of blocks, scan is done */
+		if (aoscan->sampleTargetBlk == InvalidBlockNumber)
+			return false;
+		else
+		{
+			/* target the first row of the selected block */
+			Assert(aoscan->sampleTargetBlk < nblocks);
+
+			aoscan->targrow = aoscan->sampleTargetBlk * AO_MAX_TUPLES_PER_HEAP_BLOCK;
+			return true;
+		}
+	}
+	else
+	{
+		/* scanning table sequentially */
+		Assert(aoscan->sampleTargetBlk >= -1);
+
+		/* target the first row of the next block */
+		aoscan->sampleTargetBlk++;
+		aoscan->targrow = aoscan->sampleTargetBlk * AO_MAX_TUPLES_PER_HEAP_BLOCK;
+
+		/* ran out of blocks, scan is done */
+		if (aoscan->targrow >= totalrows)
+			return false;
+
+		return true;
+	}
 }
 
 static bool
 aoco_scan_sample_next_tuple(TableScanDesc scan, SampleScanState *scanstate,
                                   TupleTableSlot *slot)
 {
-	/*
-	 * GPDB_95_MERGE_FIXME: Add support for AO_COLUMN tables
-	 */
-	ereport(ERROR,
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 errmsg("invalid relation type"),
-			 errhint("Sampling is only supported in heap tables.")));
+	TsmRoutine 			*tsm = scanstate->tsmroutine;
+	AOCSScanDesc 		aoscan = (AOCSScanDesc) scan;
+	int64  				currblk = aoscan->targrow / AO_MAX_TUPLES_PER_HEAP_BLOCK;
+	int64 				totalrows = AOCSScanDesc_TotalTupCount(aoscan);
+
+	Assert(aoscan->sampleTargetBlk >= 0);
+	Assert(aoscan->targrow >= 0 && aoscan->targrow < totalrows);
+
+	for (;;)
+	{
+		OffsetNumber targetoffset;
+		OffsetNumber maxoffset;
+
+		CHECK_FOR_INTERRUPTS();
+
+		/*
+		 * Ask the tablesample method which rows to scan on this block. Refer
+		 * to AOCSScanDesc->sampleTargetBlk for our blocking scheme.
+		 *
+		 * Note: unlike heapam, we are guaranteed to have
+		 * AO_MAX_TUPLES_PER_HEAP_BLOCK tuples in this block (unless this is the
+		 * last such block in the relation)
+		 */
+		maxoffset = Min(AO_MAX_TUPLES_PER_HEAP_BLOCK,
+						totalrows - currblk * AO_MAX_TUPLES_PER_HEAP_BLOCK);
+		targetoffset = tsm->NextSampleTuple(scanstate,
+											currblk,
+											maxoffset);
+
+		if (targetoffset != InvalidOffsetNumber)
+		{
+			Assert(targetoffset <= maxoffset);
+
+			aoscan->targrow = currblk * AO_MAX_TUPLES_PER_HEAP_BLOCK + targetoffset - 1;
+			Assert(aoscan->targrow < totalrows);
+
+			if (aocs_get_target_tuple(aoscan, aoscan->targrow, slot))
+				return true;
+
+			/* tuple was deleted, loop around to try the next one */
+		}
+		else
+		{
+			/*
+			 * If we get here, it means we've exhausted the items on this block
+			 * and it's time to move to the next.
+			 */
+			ExecClearTuple(slot);
+			return false;
+		}
+	}
+
+	Assert(0);
 }
 
 /* ------------------------------------------------------------------------

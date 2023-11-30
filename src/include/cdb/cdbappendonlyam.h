@@ -241,6 +241,8 @@ typedef struct AppendOnlyScanDescData
 	 * which starts from 0.
 	 * In other words, if we have seg0 rownums: [1, 100], seg1 rownums: [1, 200]
 	 * If targrow = 150, then we are referring to seg1's rownum=51.
+	 *
+	 * In the context of TABLESAMPLE, this is the next row to be sampled.
 	 */
 	int64				targrow;
 
@@ -268,6 +270,19 @@ typedef struct AppendOnlyScanDescData
 	 */
 	int64		totalBytesRead;
 
+	/*
+	 * The next block of AO_MAX_TUPLES_PER_HEAP_BLOCK tuples to be considered
+	 * for TABLESAMPLE. This only corresponds to tuples that are physically
+	 * present in segfiles (excludes aborted tuples). This "block" is purely a
+	 * logical grouping of tuples (in the flat row number space spanning segs).
+	 * It does NOT correspond to the concept of a "logical heap block" (block
+	 * number in a ctid).
+	 *
+	 * The choice of AO_MAX_TUPLES_PER_HEAP_BLOCK is somewhat arbitrary. It
+	 * could have been anything (that can be represented with an OffsetNumber,
+	 * to comply with the TSM API).
+	 */
+	int64 		sampleTargetBlk;
 }	AppendOnlyScanDescData;
 
 typedef AppendOnlyScanDescData *AppendOnlyScanDesc;
@@ -495,7 +510,6 @@ extern void appendonly_delete_finish(AppendOnlyDeleteDesc aoDeleteDesc);
 extern bool appendonly_positionscan(AppendOnlyScanDesc aoscan,
 									AppendOnlyBlockDirectoryEntry *dirEntry,
 									int fsInfoIdx);
-
 /*
  * Update total bytes read for the entire scan. If the block was compressed,
  * update it with the compressed length. If the block was not compressed, update

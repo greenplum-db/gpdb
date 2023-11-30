@@ -170,6 +170,8 @@ typedef struct AOCSScanDescData
 	 * which starts from 0.
 	 * In other words, if we have seg0 rownums: [1, 100], seg1 rownums: [1, 200]
 	 * If targrow = 150, then we are referring to seg1's rownum=51.
+	 *
+	 * In the context of TABLESAMPLE, this is the next row to be sampled.
 	 */
 	int64			targrow;
 
@@ -257,6 +259,20 @@ typedef struct AOCSScanDescData
 	 * across all columns projected, so far. It is used for scan progress reporting.
 	 */
 	int64		totalBytesRead;
+
+	/*
+	 * The next block of AO_MAX_TUPLES_PER_HEAP_BLOCK tuples to be considered
+	 * for TABLESAMPLE. This only corresponds to tuples that are physically
+	 * present in segfiles (excludes aborted tuples). This "block" is purely a
+	 * logical grouping of tuples (in the flat row number space spanning segs).
+	 * It does NOT correspond to the concept of a "logical heap block" (block
+	 * number in a ctid).
+	 *
+	 * The choice of AO_MAX_TUPLES_PER_HEAP_BLOCK is somewhat arbitrary. It
+	 * could have been anything (that can be represented with an OffsetNumber,
+	 * to comply with the TSM API).
+	 */
+	int64 		sampleTargetBlk;
 } AOCSScanDescData;
 
 typedef AOCSScanDescData *AOCSScanDesc;

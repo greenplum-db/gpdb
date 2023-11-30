@@ -21,6 +21,7 @@
 #include "access/heapam.h"
 #include "access/multixact.h"
 #include "access/tableam.h"
+#include "access/tsmapi.h"
 #include "access/tuptoaster.h"
 #include "access/xact.h"
 #include "catalog/aoseg.h"
@@ -2262,26 +2263,106 @@ appendonly_scan_bitmap_next_tuple(TableScanDesc scan,
 static bool
 appendonly_scan_sample_next_block(TableScanDesc scan, SampleScanState *scanstate)
 {
-	/*
-	 * GPDB_95_MERGE_FIXME: Add support for AO tables
-	 */
-	ereport(ERROR,
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 errmsg("invalid relation type"),
-			 errhint("Sampling is only supported in heap tables.")));
+	TsmRoutine 			*tsm = scanstate->tsmroutine;
+	AppendOnlyScanDesc 	aoscan = (AppendOnlyScanDesc) scan;
+	int64 				totalrows = AppendOnlyScanDesc_TotalTupCount(aoscan);
+
+	/* return false immediately if relation is empty */
+	if (aoscan->targrow >= totalrows)
+		return false;
+
+	if (tsm->NextSampleBlock)
+	{
+		int64 nblocks = (totalrows + (AO_MAX_TUPLES_PER_HEAP_BLOCK - 1)) / AO_MAX_TUPLES_PER_HEAP_BLOCK;
+
+		aoscan->sampleTargetBlk = tsm->NextSampleBlock(scanstate, nblocks);
+
+		/* ran out of blocks, scan is done */
+		if (aoscan->sampleTargetBlk == InvalidBlockNumber)
+			return false;
+		else
+		{
+			/* target the first row of the selected block */
+			Assert(aoscan->sampleTargetBlk < nblocks);
+
+			aoscan->targrow = aoscan->sampleTargetBlk * AO_MAX_TUPLES_PER_HEAP_BLOCK;
+			return true;
+		}
+	}
+	else
+	{
+		/* scanning table sequentially */
+		Assert(aoscan->sampleTargetBlk >= -1);
+
+		/* target the first row of the next block */
+		aoscan->sampleTargetBlk++;
+		aoscan->targrow = aoscan->sampleTargetBlk * AO_MAX_TUPLES_PER_HEAP_BLOCK;
+
+		/* ran out of blocks, scan is done */
+		if (aoscan->targrow >= totalrows)
+			return false;
+
+		return true;
+	}
 }
 
 static bool
 appendonly_scan_sample_next_tuple(TableScanDesc scan, SampleScanState *scanstate,
 							  TupleTableSlot *slot)
 {
-	/*
-	 * GPDB_95_MERGE_FIXME: Add support for AO tables
-	 */
-	ereport(ERROR,
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 errmsg("invalid relation type"),
-			 errhint("Sampling is only supported in heap tables.")));
+	TsmRoutine 			*tsm = scanstate->tsmroutine;
+	AppendOnlyScanDesc 	aoscan = (AppendOnlyScanDesc) scan;
+	int64  				currblk = aoscan->targrow / AO_MAX_TUPLES_PER_HEAP_BLOCK;
+	int64 				totalrows = AppendOnlyScanDesc_TotalTupCount(aoscan);
+
+	Assert(aoscan->sampleTargetBlk >= 0);
+	Assert(aoscan->targrow >= 0 && aoscan->targrow < totalrows);
+
+	for (;;)
+	{
+		OffsetNumber targetoffset;
+		OffsetNumber maxoffset;
+
+		CHECK_FOR_INTERRUPTS();
+
+		/*
+		 * Ask the tablesample method which rows to scan on this block. Refer
+		 * to AppendOnlyScanDesc->sampleTargetBlk for our blocking scheme.
+		 *
+		 * Note: unlike heapam, we are guaranteed to have
+		 * AO_MAX_TUPLES_PER_HEAP_BLOCK tuples in this block (unless this is the
+		 * last such block in the relation)
+		 */
+		maxoffset = Min(AO_MAX_TUPLES_PER_HEAP_BLOCK,
+						totalrows - currblk * AO_MAX_TUPLES_PER_HEAP_BLOCK);
+		targetoffset = tsm->NextSampleTuple(scanstate,
+											currblk,
+											maxoffset);
+
+		if (targetoffset != InvalidOffsetNumber)
+		{
+			Assert(targetoffset <= maxoffset);
+
+			aoscan->targrow = currblk * AO_MAX_TUPLES_PER_HEAP_BLOCK + targetoffset - 1;
+			Assert(aoscan->targrow < totalrows);
+
+			if (appendonly_get_target_tuple(aoscan, aoscan->targrow, slot))
+				return true;
+
+			/* tuple was deleted, loop around to try the next one */
+		}
+		else
+		{
+			/*
+			 * If we get here, it means we've exhausted the items on this block
+			 * and it's time to move to the next.
+			 */
+			ExecClearTuple(slot);
+			return false;
+		}
+	}
+
+	Assert(0);
 }
 
 /* ------------------------------------------------------------------------
