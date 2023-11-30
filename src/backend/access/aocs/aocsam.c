@@ -1055,11 +1055,7 @@ aocs_gettuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
 			if (startrow + rowcount - 1 >= targrow)
 			{
 				if (!aocs_gettuple_column(scan, attno, startrow, targrow, chkvisimap, slot))
-				{
 					ret = false;
-					/* must update tracking vars before return */
-					goto out;
-				}
 
 				chkvisimap = false;
 				/* haven't finished scanning on current block */
@@ -1096,11 +1092,7 @@ aocs_gettuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
 					datumstreamread_block_content(ds);
 
 					if (!aocs_gettuple_column(scan, attno, startrow, targrow, chkvisimap, slot))
-					{
 						ret = false;
-						/* must update tracking vars before return */
-						goto out;
-					}
 
 					chkvisimap = false;
 					/* done this column */
@@ -1116,13 +1108,13 @@ aocs_gettuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
 		}
 	}
 
-out:
 	/* update rows processed */
 	scan->segrowsprocessed = rowstoprocess;
 
 	if (ret)
 	{
 		ExecStoreVirtualTuple(slot);
+
 		pgstat_count_heap_getnext(scan->rs_base.rs_rd);
 	}
 
