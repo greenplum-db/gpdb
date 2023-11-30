@@ -585,6 +585,13 @@ bool gpvars_check_gp_resource_group_cgroup_parent(char **newval, void **extra, G
 		GUC_check_errmsg("gp_resource_group_cgroup_parent must be a valid folder name, cannot contain '/': '%s'", *newval);
 		return false;
 	}
+
+	if (strlen(*newval) == 0)
+	{
+		GUC_check_errmsg("gp_resource_group_cgroup_parent is empty");
+		return false;
+	}
+
 	return true;
 }
 
