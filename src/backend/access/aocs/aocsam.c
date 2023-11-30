@@ -1156,6 +1156,9 @@ aocs_gettuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
  * the corresponding tuple in 'slot'.
  *
  * If the tuple is visible, return true. Otherwise, return false.
+ *
+ * Note: for the duration of the scan, we expect targrow to be monotonically
+ * increasing in between successive calls.
  */
 bool
 aocs_get_target_tuple(AOCSScanDesc aoscan, int64 targrow, TupleTableSlot *slot)

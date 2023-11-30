@@ -2274,8 +2274,24 @@ appendonly_scan_sample_next_block(TableScanDesc scan, SampleScanState *scanstate
 	if (tsm->NextSampleBlock)
 	{
 		int64 nblocks = (totalrows + (AO_MAX_TUPLES_PER_HEAP_BLOCK - 1)) / AO_MAX_TUPLES_PER_HEAP_BLOCK;
+		int64 nextblk;
 
-		aoscan->sampleTargetBlk = tsm->NextSampleBlock(scanstate, nblocks);
+		nextblk = tsm->NextSampleBlock(scanstate, nblocks);
+
+		if (nextblk <= aoscan->sampleTargetBlk)
+		{
+			/*
+			 * Some tsm methods may wrap around and return a block prior to our
+			 * current scan position, like tsm_system_time.
+			 *
+			 * Since our sample scan infrastructure expects monotonically
+			 * increasing block numbers between successive calls, simply rewind
+			 * the scan here.
+			 */
+			appendonly_rescan(&aoscan->rs_base, NULL, false, false, false, false);
+		}
+
+		aoscan->sampleTargetBlk = nextblk;
 
 		/* ran out of blocks, scan is done */
 		if (aoscan->sampleTargetBlk == InvalidBlockNumber)

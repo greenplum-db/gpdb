@@ -1422,6 +1422,9 @@ appendonly_blkdirscan_get_target_tuple(AppendOnlyScanDesc scan, int64 targrow, T
  * the corresponding tuple in 'slot'.
  *
  * If the tuple is visible, return true. Otherwise, return false.
+ *
+ * Note: for the duration of the scan, we expect targrow to be monotonically
+ * increasing in between successive calls.
  */
 bool
 appendonly_get_target_tuple(AppendOnlyScanDesc aoscan, int64 targrow, TupleTableSlot *slot)
