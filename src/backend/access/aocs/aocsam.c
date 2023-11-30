@@ -973,7 +973,8 @@ aocs_gettuple_column(AOCSScanDesc scan, AttrNumber attno, int64 startrow, int64 
 	bool isSnapshotAny = (scan->rs_base.rs_snapshot == SnapshotAny);
 	DatumStreamRead *ds = scan->columnScanInfo.ds[attno];
 	int segno = scan->seginfo[scan->cur_seg]->segno;
-	AOTupleId aotid;
+	ItemPointerData fake_ctid;
+	AOTupleId *aotid = (AOTupleId *) &fake_ctid;
 	bool ret = true;
 	int64 rowstoprocess, nrows, rownum;
 	Datum *values;
@@ -990,13 +991,14 @@ aocs_gettuple_column(AOCSScanDesc scan, AttrNumber attno, int64 startrow, int64 
 	rownum = ds->blockFirstRowNum + nrows - 1;
 
 	/* form the target tuple TID */
-	AOTupleIdInit(&aotid, segno, rownum);
+	AOTupleIdInit(aotid, segno, rownum);
+	slot->tts_tid = fake_ctid;
 
-	if (chkvisimap && !isSnapshotAny && !AppendOnlyVisimap_IsVisible(&scan->visibilityMap, &aotid))
+	if (chkvisimap && !isSnapshotAny && !AppendOnlyVisimap_IsVisible(&scan->visibilityMap, aotid))
 	{
 		if (slot != NULL)
 			ExecClearTuple(slot);
-		
+
 		ret = false;
 		/* must update tracking vars before return */
 		goto out;
