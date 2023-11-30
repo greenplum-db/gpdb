@@ -1088,8 +1088,16 @@ aocs_gettuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
 
 				if (startrow + rowcount - 1 >= targrow)
 				{
+					int64 blocksRead;
+
 					/* read a new buffer to consume */
 					datumstreamread_block_content(ds);
+
+					AOCSScanDesc_UpdateTotalBytesRead(scan, attno);
+					blocksRead =
+						RelationGuessNumberOfBlocksFromSize(scan->totalBytesRead);
+					pgstat_count_buffer_read_ao(scan->rs_base.rs_rd,
+												blocksRead);
 
 					if (!aocs_gettuple_column(scan, attno, startrow, targrow, chkvisimap, slot))
 						ret = false;

@@ -1299,7 +1299,15 @@ appendonly_getblock(AppendOnlyScanDesc scan, int64 targrow, int64 *startrow)
 			Assert(rowcount > 0);
 			if (*startrow + rowcount - 1 >= targrow)
 			{
+				int64 blocksRead;
+
 				AppendOnlyExecutorReadBlock_GetContents(varblock);
+
+				AppendOnlyScanDesc_UpdateTotalBytesRead(scan);
+				blocksRead = RelationGuessNumberOfBlocksFromSize(scan->totalBytesRead);
+				pgstat_count_buffer_read_ao(scan->aos_rd,
+											blocksRead);
+
 				/* got a new buffer to consume */
 				scan->needNextBuffer = false;
 				return;
