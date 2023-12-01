@@ -737,3 +737,110 @@ drop table random_dis_char;
 set optimizer_enable_hashjoin to on;
 reset enable_hashjoin;
 reset enable_nestloop;
+
+-----------------------------------------------------------------
+-- Test cases to check if ORCA generates correct result
+-- for "Left Semi Join with replicated outer table"
+-----------------------------------------------------------------
+drop table if exists repli_t1;
+drop table if exists dist_t1;
+
+create table repli_t1 (a int) distributed replicated;
+insert into repli_t1 values(1);
+analyze repli_t1;
+
+create table dist_t1 (a int , b int) distributed by (a);
+insert into dist_t1 select i, 1 from generate_series(1, 5) i;
+analyze dist_t1;
+
+-- No explicitly defined primary key for replicated table
+---------------------------------------------------------
+
+-- Outer - replicated, Inner - distributed table
+explain (costs off) select * from repli_t1 where exists ( select 1 from dist_t1 where repli_t1.a >= dist_t1.b);
+select * from repli_t1 where exists ( select 1 from dist_t1 where repli_t1.a >= dist_t1.b);
+
+explain (costs off) select * from (select t1.a as aVal1, t2.a as aVal2 from repli_t1 as t1 , repli_t1 as t2 where t1.a = t2.a) as t3
+                    where exists (select 1 from dist_t1 as t4 where t3.aVal1 >= t4.b);
+select * from (select t1.a as aVal1, t2.a as aVal2 from repli_t1 as t1 , repli_t1 as t2 where t1.a = t2.a) as t3
+where exists (select 1 from dist_t1 as t4 where t3.aVal1 >= t4.b);
+
+create index idx_repl_t1_a ON repli_t1 using btree(a);
+analyze repli_t1;
+explain (costs off) select * from repli_t1 where exists ( select 1 from dist_t1 where repli_t1.a >= dist_t1.b);
+select * from repli_t1 where exists ( select 1 from dist_t1 where repli_t1.a >= dist_t1.b);
+drop index idx_repl_t1_a;
+
+-- Outer - distributed, Inner - replicated table
+explain (costs off) select * from dist_t1 where exists ( select 1 from repli_t1  where repli_t1.a >= dist_t1.b);
+select * from dist_t1 where exists ( select 1 from repli_t1  where repli_t1.a >= dist_t1.b);
+
+-- Both replicated table
+explain (costs off) select * from repli_t1 as t1  where exists ( select 1 from repli_t1 as t2  where t1.a >= t2.a);
+select * from repli_t1 as t1  where exists ( select 1 from repli_t1 as t2  where t1.a >= t2.a);
+
+-- Outer - Universal, Inner - distributed table
+explain (costs off) select * from generate_series(1, 5) univ_t where exists ( select 1 from dist_t1 where univ_t >= dist_t1.b);
+select * from generate_series(1, 5) univ_t where exists ( select 1 from dist_t1 where univ_t >= dist_t1.b);
+
+-- Outer - distributed, Inner - universal table
+explain (costs off) select * from dist_t1 where exists ( select 1 from generate_series(1, 5) univ_t where univ_t >= dist_t1.b);
+select * from dist_t1 where exists ( select 1 from generate_series(1, 5) univ_t where univ_t >= dist_t1.b);
+
+-- Outer - replicated, Inner - universal table
+explain (costs off)select * from repli_t1 where exists ( select 1 from generate_series(1, 5) univ_t where univ_t >= repli_t1.a);
+select * from repli_t1 where exists ( select 1 from generate_series(1, 5) univ_t where univ_t >= repli_t1.a);
+
+-- Outer - universal, Inner - replicated table
+explain (costs off) select * from generate_series(1, 5) univ_t where exists ( select 1 from repli_t1  where univ_t >= repli_t1.a);
+select * from generate_series(1, 5) univ_t where exists ( select 1 from repli_t1  where univ_t >= repli_t1.a);
+
+-- Explicitly defined primary key for replicated table
+---------------------------------------------------------
+drop table if exists repli_t1_pk;
+drop table if exists repli_t2_pk;
+drop table if exists repli_t3_pk;
+drop table if exists repli_t4_pk;
+
+-- Outer - replicated, Inner - distributed table
+
+create table repli_t1_pk (a int, PRIMARY KEY(a)) distributed replicated;
+insert into repli_t1_pk values(1);
+analyze repli_t1_pk;
+
+create table repli_t2_pk (a int, CONSTRAINT key1_t2 PRIMARY KEY(a) ) distributed replicated;
+insert into repli_t2_pk values(1);
+analyze repli_t2_pk;
+
+create table repli_t3_pk (a int,b int, c int, d int, CONSTRAINT key1_t3 UNIQUE (c,d)) distributed replicated;
+insert into repli_t3_pk values(1,2,3,4);
+analyze repli_t3_pk;
+
+create table repli_t4_pk (a int,b int, c int, d int,  CONSTRAINT key1_t4 PRIMARY KEY(a) , CONSTRAINT key2_t4 UNIQUE (c,d)) distributed replicated;
+insert into repli_t4_pk values(1,2,3,4);
+analyze repli_t4_pk;
+
+explain (costs off) select * from repli_t1_pk where exists ( select 1 from dist_t1 where repli_t1_pk.a >= dist_t1.b);
+select * from repli_t1_pk where exists ( select 1 from dist_t1 where repli_t1_pk.a >= dist_t1.b);
+
+create index idx_repli_t1_pk_a ON repli_t1_pk using btree(a);
+analyze repli_t1_pk;
+explain (costs off) select * from repli_t1_pk where exists ( select 1 from dist_t1 where repli_t1_pk.a >= dist_t1.b);
+select * from repli_t1_pk where exists ( select 1 from dist_t1 where repli_t1_pk.a >= dist_t1.b);
+drop index idx_repli_t1_pk_a;
+
+explain (costs off) select * from repli_t2_pk where exists ( select 1 from dist_t1 where repli_t2_pk.a >= dist_t1.b);
+select * from repli_t2_pk where exists ( select 1 from dist_t1 where repli_t2_pk.a >= dist_t1.b);
+
+explain (costs off) select * from repli_t3_pk where exists ( select 1 from dist_t1 where repli_t3_pk.a >= dist_t1.b);
+select * from repli_t3_pk where exists ( select 1 from dist_t1 where repli_t3_pk.a >= dist_t1.b);
+
+explain (costs off) select * from repli_t4_pk where exists ( select 1 from dist_t1 where repli_t4_pk.a >= dist_t1.b);
+select * from repli_t4_pk where exists ( select 1 from dist_t1 where repli_t4_pk.a >= dist_t1.b);
+
+drop table if exists repli_t1;
+drop table if exists dist_t1;
+drop table if exists repli_t1_pk;
+drop table if exists repli_t2_pk;
+drop table if exists repli_t3_pk;
+drop table if exists repli_t4_pk;

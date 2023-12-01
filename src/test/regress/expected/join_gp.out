@@ -1591,3 +1591,337 @@ drop table random_dis_char;
 set optimizer_enable_hashjoin to on;
 reset enable_hashjoin;
 reset enable_nestloop;
+-----------------------------------------------------------------
+-- Test cases to check if ORCA generates correct result
+-- for "Left Semi Join with replicated outer table"
+-----------------------------------------------------------------
+drop table if exists repli_t1;
+drop table if exists dist_t1;
+create table repli_t1 (a int) distributed replicated;
+insert into repli_t1 values(1);
+analyze repli_t1;
+create table dist_t1 (a int , b int) distributed by (a);
+insert into dist_t1 select i, 1 from generate_series(1, 5) i;
+analyze dist_t1;
+-- No explicitly defined primary key for replicated table
+---------------------------------------------------------
+-- Outer - replicated, Inner - distributed table
+explain (costs off) select * from repli_t1 where exists ( select 1 from dist_t1 where repli_t1.a >= dist_t1.b);
+                      QUERY PLAN                      
+------------------------------------------------------
+ Nested Loop Semi Join
+   Join Filter: (repli_t1.a >= dist_t1.b)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on repli_t1
+   ->  Materialize
+         ->  Gather Motion 3:1  (slice2; segments: 3)
+               ->  Seq Scan on dist_t1
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from repli_t1 where exists ( select 1 from dist_t1 where repli_t1.a >= dist_t1.b);
+ a 
+---
+ 1
+(1 row)
+
+explain (costs off) select * from (select t1.a as aVal1, t2.a as aVal2 from repli_t1 as t1 , repli_t1 as t2 where t1.a = t2.a) as t3
+                    where exists (select 1 from dist_t1 as t4 where t3.aVal1 >= t4.b);
+                      QUERY PLAN                      
+------------------------------------------------------
+ Nested Loop Semi Join
+   Join Filter: ((t1.a >= t4.b) AND (t2.a >= t4.b))
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Hash Join
+               Hash Cond: (t1.a = t2.a)
+               ->  Seq Scan on repli_t1 t1
+               ->  Hash
+                     ->  Seq Scan on repli_t1 t2
+   ->  Materialize
+         ->  Gather Motion 3:1  (slice2; segments: 3)
+               ->  Seq Scan on dist_t1 t4
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+select * from (select t1.a as aVal1, t2.a as aVal2 from repli_t1 as t1 , repli_t1 as t2 where t1.a = t2.a) as t3
+where exists (select 1 from dist_t1 as t4 where t3.aVal1 >= t4.b);
+ aval1 | aval2 
+-------+-------
+     1 |     1
+(1 row)
+
+create index idx_repl_t1_a ON repli_t1 using btree(a);
+analyze repli_t1;
+explain (costs off) select * from repli_t1 where exists ( select 1 from dist_t1 where repli_t1.a >= dist_t1.b);
+                      QUERY PLAN                      
+------------------------------------------------------
+ Nested Loop Semi Join
+   Join Filter: (repli_t1.a >= dist_t1.b)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on repli_t1
+   ->  Materialize
+         ->  Gather Motion 3:1  (slice2; segments: 3)
+               ->  Seq Scan on dist_t1
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from repli_t1 where exists ( select 1 from dist_t1 where repli_t1.a >= dist_t1.b);
+ a 
+---
+ 1
+(1 row)
+
+drop index idx_repl_t1_a;
+-- Outer - distributed, Inner - replicated table
+explain (costs off) select * from dist_t1 where exists ( select 1 from repli_t1  where repli_t1.a >= dist_t1.b);
+                   QUERY PLAN                   
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop Semi Join
+         Join Filter: (repli_t1.a >= dist_t1.b)
+         ->  Seq Scan on dist_t1
+         ->  Materialize
+               ->  Seq Scan on repli_t1
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from dist_t1 where exists ( select 1 from repli_t1  where repli_t1.a >= dist_t1.b);
+ a | b 
+---+---
+ 1 | 1
+ 2 | 1
+ 3 | 1
+ 4 | 1
+ 5 | 1
+(5 rows)
+
+-- Both replicated table
+explain (costs off) select * from repli_t1 as t1  where exists ( select 1 from repli_t1 as t2  where t1.a >= t2.a);
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Nested Loop Semi Join
+         Join Filter: (t1.a >= t2.a)
+         ->  Seq Scan on repli_t1 t1
+         ->  Materialize
+               ->  Seq Scan on repli_t1 t2
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from repli_t1 as t1  where exists ( select 1 from repli_t1 as t2  where t1.a >= t2.a);
+ a 
+---
+ 1
+(1 row)
+
+-- Outer - Universal, Inner - distributed table
+explain (costs off) select * from generate_series(1, 5) univ_t where exists ( select 1 from dist_t1 where univ_t >= dist_t1.b);
+                      QUERY PLAN                      
+------------------------------------------------------
+ Nested Loop Semi Join
+   Join Filter: (univ_t.univ_t >= dist_t1.b)
+   ->  Function Scan on generate_series univ_t
+   ->  Materialize
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               ->  Seq Scan on dist_t1
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from generate_series(1, 5) univ_t where exists ( select 1 from dist_t1 where univ_t >= dist_t1.b);
+ univ_t 
+--------
+      1
+      2
+      3
+      4
+      5
+(5 rows)
+
+-- Outer - distributed, Inner - universal table
+explain (costs off) select * from dist_t1 where exists ( select 1 from generate_series(1, 5) univ_t where univ_t >= dist_t1.b);
+                     QUERY PLAN                      
+-----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop Semi Join
+         Join Filter: (univ_t.univ_t >= dist_t1.b)
+         ->  Seq Scan on dist_t1
+         ->  Function Scan on generate_series univ_t
+ Optimizer: Postgres query optimizer
+(6 rows)
+
+select * from dist_t1 where exists ( select 1 from generate_series(1, 5) univ_t where univ_t >= dist_t1.b);
+ a | b 
+---+---
+ 2 | 1
+ 3 | 1
+ 4 | 1
+ 5 | 1
+ 1 | 1
+(5 rows)
+
+-- Outer - replicated, Inner - universal table
+explain (costs off)select * from repli_t1 where exists ( select 1 from generate_series(1, 5) univ_t where univ_t >= repli_t1.a);
+                        QUERY PLAN                         
+-----------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  HashAggregate
+         Group Key: repli_t1.ctid
+         ->  Nested Loop
+               Join Filter: (univ_t.univ_t >= repli_t1.a)
+               ->  Seq Scan on repli_t1
+               ->  Function Scan on generate_series univ_t
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from repli_t1 where exists ( select 1 from generate_series(1, 5) univ_t where univ_t >= repli_t1.a);
+ a 
+---
+ 1
+(1 row)
+
+-- Outer - universal, Inner - replicated table
+explain (costs off) select * from generate_series(1, 5) univ_t where exists ( select 1 from repli_t1  where univ_t >= repli_t1.a);
+                      QUERY PLAN                      
+------------------------------------------------------
+ Nested Loop Semi Join
+   Join Filter: (univ_t.univ_t >= repli_t1.a)
+   ->  Function Scan on generate_series univ_t
+   ->  Materialize
+         ->  Gather Motion 1:1  (slice1; segments: 1)
+               ->  Seq Scan on repli_t1
+ Optimizer: Postgres query optimizer
+(7 rows)
+
+select * from generate_series(1, 5) univ_t where exists ( select 1 from repli_t1  where univ_t >= repli_t1.a);
+ univ_t 
+--------
+      1
+      2
+      3
+      4
+      5
+(5 rows)
+
+-- Explicitly defined primary key for replicated table
+---------------------------------------------------------
+drop table if exists repli_t1_pk;
+drop table if exists repli_t2_pk;
+drop table if exists repli_t3_pk;
+drop table if exists repli_t4_pk;
+-- Outer - replicated, Inner - distributed table
+create table repli_t1_pk (a int, PRIMARY KEY(a)) distributed replicated;
+insert into repli_t1_pk values(1);
+analyze repli_t1_pk;
+create table repli_t2_pk (a int, CONSTRAINT key1_t2 PRIMARY KEY(a) ) distributed replicated;
+insert into repli_t2_pk values(1);
+analyze repli_t2_pk;
+create table repli_t3_pk (a int,b int, c int, d int, CONSTRAINT key1_t3 UNIQUE (c,d)) distributed replicated;
+insert into repli_t3_pk values(1,2,3,4);
+analyze repli_t3_pk;
+create table repli_t4_pk (a int,b int, c int, d int,  CONSTRAINT key1_t4 PRIMARY KEY(a) , CONSTRAINT key2_t4 UNIQUE (c,d)) distributed replicated;
+insert into repli_t4_pk values(1,2,3,4);
+analyze repli_t4_pk;
+explain (costs off) select * from repli_t1_pk where exists ( select 1 from dist_t1 where repli_t1_pk.a >= dist_t1.b);
+                      QUERY PLAN                      
+------------------------------------------------------
+ Nested Loop Semi Join
+   Join Filter: (repli_t1_pk.a >= dist_t1.b)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on repli_t1_pk
+   ->  Materialize
+         ->  Gather Motion 3:1  (slice2; segments: 3)
+               ->  Seq Scan on dist_t1
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from repli_t1_pk where exists ( select 1 from dist_t1 where repli_t1_pk.a >= dist_t1.b);
+ a 
+---
+ 1
+(1 row)
+
+create index idx_repli_t1_pk_a ON repli_t1_pk using btree(a);
+analyze repli_t1_pk;
+explain (costs off) select * from repli_t1_pk where exists ( select 1 from dist_t1 where repli_t1_pk.a >= dist_t1.b);
+                      QUERY PLAN                      
+------------------------------------------------------
+ Nested Loop Semi Join
+   Join Filter: (repli_t1_pk.a >= dist_t1.b)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on repli_t1_pk
+   ->  Materialize
+         ->  Gather Motion 3:1  (slice2; segments: 3)
+               ->  Seq Scan on dist_t1
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from repli_t1_pk where exists ( select 1 from dist_t1 where repli_t1_pk.a >= dist_t1.b);
+ a 
+---
+ 1
+(1 row)
+
+drop index idx_repli_t1_pk_a;
+explain (costs off) select * from repli_t2_pk where exists ( select 1 from dist_t1 where repli_t2_pk.a >= dist_t1.b);
+                      QUERY PLAN                      
+------------------------------------------------------
+ Nested Loop Semi Join
+   Join Filter: (repli_t2_pk.a >= dist_t1.b)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on repli_t2_pk
+   ->  Materialize
+         ->  Gather Motion 3:1  (slice2; segments: 3)
+               ->  Seq Scan on dist_t1
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from repli_t2_pk where exists ( select 1 from dist_t1 where repli_t2_pk.a >= dist_t1.b);
+ a 
+---
+ 1
+(1 row)
+
+explain (costs off) select * from repli_t3_pk where exists ( select 1 from dist_t1 where repli_t3_pk.a >= dist_t1.b);
+                      QUERY PLAN                      
+------------------------------------------------------
+ Nested Loop Semi Join
+   Join Filter: (repli_t3_pk.a >= dist_t1.b)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on repli_t3_pk
+   ->  Materialize
+         ->  Gather Motion 3:1  (slice2; segments: 3)
+               ->  Seq Scan on dist_t1
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from repli_t3_pk where exists ( select 1 from dist_t1 where repli_t3_pk.a >= dist_t1.b);
+ a | b | c | d 
+---+---+---+---
+ 1 | 2 | 3 | 4
+(1 row)
+
+explain (costs off) select * from repli_t4_pk where exists ( select 1 from dist_t1 where repli_t4_pk.a >= dist_t1.b);
+                      QUERY PLAN                      
+------------------------------------------------------
+ Nested Loop Semi Join
+   Join Filter: (repli_t4_pk.a >= dist_t1.b)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on repli_t4_pk
+   ->  Materialize
+         ->  Gather Motion 3:1  (slice2; segments: 3)
+               ->  Seq Scan on dist_t1
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+select * from repli_t4_pk where exists ( select 1 from dist_t1 where repli_t4_pk.a >= dist_t1.b);
+ a | b | c | d 
+---+---+---+---
+ 1 | 2 | 3 | 4
+(1 row)
+
+drop table if exists repli_t1;
+drop table if exists dist_t1;
+drop table if exists repli_t1_pk;
+drop table if exists repli_t2_pk;
+drop table if exists repli_t3_pk;
+drop table if exists repli_t4_pk;
