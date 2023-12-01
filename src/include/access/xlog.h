@@ -11,6 +11,8 @@
 #ifndef XLOG_H
 #define XLOG_H
 
+#include "postgres.h" /* for Datum */
+
 #include "access/rmgr.h"
 #include "access/xlogdefs.h"
 #include "access/xloginsert.h"

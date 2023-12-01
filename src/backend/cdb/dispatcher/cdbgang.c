@@ -696,8 +696,7 @@ getCdbProcessesForQD(int isPrimary)
 
 	qdinfo = cdbcomponent_getComponentInfo(COORDINATOR_CONTENT_ID);
 
-	Assert(qdinfo->config->segindex == -1);
-	Assert(SEGMENT_IS_ACTIVE_PRIMARY(qdinfo));
+	Assert((qdinfo->config->segindex == -1 && SEGMENT_IS_ACTIVE_PRIMARY(qdinfo)) || IS_HOT_STANDBY_QD());
 	Assert(qdinfo->config->hostip != NULL);
 
 	proc = makeNode(CdbProcess);

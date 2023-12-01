@@ -1,0 +1,7 @@
+-- reset the setup for hot standby tests
+!\retcode gpconfig -r hot_standby;
+(exited with code 0)
+!\retcode gpconfig -r synchronous_commit;
+(exited with code 0)
+!\retcode gpstop -ar;
+(exited with code 0)

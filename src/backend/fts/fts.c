@@ -97,7 +97,7 @@ sigIntHandler(SIGNAL_ARGS)
 pid_t
 FtsProbePID(void)
 {
-	return *shmFtsProbePID;
+	return shmFtsProbePID ? *shmFtsProbePID : 0;
 }
 
 bool

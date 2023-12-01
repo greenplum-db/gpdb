@@ -210,13 +210,15 @@ test__CdbDispatchPlan_may_be_interrupted(void **state)
 
 	queryDesc->estate = CreateExecutorState();
 
+	/* will be called multiple times in e.g. FtsNotifyProber/getCdbComponentInfo */
+	will_return_count(RecoveryInProgress, false, -1);
+
 	/* cdbcomponent_getCdbComponents() mocks */
 	will_be_called(FtsNotifyProber);
 	will_return(getFtsVersion, 1);
 	will_return(GetGpExpandVersion, 1);
 
 	/* StartTransactionCommand() mocks */
-	will_return(RecoveryInProgress, false);
 	will_be_called(__wrap_VirtualXactLockTableInsert);
 	will_be_called(__wrap_AcceptInvalidationMessages);
 	will_be_called(initialize_wal_bytes_written);

@@ -1,0 +1,4 @@
+test: hot_standby/setup
+test: hot_standby/basic
+test: hot_standby/faults
+test: hot_standby/teardown

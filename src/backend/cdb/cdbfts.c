@@ -82,6 +82,10 @@ FtsNotifyProber(void)
 	int32			started;
 	int32			done;
 
+	/* Ignore if we don't have a FTS probe process, like a standby QD in a mirrored cluster. */
+	if (FtsProbePID() == 0)
+		return;
+
 	if (am_ftsprobe)
 		return;
 

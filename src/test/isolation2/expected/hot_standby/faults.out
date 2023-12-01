@@ -1,0 +1,296 @@
+-- Test system faults scenarios
+
+-- start_matchsubs
+--
+-- m/Is the server running on host.*/
+-- s/Is the server running on host "\d+.\d+.\d+.\d+" and accepting/Is the server running on host <IP> and accepting/
+-- m/(seg\d+ \d+.\d+.\d+.\d+:\d+)/
+-- s/(.*)/(seg<ID> IP:PORT)/
+-- m/ERROR:  connection to dbid 1 .*:7000 failed .*/
+-- s/ERROR:  connection to dbid 1 .*:7000 failed .*/ERROR:  connection to dbid 1 <host>:7000 failed/
+--
+-- end_matchsubs
+
+-- Let FTS detect/declare failure sooner
+!\retcode gpconfig -c gp_fts_probe_interval -v 10 --coordinatoronly;
+(exited with code 0)
+!\retcode gpstop -u;
+(exited with code 0)
+
+create table hs_failover(a int);
+CREATE TABLE
+insert into hs_failover select * from generate_series(1,10);
+INSERT 0 10
+-1S: select * from hs_failover;
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 1  
+ 5  
+ 6  
+ 9  
+ 10 
+(10 rows)
+
+----------------------------------------------------------------
+-- Mirror segment fails
+----------------------------------------------------------------
+select pg_ctl(datadir, 'stop', 'immediate') from gp_segment_configuration where content=1 and role = 'm';
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+-- make sure mirror is detected down
+create temp table hs_tt(a int);
+CREATE TABLE
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+-- will not succeed
+-1S: select * from hs_failover;
+ERROR:  Error on receive from seg1 slice1 127.0.1.1:7006 pid=26942: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+-1Sq: ... <quitting>
+
+-- recovery
+!\retcode gprecoverseg -aF;
+(exited with code 0)
+
+-- sync-up
+select wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+
+-- works now
+-1S: select * from hs_failover;
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 5  
+ 6  
+ 9  
+ 10 
+ 1  
+(10 rows)
+
+----------------------------------------------------------------
+-- Primary segment fails
+----------------------------------------------------------------
+-- inject a fault where the mirror gets out of recovery
+select gp_inject_fault('out_of_recovery_in_startupxlog', 'skip', dbid) from gp_segment_configuration where content = 1 and role = 'm';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+select pg_ctl(datadir, 'stop', 'immediate') from gp_segment_configuration where content=1 and role = 'p';
+ pg_ctl 
+--------
+ OK     
+(1 row)
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+-- make sure failover happens
+select dbid, content, role, preferred_role, mode, status from gp_segment_configuration where content = 1;
+ dbid | content | role | preferred_role | mode | status 
+------+---------+------+----------------+------+--------
+ 3    | 1       | m    | p              | n    | d      
+ 6    | 1       | p    | m              | n    | u      
+(2 rows)
+select gp_wait_until_triggered_fault('out_of_recovery_in_startupxlog', 1, dbid) from gp_segment_configuration where content = 1 and role = 'p';
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+select gp_inject_fault('out_of_recovery_in_startupxlog', 'reset', dbid) from gp_segment_configuration where content = 1 and role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- On an existing standby connection, query will run but it is dispatched to the previous mirror
+-- in an existing gang. That mirror is now a primary, so it will complain and the query fails.
+-1S: select * from hs_failover;
+ERROR:  primary segments can only process MPP protocol messages from primary QD  (seg1 slice1 127.0.1.1:7006 pid=14671)
+HINT:  Exit the current session and re-connect.
+-1Sq: ... <quitting>
+
+-- will fail due to downed mirror (previous primary)
+-1S: select * from hs_failover;
+ERROR:  failed to acquire resources on one or more segments
+DETAIL:  could not connect to server: Connection refused
+	Is the server running on host "127.0.1.1" and accepting
+	TCP/IP connections on port 7003?
+ (seg1 127.0.1.1:7003)
+-1Sq: ... <quitting>
+
+-- bring the downed mirror up
+!\retcode gprecoverseg -aF;
+(exited with code 0)
+select wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+
+-- mirror is up
+-1S: select dbid, content, role, preferred_role, mode, status from gp_segment_configuration where content = 1;
+ dbid | content | role | preferred_role | mode | status 
+------+---------+------+----------------+------+--------
+ 6    | 1       | p    | m              | s    | u      
+ 3    | 1       | m    | p              | s    | u      
+(2 rows)
+
+-- now the query will succeed
+-1S: select * from hs_failover;
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 5  
+ 6  
+ 9  
+ 10 
+ 1  
+(10 rows)
+-1Sq: ... <quitting>
+
+-- re-balance, bring the segments to their preferred roles
+!\retcode gprecoverseg -ar;
+(exited with code 0)
+select wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+-1S: select dbid, content, role, preferred_role, mode, status from gp_segment_configuration where content = 1;
+ dbid | content | role | preferred_role | mode | status 
+------+---------+------+----------------+------+--------
+ 3    | 1       | p    | p              | s    | u      
+ 6    | 1       | m    | m              | s    | u      
+(2 rows)
+
+-- query runs fine still
+-1S: select * from hs_failover;
+ a  
+----
+ 5  
+ 6  
+ 9  
+ 10 
+ 1  
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+(10 rows)
+
+----------------------------------------------------------------
+-- DTX recovery
+----------------------------------------------------------------
+-- skip FTS probe to prevent unexpected mirror promotion
+1: select gp_inject_fault_infinite('fts_probe', 'skip', dbid) from gp_segment_configuration where role='p' and content=-1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+-- inject fault to cripple QE right after a QE finished the prepare phase of 2PC
+select gp_inject_fault_infinite('finish_commit_prepared', 'error', dbid) from gp_segment_configuration where content=1 and role='p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+-- session 1 on primary QD tries to commit a DTX, but cannot finish due to the fault on a QE
+1: begin;
+BEGIN
+1: create table tt_hs_dtx(a int);
+CREATE TABLE
+1&: end;  <waiting ...>
+
+-- inject a panic on primary QD, essentially restarts the primary QD
+2: select gp_inject_fault('before_read_command', 'panic', dbid) from gp_segment_configuration where content=-1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2: select 1;
+PANIC:  fault triggered, fault name:'before_read_command' fault type:'panic'
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+1<:  <... completed>
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+1q: ... <quitting>
+2q: ... <quitting>
+
+-- standby QD can still run query
+-1S: select * from hs_failover;
+ a  
+----
+ 1  
+ 10 
+ 2  
+ 3  
+ 4  
+ 5  
+ 6  
+ 7  
+ 8  
+ 9  
+(10 rows)
+-- XXX: currently it sees the in-doubt DTX but it shouldnt' when we supported DTX isolation.
+-1S: select * from tt_hs_dtx;
+ a 
+---
+(0 rows)
+
+-- resets the fault
+-1S: select gp_inject_fault_infinite('finish_commit_prepared', 'reset', dbid) from gp_segment_configuration where content=1 and role='p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+
+-1S: select wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+1: select gp_inject_fault('before_read_command', 'reset', dbid) from gp_segment_configuration where content=-1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: select gp_inject_fault('fts_probe', 'reset', dbid) from gp_segment_configuration where role='p' and content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)

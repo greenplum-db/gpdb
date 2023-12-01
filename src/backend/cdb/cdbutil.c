@@ -543,7 +543,7 @@ getCdbComponentInfo(void)
 	{
 		cdbInfo = &component_databases->segment_db_info[i];
 
-		if (cdbInfo->config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
+		if (!IS_HOT_STANDBY_QD() && cdbInfo->config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			continue;
 
 		hsEntry = (HostPrimaryCountEntry *) hash_search(hostPrimaryCountHash, cdbInfo->config->hostname, HASH_FIND, &found);
@@ -555,7 +555,7 @@ getCdbComponentInfo(void)
 	{
 		cdbInfo = &component_databases->entry_db_info[i];
 
-		if (cdbInfo->config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
+		if (!IS_HOT_STANDBY_QD() && cdbInfo->config->role != GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
 			continue;
 
 		hsEntry = (HostPrimaryCountEntry *) hash_search(hostPrimaryCountHash, cdbInfo->config->hostname, HASH_FIND, &found);
@@ -1011,7 +1011,16 @@ cdbcomponent_getComponentInfo(int contentId)
 	/* entry db */
 	if (contentId == -1)
 	{
-		cdbInfo = &cdbs->entry_db_info[0];	
+		Assert(cdbs->total_entry_dbs == 1 || cdbs->total_entry_dbs == 2);
+		/*
+		 * For a standby QD, get the last entry db which can be the first (on
+		 * a replica cluster) or the second (on a mirrored cluster) entry.
+		 */
+		if (IS_HOT_STANDBY_QD())
+			cdbInfo = &cdbs->entry_db_info[cdbs->total_entry_dbs - 1];
+		else
+			cdbInfo = &cdbs->entry_db_info[0];	
+
 		return cdbInfo;
 	}
 
@@ -1028,10 +1037,10 @@ cdbcomponent_getComponentInfo(int contentId)
 		Assert(cdbs->total_segment_dbs == cdbs->total_segments * 2);
 		cdbInfo = &cdbs->segment_db_info[2 * contentId];
 
-		if (!SEGMENT_IS_ACTIVE_PRIMARY(cdbInfo))
-		{
+		/* use the other segment if it is not what the QD wants */
+		if ((IS_HOT_STANDBY_QD() && SEGMENT_IS_ACTIVE_PRIMARY(cdbInfo)) 
+						|| (!IS_HOT_STANDBY_QD() && !SEGMENT_IS_ACTIVE_PRIMARY(cdbInfo)))
 			cdbInfo = &cdbs->segment_db_info[2 * contentId + 1];
-		}
 
 		return cdbInfo;
 	}
@@ -1124,10 +1133,21 @@ cdb_setup(void)
 	 *
 	 * Ignore background worker because bgworker_should_start_mpp() already did
 	 * the check.
+	 *
+	 * Ignore if we are the standby coordinator started in hot standby mode.
+	 * We don't expect dtx recovery to have finished, as dtx recovery is
+	 * performed at the end of startup. In hot standby, we are recovering
+	 * continuously and should allow queries much earlier. Since a hot standby
+	 * won't proceed dtx, it is not required to wait for recovery of the dtx
+	 * that has been prepared but not committed (i.e. to commit them); on the
+	 * other hand, the recovery of any in-doubt transactions (i.e. not prepared)
+	 * won't bother a hot standby either, just like they can be recovered in the 
+	 * background when a primary instance is running.
 	 */
 	if (!IsBackgroundWorker &&
 		Gp_role == GP_ROLE_DISPATCH &&
-		!*shmDtmStarted)
+		!*shmDtmStarted &&
+		!IS_HOT_STANDBY_QD())
 	{
 		ereport(FATAL,
 				(errcode(ERRCODE_CANNOT_CONNECT_NOW),

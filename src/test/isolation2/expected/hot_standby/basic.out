@@ -1,0 +1,223 @@
+-- Tests for basic query dispatch on a hot standy.
+
+-- must show on
+-1S: show hot_standby;
+ hot_standby 
+-------------
+ on          
+(1 row)
+
+-- will be checking if QD/QE info looks good
+-1S: select id, type, content, port from gp_backend_info();
+ id | type | content | port 
+----+------+---------+------
+ -1 | Q    | -1      | 7001 
+(1 row)
+
+----------------------------------------------------------------
+-- Test: basic query dispatch
+----------------------------------------------------------------
+create table hs_t1(a int);
+CREATE TABLE
+create table hs_t2(a int);
+CREATE TABLE
+insert into hs_t1 select * from generate_series(1,10);
+INSERT 0 10
+
+-- standby should see the result
+-1S: select * from hs_t1;
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 5  
+ 6  
+ 9  
+ 10 
+ 1  
+(10 rows)
+
+-- we have three QEs launched on the mirror segments.
+-- note that the first QE on a segment is still a "writer" because we
+-- need it to manage locks, same as read-only queries on a primary QD.
+-1S: select id, type, content, port from gp_backend_info();
+ id | type | content | port 
+----+------+---------+------
+ -1 | Q    | -1      | 7001 
+ 0  | w    | 0       | 7005 
+ 1  | w    | 1       | 7006 
+ 2  | w    | 2       | 7007 
+(4 rows)
+
+-- should have parallel readers launched
+-1S: select * from hs_t1 join (select * from hs_t2) hs_t2 on (hs_t1 = hs_t2);
+ a | a 
+---+---
+(0 rows)
+-1S: select id, type, content, port from gp_backend_info();
+ id | type | content | port 
+----+------+---------+------
+ -1 | Q    | -1      | 7001 
+ 0  | w    | 0       | 7005 
+ 1  | w    | 1       | 7006 
+ 2  | w    | 2       | 7007 
+ 3  | r    | 0       | 7005 
+ 4  | r    | 1       | 7006 
+ 5  | r    | 2       | 7007 
+(7 rows)
+
+-- now a singleton reader added too
+-1S: select * from hs_t1 join (select oid::int from pg_class) hs_t2 on (hs_t1 = hs_t2);
+ a | oid 
+---+-----
+(0 rows)
+-1S: select id, type, content, port from gp_backend_info();
+ id | type | content | port 
+----+------+---------+------
+ -1 | Q    | -1      | 7001 
+ 0  | w    | 0       | 7005 
+ 1  | w    | 1       | 7006 
+ 2  | w    | 2       | 7007 
+ 3  | r    | 0       | 7005 
+ 4  | r    | 1       | 7006 
+ 5  | r    | 2       | 7007 
+ 6  | R    | -1      | 7001 
+(8 rows)
+
+-- un-committed result should not be seen by the standby
+begin;
+BEGIN
+insert into hs_t1 select * from generate_series(11,20);
+INSERT 0 10
+
+-- standby should only see 1...10
+-1S: select * from hs_t1;
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 5  
+ 6  
+ 9  
+ 10 
+ 1  
+(10 rows)
+
+end;
+COMMIT
+
+-- standby should see 1...20 now
+-1S: select * from hs_t1;
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 16 
+ 18 
+ 19 
+ 5  
+ 6  
+ 9  
+ 10 
+ 11 
+ 13 
+ 14 
+ 17 
+ 1  
+ 12 
+ 15 
+ 20 
+(20 rows)
+
+----------------------------------------------------------------
+-- Test: other things that a hot standby can do
+----------------------------------------------------------------
+-- set/reset and show GUC
+-1S: set optimizer = on;
+SET
+-1S: show optimizer;
+ optimizer 
+-----------
+ on        
+(1 row)
+-1S: reset optimizer;
+RESET
+-- copy command
+-1S: copy hs_t1 to '/tmp/hs_copyto.csv' csv null '';
+COPY 20
+-- query catalogs
+-1S: select count(*) from pg_class where relname = 'hs_t1';
+ count 
+-------
+ 1     
+(1 row)
+-1S: select dbid,content,role,preferred_role,mode,status from gp_segment_configuration where dbid = current_setting('gp_dbid')::integer;
+ dbid | content | role | preferred_role | mode | status 
+------+---------+------+----------------+------+--------
+ 8    | -1      | m    | m              | s    | u      
+(1 row)
+
+-- Here are the things hot standby in PG can do but currently cannot in GPDB:
+-- transaction block BEGIN...END;
+-1S: begin;
+ERROR:  cannot make new WAL entries during recovery (xloginsert.c:135)
+-1S: end;
+COMMIT
+-- cursor operation due to not supporting BEGIN...END yet;
+
+-- checkpoint is allowed on standby but a restart point is created instead
+-1S: checkpoint;
+CHECKPOINT
+
+----------------------------------------------------------------
+-- Test: things that can't be done on a hot standby in both PG and GDPB:
+-- no DML, DDL or anything that generates WAL
+----------------------------------------------------------------
+-1S: insert into hs_t1 values(1);
+ERROR:  cannot execute INSERT in a read-only transaction
+-1S: delete from hs_t1;
+ERROR:  cannot acquire lock mode ExclusiveLock on database objects while recovery is in progress
+LINE 1: delete from hs_t1;
+                    ^
+HINT:  Only RowExclusiveLock or less can be acquired on database objects during recovery.
+-1S: update hs_t1 set a = 0;
+ERROR:  cannot acquire lock mode ExclusiveLock on database objects while recovery is in progress
+LINE 1: update hs_t1 set a = 0;
+               ^
+HINT:  Only RowExclusiveLock or less can be acquired on database objects during recovery.
+-1S: create table hs_t2(a int);
+ERROR:  cannot execute CREATE TABLE in a read-only transaction
+-1S: create database hs_db;
+ERROR:  cannot execute CREATE DATABASE in a read-only transaction
+-1S: vacuum hs_t1;
+ERROR:  cannot execute VACUUM during recovery
+
+--
+-- No hintbit WAL generation in SELECT.
+--
+create table hs_nohintbit(a int) distributed by (a);
+CREATE TABLE
+insert into hs_nohintbit select generate_series (1, 10);
+INSERT 0 10
+-- flush the data to disk
+checkpoint;
+CHECKPOINT
+
+-1S: set gp_disable_tuple_hints=off;
+SET
+-- no WAL is being generated (otherwise an error would occur "cannot make new WAL entries during recovery")
+-1S: SELECT count(*) FROM hs_nohintbit;
+ count 
+-------
+ 10    
+(1 row)
+
