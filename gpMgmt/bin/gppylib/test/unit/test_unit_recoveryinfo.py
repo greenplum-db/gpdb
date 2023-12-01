@@ -491,8 +491,8 @@ class RecoveryResultTestCase(GpTestCase):
                 else:
                     host2_result = CommandResult(1, 'failed 2'.encode(), test["host2_error"].encode(), True, False)
 
-                host1_recovery_output = gp.GpSegRecovery(None, None, None, False, 1, 'host1', None, True)
-                host2_recovery_output = gp.GpSegRecovery(None, None, None, False, 1, 'host2', None, True)
+                host1_recovery_output = gp.GpSegRecovery(None, None, None, False, 1, 'host1', None, True, None)
+                host2_recovery_output = gp.GpSegRecovery(None, None, None, False, 1, 'host2', None, True, None)
                 host1_recovery_output.get_results = Mock(return_value=host1_result)
                 host2_recovery_output.get_results = Mock(return_value=host2_result)
 

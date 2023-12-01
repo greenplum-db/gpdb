@@ -146,9 +146,10 @@ class FullRecoveryTestCase(GpTestCase):
                                               p.getSegmentDataDirectory(),
                                               True, False, '/tmp/test_progress_file')
         self.era = '1234_20211110'
+        self.maxRate = '1024M'
         self.full_recovery_cmd = gpsegrecovery.FullRecovery(
             name='test full recovery', recovery_info=self.seg_recovery_info,
-            forceoverwrite=True, logger=self.mock_logger, era=self.era)
+            forceoverwrite=True, logger=self.mock_logger, era=self.era, maxRate=self.maxRate)
 
     def tearDown(self):
         super(FullRecoveryTestCase, self).tearDown()
@@ -182,7 +183,7 @@ class FullRecoveryTestCase(GpTestCase):
 
         expected_init_args = call("/data/mirror0", "sdw1", '40000', create_slot=True,
                                    replication_slot_name='internal_wal_replication_slot',
-                                   forceoverwrite=True, target_gp_dbid=2, progress_file='/tmp/test_progress_file')
+                                   forceoverwrite=True, target_gp_dbid=2, progress_file='/tmp/test_progress_file', max_rate='1024M')
 
         self._assert_basebackup_runs(expected_init_args)
         self._assert_cmd_passed()
@@ -194,7 +195,7 @@ class FullRecoveryTestCase(GpTestCase):
 
         expected_init_args = call("/data/mirror0", "sdw1", '40000', create_slot=True,
                                    replication_slot_name='internal_wal_replication_slot',
-                                   forceoverwrite=False, target_gp_dbid=2, progress_file='/tmp/test_progress_file')
+                                   forceoverwrite=False, target_gp_dbid=2, progress_file='/tmp/test_progress_file', max_rate='1024M')
         self._assert_basebackup_runs(expected_init_args)
         self._assert_cmd_passed()
 
@@ -205,7 +206,7 @@ class FullRecoveryTestCase(GpTestCase):
 
         expected_init_args = call("/data/mirror0", "sdw1", '40000', create_slot=True,
                                    replication_slot_name='internal_wal_replication_slot',
-                                   forceoverwrite=True, target_gp_dbid=2, progress_file='/tmp/test_progress_file')
+                                   forceoverwrite=True, target_gp_dbid=2, progress_file='/tmp/test_progress_file', max_rate='1024M')
         self.assertEqual(1, self.mock_pgbasebackup_init.call_count)
         self.assertEqual([expected_init_args], self.mock_pgbasebackup_init.call_args_list)
         self.assertEqual(1, self.mock_pgbasebackup_run.call_count)
@@ -222,7 +223,7 @@ class FullRecoveryTestCase(GpTestCase):
 
         expected_init_args = call("/data/mirror0", "sdw1", '40000', create_slot=True,
                                    replication_slot_name='internal_wal_replication_slot',
-                                   forceoverwrite=False, target_gp_dbid=2, progress_file='/tmp/test_progress_file')
+                                   forceoverwrite=False, target_gp_dbid=2, progress_file='/tmp/test_progress_file', max_rate='1024M')
         self.assertEqual(1, self.mock_pgbasebackup_init.call_count)
         self.assertEqual([expected_init_args], self.mock_pgbasebackup_init.call_args_list)
         self.assertEqual(1, self.mock_pgbasebackup_run.call_count)
@@ -237,7 +238,8 @@ class FullRecoveryTestCase(GpTestCase):
         self.full_recovery_cmd.run()
         expected_init_args = call("/data/mirror0", "sdw1", '40000', create_slot=True,
                                   replication_slot_name='internal_wal_replication_slot',
-                                  forceoverwrite=True, target_gp_dbid=2, progress_file='/tmp/test_progress_file')
+                                  forceoverwrite=True, target_gp_dbid=2, progress_file='/tmp/test_progress_file', max_rate='1024M')
+
         self.assertEqual(1, self.mock_pgbasebackup_init.call_count)
         self.assertEqual(expected_init_args, self.mock_pgbasebackup_init.call_args)
         self.assertEqual(0, self.mock_pgbasebackup_run.call_count)
@@ -288,6 +290,7 @@ class SegRecoveryTestCase(GpTestCase):
         self.diff_r2 = RecoveryInfo('target_data_dir6', 5006, 6, 'source_hostname6',
                                     6006, 'source_datadir6', False, True, '/tmp/progress_file6')
         self.era = '1234_2021110'
+        self.maxRate = '1024M'
 
         self.apply_patches([
             patch('gpsegrecovery.SegmentStart.__init__', return_value=None),
@@ -352,10 +355,10 @@ class SegRecoveryTestCase(GpTestCase):
     def test_get_recovery_cmds_is_called(self, mock_get_recovery_cmds, mock_recovery_base_main, mock_logger):
         mix_confinfo = gppylib.recoveryinfo.serialize_list([self.full_r1, self.incr_r2])
         sys.argv = ['gpsegrecovery', '-l', '/tmp/logdir', '--era={}'.format(self.era), '-f',
-                    '-c {}'.format(mix_confinfo)]
+                    '-c {}'.format(mix_confinfo), '--max-rate={}'.format(self.maxRate)]
         SegRecovery().main()
         mock_get_recovery_cmds.assert_called_once_with([self.full_r1, self.incr_r2], True, mock_logger.return_value,
-                                                       self.era)
+                                                       self.era, self.maxRate)
         mock_recovery_base_main.assert_called_once_with(mock_get_recovery_cmds.return_value)
 
     def _assert_validation_full_call(self, cmd, expected_recovery_info,
@@ -367,6 +370,7 @@ class SegRecoveryTestCase(GpTestCase):
         self.assertEqual(expected_forceoverwrite, cmd.forceoverwrite)
         self.assertEqual(self.era, cmd.era)
         self.assertEqual(self.mock_logger, cmd.logger)
+        self.assertEqual(self.maxRate, cmd.maxRate)
 
     def _assert_setup_incr_call(self, cmd, expected_recovery_info):
         self.assertTrue(
@@ -385,32 +389,32 @@ class SegRecoveryTestCase(GpTestCase):
         self.assertEqual(self.mock_logger, cmd.logger)
 
     def test_empty_recovery_info_list(self):
-        cmd_list = SegRecovery().get_recovery_cmds([], False, None, self.era)
+        cmd_list = SegRecovery().get_recovery_cmds([], False, None, self.era, self.maxRate)
         self.assertEqual([], cmd_list)
 
     def test_get_recovery_cmds_full_recoveryinfo(self):
-        cmd_list = SegRecovery().get_recovery_cmds([self.full_r1, self.full_r2], False, self.mock_logger, self.era)
+        cmd_list = SegRecovery().get_recovery_cmds([self.full_r1, self.full_r2], False, self.mock_logger, self.era, self.maxRate)
         self._assert_validation_full_call(cmd_list[0], self.full_r1)
         self._assert_validation_full_call(cmd_list[1], self.full_r2)
 
     def test_get_recovery_cmds_incr_recoveryinfo(self):
-        cmd_list = SegRecovery().get_recovery_cmds([self.incr_r1, self.incr_r2], False, self.mock_logger, self.era)
+        cmd_list = SegRecovery().get_recovery_cmds([self.incr_r1, self.incr_r2], False, self.mock_logger, self.era, self.maxRate)
         self._assert_setup_incr_call(cmd_list[0], self.incr_r1)
         self._assert_setup_incr_call(cmd_list[1], self.incr_r2)
 
     def test_get_recovery_cmds_diff_recoveryinfo(self):
-        cmd_list = SegRecovery().get_recovery_cmds([self.diff_r1, self.diff_r2], False, self.mock_logger, self.era)
+        cmd_list = SegRecovery().get_recovery_cmds([self.diff_r1, self.diff_r2], False, self.mock_logger, self.era, self.maxRate)
         self._assert_setup_diff_call(cmd_list[0], self.diff_r1)
         self._assert_setup_diff_call(cmd_list[1], self.diff_r2)
 
     def test_get_recovery_cmds_mix_recoveryinfo(self):
-        cmd_list = SegRecovery().get_recovery_cmds([self.full_r1, self.incr_r2, self.diff_r1], False, self.mock_logger, self.era)
+        cmd_list = SegRecovery().get_recovery_cmds([self.full_r1, self.incr_r2, self.diff_r1], False, self.mock_logger, self.era, self.maxRate)
         self._assert_validation_full_call(cmd_list[0], self.full_r1)
         self._assert_setup_incr_call(cmd_list[1], self.incr_r2)
         self._assert_setup_diff_call(cmd_list[2], self.diff_r1)
 
     def test_get_recovery_cmds_mix_recoveryinfo_forceoverwrite(self):
-        cmd_list = SegRecovery().get_recovery_cmds([self.full_r1, self.incr_r2, self.diff_r1], True, self.mock_logger, self.era)
+        cmd_list = SegRecovery().get_recovery_cmds([self.full_r1, self.incr_r2, self.diff_r1], True, self.mock_logger, self.era, self.maxRate)
         self._assert_validation_full_call(cmd_list[0], self.full_r1,
                                           expected_forceoverwrite=True)
         self._assert_setup_incr_call(cmd_list[1], self.incr_r2)

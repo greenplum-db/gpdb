@@ -40,6 +40,7 @@ class RecoveryBase(object):
         parser.add_option('-f', '--force-overwrite', dest='forceoverwrite', action='store_true', default=False)
         parser.add_option('-l', '--log-dir', dest="logfileDirectory", type="string")
         parser.add_option('', '--era', dest="era", help="coordinator era", )
+        parser.add_option('--max-rate', type='string', dest='maxRate', metavar='<maxRate>')
 
         # Parse the command line arguments
         self.options, _ = parser.parse_args()

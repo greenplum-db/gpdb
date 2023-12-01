@@ -338,7 +338,7 @@ class PgRewind(Command):
 class PgBaseBackup(Command):
     def __init__(self, target_datadir, source_host, source_port, create_slot=False, replication_slot_name=None,
                  excludePaths=[], ctxt=LOCAL, remoteHost=None, writeconffilesonly=False, forceoverwrite=False,
-                 target_gp_dbid=0, progress_file=None, recovery_mode=True):
+                 target_gp_dbid=0, progress_file=None, recovery_mode=True, max_rate=None):
         cmd_tokens = ['pg_basebackup', '-c', 'fast']
         cmd_tokens.append('-D')
         cmd_tokens.append(target_datadir)
@@ -397,6 +397,9 @@ class PgBaseBackup(Command):
                     cmd_tokens.append('-E')
                     cmd_tokens.append(path)
 
+            if max_rate:
+                cmd_tokens.append('--max-rate')
+                cmd_tokens.append(max_rate)
         # This is needed to handle Greenplum tablespaces
         cmd_tokens.append('--target-gp-dbid')
         cmd_tokens.append(str(target_gp_dbid))

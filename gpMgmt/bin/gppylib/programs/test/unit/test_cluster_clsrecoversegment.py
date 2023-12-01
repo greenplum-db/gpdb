@@ -3,6 +3,7 @@ from mock import Mock, patch, call
 from gppylib.test.unit.gp_unittest import GpTestCase, run_tests
 from gppylib.commands.base import CommandResult, ExecutionError
 from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
+from gppylib.test.unit.test_unit_gprecoverseg import Options
 
 class RecoverSegmentsTestCase(GpTestCase):
     def setUp(self):
@@ -73,6 +74,39 @@ class RecoverSegmentsTestCase(GpTestCase):
         self.mock_logger.error.assert_has_calls([call("Not able to terminate recovery process on host sdw1: Error getting recovery PID"),
                                                  call("Not able to terminate recovery process on host sdw3: Error getting recovery PID")])
 
+    def test_is_max_rate_valid_exception(self):
+        options = Options()
+        options.showProgressInplace = True
+
+        options.maxRate = 'k32'
+        object = GpRecoverSegmentProgram(options)
+        with self.assertRaises(Exception) as ex:
+            object.validateMaxRate()
+        self.assertEqual("transfer rate k32 is not a valid value", str(ex.exception))
+
+        options.maxRate = '0'
+        object = GpRecoverSegmentProgram(options)
+        with self.assertRaises(Exception) as ex:
+            object.validateMaxRate()
+        self.assertEqual("Transfer rate must be greater than zero", str(ex.exception))
+
+        options.maxRate = '1046M'
+        object = GpRecoverSegmentProgram(options)
+        with self.assertRaises(Exception) as ex:
+            object.validateMaxRate()
+        self.assertEqual("transfer rate 1046M is out of range", str(ex.exception))
+
+        options.maxRate = '1024G'
+        object = GpRecoverSegmentProgram(options)
+        with self.assertRaises(Exception) as ex:
+            object.validateMaxRate()
+        self.assertEqual("Invalid --max-rate unit: G", str(ex.exception))
+
+        options.maxRate = '3k2k'
+        object = GpRecoverSegmentProgram(options)
+        with self.assertRaises(Exception) as ex:
+            object.validateMaxRate()
+        self.assertEqual("transfer rate 3k2k is not a valid value", str(ex.exception))
 
 if __name__ == '__main__':
     run_tests()

@@ -12,6 +12,7 @@ gprecoverseg [-p <new_recover_host>[,...]]
              [-d <coordinator_data_directory>]
              [-B <batch_size>] [-b <segment_batch_size>] [--differential]
              [-F] [-a] [-q] [-s] [--no-progress] [-l <logfile_directory>]
+             [--max-rate <max_rate>]
 
 
 gprecoverseg -r [--replay-lag <replay_lag>] [--disable-replay-lag]
@@ -151,6 +152,12 @@ Optional. Perform a differential copy of the active segment instance
 in order to recover the failed segment. The default is to only copy
 over the incremental changes that occurred while the segment was down.
 
+--max-rate <max_rate>
+
+Optional. Specifies the max-rate for full recovery of failed segments.
+Rate is in kB/s, suffix `k` or `M` can be used to signify kB/s or MB/s.
+Valid rate ranges from 32kB/s to 1048576kB/s(1024MB/s). The default is to use the
+entire available network bandwidth to perform full recovery of failed segment.
 
 -i <recover_config_file>
 

@@ -1013,12 +1013,12 @@ class GpSegRecovery(Command):
     """
     Format gpsegrecovery call for running pg_basebackup/pg_rewind on remoteHost for the segments passed in confinfo
     """
-    def __init__(self, name, confinfo, logdir, batchSize, verbose, remoteHost, forceoverwrite, era):
-        cmdStr = _get_cmd_for_recovery_wrapper('gpsegrecovery', confinfo, logdir, batchSize, verbose, forceoverwrite, era)
+    def __init__(self, name, confinfo, logdir, batchSize, verbose, remoteHost, forceoverwrite, era, maxRate):
+        cmdStr = _get_cmd_for_recovery_wrapper('gpsegrecovery', confinfo, logdir, batchSize, verbose, forceoverwrite, era, maxRate)
         Command.__init__(self, name, cmdStr, REMOTE, remoteHost, start_new_session=True)
 
 
-def _get_cmd_for_recovery_wrapper(wrapper_filename, confinfo, logdir, batchSize, verbose, forceoverwrite, era=None):
+def _get_cmd_for_recovery_wrapper(wrapper_filename, confinfo, logdir, batchSize, verbose, forceoverwrite, era=None, maxRate=None):
     cmdStr = '$GPHOME/sbin/{}.py -c {} -l {}'.format(wrapper_filename, pipes.quote(confinfo), pipes.quote(logdir))
 
     if verbose:
@@ -1029,6 +1029,9 @@ def _get_cmd_for_recovery_wrapper(wrapper_filename, confinfo, logdir, batchSize,
         cmdStr += " --force-overwrite"
     if era:
         cmdStr += " --era={}".format(era)
+    if maxRate:
+        cmdStr += " --max-rate {}".format(maxRate)
+
 
     return cmdStr
 

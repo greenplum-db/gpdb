@@ -9,7 +9,7 @@ Recovers a primary or mirror segment instance that has been marked as down \(if 
 gprecoverseg [[-p <new_recover_host>[,...]] | -i <recover_config_file>] [-d <coordinator_data_directory>] 
              [-b <segment_batch_size>] [-B <batch_size>] [-F [-s]] [-a] [-q] [--differential]
 	           [--hba-hostnames <boolean>] 
-             [--no-progress] [-l <logfile_directory>]
+             [--no-progress] [-l <logfile_directory>] [--max-rate <max_rate>]
 
 gprecoverseg -r [--replay-lag <replay_lag>] [--disable-replay-lag]
 
@@ -186,6 +186,9 @@ The recovery process marks the segment as up again in the Greenplum Database sys
 
     >**Note**
     >The `--differential` option cannot be combined with any of the following `gprecoverseg` options: `-i`, `-o`, `-F`, or `-p`.
+
+--max-rate max\_rate
+:    Optional. Maximum transfer rate for Full recovery of failed segments. Rate is in kB/s, suffix `k` or `M` can be used to signify kB/s or MB/s. Valid options are from 32kB/s to 1048576kB/s(1024MB/s).
 
 -v \| --verbose
 :   Sets logging output to verbose.

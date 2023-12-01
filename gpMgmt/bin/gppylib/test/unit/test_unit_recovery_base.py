@@ -188,7 +188,7 @@ class RecoveryBaseTestCase(GpTestCase):
         mock_workerpool.return_value.getCompletedItems = Mock(return_value=[cmd1, cmd1])
         sys.argv = ['recovery_base', '-l', '/tmp/logdir',
                     '-c {}'.format(self.confinfo),
-                    '-b 10', '-f', '-v', '--era', '1234_2021']
+                    '-b 10', '-f', '-v', '--era', '1234_2021', '--max-rate', '1024M']
         stderr_buf, ex = self.run_recovery_base_get_stderr()
         self._asserts_for_passing_tests(stderr_buf, ex, enable_verbose_count=1)
         self.assertEqual([call('test_file.py', ANY, ANY, logdir='/tmp/logdir')],
@@ -325,7 +325,7 @@ class SetCmdResultsTestCase(GpTestCase):
             raise Exception('running the cmd failed')
 
         recovery_info = RecoveryInfo('/tmp/datadir2', 7002, 2, None, None, None, None, None, '/tmp/progress_file2')
-        test_cmd = FullRecovery('original name', recovery_info, True,None,None)
+        test_cmd = FullRecovery('original name', recovery_info, True,None,None,None)
         test_decorator(test_cmd)
         self.assertEqual('new name', test_cmd.name)
 
@@ -340,7 +340,7 @@ class SetCmdResultsTestCase(GpTestCase):
             cmd.error_type = None
             raise Exception('running the cmd failed')
         recovery_info = RecoveryInfo('/tmp/datadir2', 7002, 2, None, None, None, None, None, '/tmp/progress_file2')
-        test_cmd = FullRecovery('original name', recovery_info, True,None,None)
+        test_cmd = FullRecovery('original name', recovery_info, True,None,None,None)
         test_decorator(test_cmd)
         self.assertEqual('new name', test_cmd.name)
 

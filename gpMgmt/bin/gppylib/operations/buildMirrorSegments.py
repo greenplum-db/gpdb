@@ -171,7 +171,7 @@ class GpMirrorListToBuild:
         ADDMIRRORS='add'
         RECOVERMIRRORS='recover'
 
-    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False, progressMode=Progress.INPLACE, parallelPerHost=gp.DEFAULT_SEGHOST_NUM_WORKERS):
+    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False, progressMode=Progress.INPLACE, parallelPerHost=gp.DEFAULT_SEGHOST_NUM_WORKERS, maxRate=None):
         self.__mirrorsToBuild = toBuild
         self.__pool = pool
         self.__quiet = quiet
@@ -181,6 +181,7 @@ class GpMirrorListToBuild:
         self.__forceoverwrite = forceoverwrite
         self.__parallelPerHost = parallelPerHost
         self.__additionalWarnings = additionalWarnings or []
+        self.__maxRate = maxRate
         self.segments_to_mark_down = []
         if not logger:
             raise Exception('logger argument cannot be None')
@@ -209,6 +210,12 @@ class GpMirrorListToBuild:
         Returns any additional warnings generated during building of list
         """
         return self.__additionalWarnings
+
+    def getMaxTransferRate(self):
+        """
+        returns the maximum transfer rate of data directory during Full recovery of failed segments
+        """
+        return self.__maxRate
 
     def _cleanup_before_recovery(self, gpArray, gpEnv):
         self.checkForPortAndDirectoryConflicts(gpArray)
@@ -602,6 +609,7 @@ class GpMirrorListToBuild:
                                          batchSize=self.__parallelPerHost,
                                          remoteHost=hostName,
                                          era=era,
+                                         maxRate=self.__maxRate,
                                          forceoverwrite=self.__forceoverwrite))
         completed_recovery_results = self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, suppressErrorCheck=True,
                                                                                        progressCmds=progress_cmds)

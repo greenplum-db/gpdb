@@ -562,6 +562,31 @@ Feature: gprecoverseg tests
         And the segments are synchronized
         And the cluster is rebalanced
 
+    Scenario: gprecoverseg recovers segment for valid max-rate options and errors out for others
+      Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+      When user stops all primary processes
+        And user can start transactions
+        And the user runs "gprecoverseg -aF --max-rate 30"
+      Then gprecoverseg should return a return code of 2
+        And gprecoverseg should print "error: transfer rate 30 is out of range" to stdout
+      When the user runs "gprecoverseg -aF --max-rate k35"
+      Then gprecoverseg should return a return code of 2
+        And gprecoverseg should print "error: transfer rate k35 is not a valid value" to stdout
+      When the user runs "gprecoverseg -aF --max-rate 0"
+      Then gprecoverseg should return a return code of 2
+        And gprecoverseg should print "error: Transfer rate must be greater than zero" to stdout
+      When the user runs "gprecoverseg -aF --max-rate 32G"
+      Then gprecoverseg should return a return code of 2
+        And gprecoverseg should print "error: Invalid --max-rate unit: G" to stdout
+      When the user runs "gprecoverseg -aF --max-rate 104857.6k"
+      Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Segments successfully recovered" to stdout
+        And gprecoverseg should print "Maximum Transfer Rate.*= 104857.6k" to stdout
+        And the segments are synchronized
+        And the cluster is rebalanced
+
 ########################### @concourse_cluster tests ###########################
 # The @concourse_cluster tag denotes the scenario that requires a remote cluster
     @demo_cluster
