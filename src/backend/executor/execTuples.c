@@ -74,6 +74,7 @@ static TupleDesc ExecTypeFromTLInternal(List *targetList,
 										bool skipjunk);
 static pg_attribute_always_inline void slot_deform_heap_tuple(TupleTableSlot *slot, HeapTuple tuple, uint32 *offp,
 															  int natts);
+static pg_attribute_always_inline void slot_deform_ao_tuple(TupleTableSlot *slot, int natts);
 static inline void tts_buffer_heap_store_tuple(TupleTableSlot *slot,
 											   HeapTuple tuple,
 											   Buffer buffer,
@@ -881,9 +882,19 @@ tts_buffer_heap_copy_minimal_tuple(TupleTableSlot *slot)
 static void
 tts_ao_getsomeattrs(TupleTableSlot *slot, int natts)
 {
-    AOTupleTableSlot *aoSlot = (AOTupleTableSlot *)slot;
-    memtuple_deform(aoSlot->tuple, aoSlot->mt_bind, slot->tts_values, slot->tts_isnull);
-    slot->tts_nvalid = slot->tts_tupleDescriptor->natts;
+	Assert(!TTS_EMPTY(slot));
+
+	slot_deform_ao_tuple(slot, natts);
+}
+
+static void
+tts_ao_materialize(TupleTableSlot *slot)
+{
+	Assert(!TTS_EMPTY(slot));
+
+	slot_deform_ao_tuple(slot, slot->tts_tupleDescriptor->natts);
+
+	tts_virtual_materialize(slot);
 }
 
 static HeapTuple
@@ -1084,6 +1095,39 @@ slot_deform_heap_tuple(TupleTableSlot *slot, HeapTuple tuple, uint32 *offp,
 		slot->tts_flags &= ~TTS_FLAG_SLOW;
 }
 
+/*
+ * slot_deform_ao_tuple
+ *		Given a TupleTableSlot, extract data from the slot's memtuple tuple
+ *		into its Datum/isnull arrays.  Data is extracted up through the
+ *		natts'th column (caller must ensure this is a legal column number).
+ *
+ *		This is essentially an incremental version of memtuple_deform:
+ *		on each call we extract attributes up to the one needed, without
+ *		re-computing information about previously extracted attributes.
+ *		slot->tts_nvalid is the number of attributes already extracted.
+ *
+ * This is marked as always inline, so the different offp for different types
+ * of slots gets optimized away.
+ */
+static pg_attribute_always_inline void
+slot_deform_ao_tuple(TupleTableSlot *slot, int natts)
+{
+	int attnum = slot->tts_nvalid;
+	bool *isnull = slot->tts_isnull;
+
+	AOTupleTableSlot *aoSlot = (AOTupleTableSlot *)slot;
+	MemTuple tuple = aoSlot->tuple;
+	MemTupleBinding *pbind = aoSlot->mt_bind;
+
+	for (; attnum < natts; attnum++)
+	{
+		if (attnum < pbind->natts)
+			slot->tts_values[attnum] = memtuple_getattr(tuple, pbind, attnum + 1, &isnull[attnum]);
+		else
+			slot->tts_values[attnum] = getmissingattr(pbind->tupdesc, attnum + 1, &isnull[attnum]);
+	}
+	slot->tts_nvalid = natts;
+}
 
 const TupleTableSlotOps TTSOpsVirtual = {
 	.base_slot_size = sizeof(VirtualTupleTableSlot),
@@ -1163,7 +1207,7 @@ const TupleTableSlotOps TTSOpsAOTuple = {
     .clear = tts_virtual_clear,
     .getsomeattrs = tts_ao_getsomeattrs,
     .getsysattr = tts_virtual_getsysattr,
-    .materialize = tts_virtual_materialize,
+    .materialize = tts_ao_materialize,
     .copyslot = tts_virtual_copyslot,
 
     /*

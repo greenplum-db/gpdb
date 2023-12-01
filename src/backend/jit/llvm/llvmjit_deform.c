@@ -792,8 +792,10 @@ slot_compile_deform_ao(LLVMJitContext *context, TupleDesc desc,
     LLVMBasicBlockRef b_large_col_binding;
     LLVMBasicBlockRef b_getattrbinds;
     LLVMBasicBlockRef b_getnullbmsize;
+    LLVMBasicBlockRef b_find_start;
     LLVMBasicBlockRef b_getmissingattrs;
     LLVMBasicBlockRef b_out;
+    LLVMBasicBlockRef b_dead;
 
     LLVMBasicBlockRef *attmissingcheckblocks;
     LLVMBasicBlockRef *attstartblocks;
@@ -812,6 +814,7 @@ slot_compile_deform_ao(LLVMJitContext *context, TupleDesc desc,
     LLVMValueRef v_tts_values;
     LLVMValueRef v_tts_nulls;
     LLVMValueRef v_nvalidp;
+	LLVMValueRef v_nvalid;
     LLVMValueRef v_tuplep;
     LLVMValueRef v_bindingp;
     LLVMValueRef v_tupleheader;
@@ -855,12 +858,15 @@ slot_compile_deform_ao(LLVMJitContext *context, TupleDesc desc,
         LLVMAppendBasicBlock(v_deform_fn, "b_getattrbinds");
     b_getnullbmsize = 
         LLVMAppendBasicBlock(v_deform_fn, "b_getnullbmsize");
+    b_find_start =
+        LLVMAppendBasicBlock(v_deform_fn, "find_start_attribute");
     b_getmissingattrs =
         LLVMAppendBasicBlock(v_deform_fn, "get_missingatts");
     b_out =
         LLVMAppendBasicBlock(v_deform_fn, "out");
+    b_dead =
+        LLVMAppendBasicBlock(v_deform_fn, "deadblock");
 
-    natts = desc->natts;
     attmissingcheckblocks = palloc(sizeof(LLVMBasicBlockRef) * natts);
     attstartblocks = palloc(sizeof(LLVMBasicBlockRef) * natts);
     attnullcheckblocks = palloc(sizeof(LLVMBasicBlockRef) * natts);
@@ -979,7 +985,7 @@ slot_compile_deform_ao(LLVMJitContext *context, TupleDesc desc,
         l_load_struct_gep(b, v_colbind, FIELDNO_MEMTUPLEBINDINGCOLS_BINDINGS, "attrbinds");
     v_nullsavesp =
         LLVMBuildStructGEP(b, v_colbind, FIELDNO_MEMTUPLEBINDINGCOLS_NULLSAVES, "null_saves");
-    LLVMBuildCondBr(b, v_hasnulls, b_getnullbmsize, attmissingcheckblocks[0]);
+    LLVMBuildCondBr(b, v_hasnulls, b_getnullbmsize, b_find_start);
 
     LLVMPositionBuilderAtEnd(b, b_getnullbmsize);
     {
@@ -990,7 +996,41 @@ slot_compile_deform_ao(LLVMJitContext *context, TupleDesc desc,
                                          ""),
                                          v_nullbmsizep);
     }
-    LLVMBuildBr(b, attmissingcheckblocks[0]);
+    LLVMBuildBr(b, b_find_start);
+
+
+    LLVMPositionBuilderAtEnd(b, b_find_start);
+
+    v_nvalid = LLVMBuildLoad(b, v_nvalidp, "");
+
+    /*
+     * Build switch to go from nvalid to the right startblock.  Callers
+     * currently don't have the knowledge, but it'd be good for performance to
+     * avoid this check when it's known that the slot is empty (e.g. in scan
+     * nodes).
+     */
+    if (true)
+    {
+        LLVMValueRef v_switch = LLVMBuildSwitch(b, v_nvalid,
+                                                b_dead, natts);
+
+        for (attnum = 0; attnum < natts; attnum++)
+        {
+            LLVMValueRef v_attno = l_int16_const(attnum);
+
+            LLVMAddCase(v_switch, v_attno, attmissingcheckblocks[attnum]);
+        }
+
+    }
+    else
+    {
+        /* jump from entry block to first block */
+        LLVMBuildBr(b, attmissingcheckblocks[0]);
+    }
+
+    LLVMPositionBuilderAtEnd(b, b_dead);
+    LLVMBuildUnreachable(b);
+
     for (attnum = 0; attnum < natts; attnum++)
     {
         Form_pg_attribute att = TupleDescAttr(desc, attnum);
@@ -1222,7 +1262,7 @@ slot_compile_deform_ao(LLVMJitContext *context, TupleDesc desc,
     LLVMBuildBr(b, b_out);
 
     LLVMPositionBuilderAtEnd(b, b_out);
-    LLVMBuildStore(b, l_int16_const(desc->natts), v_nvalidp);
+    LLVMBuildStore(b, l_int16_const(natts), v_nvalidp);
     LLVMBuildRetVoid(b);
 
     LLVMDisposeBuilder(b);
