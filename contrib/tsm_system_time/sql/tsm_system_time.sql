@@ -38,6 +38,8 @@ SELECT * FROM
   LATERAL (SELECT COUNT(*) FROM test_tablesample
            TABLESAMPLE system_time (time)) ss;
 
+-- XXX: LATERAL support is limited in GPDB. So, the following errors out. Also,
+-- setting nested loop off doesn't force a change in the plan shape unfortunately.
 SELECT * FROM
   (VALUES (0),(100000)) v(time),
   LATERAL (SELECT COUNT(*) FROM test_tablesample

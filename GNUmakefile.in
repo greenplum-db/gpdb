@@ -28,6 +28,8 @@ all:
 	$(MAKE) -C contrib/btree_gin all
 	$(MAKE) -C contrib/pg_trgm all
 	$(MAKE) -C contrib/isn all
+	$(MAKE) -C contrib/tsm_system_rows all
+	$(MAKE) -C contrib/tsm_system_time all
 ifeq ($(with_openssl), yes)
 	$(MAKE) -C contrib/sslinfo all
 endif
