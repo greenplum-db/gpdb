@@ -235,6 +235,7 @@ groups:
   - pg_upgrade_[[ os_type ]]
   - interconnect_[[ os_type ]]
   - pg_filedump_[[ os_type ]]
+  - hot_standby_[[ os_type ]]
   - icw_planner_resgroup_[[ os_type ]]
   - icw_gporca_resgroup_[[ os_type ]]
   - gate_icw_end
@@ -308,6 +309,7 @@ groups:
   - pg_upgrade_[[ os_type ]]
   - interconnect_[[ os_type ]]
   - pg_filedump_[[ os_type ]]
+  - hot_standby_[[ os_type ]]
   - icw_planner_resgroup_[[ os_type ]]
   - icw_gporca_resgroup_[[ os_type ]]
   - gate_icw_end
@@ -1232,6 +1234,24 @@ jobs:
           BUILD_TYPE=((rc-build-type)) installcheck
         TEST_OS: [[ test_os ]]
 
+- name: hot_standby_[[ os_type ]]
+  plan:
+    - in_parallel:
+        steps:
+          - get: gpdb_src
+            passed: [gate_icw_start]
+          - get: bin_gpdb
+            passed: [gate_icw_start]
+            trigger: true
+          - get: gpdb7-[[ os_type ]]-test
+    - task: ic_hot_standby
+      file: gpdb_src/concourse/tasks/ic_gpdb.yml
+      image: gpdb7-[[ os_type ]]-test
+      params:
+        MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off -c jit=off'
+          BUILD_TYPE=((rc-build-type)) -C src/test/isolation2 installcheck-hot-standby
+        TEST_OS: [[ test_os ]]
+
 - name: icw_extensions_gpcloud_[[ os_type ]]
   plan:
     - in_parallel:
@@ -1464,6 +1484,7 @@ jobs:
         - pg_upgrade_[[ os_type ]]
         - interconnect_[[ os_type ]]
         - pg_filedump_[[ os_type ]]
+        - hot_standby_[[ os_type ]]
       - get: icw_planner_[[ os_type ]]_dump
         params:
           skip_download: 'true'
@@ -1490,6 +1511,7 @@ jobs:
         - icw_gporca_resgroup_[[ os_type ]]
         - interconnect_[[ os_type ]]
         - pg_filedump_[[ os_type ]]
+        - hot_standby_[[ os_type ]]
         trigger: true
       - get: bin_gpdb_clients
         params:
