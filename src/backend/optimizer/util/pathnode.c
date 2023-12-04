@@ -33,6 +33,7 @@
 
 #include "catalog/pg_proc.h"
 #include "cdb/cdbhash.h"        /* cdb_default_distribution_opfamily_for_type() */
+#include "cdb/cdbmutate.h"      /* contains_outer_params() */
 #include "cdb/cdbpath.h"        /* cdb_create_motion_path() etc */
 #include "cdb/cdbutil.h"		/* getgpsegmentCount() */
 #include "cdb/cdbvars.h"
@@ -59,6 +60,7 @@ static CdbVisitOpt pathnode_walk_list(List *pathlist,
 static CdbVisitOpt pathnode_walk_kids(Path *path,
 				   CdbVisitOpt (*walker)(Path *path, void *context),
 				   void *context);
+static bool functionscan_contain_outer_params(PlannerInfo *root, Path *path);
 
 /*
  * pathnode_walk_node
@@ -3199,6 +3201,11 @@ create_nestloop_path(PlannerInfo *root,
 	Relids		inner_req_outer = PATH_REQ_OUTER(inner_path);
 	bool		inner_must_be_local = !bms_is_empty(inner_req_outer);
 
+	if (outer_path->pathtype == T_FunctionScan)
+		outer_must_be_local = outer_must_be_local || functionscan_contain_outer_params(root, outer_path);
+	if (inner_path->pathtype == T_FunctionScan)
+		inner_must_be_local = inner_must_be_local || functionscan_contain_outer_params(root, inner_path);
+
 	/* Add motion nodes above subpaths and decide where to join. */
 	join_locus = cdbpath_motion_for_join(root,
 										 jointype,
@@ -3433,6 +3440,11 @@ create_mergejoin_path(PlannerInfo *root,
 	preserve_outer_ordering = preserve_outer_ordering || !bms_is_empty(PATH_REQ_OUTER(outer_path));
 	preserve_inner_ordering = preserve_inner_ordering || !bms_is_empty(PATH_REQ_OUTER(inner_path));
 
+	if (outer_path->pathtype == T_FunctionScan)
+		preserve_outer_ordering = preserve_outer_ordering || functionscan_contain_outer_params(root, outer_path);
+	if (inner_path->pathtype == T_FunctionScan)
+		preserve_inner_ordering = preserve_inner_ordering || functionscan_contain_outer_params(root, inner_path);
+
 	join_locus = cdbpath_motion_for_join(root,
 										 jointype,
 										 &outer_path,       /* INOUT */
@@ -3537,6 +3549,11 @@ create_hashjoin_path(PlannerInfo *root,
 	bool		outer_must_be_local = !bms_is_empty(PATH_REQ_OUTER(outer_path));
 	bool		inner_must_be_local = !bms_is_empty(PATH_REQ_OUTER(inner_path));
 
+	if (outer_path->pathtype == T_FunctionScan)
+		outer_must_be_local = outer_must_be_local || functionscan_contain_outer_params(root, outer_path);
+	if (inner_path->pathtype == T_FunctionScan)
+		inner_must_be_local = inner_must_be_local || functionscan_contain_outer_params(root, inner_path);
+
 	/* Add motion nodes above subpaths and decide where to join. */
 	join_locus = cdbpath_motion_for_join(root,
 										 jointype,
@@ -3638,6 +3655,49 @@ create_hashjoin_path(PlannerInfo *root,
 	return turn_volatile_seggen_to_singleqe(root,
 											(Path *) pathnode,
 											(Node *) (pathnode->jpath.joinrestrictinfo));	
+}
+
+/* See if the function scan refs parameters of the outer query. */
+static bool
+functionscan_contain_outer_params(PlannerInfo *root, Path *path)
+{
+	RangeTblEntry *rte;
+	RelOptInfo *rel = path->parent;
+	Index scan_relid = rel->relid;
+	bool contain_outer_params = false;
+
+	/* it should be a function base rel... */
+	Assert(scan_relid > 0);
+	rte = planner_rt_fetch(scan_relid, root);
+	Assert(path->pathtype == T_FunctionScan);
+	Assert(rte->rtekind == RTE_FUNCTION);
+
+	if (CdbPathLocus_IsEntry(path->locus))
+	{
+		ListCell   *lc;
+
+		foreach (lc, rel->baserestrictinfo)
+		{
+			RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
+
+			if (rinfo->contain_outer_query_references)
+			{
+				contain_outer_params = true;
+				break;
+			}
+		}
+
+		foreach (lc, rte->functions)
+		{
+			RangeTblFunction *rtfunc = (RangeTblFunction *) lfirst(lc);
+
+			if (!contain_outer_params &&
+				contains_outer_params(rtfunc->funcexpr, root))
+				contain_outer_params = true;
+		}
+	}
+
+	return contain_outer_params;
 }
 
 /*
