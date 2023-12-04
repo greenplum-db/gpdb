@@ -57,6 +57,7 @@ typedef struct AnyTableData
 	PlanState			*subplan;     /* subplan node */
 	TupleDesc            subdesc;     /* tuple descriptor of subplan */
 	JunkFilter          *junkfilter;  /* for projection of subplan tuple */
+	MemoryContext        retbuffer_ctx; /* memory context for the return buffer */
 } AnyTableData;
 
 /*
@@ -391,6 +392,8 @@ ExecInitTableFunction(TableFunctionScan *node, EState *estate, int eflags)
 	scanstate->inputscan->econtext = econtext;
 	scanstate->inputscan->subplan  = subplan;
 	scanstate->inputscan->subdesc  = inputdesc;
+	scanstate->inputscan->retbuffer_ctx =
+		AllocSetContextCreate(CurrentMemoryContext, "AnyTableBuffer", ALLOCSET_SMALL_SIZES);
 
 	/* Determine projection information for subplan */
 	scanstate->inputscan->junkfilter =
@@ -494,6 +497,7 @@ AnyTable_GetNextTuple(AnyTable t)
 {
 	MemoryContext oldcontext;
 	TupleTableSlot *slot;
+	HeapTuple returnTuple;
 
 	if (t == NULL)
 	{
@@ -524,7 +528,14 @@ AnyTable_GetNextTuple(AnyTable t)
 	 * I don't think we should be doing this either
 	 */
 	slot = ExecFilterJunk(t->junkfilter, t->econtext->ecxt_outertuple);
-	return ExecCopySlotHeapTuple(slot);
+
+	/* clean the previous tuple, and copy the new tuple into owned buffer */
+	MemoryContextReset(t->retbuffer_ctx);
+	oldcontext = MemoryContextSwitchTo(t->retbuffer_ctx);
+	returnTuple = ExecCopySlotHeapTuple(slot);
+	MemoryContextSwitchTo(oldcontext);
+
+	return returnTuple;
 }
 
 /*
