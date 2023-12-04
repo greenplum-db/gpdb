@@ -206,6 +206,13 @@ endCurrentBitmapIndexScan(DynamicBitmapIndexScanState *node)
 {
 	if (node->bitmapIndexScanState)
 	{
+		/* Free ExprContext allocated in beginCurrentBitmapIndexScan */
+		if (node->bitmapIndexScanState->ss.ps.ps_ExprContext)
+		{
+			FreeExprContext(node->bitmapIndexScanState->ss.ps.ps_ExprContext, true);
+			node->bitmapIndexScanState->ss.ps.ps_ExprContext = NULL;
+		}
+
 		ExecEndBitmapIndexScan(node->bitmapIndexScanState);
 		node->bitmapIndexScanState = NULL;
 	}
