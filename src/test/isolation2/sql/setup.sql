@@ -566,3 +566,23 @@ RETURNS TEXT AS $$
         raise Exception("bogus file: %s should not exist" % bogus_file)
     return 'OK'
 $$ LANGUAGE plpython3u;
+
+CREATE or REPLACE FUNCTION wait_until_segments_are_down(num_segs int)
+RETURNS bool AS
+$$
+declare
+retries int; /* in func */
+begin /* in func */
+  retries := 1200; /* in func */
+  loop /* in func */
+if (select count(*) = num_segs from gp_segment_configuration where status = 'd') then /* in func */
+      return true; /* in func */
+end if; /* in func */
+    if retries <= 0 then /* in func */
+      return false; /* in func */
+end if; /* in func */
+    perform pg_sleep(0.1); /* in func */
+    retries := retries - 1; /* in func */
+end loop; /* in func */
+end; /* in func */
+$$ language plpgsql;

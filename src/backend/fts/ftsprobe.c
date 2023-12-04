@@ -23,16 +23,22 @@
 
 #include "libpq-fe.h"
 #include "libpq-int.h"
+#include "access/table.h"
 #include "access/xact.h"
+#include "catalog/gp_configuration_history.h"
+#include "catalog/indexing.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbvars.h"
 #include "postmaster/fts.h"
 #include "postmaster/ftsprobe.h"
 #include "postmaster/postmaster.h"
+#include "utils/builtins.h"
+#include "utils/rel.h"
 #include "utils/snapmgr.h"
 
 
 static struct pollfd *PollFds;
+static Bitmapset *doubleFaultContentIds;
 
 static CdbComponentDatabaseInfo *
 FtsGetPeerSegment(CdbComponentDatabases *cdbs,
@@ -972,6 +978,58 @@ updateConfiguration(CdbComponentDatabaseInfo *primary,
 }
 
 /*
+ * This function is used to update gp_configuration_history whenever a
+ * segment pair goes into double fault or comes out of double fault.
+ * Since FTS probe doesn't have its own transaction, we need to create one
+ * to update the catalog and commit it once it is done.
+ */
+static void
+updateDoubleFaultStatus(CdbComponentDatabaseInfo *primary, bool isSegmentAlive)
+{
+	StartTransactionCommand();
+	GetTransactionSnapshot();
+
+	/*
+	 * Insert new tuple into gp_configuration_history catalog.
+	 */
+	Relation histrel;
+	HeapTuple histtuple;
+	Datum histvals[Natts_gp_configuration_history];
+	bool histnulls[Natts_gp_configuration_history] = { false };
+	char desc[SQL_CMD_BUF_SIZE];
+
+	histrel = table_open(GpConfigHistoryRelationId,
+						 RowExclusiveLock);
+
+	histvals[Anum_gp_configuration_history_time-1] =
+		TimestampTzGetDatum(GetCurrentTimestamp());
+	histvals[Anum_gp_configuration_history_dbid-1] =
+		Int16GetDatum(primary->config->dbid);
+	if (isSegmentAlive)
+		snprintf(desc, sizeof(desc),
+				 "FTS: content id %d is out of double fault, dbid %d is up",
+				 primary->config->segindex, primary->config->dbid);
+	else
+		snprintf(desc, sizeof(desc),
+				 "FTS: double fault detected for content id %d",
+				 primary->config->segindex);
+	histvals[Anum_gp_configuration_history_description-1] =
+		CStringGetTextDatum(desc);
+	histtuple = heap_form_tuple(RelationGetDescr(histrel), histvals, histnulls);
+	CatalogTupleInsert(histrel, histtuple);
+
+	SIMPLE_FAULT_INJECTOR("fts_update_config_hist");
+
+	table_close(histrel, RowExclusiveLock);
+
+	CommitTransactionCommand();
+	if (isSegmentAlive)
+		doubleFaultContentIds = bms_del_member(doubleFaultContentIds, primary->config->segindex);
+	else
+		doubleFaultContentIds = bms_add_member(doubleFaultContentIds, primary->config->segindex);
+}
+
+/*
  * Process responses from primary segments:
  * (a) Transition internal state so that segments can be messaged subsequently
  * (e.g. promotion and turning off syncrep).
@@ -1017,6 +1075,11 @@ processResponse(fts_context *context)
 		{
 			case FTS_PROBE_SUCCESS:
 				Assert(IsPrimaryAlive);
+
+				if (bms_is_member(primary->config->segindex, doubleFaultContentIds))
+					updateDoubleFaultStatus(primary,
+											true);
+
 				if (ftsInfo->result.isSyncRepEnabled && !IsMirrorAlive)
 				{
 					if (!ftsInfo->result.retryRequested)
@@ -1160,6 +1223,11 @@ processResponse(fts_context *context)
 					elog(WARNING, "ERROR: FTS double fault detected (content=%d) "
 						 "primary dbid=%d, mirror dbid=%d",
 						 primary->config->segindex, primary->config->dbid, mirror->config->dbid);
+
+					if (!bms_is_member(primary->config->segindex, doubleFaultContentIds))
+						updateDoubleFaultStatus(primary,
+												false);
+
 					ftsInfo->state = FTS_RESPONSE_PROCESSED;
 				}
 				break;
@@ -1181,6 +1249,11 @@ processResponse(fts_context *context)
 				elog(WARNING, "ERROR: FTS double fault detected (content=%d) "
 					 "primary dbid=%d, mirror dbid=%d",
 					 primary->config->segindex, primary->config->dbid, mirror->config->dbid);
+
+				if (!bms_is_member(primary->config->segindex, doubleFaultContentIds))
+					updateDoubleFaultStatus(primary,
+											false);
+
 				ftsInfo->state = FTS_RESPONSE_PROCESSED;
 				break;
 			case FTS_PROMOTE_SUCCESS:
@@ -1188,6 +1261,11 @@ processResponse(fts_context *context)
 					   "FTS mirror (content=%d, dbid=%d) promotion "
 					   "triggered successfully",
 					   primary->config->segindex, primary->config->dbid);
+
+				if (bms_is_member(primary->config->segindex, doubleFaultContentIds))
+					updateDoubleFaultStatus(primary,
+											true);
+
 				ftsInfo->state = FTS_RESPONSE_PROCESSED;
 				break;
 			case FTS_SYNCREP_OFF_SUCCESS:
