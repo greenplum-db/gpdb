@@ -283,3 +283,16 @@ SELECT count(*) FROM t6_function_scan;
 DROP TABLE IF EXISTS t7_function_scan;
 CREATE TABLE t7_function_scan AS SELECT * FROM  get_country() UNION ALL SELECT 100/(1+ 1* random())::int, 'cc'::text;
 SELECT count(*) FROM t7_function_scan;
+
+-- Test INITPLAN functions in INITPLAN
+-- more details could be found at https://github.com/greenplum-db/gpdb/issues/16679
+create or replace function hello_initplan() returns setof text as $$
+return ["hello"]
+$$ language plpython3u
+execute on initplan;
+
+explain select array(select f from hello_initplan() as f);
+select array(select f from hello_initplan() as f);
+
+
+
