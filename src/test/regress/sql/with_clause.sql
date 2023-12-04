@@ -390,3 +390,29 @@ with recursive rcte(x,y) as
   where t.b = x
 )
 select * from rcte limit 10;
+
+-- Issue  #16785
+set optimizer = off;
+drop table if exists r;
+drop table if exists d;
+create table r (a int, b int) distributed replicated;
+create table d (b int, a int default 1) distributed by (b);
+
+insert into d select * from generate_series(0, 20) j;
+alter table d set distributed randomly;
+insert into r values (1, 1), (2, 2), (3, 3);
+
+-- Segment General
+with cte as (
+    select a, b * random() as rand from r
+)
+select count(distinct(rand)) from cte join d on cte.a = d.a;
+
+-- General
+with cte as (
+    select a as a, a * random() as rand from generate_series(0, 3)a
+)
+select count(distinct(rand)) from cte join d on cte.a = d.a;
+
+drop table r;
+drop table d;
