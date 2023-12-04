@@ -604,7 +604,7 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	Cost		cpu_per_tuple;
 	double		tuples_fetched;
 	double		pages_fetched;
-	double		rand_heap_pages;
+	double		rand_heap_pages=0.0;
 	double		index_pages;
 	int			numsegments;
 	BlockNumber orig_idx_pages;
