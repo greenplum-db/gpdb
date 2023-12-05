@@ -489,6 +489,12 @@ AnyTable_GetTupleDesc(AnyTable t)
 	return t->junkfilter->jf_cleanTupType;
 }
 
+/*
+ * Get the next tuple from anytable
+ *
+ * will alloc memory in caller's memory context.
+ * caller need to relase the memory using pfree()
+ */
 HeapTuple
 AnyTable_GetNextTuple(AnyTable t)
 {
