@@ -86,6 +86,8 @@ void new_gpdb_invalidate_bitmap_indexes(void);
 /* check_gp.c */
 
 void check_greenplum(void);
+void setup_GPDB6_data_type_checks(ClusterInfo *cluster);
+void teardown_GPDB6_data_type_checks(ClusterInfo *cluster);
 
 /* reporting.c */
 

@@ -15,6 +15,7 @@
  */
 
 #include "pg_upgrade_greenplum.h"
+#include "catalog/pg_class_d.h"
 
 #define RELSTORAGE_EXTERNAL	'x'
 
@@ -720,4 +721,104 @@ check_for_array_of_partition_table_types(ClusterInfo *cluster)
 	pfree(dependee_partition_report);
 
 	check_ok();
+}
+
+void
+setup_GPDB6_data_type_checks(ClusterInfo *cluster)
+{
+	if (GET_MAJOR_VERSION(cluster->major_version) > 904)
+		return;
+
+	for (int dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+	{
+		DbInfo *active_db = &cluster->dbarr.dbs[dbnum];
+		PGconn *conn = connectToServer(cluster, active_db->db_name);
+		PGresult *res = executeQueryOrDie(conn,
+										  "CREATE SCHEMA __gpupgrade_tmp; "
+										  "CREATE FUNCTION __gpupgrade_tmp.data_type_checks(base_query TEXT) "
+										  "RETURNS TABLE ( "
+										  "    nspname NAME, "
+										  "    relname NAME, "
+										  "    attname NAME "
+										  ") "
+										  "AS $$ "
+										  "DECLARE "
+										  "    result_oids REGTYPE[]; "
+										  "    base_oids REGTYPE[]; "
+										  "    dependent_oids REGTYPE[]; "
+										  "BEGIN "
+										  "    EXECUTE base_query INTO base_oids; "
+										  "    dependent_oids = base_oids; "
+										  "    result_oids = base_oids; "
+										  "    WHILE array_length(dependent_oids, 1) IS NOT NULL LOOP "
+										  "        dependent_oids := ARRAY( "
+										  "            SELECT t.oid "
+										  "            FROM ( "
+										  "                SELECT t.oid "
+										  "                FROM pg_catalog.pg_type t, unnest(dependent_oids) AS x(oid) "
+										  "                WHERE typbasetype = x.oid AND typtype = 'd' "
+										  "                UNION ALL "
+										  "                SELECT t.oid "
+										  "                FROM pg_catalog.pg_type t, unnest(dependent_oids) AS x(oid) "
+										  "                WHERE typelem = x.oid AND typtype = 'b' "
+										  "                UNION ALL "
+										  "                SELECT t.oid "
+										  "                FROM pg_catalog.pg_type t "
+										  "                JOIN pg_catalog.pg_class c ON t.oid = c.reltype "
+										  "                JOIN pg_catalog.pg_attribute a ON c.oid = a.attrelid "
+										  "                WHERE t.typtype = 'c' "
+										  "                    AND NOT a.attisdropped "
+										  "                    AND a.atttypid = ANY(dependent_oids) "
+										  "                UNION ALL "
+										  "                SELECT t.oid "
+										  "                FROM pg_catalog.pg_type t, pg_catalog.pg_range r, unnest(dependent_oids) AS x(oid) "
+										  "                WHERE t.typtype = 'r' "
+										  "                    AND r.rngtypid = t.oid "
+										  "                    AND r.rngsubtype = x.oid "
+										  "            ) AS t "
+										  "        ); "
+										  "        result_oids := result_oids || dependent_oids; "
+										  "    END LOOP; "
+										  "    RETURN QUERY "
+										  "    SELECT n.nspname, c.relname, a.attname "
+										  "    FROM pg_catalog.pg_class c "
+										  "    JOIN pg_catalog.pg_namespace n ON c.relnamespace = n.oid "
+										  "    JOIN pg_catalog.pg_attribute a ON c.oid = a.attrelid "
+										  "    WHERE NOT a.attisdropped "
+										  "        AND a.atttypid = ANY(result_oids) "
+										  "        AND c.relkind IN ( "
+													   CppAsString2(RELKIND_RELATION) ", "
+													   CppAsString2(RELKIND_MATVIEW) ", "
+													   CppAsString2(RELKIND_INDEX)
+										  "        ) "
+										  "        AND n.nspname !~ '^pg_temp_' "
+										  "        AND n.nspname !~ '^pg_toast_temp_' "
+										  "        AND n.nspname NOT IN ('pg_catalog', 'information_schema'); "
+										  "END; "
+										  "$$ LANGUAGE plpgsql;");
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+}
+
+void
+teardown_GPDB6_data_type_checks(ClusterInfo *cluster)
+{
+	if (GET_MAJOR_VERSION(cluster->major_version) > 904)
+		return;
+
+	for (int dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+	{
+		DbInfo *active_db = &cluster->dbarr.dbs[dbnum];
+		PGconn *conn = connectToServer(cluster, active_db->db_name);
+		PGresult *res = executeQueryOrDie(conn,
+										  "SET CLIENT_MIN_MESSAGES = WARNING; "
+										  "DROP SCHEMA __gpupgrade_tmp CASCADE; "
+										  "SET CLIENT_MIN_MESSAGES = NOTICE;");
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+
 }

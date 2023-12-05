@@ -100,6 +100,8 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 
 	get_loadable_libraries();
 
+	setup_GPDB6_data_type_checks(&old_cluster);
+
 	/*
 	 * Check for various failure cases
 	 */
@@ -172,6 +174,8 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	{
 		check_for_appendonly_materialized_view_with_relfrozenxid(&old_cluster);
 	}
+
+	teardown_GPDB6_data_type_checks(&old_cluster);
 
 dump_old_cluster:
 	/*
