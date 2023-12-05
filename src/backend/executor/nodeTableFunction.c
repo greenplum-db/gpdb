@@ -493,7 +493,7 @@ AnyTable_GetTupleDesc(AnyTable t)
  * Get the next tuple from anytable
  *
  * will alloc memory in caller's memory context.
- * caller need to relase the memory using pfree()
+ * caller need to release the memory using pfree()
  */
 HeapTuple
 AnyTable_GetNextTuple(AnyTable t)
