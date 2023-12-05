@@ -117,7 +117,6 @@ Feature: gprecoverseg tests
 
     @demo_cluster
     @concourse_cluster
-    @shi
     Scenario: Differential recovery succeeds if previous incremental recovery failed
         Given the database is running
           And user stops all primary processes
@@ -2474,6 +2473,40 @@ Feature: gprecoverseg tests
         And all the segments are running
         And user can start transactions
 
+    @demo_cluster
+    @concourse_cluster
+    Scenario: gprecoverseg reports correct segment startup error messages to stdout
+      Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And all files in gpAdminLogs directory are deleted on all hosts in the cluster
+        And user immediately stops all primary processes for content 1
+        And user can start transactions
+        And a gprecoverseg directory under '/tmp' with mode '0700' is created
+        And a gprecoverseg input file is created
+        And edit the input file to recover mirror with content 1 to a new directory on remote host with mode 0755
+      When the user runs gprecoverseg with input file and additional args "-a"
+      Then gprecoverseg should return a return code of 1
+        And user can start transactions
+        And check if start failed for contents 1 during full recovery for gprecoverseg
+        And gprecoverseg should print "Failed to start the following segments" to stdout
+        And gprecoverseg should print "error:.*data directory.* has invalid permissions" to stdout
+        And verify that mirror on content 1 is down
+      When the mode of all the created data directories is non-recursively changed to '0500'
+        And the user runs "gprecoverseg -a"
+      Then gprecoverseg should return a return code of 1
+        And user can start transactions
+        And gprecoverseg should print "Failed to start the following segments" to stdout
+        And gprecoverseg should print "error:.*could not create lock file" to stdout
+        And verify that mirror on content 1 is down
+      When the mode of all the created data directories is changed to 0700
+        And the user runs "gprecoverseg -a"
+      Then gprecoverseg should return a return code of 0
+        And user can start transactions
+        And all the segments are running
+        And the segments are synchronized
+        And the cluster is rebalanced
+
     @remove_rsync_bash
     @concourse_cluster
     Scenario: None of the accumulated wal (after running pg_start_backup and before copying the pg_control file) is lost during differential
@@ -2494,4 +2527,3 @@ Feature: gprecoverseg tests
         And user can start transactions
        Then the row count of table test_recoverseg in "postgres" should be 2000
         And the cluster is recovered in full and rebalanced
-
