@@ -172,15 +172,18 @@ class Guc:
                 return "the value of gp_resource_manager must be 'none', 'queue', 'group', or 'group-v2'"
         elif self.name == "gp_resource_group_cgroup_parent":
             base = newval.strip("'")
-            if '/' in base:
-                return "cannot contain '/'"
+            if not re.match("^[0-9a-zA-Z][-._0-9a-zA-Z]*$", base):
+                return "resource group cgroup parent can only contains alphabet, number, and non-leading . _ -"
 
             path = None
             for partition in psutil.disk_partitions(all=True):
                 if partition.fstype == "cgroup2":
                     path = partition.mountpoint + "/" + base
-                    if os.path.realpath(path) == os.path.realpath(partition.mountpoint):
+                    path = os.path.realpath(path)
+                    if path == partition.mountpoint:
                         return "resource group cgroup parent cannot be the root of system cgroup"
+                    if not path.startswith(partition.mountpoint):
+                        return "resource group cgroup parent must be under the root of system cgroup"
                     break
             if path is None:
                 return "cannot find cgroup v2 mountpoint"

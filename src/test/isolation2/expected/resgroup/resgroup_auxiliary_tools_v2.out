@@ -23,7 +23,7 @@ ERROR:  language "plpython3u" already exists
 -- start_ignore
 ! gpconfig -c gp_resource_manager -v group-v2;
 
-! gpconfig -c gpconfig -c gp_resource_group_cgroup_parent -v "gpdb"
+! gpconfig -c gp_resource_group_cgroup_parent -v "gpdb"
 
 ! gpconfig -c max_connections -v 250 -m 25;
 

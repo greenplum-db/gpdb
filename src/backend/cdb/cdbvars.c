@@ -17,9 +17,11 @@
  *
  *-------------------------------------------------------------------------
  */
+#include "catalog/pg_collation_d.h"
 #include "postgres.h"
 
 #include "miscadmin.h"
+#include "regex/regex.h"
 #include "utils/guc.h"
 #include "cdb/cdbvars.h"
 #include "libpq-fe.h"
@@ -580,19 +582,41 @@ gpvars_show_gp_resource_manager_policy(void)
 
 bool gpvars_check_gp_resource_group_cgroup_parent(char **newval, void **extra, GucSource source)
 {
-	if (strstr(*newval, "/") != NULL)
+	int		  regres;
+	char	  err[128];
+	regex_t  *re = palloc(sizeof(regex_t));
+	char	 *pattern = "^[0-9a-zA-Z][-._0-9a-zA-Z]*$";
+	pg_wchar *wpattern = palloc((strlen(pattern) + 1) * sizeof(pg_wchar));
+	int		  wlen = pg_mb2wchar_with_len(pattern, wpattern, strlen(pattern));
+	pg_wchar *data = palloc((strlen(*newval) + 1) * sizeof(pg_wchar));
+	int		  data_len = pg_mb2wchar_with_len(*newval, data, sizeof(*newval));
+	bool	  match = true;
+
+	regres = pg_regcomp(re, wpattern, wlen, REG_ADVANCED, DEFAULT_COLLATION_OID);
+	if (regres != REG_OKAY)
 	{
-		GUC_check_errmsg("gp_resource_group_cgroup_parent must be a valid folder name, cannot contain '/': '%s'", *newval);
+		CHECK_FOR_INTERRUPTS();
+		pg_regerror(regres, re, err, sizeof(err));
+		GUC_check_errmsg("compile regex failed: %s", err);
+
+		pfree(wpattern);
+		pfree(data);
+
 		return false;
 	}
 
-	if (strlen(*newval) == 0)
+	regres = pg_regexec(re, data, data_len, 0, NULL, 0, NULL, 0);
+	if (regres != REG_OKAY)
 	{
-		GUC_check_errmsg("gp_resource_group_cgroup_parent is empty");
-		return false;
+		match = false;
+		GUC_check_errmsg("gp_resource_group_cgroup_parent can only contains alphabet, number and non-leading . _ -");
 	}
 
-	return true;
+	pg_regfree(re);
+	pfree(wpattern);
+	pfree(data);
+
+	return match;
 }
 
 /*
