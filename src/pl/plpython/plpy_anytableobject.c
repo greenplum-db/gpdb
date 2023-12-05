@@ -98,6 +98,9 @@ PLy_anytable_iternext(PyObject *self) {
 		PyTuple_SetItem(rettuple, i, item);
 	}
 
+	/* AnyTable_GetNextTuple() will alloc memory, relase it */
+	pfree(heap);
+
 	return rettuple;
 }
 
