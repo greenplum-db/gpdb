@@ -6,6 +6,8 @@ inputs:
   - name: bin_gpdb
   - name: llvm-with-asserts-packages
     optional: true
+  - name: bin_gpdb_with_llvm_asserts
+    optional: true
 outputs:
   - name: sqldump
 params:

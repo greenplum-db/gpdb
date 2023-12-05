@@ -83,7 +83,7 @@ function include_dependencies() {
 	library_search_path+=($(cat /etc/ld.so.conf.d/*.conf | grep -v '#'))
 	library_search_path+=(/lib64 /usr/lib64 /lib /usr/lib)
 
-	vendored_libs=(libxerces-c{,-3.1}.so)
+	vendored_libs=(libxerces-c{,-3.1}.so libLLVM{,-15,-15.0.7}.so)
 
 	# Vendor shared libraries - follow symlinks
 	for path in "${library_search_path[@]}"; do if [[ -d "${path}" ]]; then for lib in "${vendored_libs[@]}"; do find -L $path -name $lib -exec cp -avn '{}' ${GREENPLUM_INSTALL_DIR}/lib \;; done; fi; done
