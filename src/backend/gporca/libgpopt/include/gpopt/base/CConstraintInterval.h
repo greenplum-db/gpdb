@@ -109,8 +109,8 @@ private:
 		BOOL infer_nulls_as = false,
 		IMDIndex::EmdindexType access_method = IMDIndex::EmdindSentinel);
 
-	// create interval from scalar null test
-	static CConstraintInterval *PciIntervalFromScalarNullTest(
+	// create interval from scalar null test & unknown test
+	static CConstraintInterval *PciIntervalFromScalarNullAndUnknownTest(
 		CMemoryPool *mp, CExpression *pexpr, CColRef *colref);
 
 	// create interval from scalar boolean test

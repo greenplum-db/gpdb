@@ -195,7 +195,7 @@ CConstraintInterval::PciIntervalFromScalarExpr(
 	switch (pexpr->Pop()->Eopid())
 	{
 		case COperator::EopScalarNullTest:
-			pci = PciIntervalFromScalarNullTest(mp, pexpr, colref);
+			pci = PciIntervalFromScalarNullAndUnknownTest(mp, pexpr, colref);
 			break;
 		case COperator::EopScalarBooleanTest:
 			pci = PciIntervalFromScalarBooleanTest(mp, pexpr, colref);
@@ -401,25 +401,44 @@ CConstraintInterval::PciIntervalFromConstraint(CMemoryPool *mp,
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CConstraintInterval::PciIntervalFromScalarNullTest
+//		CConstraintInterval::PciIntervalFromScalarNullAndUnknownTest
 //
 //	@doc:
-//		Create interval from scalar null test
+//		Create interval from scalar null test & unknown test
+//
+//		Returns an empty interval includes null, appropriate for
+//		"is null" and "is unknown"
+//
+//		For "is not null",
+//		PciComplement will be invoked by PciIntervalFromScalarBoolOp
+//		For "is not unknown",
+//		PciComplement will be invoked by PciIntervalFromScalarBooleanTest
+//
+//		Notice: this function only supports cases where the child is an
+//		identifier now, otherwise, it will return nullptr
 //
 //---------------------------------------------------------------------------
 CConstraintInterval *
-CConstraintInterval::PciIntervalFromScalarNullTest(CMemoryPool *mp,
-												   CExpression *pexpr,
-												   CColRef *colref)
+CConstraintInterval::PciIntervalFromScalarNullAndUnknownTest(CMemoryPool *mp,
+															 CExpression *pexpr,
+															 CColRef *colref)
 {
 	GPOS_ASSERT(nullptr != pexpr);
-	GPOS_ASSERT(CUtils::FScalarNullTest(pexpr));
+	// let (is null & is not null) and (is unknown & is not unknown) in
+	GPOS_ASSERT(CUtils::FScalarNullTest(pexpr) ||
+				(CUtils::FScalarBooleanTest(pexpr) &&
+				 (CScalarBooleanTest::PopConvert(pexpr->Pop())->Ebt() ==
+					  CScalarBooleanTest::EbtIsUnknown ||
+				  CScalarBooleanTest::PopConvert(pexpr->Pop())->Ebt() ==
+					  CScalarBooleanTest::EbtIsNotUnknown)));
 
 	// child of comparison operator
 	CExpression *pexprChild = (*pexpr)[0];
 
 	// TODO:  - May 28, 2012; add support for other expression forms
 	// besides (ident is null)
+	// think about how to differ ((ident is true) is null) from (ident is null)
+	// when ident is null
 
 	if (CUtils::FScalarIdent(pexprChild))
 	{
@@ -441,6 +460,29 @@ CConstraintInterval::PciIntervalFromScalarNullTest(CMemoryPool *mp,
 //	@doc:
 //		Create interval from scalar null test
 //
+//		This is the table about results of boolean tests &
+//		some other boolean operators
+//
+//		Parameter		T	F	NULL
+//		----------------------------
+//		is true			T	F	F
+//		is not false	T	F	T
+//		is false		F	T	F
+//		is not true		F	T	T
+//		is unknown		F	F	T
+//		is not unknown	T	T	F
+//		----------------------------
+//		expr			T	F	infer_nulls_as
+//		not				F	T	infer_nulls_as
+//		is null			F	F	T
+//		is not null		T	T	F
+//
+//		So, we treat
+//		(is true / is not false)	as	expr with infer_nulls_as
+//		(is false / is not true)	as	not with infer_nulls_as
+//		is unknown 					as	is null
+//		is not unknown 				as	is not null
+//
 //---------------------------------------------------------------------------
 CConstraintInterval *
 CConstraintInterval::PciIntervalFromScalarBooleanTest(CMemoryPool *mp,
@@ -453,10 +495,6 @@ CConstraintInterval::PciIntervalFromScalarBooleanTest(CMemoryPool *mp,
 	CScalarBooleanTest *pop = CScalarBooleanTest::PopConvert(pexpr->Pop());
 	GPOS_ASSERT(nullptr != pop);
 
-	CRangeArray *pdrngprng = GPOS_NEW(mp) CRangeArray(mp);
-	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
-	const IMDTypeBool *pmdtypebool = md_accessor->PtMDType<IMDTypeBool>();
-	const IComparator *pcomp = COptCtxt::PoctxtFromTLS()->Pcomp();
 	bool fIncludesNull = false;
 	switch (pop->Ebt())
 	{
@@ -468,12 +506,8 @@ CConstraintInterval::PciIntervalFromScalarBooleanTest(CMemoryPool *mp,
 				fIncludesNull = true;
 			}
 
-			IDatumBool *datum =
-				pmdtypebool->CreateBoolDatum(mp, true, false /*is_null*/);
-			CRange *prange =
-				GPOS_NEW(mp) CRange(pcomp, IMDType::EcmptEq, datum);
-			pdrngprng->Append(prange);
-			break;
+			return PciIntervalFromScalarExpr(mp, (*pexpr)[0], colref,
+											 fIncludesNull);
 		}
 		case CScalarBooleanTest::EbtIsNotTrue:
 		case CScalarBooleanTest::EbtIsFalse:
@@ -483,33 +517,40 @@ CConstraintInterval::PciIntervalFromScalarBooleanTest(CMemoryPool *mp,
 				fIncludesNull = true;
 			}
 
-			IDatumBool *datum =
-				pmdtypebool->CreateBoolDatum(mp, false, false /*is_null*/);
-			CRange *prange =
-				GPOS_NEW(mp) CRange(pcomp, IMDType::EcmptEq, datum);
-			pdrngprng->Append(prange);
-			break;
+			CConstraintInterval *pciChild = PciIntervalFromScalarExpr(
+				mp, (*pexpr)[0], colref, !fIncludesNull);
+			if (nullptr == pciChild)
+			{
+				return nullptr;
+			}
+
+			CConstraintInterval *pciNot = pciChild->PciComplement(mp);
+			pciChild->Release();
+			return pciNot;
 		}
 		case CScalarBooleanTest::EbtIsUnknown:
+		{
+			return PciIntervalFromScalarNullAndUnknownTest(mp, pexpr, colref);
+		}
 		case CScalarBooleanTest::EbtIsNotUnknown:
 		{
-			IDatumBool *datum =
-				pmdtypebool->CreateBoolDatum(mp, false, false /*is_null*/);
-			CRange *prange =
-				GPOS_NEW(mp) CRange(pcomp, IMDType::EcmptOther, datum);
-			pdrngprng->Append(prange);
-			fIncludesNull = true;
-			break;
+			CConstraintInterval *pciNullTest =
+				PciIntervalFromScalarNullAndUnknownTest(mp, pexpr, colref);
+			if (nullptr == pciNullTest)
+			{
+				return nullptr;
+			}
+
+			CConstraintInterval *pciNot = pciNullTest->PciComplement(mp);
+			pciNullTest->Release();
+			return pciNot;
 		}
 		default:
 		{
 			GPOS_ASSERT(false && "Unknown boolean test type");
-			break;
+			return nullptr;
 		}
 	}
-
-	return GPOS_NEW(mp)
-		CConstraintInterval(mp, colref, pdrngprng, fIncludesNull);
 }
 
 

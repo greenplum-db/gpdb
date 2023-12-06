@@ -164,6 +164,30 @@
           <dxl:Partition Mdid="6.112489.1.0"/>
         </dxl:Partitions>
       </dxl:Relation>
+      <dxl:GPDBScalarOp Mdid="0.1694.1.0" Name="&lt;=" ComparisonType="LEq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
+        <dxl:LeftType Mdid="0.16.1.0"/>
+        <dxl:RightType Mdid="0.16.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.1691.1.0"/>
+        <dxl:Commutator Mdid="0.1695.1.0"/>
+        <dxl:InverseOp Mdid="0.59.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.424.1.0"/>
+          <dxl:Opfamily Mdid="0.10002.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
+      <dxl:GPDBScalarOp Mdid="0.1695.1.0" Name="&gt;=" ComparisonType="GEq" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
+        <dxl:LeftType Mdid="0.16.1.0"/>
+        <dxl:RightType Mdid="0.16.1.0"/>
+        <dxl:ResultType Mdid="0.16.1.0"/>
+        <dxl:OpFunc Mdid="0.1692.1.0"/>
+        <dxl:Commutator Mdid="0.1694.1.0"/>
+        <dxl:InverseOp Mdid="0.58.1.0"/>
+        <dxl:Opfamilies>
+          <dxl:Opfamily Mdid="0.424.1.0"/>
+          <dxl:Opfamily Mdid="0.10002.1.0"/>
+        </dxl:Opfamilies>
+      </dxl:GPDBScalarOp>
       <dxl:GPDBScalarOp Mdid="0.58.1.0" Name="&lt;" ComparisonType="LT" ReturnsNullOnNullInput="true" IsNDVPreserving="false">
         <dxl:LeftType Mdid="0.16.1.0"/>
         <dxl:RightType Mdid="0.16.1.0"/>

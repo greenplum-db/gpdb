@@ -3442,14 +3442,12 @@ SELECT * FROM pt_bool_tab WHERE col2 IS NULL;
 (0 rows)
 
 EXPLAIN SELECT * FROM pt_bool_tab WHERE col2 IS unknown;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
-   ->  Dynamic Seq Scan on pt_bool_tab  (cost=0.00..431.00 rows=1 width=5)
-         Number of partitions to scan: 2 (out of 2)
-         Filter: (col2 IS UNKNOWN)
- Optimizer: Pivotal Optimizer (GPORCA)
-(5 rows)
+                QUERY PLAN                
+------------------------------------------
+ Result  (cost=0.00..0.00 rows=0 width=5)
+   One-Time Filter: false
+ Optimizer: GPORCA
+(3 rows)
 
 SELECT * FROM pt_bool_tab WHERE col2 IS unknown;
  col1 | col2 
@@ -3531,6 +3529,146 @@ SELECT * FROM pt_bool_tab WHERE col2 IS NOT NULL;
     3 | t
 (5 rows)
 
+EXPLAIN SELECT * FROM pt_bool_tab WHERE (not col2) IS true;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 1 (out of 2)
+         Filter: ((NOT col2) IS TRUE)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab WHERE (not col2) IS true;
+ col1 | col2 
+------+------
+    2 | f
+    1 | f
+(2 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab WHERE (not col2) IS false;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 1 (out of 2)
+         Filter: ((NOT col2) IS FALSE)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab WHERE (not col2) IS false;
+ col1 | col2 
+------+------
+    2 | t
+    3 | t
+    1 | t
+(3 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab WHERE (not col2) IS NULL;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 2 (out of 2)
+         Filter: ((NOT col2) IS NULL)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab WHERE (not col2) IS NULL;
+ col1 | col2 
+------+------
+(0 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab WHERE (not col2) IS unknown;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 2 (out of 2)
+         Filter: ((NOT col2) IS UNKNOWN)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab WHERE (not col2) IS unknown;
+ col1 | col2 
+------+------
+(0 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab WHERE (not col2) IS NOT true;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 1 (out of 2)
+         Filter: ((NOT col2) IS NOT TRUE)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab WHERE (not col2) IS NOT true;
+ col1 | col2 
+------+------
+    2 | t
+    3 | t
+    1 | t
+(3 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab WHERE (not col2) IS NOT false;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 1 (out of 2)
+         Filter: ((NOT col2) IS NOT FALSE)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab WHERE (not col2) IS NOT false;
+ col1 | col2 
+------+------
+    2 | f
+    1 | f
+(2 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab WHERE (not col2) IS NOT unknown;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 2 (out of 2)
+         Filter: ((NOT col2) IS NOT UNKNOWN)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab WHERE (not col2) IS NOT unknown;
+ col1 | col2 
+------+------
+    1 | f
+    1 | t
+    2 | f
+    2 | t
+    3 | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab WHERE (not col2) IS NOT NULL;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 2 (out of 2)
+         Filter: (NOT ((NOT col2) IS NULL))
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab WHERE (not col2) IS NOT NULL;
+ col1 | col2 
+------+------
+    1 | f
+    1 | t
+    2 | f
+    2 | t
+    3 | t
+(5 rows)
+
 CREATE TABLE pt_bool_tab_df
 (
   col1 int,
@@ -3602,7 +3740,7 @@ EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS unknown;
 ------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
    ->  Dynamic Seq Scan on pt_bool_tab_df  (cost=0.00..431.00 rows=1 width=5)
-         Number of partitions to scan: 3 (out of 3)
+         Number of partitions to scan: 1 (out of 3)
          Filter: (col2 IS UNKNOWN)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -3655,7 +3793,7 @@ EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT unknown;
 ------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
    ->  Dynamic Seq Scan on pt_bool_tab_df  (cost=0.00..431.00 rows=1 width=5)
-         Number of partitions to scan: 3 (out of 3)
+         Number of partitions to scan: 2 (out of 3)
          Filter: (col2 IS NOT UNKNOWN)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -3675,12 +3813,156 @@ EXPLAIN SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT NULL;
 ------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
    ->  Dynamic Seq Scan on pt_bool_tab_df  (cost=0.00..431.00 rows=1 width=5)
-         Number of partitions to scan: 3 (out of 3)
+         Number of partitions to scan: 2 (out of 3)
          Filter: (NOT (col2 IS NULL))
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
 
 SELECT * FROM pt_bool_tab_df WHERE col2 IS NOT NULL;
+ col1 | col2 
+------+------
+    2 | f
+    2 | t
+    3 | t
+    1 | f
+    1 | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE (not col2) IS true;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_df  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 1 (out of 3)
+         Filter: ((NOT col2) IS TRUE)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE (not col2) IS true;
+ col1 | col2 
+------+------
+    2 | f
+    1 | f
+(2 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE (not col2) IS false;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_df  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 1 (out of 3)
+         Filter: ((NOT col2) IS FALSE)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE (not col2) IS false;
+ col1 | col2 
+------+------
+    2 | t
+    3 | t
+    1 | t
+(3 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE (not col2) IS NULL;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_df  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 3 (out of 3)
+         Filter: ((NOT col2) IS NULL)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE (not col2) IS NULL;
+ col1 | col2 
+------+------
+    1 | 
+(1 row)
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE (not col2) IS unknown;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_df  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 3 (out of 3)
+         Filter: ((NOT col2) IS UNKNOWN)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE (not col2) IS unknown;
+ col1 | col2 
+------+------
+    1 | 
+(1 row)
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE (not col2) IS NOT true;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_df  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 2 (out of 3)
+         Filter: ((NOT col2) IS NOT TRUE)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE (not col2) IS NOT true;
+ col1 | col2 
+------+------
+    2 | t
+    3 | t
+    1 | t
+    1 | 
+(4 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE (not col2) IS NOT false;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_df  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 2 (out of 3)
+         Filter: ((NOT col2) IS NOT FALSE)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE (not col2) IS NOT false;
+ col1 | col2 
+------+------
+    2 | f
+    1 | f
+    1 | 
+(3 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE (not col2) IS NOT unknown;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_df  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 3 (out of 3)
+         Filter: ((NOT col2) IS NOT UNKNOWN)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE (not col2) IS NOT unknown;
+ col1 | col2 
+------+------
+    2 | f
+    2 | t
+    3 | t
+    1 | f
+    1 | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_df WHERE (not col2) IS NOT NULL;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_df  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 3 (out of 3)
+         Filter: (NOT ((NOT col2) IS NULL))
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_df WHERE (not col2) IS NOT NULL;
  col1 | col2 
 ------+------
     2 | f
@@ -3761,7 +4043,7 @@ EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS unknown;
 --------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
    ->  Dynamic Seq Scan on pt_bool_tab_null  (cost=0.00..431.00 rows=1 width=5)
-         Number of partitions to scan: 3 (out of 3)
+         Number of partitions to scan: 1 (out of 3)
          Filter: (col2 IS UNKNOWN)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -3814,7 +4096,7 @@ EXPLAIN SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT unknown;
 --------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
    ->  Dynamic Seq Scan on pt_bool_tab_null  (cost=0.00..431.00 rows=1 width=5)
-         Number of partitions to scan: 3 (out of 3)
+         Number of partitions to scan: 2 (out of 3)
          Filter: (col2 IS NOT UNKNOWN)
  Optimizer: Pivotal Optimizer (GPORCA)
 (5 rows)
@@ -3847,6 +4129,150 @@ SELECT * FROM pt_bool_tab_null WHERE col2 IS NOT NULL;
     3 | t
     1 | f
     1 | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE (not col2) IS true;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_null  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 1 (out of 3)
+         Filter: ((NOT col2) IS TRUE)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE (not col2) IS true;
+ col1 | col2 
+------+------
+    1 | f
+    2 | f
+(2 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE (not col2) IS false;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_null  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 1 (out of 3)
+         Filter: ((NOT col2) IS FALSE)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE (not col2) IS false;
+ col1 | col2 
+------+------
+    1 | t
+    2 | t
+    3 | t
+(3 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE (not col2) IS NULL;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_null  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 3 (out of 3)
+         Filter: ((NOT col2) IS NULL)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE (not col2) IS NULL;
+ col1 | col2 
+------+------
+    1 | 
+(1 row)
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE (not col2) IS unknown;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_null  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 3 (out of 3)
+         Filter: ((NOT col2) IS UNKNOWN)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE (not col2) IS unknown;
+ col1 | col2 
+------+------
+    1 | 
+(1 row)
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE (not col2) IS NOT true;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_null  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 2 (out of 3)
+         Filter: ((NOT col2) IS NOT TRUE)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE (not col2) IS NOT true;
+ col1 | col2 
+------+------
+    1 | t
+    1 | 
+    2 | t
+    3 | t
+(4 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE (not col2) IS NOT false;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_null  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 2 (out of 3)
+         Filter: ((NOT col2) IS NOT FALSE)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE (not col2) IS NOT false;
+ col1 | col2 
+------+------
+    1 | f
+    1 | 
+    2 | f
+(3 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE (not col2) IS NOT unknown;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_null  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 3 (out of 3)
+         Filter: ((NOT col2) IS NOT UNKNOWN)
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE (not col2) IS NOT unknown;
+ col1 | col2 
+------+------
+    1 | f
+    1 | t
+    2 | f
+    2 | t
+    3 | t
+(5 rows)
+
+EXPLAIN SELECT * FROM pt_bool_tab_null WHERE (not col2) IS NOT NULL;
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=5)
+   ->  Dynamic Seq Scan on pt_bool_tab_null  (cost=0.00..431.00 rows=1 width=5)
+         Number of partitions to scan: 3 (out of 3)
+         Filter: (NOT ((NOT col2) IS NULL))
+ Optimizer: GPORCA
+(5 rows)
+
+SELECT * FROM pt_bool_tab_null WHERE (not col2) IS NOT NULL;
+ col1 | col2 
+------+------
+    1 | f
+    1 | t
+    2 | f
+    2 | t
+    3 | t
 (5 rows)
 
 RESET ALL;
