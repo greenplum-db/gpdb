@@ -50,7 +50,7 @@ typedef enum InstrumentOption
 {
 	INSTRUMENT_NONE = 0,
 	INSTRUMENT_TIMER = 1 << 0,	/* needs timer (and row counts) */
-	INSTRUMENT_BUFFERS = 1 << 1,	/* needs buffer usage (not implemented yet) */
+	INSTRUMENT_BUFFERS = 1 << 1,	/* needs buffer usage */
 	INSTRUMENT_ROWS = 1 << 2,	/* needs row count */
 	INSTRUMENT_WAL = 1 << 3,	/* needs WAL usage */
 	INSTRUMENT_MEMORY_DETAIL = 0x20000000,	/* needs detailed memory accounting */

@@ -5,6 +5,8 @@
 -- s/Executor memory: (\d+)\w bytes\./Executor memory: (#####)K bytes./
 -- m/\(slice\d+\)    Executor memory: (\d+)\w bytes avg x \d+ workers, \d+\w bytes max \(seg\d+\)\./
 -- s/Executor memory: (\d+)\w bytes avg x \d+ workers, \d+\w bytes max \(seg\d+\)\./Executor memory: ####K bytes avg x #### workers, ####K bytes max (seg#)./
+-- m/\(slice\d+\)    Executor memory: (\d+)\w bytes \(seg\d+\)\./
+-- s/Executor memory: (\d+)\w bytes \(seg\d+\)\./Executor memory: ####K bytes (seg#)./
 -- m/Work_mem: \d+\w bytes max\./
 -- s/Work_mem: \d+\w bytes max\. */Work_mem: ###K bytes max./
 -- m/Memory: \d+kB  Max Memory: \d+kB  Avg Memory: \d+kB \(3 segments\)/
@@ -863,6 +865,404 @@ Extra Text: (seg1)   hash table(s): 1; 3385 groups total in 8 batches, 53488 spi
 (2 rows)
 RESET optimizer_enable_hashagg;
 RESET statement_mem;
+-- Check EXPLAIN format output with BUFFERS enabled
+--
+-- start_matchsubs
+-- m{I/O Timings: read=\d*\.\d+ write=\d+\.\d+.*}
+-- s{I/O Timings: read=\d*\.\d+ write=\d+\.\d+.*}{I/O Timings: read=##.### write=##.###}
+-- m{I/O Timings: read=\d*\.\d+.*}
+-- s{I/O Timings: read=\d*\.\d+.*}{I/O Timings: read=##.###.*}
+-- m{I/O Read Time: \d*\.\d+}
+-- s{I/O Read Time: \d*\.\d+}{I/O Read Time: ##.###}
+-- m{I/O Write Time: \d*\.\d+}
+-- s{I/O Write Time: \d*\.\d+}{I/O Write Time: ##.###}
+-- m{Shared Hit Blocks: \d+}
+-- s{Shared Hit Blocks: \d+}{Shared Hit Blocks: ###}
+-- m{Shared Read Blocks: \d+}
+-- s{Shared Read Blocks: \d+}{Shared Read Blocks: ###}
+-- m{Shared Dirtied Blocks: \d+}
+-- s{Shared Dirtied Blocks: \d+}{Shared Dirtied Blocks: ###}
+-- m{Shared Written Blocks: \d+}
+-- s{Shared Written Blocks: \d+}{Shared Written Blocks: ###}
+-- m{Temp Read Blocks: \d+}
+-- s{Temp Read Blocks: \d+}{Temp Read Blocks: ###}
+-- m{Temp Written Blocks: \d+}
+-- s{Temp Written Blocks: \d+}{Temp Written Blocks: ###}
+-- m/Buffers: shared hit=\d+\s+/
+-- s/Buffers: shared hit=\d+\s+Buffers: shared hit=###/
+-- m/Buffers: shared hit=\d+ read=\d+\s+/
+-- s/Buffers: shared hit=\d+ read=\d+\s+/Buffers: shared hit=### read=###/
+-- m/Buffers: shared hit=\d+ read=\d+ dirtied=\d+\s+/
+-- s/Buffers: shared hit=\d+ read=\d+ dirtied=\d+\s+/Buffers: shared hit=### read=### dirtied=###/
+-- m/Buffers: shared hit=\d+ read=\d+ dirtied=\d+ written=\d+\s+/
+-- s/Buffers: shared hit=\d+ read=\d+ dirtied=\d+ written=\d+\s+/Buffers: shared hit=### read=### dirtied=### written=###/
+-- end_matchsubs
+-- Insert rows into a single segment
+SET track_io_timing = on;
+CREATE TABLE stat_io_timing(a, b) AS SELECT 0, i FROM generate_series(1, 10000) i DISTRIBUTED BY (a);
+ANALYZE stat_io_timing;
+-- explain_processing_off
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF)
+SELECT a FROM stat_io_timing
+WHERE b BETWEEN 5 AND 9;
+QUERY PLAN
+Gather Motion 3:1  (slice1; segments: 3) (actual time=0.785..0.786 rows=5 loops=1)
+  ->  Seq Scan on stat_io_timing (actual time=0.020..0.676 rows=5 loops=1)
+        Filter: ((b >= 5) AND (b <= 9))
+        Rows Removed by Filter: 9995
+        Buffers: shared hit=12
+Optimizer: GPORCA
+Planning Time: 3.382 ms
+  (slice0)    Executor memory: 36K bytes.
+  (slice1)    Executor memory: 36K bytes avg x 3 workers, 36K bytes max (seg0).
+Memory used:  128000kB
+Execution Time: 0.993 ms
+(11 rows)
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, SUMMARY OFF)
+SELECT a FROM stat_io_timing
+WHERE b BETWEEN 5 AND 9;
+QUERY PLAN
+Gather Motion 3:1  (slice1; segments: 3) (actual time=0.732..0.733 rows=5 loops=1)
+  ->  Seq Scan on stat_io_timing (actual time=0.017..0.663 rows=5 loops=1)
+        Filter: ((b >= 5) AND (b <= 9))
+        Rows Removed by Filter: 9995
+        Buffers: shared hit=12
+Optimizer: GPORCA
+(6 rows)
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF)
+INSERT INTO stat_io_timing (SELECT * FROM stat_io_timing);
+QUERY PLAN
+Insert on stat_io_timing (actual time=0.000..6.500 rows=0 loops=1)
+  ->  Seq Scan on stat_io_timing stat_io_timing_1 (actual time=0.016..0.997 rows=10000 loops=1)
+        Buffers: shared hit=12
+Optimizer: GPORCA
+Planning Time: 2.432 ms
+  (slice0)    Executor memory: 35K bytes avg x 3 workers, 35K bytes max (seg0).
+Memory used:  128000kB
+Execution Time: 6.705 ms
+(8 rows)
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, FORMAT JSON)
+INSERT INTO stat_io_timing (SELECT * FROM stat_io_timing);
+QUERY PLAN
+[
+  {
+    "Plan": {
+      "Node Type": "ModifyTable",
+      "Operation": "Insert",
+      "Slice": 0,
+      "Segments": 3,
+      "Gang Type": "primary writer",
+      "Parallel Aware": false,
+      "Relation Name": "stat_io_timing",
+      "Alias": "stat_io_timing",
+      "Actual Startup Time": 0.000,
+      "Actual Total Time": 12.591,
+      "Actual Rows": 0,
+      "Actual Loops": 1,
+      "Shared Hit Blocks": 0,
+      "Shared Read Blocks": 0,
+      "Shared Dirtied Blocks": 0,
+      "Shared Written Blocks": 0,
+      "Local Hit Blocks": 0,
+      "Local Read Blocks": 0,
+      "Local Dirtied Blocks": 0,
+      "Local Written Blocks": 0,
+      "Temp Read Blocks": 0,
+      "Temp Written Blocks": 0,
+      "I/O Read Time": 0.000,
+      "I/O Write Time": 0.000,
+      "Plans": [
+        {
+          "Node Type": "Seq Scan",
+          "Parent Relationship": "Member",
+          "Slice": 0,
+          "Segments": 3,
+          "Gang Type": "primary writer",
+          "Parallel Aware": false,
+          "Relation Name": "stat_io_timing",
+          "Alias": "stat_io_timing_1",
+          "Actual Startup Time": 0.016,
+          "Actual Total Time": 1.941,
+          "Actual Rows": 20000,
+          "Actual Loops": 1,
+          "Shared Hit Blocks": 23,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0,
+          "I/O Read Time": 0.000,
+          "I/O Write Time": 0.000
+        }
+      ]
+    },
+    "Optimizer": "GPORCA",
+    "Planning Time": 2.499,
+    "Triggers": [
+    ],
+    "Slice statistics": [
+      {
+        "Slice": 0,
+        "Executor Memory": {
+          "Average": 35368,
+          "Workers": 3,
+          "Maximum Memory Used": 35368
+        }
+      }
+    ],
+    "Statement statistics": {
+      "Memory used": 128000
+    },
+    "Execution Time": 12.799
+  }
+]
+(1 row)
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, SUMMARY OFF)
+INSERT INTO stat_io_timing (SELECT * FROM stat_io_timing);
+QUERY PLAN
+Insert on stat_io_timing (actual time=0.000..31.984 rows=0 loops=1)
+  ->  Seq Scan on stat_io_timing stat_io_timing_1 (actual time=0.019..5.064 rows=40000 loops=1)
+        Buffers: shared hit=45
+Optimizer: GPORCA
+(4 rows)
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, FORMAT JSON)
+SELECT b FROM stat_io_timing where b=50;
+QUERY PLAN
+[
+  {
+    "Plan": {
+      "Node Type": "Gather Motion",
+      "Senders": 3,
+      "Receivers": 1,
+      "Slice": 1,
+      "Segments": 3,
+      "Gang Type": "primary reader",
+      "Parallel Aware": false,
+      "Actual Startup Time": 4.180,
+      "Actual Total Time": 4.181,
+      "Actual Rows": 8,
+      "Actual Loops": 1,
+      "Shared Hit Blocks": 0,
+      "Shared Read Blocks": 0,
+      "Shared Dirtied Blocks": 0,
+      "Shared Written Blocks": 0,
+      "Local Hit Blocks": 0,
+      "Local Read Blocks": 0,
+      "Local Dirtied Blocks": 0,
+      "Local Written Blocks": 0,
+      "Temp Read Blocks": 0,
+      "Temp Written Blocks": 0,
+      "I/O Read Time": 0.000,
+      "I/O Write Time": 0.000,
+      "Plans": [
+        {
+          "Node Type": "Seq Scan",
+          "Parent Relationship": "Outer",
+          "Slice": 1,
+          "Segments": 3,
+          "Gang Type": "primary reader",
+          "Parallel Aware": false,
+          "Relation Name": "stat_io_timing",
+          "Alias": "stat_io_timing",
+          "Actual Startup Time": 0.021,
+          "Actual Total Time": 4.090,
+          "Actual Rows": 8,
+          "Actual Loops": 1,
+          "Filter": "(b = 50)",
+          "Rows Removed by Filter": 79992,
+          "Shared Hit Blocks": 89,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0,
+          "I/O Read Time": 0.000,
+          "I/O Write Time": 0.000
+        }
+      ]
+    },
+    "Optimizer": "GPORCA",
+    "Planning Time": 2.071,
+    "Triggers": [
+    ],
+    "Slice statistics": [
+      {
+        "Slice": 0,
+        "Executor Memory": 36488
+      },
+      {
+        "Slice": 1,
+        "Executor Memory": {
+          "Average": 36104,
+          "Workers": 3,
+          "Maximum Memory Used": 36104
+        }
+      }
+    ],
+    "Statement statistics": {
+      "Memory used": 128000
+    },
+    "Execution Time": 4.362
+  }
+]
+(1 row)
+CREATE INDEX stat_io_timing_idx ON stat_io_timing (b);
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF)
+SELECT b FROM stat_io_timing where b=50;
+QUERY PLAN
+Gather Motion 3:1  (slice1; segments: 3) (actual time=0.235..0.236 rows=8 loops=1)
+  ->  Index Scan using stat_io_timing_idx on stat_io_timing (actual time=0.110..0.116 rows=8 loops=1)
+        Index Cond: (b = 50)
+        Buffers: shared hit=8 read=3
+        I/O Timings: read=0.087
+Optimizer: GPORCA
+Planning Time: 2.600 ms
+  (slice0)    Executor memory: 40K bytes.
+  (slice1)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
+Memory used:  128000kB
+Execution Time: 0.412 ms
+(11 rows)
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, FORMAT JSON)
+SELECT b FROM stat_io_timing where b=50;
+QUERY PLAN
+[
+  {
+    "Plan": {
+      "Node Type": "Gather Motion",
+      "Senders": 3,
+      "Receivers": 1,
+      "Slice": 1,
+      "Segments": 3,
+      "Gang Type": "primary reader",
+      "Parallel Aware": false,
+      "Actual Startup Time": 0.090,
+      "Actual Total Time": 0.108,
+      "Actual Rows": 8,
+      "Actual Loops": 1,
+      "Shared Hit Blocks": 0,
+      "Shared Read Blocks": 0,
+      "Shared Dirtied Blocks": 0,
+      "Shared Written Blocks": 0,
+      "Local Hit Blocks": 0,
+      "Local Read Blocks": 0,
+      "Local Dirtied Blocks": 0,
+      "Local Written Blocks": 0,
+      "Temp Read Blocks": 0,
+      "Temp Written Blocks": 0,
+      "I/O Read Time": 0.000,
+      "I/O Write Time": 0.000,
+      "Plans": [
+        {
+          "Node Type": "Index Scan",
+          "Parent Relationship": "Outer",
+          "Slice": 1,
+          "Segments": 3,
+          "Gang Type": "primary reader",
+          "Parallel Aware": false,
+          "Scan Direction": "Forward",
+          "Index Name": "stat_io_timing_idx",
+          "Relation Name": "stat_io_timing",
+          "Alias": "stat_io_timing",
+          "Actual Startup Time": 0.004,
+          "Actual Total Time": 0.008,
+          "Actual Rows": 8,
+          "Actual Loops": 1,
+          "Index Cond": "(b = 50)",
+          "Rows Removed by Index Recheck": 0,
+          "Shared Hit Blocks": 11,
+          "Shared Read Blocks": 0,
+          "Shared Dirtied Blocks": 0,
+          "Shared Written Blocks": 0,
+          "Local Hit Blocks": 0,
+          "Local Read Blocks": 0,
+          "Local Dirtied Blocks": 0,
+          "Local Written Blocks": 0,
+          "Temp Read Blocks": 0,
+          "Temp Written Blocks": 0,
+          "I/O Read Time": 0.000,
+          "I/O Write Time": 0.000
+        }
+      ]
+    },
+    "Optimizer": "GPORCA",
+    "Planning Time": 2.104,
+    "Triggers": [
+    ],
+    "Slice statistics": [
+      {
+        "Slice": 0,
+        "Executor Memory": 40392
+      },
+      {
+        "Slice": 1,
+        "Executor Memory": {
+          "Average": 42808,
+          "Workers": 3,
+          "Maximum Memory Used": 42808
+        }
+      }
+    ],
+    "Statement statistics": {
+      "Memory used": 128000
+    },
+    "Execution Time": 0.277
+  }
+]
+(1 row)
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF)
+SELECT s1.b FROM stat_io_timing s1 join stat_io_timing s2 on s1.b=s2.b where s1.a=50;
+QUERY PLAN
+Gather Motion 3:1  (slice1; segments: 3) (actual time=4.311..4.311 rows=0 loops=1)
+  ->  Nested Loop (actual time=0.000..4.184 rows=0 loops=1)
+        Join Filter: true
+        ->  Broadcast Motion 3:3  (slice2; segments: 3) (actual time=0.000..4.183 rows=0 loops=1)
+              ->  Seq Scan on stat_io_timing (actual time=0.000..3.904 rows=0 loops=1)
+                    Filter: (a = 50)
+        ->  Index Scan using stat_io_timing_idx on stat_io_timing stat_io_timing_1 (never executed)
+              Index Cond: (b = stat_io_timing.b)
+Optimizer: GPORCA
+Planning Time: 5.088 ms
+  (slice0)    Executor memory: 47K bytes.
+  (slice1)    Executor memory: 42K bytes avg x 3 workers, 42K bytes max (seg0).
+  (slice2)    Executor memory: 37K bytes avg x 3 workers, 37K bytes max (seg0).
+Memory used:  128000kB
+Execution Time: 8.064 ms
+(15 rows)
+-- Test Bitmap Heap Scan block accounting
+SET enable_seqscan = 0;
+SET enable_bitmapscan = 1;
+SET optimizer_enable_tablescan = 0;
+SET optimizer_enable_bitmapscan = 1;
+CREATE INDEX stat_io_timing_brin_idx ON stat_io_timing USING brin (b);
+VACUUM ANALYZE stat_io_timing;
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF)
+SELECT * FROM stat_io_timing WHERE b = 1;
+QUERY PLAN
+Gather Motion 3:1  (slice1; segments: 3) (actual time=0.102..0.122 rows=8 loops=1)
+  ->  Index Scan using stat_io_timing_idx on stat_io_timing (actual time=0.006..0.010 rows=8 loops=1)
+        Index Cond: (b = 1)
+        Buffers: shared hit=11
+Optimizer: GPORCA
+Planning Time: 3.022 ms
+  (slice0)    Executor memory: 39K bytes.
+  (slice1)    Executor memory: 41K bytes avg x 3 workers, 41K bytes max (seg0).
+Memory used:  128000kB
+Execution Time: 0.302 ms
+(10 rows)
+-- explain_processing_on
+RESET track_io_timing;
+RESET enable_seqscan;
+RESET enable_bitmapscan;
+RESET optimizer_enable_tablescan;
+RESET optimizer_enable_bitmapscan;
 -- Cleanup
 DROP TABLE boxes;
 DROP TABLE apples;
@@ -872,3 +1272,4 @@ DROP TABLE jit_explain_output;
 DROP TABLE test_src_tbl;
 DROP TABLE test_hashagg_spill;
 DROP TABLE test_hashagg_groupingsets;
+DROP TABLE stat_io_timing;

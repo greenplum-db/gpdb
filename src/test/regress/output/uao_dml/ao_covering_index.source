@@ -198,10 +198,11 @@ SELECT a, b, c, d, e FROM test_add_drop_columns_@amname@ WHERE a<42 AND b>42 AND
    ->  Bitmap Heap Scan on test_add_drop_columns_@amname@ (actual rows=8 loops=1)
          Recheck Cond: ((a < 42) AND (b > 42))
          Filter: ((e IS NULL) AND (c > 42))
+         Heap Blocks: exact=1
          ->  Bitmap Index Scan on i_test_add_drop_columns_@amname@ (actual rows=8 loops=1)
                Index Cond: ((a < 42) AND (b > 42))
  Optimizer: Postgres query optimizer
-(7 rows)
+(8 rows)
 
 -- Test various table types (e.g. AO/AOCO/replicated)
 --
@@ -235,10 +236,11 @@ SELECT b, c FROM test_replicated_@amname@ WHERE a<42 AND b>42;
          Recheck Cond: (a < 42)
          Filter: (b > 42)
          Rows Removed by Filter: 21
+         Heap Blocks: exact=1
          ->  Bitmap Index Scan on i_test_replicated_@amname@ (actual rows=41 loops=1)
                Index Cond: (a < 42)
  Optimizer: Postgres query optimizer
-(8 rows)
+(9 rows)
 
 -- Expect Seq Scan because predicate "c" is not in KEYS
 -- KEYS: [a] INCLUDED: [b]
@@ -407,22 +409,26 @@ SELECT a, b, c FROM test_cover_index_on_pt_@amname@ WHERE a<10;
    ->  Append (actual rows=3 loops=1)
          ->  Bitmap Heap Scan on test_cover_index_on_pt_@amname@_1_prt_1 (actual rows=1 loops=1)
                Recheck Cond: (a < 10)
+               Heap Blocks: exact=1
                ->  Bitmap Index Scan on test_cover_index_on_pt_@amname@_1_prt_1_a_b_idx (actual rows=1 loops=1)
                      Index Cond: (a < 10)
          ->  Bitmap Heap Scan on test_cover_index_on_pt_@amname@_1_prt_2 (actual rows=1 loops=1)
                Recheck Cond: (a < 10)
+               Heap Blocks: exact=1
                ->  Bitmap Index Scan on test_cover_index_on_pt_@amname@_1_prt_2_a_b_idx (actual rows=1 loops=1)
                      Index Cond: (a < 10)
          ->  Bitmap Heap Scan on test_cover_index_on_pt_@amname@_1_prt_3 (actual rows=1 loops=1)
                Recheck Cond: (a < 10)
+               Heap Blocks: exact=1
                ->  Bitmap Index Scan on test_cover_index_on_pt_@amname@_1_prt_3_a_b_idx (actual rows=1 loops=1)
                      Index Cond: (a < 10)
          ->  Bitmap Heap Scan on test_cover_index_on_pt_@amname@_1_prt_4 (actual rows=1 loops=1)
                Recheck Cond: (a < 10)
+               Heap Blocks: exact=1
                ->  Bitmap Index Scan on test_cover_index_on_pt_@amname@_1_prt_4_a_b_idx (actual rows=1 loops=1)
                      Index Cond: (a < 10)
  Optimizer: Postgres query optimizer
-(19 rows)
+(23 rows)
 
 -- Expect Seq Scan because predicate "b" is not in KEYS
 -- KEYS: [a]    INCLUDED: [b]
@@ -663,10 +669,11 @@ SELECT b, c FROM test_unique_index_include_@amname@ WHERE a > 5;
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=6 loops=1)
    ->  Bitmap Heap Scan on test_unique_index_include_@amname@ (actual rows=4 loops=1)
          Recheck Cond: (a > 5)
+         Heap Blocks: exact=1
          ->  Bitmap Index Scan on test_unique_index_include_@amname@_a_c_key (actual rows=4 loops=1)
                Index Cond: (a > 5)
  Optimizer: Postgres query optimizer
-(6 rows)
+(7 rows)
 
 -- Test drop behavior
 --

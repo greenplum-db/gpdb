@@ -197,10 +197,11 @@ SELECT a, b, c, d, e FROM test_add_drop_columns_@amname@ WHERE a<42 AND b>42 AND
    ->  Bitmap Heap Scan on test_add_drop_columns_@amname@ (actual rows=8 loops=1)
          Recheck Cond: ((a < 42) AND (b > 42))
          Filter: ((e IS NULL) AND (c > 42))
+         Heap Blocks: exact=1
          ->  Bitmap Index Scan on i_test_add_drop_columns_@amname@ (actual rows=8 loops=1)
                Index Cond: ((a < 42) AND (b > 42))
  Optimizer: GPORCA
-(7 rows)
+(8 rows)
 
 -- Test various table types (e.g. AO/AOCO/replicated)
 --

@@ -5,6 +5,8 @@
 -- s/Executor memory: (\d+)\w bytes\./Executor memory: (#####)K bytes./
 -- m/\(slice\d+\)    Executor memory: (\d+)\w bytes avg x \d+ workers, \d+\w bytes max \(seg\d+\)\./
 -- s/Executor memory: (\d+)\w bytes avg x \d+ workers, \d+\w bytes max \(seg\d+\)\./Executor memory: ####K bytes avg x #### workers, ####K bytes max (seg#)./
+-- m/\(slice\d+\)    Executor memory: (\d+)\w bytes \(seg\d+\)\./
+-- s/Executor memory: (\d+)\w bytes \(seg\d+\)\./Executor memory: ####K bytes (seg#)./
 -- m/Work_mem: \d+\w bytes max\./
 -- s/Work_mem: \d+\w bytes max\. */Work_mem: ###K bytes max./
 -- m/Memory: \d+kB  Max Memory: \d+kB  Avg Memory: \d+kB \(3 segments\)/
@@ -260,6 +262,95 @@ SELECT BTRIM(et) as explain_info FROM query_plan WHERE et like '%Extra Text%' li
 RESET optimizer_enable_hashagg;
 RESET statement_mem;
 
+-- Check EXPLAIN format output with BUFFERS enabled
+--
+-- start_matchsubs
+-- m{I/O Timings: read=\d*\.\d+ write=\d+\.\d+.*}
+-- s{I/O Timings: read=\d*\.\d+ write=\d+\.\d+.*}{I/O Timings: read=##.### write=##.###}
+-- m{I/O Timings: read=\d*\.\d+.*}
+-- s{I/O Timings: read=\d*\.\d+.*}{I/O Timings: read=##.###.*}
+-- m{I/O Read Time: \d*\.\d+}
+-- s{I/O Read Time: \d*\.\d+}{I/O Read Time: ##.###}
+-- m{I/O Write Time: \d*\.\d+}
+-- s{I/O Write Time: \d*\.\d+}{I/O Write Time: ##.###}
+-- m{Shared Hit Blocks: \d+}
+-- s{Shared Hit Blocks: \d+}{Shared Hit Blocks: ###}
+-- m{Shared Read Blocks: \d+}
+-- s{Shared Read Blocks: \d+}{Shared Read Blocks: ###}
+-- m{Shared Dirtied Blocks: \d+}
+-- s{Shared Dirtied Blocks: \d+}{Shared Dirtied Blocks: ###}
+-- m{Shared Written Blocks: \d+}
+-- s{Shared Written Blocks: \d+}{Shared Written Blocks: ###}
+-- m{Temp Read Blocks: \d+}
+-- s{Temp Read Blocks: \d+}{Temp Read Blocks: ###}
+-- m{Temp Written Blocks: \d+}
+-- s{Temp Written Blocks: \d+}{Temp Written Blocks: ###}
+-- m/Buffers: shared hit=\d+\s+/
+-- s/Buffers: shared hit=\d+\s+Buffers: shared hit=###/
+-- m/Buffers: shared hit=\d+ read=\d+\s+/
+-- s/Buffers: shared hit=\d+ read=\d+\s+/Buffers: shared hit=### read=###/
+-- m/Buffers: shared hit=\d+ read=\d+ dirtied=\d+\s+/
+-- s/Buffers: shared hit=\d+ read=\d+ dirtied=\d+\s+/Buffers: shared hit=### read=### dirtied=###/
+-- m/Buffers: shared hit=\d+ read=\d+ dirtied=\d+ written=\d+\s+/
+-- s/Buffers: shared hit=\d+ read=\d+ dirtied=\d+ written=\d+\s+/Buffers: shared hit=### read=### dirtied=### written=###/
+-- end_matchsubs
+
+-- Insert rows into a single segment
+SET track_io_timing = on;
+CREATE TABLE stat_io_timing(a, b) AS SELECT 0, i FROM generate_series(1, 10000) i DISTRIBUTED BY (a);
+ANALYZE stat_io_timing;
+
+-- explain_processing_off
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF)
+SELECT a FROM stat_io_timing
+WHERE b BETWEEN 5 AND 9;
+
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, SUMMARY OFF)
+SELECT a FROM stat_io_timing
+WHERE b BETWEEN 5 AND 9;
+
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF)
+INSERT INTO stat_io_timing (SELECT * FROM stat_io_timing);
+
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, FORMAT JSON)
+INSERT INTO stat_io_timing (SELECT * FROM stat_io_timing);
+
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, SUMMARY OFF)
+INSERT INTO stat_io_timing (SELECT * FROM stat_io_timing);
+
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, FORMAT JSON)
+SELECT b FROM stat_io_timing where b=50;
+
+CREATE INDEX stat_io_timing_idx ON stat_io_timing (b);
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF)
+SELECT b FROM stat_io_timing where b=50;
+
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, FORMAT JSON)
+SELECT b FROM stat_io_timing where b=50;
+
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF)
+SELECT s1.b FROM stat_io_timing s1 join stat_io_timing s2 on s1.b=s2.b where s1.a=50;
+
+-- Test Bitmap Heap Scan block accounting
+SET enable_seqscan = 0;
+SET enable_bitmapscan = 1;
+SET optimizer_enable_tablescan = 0;
+SET optimizer_enable_bitmapscan = 1;
+
+CREATE INDEX stat_io_timing_brin_idx ON stat_io_timing USING brin (b);
+VACUUM ANALYZE stat_io_timing;
+
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF)
+SELECT * FROM stat_io_timing WHERE b = 1;
+
+-- explain_processing_on
+
+RESET track_io_timing;
+RESET enable_seqscan;
+RESET enable_bitmapscan;
+RESET optimizer_enable_tablescan;
+RESET optimizer_enable_bitmapscan;
+
 -- Cleanup
 DROP TABLE boxes;
 DROP TABLE apples;
@@ -269,3 +360,4 @@ DROP TABLE jit_explain_output;
 DROP TABLE test_src_tbl;
 DROP TABLE test_hashagg_spill;
 DROP TABLE test_hashagg_groupingsets;
+DROP TABLE stat_io_timing;

@@ -196,4 +196,9 @@ s/^\s+QUERY PLAN\s*$/ QUERY PLAN \n/
 m/^------------+\s*$/
 s/^------------+\s*$/------------\n/
 
+# ignore Heap Blocks: {exact,lossy} counter values in EXPLAIN outputs
+-- m/Heap Blocks: exact=\d+/
+-- s/Heap Blocks: exact=\d+/Heap Blocks: exact=###/
+-- m/Heap Blocks: lossy=\d+/
+-- s/Heap Blocks: lossy=\d+/Heap Blocks: lossy=###/
 -- end_matchsubs

@@ -63,10 +63,13 @@ typedef struct CdbExplain_StatInst
 	instr_time	firststart;		/* Start time of first iteration of node */
 	int			numPartScanned; /* Number of part tables scanned */
 
+	BufferUsage bufusage;	/* buffer usage by plan node */
 	TuplesortInstrumentation sortstats; /* Sort stats, if this is a Sort node */
 	HashInstrumentation hashstats; /* Hash stats, if this is a Hash node */
 	int			bnotes;			/* Offset to beginning of node's extra text */
 	int			enotes;			/* Offset to end of node's extra text */
+	long		exact_pages;		/* BitmapHeapScan exact_pages */
+	long		lossy_pages;		/* BitmapHeapScan lossy_pages */
 } CdbExplain_StatInst;
 
 
@@ -127,6 +130,20 @@ typedef struct CdbExplain_NodeSummary
 	CdbExplain_Agg totalWorkfileCreated;
 	/* Used for DynamicSeqScan, DynamicIndexScan, DynamicBitmapHeapScan, and DynamicForeignScan */
 	CdbExplain_Agg totalPartTableScanned;
+
+	/* Summary of buffer usage over node's workers */
+	CdbExplain_Agg shared_blks_hit;
+	CdbExplain_Agg shared_blks_read;
+	CdbExplain_Agg shared_blks_written;
+	CdbExplain_Agg shared_blks_dirtied;
+	CdbExplain_Agg local_blks_hit;
+	CdbExplain_Agg local_blks_read;
+	CdbExplain_Agg local_blks_written;
+	CdbExplain_Agg local_blks_dirtied;
+	CdbExplain_Agg temp_blks_read;
+	CdbExplain_Agg temp_blks_written;
+	CdbExplain_Agg blk_read_time;
+	CdbExplain_Agg blk_write_time;
 
 	/* insts array info */
 	int			qe_identifier0;		/* qe identifier of insts[0] */
@@ -855,6 +872,8 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	si->firststart = instr->firststart;
 	si->numPartScanned = instr->numPartScanned;
 
+	si->bufusage = instr->bufusage;
+
 	if (IsA(planstate, SortState))
 	{
 		SortState *sortstate = (SortState *) planstate;
@@ -867,6 +886,13 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 
 		if (hashstate->hashtable)
 			ExecHashGetInstrumentation(&si->hashstats, hashstate->hashtable);
+	}
+	if (IsA(planstate, BitmapHeapScanState) ||
+			IsA(planstate, DynamicBitmapHeapScanState))
+	{
+		BitmapHeapScanState *bhsState = (BitmapHeapScanState *) planstate;
+		si->exact_pages = bhsState->exact_pages;
+		si->lossy_pages = bhsState->lossy_pages;
 	}
 }								/* cdbexplain_collectStatsFromNode */
 
@@ -993,6 +1019,21 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	CdbExplain_DepStatAcc peakmemused;
 	CdbExplain_DepStatAcc vmem_reserved;
 	CdbExplain_DepStatAcc totalPartTableScanned;
+
+	/* Buffer usage counters */
+	CdbExplain_DepStatAcc shared_blks_hit;
+	CdbExplain_DepStatAcc shared_blks_read;
+	CdbExplain_DepStatAcc shared_blks_written;
+	CdbExplain_DepStatAcc shared_blks_dirtied;
+	CdbExplain_DepStatAcc local_blks_hit;
+	CdbExplain_DepStatAcc local_blks_read;
+	CdbExplain_DepStatAcc local_blks_written;
+	CdbExplain_DepStatAcc local_blks_dirtied;
+	CdbExplain_DepStatAcc temp_blks_read;
+	CdbExplain_DepStatAcc temp_blks_written;
+	CdbExplain_DepStatAcc blk_read_time;
+	CdbExplain_DepStatAcc blk_write_time;
+
 	int			imsgptr;
 	int			nInst;
 
@@ -1018,6 +1059,18 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	cdbexplain_depStatAcc_init0(&workmemwanted);
 	cdbexplain_depStatAcc_init0(&totalWorkfileCreated);
 	cdbexplain_depStatAcc_init0(&totalPartTableScanned);
+	cdbexplain_depStatAcc_init0(&shared_blks_hit);
+	cdbexplain_depStatAcc_init0(&shared_blks_read);
+	cdbexplain_depStatAcc_init0(&shared_blks_written);
+	cdbexplain_depStatAcc_init0(&shared_blks_dirtied);
+	cdbexplain_depStatAcc_init0(&local_blks_hit);
+	cdbexplain_depStatAcc_init0(&local_blks_read);
+	cdbexplain_depStatAcc_init0(&local_blks_written);
+	cdbexplain_depStatAcc_init0(&local_blks_dirtied);
+	cdbexplain_depStatAcc_init0(&temp_blks_read);
+	cdbexplain_depStatAcc_init0(&temp_blks_written);
+	cdbexplain_depStatAcc_init0(&blk_read_time);
+	cdbexplain_depStatAcc_init0(&blk_write_time);
 
 	/* Initialize per-slice accumulators. */
 	cdbexplain_depStatAcc_init0(&peakmemused);
@@ -1057,6 +1110,18 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		cdbexplain_depStatAcc_upd(&workmemwanted, rsi->workmemwanted, rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&totalWorkfileCreated, (rsi->workfileCreated ? 1 : 0), rsh, rsi, nsi);
 		cdbexplain_depStatAcc_upd(&totalPartTableScanned, rsi->numPartScanned, rsh, rsi, nsi);
+		cdbexplain_depStatAcc_upd(&shared_blks_hit, rsi->bufusage.shared_blks_hit, rsh, rsi, nsi);
+		cdbexplain_depStatAcc_upd(&shared_blks_read, rsi->bufusage.shared_blks_read, rsh, rsi, nsi);
+		cdbexplain_depStatAcc_upd(&shared_blks_written, rsi->bufusage.shared_blks_written, rsh, rsi, nsi);
+		cdbexplain_depStatAcc_upd(&shared_blks_dirtied, rsi->bufusage.shared_blks_dirtied, rsh, rsi, nsi);
+		cdbexplain_depStatAcc_upd(&local_blks_hit, rsi->bufusage.local_blks_hit, rsh, rsi, nsi);
+		cdbexplain_depStatAcc_upd(&local_blks_read, rsi->bufusage.local_blks_read, rsh, rsi, nsi);
+		cdbexplain_depStatAcc_upd(&local_blks_written, rsi->bufusage.local_blks_written, rsh, rsi, nsi);
+		cdbexplain_depStatAcc_upd(&local_blks_dirtied, rsi->bufusage.local_blks_dirtied, rsh, rsi, nsi);
+		cdbexplain_depStatAcc_upd(&temp_blks_read, rsi->bufusage.temp_blks_read, rsh, rsi, nsi);
+		cdbexplain_depStatAcc_upd(&temp_blks_written, rsi->bufusage.temp_blks_written, rsh, rsi, nsi);
+		cdbexplain_depStatAcc_upd(&blk_read_time, INSTR_TIME_GET_DOUBLE(rsi->bufusage.blk_read_time), rsh, rsi, nsi);
+		cdbexplain_depStatAcc_upd(&blk_write_time, INSTR_TIME_GET_DOUBLE(rsi->bufusage.blk_write_time), rsh, rsi, nsi);
 
 		/* Update per-slice accumulators. */
 		cdbexplain_depStatAcc_upd(&peakmemused, rsh->worker.peakmemused, rsh, rsi, nsi);
@@ -1079,7 +1144,9 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 	INSTR_TIME_ASSIGN(instr->firststart, ntuples.firststart_of_max_total);
 
 	/*
-	 * Put winner's stats into qDisp PlanState's Instrument node.
+	 * Put winner's stats into QD PlanState's Instrument node.
+	 * XXX: Nodes that do not emit tuples (I/U/D) do not have their stats recorded
+	 * in the QD Instrument node.
 	 */
 	if (ntuples.agg.vcnt > 0)
 	{
@@ -1098,6 +1165,15 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		instr->workmemwanted = ntuples.nsimax->workmemwanted;
 		instr->workfileCreated = ntuples.nsimax->workfileCreated;
 		instr->firststart = ntuples.nsimax->firststart;
+		instr->bufusage = ntuples.nsimax->bufusage;
+
+		/* For BitmapHeapScan, save exact/lossy pages into the QD planstate */
+		if (IsA(planstate, BitmapHeapScanState) || IsA(planstate, DynamicBitmapHeapScanState))
+		{
+			BitmapHeapScanState *bhsState = (BitmapHeapScanState *) planstate;
+			bhsState->exact_pages = ntuples.nsimax->exact_pages;
+			bhsState->lossy_pages = ntuples.nsimax->lossy_pages;
+		}
 	}
 	/* Save non-zero nloops even when 0 tuple is returned */
 	else if (nloops.agg.vcnt > 0)
@@ -1126,6 +1202,34 @@ cdbexplain_depositStatsToNode(PlanState *planstate, CdbExplain_RecvStatCtx *ctx)
 		 */
 		if (peakmemused.agg.vmax > 1.05 * cdbexplain_agg_avg(&peakmemused.agg))
 			cdbexplain_depStatAcc_saveText(&peakmemused, ctx->extratextbuf, &saved);
+
+		/*
+		 * For positive buffer counters, save extra message text
+		 */
+		if (shared_blks_hit.agg.vsum > 0)
+			cdbexplain_depStatAcc_saveText(&shared_blks_hit, ctx->extratextbuf, &saved);
+		if (shared_blks_read.agg.vsum > 0)
+			cdbexplain_depStatAcc_saveText(&shared_blks_read, ctx->extratextbuf, &saved);
+		if (shared_blks_written.agg.vsum > 0)
+			cdbexplain_depStatAcc_saveText(&shared_blks_written, ctx->extratextbuf, &saved);
+		if (shared_blks_dirtied.agg.vsum > 0)
+			cdbexplain_depStatAcc_saveText(&shared_blks_dirtied, ctx->extratextbuf, &saved);
+		if (local_blks_hit.agg.vsum > 0)
+			cdbexplain_depStatAcc_saveText(&local_blks_hit, ctx->extratextbuf, &saved);
+		if (local_blks_read.agg.vsum > 0)
+			cdbexplain_depStatAcc_saveText(&local_blks_read, ctx->extratextbuf, &saved);
+		if (local_blks_written.agg.vsum > 0)
+			cdbexplain_depStatAcc_saveText(&local_blks_written, ctx->extratextbuf, &saved);
+		if (local_blks_dirtied.agg.vsum > 0)
+			cdbexplain_depStatAcc_saveText(&local_blks_dirtied, ctx->extratextbuf, &saved);
+		if (temp_blks_read.agg.vsum > 0)
+			cdbexplain_depStatAcc_saveText(&temp_blks_read, ctx->extratextbuf, &saved);
+		if (temp_blks_written.agg.vsum > 0)
+			cdbexplain_depStatAcc_saveText(&temp_blks_written, ctx->extratextbuf, &saved);
+		if (blk_read_time.agg.vsum > 0)
+			cdbexplain_depStatAcc_saveText(&blk_read_time, ctx->extratextbuf, &saved);
+		if (blk_write_time.agg.vsum > 0)
+			cdbexplain_depStatAcc_saveText(&blk_write_time, ctx->extratextbuf, &saved);
 
 		/*
 		 * One worker which produced the greatest number of output rows.

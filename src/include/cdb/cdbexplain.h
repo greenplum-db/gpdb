@@ -66,7 +66,6 @@ cdbexplain_agg_avg(CdbExplain_Agg *agg)
                            : 0;
 }
 
-
 /*
  * cdbexplain_localExecStats
  *    Called by qDisp to build NodeSummary and SliceSummary blocks

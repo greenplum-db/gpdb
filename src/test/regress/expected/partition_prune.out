@@ -2777,6 +2777,7 @@ update ab_a1 set b = 3 from ab where ab.a = 1 and ab.a = ab_a1.a;
    ->  Nested Loop (actual rows=1 loops=1)
          ->  Bitmap Heap Scan on ab_a1_b2 (actual rows=1 loops=1)
                Recheck Cond: (a = 1)
+               Heap Blocks: exact=1
                ->  Bitmap Index Scan on ab_a1_b2_a_idx (actual rows=1 loops=1)
                      Index Cond: (a = 1)
          ->  Materialize (actual rows=1 loops=1)
@@ -2787,6 +2788,7 @@ update ab_a1 set b = 3 from ab where ab.a = 1 and ab.a = ab_a1.a;
                                  Index Cond: (a = 1)
                      ->  Bitmap Heap Scan on ab_a1_b2 ab_a1_b2_1 (actual rows=1 loops=1)
                            Recheck Cond: (a = 1)
+                           Heap Blocks: exact=1
                            ->  Bitmap Index Scan on ab_a1_b2_a_idx (actual rows=1 loops=1)
                                  Index Cond: (a = 1)
                      ->  Bitmap Heap Scan on ab_a1_b3 ab_a1_b3_1 (actual rows=0 loops=1)
@@ -2913,10 +2915,12 @@ select * from tbl1 join tprt on tbl1.col1 > tprt.col1;
          ->  Append (actual rows=1 loops=2)
                ->  Bitmap Heap Scan on tprt_1 (actual rows=1 loops=2)
                      Recheck Cond: (tbl1.col1 > col1)
+                     Heap Blocks: exact=2
                      ->  Bitmap Index Scan on tprt1_idx (actual rows=1 loops=2)
                            Index Cond: (col1 < tbl1.col1)
                ->  Bitmap Heap Scan on tprt_2 (actual rows=2 loops=1)
                      Recheck Cond: (tbl1.col1 > col1)
+                     Heap Blocks: exact=1
                      ->  Bitmap Index Scan on tprt2_idx (actual rows=2 loops=1)
                            Index Cond: (col1 < tbl1.col1)
                ->  Bitmap Heap Scan on tprt_3 (never executed)
@@ -2935,8 +2939,8 @@ select * from tbl1 join tprt on tbl1.col1 > tprt.col1;
                      Recheck Cond: (tbl1.col1 > col1)
                      ->  Bitmap Index Scan on tprt6_idx (never executed)
                            Index Cond: (col1 < tbl1.col1)
- Optimizer: Postgres query optimizer
-(30 rows)
+ Optimizer: Postgres-based planner
+(32 rows)
 
 explain (analyze, costs off, summary off, timing off)
 select * from tbl1 join tprt on tbl1.col1 = tprt.col1;
@@ -2952,6 +2956,7 @@ select * from tbl1 join tprt on tbl1.col1 = tprt.col1;
                            Index Cond: (col1 = tbl1.col1)
                ->  Bitmap Heap Scan on tprt_2 (actual rows=1 loops=1)
                      Recheck Cond: (col1 = tbl1.col1)
+                     Heap Blocks: exact=1
                      ->  Bitmap Index Scan on tprt2_idx (actual rows=1 loops=1)
                            Index Cond: (col1 = tbl1.col1)
                ->  Bitmap Heap Scan on tprt_3 (never executed)
@@ -2970,8 +2975,8 @@ select * from tbl1 join tprt on tbl1.col1 = tprt.col1;
                      Recheck Cond: (col1 = tbl1.col1)
                      ->  Bitmap Index Scan on tprt6_idx (never executed)
                            Index Cond: (col1 = tbl1.col1)
- Optimizer: Postgres query optimizer
-(29 rows)
+ Optimizer: Postgres-based planner
+(30 rows)
 
 select tbl1.col1, tprt.col1 from tbl1
 inner join tprt on tbl1.col1 > tprt.col1
@@ -3008,14 +3013,17 @@ select * from tbl1 inner join tprt on tbl1.col1 > tprt.col1;
          ->  Append (actual rows=2 loops=5)
                ->  Bitmap Heap Scan on tprt_1 (actual rows=1 loops=5)
                      Recheck Cond: (tbl1.col1 > col1)
+                     Heap Blocks: exact=5
                      ->  Bitmap Index Scan on tprt1_idx (actual rows=1 loops=5)
                            Index Cond: (col1 < tbl1.col1)
                ->  Bitmap Heap Scan on tprt_2 (actual rows=2 loops=4)
                      Recheck Cond: (tbl1.col1 > col1)
+                     Heap Blocks: exact=4
                      ->  Bitmap Index Scan on tprt2_idx (actual rows=2 loops=4)
                            Index Cond: (col1 < tbl1.col1)
                ->  Bitmap Heap Scan on tprt_3 (actual rows=1 loops=2)
                      Recheck Cond: (tbl1.col1 > col1)
+                     Heap Blocks: exact=2
                      ->  Bitmap Index Scan on tprt3_idx (actual rows=1 loops=2)
                            Index Cond: (col1 < tbl1.col1)
                ->  Bitmap Heap Scan on tprt_4 (never executed)
@@ -3030,8 +3038,8 @@ select * from tbl1 inner join tprt on tbl1.col1 > tprt.col1;
                      Recheck Cond: (tbl1.col1 > col1)
                      ->  Bitmap Index Scan on tprt6_idx (never executed)
                            Index Cond: (col1 < tbl1.col1)
- Optimizer: Postgres query optimizer
-(30 rows)
+ Optimizer: Postgres-based planner
+(33 rows)
 
 explain (analyze, costs off, summary off, timing off)
 select * from tbl1 inner join tprt on tbl1.col1 = tprt.col1;
@@ -3047,10 +3055,12 @@ select * from tbl1 inner join tprt on tbl1.col1 = tprt.col1;
                            Index Cond: (col1 = tbl1.col1)
                ->  Bitmap Heap Scan on tprt_2 (actual rows=1 loops=1)
                      Recheck Cond: (col1 = tbl1.col1)
+                     Heap Blocks: exact=1
                      ->  Bitmap Index Scan on tprt2_idx (actual rows=1 loops=1)
                            Index Cond: (col1 = tbl1.col1)
                ->  Bitmap Heap Scan on tprt_3 (actual rows=0 loops=2)
                      Recheck Cond: (col1 = tbl1.col1)
+                     Heap Blocks: exact=1
                      ->  Bitmap Index Scan on tprt3_idx (actual rows=0 loops=2)
                            Index Cond: (col1 = tbl1.col1)
                ->  Bitmap Heap Scan on tprt_4 (never executed)
@@ -3065,8 +3075,8 @@ select * from tbl1 inner join tprt on tbl1.col1 = tprt.col1;
                      Recheck Cond: (col1 = tbl1.col1)
                      ->  Bitmap Index Scan on tprt6_idx (never executed)
                            Index Cond: (col1 = tbl1.col1)
- Optimizer: Postgres query optimizer
-(29 rows)
+ Optimizer: Postgres-based planner
+(31 rows)
 
 select tbl1.col1, tprt.col1 from tbl1
 inner join tprt on tbl1.col1 > tprt.col1
@@ -3142,10 +3152,11 @@ select * from tbl1 join tprt on tbl1.col1 < tprt.col1;
                            Index Cond: (col1 > tbl1.col1)
                ->  Bitmap Heap Scan on tprt_6 (actual rows=1 loops=1)
                      Recheck Cond: (tbl1.col1 < col1)
+                     Heap Blocks: exact=1
                      ->  Bitmap Index Scan on tprt6_idx (actual rows=1 loops=1)
                            Index Cond: (col1 > tbl1.col1)
- Optimizer: Postgres query optimizer
-(30 rows)
+ Optimizer: Postgres-based planner
+(31 rows)
 
 select tbl1.col1, tprt.col1 from tbl1
 inner join tprt on tbl1.col1 < tprt.col1

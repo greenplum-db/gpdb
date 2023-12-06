@@ -284,10 +284,11 @@ SELECT b, c FROM test_ao WHERE a<42 AND b>42;
          Recheck Cond: (a < 42)
          Filter: (b > 42)
          Rows Removed by Filter: 8
+         Heap Blocks: exact=1
          ->  Bitmap Index Scan on i_test_ao (actual rows=16 loops=1)
                Index Cond: (a < 42)
  Optimizer: Postgres query optimizer
-(8 rows)
+(9 rows)
 
 -- KEYS: [a] INCLUDED: [b]
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
