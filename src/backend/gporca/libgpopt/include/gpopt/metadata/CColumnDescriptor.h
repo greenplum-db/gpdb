@@ -56,6 +56,9 @@ private:
 	// is the column a distribution col
 	BOOL m_is_dist_col;
 
+	// is the column a partition col
+	BOOL m_is_part_col;
+
 public:
 	// ctor
 	CColumnDescriptor(CMemoryPool *mp, const IMDType *pmdtype,
@@ -121,11 +124,25 @@ public:
 		return m_is_dist_col;
 	}
 
+	// is this a partition column
+	BOOL
+	IsPartCol() const
+	{
+		return m_is_part_col;
+	}
+
 	// set this column as a distribution column
 	void
 	SetAsDistCol()
 	{
 		m_is_dist_col = true;
+	}
+
+	// set this column as a partition column
+	void
+	SetAsPartCol()
+	{
+		m_is_part_col = true;
 	}
 
 	IOstream &OsPrint(IOstream &os) const;

@@ -37,6 +37,13 @@
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbappendonlyam.h"
 
+/*
+ * Helper macro that is used to determine if a Modifytable node came from a
+ * Dynamic scan (produced by Orca), which requires tuple routing to determine
+ * the correct partition
+ */
+#define IsDynamicScan(plan) castNode(ModifyTable, plan) != NULL && \
+							castNode(ModifyTable, plan)->forceTupleRouting
 /*-----------------------
  * PartitionTupleRouting - Encapsulates all information required to
  * route a tuple inserted into a partitioned table to one of its leaf
@@ -184,7 +191,8 @@ static void FormPartitionKeyDatum(PartitionDispatch pd,
 								  TupleTableSlot *slot,
 								  EState *estate,
 								  Datum *values,
-								  bool *isnull);
+								  bool *isnull,
+								  AttrNumber *attno_map);
 
 static char *ExecBuildSlotPartitionKeyDescription(Relation rel,
 												  Datum *values,
@@ -324,7 +332,23 @@ ExecFindPartition(ModifyTableState *mtstate,
 		 * So update ecxt_scantuple accordingly.
 		 */
 		ecxt->ecxt_scantuple = slot;
-		FormPartitionKeyDatum(dispatch, slot, estate, values, isnull);
+		/*
+		 * If the operation is delete and its child is a dynamic scan,
+		 * then we need to remap the the attributes from the tuple to the relation.
+		 * This is because the tuple descriptor's columns do not exactly match
+		 * the relation attributes in the catalog--the tuple has a subset of the attrs.
+		 * FormPartitionKeyDatum uses this map to get the partition key index in
+		 * the tuple descriptor, and the values at that index within the tuple.
+		 */
+		AttrNumber *attno_map = NULL;
+		if (IsDynamicScan(mtstate->ps.plan)
+			&& mtstate->operation == CMD_DELETE)
+		{
+			attno_map = convert_tuples_by_name_map_missing_ok(slot->tts_tupleDescriptor,
+															  RelationGetDescr(dispatch->reldesc));
+		}
+		/* Populate values/isnull with partition key value from tuple */
+		FormPartitionKeyDatum(dispatch, slot, estate, values, isnull, attno_map);
 
 		/*
 		 * If this partitioned table has no partitions or no partition for
@@ -496,9 +520,32 @@ ExecFindPartition(ModifyTableState *mtstate,
 				else
 					slot = rootslot;
 			}
+			/*
+			 * If this is a DELETE operation with a dynamic scan child,
+			 * then we need to convert the slot to be based on the relation descriptor, as
+			 * ExecPartitionCheck uses the partition bounds defined on the relation, not the slot.
+			 * The tuple slot returned by the scan however only includes only the projection columns.
+			 */
+			if (IsDynamicScan(mtstate->ps.plan)
+				&& mtstate->operation == CMD_DELETE)
+			{
+				TupleTableSlot *slotOut = MakeSingleTupleTableSlot(RelationGetDescr(rri->ri_RelationDesc), &TTSOpsVirtual);
+				slot = execute_attr_map_slot(attno_map, slot, slotOut);
+				ExecPartitionCheck(rri, slot, estate, true);
 
-			ExecPartitionCheck(rri, slot, estate, true);
+				/*
+				 * Drop the slot. Note that this slot points to slotOut and myslot,
+				 * so we drop it to properly clean up the slot and relation descriptor
+				 */
+				ExecDropSingleTupleTableSlot(slot);
+			}
+			else
+			{
+				ExecPartitionCheck(rri, slot, estate, true);
+			}
 		}
+		if (attno_map)
+			pfree(attno_map);
 	}
 
 	/* Release the tuple in the lowest parent's dedicated slot. */
@@ -1274,6 +1321,8 @@ ExecCleanupTupleRouting(ModifyTableState *mtstate,
  *					expressions (must be non-NULL)
  *	values			Array of partition key Datums (output area)
  *	isnull			Array of is-null indicators (output area)
+ *	attno_map		Map of att nums from tuple descriptor to relation, needed since
+ *					partition bound attnums correspond to relation, not tuple desc (GPDB only)
  *
  * the ecxt_scantuple slot of estate's per-tuple expr context must point to
  * the heap tuple passed in.
@@ -1284,7 +1333,8 @@ FormPartitionKeyDatum(PartitionDispatch pd,
 					  TupleTableSlot *slot,
 					  EState *estate,
 					  Datum *values,
-					  bool *isnull)
+					  bool *isnull,
+					  AttrNumber *attno_map)
 {
 	ListCell   *partexpr_item;
 	int			i;
@@ -1303,6 +1353,10 @@ FormPartitionKeyDatum(PartitionDispatch pd,
 	for (i = 0; i < pd->key->partnatts; i++)
 	{
 		AttrNumber	keycol = pd->key->partattrs[i];
+		/* Use passed in map to extract part key, as slot's attrs may not match the Relation's attrs */
+		if (attno_map)
+			keycol = attno_map[pd->key->partattrs[i]-1];
+
 		Datum		datum;
 		bool		isNull;
 

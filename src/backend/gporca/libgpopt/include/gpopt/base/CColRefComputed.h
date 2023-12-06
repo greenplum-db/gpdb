@@ -66,6 +66,14 @@ public:
 		return false;
 	};
 
+	// is column a partition column?
+	BOOL
+	IsPartCol() const override
+	{
+		// we cannot introduce partition columns as computed column
+		return false;
+	};
+
 
 };	// class CColRefComputed
 

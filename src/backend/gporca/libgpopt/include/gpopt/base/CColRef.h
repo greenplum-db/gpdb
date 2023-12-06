@@ -174,6 +174,9 @@ public:
 	// is column a distribution column?
 	virtual BOOL IsDistCol() const = 0;
 
+	// is column a partition column?
+	virtual BOOL IsPartCol() const = 0;
+
 	// print
 	IOstream &OsPrint(IOstream &) const;
 

@@ -39,6 +39,7 @@ CColRefTable::CColRefTable(const CColumnDescriptor *pcoldesc, ULONG id,
 	m_iAttno = pcoldesc->AttrNum();
 	m_is_nullable = pcoldesc->IsNullable();
 	m_is_dist_col = pcoldesc->IsDistCol();
+	m_is_part_col = pcoldesc->IsPartCol();
 }
 
 //---------------------------------------------------------------------------

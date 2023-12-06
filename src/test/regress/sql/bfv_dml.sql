@@ -365,3 +365,70 @@ drop table bar;
 -- columns into a table with no columns
 create table test();
 explain (analyze, costs off, timing off, summary off) insert into test default values;
+
+-- Test delete on partition table with dropped/added columns
+CREATE TABLE part (
+    a int,
+    b int,
+    c text,
+    d numeric)
+DISTRIBUTED BY (b)
+partition by range(a) (
+    start(1) end(6) every(2),
+    default partition def);
+alter table part add column e int;
+insert into part select i, i, 'abc', i*1.01,i from generate_series(1,10)i;
+alter table part drop column b;
+alter table part set WITH (reorganize=true) distributed by (e);
+-- test delete with dropped column
+explain delete from part where d>9;
+delete from part where d>9;
+select count(*) from part;
+-- test delete with added partition key
+explain delete from part where e=3;
+delete from part where e=3;
+select count(*) from part;
+-- test delete from default partition
+explain delete from part where a=8;
+delete from part where a=8;
+select count(*) from part;
+
+DROP TABLE IF EXISTS part;
+CREATE TABLE part (
+    a int,
+    b int,
+    partkey int,
+    c text,
+    d numeric)
+DISTRIBUTED BY (b)
+partition by range(partkey) (
+    start(1) end(6) every(2),
+    default partition def);
+alter table part add column e int;
+insert into part select i, i, i, 'abc', i*1.01,i from generate_series(1,10)i;
+alter table part drop column b;
+alter table part set WITH (reorganize=true) distributed by (e);
+-- test delete with column order change
+explain delete from part where d>9;
+delete from part where d>9;
+select count(*) from part;
+
+-- Test delete on mid-level partitions. Ensure Orca properly handles tuple routing
+create table deep_part (
+  i int,
+  j int,
+  k int,
+  s char(5)
+) distributed by (i) partition by list(s) subpartition by range (j) subpartition template (
+  start(1) end(3) every(1)
+) (
+  partition p1
+  values
+    ('A'),
+    partition p2
+  values
+    ('B')
+);
+
+insert into deep_part values (1,1,1,'A');
+delete from deep_part_1_prt_p1 where j=1;

@@ -4735,16 +4735,21 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 		GPOS_NEW(m_mp) CDXLTranslationContextArray(m_mp);
 	child_contexts->Append(&child_context);
 
-	// translate proj list
 	List *dml_target_list =
 		TranslateDXLProjList(project_list_dxlnode,
 							 nullptr,  // translate context for the base table
 							 child_contexts, output_context);
 
-	// pad child plan's target list with NULLs for dropped columns for all DML operator types
-	List *target_list_with_dropped_cols =
-		CreateTargetListWithNullsForDroppedCols(dml_target_list, md_rel);
-	dml_target_list = target_list_with_dropped_cols;
+	// project all columns for intermediate (mid-level) partitions, as we need to pass through the partition keys
+	// but do not have that information for intermediate partitions during Orca's optimization
+	BOOL is_intermediate_part =
+		(md_rel->IsPartitioned() && nullptr != md_rel->MDPartConstraint());
+	if (m_cmd_type != CMD_DELETE || is_intermediate_part)
+	{
+		// pad child plan's target list with NULLs for dropped columns for UPDATE/INSERTs and for DELETEs on intermeidate partitions
+		dml_target_list =
+			CreateTargetListWithNullsForDroppedCols(dml_target_list, md_rel);
+	}
 
 	// Add junk columns to the target list for the 'action', 'ctid',
 	// 'gp_segment_id'. The ModifyTable node will find these based
@@ -4778,7 +4783,7 @@ CTranslatorDXLToPlStmt::TranslateDXLDml(
 	result_plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
 	result_plan->lefttree = child_plan;
 
-	result_plan->targetlist = target_list_with_dropped_cols;
+	result_plan->targetlist = dml_target_list;
 	SetParamIds(result_plan);
 
 	child_plan = (Plan *) result;

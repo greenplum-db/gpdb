@@ -212,13 +212,14 @@ CTableDescriptor::AddDistributionColumn(ULONG ulPos, IMDId *opfamily)
 //		CTableDescriptor::AddPartitionColumn
 //
 //	@doc:
-//		Add the column at the specified position to the array of partition column
-//		descriptors
+//		Add the column's position to the array of partition columns
 //
 //---------------------------------------------------------------------------
 void
 CTableDescriptor::AddPartitionColumn(ULONG ulPos)
 {
+	CColumnDescriptor *pcoldesc = (*m_pdrgpcoldesc)[ulPos];
+	pcoldesc->SetAsPartCol();
 	m_pdrgpulPart->Append(GPOS_NEW(m_mp) ULONG(ulPos));
 }
 

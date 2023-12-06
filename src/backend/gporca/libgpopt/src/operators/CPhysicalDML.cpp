@@ -87,6 +87,31 @@ CPhysicalDML::CPhysicalDML(CMemoryPool *mp, CLogicalDML::EDMLOperator edmlop,
 			m_pds = GPOS_NEW(mp) CDistributionSpecRandom();
 		}
 	}
+
+	// Delete operations only need the ctid to delete the row. However, in Orca we need the
+	// distribution column to handle direct dispatch, and the partitioning key (if it's a partitioned table)
+	// to determine which partition to delete from during the Dynamic Scan execution
+	// We don't perform this optimization for intermediate partitions, as we need ALL partition keys for use in tuple routing during execution
+	// and don't have the parent's partition keys at this stage
+	CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+
+	const IMDRelation *pmdrel = md_accessor->RetrieveRel(ptabdesc->MDId());
+	BOOL is_intermediate_part =
+		(pmdrel->IsPartitioned() && nullptr != pmdrel->MDPartConstraint());
+	if (CLogicalDML::EdmlDelete == edmlop && !is_intermediate_part)
+	{
+		CColRefArray *colref_array = GPOS_NEW(mp) CColRefArray(mp);
+		for (ULONG ul = 0; ul < m_pdrgpcrSource->Size(); ++ul)
+		{
+			CColRef *colref = (*m_pdrgpcrSource)[ul];
+			if (colref->IsDistCol() || colref->IsPartCol())
+			{
+				colref_array->Append(colref);
+			}
+		}
+		m_pdrgpcrSource->Release();
+		m_pdrgpcrSource = colref_array;
+	}
 	m_pos = PosComputeRequired(mp, ptabdesc);
 	ComputeRequiredLocalColumns(mp);
 }

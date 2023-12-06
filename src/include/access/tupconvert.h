@@ -43,6 +43,8 @@ extern TupleConversionMap *convert_tuples_by_name(TupleDesc indesc,
 extern AttrNumber *convert_tuples_by_name_map(TupleDesc indesc,
 											  TupleDesc outdesc,
 											  const char *msg);
+extern AttrNumber *convert_tuples_by_name_map_missing_ok(TupleDesc indesc,
+											  TupleDesc outdesc);
 extern AttrNumber *convert_tuples_by_name_map_if_req(TupleDesc indesc,
 													 TupleDesc outdesc,
 													 const char *msg);
