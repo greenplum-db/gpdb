@@ -332,6 +332,8 @@ INSERT INTO alter_column_other VALUES (1,2,3);
 EXECUTE capturerelfilenodebefore ('alter_column_other', 'alter_column_other');
 EXECUTE attribute_encoding_check ('alter_column_other');
 
+-- ALTER TYPE and adding constraint can be done together when rewriting column-only. No table rewrite.
+-- SET DEFAULT is essentially adding a constraint.
 ALTER TABLE alter_column_other ALTER COLUMN b TYPE text, ALTER COLUMN c SET DEFAULT 5;
 
 EXECUTE attribute_encoding_check ('alter_column_other');
@@ -365,7 +367,7 @@ ALTER TABLE alter_column_constraints ALTER COLUMN b TYPE bigint;
 EXECUTE checkrelfilenodediff ('alter_column_constraints_col_rewrite', 'alter_column_constraints');
 
 EXECUTE capturerelfilenodebefore ('alter_column_constraints_fullrewrite', 'alter_column_constraints');
--- should succeed and relfile changed (not using the column rewrite optimization because there's other command)
+-- should succeed and no table rewrite
 ALTER TABLE alter_column_constraints ADD CONSTRAINT checkb2 CHECK (b < 100), ALTER COLUMN b TYPE int;
 EXECUTE checkrelfilenodediff ('alter_column_constraints_fullrewrite', 'alter_column_constraints');
 

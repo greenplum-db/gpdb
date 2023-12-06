@@ -936,23 +936,25 @@ EXECUTE attribute_encoding_check ('alter_column_other');
  alter_column_other | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
 (3 rows)
 
+-- ALTER TYPE and adding constraint can be done together when rewriting column-only. No table rewrite.
+-- SET DEFAULT is essentially adding a constraint.
 ALTER TABLE alter_column_other ALTER COLUMN b TYPE text, ALTER COLUMN c SET DEFAULT 5;
 ALTER TABLE
 
 EXECUTE attribute_encoding_check ('alter_column_other');
  relname            | attname | filenum | attoptions                                                  
 --------------------+---------+---------+-------------------------------------------------------------
- alter_column_other | b       | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_column_other | b       | 1602    | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
  alter_column_other | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
  alter_column_other | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
 (3 rows)
 EXECUTE checkrelfilenodediff ('alter_column_other', 'alter_column_other');
  segid | casename           | relname            | rewritten 
 -------+--------------------+--------------------+-----------
- 2     | alter_column_other | alter_column_other | t         
- -1    | alter_column_other | alter_column_other | t         
- 0     | alter_column_other | alter_column_other | t         
- 1     | alter_column_other | alter_column_other | t         
+ 2     | alter_column_other | alter_column_other | f         
+ -1    | alter_column_other | alter_column_other | f         
+ 0     | alter_column_other | alter_column_other | f         
+ 1     | alter_column_other | alter_column_other | f         
 (4 rows)
 SELECT * FROM alter_column_other;
  a | b | c 
@@ -1026,16 +1028,16 @@ EXECUTE checkrelfilenodediff ('alter_column_constraints_col_rewrite', 'alter_col
 
 EXECUTE capturerelfilenodebefore ('alter_column_constraints_fullrewrite', 'alter_column_constraints');
 INSERT 0 4
--- should succeed and relfile changed (not using the column rewrite optimization because there's other command)
+-- should succeed and no table rewrite
 ALTER TABLE alter_column_constraints ADD CONSTRAINT checkb2 CHECK (b < 100), ALTER COLUMN b TYPE int;
 ALTER TABLE
 EXECUTE checkrelfilenodediff ('alter_column_constraints_fullrewrite', 'alter_column_constraints');
  segid | casename                             | relname                  | rewritten 
 -------+--------------------------------------+--------------------------+-----------
- -1    | alter_column_constraints_fullrewrite | alter_column_constraints | t         
- 0     | alter_column_constraints_fullrewrite | alter_column_constraints | t         
- 1     | alter_column_constraints_fullrewrite | alter_column_constraints | t         
- 2     | alter_column_constraints_fullrewrite | alter_column_constraints | t         
+ -1    | alter_column_constraints_fullrewrite | alter_column_constraints | f         
+ 2     | alter_column_constraints_fullrewrite | alter_column_constraints | f         
+ 0     | alter_column_constraints_fullrewrite | alter_column_constraints | f         
+ 1     | alter_column_constraints_fullrewrite | alter_column_constraints | f         
 (4 rows)
 
 --------------------------------------------------------------------------------
