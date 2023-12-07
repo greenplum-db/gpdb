@@ -14,9 +14,9 @@
 0U: create temp table ttu_av0(a int);
 1U: create temp table ttu_av1(a int);
 
--- PANIC
-1: select gp_inject_fault('exec_mpp_query_start', 'panic', dbid) from gp_segment_configuration where content=0 and role='p';
-1: select * from tt_av1;
+-- Inject a PANIC on one of the segment. Use something that's not going to be hit by background worker (including autovacuum).
+1: select gp_inject_fault('create_function_fail', 'panic', dbid) from gp_segment_configuration where content=0 and role='p';
+1: create function my_function() returns void as $$ begin end; $$ language plpgsql;
 
 0Uq:
 1q:
@@ -24,6 +24,9 @@
 -- make sure the segment restarted,
 -- also served as a third test case.
 1: create temp table tt_av3(a int);
+
+-- clear the fault
+1: select gp_inject_fault('create_function_fail', 'reset', dbid) from gp_segment_configuration where content=0 and role='p';
 
 -- make sure the autovacuum is run at least once,
 -- it might've been run already, which is fine.
