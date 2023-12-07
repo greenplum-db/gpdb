@@ -3135,16 +3135,11 @@ create_ctescan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->pathkeys = pathkeys;
 	pathnode->locus = locus;
 
-	/*
-	 * We can't extract these two values from the subplan, so we simple set
-	 * them to their worst case here.
-	 *
-	 * GPDB: we do have the subpath, at least if it's not a shared cte.
-	 */
-	pathnode->motionHazard = true;
-	pathnode->rescannable = false;
 	pathnode->sameslice_relids = NULL;
 
+	/*
+	 * GPDB: we do have the subpath, at least if it's not a shared cte.
+	 */
 	if (subpath)
 	{
 		/* copy the cost estimates from the subpath */
@@ -3159,10 +3154,19 @@ create_ctescan_path(PlannerInfo *root, RelOptInfo *rel,
 		pathnode->startup_cost = subpath->startup_cost;
 		pathnode->total_cost = subpath->total_cost;
 
+		pathnode->motionHazard = subpath->motionHazard;
+		pathnode->rescannable = subpath->rescannable;
+
 		ctepath->subpath = subpath;
 	}
 	else
 	{
+		/*
+	 	 * We can't extract these two values from the subplan, so we simple set
+	 	 * them to their worst case here.
+		 */
+		pathnode->motionHazard = true;
+		pathnode->rescannable = false;
 		/* Shared scan. We'll use the cost estimates from the CTE rel. */
 		cost_ctescan(pathnode, root, rel, pathnode->param_info);
 	}
