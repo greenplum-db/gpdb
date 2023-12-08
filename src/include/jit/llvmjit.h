@@ -70,7 +70,7 @@ extern LLVMTypeRef StructHeapTupleData;
 extern LLVMTypeRef StructTupleTableSlot;
 extern LLVMTypeRef StructHeapTupleTableSlot;
 extern LLVMTypeRef StructMinimalTupleTableSlot;
-extern LLVMTypeRef StructAOTupleTableSlot;
+extern LLVMTypeRef StructMemTupleTableSlot;
 extern LLVMTypeRef StructMemTupleData;
 extern LLVMTypeRef StructMemTupleBinding;
 extern LLVMTypeRef StructMemTupleBindingCols;

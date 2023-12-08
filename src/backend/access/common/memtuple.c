@@ -899,3 +899,18 @@ bool MemTupleHasExternal(MemTuple mtup, MemTupleBinding *pbind)
 
 	return false;
 }
+
+MemTuple memtuple_copytuple(MemTuple tuple)
+{
+	int len;
+	MemTuple newTuple;
+
+	if (tuple == NULL)
+		return NULL;
+
+	len = memtuple_get_size(tuple);
+	newTuple = (MemTuple)palloc0(len);
+	memcpy(newTuple, tuple, len);
+
+	return newTuple;
+}

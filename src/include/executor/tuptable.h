@@ -224,12 +224,13 @@ extern PGDLLIMPORT const TupleTableSlotOps TTSOpsVirtual;
 extern PGDLLIMPORT const TupleTableSlotOps TTSOpsHeapTuple;
 extern PGDLLIMPORT const TupleTableSlotOps TTSOpsMinimalTuple;
 extern PGDLLIMPORT const TupleTableSlotOps TTSOpsBufferHeapTuple;
-extern PGDLLIMPORT const TupleTableSlotOps TTSOpsAOTuple;
+extern PGDLLIMPORT const TupleTableSlotOps TTSOpsMemTuple;
 
 #define TTS_IS_VIRTUAL(slot) ((slot)->tts_ops == &TTSOpsVirtual)
 #define TTS_IS_HEAPTUPLE(slot) ((slot)->tts_ops == &TTSOpsHeapTuple)
 #define TTS_IS_MINIMALTUPLE(slot) ((slot)->tts_ops == &TTSOpsMinimalTuple)
 #define TTS_IS_BUFFERTUPLE(slot) ((slot)->tts_ops == &TTSOpsBufferHeapTuple)
+#define TTS_IS_MEMTUPLE(slot) ((slot)->tts_ops == &TTSOpsMemTuple)
 
 /*
  * Tuple table slot implementations.
@@ -286,15 +287,14 @@ typedef struct MinimalTupleTableSlot
 	uint32		off;			/* saved state for slot_deform_heap_tuple */
 } MinimalTupleTableSlot;
 
-typedef struct AOTupleTableSlot
+typedef struct MemTupleTableSlot
 {
     TupleTableSlot base;
-    char *data;
-#define FIELDNO_AOTUPLETABLESLOT_TUPLE 2
+#define FIELDNO_MEMTUPLETABLESLOT_TUPLE 1
     MemTuple tuple;
-#define FIELDNO_AOTUPLETABLESLOT_BINDING 3
+#define FIELDNO_MEMTUPLETABLESLOT_BINDING 2
     MemTupleBinding *mt_bind;
-} AOTupleTableSlot;
+} MemTupleTableSlot;
 
 /*
  * TupIsNull -- is a TupleTableSlot empty?
@@ -331,7 +331,6 @@ extern void ExecForceStoreMinimalTuple(MinimalTuple mtup, TupleTableSlot *slot,
 									   bool shouldFree);
 extern TupleTableSlot *ExecStoreVirtualTuple(TupleTableSlot *slot);
 extern TupleTableSlot *ExecStoreAllNullTuple(TupleTableSlot *slot);
-extern TupleTableSlot *ExecStoreAOTuple(TupleTableSlot *slot, MemTuple mtup, MemTupleBinding *mt_bind, bool *shouldFree);
 extern void ExecStoreHeapTupleDatum(Datum data, TupleTableSlot *slot);
 extern HeapTuple ExecFetchSlotHeapTuple(TupleTableSlot *slot, bool materialize, bool *shouldFree);
 extern MinimalTuple ExecFetchSlotMinimalTuple(TupleTableSlot *slot,

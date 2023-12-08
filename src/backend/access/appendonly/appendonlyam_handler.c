@@ -425,7 +425,7 @@ get_or_create_unique_check_desc(Relation relation, Snapshot snapshot)
 static const TupleTableSlotOps *
 appendonly_slot_callbacks(Relation relation)
 {
-	return &TTSOpsAOTuple;
+	return &TTSOpsMemTuple;
 }
 
 MemTuple
@@ -435,8 +435,7 @@ appendonly_form_memtuple(TupleTableSlot *slot, MemTupleBinding *mt_bind)
 	MemoryContext	oldContext;
 
 	/*
-	 * In case of a non virtal tuple, make certain that the slot's values are
-	 * populated, for example during a CTAS.
+	 * make certain that the slot's values are populated, for example during a CTAS.
 	 */
 	if (slot->tts_nvalid < slot->tts_tupleDescriptor->natts)
 		slot_getsomeattrs(slot, slot->tts_tupleDescriptor->natts);
@@ -827,6 +826,7 @@ static void
 appendonly_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 					int options, BulkInsertState bistate)
 {
+	bool shouldFree;
 	AppendOnlyInsertDesc    insertDesc;
 	MemTuple				mtuple;
 
@@ -837,7 +837,7 @@ appendonly_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 	 * rows to bump gp_fastsequence by.
 	 */
 	insertDesc = get_or_create_ao_insert_descriptor(relation, NUM_FAST_SEQUENCES);
-	mtuple = appendonly_form_memtuple(slot, insertDesc->mt_bind);
+	mtuple = appendonly_fetch_memtuple(slot, insertDesc->mt_bind, &shouldFree);
 
 	/* Update the tuple with table oid */
 	slot->tts_tableOid = RelationGetRelid(relation);
@@ -847,7 +847,8 @@ appendonly_tuple_insert(Relation relation, TupleTableSlot *slot, CommandId cid,
 
 	pgstat_count_heap_insert(relation, 1);
 
-	appendonly_free_memtuple(mtuple);
+	if (shouldFree)
+		appendonly_free_memtuple(mtuple);
 }
 
 /*
@@ -931,6 +932,7 @@ appendonly_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slo
 					bool wait, TM_FailureData *tmfd,
 					LockTupleMode *lockmode, bool *update_indexes)
 {
+	bool shouldFree;
 	AppendOnlyInsertDesc	insertDesc;
 	AppendOnlyDeleteDesc	deleteDesc;
 	MemTuple				mtuple;
@@ -947,7 +949,7 @@ appendonly_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slo
 	/* Update the tuple with table oid */
 	slot->tts_tableOid = RelationGetRelid(relation);
 
-	mtuple = appendonly_form_memtuple(slot, insertDesc->mt_bind);
+	mtuple = appendonly_fetch_memtuple(slot, insertDesc->mt_bind, &shouldFree);
 
 #ifdef FAULT_INJECTOR
 	FaultInjector_InjectFaultIfSet(
@@ -968,7 +970,8 @@ appendonly_tuple_update(Relation relation, ItemPointer otid, TupleTableSlot *slo
 	/* No HOT updates with AO tables. */
 	*update_indexes = true;
 
-	appendonly_free_memtuple(mtuple);
+	if (shouldFree)
+		appendonly_free_memtuple(mtuple);
 
 	return result;
 }

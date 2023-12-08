@@ -52,7 +52,7 @@ typedef struct MemTupleBinding
 {
 	TupleDesc tupdesc;
 	int column_align;
-#define FIELDNO_MEMTUPLEBINDING_NULLBITMAPSIZE 2
+#define FIELDNO_MEMTUPLEBINDING_NULLBITMAPEXTRASIZE 2
 	int null_bitmap_extra_size;  /* extra bytes required by null bitmap */
 #define FIELDNO_MEMTUPLEBINDING_NATTS 3
 	int natts; 			/* number of attributes in memtuple (note: it could be smaller than tupdesc->natts) */
@@ -146,4 +146,5 @@ extern void memtuple_deform(MemTuple mtup, MemTupleBinding *pbind, Datum *datum,
 
 extern bool MemTupleHasExternal(MemTuple mtup, MemTupleBinding *pbind);
 
+extern MemTuple memtuple_copytuple(MemTuple tuple);
 #endif /* MEMTUP_H */

@@ -78,7 +78,7 @@ LLVMTypeRef StructTupleDescData;
 LLVMTypeRef StructTupleTableSlot;
 LLVMTypeRef StructHeapTupleTableSlot;
 LLVMTypeRef StructMinimalTupleTableSlot;
-LLVMTypeRef StructAOTupleTableSlot;
+LLVMTypeRef StructMemTupleTableSlot;
 LLVMTypeRef StructMemTupleData;
 LLVMTypeRef StructMemTupleBinding;
 LLVMTypeRef StructMemTupleBindingCols;
@@ -1018,7 +1018,7 @@ llvm_create_types(void)
 	StructTupleTableSlot = load_type(mod, "StructTupleTableSlot");
 	StructHeapTupleTableSlot = load_type(mod, "StructHeapTupleTableSlot");
 	StructMinimalTupleTableSlot = load_type(mod, "StructMinimalTupleTableSlot");
-    StructAOTupleTableSlot = load_type(mod, "StructAOTupleTableSlot");
+    StructMemTupleTableSlot = load_type(mod, "StructMemTupleTableSlot");
     StructMemTupleData = load_type(mod, "StructMemTupleData");
     StructMemTupleBinding = load_type(mod, "StructMemTupleBinding");
     StructMemTupleBindingCols = load_type(mod, "StructMemTupleBindingCols");

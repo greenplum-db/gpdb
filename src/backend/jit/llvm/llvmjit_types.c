@@ -62,7 +62,7 @@ MemoryContextData StructMemoryContextData;
 TupleTableSlot StructTupleTableSlot;
 HeapTupleTableSlot StructHeapTupleTableSlot;
 MinimalTupleTableSlot StructMinimalTupleTableSlot;
-AOTupleTableSlot StructAOTupleTableSlot;
+MemTupleTableSlot StructMemTupleTableSlot;
 MemTupleData StructMemTupleData;
 MemTupleBinding StructMemTupleBinding;
 MemTupleBindingCols StructMemTupleBindingCols;

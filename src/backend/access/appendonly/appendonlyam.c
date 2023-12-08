@@ -97,6 +97,11 @@ static void AppendOnlyExecutorReadBlock_ResetCounts(
 static void AppendOnlyScanDesc_UpdateTotalBytesRead(
 										AppendOnlyScanDesc scan);
 
+static TupleTableSlot *appendonly_store_memtuple(TupleTableSlot *slot,
+												 MemTuple mtup,
+												 bool shouldFree);
+
+static void appendonly_update_memtuple_binding(TupleTableSlot *slot, int largestAttnum);
 /* ----------------
  *		initscan - scan code common to appendonly_beginscan and appendonly_rescan
  * ----------------
@@ -119,8 +124,6 @@ initscan(AppendOnlyScanDesc scan, ScanKey key)
 	if (scan->initedStorageRoutines)
 		AppendOnlyExecutorReadBlock_ResetCounts(
 												&scan->executorReadBlock);
-
-	scan->executorReadBlock.mt_bind = NULL;
 
 	pgstat_count_heap_scan(scan->aos_rd);
 }
@@ -688,15 +691,11 @@ AppendOnlyExecutorReadBlock_GetBlockInfo(AppendOnlyStorageRead *storageRead,
 	executorReadBlock->headerOffsetInFile =
 		AppendOnlyStorageRead_CurrentHeaderOffsetInFile(storageRead);
 
-	/* Start curLargestAttnum from 1, this will be updated in AppendOnlyExecutorReadBlock_BindingInit() */
-	executorReadBlock->curLargestAttnum = 1;
-
-	/* mt_bind should be recreated for the new block */
-	if (executorReadBlock->mt_bind)
-	{
-		destroy_memtuple_binding(executorReadBlock->mt_bind);
-		executorReadBlock->mt_bind = NULL;
-	}
+	/*
+	 * Start curLargestAttnum from InvalidAttrNumber,
+	 * this will be updated in AppendOnlyExecutorReadBlock_BindingInit()
+	 */
+	executorReadBlock->curLargestAttnum = InvalidAttrNumber;
 
 	/* UNDONE: Check blockFirstRowNum */
 
@@ -768,12 +767,6 @@ AppendOnlyExecutorReadBlock_Finish(AppendOnlyExecutorReadBlock *executorReadBloc
 		executorReadBlock->numericAtts = NULL;
 	}
 
-	if (executorReadBlock->mt_bind)
-	{
-		pfree(executorReadBlock->mt_bind);
-		executorReadBlock->mt_bind = NULL;
-	}
-
 	if (executorReadBlock->attnum_to_rownum)
 	{
 		pfree(executorReadBlock->attnum_to_rownum);
@@ -827,7 +820,6 @@ AppendOnlyExecutorReadBlock_BindingInit(AppendOnlyExecutorReadBlock *executorRea
 	MemoryContext oldContext;
 
 	/* for any row to be read, there's at least one column data in the row */
-	Assert(largestAttnum > 0);
 	Assert(executorReadBlock->attnum_to_rownum != NULL);
 
 	/* Find the first attnum that has a larger lastrownum than rowNum. */
@@ -836,18 +828,14 @@ AppendOnlyExecutorReadBlock_BindingInit(AppendOnlyExecutorReadBlock *executorRea
 		largestAttnum++;
 
 	/*
-	 * If we already created the bindings and also the largest attnum have not changed, 
-	 * we do not need to recreate the bindings again.
+	 * If the tuple we are currently processing is not the first tuple of this block and also
+	 * the largest attnum have not changed, we do not need to recreate the bindings again.
 	 */
-	if (executorReadBlock->mt_bind && largestAttnum == executorReadBlock->curLargestAttnum)
+	if (executorReadBlock->curLargestAttnum != InvalidAttrNumber && largestAttnum == executorReadBlock->curLargestAttnum)
 		return;
 
 	/* Otherwise, we have to create/recreate bindings */
 	oldContext = MemoryContextSwitchTo(executorReadBlock->memoryContext);
-
-	/* destroy the previous bindings */
-	if (executorReadBlock->mt_bind)
-		destroy_memtuple_binding(executorReadBlock->mt_bind);
 
 	/*
 	 * MemTupleBinding should be created from the slot's tuple descriptor
@@ -855,7 +843,7 @@ AppendOnlyExecutorReadBlock_BindingInit(AppendOnlyExecutorReadBlock *executorRea
 	 * not using the tuple descriptor in the relation which could be different
 	 * in case like alter table rewrite.
 	 */
-	executorReadBlock->mt_bind = create_memtuple_binding(slot->tts_tupleDescriptor, largestAttnum);
+	appendonly_update_memtuple_binding(slot, largestAttnum);
 	MemoryContextSwitchTo(oldContext);
 
 	executorReadBlock->curLargestAttnum = largestAttnum;
@@ -891,10 +879,9 @@ AppendOnlyExecutorReadBlock_ProcessTuple(AppendOnlyExecutorReadBlock *executorRe
 	AppendOnlyExecutorReadBlock_BindingInit(executorReadBlock, slot, rowNum);
 
 	{
-		Assert(executorReadBlock->mt_bind);
 		ExecClearTuple(slot);
 		slot->tts_tid = fake_ctid;
-		ExecStoreAOTuple(slot, tuple, executorReadBlock->mt_bind, false);
+		appendonly_store_memtuple(slot, tuple, false);
 	}
 
 	/* skip visibility test, all tuples are visible */
@@ -3424,4 +3411,87 @@ appendonly_insert_finish(AppendOnlyInsertDesc aoInsertDesc)
 
 	pfree(aoInsertDesc->title);
 	pfree(aoInsertDesc);
+}
+
+/*
+ * Store a memory tuple and MemTupleBinding into a MemTupleTableSlot.
+ */
+static TupleTableSlot *appendonly_store_memtuple(TupleTableSlot *slot,
+												 MemTuple mtup,
+												 bool shouldFree)
+{
+	MemTupleTableSlot *mslot = (MemTupleTableSlot *)slot;
+
+	/*
+	 * sanity checks
+	 */
+	Assert(slot != NULL);
+	Assert(slot->tts_tupleDescriptor != NULL);
+	Assert(TTS_EMPTY(slot));
+
+	Assert(mtup != NULL);
+
+	if (unlikely(!TTS_IS_MEMTUPLE(slot)))
+		elog(ERROR, "trying to store an ao_row tuple into wrong type of slot");
+
+	slot->tts_flags &= ~TTS_FLAG_EMPTY;
+
+	mslot->tuple = mtup;
+	slot->tts_nvalid = 0;
+
+	if (shouldFree)
+		slot->tts_flags |= TTS_FLAG_SHOULDFREE;
+
+	return slot;
+}
+
+static void appendonly_update_memtuple_binding(TupleTableSlot *slot, int largestAttnum)
+{
+	MemTupleTableSlot *mslot = (MemTupleTableSlot *)slot;
+
+	/*
+	 * sanity checks
+	 */
+	Assert(slot != NULL);
+	Assert(slot->tts_tupleDescriptor != NULL);
+	Assert(largestAttnum != InvalidAttrNumber);
+
+	if (unlikely(!TTS_IS_MEMTUPLE(slot)))
+		elog(ERROR, "Only able to update memtuple binding for a memtuple table slot");
+	destroy_memtuple_binding(mslot->mt_bind);
+	mslot->mt_bind = create_memtuple_binding(slot->tts_tupleDescriptor, largestAttnum);
+}
+
+/*
+ * If the slot is MemTupleTableSlot, return mslot->tuple, otherwise form the memory tuple.
+ */
+MemTuple
+appendonly_fetch_memtuple(TupleTableSlot *slot, MemTupleBinding *mt_bind, bool *shouldFree)
+{
+	MemTupleTableSlot *mslot = (MemTupleTableSlot *)slot;
+
+	/*
+	 * sanity check
+	 */
+	Assert(slot != NULL);
+	Assert(mt_bind != NULL);
+	Assert(shouldFree != NULL);
+
+	/*
+	 * if the slot isn't MemTupleTableSlot, caller should free this memory tuple after use.
+	 */
+	if (!TTS_IS_MEMTUPLE(slot))
+	{
+		*shouldFree = true;
+		return appendonly_form_memtuple(slot, mt_bind);
+	}
+
+	/* Materialize the tuple so that the slot "owns" it */
+	slot->tts_ops->materialize(slot);
+
+	/*
+	 * mslot->tuple should be freed by tts_mem_clear()
+	 */
+	*shouldFree = false;
+	return mslot->tuple;
 }

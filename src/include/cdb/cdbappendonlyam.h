@@ -122,7 +122,7 @@ typedef struct AppendOnlyExecutorReadBlock
 
 	AttrNumber 		curLargestAttnum; /* the largest attnum stored in memtuple currently being read */
 	int64 			*attnum_to_rownum; /*attnum to rownum mapping, used in building memtuple binding */
-	MemTupleBinding *mt_bind;
+
 	/*
 	 * When reading a segfile that's using version < AOSegfileFormatVersion_GP5,
 	 * that is, was created before GPDB 5.0 and upgraded with pg_upgrade, we need
@@ -496,7 +496,7 @@ extern AppendOnlyInsertDesc appendonly_insert_init(Relation rel,
 												   int64 num_rows);
 extern void appendonly_insert(
 		AppendOnlyInsertDesc aoInsertDesc, 
-		MemTuple instup, 
+		MemTuple instup,
 		AOTupleId *aoTupleId);
 extern void appendonly_insert_finish(AppendOnlyInsertDesc aoInsertDesc);
 extern void appendonly_dml_finish(Relation relation);
@@ -510,6 +510,8 @@ extern void appendonly_delete_finish(AppendOnlyDeleteDesc aoDeleteDesc);
 extern bool appendonly_positionscan(AppendOnlyScanDesc aoscan,
 									AppendOnlyBlockDirectoryEntry *dirEntry,
 									int fsInfoIdx);
+
+extern MemTuple appendonly_fetch_memtuple(TupleTableSlot *slot, MemTupleBinding *mt_bind, bool *shouldFree);
 /*
  * Update total bytes read for the entire scan. If the block was compressed,
  * update it with the compressed length. If the block was not compressed, update
