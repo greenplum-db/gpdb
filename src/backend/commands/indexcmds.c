@@ -144,8 +144,26 @@ cdb_sync_indcheckxmin_with_segments(Oid indexRelationId)
 	int			i;
 	char		cmd[100];
 	bool		indcheckxmin_set_in_any_segment;
+	Relation	pg_index_rel;
 
 	Assert(Gp_role == GP_ROLE_DISPATCH && !IsBootstrapProcessingMode());
+
+	/*
+	 * The query to check on indcheckxmin on segments will acquire AccessShareLock
+	 * on pg_index table, and wouldn't release until the end of the transaction.
+	 * To avoid deadlock between coordinator and segments, we should acquire the
+	 * lock on coordinator in advance, and shouldn't release until the end of the
+	 * transaction.
+	 *
+	 * A typical deadlock case without acquiring the lock is:
+	 *
+	 *   T1: CREATE TABLE t1 (c1 int);
+	 *   T1: BEGIN;
+	 *   T1: CREATE INDEX idx on t1(c1);
+	 *   T2: VACUUM FULL pg_index;
+	 *   T1: SELECT * FROM t1;
+	 */
+	pg_index_rel = heap_open(IndexRelationId, AccessShareLock);
 
 	/*
 	 * Query all the segments, for their indcheckxmin value for this index.
@@ -209,6 +227,12 @@ cdb_sync_indcheckxmin_with_segments(Oid indexRelationId)
 		heap_freetuple(indexTuple);
 		heap_close(pg_index, RowExclusiveLock);
 	}
+
+	/*
+	 * Keep consistent with segments, don't release the lock until the end of
+	 * the transaction.
+	 */
+	heap_close(pg_index_rel, NoLock);
 }
 
 /*

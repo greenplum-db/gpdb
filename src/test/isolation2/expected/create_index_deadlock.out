@@ -1,0 +1,22 @@
+-- This test is used to check if there is a deadlock between coordinator and segments
+-- when creating index.
+
+1: CREATE TABLE test_create_index_deadlock_tbl (c1 int);
+CREATE TABLE
+
+1: BEGIN;
+BEGIN
+1: CREATE INDEX test_create_index_deadlock_idx on test_create_index_deadlock_tbl (c1);
+CREATE INDEX
+2&: VACUUM FULL pg_index;  <waiting ...>
+1: SELECT * FROM test_create_index_deadlock_tbl;
+ c1 
+----
+(0 rows)
+1: COMMIT;
+COMMIT
+2<:  <... completed>
+VACUUM
+
+1: DROP TABLE test_create_index_deadlock_tbl;
+DROP TABLE
