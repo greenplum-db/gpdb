@@ -188,14 +188,14 @@ Redhat and Oracle Linux both support options for in-place upgrade of the operati
 
 > **Note** In-Place upgrades with the Leapp utility are not supported with Rocky or CentOS Linux. You must use Greenplum Copy or Greenplum Backup and Restore instead.
 
-Greenplum Database includes the `upgrade_check.py` utility which helps you identify and address the main challenges associated with an in-place upgrade from EL 7 to 8 caused by the `glibc` GNU C library changes.
+Greenplum Database includes the `el8_migrate_locale.py` utility which helps you identify and address the main challenges associated with an in-place upgrade from EL 7 to 8 caused by the `glibc` GNU C library changes.
 
 As part of the overall process of this upgrade method, you:
 
-- Run the `upgrade_check.py` utility to perform pre-check scripts, these scripts report information on any objects whose data the upgrade might affect.
+- Run the `el8_migrate_locale.py` utility to perform pre-check scripts, these scripts report information on any objects whose data the upgrade might affect.
 - Stop the Greenplum cluster and use Leapp to run an in-place upgrade of the operating system.
 - Address any required operating system configuration differences and start the Greenplum cluster.
-- Follow the required steps given by the `upgrade_check.py` utility for fixing the data that is impacted by the `glibc` locale sorting changes.
+- Follow the required steps given by the `el8_migrate_locale.py` utility for fixing the data that is impacted by the `glibc` locale sorting changes.
 
 The advantage of this method is that it does not require two different Greenplum clusters. The disadvantages are the risk of performing an in-place operating system upgrade, no downgrade options after any issues, the risk of issues that could leave your cluster in a non-operating state, and the requirement of additional steps after the upgrade is complete to address the `glibc` changes. You must also plan downtime of your Greenplum database for the entire process.
 
@@ -208,8 +208,8 @@ Continue reading for a detailed list of steps to upgrade your cluster using this
 Before you begin the upgrade, run the following commands:
 
 ```
-python upgrade_check.py precheck-index --out index.out
-python upgrade_check.py precheck-table --pre_upgrade --out table.out
+python el8_migrate_locale.py precheck-index --out index.out
+python el8_migrate_locale.py precheck-table --pre_upgrade --out table.out
 ```
 
 The subcommand `precheck-index` checks each database for indexes involving columns of type `text`, `varchar`, `char`, and `citext`, and the subcommand `precheck-table` checks each database for range-partitioned tables using these types in the partition key. The option `--pre_upgrade` lists the partition tables with the partition key using built-in collatable types.
@@ -230,26 +230,26 @@ Once the upgrade is complete, address any [Operating System Configuration Differ
 
 You must reindex all indexes involving columns of collatable data types (`text`, `varchar`, `char`, and `citext`) before the database instance is put into production. 
 
-Run the `upgrade_check.py` utility with the `migrate` subcommand to reindex the necessary indexes.
+Run the `el8_migrate_locale.py` utility with the `migrate` subcommand to reindex the necessary indexes.
 
 ```
-python upgrade_check.py migrate --input index.out
+python el8_migrate_locale.py migrate --input index.out
 ```
 
 ##### <a id="rangepart"></a>Range-Partitioned Tables
 
 You must check range-partitioned tables that use collatable data types in the partition key to verify that all rows are still in the correct partitions. 
 
-First, run the `upgrade_check.py` utility with the `precheck-table` subcommand in order to verify if the rows are still in the correct partitions after the operating system upgrade. 
+First, run the `el8_migrate_locale.py` utility with the `precheck-table` subcommand in order to verify if the rows are still in the correct partitions after the operating system upgrade. 
 
 ```
-python upgrade_check.py precheck-table --out table.out
+python el8_migrate_locale.py precheck-table --out table.out
 ```
 
 The utility returns the list of range-partitioned tables whose rows have been affected. Run the utility using the `migrate` subcommand to rebuild the partitions that have their rows in an incorrect order after the upgrade. 
 
 ```
-python upgrade_check.py migrate --input table.out
+python el8_migrate_locale.py migrate --input table.out
 ```
 
 #### <a id="postfix"></a>Verify the Changes
@@ -257,8 +257,8 @@ python upgrade_check.py migrate --input table.out
 Run the pre-upgrade scripts again for each database to verify that all required changes in the database have been addressed.
 
 ```
-python upgrade_check.py precheck-index --out index.out
-python upgrade_check.py precheck-table --out table.out
+python el8_migrate_locale.py precheck-index --out index.out
+python el8_migrate_locale.py precheck-table --out table.out
 ```
 
 If the utility returns no indexes nor tables, you have successfully addressed all the issues in your Greenplum Database cluster caused by the `glibc` GNU C library changes.
