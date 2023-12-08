@@ -1826,12 +1826,11 @@ select * from x;
          Join Filter: (length((x.a || x_1.a)) < 5)
          ->  WorkTable Scan on x
                Output: x.a
-         ->  Materialize
+         ->  WorkTable Scan on x x_1
                Output: x_1.a
-               ->  WorkTable Scan on x x_1
-                     Output: x_1.a
- Optimizer: Postgres query optimizer
-(13 rows)
+ Optimizer: Postgres-based planner
+ Settings: gp_cte_sharing = 'on'
+(12 rows)
 
 with recursive x(a) as
   ((values ('a'), ('b'))
