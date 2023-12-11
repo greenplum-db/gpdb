@@ -1608,7 +1608,7 @@ aocol_compression_ratio_internal(Relation parentrel)
 {
 	StringInfoData sqlstmt;
 	Relation	aosegrel;
-	bool		connected = false;
+	volatile bool		connected = false;
 	int			proc;	/* 32 bit, only holds number of segments */
 	int			ret;
 	int64		eof = 0;
