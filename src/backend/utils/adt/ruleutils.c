@@ -45,6 +45,7 @@
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/tlist.h"
+#include "optimizer/planner.h"
 #include "parser/keywords.h"
 #include "parser/parse_agg.h"
 #include "parser/parse_func.h"
@@ -98,6 +99,9 @@
 #define PRETTY_INDENT(context)	((context)->prettyFlags & PRETTYFLAG_INDENT)
 #define PRETTY_SCHEMA(context)	((context)->prettyFlags & PRETTYFLAG_SCHEMA)
 
+/* macros for negative operator only used in current file */
+#define	Int4NegOperator			558
+#define	NumericNegOperator		1751
 
 /* ----------
  * Local data types
@@ -5437,6 +5441,31 @@ get_rule_sortgroupclause(SortGroupClause *srt, List *tlist, bool force_colno,
 	}
 	else if (expr && IsA(expr, Const))
 		get_const_expr((Const *) expr, context, 1);
+	else if (expr && IsA(expr, OpExpr))
+	{
+		OpExpr		*opexpr = (OpExpr *)expr;
+		List		*args = opexpr->args;
+
+		/*
+		 * Const-folder the expression(opexpr plus const) to negative const,
+		 * mainly there are two operators we need to worried about, namely
+		 * in4um(Int4NegOperator) and numeric_uminus(NumericNegOperator),
+		 * and get_const_expr() is responsible for end up getting labeled
+		 * with a typecast.
+		 */
+		if (list_length(args) == 1)
+		{
+			Node	   *arg = (Node *) linitial(args);
+			Oid			opno = opexpr->opno;
+
+			if ((opno == Int4NegOperator ||
+				 opno == NumericNegOperator) &&
+				 IsA(arg, Const))
+				expr = (Node *)expression_planner((Expr *)expr);
+		}
+
+		get_rule_expr(expr, context, true);
+	}
 	else
 		get_rule_expr(expr, context, true);
 
