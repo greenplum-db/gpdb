@@ -5458,10 +5458,9 @@ get_rule_sortgroupclause(SortGroupClause *srt, List *tlist, bool force_colno,
 			Node	   *arg = (Node *) linitial(args);
 			Oid			opno = opexpr->opno;
 
-			if ((opno == Int4NegOperator ||
-				 opno == NumericNegOperator) &&
+			if ((opno == Int4NegOperator || opno == NumericNegOperator) &&
 				 IsA(arg, Const))
-				expr = (Node *)expression_planner((Expr *)expr);
+				expr = (Node *) expression_planner((Expr *)expr);
 		}
 
 		get_rule_expr(expr, context, true);
