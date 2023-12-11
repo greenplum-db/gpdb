@@ -20592,7 +20592,7 @@ AttachPartitionEnsureIndexes(Relation rel, Relation attachrel)
 
 	/*
 	 * For each index on the partitioned table, find a matching one in the
-	 * partition-to-be; if one is not found, create one.
+	 * partition-to-be; if one is not found, error out.
 	 */
 	foreach(cell, idxes)
 	{
@@ -20631,10 +20631,6 @@ AttachPartitionEnsureIndexes(Relation rel, Relation attachrel)
 			Oid			cldIdxId = RelationGetRelid(attachrelIdxRels[i]);
 			Oid			cldConstrOid = InvalidOid;
 
-			/* does this index have a parent?  if so, can't use it */
-			if (has_superclass(cldIdxId))
-				continue;
-
 			if (CompareIndexInfo(attachInfos[i], info,
 								 attachrelIdxRels[i]->rd_indcollation,
 								 idxRel->rd_indcollation,
@@ -20643,6 +20639,17 @@ AttachPartitionEnsureIndexes(Relation rel, Relation attachrel)
 								 attmap,
 								 RelationGetDescr(rel)->natts))
 			{
+				/*
+				 * Does this index have a parent?  if so, this parent index is
+				 * redundant. All redundant indexes have already been removed
+				 * from partition.
+				 */
+				if (has_superclass(cldIdxId))
+				{
+					found = true;
+					continue;
+				}
+
 				/*
 				 * If this index is being created in the parent because of a
 				 * constraint, then the child needs to have a constraint also,
