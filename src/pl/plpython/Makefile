@@ -119,6 +119,7 @@ REGRESS = \
 	plpython_subtransaction \
 	plpython_transaction \
 	plpython_gpdb \
+	plpython3_virtual_env \
 	plpython3_path_guc \
 	plpython_drop
 

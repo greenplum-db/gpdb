@@ -12,10 +12,16 @@
 #include "commands/trigger.h"
 #include "executor/spi.h"
 #include "miscadmin.h"
+#include "utils/builtins.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
 #include "utils/syscache.h"
+#include "utils/timestamp.h"
+
+#include "cdb/cdbvars.h"
+
+#include "cdb/cdbvars.h"
 
 #include "cdb/cdbvars.h"
 
@@ -28,7 +34,6 @@
 #include "plpy_plpymodule.h"
 #include "plpy_procedure.h"
 #include "plpy_subxactobject.h"
-
 
 /*
  * exported functions
@@ -86,6 +91,27 @@ static bool inited = false;
 
 /* GUC variables */
 #if PY_MAJOR_VERSION >= 3
+
+/* GUC variables */
+static char *plpython3_virtual_env = NULL;
+
+static bool
+plpython3_check_python_virtual_env(char **newval, void **extra, GucSource source) {
+	if (inited)
+	{
+		GUC_check_errmsg("SET PYTHON Virtual Env failed, the GUC value can only be changed before initializing the python interpreter.");
+		return false;
+	}
+	if (*newval ==NULL || **newval == '\0')
+		return true;
+	if (!(strncmp(*newval, "venv_", sizeof("venv_") - 1) == 0 && strtoull(*newval + sizeof("venv_") - 1, NULL, 16)))
+	{		
+		GUC_check_errmsg("SET PYTHON Virtual Env failed, virtual environment name is invalid");
+			return false;
+	}
+	return true;
+}
+
 static char *plpython3_path = NULL;
 
 static bool
@@ -124,11 +150,16 @@ _PG_init(void)
 	prev_cancel_pending_hook = cancel_pending_hook;
 	cancel_pending_hook = PLy_handle_cancel_interrupt;
 
-	/*
-	 * This should be safe even in the presence of conflicting plpythons, and
-	 * it's necessary to do it before possibly throwing a conflict error, or
-	 * the error message won't get localized.
-	 */
+	DefineCustomStringVariable("plpython3.virtual_env",
+								gettext_noop("Virtual Env for plpython3."),
+								NULL,
+								&plpython3_virtual_env,
+								"",
+								PGC_USERSET,
+								GUC_GPDB_NEED_SYNC,
+								plpython3_check_python_virtual_env,
+								NULL,
+								NULL);
 	pg_bindtextdomain(TEXTDOMAIN);
 #if PY_MAJOR_VERSION >= 3
 	DefineCustomStringVariable("plpython3.python_path",
@@ -186,7 +217,58 @@ PLy_initialize(void)
 #if PY_MAJOR_VERSION >= 3
 	PyImport_AppendInittab("plpy", PyInit_plpy);
 #endif
+
+#if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 8
+	if (plpython3_virtual_env != NULL && *plpython3_virtual_env != '\0')
+	{	
+
+		PyStatus status;
+
+		PyConfig config;
+		PyConfig_InitPythonConfig(&config);
+
+		unsetenv("PYTHONPATH");
+		unsetenv("PYTHONHOME");
+		
+		/* Preinitialize Set Python Interpreter Path*/
+		char plpython3_prefix[MAXPGPATH];
+		snprintf(plpython3_prefix, sizeof(plpython3_prefix), "/tmp/plpython3/%s", plpython3_virtual_env);
+
+		char plpython3_executable[MAXPGPATH];
+		snprintf(plpython3_executable, sizeof(plpython3_executable), "%s/bin/python", plpython3_prefix);
+		
+		/* Set the executable. Implicitly preinitialize Python. */
+		status = PyConfig_SetBytesString(&config, &config.executable,
+									plpython3_executable);
+
+		if (status.err_msg)
+			PLy_elog(ERROR, "%s", status.err_msg);
+
+		status = PyConfig_SetBytesString(&config, &config.prefix,
+									plpython3_prefix);
+
+		if (status.err_msg)
+			PLy_elog(ERROR, "%s", status.err_msg);
+
+		status = PyConfig_SetBytesString(&config, &config.exec_prefix,
+									plpython3_prefix);
+
+		if (status.err_msg)
+			PLy_elog(ERROR, "%s", status.err_msg);
+
+		status = Py_InitializeFromConfig(&config);
+
+		if (status.err_msg)
+			PLy_elog(ERROR, "%s", status.err_msg);
+
+		PyConfig_Clear(&config);
+	}
+	else
+		Py_Initialize();
+#else
 	Py_Initialize();
+#endif
+
 #if PY_MAJOR_VERSION >= 3
 	PyImport_ImportModule("plpy");
 #endif
