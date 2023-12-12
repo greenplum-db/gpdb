@@ -88,8 +88,28 @@ select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat';
 insert into toolkit_miss_stat select i,i from generate_series(1,10) i;
 analyze toolkit_miss_stat;
 select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat';
+-- ensure materialized view is displayed accordingly
+create materialized view toolkit_miss_stat_mv as select * from toolkit_miss_stat distributed by (a);
+select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat_mv';
+analyze toolkit_miss_stat_mv;
+select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat_mv';
+drop materialized view toolkit_miss_stat_mv;
 drop table toolkit_miss_stat;
 
+create table deep_part ( i int, j int, k int, s char(5))
+distributed by (i)
+partition by list(s)
+subpartition by range (j) subpartition template (start(1)  end(3) every(1))
+(partition female values('F'), partition male values('M'));
+insert into deep_part values (1, 1, 1, 'M');
+insert into deep_part values (1, 1, 1, 'F');
+insert into deep_part values (2, 2, 2, 'M');
+-- should return all partitions and root, but not intermediate
+select * from gp_toolkit.gp_stats_missing where smitable LIKE 'deep_part%';
+analyze deep_part;
+-- should return no partitions, since they've all been analyzed
+select * from gp_toolkit.gp_stats_missing where smitable LIKE 'deep_part%';
+reset gp_autostats_mode;
 
 -- Test the gp_skew_idle_fractions view
 create table toolkit_skew (a int);

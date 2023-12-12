@@ -868,7 +868,9 @@ GRANT SELECT ON TABLE gp_toolkit.gp_skew_idle_fractions TO public;
 --        gp_toolkit.gp_stats_missing
 --
 -- @doc:
---        List all tables with no or insufficient stats
+--        List all tables with no or insufficient stats. Always skip interior partitions, as stats are never collected
+--        and this would add noise.
+--        GPDB_14_MERGE_FIXME: Change this to relpages > -1 after 3d351d9
 --
 --------------------------------------------------------------------------------
 CREATE VIEW gp_toolkit.gp_stats_missing
@@ -898,7 +900,7 @@ AS
             GROUP BY starelid
         ) bar
         ON aut.autoid = starelid
-    WHERE (aut.autrelkind in ('r', 'p', 'm')
+    WHERE aut.autrelkind in ('r', 'p', 'm')
     AND NOT (pgc.relispartition AND aut.autrelkind = 'p')
     AND (aut.autrelpages = 0 AND (stacnt IS NULL OR attcnt > stacnt));
 
