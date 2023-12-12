@@ -514,6 +514,8 @@ deleteDir(Oid group, CGroupComponentType component, const char *filename, bool u
 
 	while (++retry <= MAX_RETRY)
 	{
+		bool all_deleted = true;
+
 		if (unassign)
 			detachcgroup(group, component, fd_dir);
 
@@ -534,21 +536,28 @@ deleteDir(Oid group, CGroupComponentType component, const char *filename, bool u
 					continue;
 				}
 
-				/*
-				 * we don't check for ENOENT again as we already acquired the lock
-				 * on this dir and the dir still exist at that time, so if then
-				 * it's removed by other processes then it's a bug.
-				 */
+				if (err == ENOENT) {
+					pathes[i].deleted = true;
+					continue;
+				}
+
 				elog(DEBUG1, "can't remove dir, ignore the error: %s: %s",
 					 pathes[i].path, strerror(err));
+				goto error;
 			}
 
 			pathes[i].deleted = true;
 			elog(DEBUG1, "cgroup dir '%s' removed", pathes[i].path);
 		}
-		break;
+
+		for (i = 0;i < path_cnt; ++i)
+			all_deleted = (all_deleted && pathes[i].deleted);
+
+		if (all_deleted)
+			break;
 	}
 
+error:
 	/* close() also releases the lock */
 	close(fd_dir);
 
