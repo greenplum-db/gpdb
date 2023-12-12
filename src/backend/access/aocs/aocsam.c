@@ -822,7 +822,11 @@ aocs_locate_target_segment(AOCSScanDesc scan, int64 targrow)
  * block directory based get_target_tuple()
  */
 static bool
-aocs_blkdirscan_get_target_tuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot, bool reset, bool checkVisiOnly)
+aocs_blkdirscan_get_target_tuple(AOCSScanDesc scan,
+								 int64 targrow,
+								 TupleTableSlot *slot,
+								 bool reset,
+								 bool checkVisiOnly)
 {
 	int segno, segidx;
 	int64 rownum = InvalidAORowNum;
@@ -887,9 +891,7 @@ aocs_blkdirscan_get_target_tuple(AOCSScanDesc scan, int64 targrow, TupleTableSlo
 			scan->blkdirscan->segno = -1;
 		}
 		else
-		{
 			rowsprocessed = scan->segfirstrow + scan->segrowsprocessed;
-		}
 
 		if ((scan->rs_base.rs_rd)->rd_att->attrs[col].attisdropped)
 			continue;
@@ -1177,7 +1179,11 @@ aocs_gettuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
  * increasing in between successive calls.
  */
 bool
-aocs_get_target_tuple(AOCSScanDesc aoscan, int64 targrow, TupleTableSlot *slot, bool reset, bool checkVisiOnly)
+aocs_get_target_tuple(AOCSScanDesc aoscan,
+					  int64 targrow,
+					  TupleTableSlot *slot,
+					  bool reset,
+					  bool checkVisiOnly)
 {
 	if (aoscan->columnScanInfo.relationTupleDesc == NULL)
 	{
@@ -1188,7 +1194,11 @@ aocs_get_target_tuple(AOCSScanDesc aoscan, int64 targrow, TupleTableSlot *slot, 
 	}
 
 	if (aoscan->blkdirscan != NULL)
-		return aocs_blkdirscan_get_target_tuple(aoscan, targrow, slot, reset, checkVisiOnly);
+		return aocs_blkdirscan_get_target_tuple(aoscan,
+												targrow,
+												slot,
+												reset,
+												checkVisiOnly);
 
 	if (aocs_getsegment(aoscan, targrow) < 0)
 	{

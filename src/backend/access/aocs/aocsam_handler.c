@@ -114,6 +114,12 @@ typedef struct AOCODMLStates
 
 static AOCODMLStates aocoDMLStates;
 
+/* Used by qsort() to compare two int64 values */
+static inline int sort_int64_cmp(const void * a, const void * b)
+{
+	return ( *(int64*)a - *(int64*)b );
+}
+
 /*
  * There are two cases that we are called from, during context destruction
  * after a successful completion and after a transaction abort. Only in the
@@ -1683,10 +1689,6 @@ aoco_scan_analyze_next_tuple(TableScanDesc scan, TransactionId OldestXmin,
 			 errmsg("API not supported for appendoptimized relations")));
 }
 
-static int sort_int64_cmp(const void * a, const void * b) {
-	return ( *(int64*)a - *(int64*)b );
-}
-
 /*
  * Sameple rows from AOCO table
  *
@@ -1701,13 +1703,6 @@ static int sort_int64_cmp(const void * a, const void * b) {
  * When RowSampler selected a tuple which is dead, continue to move globalOffset
  * till getting a live tuple.
  *
- * Peformance improvement:
- *
- * For now we use aocs_get_target_tuple() to walk through the table, which is
- * unnecessary because we need just to fetch live tuples. A visimap scan
- * without table scan will have better performance. However, it is not easy
- * to implement since the code of visimap scan ties to table scan heavily.
- * We can consider it for performance improvement in future.
  */
 static int
 aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
@@ -1727,9 +1722,9 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 	AOCSScanDesc aocoscan = (AOCSScanDesc) scan;
 
 	int64 totaltupcount = AOCSScanDesc_TotalTupCount(aocoscan);
-	/*int64 totaldeadtupcount = 0;
+	int64 totaldeadtupcount = 0;
 	if (aocoscan->total_seg > 0 )
-		totaldeadtupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&aocoscan->visibilityMap);*/
+		totaldeadtupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&aocoscan->visibilityMap);
 
 	/*
 	 * Get the total number of blocks for the table
@@ -1745,8 +1740,8 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 	 * AOTupleId is 48bits, the max value of totalrows is never greater than
 	 * AOTupleId_MaxSegmentFileNum * AOTupleId_MaxRowNum (< 48 significant bits).
 	 */
-	/**totalrows = (double) (totaltupcount - totaldeadtupcount);
-	*totaldeadrows = (double) totaldeadtupcount; */
+	*totalrows = (double) (totaltupcount - totaldeadtupcount);
+	*totaldeadrows = (double) totaldeadtupcount;
 
 	/*
 	 * Prepare for sampling tuple numbers
@@ -1756,9 +1751,13 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 	VslSampler_Init(&vs, totaltupcount, targrows);
 	int lastStepLength = 0;
 	bool reset = false;
-	int64 tupleIdIdx = 0;
-	int64* tupleIdSet = palloc(sizeof(int64) * targrows);
+	int64 rowNumIdx = 0;
+	int64* rowNumSet = palloc(sizeof(int64) * targrows);
 
+	/*
+	 * Query VslSampler for selected row numbers, check the visibility of them,
+	 * and save the row number of live tuples to rowNumSet
+	 */
 	while (VslSampler_HasMore(&vs))
 	{
 		/* Selected row number in scope of live tuples */
@@ -1771,9 +1770,10 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 			lastStepLength = vs.stepLength;
 		}
 
+		/* Check visibility of the tuple without actually fetching it */
 		if (aocs_get_target_tuple(aocoscan, aocoscan->targrow, slot, reset, true))
 		{
-			tupleIdSet[tupleIdIdx++] = aocoscan->targrow;
+			rowNumSet[rowNumIdx++] = aocoscan->targrow;
 			liverows++;
 			VslSampler_SetValid(&vs);
 		}
@@ -1796,12 +1796,17 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 		vacuum_delay_point();
 	}
 
-	qsort(tupleIdSet, tupleIdIdx, sizeof(int64), sort_int64_cmp);
-	//aocs_rescan(aocoscan);
+	/* Sort all items in rowNumSet for sequential scan later */
+	qsort(rowNumSet, rowNumIdx, sizeof(int64), sort_int64_cmp);
+
+	/*
+	 * Fetch tuples acccording to rowNumSet
+	 * Note that we need to reset the scan for first time
+	 */
 	reset = true;
-	for (int i = 0; i < tupleIdIdx; i++)
+	for (int i = 0; i < rowNumIdx; i++)
 	{
-		if (aocs_get_target_tuple(aocoscan, tupleIdSet[i], slot, reset, false))
+		if (aocs_get_target_tuple(aocoscan, rowNumSet[i], slot, reset, false))
 		{
 			rows[numrows++] = ExecCopySlotHeapTuple(slot);
 			ExecClearTuple(slot);
@@ -1813,7 +1818,7 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 
 	ExecDropSingleTupleTableSlot(slot);
 	table_endscan(scan);
-	pfree(tupleIdSet);
+	pfree(rowNumSet);
 
 	/*
 	 * Emit some interesting relation info
@@ -1825,8 +1830,7 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 					"%.f accurate total dead rows",
 					RelationGetRelationName(onerel),
 					vs.m, liverows, deadrows, numrows,
-					0.0, 0.0)));
-					//*totalrows, *totaldeadrows)));
+					*totalrows, *totaldeadrows)));
 
 	return numrows;
 }
