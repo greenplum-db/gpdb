@@ -1177,6 +1177,16 @@ aocs_gettuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
  *
  * Note: for the duration of the scan, we expect targrow to be monotonically
  * increasing in between successive calls.
+ *
+ * Parameter "reset" indicates whether rescan is needed before checking
+ * visibility/fetching tuple. It should be set if current tuple is before
+ * the latest accessed tuple.
+ *
+ * If checkVisiOnly is false, tuple will be returned by slot. If it is true,
+ * no tuple will be returned.
+ * Note checkVisiOnly is valid only for blk dir scan (aoscan->blkdirscan is
+ * set). If it is not blk dir scan, checkVisiOnly will be ignored and the
+ * tuple will always be returned if the tuple is live.
  */
 bool
 aocs_get_target_tuple(AOCSScanDesc aoscan,

@@ -1691,18 +1691,6 @@ aoco_scan_analyze_next_tuple(TableScanDesc scan, TransactionId OldestXmin,
 
 /*
  * Sameple rows from AOCO table
- *
- * Basic algorithm:
- *
- * Let RowSampler works in the scope of a "filtered" table which includes only
- * live tuples. e.g. there is a table with 100 tuples including 30 live tuples
- * and 70 dead tuples. RowSampler can "see" a table with only 30 tuples.
- * Use a global cursor (globalOffset) to remember the actual position.
- * When RowSampler skipped n tuples before a selecting, move globalOffset 
- * forward by n live tuples (ignoring all dead tuples in the scanning).
- * When RowSampler selected a tuple which is dead, continue to move globalOffset
- * till getting a live tuple.
- *
  */
 static int
 aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
@@ -1719,6 +1707,7 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 	int lastStepLength = 0;
 	bool reset = false;
 	int64 rowNumIdx = 0;
+	/* An array to save row numbers of selected tuples */
 	int64* rowNumSet = NULL;
 
 	Assert(targrows > 0);
@@ -1753,7 +1742,7 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 	*totaldeadrows = (double) totaldeadtupcount;
 
 	/*
-	 * Prepare for sampling row numbers
+	 * Prepare for sampling tuple numbers
 	 */
 	VslSampler_Init(&vs, totaltupcount, targrows, random());
 	rowNumSet = palloc(sizeof(int64) * targrows);
@@ -1764,9 +1753,12 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 	 */
 	while (VslSampler_HasMore(&vs))
 	{
-		/* Selected row number in scope of live tuples */
 		aocoscan->targrow = VslSampler_Next(&vs);
 
+		/*
+		 * If vs.stepLength changed, it means we go backward to the begining of
+		 * the table for next scan. Reset the scan then.
+		 */
 		if (lastStepLength != vs.stepLength)
 		{
 			if (lastStepLength != 0)

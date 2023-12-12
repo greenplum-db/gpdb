@@ -79,7 +79,7 @@ extern double anl_random_fract(void);
 extern double anl_init_selection_state(int n);
 extern double anl_get_next_S(double t, int n, double *stateptr);
 
-/* Very Step Length Sampling algorithm for AO/CO table rows */
+/* Variable Step Length Sampling algorithm for AO/CO table rows */
 typedef struct
 {
 	int64           N;				/* number of objects, known in advance */
