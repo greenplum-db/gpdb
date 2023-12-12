@@ -1757,8 +1757,6 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 	int lastStepLength = 0;
 	bool reset = false;
 	int64 tupleIdIdx = 0;
-	//AOTupleId* tupleIdSet = palloc(sizeof(AOTupleId) * targrows);
-	AOTupleId tupleId;
 	int64* tupleIdSet = palloc(sizeof(int64) * targrows);
 
 	while (VslSampler_HasMore(&vs))
@@ -1773,7 +1771,7 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 			lastStepLength = vs.stepLength;
 		}
 
-		if (aocs_get_target_tuple(aocoscan, aocoscan->targrow, slot, reset, true, &tupleId))
+		if (aocs_get_target_tuple(aocoscan, aocoscan->targrow, slot, reset, true))
 		{
 			tupleIdSet[tupleIdIdx++] = aocoscan->targrow;
 			liverows++;
@@ -1803,7 +1801,7 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 	reset = true;
 	for (int i = 0; i < tupleIdIdx; i++)
 	{
-		if (aocs_get_target_tuple(aocoscan, tupleIdSet[i], slot, reset, false, &tupleId))
+		if (aocs_get_target_tuple(aocoscan, tupleIdSet[i], slot, reset, false))
 		{
 			rows[numrows++] = ExecCopySlotHeapTuple(slot);
 			ExecClearTuple(slot);
@@ -2731,7 +2729,7 @@ aoco_scan_sample_next_tuple(TableScanDesc scan, SampleScanState *scanstate,
 			aoscan->targrow = currblk * AO_MAX_TUPLES_PER_HEAP_BLOCK + targetoffset - 1;
 			Assert(aoscan->targrow < totalrows);
 
-			if (aocs_get_target_tuple(aoscan, aoscan->targrow, slot))
+			if (aocs_get_target_tuple(aoscan, aoscan->targrow, slot, false, false))
 				return true;
 
 			/* tuple was deleted, loop around to try the next one */
