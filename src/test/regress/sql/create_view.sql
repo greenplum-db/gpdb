@@ -615,6 +615,12 @@ select pg_get_viewdef('tt23v', true);
 select pg_get_ruledef(oid, true) from pg_rewrite
   where ev_class = 'tt23v'::regclass and ev_type = '1';
 
+
+-- test display negative operator of const-folder expression
+create table tdis(a int, b int, c int);
+create view tdis_v1 as select a,b,c, -1::int from tdis group by 1,2,3,4;
+select pg_get_viewdef('tdis_v1', true);
+
 -- clean up all the random objects we made above
 DROP SCHEMA temp_view_test CASCADE;
 DROP SCHEMA testviewschm2 CASCADE;
