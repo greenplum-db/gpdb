@@ -466,27 +466,13 @@ bool
 deleteDir(Oid group, CGroupComponentType component, const char *filename, bool unassign,
 		  void (*detachcgroup) (Oid group, CGroupComponentType component, int fd_dir))
 {
-	struct path_item {
-		char *path;
-		bool deleted;
-	};
-
 	char path[MAX_CGROUP_PATHLEN];
 	char leaf_path[MAX_CGROUP_PATHLEN];
 	size_t path_size = sizeof(path);
 
 	bool is_v2 = Gp_resource_manager_policy == RESOURCE_MANAGER_POLICY_GROUP_V2;
 	int path_cnt = 2;
-	struct path_item pathes[2] = {
-		{
-			.path = leaf_path,
-			.deleted = !is_v2,
-		},
-		{
-			.path = path,
-			.deleted = false,
-		}
-	};
+	char *paths[2] = {leaf_path, path};
 	int retry = unassign ? 0 : MAX_RETRY - 1;
 	int fd_dir;
 	int i;
@@ -512,48 +498,43 @@ deleteDir(Oid group, CGroupComponentType component, const char *filename, bool u
 	if (filename)
 		writeInt64(group, BASEDIR_GPDB, component, filename, 0);
 
+	if (!unassign)
+		detachcgroup = NULL;
+
+	i = is_v2 ? 0 : 1;
 	while (++retry <= MAX_RETRY)
 	{
-		bool all_deleted = true;
-
-		if (unassign)
+		if (detachcgroup)
 			detachcgroup(group, component, fd_dir);
 
-		for (i = 0;i < path_cnt; ++i)
+		for (; i < path_cnt; ++i)
 		{
-			if (pathes[i].deleted)
-				continue;
-
-			if (rmdir(pathes[i].path))
+			if (rmdir(paths[i]))
 			{
 				int err = errno;
 
 				if (err == EBUSY && unassign && retry < MAX_RETRY)
 				{
 					elog(DEBUG1, "can't remove dir, will retry: %s: %s",
-						 pathes[i].path, strerror(err));
+						 paths[i], strerror(err));
 					pg_usleep(1000);
-					continue;
+					break;
 				}
 
-				if (err == ENOENT) {
-					pathes[i].deleted = true;
-					continue;
+				if (err != ENOENT)
+				{
+					elog(DEBUG1, "can't remove dir, ignore the error: %s: %s",
+						paths[i], strerror(err));
+					goto error;
 				}
-
-				elog(DEBUG1, "can't remove dir, ignore the error: %s: %s",
-					 pathes[i].path, strerror(err));
-				goto error;
 			}
 
-			pathes[i].deleted = true;
-			elog(DEBUG1, "cgroup dir '%s' removed", pathes[i].path);
+			detachcgroup = NULL;
+
+			elog(DEBUG1, "cgroup dir '%s' removed", paths[i]);
 		}
 
-		for (i = 0;i < path_cnt; ++i)
-			all_deleted = (all_deleted && pathes[i].deleted);
-
-		if (all_deleted)
+		if (i >= path_cnt)
 			break;
 	}
 
