@@ -88,12 +88,16 @@ typedef struct
 	int64			m;				/* objects selected so far */
 	int64			pos;			/* current position */
 	int64			stepLength;
+	int64			startOffset;
+	SamplerRandomState randstate;	/* random generator state */
 } VslSamplerData;
 
 typedef VslSamplerData *VslSampler;
 
-extern void VslSampler_Init(VslSampler vs, int64 nobjects,
-							   int64 samplesize);
+extern void VslSampler_Init(VslSampler vs,
+							int64 nobjects,
+							int64 samplesize,
+							int64 randseed);
 extern bool VslSampler_HasMore(VslSampler vs);
 extern int64 VslSampler_Next(VslSampler vs);
 extern void VslSampler_SetValid(VslSampler vs);

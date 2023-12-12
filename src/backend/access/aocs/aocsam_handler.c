@@ -1715,6 +1715,12 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
 	double	        liverows = 0;	/* # live rows seen */
 	double	        deadrows = 0;	/* # dead rows seen */
 
+	VslSamplerData vs;
+	int lastStepLength = 0;
+	bool reset = false;
+	int64 rowNumIdx = 0;
+	int64* rowNumSet = NULL;
+
 	Assert(targrows > 0);
 
 	TableScanDesc scan = table_beginscan_analyze(onerel);
@@ -1739,20 +1745,18 @@ aoco_acquire_sample_rows(Relation onerel, int elevel, HeapTuple *rows,
      * The conversion from int64 to double (53 significant bits) is safe as the
 	 * AOTupleId is 48bits, the max value of totalrows is never greater than
 	 * AOTupleId_MaxSegmentFileNum * AOTupleId_MaxRowNum (< 48 significant bits).
+	 *
+	 * Note totaldeadrows is unnecessary for the algorithm. Calculate it to just
+	 * satisfy the interface of aoco_acquire_sample_rows().
 	 */
 	*totalrows = (double) (totaltupcount - totaldeadtupcount);
 	*totaldeadrows = (double) totaldeadtupcount;
 
 	/*
-	 * Prepare for sampling tuple numbers
-	 * Note that RowSampler works in the scope of live tuples
+	 * Prepare for sampling row numbers
 	 */
-	VslSamplerData vs;
-	VslSampler_Init(&vs, totaltupcount, targrows);
-	int lastStepLength = 0;
-	bool reset = false;
-	int64 rowNumIdx = 0;
-	int64* rowNumSet = palloc(sizeof(int64) * targrows);
+	VslSampler_Init(&vs, totaltupcount, targrows, random());
+	rowNumSet = palloc(sizeof(int64) * targrows);
 
 	/*
 	 * Query VslSampler for selected row numbers, check the visibility of them,
