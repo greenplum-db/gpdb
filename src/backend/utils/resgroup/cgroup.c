@@ -466,14 +466,30 @@ bool
 deleteDir(Oid group, CGroupComponentType component, const char *filename, bool unassign,
 		  void (*detachcgroup) (Oid group, CGroupComponentType component, int fd_dir))
 {
+	struct path_item {
+		char *path;
+		bool deleted;
+	};
 
 	char path[MAX_CGROUP_PATHLEN];
 	char leaf_path[MAX_CGROUP_PATHLEN];
 	size_t path_size = sizeof(path);
 
 	bool is_v2 = Gp_resource_manager_policy == RESOURCE_MANAGER_POLICY_GROUP_V2;
+	int path_cnt = 2;
+	struct path_item pathes[2] = {
+		{
+			.path = leaf_path,
+			.deleted = !is_v2,
+		},
+		{
+			.path = path,
+			.deleted = false,
+		}
+	};
 	int retry = unassign ? 0 : MAX_RETRY - 1;
 	int fd_dir;
+	int i;
 
 	buildPath(group, BASEDIR_GPDB, component, "", path, path_size);
 	if (is_v2)
@@ -501,31 +517,38 @@ deleteDir(Oid group, CGroupComponentType component, const char *filename, bool u
 		if (unassign)
 			detachcgroup(group, component, fd_dir);
 
-		if ((is_v2 && rmdir(leaf_path)) || rmdir(path))
+		for (i = 0;i < path_cnt; ++i)
 		{
-			int err = errno;
-
-			if (err == EBUSY && unassign && retry < MAX_RETRY)
-			{
-				elog(DEBUG1, "can't remove dir, will retry: %s: %s",
-					 path, strerror(err));
-				pg_usleep(1000);
+			if (pathes[i].deleted)
 				continue;
+
+			if (rmdir(pathes[i].path))
+			{
+				int err = errno;
+
+				if (err == EBUSY && unassign && retry < MAX_RETRY)
+				{
+					elog(DEBUG1, "can't remove dir, will retry: %s: %s",
+						 pathes[i].path, strerror(err));
+					pg_usleep(1000);
+					continue;
+				}
+
+				/*
+				 * we don't check for ENOENT again as we already acquired the lock
+				 * on this dir and the dir still exist at that time, so if then
+				 * it's removed by other processes then it's a bug.
+				 */
+				elog(DEBUG1, "can't remove dir, ignore the error: %s: %s",
+					 pathes[i].path, strerror(err));
 			}
 
-			/*
-			 * we don't check for ENOENT again as we already acquired the lock
-			 * on this dir and the dir still exist at that time, so if then
-			 * it's removed by other processes then it's a bug.
-			 */
-			elog(DEBUG1, "can't remove dir, ignore the error: %s: %s",
-				 path, strerror(err));
+			if (retry <= MAX_RETRY)
+				elog(DEBUG1, "cgroup dir '%s' removed", pathes[i].path);
+			pathes[i].deleted = true;
 		}
 		break;
 	}
-
-	if (retry <= MAX_RETRY)
-		elog(DEBUG1, "cgroup dir '%s' removed", path);
 
 	/* close() also releases the lock */
 	close(fd_dir);
