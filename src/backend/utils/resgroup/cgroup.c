@@ -543,9 +543,8 @@ deleteDir(Oid group, CGroupComponentType component, const char *filename, bool u
 					 pathes[i].path, strerror(err));
 			}
 
-			if (retry <= MAX_RETRY)
-				elog(DEBUG1, "cgroup dir '%s' removed", pathes[i].path);
 			pathes[i].deleted = true;
+			elog(DEBUG1, "cgroup dir '%s' removed", pathes[i].path);
 		}
 		break;
 	}
