@@ -136,7 +136,7 @@ Before you install the PL/Java extension, make sure that your Greenplum database
 2.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the **Greenplum Procedural Languages PL/Java** software.
 3.  Install the software extension package by running the `gppkg` command. This example installs the PL/Java extension package on a Linux system:
     ```
-    $ gppkg install pljava-1.4.3-gp5-rhel<osversion>_x86_64.gppkg
+    $ gppkg install pljava-2.0.9-gp7-rhel<osversion>_x86_64.gppkg
     ```
 
 4.  Ensure that the environment variables `JAVA_HOME` and `LD_LIBRARY_PATH` are set properly in `$GPHOME/greenplum_path.sh` on all Greenplum Database hosts.
@@ -145,7 +145,7 @@ Before you install the PL/Java extension, make sure that your Greenplum database
         ```
         export JAVA_HOME=/usr/lib/jvm
         ```
-    -   Set the `LD_LIBRARY_PATH` to include the directory with the Java server runtime libraries. PL/Java depends on `libjvm.so` and the shared object should be in your `LD_LIBRARY_PATH`. By default, `libjvm.so` is available in `$JAVA_HOME/lib/server` with JDK 11, or in `$JAVA_HOME/jre/lib/amd64/server` with JDK 8. This example adds the JDK 11 directory to the environment variable.
+    -   Set the `LD_LIBRARY_PATH` to include the directory with the Java server runtime libraries. PL/Java depends on `libjvm.so` and the shared object should be in your `LD_LIBRARY_PATH`. By default, `libjvm.so` is available in `$JAVA_HOME/lib/server` with JDK 11 and JDK 17, or in `$JAVA_HOME/jre/lib/amd64/server` with JDK 8. This example adds the JDK 11 directory to the environment variable.
         ```
         export LD_LIBRARY_PATH=$GPHOME/lib:$GPHOME/ext/python/lib:$JAVA_HOME/lib/server:$LD_LIBRARY_PATH
         ```
