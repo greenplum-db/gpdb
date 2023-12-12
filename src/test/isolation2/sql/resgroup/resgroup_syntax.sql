@@ -288,3 +288,16 @@ DROP RESOURCE GROUP rg_test_group;
 !\retcode gpstop -ari;
 -- end_ignore
 
+-- test set gp_resource_group_cpu_limit to low
+1: CREATE RESOURCE GROUP rg_test_group WITH (cpu_max_percent=80);
+-- start_ignore
+-- 0.6 < 0.9 * 0.8
+!\retcode gpconfig -c gp_resource_group_cpu_limit -v 0.6;
+-- startup will fail until the bug is fixed.
+!\retcode gpstop -ari;
+-- end_ignore
+2: DROP RESOURCE GROUP rg_test_group;
+-- start_ignore
+!\retcode gpconfig -c gp_resource_group_cpu_limit -v 0.9;
+!\retcode gpstop -ari;
+-- end_ignore

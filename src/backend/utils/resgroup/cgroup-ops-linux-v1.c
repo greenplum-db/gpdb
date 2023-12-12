@@ -15,6 +15,7 @@
 #include "postgres.h"
 
 #include <limits.h>
+#include <dirent.h>
 
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
@@ -69,6 +70,7 @@ static void detect_component_dirs_v1(void);
 static void dump_component_dirs_v1(void);
 
 static void check_component_hierarchy_v1();
+static void reset_child_cpu_cfs_quota_us_v1();
 
 static void init_cpu_v1(void);
 static void init_cpuset_v1(void);
@@ -398,6 +400,54 @@ check_component_hierarchy_v1()
 }
 
 /*
+ * Reset cpu.cfs_quota_us to -1 in all of child cgroups.
+ */
+static void
+reset_child_cpu_cfs_quota_us_v1()
+{
+	DIR *root_dir;
+	struct dirent *de;
+	struct stat statbuf;
+	char root_path[MAX_CGROUP_PATHLEN];
+	char dest_path[MAX_CGROUP_PATHLEN];
+	const char *component_name = getComponentName(CGROUP_COMPONENT_CPU);
+
+	Assert(cgroupSystemInfo->cgroup_dir[0] != 0);
+	/* build path /sys/fs/cgroup/cpu/gpdb/ */
+	snprintf(root_path, sizeof(root_path), "%s/%s/gpdb/",
+			 cgroupSystemInfo->cgroup_dir, component_name);
+	root_dir = opendir(root_path);
+	if (root_dir == NULL)
+		return;
+
+	while ((de = readdir(root_dir)) != NULL)
+	{
+		if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
+			continue;
+
+		/* sub directory */
+		snprintf(dest_path, sizeof(dest_path), "%s%s", root_path, de->d_name);
+
+		if (lstat(dest_path, &statbuf) < 0)
+		{
+			ereport(LOG,
+					(errcode_for_file_access(),
+					 errmsg("could not stat file \"%s\": %m", dest_path)));
+			continue;
+		}
+
+		if (S_ISDIR(statbuf.st_mode))
+		{
+			snprintf(dest_path, sizeof(dest_path), "%s%s/cpu.cfs_quota_us",
+					 root_path, de->d_name);
+			writeData(dest_path, "-1", strlen("-1"));
+		}
+	}
+
+	closedir(root_dir);
+}
+
+/*
  * Init gpdb cpu settings.
  */
 static void
@@ -406,6 +456,13 @@ init_cpu_v1(void)
 	CGroupComponentType component = CGROUP_COMPONENT_CPU;
 	int64		cfs_quota_us;
 	int64		shares;
+
+	/*
+	 * In cgroup v1, child cgroup's cfs_period_us should not larger than the
+	 * value of parent. So we sholud reset child cgroup's cfs_period_us first
+	 * to ensure that gpdb's root cgroup can be set successfully.
+	 */
+	reset_child_cpu_cfs_quota_us_v1();
 
 	/*
 	 * CGroup promises that cfs_quota_us will never be 0, however on centos6
