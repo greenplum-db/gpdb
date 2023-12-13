@@ -8,3 +8,25 @@ from pg_buffercache;
  t
 (1 row)
 
+SELECT count(*) = (select setting::bigint
+                   from pg_settings
+                   where name = 'shared_buffers') *
+                   (select count(*) from gp_segment_configuration where role='p')
+                   as buffers
+FROM gp_buffercache;
+ buffers 
+---------
+ t
+(1 row)
+
+-- Check that the functions / views can't be accessed by default.
+CREATE ROLE buffercache_test;
+SET ROLE buffercache_test;
+SELECT * FROM pg_buffercache;
+ERROR:  permission denied for view pg_buffercache
+SELECT * FROM pg_buffercache_pages() AS p (wrong int);
+ERROR:  permission denied for function pg_buffercache_pages
+SELECT * FROM gp_buffercache;
+ERROR:  permission denied for view gp_buffercache
+RESET ROLE;
+DROP ROLE buffercache_test;

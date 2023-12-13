@@ -16,6 +16,15 @@ CREATE VIEW pg_buffercache AS
 	 relforknumber int2, relblocknumber int8, isdirty bool, usagecount int2,
 	 pinning_backends int4);
 
+CREATE VIEW gp_buffercache AS
+	SELECT gp_execution_segment() AS gp_segment_id, *
+	FROM gp_dist_random('pg_buffercache')
+	UNION ALL
+	SELECT -1 AS gp_segment_id, *
+  FROM pg_buffercache
+  ORDER BY 1,2;
+
 -- Don't want these to be available to public.
 REVOKE ALL ON FUNCTION pg_buffercache_pages() FROM PUBLIC;
 REVOKE ALL ON pg_buffercache FROM PUBLIC;
+REVOKE ALL ON gp_buffercache FROM PUBLIC;
