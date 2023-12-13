@@ -105,7 +105,7 @@ class GlobalShellExecutor(object):
 
         bash_cmd = shutil.which('bash')
         if bash_cmd is None:
-            bash_cmd = '/bin/bash'
+            raise GlobalShellExecutor.ExecutionError("cannot find bash command")
 
         self.sh_proc = subprocess.Popen([bash_cmd, '--noprofile', '--norc', '--noediting', '-i'],
                                         stdin=self.subsidiary_fd,
