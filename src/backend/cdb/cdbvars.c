@@ -595,7 +595,6 @@ bool gpvars_check_gp_resource_group_cgroup_parent(char **newval, void **extra, G
 	regres = pg_regcomp(re, wpattern, wlen, REG_ADVANCED, DEFAULT_COLLATION_OID);
 	if (regres != REG_OKAY)
 	{
-		CHECK_FOR_INTERRUPTS();
 		pg_regerror(regres, re, err, sizeof(err));
 		GUC_check_errmsg("compile regex failed: %s", err);
 

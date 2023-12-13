@@ -179,11 +179,6 @@ class Guc:
             for partition in psutil.disk_partitions(all=True):
                 if partition.fstype == "cgroup2":
                     path = partition.mountpoint + "/" + base
-                    path = os.path.realpath(path)
-                    if path == partition.mountpoint:
-                        return "resource group cgroup parent cannot be the root of system cgroup"
-                    if not path.startswith(partition.mountpoint):
-                        return "resource group cgroup parent must be under the root of system cgroup"
                     break
             if path is None:
                 return "cannot find cgroup v2 mountpoint"
