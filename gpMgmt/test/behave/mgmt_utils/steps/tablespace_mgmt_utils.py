@@ -13,7 +13,7 @@ from gppylib.commands.unix import get_remote_link_path
 from contextlib import closing
 
 class Tablespace:
-    def __init__(self, name):
+    def __init__(self, name, with_desc=False):
         self.name = name
         self.path = tempfile.mkdtemp()
         self.dbname = 'tablespace_db_%s' % name
@@ -35,6 +35,11 @@ class Tablespace:
             db.query("INSERT INTO tbl VALUES (GENERATE_SERIES(0, 25))")
             # save the distributed data for later verification
             self.initial_data = db.query("SELECT gp_segment_id, i FROM tbl").getresult()
+
+        if with_desc:
+            with dbconn.connect(dbconn.DbURL(dbname=self.dbname), unsetSearchPath=False) as conn:
+                db = pg.DB(conn)
+                db.query("COMMENT on TABLESPACE %s IS 'This is a tablespace'" % (self.name))
 
     def cleanup(self):
         with dbconn.connect(dbconn.DbURL(dbname="postgres"), unsetSearchPath=False) as conn:
@@ -216,11 +221,14 @@ def impl(context):
 def impl(context):
     _create_tablespace_with_data(context, "myspace")
 
+@given('a tablespace is created with data and description')
+def impl(context):
+    _create_tablespace_with_data(context, "outerspace", with_desc=True)
 
-def _create_tablespace_with_data(context, name):
+def _create_tablespace_with_data(context, name, with_desc=False):
     if 'tablespaces' not in context:
         context.tablespaces = {}
-    context.tablespaces[name] = Tablespace(name)
+    context.tablespaces[name] = Tablespace(name, with_desc=with_desc)
 
 
 @then('the tablespace is valid')
