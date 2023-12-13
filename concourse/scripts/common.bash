@@ -31,7 +31,7 @@ function build_arch() {
 function install_gpdb() {
     mkdir -p /usr/local/greenplum-db-devel
     if [[ "${CONFIGURE_FLAGS}" =~ enable-cassert && -d bin_gpdb_with_llvm_asserts ]]; then
-      tar -xzf bin_gpdb_with_llvm_asserts/bin_gpdb.tar.gz -C /usr/local/greenplum-db-devel
+      tar -xzf bin_gpdb_with_llvm_asserts/bin_gpdb_with_llvm_asserts.tar.gz -C /usr/local/greenplum-db-devel
     else
       tar -xzf bin_gpdb/bin_gpdb.tar.gz -C /usr/local/greenplum-db-devel
     fi

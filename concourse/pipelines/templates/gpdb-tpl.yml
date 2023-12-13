@@ -555,7 +555,7 @@ resources:
   source:
     bucket: ((gcs-bucket-intermediates))
     json_key: ((concourse-gcs-resources-service-account-key))
-    versioned_file: ((pipeline-name))/bin_gpdb/bin_gpdb.tar.gz
+    versioned_file: ((pipeline-name))/bin_gpdb/bin_gpdb_with_llvm_asserts.tar.gz
 
 - name: llvm-with-asserts-packages
   type: gcs
@@ -712,11 +712,12 @@ jobs:
       CONFIGURE_FLAGS: ((configure_flags_with_extensions))
       BLD_TARGETS: "clients"
       RC_BUILD_TYPE_GCS: ((rc-build-type-gcs))
+      GPDB_BIN_FILENAME: bin_gpdb_with_llvm_asserts.tar.gz
   - in_parallel:
       steps:
       - put: bin_gpdb_with_llvm_asserts
         params:
-          file: gpdb_artifacts/bin_gpdb.tar.gz
+          file: gpdb_artifacts/bin_gpdb_with_llvm_asserts.tar.gz
 {% endif %}
 
 {% if os_type == "rhel8" or os_type == "oel8" or os_type == "rocky8" %}
@@ -957,6 +958,7 @@ jobs:
       - get: llvm-with-asserts-packages
       - get: bin_gpdb_with_llvm_asserts
         passed: [gate_icw_start]
+        trigger: true
       {% endif %}
   - task: ic_gpdb
     {% if use_ICW_workers %}
@@ -1051,6 +1053,7 @@ jobs:
       - get: llvm-with-asserts-packages
       - get: bin_gpdb_with_llvm_asserts
         passed: [gate_icw_start]
+        trigger: true
       {% endif %}
   - task: ic_gpdb
     {% if use_ICW_workers %}
