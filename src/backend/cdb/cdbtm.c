@@ -2014,7 +2014,7 @@ sendDtxExplicitBegin(void)
 }
 
 /**
- * On the QD, run the Prepare operation.
+ * On the QE, run the Prepare operation.
  */
 static void
 performDtxProtocolPrepare(const char *gid)
