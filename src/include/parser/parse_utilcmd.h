@@ -48,7 +48,7 @@ extern List *generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSp
 								PartitionSpec *subPartSpec,
 								const char *queryString, List *parentoptions,
 								const char *parentaccessmethod,
-								List *parentattenc, bool addpartition);
+								List *parentattenc, CreateStmtOrigin origin);
 GpPartitionDefinition *
 transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
 							   GpPartitionDefinition *gpPartDef_orig);
@@ -66,7 +66,8 @@ extern CreateStmt *makePartitionCreateStmt(Relation parentrel, char *partname,
 										   PartitionBoundSpec *boundspec,
 										   PartitionSpec *subPart,
 										   GpPartDefElem *elem,
-										   partname_comp *partnamecomp);
+										   partname_comp *partnamecomp,
+										   CreateStmtOrigin origin);
 extern char *ChoosePartitionName(const char *parentname, int level,
 								 Oid naemspaceId, const char *partname,
 								 int partnum);

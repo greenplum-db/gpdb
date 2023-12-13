@@ -2269,7 +2269,7 @@ DefineCompositeType(RangeVar *typevar, List *coldeflist)
 	createStmt->oncommit = ONCOMMIT_NOOP;
 	createStmt->tablespacename = NULL;
 	createStmt->if_not_exists = false;
-	createStmt->gp_style_alter_part = false;
+	createStmt->origin = ORIGIN_NO_GEN;
 
 	/*
 	 * Check for collision with an existing type name. If there is one and

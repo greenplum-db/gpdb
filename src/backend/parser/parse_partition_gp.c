@@ -65,17 +65,20 @@ static List *generateRangePartitions(ParseState *pstate,
 									 GpPartDefElem *elem,
 									 PartitionSpec *subPart,
 									 partname_comp *partnamecomp,
-									 bool *hasImplicitRangeBounds);
+									 bool *hasImplicitRangeBounds,
+									 CreateStmtOrigin origin);
 static List *generateListPartition(ParseState *pstate,
 								   Relation parentrel,
 								   GpPartDefElem *elem,
 								   PartitionSpec *subPart,
-								   partname_comp *partnamecomp);
+								   partname_comp *partnamecomp,
+								   CreateStmtOrigin origin);
 static List *generateDefaultPartition(ParseState *pstate,
 									  Relation parentrel,
 									  GpPartDefElem *elem,
 									  PartitionSpec *subPart,
-									  partname_comp *partnamecomp);
+									  partname_comp *partnamecomp,
+									  CreateStmtOrigin origin);
 
 static char *extract_tablename_from_options(List **options);
 
@@ -353,7 +356,7 @@ list_qsort_arg(List *list, qsort_arg_comparator cmp, void *arg)
  * END, deduce the value and update the corresponding list of CreateStmts.
  */
 static void
-deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *stmts, bool addpartition)
+deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *stmts, CreateStmtOrigin origin)
 {
 	PartitionKey key = RelationRetrievePartitionKey(parentrel);
 	PartitionDesc desc = RelationRetrievePartitionDesc(parentrel);
@@ -366,7 +369,7 @@ deduceImplicitRangeBounds(ParseState *pstate, Relation parentrel, List *stmts, b
 	 * a whole new set of child partitions of a parent table, or an ALTER TABLE
 	 * ADD PARTTION to add to an existing set of sibling partitions.
 	 */
-	if (!addpartition)
+	if (origin != ORIGIN_GP_CLASSIC_ALTER_GEN)
 	{
 		/*
 		 * CREATE TABLE or ALTER TABLE SET SUBPARTITION TEMPLATE. We deduce the
@@ -734,10 +737,14 @@ ChoosePartitionName(const char *parentname, int level, Oid naemspaceId,
 							  false);
 }
 
+/*
+ * Construct a CreateStmt representing a single partition to be created as part
+ * of a legacy style CREATE/ALTER statement.
+ */
 CreateStmt *
 makePartitionCreateStmt(Relation parentrel, char *partname, PartitionBoundSpec *boundspec,
 						PartitionSpec *subPart, GpPartDefElem *elem,
-						partname_comp *partnamecomp)
+						partname_comp *partnamecomp, CreateStmtOrigin origin)
 {
 	CreateStmt *childstmt;
 	RangeVar   *parentrv;
@@ -774,7 +781,7 @@ makePartitionCreateStmt(Relation parentrel, char *partname, PartitionBoundSpec *
 	childstmt->tablespacename = elem->tablespacename ? pstrdup(elem->tablespacename) : NULL;
 	childstmt->accessMethod = elem->accessMethod ? pstrdup(elem->accessMethod) : NULL;
 	childstmt->if_not_exists = false;
-	childstmt->gp_style_alter_part = true;
+	childstmt->origin = origin;
 	childstmt->distributedBy = make_distributedby_for_rel(parentrel);
 	childstmt->partitionBy = NULL;
 	childstmt->relKind = 0;
@@ -791,7 +798,8 @@ generateRangePartitions(ParseState *pstate,
 						GpPartDefElem *elem,
 						PartitionSpec *subPart,
 						partname_comp *partnamecomp,
-						bool *hasImplicitRangeBounds)
+						bool *hasImplicitRangeBounds,
+						CreateStmtOrigin origin)
 {
 	GpPartitionRangeSpec *boundspec;
 	List				 *result = NIL;
@@ -891,7 +899,7 @@ generateRangePartitions(ParseState *pstate,
 			partname = elem->partName;
 
 		childstmt = makePartitionCreateStmt(parentrel, partname, boundspec,
-											copyObject(subPart), elem, partnamecomp);
+											copyObject(subPart), elem, partnamecomp, origin);
 		result = lappend(result, childstmt);
 	}
 
@@ -905,7 +913,8 @@ generateListPartition(ParseState *pstate,
 					  Relation parentrel,
 					  GpPartDefElem *elem,
 					  PartitionSpec *subPart,
-					  partname_comp *partnamecomp)
+					  partname_comp *partnamecomp,
+					  CreateStmtOrigin origin)
 {
 	GpPartitionListSpec *gpvaluesspec;
 	PartitionBoundSpec  *boundspec;
@@ -950,7 +959,7 @@ generateListPartition(ParseState *pstate,
 	boundspec->location = -1;
 
 	childstmt = makePartitionCreateStmt(parentrel, elem->partName, boundspec, subPart,
-										elem, partnamecomp);
+										elem, partnamecomp, origin);
 
 	return list_make1(childstmt);
 }
@@ -960,7 +969,8 @@ generateDefaultPartition(ParseState *pstate,
 						 Relation parentrel,
 						 GpPartDefElem *elem,
 						 PartitionSpec *subPart,
-						 partname_comp *partnamecomp)
+						 partname_comp *partnamecomp,
+						 CreateStmtOrigin origin)
 {
 	PartitionBoundSpec *boundspec;
 	CreateStmt *childstmt;
@@ -972,7 +982,7 @@ generateDefaultPartition(ParseState *pstate,
 	/* default partition always needs name to be specified */
 	Assert(elem->partName != NULL);
 	childstmt = makePartitionCreateStmt(parentrel, elem->partName, boundspec, subPart,
-										elem, partnamecomp);
+										elem, partnamecomp, origin);
 	return list_make1(childstmt);
 }
 
@@ -1710,7 +1720,7 @@ List *
 generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 				   PartitionSpec *subPartSpec, const char *queryString,
 				   List *parentoptions, const char *parentaccessmethod,
-				   List *parentattenc, bool addpartition)
+				   List *parentattenc, CreateStmtOrigin origin)
 {
 	Relation	parentrel;
 	List	   *result = NIL;
@@ -1829,7 +1839,9 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 			elem->colencs = merge_partition_encoding(pstate, elem->colencs, penc_cls);
 
 		if (elem->isDefault)
-			new_parts = generateDefaultPartition(pstate, parentrel, elem, tmpSubPartSpec, &partcomp);
+			new_parts = generateDefaultPartition(pstate, parentrel, elem,
+												 tmpSubPartSpec, &partcomp,
+												 origin);
 		else
 		{
 			PartitionKey key = RelationRetrievePartitionKey(parentrel);
@@ -1839,12 +1851,18 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 				case PARTITION_STRATEGY_RANGE:
 				{
 					new_parts = generateRangePartitions(pstate, parentrel,
-														elem, tmpSubPartSpec, &partcomp, &hasImplicitRangeBounds);
+														elem, tmpSubPartSpec,
+														&partcomp,
+														&hasImplicitRangeBounds,
+														origin);
 					break;
 				}
 
 				case PARTITION_STRATEGY_LIST:
-					new_parts = generateListPartition(pstate, parentrel, elem, tmpSubPartSpec, &partcomp);
+					new_parts = generateListPartition(pstate, parentrel, elem,
+													  tmpSubPartSpec,
+													  &partcomp,
+													  origin);
 					break;
 				default:
 					elog(ERROR, "Not supported partition strategy");
@@ -1862,7 +1880,7 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 	 * bounds for implicit START/END.
 	 */
 	if (hasImplicitRangeBounds)
-		deduceImplicitRangeBounds(pstate, parentrel, result, addpartition);
+		deduceImplicitRangeBounds(pstate, parentrel, result, origin);
 
 	free_parsestate(pstate);
 	table_close(parentrel, NoLock);

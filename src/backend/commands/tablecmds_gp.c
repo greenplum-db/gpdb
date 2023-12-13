@@ -992,7 +992,7 @@ AtExecGPSplitPartition(Relation rel, AlterTableCmd *cmd)
 		elem->options = p_reloptions;
 
 		/* create first partition stmt */
-		stmts = lappend(stmts, makePartitionCreateStmt(rel, partname1, boundspec1, NULL, elem, &partcomp));
+		stmts = lappend(stmts, makePartitionCreateStmt(rel, partname1, boundspec1, NULL, elem, &partcomp, ORIGIN_GP_CLASSIC_ALTER_GEN));
 
 		/* create second partition stmt */
 		if (defaultpartname)
@@ -1000,7 +1000,7 @@ AtExecGPSplitPartition(Relation rel, AlterTableCmd *cmd)
 			partcomp.tablename = defaultpartname;
 			partname2 = NULL;
 		}
-		stmts = lappend(stmts, makePartitionCreateStmt(rel, partname2, boundspec2, NULL, elem, &partcomp));
+		stmts = lappend(stmts, makePartitionCreateStmt(rel, partname2, boundspec2, NULL, elem, &partcomp, ORIGIN_GP_CLASSIC_ALTER_GEN));
 	}
 
 	foreach (l, stmts)
@@ -1248,7 +1248,7 @@ ATExecGPPartCmds(Relation origrel, AlterTableCmd *cmd)
 										 list_length(ancestors), gpPartDef);
 			List *cstmts = generatePartitions(RelationGetRelid(rel),
 											  gpPartDef, subpart, cmd->queryString,
-											  NIL, NULL, NULL, true);
+											  NIL, NULL, NULL, ORIGIN_GP_CLASSIC_ALTER_GEN);
 			foreach(l, cstmts)
 			{
 				Node *stmt = (Node *) lfirst(l);

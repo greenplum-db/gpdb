@@ -2318,6 +2318,21 @@ typedef struct VariableShowStmt
 	char	   *name;
 } VariableShowStmt;
 
+/*
+ * GPDB: Where did the CreateStmt originate? Was it generated and if so, what
+ * type of operation generated it?
+ *
+ * Note: 'classic' syntax refers to the legacy GPDB partitioning syntax that
+ * predates the upstream partitioning syntax that was acquired during the
+ * Postgres 12 merge.
+ */
+typedef enum CreateStmtOrigin
+{
+	ORIGIN_NO_GEN,
+	ORIGIN_GP_CLASSIC_CREATE_GEN,
+	ORIGIN_GP_CLASSIC_ALTER_GEN
+} CreateStmtOrigin;
+
 /* ----------------------
  *		Create Table Statement
  *
@@ -2346,7 +2361,7 @@ typedef struct CreateStmt
 	char	   *tablespacename; /* table space to use, or NULL */
 	char	   *accessMethod;	/* table access method */
 	bool		if_not_exists;	/* just do nothing if it already exists? */
-	bool 		gp_style_alter_part; /* is this due to a GP-style ALTER on partition tables? */
+	bool 		gp_style_alter_part; /* unused */
 
 	DistributedBy *distributedBy;   /* what columns we distribute the data by */
 	Node       *partitionBy;     /* what columns we partition the data by */
@@ -2361,6 +2376,8 @@ typedef struct CreateStmt
 	/* names chosen for partition indexes */
 	List	   *part_idx_oids;
 	List	   *part_idx_names;
+
+	CreateStmtOrigin origin;	/* GPDB: provenance of this CreateStmt */
 } CreateStmt;
 
 /* ----------------------
