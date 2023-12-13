@@ -29,7 +29,7 @@ def _getPlatformInfo():
 def _getFileInfo(coreFile):
     file_cmd = which('file')
     if file_cmd is None:
-        file_cmd = '/usr/bin/file'
+        return False
 
     cmd = Popen([file_cmd, '--version'], stdout=PIPE, stderr=STDOUT)
     fileVersion = cmd.communicate()[0].split()[0].strip().decode()
