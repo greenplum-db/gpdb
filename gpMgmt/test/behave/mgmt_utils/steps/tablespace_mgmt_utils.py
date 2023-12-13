@@ -13,7 +13,7 @@ from gppylib.commands.base import Command, REMOTE
 from gppylib.commands.unix import get_remote_link_path
 
 class Tablespace:
-    def __init__(self, name):
+    def __init__(self, name, with_desc=False):
         self.name = name
         self.path = tempfile.mkdtemp()
         self.dbname = 'tablespace_db_%s' % name
@@ -32,6 +32,9 @@ class Tablespace:
         conn = dbconn.connect(dbconn.DbURL(dbname=self.dbname), unsetSearchPath=False)
         dbconn.execSQL(conn, "CREATE TABLE tbl (i int) DISTRIBUTED RANDOMLY")
         dbconn.execSQL(conn, "INSERT INTO tbl VALUES (GENERATE_SERIES(0, 25))")
+
+        if with_desc:
+            dbconn.execSQL(conn, "COMMENT on TABLESPACE %s IS 'This is a tablespace'" % (self.name))
 
         # save the distributed data for later verification
         self.initial_data = dbconn.query(conn, "SELECT gp_segment_id, i FROM tbl").fetchall()
@@ -214,11 +217,14 @@ def impl(context):
 def impl(context):
     _create_tablespace_with_data(context, "myspace")
 
+@given('a tablespace is created with data and description')
+def impl(context):
+    _create_tablespace_with_data(context, "outerspace", with_desc=True)
 
-def _create_tablespace_with_data(context, name):
+def _create_tablespace_with_data(context, name, with_desc=False):
     if 'tablespaces' not in context:
         context.tablespaces = {}
-    context.tablespaces[name] = Tablespace(name)
+    context.tablespaces[name] = Tablespace(name, with_desc=with_desc)
 
 
 @then('the tablespace is valid')

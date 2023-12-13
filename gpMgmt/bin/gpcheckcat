@@ -2423,6 +2423,10 @@ TableMainColumn['pg_statistic_ext_data'] = ['stxoid', 'pg_statistic_ext']
 TableMainColumn['pg_type_encoding'] = ['typid', 'pg_type']
 TableMainColumn['pg_window'] = ['winfnoid', 'pg_proc']
 TableMainColumn['pg_description'] = ['objoid', 'pg_description']
+TableMainColumn['pg_shdescription'] = ['objoid', 'pg_shdescription']
+TableMainColumn['pg_seclabel'] = ['objoid', 'pg_seclabel']
+TableMainColumn['pg_shseclabel'] = ['objoid', 'pg_shseclabel']
+TableMainColumn['pg_seclabels'] = ['objoid', 'pg_seclabels']
 
 # Table with OID (special case), these OIDs are known to be inconsistent
 TableMainColumn['pg_attrdef'] = ['adrelid', 'pg_class']
