@@ -584,7 +584,7 @@ bool gpvars_check_gp_resource_group_cgroup_parent(char **newval, void **extra, G
 {
 	int		  regres;
 	char	  err[128];
-	regex_t  *re = palloc(sizeof(regex_t));
+	regex_t  re;
 	char	 *pattern = "^[0-9a-zA-Z][-._0-9a-zA-Z]*$";
 	pg_wchar *wpattern = palloc((strlen(pattern) + 1) * sizeof(pg_wchar));
 	int		  wlen = pg_mb2wchar_with_len(pattern, wpattern, strlen(pattern));
@@ -592,10 +592,10 @@ bool gpvars_check_gp_resource_group_cgroup_parent(char **newval, void **extra, G
 	int		  data_len = pg_mb2wchar_with_len(*newval, data, sizeof(*newval));
 	bool	  match = true;
 
-	regres = pg_regcomp(re, wpattern, wlen, REG_ADVANCED, DEFAULT_COLLATION_OID);
+	regres = pg_regcomp(&re, wpattern, wlen, REG_ADVANCED, DEFAULT_COLLATION_OID);
 	if (regres != REG_OKAY)
 	{
-		pg_regerror(regres, re, err, sizeof(err));
+		pg_regerror(regres, &re, err, sizeof(err));
 		GUC_check_errmsg("compile regex failed: %s", err);
 
 		pfree(wpattern);
@@ -604,14 +604,14 @@ bool gpvars_check_gp_resource_group_cgroup_parent(char **newval, void **extra, G
 		return false;
 	}
 
-	regres = pg_regexec(re, data, data_len, 0, NULL, 0, NULL, 0);
+	regres = pg_regexec(&re, data, data_len, 0, NULL, 0, NULL, 0);
 	if (regres != REG_OKAY)
 	{
 		match = false;
 		GUC_check_errmsg("gp_resource_group_cgroup_parent can only contains alphabet, number and non-leading . _ -");
 	}
 
-	pg_regfree(re);
+	pg_regfree(&re);
 	pfree(wpattern);
 	pfree(data);
 
