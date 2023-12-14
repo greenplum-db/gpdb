@@ -466,19 +466,93 @@ CTranslatorQueryToDXL::CheckRangeTable(Query *query)
 	{
 		RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
 
-		if (rte->security_barrier || rte->securityQuals)
+		if (rte->security_barrier)
 		{
 			GPOS_ASSERT(RTE_SUBQUERY == rte->rtekind);
 			// otherwise ORCA most likely pushes potentially leaky filters down
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 					   GPOS_WSZ_LIT("views with security_barrier ON"));
 		}
+
+		// In a rewritten parse tree
+		// [1] When hasRowSecurity=false and security_quals are not
+		// present in an rte, means that the relations present in a
+		// query don't have row level security enabled.
+		// [2] When hasRowSecurity=true and security_quals are present
+		// in an rte, means that the relations present in a query have
+		// row level security enabled.
+		// [3] When hasRowSecurity=true and security_quals are not
+		// present in an rte, means that the relations present in
+		// a query have row level security enabled but the query is
+		// executed by the owner of the relation.
+		// [4] When hasRowSecurity=false and security_quals are
+		// present in an rte example: A view with security barrier
+		// enabled and the view contains a relation with rules.
+		// Example query is below
+		// CREATE TABLE foo(id int PRIMARY KEY, data text, deleted boolean);
+		// CREATE RULE foo_del_rule AS ON DELETE TO foo DO INSTEAD UPDATE
+		// foo SET deleted = true WHERE id = old.id;
+		// CREATE VIEW rw_view1 WITH (security_barrier=true) AS SELECT id,
+		// data FROM foo WHERE NOT deleted;
+		// DELETE FROM rw_view1 WHERE id = 1;
+		// ORCA will fallback to planner for this case [4].
+		if (!query->hasRowSecurity && nullptr != rte->securityQuals)
+		{
+			GPOS_RAISE(
+				gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				GPOS_WSZ_LIT(
+					"Security quals present in RTE without row level security enabled"));
+		}
+
+		// ORCA will fallback to planner if row level security is
+		// enabled for a relation and the security quals contain
+		// sublinks.
+		if (query->hasRowSecurity && query->hasSubLinks &&
+			0 < gpdb::ListLength(rte->securityQuals) &&
+			CheckSublinkInSecurityQuals((Node *) rte->securityQuals, nullptr))
+		{
+			GPOS_RAISE(
+				gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+				GPOS_WSZ_LIT(
+					"Query has row level security enabled and security quals contain sublinks"));
+		}
+
 		if (rte->tablesample)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 					   GPOS_WSZ_LIT("TABLESAMPLE in the FROM clause"));
 		}
 	}
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorQueryToDXL::CheckSublinkInSecurityQuals
+//
+//	@doc:
+//		When row level security is enabled we add the security quals
+//		while translating the table scans from DXL To Planned Statement.
+//		If the security quals consists of SUBLINKS then those queries
+//		will not have been planned as we add them at the end during
+//		translation. So falling back to planner for such cases. This walker
+// 		is used to find if we have any sublinks present in the security quals.
+//
+//---------------------------------------------------------------------------
+
+BOOL
+CTranslatorQueryToDXL::CheckSublinkInSecurityQuals(Node *node, void *context)
+{
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, SubLink))
+	{
+		return true;
+	}
+
+	return gpdb::WalkExpressionTree(
+		node, (BOOL(*)()) CTranslatorQueryToDXL::CheckSublinkInSecurityQuals,
+		context);
 }
 
 //---------------------------------------------------------------------------

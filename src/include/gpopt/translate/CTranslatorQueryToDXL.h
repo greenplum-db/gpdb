@@ -147,6 +147,9 @@ private:
 	// node is found
 	static void CheckUnsupportedNodeTypes(Query *query);
 
+	// walker to check if SUBLINK node is present in the security quals
+	static BOOL CheckSublinkInSecurityQuals(Node *node, void *context);
+
 	// check for SIRV functions in the targetlist without a FROM clause and
 	// throw an exception when found
 	void CheckSirvFuncsWithoutFromClause(Query *query);
