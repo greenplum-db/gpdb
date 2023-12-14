@@ -123,6 +123,12 @@ double		cpu_operator_cost = DEFAULT_CPU_OPERATOR_COST;
 double		parallel_tuple_cost = DEFAULT_PARALLEL_TUPLE_COST;
 double		parallel_setup_cost = DEFAULT_PARALLEL_SETUP_COST;
 
+/*
+ * Approximate ratio of the time taken to decompress a varblock with zstd to the
+ * time taken to fetch a tuple.
+ */
+double		gp_cpu_decompress_cost = DEFAULT_GP_DECOMPRESS_COST;
+
 int			effective_cache_size = DEFAULT_EFFECTIVE_CACHE_SIZE;
 
 Cost		disable_cost = 1.0e10;
@@ -298,11 +304,14 @@ adjust_reloptinfo(RelOptInfoPerSegment *basescan, RelOptInfo *baserel_orig,
 															&param_info_adjusted, param_info_orig)
 
 
-static void cost_indexonlyscan_cpu_ao(RelOptInfoPerSegment *baserel,
-									  PlannerInfo *root,
-									  double *num_blkdir_tuples,
-									  Cost *blkdir_cost_per_tuple,
-									  Cost *visimap_cost_per_tuple);
+static void cost_cpu_ao_index_aux_tables(RelOptInfoPerSegment *baserel,
+										 PlannerInfo *root,
+										 double *num_blkdir_tuples,
+										 Cost *blkdir_cost_per_tuple,
+										 Cost *visimap_cost_per_tuple,
+										 double *num_varblocks);
+static double ao_estimate_num_varblocks(RelOptInfoPerSegment *baserel,
+										PlannerInfo *root);
 
 /*
  * cost_seqscan
@@ -355,6 +364,15 @@ cost_seqscan(Path *path, PlannerInfo *root,
 	/* tlist eval costs are paid per output row, not per tuple scanned */
 	startup_cost += path->pathtarget->cost.startup;
 	cpu_run_cost += path->pathtarget->cost.per_tuple * path->rows;
+
+	/* GPDB: Add cost of decompression: each varblock fetched causes 1 decompression */
+	if (IsAccessMethodAO(baserel->orig->relam))
+	{
+		double	num_varblocks = ao_estimate_num_varblocks(baserel, root);
+		Cost	decompress_coeff = get_ao_decompress_coefficient(baserel_orig, true);
+
+		cpu_run_cost += decompress_coeff * num_varblocks;
+	}
 
 	/* Adjust costing for parallelism, if used. */
 	if (path->parallel_workers > 0)
@@ -613,9 +631,10 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	/* GPDB: Components for index only scans on append-optimized tables */
 	double 		num_blkdir_tuples = 0.0;
 	Cost 		blkdir_cost_per_tuple = 0.0;
-	Cost 		max_blkdir_cost = 0.0;
-	Cost 		min_blkdir_cost = 0.0;
 	Cost 		visimap_cost_per_tuple = 0.0;
+	double 		num_varblocks = 0.0;
+	Cost 		max_aux_io_cost = 0.0;
+	Cost 		min_aux_io_cost = 0.0;
 
 	/* Should only be applied to base relations */
 	Assert(IsA(baserel_orig, RelOptInfo) &&
@@ -718,13 +737,14 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	 */
 	AssertImply(IsAccessMethodAO(baserel_orig->relam), baserel->allvisfrac == 1);
 
-	/* GPDB: Special costing is required for Index Only Scans on AO/CO tables */
-	if (IsAccessMethodAO(baserel_orig->relam) && indexonly)
+	if (IsAccessMethodAO(baserel_orig->relam))
 	{
 		double 		num_blkdir_pages;
 
-		cost_indexonlyscan_cpu_ao(baserel, root, &num_blkdir_tuples,
-								  &blkdir_cost_per_tuple, &visimap_cost_per_tuple);
+		cost_cpu_ao_index_aux_tables(baserel, root, &num_blkdir_tuples,
+									 &blkdir_cost_per_tuple,
+									 &visimap_cost_per_tuple,
+									 &num_varblocks);
 
 		/* Approx. 7 blkdir tuples fit into a full blkdir rel page */
 		num_blkdir_pages = ceil(num_blkdir_tuples / 7.0);
@@ -733,14 +753,22 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 		 * Disk costs: The max_IO_cost represents the perfectly un-correlated,
 		 * case whereas the min_IO_cost represents the perfectly correlated case.
 		 */
-		max_IO_cost = spc_seq_page_cost * index_pages;
-		max_IO_cost += spc_random_page_cost * Min(num_blkdir_pages, tuples_fetched);
+		max_aux_io_cost = spc_random_page_cost * Min(num_blkdir_pages, tuples_fetched);
 		/* Count only meta-page for visimap idx */
-		max_IO_cost += spc_random_page_cost * 1;
+		max_aux_io_cost += spc_random_page_cost * 1;
 
+		min_aux_io_cost = spc_seq_page_cost * Min(indexSelectivity * num_blkdir_pages,
+												   tuples_fetched);
+	}
+
+	/*
+	 * GPDB: For Index Only Scans on AO/CO tables, consider only the index I/O
+	 * cost and aux table I/O cost (later), as we never visit the physical table.
+	 */
+	if (IsAccessMethodAO(baserel_orig->relam) && indexonly)
+	{
+		max_IO_cost = spc_seq_page_cost * index_pages;
 		min_IO_cost = spc_seq_page_cost * index_pages * indexSelectivity;
-		min_IO_cost += spc_seq_page_cost * Min(indexSelectivity * num_blkdir_pages,
-											  tuples_fetched);
 	}
 
 	/*----------
@@ -889,6 +917,15 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	 */
 	csquared = indexCorrelation * indexCorrelation;
 
+	if (IsAccessMethodAO(baserel_orig->relam))
+	{
+		/*
+		 * GPDB: tag on aux table I/O cost for AO/CO tables. Note that we
+		 * currently don't distinguish based on loop_count.
+		 */
+		max_IO_cost += max_aux_io_cost;
+		min_IO_cost += min_aux_io_cost;
+	}
 	run_cost += max_IO_cost + csquared * (min_IO_cost - max_IO_cost);
 
 	/*
@@ -918,16 +955,56 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 	startup_cost += qpqual_cost.startup;
 	cpu_per_tuple = cpu_tuple_cost + qpqual_cost.per_tuple;
 
+	/*
+	 * GPDB: Add cost of decompression (if any). We interpolate between:
+	 *
+	 * Best case: Consecutive tuple fetches map to the same varblock. This
+	 * happens when we have perfect correlation.
+	 *
+	 * Worst case: Consecutive tuple fetches map to different varblocks, leading
+	 * to another decompression. This happens when we have no correlation. The
+	 * worst case can be a very large number and why vanilla index scans on
+	 * append-optimized tables have been discouraged in the past.
+	 *
+	 * Note: We make a conscious choice here not to simply tag the cost of
+	 * decompression on to an I/O cost (e.g. to random_page_cost). This is
+	 * because even though a varblock may reside in the OS page cache, it can
+	 * still be decompressed many times (and the I/O model doesn't take that
+	 * into consideration).
+	 *
+	 * Note: For regular index scans on compressed append-optimized tables, this
+	 * cost will dominate (specially the worst case cost).
+	 */
+	if (IsAccessMethodAO(baserel_orig->relam) && !indexonly)
+	{
+		Cost min_decompress_cost;
+		Cost max_decompress_cost;
+		Cost decompression_coeff = get_ao_decompress_coefficient(baserel_orig, false);
+
+		/* due to high clustering, we don't have repeated decompressions */
+		min_decompress_cost = decompression_coeff *
+				 ceil((tuples_fetched / baserel->tuples) * num_varblocks * loop_count);
+
+		/* every tuple causes 1 decompression */
+		max_decompress_cost = decompression_coeff * tuples_fetched * loop_count;
+
+		cpu_run_cost += max_decompress_cost +
+				csquared * (min_decompress_cost - max_decompress_cost);
+	}
 	cpu_run_cost += cpu_per_tuple * tuples_fetched;
 
 	/* tlist eval costs are paid per output row, not per tuple scanned */
 	startup_cost += path->path.pathtarget->cost.startup;
 	cpu_run_cost += path->path.pathtarget->cost.per_tuple * path->path.rows;
 
-	if (IsAccessMethodAO(baserel_orig->relam) && indexonly)
+	if (IsAccessMethodAO(baserel_orig->relam))
 	{
+		Cost 		max_blkdir_cost;
+		Cost 		min_blkdir_cost;
+		Cost 		max_bhs_blkdir_cost;
+		Cost 		min_bhs_blkdir_cost;
 		/*
-		 * GPDB: Additional charges for Index Only Scans on AO/CO tables
+		 * GPDB: Additional charges for AO/CO tables
 		 *
 		 * 1. Blkdir cost: interpolated between the zero correlated case (where
 		 * we charge the cost per scanned tuple) and the perfectly correlated
@@ -940,6 +1017,12 @@ cost_index(IndexPath *path, PlannerInfo *root, double loop_count,
 		run_cost += max_blkdir_cost + csquared * (min_blkdir_cost - max_blkdir_cost);
 
 		run_cost += visimap_cost_per_tuple * tuples_fetched;
+
+		/* Add to indextotalcost so that we can reuse this for bitmap scans */
+		max_bhs_blkdir_cost = blkdir_cost_per_tuple * num_blkdir_tuples;
+		min_bhs_blkdir_cost = min_blkdir_cost;
+		path->indextotalcost += max_bhs_blkdir_cost +
+			csquared * (min_bhs_blkdir_cost - max_bhs_blkdir_cost);
 	}
 
 	/* Adjust costing for parallelism, if used. */
@@ -1161,11 +1244,13 @@ cost_bitmap_heap_scan(Path *path, PlannerInfo *root, RelOptInfo *baserel_orig,
 	Cost		cpu_per_tuple;
 	Cost		cost_per_page;
 	Cost		cpu_run_cost;
+	Cost 		decompress_cost;
 	double		tuples_fetched;
 	double		pages_fetched;
 	double		spc_seq_page_cost,
 				spc_random_page_cost;
 	double		T;
+	double 		num_varblocks = 0.0;
 
 	/* Should only be applied to base relations */
 	Assert(IsA(baserel_orig, RelOptInfo));
@@ -1223,6 +1308,18 @@ cost_bitmap_heap_scan(Path *path, PlannerInfo *root, RelOptInfo *baserel_orig,
 	startup_cost += qpqual_cost.startup;
 	cpu_per_tuple = cpu_tuple_cost + qpqual_cost.per_tuple;
 	cpu_run_cost = cpu_per_tuple * tuples_fetched;
+
+	/* GPDB: Add cost of decompression: each varblock fetched causes 1 decompression */
+	if (IsAccessMethodAO(baserel->orig->relam))
+	{
+		Cost 	decompression_coeff;
+
+		num_varblocks = ao_estimate_num_varblocks(baserel, root);
+		decompression_coeff = get_ao_decompress_coefficient(baserel_orig, true);
+		decompress_cost = decompression_coeff *
+			ceil((tuples_fetched / baserel->tuples) * num_varblocks * loop_count);
+		cpu_run_cost += decompress_cost;
+	}
 
 	/* Adjust costing for parallelism, if used. */
 	if (path->parallel_workers > 0)
@@ -6358,23 +6455,18 @@ compute_bitmap_pages(PlannerInfo *root, RelOptInfo *baserel_orig, Path *bitmapqu
 
 /*
  * Calculates and returns the CPU costs for sys-scanning the block directory
- * and visimap during an Index Only Scan on an append-optimized table.
+ * and visimap during index access to an append-optimized table.
  *
  * FIXME: We currently only consider the cost of scanning an empty AO visimap.
  */
 static void
-cost_indexonlyscan_cpu_ao(RelOptInfoPerSegment *baserel,
-						  PlannerInfo *root,
-						  double *num_blkdir_tuples,
-						  Cost *blkdir_cost_per_tuple,
-						  Cost *visimap_cost_per_tuple)
+cost_cpu_ao_index_aux_tables(RelOptInfoPerSegment *baserel,
+							 PlannerInfo *root,
+							 double *num_blkdir_tuples,
+							 Cost *blkdir_cost_per_tuple,
+							 Cost *visimap_cost_per_tuple,
+							 double *num_varblocks)
 {
-	Oid			baserel_oid = planner_rt_fetch(baserel->orig->relid, root)->relid;
-
-	double		tuple_width = 0.0;
-	double		uncompressed_size_baserel = 0.0;
-	double 		num_var_blocks = 0.0;
-	double 		per_tuple_meta_overhead = 20; /* in bytes */
 	int 		blkdir_idx_qual_count = 3;
 	int 		blkdir_idx_tree_height;
 	double		blkdir_idx_leaf_pages;
@@ -6391,11 +6483,8 @@ cost_indexonlyscan_cpu_ao(RelOptInfoPerSegment *baserel,
 	 * FIXME: Fetch the actual sizes of the blkdir, instead of estimating
 	 * their reltuples and relpages, as we do below.
 	 */
-	tuple_width = get_relation_data_width(baserel_oid, NULL);
-	tuple_width += per_tuple_meta_overhead;
-	uncompressed_size_baserel = tuple_width * baserel->tuples;
-	num_var_blocks = uncompressed_size_baserel / DEFAULT_APPENDONLY_BLOCK_SIZE;
-	*num_blkdir_tuples = num_var_blocks / NUM_MINIPAGE_ENTRIES;
+	*num_varblocks = ao_estimate_num_varblocks(baserel, root);
+	*num_blkdir_tuples = *num_varblocks / NUM_MINIPAGE_ENTRIES;
 
 	blkdir_descent_cost = ceil(log(*num_blkdir_tuples) / log(2.0)) * cpu_operator_cost;
 	/* Approx. 1052 tuples fit in a 90% full blkdir idx leaf page */
@@ -6410,4 +6499,28 @@ cost_indexonlyscan_cpu_ao(RelOptInfoPerSegment *baserel,
 
 	visimap_idx_qual_cost = cpu_operator_cost * visimap_idx_qual_count;
 	*visimap_cost_per_tuple = visimap_idx_qual_cost + (2 * sysscan_setup_finish_cost);
+}
+
+/*
+ * Estimate the number of varblocks found in an append-optimized table.
+ * Arguably, this should be a statistic maintained in pg_statistic, but let's
+ * estimate for now, based on tuple width and number of tuples.
+ *
+ * XXX: More sophisticated estimation can be provided to differentiate ao_column
+ * tables over ao_row tables.
+ */
+static double
+ao_estimate_num_varblocks(RelOptInfoPerSegment *baserel, PlannerInfo *root)
+{
+	double		tuple_width;
+	double 		per_tuple_meta_overhead = 20; /* in bytes */
+
+	Oid			baserel_oid = planner_rt_fetch(baserel->orig->relid, root)->relid;
+
+	Assert(IsAccessMethodAO(baserel->orig->relam));
+
+	tuple_width = get_relation_data_width(baserel_oid, NULL);
+	tuple_width += per_tuple_meta_overhead;
+
+	return (tuple_width * baserel->tuples / DEFAULT_APPENDONLY_BLOCK_SIZE);
 }

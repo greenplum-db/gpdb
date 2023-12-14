@@ -42,6 +42,7 @@
 		"gp_appendonly_verify_write_block",
 		"gp_blockdirectory_entry_min_range",
 		"gp_blockdirectory_minipage_size",
+		"gp_cpu_decompress_cost",
 		"gp_debug_linger",
 		"gp_default_storage_options",
 		"gp_detect_data_correctness",

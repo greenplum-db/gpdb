@@ -49,15 +49,14 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
  */
 EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a WHERE t1.a<42;
 
--- NB: IndexScan on AO table is invalid because AO tables do not support index
---     scan
+-- NB: IndexScan on AO table is supported only for planner.
 /*+
     IndexScan(t1 my_incredible_index)
     IndexScan(t3 our_amazing_index)
  */
 EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a WHERE t1.a<42;
 
--- NB: IndexScan on AO table is invalid because AO tables do not support index
+-- NB: IndexScan on AO table is supported only for planner.
 --     scan (e.g. t2)
 /*+
     IndexScan(t1)
@@ -125,7 +124,7 @@ EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
  */
 EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
 
--- NB: IndexScan on AO table is invalid because AO tables do not support index
+-- NB: IndexScan on AO table is supported only for planner.
 --     scan (e.g. t2)
 --/*+
 --    IndexScan(t2 your_amazing_index)
@@ -365,7 +364,7 @@ CREATE VIEW everybody_view AS SELECT t1.a AS a1, t2.a AS a2, t3.a AS a3 FROM my_
  */
 EXPLAIN (costs off) SELECT * FROM everybody_view;
 
--- NB: IndexScan on AO table is invalid because AO tables do not support index
+-- NB: IndexScan on AO table is supported only for planner.
 --     scan (e.g. t2)
 /*+
     IndexScan(t1 my_incredible_index)
@@ -426,7 +425,7 @@ EXPLAIN (costs off) WITH cte AS
 )
 SELECT a1, a2, a3 FROM cte WHERE a1<42;
 
--- NB: IndexScan on AO table is invalid because AO tables do not support index
+-- NB: IndexScan on AO table is supported only for planner.
 --     scan (e.g. t2)
 /*+
     IndexScan(t1 my_incredible_index)
@@ -438,7 +437,7 @@ EXPLAIN (costs off) WITH cte AS
 )
 SELECT a1, a2, a3 FROM cte WHERE a1<42;
 
--- NB: IndexScan on AO table is invalid because AO tables do not support index
+-- NB: IndexScan on AO table is supported only for planner.
 --     scan (e.g. t2)
 /*+
     IndexScan(t1)

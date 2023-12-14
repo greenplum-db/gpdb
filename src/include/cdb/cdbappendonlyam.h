@@ -52,6 +52,7 @@
 #define MAX_APPENDONLY_BLOCK_SIZE			 (2 * 1024 * 1024)
 #define DEFAULT_VARBLOCK_TEMPSPACE_LEN   	 (4 * 1024)
 #define DEFAULT_FS_SAFE_WRITE_SIZE			 (0)
+#define DEFAULT_COMPRESS_TYPE				("none")
 
 extern AppendOnlyBlockDirectory *GetAOBlockDirectory(Relation relation);
 

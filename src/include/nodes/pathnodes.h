@@ -27,7 +27,7 @@
 #include "nodes/plannerconfig.h"
 #include "cdb/cdbpathlocus.h"
 #include "foreign/foreign.h"
-
+#include "utils/rel.h"
 
 /*
  * Relids
@@ -812,6 +812,18 @@ typedef enum RelOptKind
 	 (rel)->reloptkind == RELOPT_OTHER_JOINREL || \
 	 (rel)->reloptkind == RELOPT_OTHER_UPPER_REL)
 
+/*
+ * GPDB: Storage attributes associated with append-optimized tables.
+ */
+typedef struct AOStorageInfo
+{
+	/* table level storage info */
+	int						compresslevel;
+	char					compresstype[NAMEDATALEN];
+	/* per column storage info (NULL for row-oriented tables) */
+	struct AOStorageInfo	*col_storage_infos;
+} AOStorageInfo;
+
 typedef struct RelOptInfo
 {
 	NodeTag		type;
@@ -915,6 +927,8 @@ typedef struct RelOptInfo
 	 */
 	List	   *upperrestrictinfo;		/* RestrictInfo structures (if base
 										 * rel) */
+
+	AOStorageInfo *ao_storage_info;		/* GPDB: Storage info for AO/CO tables */
 } RelOptInfo;
 
 /*

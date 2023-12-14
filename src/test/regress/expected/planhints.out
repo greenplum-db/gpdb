@@ -99,8 +99,7 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
  Optimizer: Postgres-based planner
 (23 rows)
 
--- NB: IndexScan on AO table is invalid because AO tables do not support index
---     scan
+-- NB: IndexScan on AO table is supported only for planner.
 /*+
     IndexScan(t1 my_incredible_index)
     IndexScan(t3 our_amazing_index)
@@ -133,7 +132,7 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
  Optimizer: Postgres-based planner
 (23 rows)
 
--- NB: IndexScan on AO table is invalid because AO tables do not support index
+-- NB: IndexScan on AO table is supported only for planner.
 --     scan (e.g. t2)
 /*+
     IndexScan(t1)
@@ -228,7 +227,7 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
                            ->  Index Scan using my_bitmap_index on my_table t1
                                  Index Cond: (a < 42)
          ->  Hash
-               ->  Index Scan using your_bitmap_index on your_table t2
+               ->  Index Only Scan using your_incredible_index on your_table t2
                      Index Cond: (a < 42)
  Optimizer: Postgres-based planner
 (23 rows)
@@ -395,7 +394,7 @@ EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
  Optimizer: Postgres-based planner
 (4 rows)
 
--- NB: IndexScan on AO table is invalid because AO tables do not support index
+-- NB: IndexScan on AO table is supported only for planner.
 --     scan (e.g. t2)
 --/*+
 --    IndexScan(t2 your_amazing_index)
@@ -486,9 +485,9 @@ EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
  */
 EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
                         QUERY PLAN                         
------------------------------------------------------------
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Scan using your_bitmap_index on your_table t2
+   ->  Index Only Scan using your_incredible_index on your_table t2
          Index Cond: (a < 42)
  Optimizer: Postgres-based planner
 (4 rows)
@@ -674,10 +673,12 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
                            ->  Index Scan using my_bitmap_index on my_table t1
                                  Index Cond: (a < 42)
          ->  Hash
-               ->  Index Scan using your_bitmap_index on your_table t2
-                     Index Cond: (a < 42)
+               ->  Bitmap Heap Scan on your_table t2
+                     Recheck Cond: (a < 42)
+                     ->  Bitmap Index Scan on your_bitmap_index
+                           Index Cond: (a < 42)
  Optimizer: Postgres-based planner
-(23 rows)
+(25 rows)
 
 /*+
     NoIndexScan(t1)
@@ -1141,7 +1142,7 @@ EXPLAIN (costs off) SELECT * FROM everybody_view;
  Optimizer: Postgres-based planner
 (23 rows)
 
--- NB: IndexScan on AO table is invalid because AO tables do not support index
+-- NB: IndexScan on AO table is supported only for planner.
 --     scan (e.g. t2)
 /*+
     IndexScan(t1 my_incredible_index)
@@ -1270,7 +1271,7 @@ EXPLAIN (costs off) SELECT * FROM everybody_view;
                            ->  Index Scan using my_bitmap_index on my_table t1
                                  Index Cond: (a < 42)
          ->  Hash
-               ->  Index Scan using your_bitmap_index on your_table t2
+               ->  Index Only Scan using your_incredible_index on your_table t2
                      Index Cond: (a < 42)
  Optimizer: Postgres-based planner
 (23 rows)
@@ -1407,7 +1408,7 @@ SELECT a1, a2, a3 FROM cte WHERE a1<42;
  Optimizer: Postgres-based planner
 (23 rows)
 
--- NB: IndexScan on AO table is invalid because AO tables do not support index
+-- NB: IndexScan on AO table is supported only for planner.
 --     scan (e.g. t2)
 /*+
     IndexScan(t1 my_incredible_index)
@@ -1445,7 +1446,7 @@ SELECT a1, a2, a3 FROM cte WHERE a1<42;
  Optimizer: Postgres-based planner
 (23 rows)
 
--- NB: IndexScan on AO table is invalid because AO tables do not support index
+-- NB: IndexScan on AO table is supported only for planner.
 --     scan (e.g. t2)
 /*+
     IndexScan(t1)
@@ -1552,7 +1553,7 @@ SELECT a1, a2, a3 FROM cte WHERE a1<42;
                            ->  Index Scan using my_bitmap_index on my_table t1
                                  Index Cond: (a < 42)
          ->  Hash
-               ->  Index Scan using your_bitmap_index on your_table t2
+               ->  Index Only Scan using your_incredible_index on your_table t2
                      Index Cond: (a < 42)
  Optimizer: Postgres-based planner
 (23 rows)

@@ -1909,11 +1909,9 @@ explain(costs off) select * from test_ao_table order by e desc nulls last, d, a 
    ->  Gather Motion 3:1  (slice1; segments: 3)
          Merge Key: e, d, a
          ->  Limit
-               ->  Sort
-                     Sort Key: e DESC NULLS LAST, d, a DESC
-                     ->  Seq Scan on test_ao_table
- Optimizer: Postgres query optimizer
-(8 rows)
+               ->  Index Scan using ao_index_eda on test_ao_table
+ Optimizer: Postgres-based planner
+(6 rows)
 
 select * from test_ao_table order by e desc nulls last, d, a desc limit 3;
   a  |  b  |         c          |        d        | e  
