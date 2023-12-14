@@ -3789,7 +3789,11 @@ XLogFileReadAnyTLI(XLogSegNo segno, int emode, int source)
 		{
 			XLogSegNo	beginseg = 0;
 
-			XLByteToSeg(hent->begin, beginseg, wal_segment_size);
+            /*
+             * Here XLByteToSeg takes 2 argument with fixed 
+             * wal segment size i.e., XLogSegSize
+             */
+			XLByteToSeg(hent->begin, beginseg);
 
 			/*
 			 * The logfile segment that doesn't belong to the timeline is
