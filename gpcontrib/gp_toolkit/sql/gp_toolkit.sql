@@ -87,7 +87,11 @@ select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat';
 analyze toolkit_miss_stat;
 -- after analyzing empty table, table should not be returned
 select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat';
+truncate toolkit_miss_stat;
+
 insert into toolkit_miss_stat select i,i from generate_series(1,10) i;
+-- table has not been analyzed, table should be returned
+select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat';
 analyze toolkit_miss_stat;
 -- after populating table and analyzing, table should not be returned
 select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat';
