@@ -868,8 +868,11 @@ GRANT SELECT ON TABLE gp_toolkit.gp_skew_idle_fractions TO public;
 --        gp_toolkit.gp_stats_missing
 --
 -- @doc:
---        List all tables with no or insufficient stats. Always skip interior partitions, as stats are never collected
---        and this would add noise.
+--        List all tables with no or insufficient stats. For partitioned
+--        tables, always skip interior partitions, as stats are never collected
+--        and this would add noise. If all leaves are empty and table is
+--        analyzed, the root will still be displayed as we can't differentiate
+--        between an analyzed and unanalyzed root based on relpages.
 --        GPDB_14_MERGE_FIXME: Change this to relpages > -1 after 3d351d9
 --
 --------------------------------------------------------------------------------

@@ -80,27 +80,41 @@ from gp_toolkit.gp_disk_free where dfsegment=0;
 
 
 -- GP Missing Stats
--- New table or without any data will not have any stats
+-- New table that hasn't been analyzed will not have any stats
 -- After analyze or with auto-stats, then we will not have any table in gp_stats_missing
-set gp_autostats_mode='none';
-create table toolkit_miss_stat (a int, b int);
+create table toolkit_miss_stat (a int, b int) with (autovacuum_enabled=false);
+select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat';
+analyze toolkit_miss_stat;
+-- after analyzing empty table, table should not be returned
 select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat';
 insert into toolkit_miss_stat select i,i from generate_series(1,10) i;
 analyze toolkit_miss_stat;
+-- after populating table and analyzing, table should not be returned
 select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat';
--- ensure materialized view is displayed accordingly
-create materialized view toolkit_miss_stat_mv as select * from toolkit_miss_stat distributed by (a);
+
+-- ensure materialized view is shown when stats are missing
+create materialized view toolkit_miss_stat_mv with (autovacuum_enabled=false) as select * from toolkit_miss_stat distributed by (a);
 select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat_mv';
 analyze toolkit_miss_stat_mv;
+-- after analyze, table will have stats and should not be returned
 select * from gp_toolkit.gp_stats_missing where smitable='toolkit_miss_stat_mv';
 drop materialized view toolkit_miss_stat_mv;
 drop table toolkit_miss_stat;
 
-create table deep_part ( i int, j int, k int, s char(5))
+-- test partitioned table. Intermediate parittions should never be shown, root partition should be shown
+-- if any leaf hasn't been analyzed, OR all leaves are empty and have been analyzed
+create table deep_part ( i int, j int, k int, s char(5)) with (autovacuum_enabled=false)
 distributed by (i)
 partition by list(s)
 subpartition by range (j) subpartition template (start(1)  end(3) every(1))
 (partition female values('F'), partition male values('M'));
+-- all leaf partitions and root partition should be returned
+select * from gp_toolkit.gp_stats_missing where smitable LIKE 'deep_part%';
+analyze deep_part;
+-- only root partition should be returned
+select * from gp_toolkit.gp_stats_missing where smitable LIKE 'deep_part%';
+
+truncate deep_part; -- remove stats
 insert into deep_part values (1, 1, 1, 'M');
 insert into deep_part values (1, 1, 1, 'F');
 insert into deep_part values (2, 2, 2, 'M');
@@ -109,7 +123,6 @@ select * from gp_toolkit.gp_stats_missing where smitable LIKE 'deep_part%';
 analyze deep_part;
 -- should return no partitions, since they've all been analyzed
 select * from gp_toolkit.gp_stats_missing where smitable LIKE 'deep_part%';
-reset gp_autostats_mode;
 
 -- Test the gp_skew_idle_fractions view
 create table toolkit_skew (a int);
