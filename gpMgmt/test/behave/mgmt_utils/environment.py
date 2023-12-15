@@ -77,6 +77,7 @@ def before_feature(context, feature):
         dbconn.execSQL(context.conn, 'analyze t2')
         dbconn.execSQL(context.conn, 'analyze t3')
         dbconn.execSQL(context.conn, 'analyze spiegelungssätze')
+        dbconn.execSQL(context.conn, 'create or replace function select_one() returns integer as $$ select 1 $$ language sql')
         context.conn.commit()
 
 def after_feature(context, feature):
