@@ -134,12 +134,6 @@ public:
 	static ScanDirection GetScanDirection(
 		EdxlIndexScanDirection idx_scan_direction);
 
-	// get the oid of comparison operator
-	static OID OidCmpOperator(Expr *expr);
-
-	// get the opfamily for index key
-	static OID GetOpFamilyForIndexQual(INT attno, OID oid_index);
-
 	// find the n-th column descriptor in the table descriptor
 	static const CDXLColDescr *GetColumnDescrAt(
 		const CDXLTableDescr *table_descr, ULONG pos);
