@@ -29,6 +29,8 @@
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 #include "utils/hsearch.h"
+#include "nodes/makefuncs.h"
+#include "catalog/partition.h"
 
 
 typedef struct MCVFreqEntry
@@ -1302,4 +1304,37 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 	}
 
 	return !all_parts_empty;
+}
+
+/* Helper function to issue an analyze command on a specific relation */
+void update_root_stats(Relation rel)
+{
+	/*
+	 * Update stats iff, all the existing
+	 * leaf partitions are analyzed.
+	 */
+
+	Oid root_parent_relid = get_top_level_partition_root(rel->rd_id);
+
+	if (root_parent_relid != InvalidOid && leaf_parts_analyzed(root_parent_relid, InvalidOid, NIL, DEBUG2))
+	{
+		VacuumStmt *analyzeStmt;
+		VacuumRelation *relation;
+		ParseState *pstate;
+
+		/*  Set up an ANALYZE command */
+		relation = makeVacuumRelation(NULL, root_parent_relid, NIL);
+		analyzeStmt = makeNode(VacuumStmt);
+		analyzeStmt->options = NIL;
+		analyzeStmt->rels = list_make1(relation);
+		analyzeStmt->is_vacuumcmd = false;
+
+		pstate = make_parsestate(NULL);
+		pstate->p_sourcetext = NULL;
+
+		ExecVacuum(pstate, analyzeStmt, false, false);
+
+		free_parsestate(pstate);
+		pfree(analyzeStmt);
+	}
 }

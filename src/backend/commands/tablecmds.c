@@ -138,6 +138,7 @@
 #include "cdb/cdbrelsize.h"
 #include "cdb/cdboidsync.h"
 #include "postmaster/autostats.h"
+#include "commands/analyzeutils.h"
 
 const char *synthetic_sql = "(internally generated SQL command)";
 
@@ -5842,7 +5843,28 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			break;
 		case AT_AttachPartition:
 			if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
-				ATExecAttachPartition(wqueue, rel, (PartitionCmd *) cmd->def);
+			{
+				ObjectAddress objAdd = InvalidObjectAddress;
+				objAdd = ATExecAttachPartition(wqueue, rel,(PartitionCmd *)cmd->def);
+
+				/*
+				 * Invalid class Oid (from pg_class) means
+				 * partition not attached successfully
+				 */
+				if (objAdd.classId != InvalidOid)
+				{
+					/*
+					 * 1. Check and update root stats
+					 * after attachment of partition.
+					 *
+					 * 2. Aim is to merge root stats
+					 * iff, all the existing leafs are
+					 * analyzed.
+					 */
+					update_root_stats(rel);
+				}
+			}
+
 			else
 				ATExecAttachPartitionIdx(wqueue, rel,
 										 ((PartitionCmd *) cmd->def)->name);
@@ -5850,7 +5872,23 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		case AT_DetachPartition:
 			/* ATPrepCmd ensures it must be a table */
 			Assert(rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE);
-			ATExecDetachPartition(rel, ((PartitionCmd *) cmd->def)->name);
+			ObjectAddress objAdd = InvalidObjectAddress;
+			objAdd = ATExecDetachPartition(rel, ((PartitionCmd *) cmd->def)->name);
+
+			/*
+			 * Invalid class Oid (from pg_class) means
+			 * partition not detached successfully
+			 */
+			if (objAdd.classId != InvalidOid)
+			{
+
+				/*
+				 * Check and update root stats
+				 * after detaching partition.
+				 */
+				update_root_stats(rel);
+
+			}
 			break;
 		default:				/* oops */
 			elog(ERROR, "unrecognized alter table type: %d",

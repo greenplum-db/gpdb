@@ -689,3 +689,281 @@ analyze verbose p2;
 select * from pg_stats where tablename like 'part2';
 
 drop table multipart cascade;
+
+-----------------------------------------------
+-- Test cases to check, if the leaf stats are merged
+-- when a partition is attached/detached from the table.
+
+-- Basic structure -
+--    RootTab --> Mid --> Leaf1
+-- To this, Leaf2 is attached/detached to check if stats merging
+-- occured or not.
+
+-----------------------------------------------
+-- Reset flags to ignore any changes from tests before running these tests.
+reset optimizer_analyze_root_partition;
+reset optimizer_analyze_midlevel_partition;
+
+-----------------------------------------------
+-- Case 1 - If an 'Analyzed Partition' is attached/detached to
+--     an analyzed table, merging of leaf stats is expected.
+--
+--         Root  Analyzed
+--         Leaf1 Analyzed (as table analyzed)
+--         Leaf2 Analyzed
+-----------------------------------------------
+
+-- 1. Prepare basic framework
+drop table if exists rootTab;
+drop table if exists rootTabLeaf1;
+drop table if exists rootTabLeaf2;
+create table rootTab(a int)  partition by range(a);
+create table rootTabMid1(a int) partition by range(a);
+create table rootTabLeaf1(a int);
+create table rootTabLeaf2(a int);
+alter table rootTab attach partition rootTabMid1 for values from (0) to (20);
+alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
+insert into rootTab select i%10 from generate_series(0,4)i;
+analyze rootTab;
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-- 2. Update rootTabLeaf1 to check, if it is re-sampled when a new partiton is attached.
+-- These should not be present in the root stats, after attach/detach of partition
+insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
+
+-- 3. Analyze rootTabLeaf2 (new partition to be added)
+insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
+analyze rootTabLeaf2;
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-- 4. Attach new partition, and check if root stats are updated.
+alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+--5. Detach Partition (Leaf2) and check if root stats are updated.
+alter table rootTabMid1 detach partition rootTabLeaf2;
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+
+-----------------------------------------------
+-- Case 2 - If an 'Un-Analyzed Partition' is attached/detached
+--     to an analyzed table, merging of leaf stats is not expected.
+--
+--         Root  Analyzed
+--         Leaf1 Analyzed (as table analyzed)
+--         Leaf2 Not Analyzed
+-----------------------------------------------
+-- 1. Prepare basic framework
+drop table if exists rootTab;
+drop table if exists rootTabLeaf1;
+drop table if exists rootTabLeaf2;
+create table rootTab(a int)  partition by range(a);
+create table rootTabMid1(a int) partition by range(a);
+create table rootTabLeaf1(a int);
+create table rootTabLeaf2(a int);
+alter table rootTab attach partition rootTabMid1 for values from (0) to (20);
+alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
+insert into rootTab select i%10 from generate_series(0,4)i;
+analyze rootTab;
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-- 2. Update rootTabLeaf1 to check, if it is re-sampled when a new partiton is attached
+-- These should not be present in the root stats, after attach/detach of partition
+insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
+
+-- 3.Only Insert, not analyze the new partition to be added
+insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
+
+-- 4. Attach new partition, and check if root stats are updated.
+alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-- 5. Detach Partition (Leaf2) and check if root stats are updated.
+alter table rootTabMid1 detach partition rootTabLeaf2;
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+
+-----------------------------------------------
+-- Case 3 - If the table is not analyzed, but all the existing leafs are
+--     analyzed, then if an 'Analyzed Partition' is attached/detached,
+--     merging of leaf stats is expected
+--
+--         Root  Not Analyzed
+--         Leaf1 Analyzed
+--         Leaf2 Analyzed
+-----------------------------------------------
+    -- 1. Prepare basic framework
+drop table if exists rootTab;
+drop table if exists rootTabLeaf1;
+drop table if exists rootTabLeaf2;
+create table rootTab(a int)  partition by range(a);
+create table rootTabMid1(a int) partition by range(a);
+alter table rootTab attach partition rootTabMid1 for values from (0) to (20);
+create table rootTabLeaf1(a int);
+insert into rootTabLeaf1 select i%10 from generate_series(0,4)i;
+analyze rootTabLeaf1;
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-- 2. Attach analyed partition(Leaf1) and check updated root stats
+alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-- 3. Analyze the new partition (Leaf2) to be added
+create table rootTabLeaf2(a int);
+insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
+analyze rootTabLeaf2;
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-- 4. Update rootTabLeaf1 to check, if it is analyzed when a new partiton is attached.
+-- These should not be present in the root stats, after attach/detach of partition
+insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
+
+-- 5. Attach new partition, and check if root stats are updated.
+alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-- 6. Detach Partition (Leaf2) and check if root stats are updated.
+alter table rootTabMid1 detach partition rootTabLeaf2;
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-----------------------------------------------
+-- Case 4 - If the table is not analyzed, but all the existing leafs are
+--     analyzed, then if an 'un-Analyzed Partition' is attached/detached,
+--     merging of leaf stats is not expected
+--
+--         Root  Not Analyzed
+--         Leaf1 Analyzed
+--         Leaf2 Not Analyzed
+-----------------------------------------------
+-- 1. Prepare basic framework
+drop table if exists rootTab;
+drop table if exists rootTabLeaf1;
+drop table if exists rootTabLeaf2;
+create table rootTab(a int)  partition by range(a);
+create table rootTabMid1(a int) partition by range(a);
+alter table rootTab attach partition rootTabMid1 for values from (0) to (20);
+create table rootTabLeaf1(a int);
+insert into rootTabLeaf1 select i%10 from generate_series(0,4)i;
+analyze rootTabLeaf1;
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-- 2. Attach analyed partition(Leaf1) and check updated root stats
+alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-- 3. Create new partition (Leaf2) to be added
+create table rootTabLeaf2(a int);
+insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
+
+-- 4. Update rootTabLeaf1 to check, if it is analyzed when a new partiton is attached.
+-- These should not be present in the root stats, after attach/detach of partition
+insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
+
+-- 5. Attach new partition, and check updated stats
+alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-- 6. Detach Partition (Leaf2) and check if root stats are updated.
+-- The existing stats of rootTabLeaf1 will be updated for root
+alter table rootTabMid1 detach partition rootTabLeaf2;
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-----------------------------------------------
+-- Case 5 - If the table is not analyzed, then if an 'Analyzed Partition'
+--     is attached/detached, merging of leaf stats is not expected
+--
+--         Root  Not Analyzed
+--         Leaf1 Not Analyzed
+--         Leaf2 Analyzed
+-----------------------------------------------
+-- 1. Prepare basic framework
+drop table if exists rootTab;
+drop table if exists rootTabLeaf1;
+drop table if exists rootTabLeaf2;
+create table rootTab(a int)  partition by range(a);
+create table rootTabMid1(a int) partition by range(a);
+alter table rootTab attach partition rootTabMid1 for values from (0) to (20);
+create table rootTabLeaf1(a int);
+insert into rootTabLeaf1 select i%10 from generate_series(0,4)i;
+alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
+
+-- 2. Analyzing the new partition (Leaf2) to be added
+create table rootTabLeaf2(a int);
+insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
+analyze rootTabLeaf2;
+
+    -- 3. Update rootTabLeaf1 to check, if it is analyzed when a new partiton is attached.
+    -- These should not be present in the root stats, after attach/detach of partition
+insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
+
+-- 4. Attach new partition, and check updated stats
+-- No updation of root stats expected.
+alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-- 5. Detach Partition (Leaf2) and check updated stats.
+-- No updation of root stats expected.
+alter table rootTabMid1 detach partition rootTabLeaf2;
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+
+-----------------------------------------------
+-- Case 6 - If the table is not analyzed, then if an 'Un-Analyzed Partition'
+--     is attached/detached, merging of leaf stats is not expected
+--
+--         Root  Not Analyzed
+--         Leaf1 Not Analyzed
+--         Leaf2 Not Analyzed
+-----------------------------------------------
+-- 1. Prepare basic framework
+drop table if exists rootTab;
+drop table if exists rootTabLeaf1;
+drop table if exists rootTabLeaf2;
+create table rootTab(a int)  partition by range(a);
+create table rootTabMid1(a int) partition by range(a);
+alter table rootTab attach partition rootTabMid1 for values from (0) to (20);
+create table rootTabLeaf1(a int);
+insert into rootTabLeaf1 select i%10 from generate_series(0,4)i;
+alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
+
+-- 2. Creating the new partition(Leaf2) to be added
+create table rootTabLeaf2(a int);
+insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
+
+-- 3. Update rootTabLeaf1 to check, if it is analyzed when a new partiton is attached.
+-- These should not be present in the root stats, after attach/detach of partition
+insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
+
+-- 4. Attach new partition, and check updated stats
+alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-- 5. Detach Partition (Leaf2) and check if root stats are updated.
+-- No updation of root stats expected.
+alter table rootTabMid1 detach partition rootTabLeaf2;
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+select * from pg_stats where tablename like 'root%' order by tablename;
+
+-- clean up in the end
+drop table if exists rootTab;
+drop table if exists rootTabLeaf1;
+drop table if exists rootTabLeaf2;
