@@ -41,7 +41,7 @@ Greenplum Database provides the following utility programs. Superscripts identif
 - [gpmovemirrors](ref/gpmovemirrors.html)
 - [gpmt](ref/gpmt.html)
 - [gppkg](ref/gppkg.html)
-- [gpdr](https://docs.vmware.com/en/VMware-Greenplum-Disaster-Recovery/1.0/greenplum-disaster-recovery/ref-gpdr.html)
+- [gpdr](https://docs.vmware.com/en/VMware-Greenplum-Disaster-Recovery/1.0/greenplum-disaster-recovery/GUID-ref-gpdr.html)
 - [gprecoverseg](ref/gprecoverseg.html)
 - [gpreload](ref/gpreload.html)
 - [gprestore](https://docs.vmware.com/en/VMware-Greenplum-Backup-and-Restore/index.html)<sup>1</sup>
