@@ -57,6 +57,18 @@ typedef struct
 	bool		has_wts;		/* Does the rel have WorkTableScan? */
 } CdbpathMfjRel;
 
+/*
+ * We introduced execute on initplan option for function at
+ * https://github.com/greenplum-db/gpdb/pull/9542, which introduced
+ * a new location option for function: EXECUTE ON INITPLAN and run
+ * the f() on initplan.
+ *
+ * But if f() itself is in initplan, this execution method will cause
+ * problems. Therefore, the variable allow_append_initplan_for_function_scan
+ * is introduced to control this optimization
+ */
+static bool allow_append_initplan_for_function_scan = true;
+
 static bool try_redistribute(PlannerInfo *root, CdbpathMfjRel *g,
 							 CdbpathMfjRel *o, List *redistribution_clauses);
 
@@ -2668,4 +2680,22 @@ can_elide_explicit_motion(PlannerInfo *root, Index rti, Path *subpath,
 	}
 
 	return false;
+}
+
+void
+set_not_allow_append_initplan_for_function_scan()
+{
+	allow_append_initplan_for_function_scan = false;
+}
+
+void
+set_allow_append_initplan_for_function_scan()
+{
+	allow_append_initplan_for_function_scan = true;
+}
+
+bool
+get_allow_append_initplan_for_function_scan()
+{
+	return allow_append_initplan_for_function_scan;
 }
