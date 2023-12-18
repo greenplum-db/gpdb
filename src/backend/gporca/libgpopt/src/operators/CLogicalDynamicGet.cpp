@@ -59,12 +59,13 @@ CLogicalDynamicGet::CLogicalDynamicGet(
 	ULONG ulPartIndex, CColRefArray *pdrgpcrOutput,
 	CColRef2dArray *pdrgpdrgpcrPart, IMdIdArray *partition_mdids,
 	CConstraint *partition_cnstrs_disj, BOOL static_pruned,
-	IMdIdArray *foreign_server_mdids)
+	IMdIdArray *foreign_server_mdids, BOOL hasSecurityQuals)
 	: CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, ulPartIndex,
 							 pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids),
 	  m_partition_cnstrs_disj(partition_cnstrs_disj),
 	  m_static_pruned(static_pruned),
-	  m_foreign_server_mdids(foreign_server_mdids)
+	  m_foreign_server_mdids(foreign_server_mdids),
+	  m_has_security_quals(hasSecurityQuals)
 {
 	GPOS_ASSERT(static_pruned || (nullptr == partition_cnstrs_disj));
 	GPOS_ASSERT(nullptr != foreign_server_mdids);
@@ -83,10 +84,12 @@ CLogicalDynamicGet::CLogicalDynamicGet(CMemoryPool *mp, const CName *pnameAlias,
 									   CTableDescriptor *ptabdesc,
 									   ULONG ulPartIndex,
 									   IMdIdArray *partition_mdids,
-									   IMdIdArray *foreign_server_mdids)
+									   IMdIdArray *foreign_server_mdids,
+									   BOOL hasSecurityQuals)
 	: CLogicalDynamicGetBase(mp, pnameAlias, ptabdesc, ulPartIndex,
 							 partition_mdids),
-	  m_foreign_server_mdids(foreign_server_mdids)
+	  m_foreign_server_mdids(foreign_server_mdids),
+	  m_has_security_quals(hasSecurityQuals)
 {
 	GPOS_ASSERT(nullptr != foreign_server_mdids);
 }
@@ -121,6 +124,9 @@ CLogicalDynamicGet::HashValue() const
 	ulHash =
 		gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrOutput));
 
+	ulHash = gpos::CombineHashes(ulHash,
+								 gpos::HashValue<BOOL>(&m_has_security_quals));
+
 	return ulHash;
 }
 
@@ -136,7 +142,18 @@ CLogicalDynamicGet::HashValue() const
 BOOL
 CLogicalDynamicGet::Matches(COperator *pop) const
 {
-	return CUtils::FMatchDynamicScan(this, pop);
+	if (this->Eopid() != pop->Eopid())
+	{
+		return false;
+	}
+
+	CLogicalDynamicGet *popGet = CLogicalDynamicGet::PopConvert(pop);
+
+	// match if the table descriptors are identical
+	return this->ScanId() == popGet->ScanId() &&
+		   this->Ptabdesc()->MDId()->Equals(popGet->Ptabdesc()->MDId()) &&
+		   this->PdrgpcrOutput()->Equals(popGet->PdrgpcrOutput()) &&
+		   this->HasSecurityQuals() == popGet->HasSecurityQuals();
 }
 
 //---------------------------------------------------------------------------
@@ -186,7 +203,7 @@ CLogicalDynamicGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 	return GPOS_NEW(mp) CLogicalDynamicGet(
 		mp, pnameAlias, Ptabdesc(), m_scan_id, pdrgpcrOutput, pdrgpdrgpcrPart,
 		m_partition_mdids, partition_cnstrs_disj, m_static_pruned,
-		m_foreign_server_mdids);
+		m_foreign_server_mdids, m_has_security_quals);
 }
 
 //---------------------------------------------------------------------------

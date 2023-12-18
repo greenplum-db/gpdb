@@ -36,6 +36,8 @@ XERCES_CPP_NAMESPACE_USE
 class CParseHandlerLogicalGet : public CParseHandlerLogicalOp
 {
 private:
+	BOOL m_has_security_quals{false};
+
 	// process the start of an element
 	void StartElement(
 		const XMLCh *const element_uri,			// URI of element's namespace
@@ -54,7 +56,7 @@ private:
 protected:
 	// start element helper function
 	void StartElement(const XMLCh *const element_local_name,
-					  Edxltoken token_type);
+					  Edxltoken token_type, const Attributes &attr);
 
 	// end element helper function
 	void EndElement(const XMLCh *const element_local_name,

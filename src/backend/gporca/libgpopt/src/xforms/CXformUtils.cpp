@@ -2504,16 +2504,28 @@ CXformUtils::PexprBuildBtreeIndexPlan(CMemoryPool *mp, CMDAccessor *md_accessor,
 	// exit early if:
 	// (1) there are no index-able predicates or
 	// (2) there are no outer references in index-able predicates
+	// (3) The relation contains security quals
 	//
 	// (2) is valid only for Join2IndexApply xform wherein the index-get
 	// expression must include outer references for it to be an alternative
 	// worth considering. Otherwise it has the same effect as a regular NLJ
 	// with an index lookup.
 	//
+	// (3) We need to early exit when the relation contains security quals
+	// because we are adding the security quals when translating from DXL to
+	// Planned Statement as a filter. So pdrgpexprIndex will not contain any
+	// security quals here at this stage. So if the index condition contains
+	// a non leak-proof qual it can lead to data leak.
+	//
 	// Both (1) and (2) doesn't apply if index is used for ORDER BY. Because
 	// a query with just order by doesn't have index-able predicates.
-	if ((0 == pdrgpexprIndex->Size() || outer_refs_in_index_get->Size() == 0) &&
-		!indexForOrderBy)
+	if (((0 == pdrgpexprIndex->Size() ||
+		  outer_refs_in_index_get->Size() == 0) &&
+		 !indexForOrderBy) ||
+		(CLogical::EopLogicalGet == op_id &&
+		 CLogicalGet::PopConvert(pexprGet->Pop())->HasSecurityQuals()) ||
+		(fDynamicGet &&
+		 CLogicalDynamicGet::PopConvert(pexprGet->Pop())->HasSecurityQuals()))
 	{
 		// clean up
 		GPOS_DELETE(alias);
@@ -3509,6 +3521,21 @@ CXformUtils::PexprBitmapTableGet(CMemoryPool *mp, CLogical *popGet,
 		&pexprResidual, false /*isAPartialPredicate*/
 	);
 	CExpression *pexprResult = nullptr;
+
+	// We need to early exit when the relation contains security quals
+	// because we are adding the security quals when translating from DXL to
+	// Planned Statement. So the index conditions at this stage will not
+	// contain any security quals. So if the index condition contains a non
+	// leak-proof qual it can lead to data leak.
+	if (nullptr != pexprBitmap &&
+		((CLogical::EopLogicalGet == popGet->Eopid() &&
+		  (dynamic_cast<CLogicalGet *>(popGet))->HasSecurityQuals()) ||
+		 (fDynamicGet &&
+		  (dynamic_cast<CLogicalDynamicGet *>(popGet))->HasSecurityQuals())))
+	{
+		pdrgpexpr->Release();
+		return pexprResult;
+	}
 
 	if (nullptr != pexprBitmap)
 	{

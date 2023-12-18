@@ -27,8 +27,11 @@ using namespace gpdxl;
 //		Construct a logical get operator node given its table descriptor rtable entry
 //
 //---------------------------------------------------------------------------
-CDXLLogicalGet::CDXLLogicalGet(CMemoryPool *mp, CDXLTableDescr *table_descr)
-	: CDXLLogical(mp), m_dxl_table_descr(table_descr)
+CDXLLogicalGet::CDXLLogicalGet(CMemoryPool *mp, CDXLTableDescr *table_descr,
+							   BOOL hasSecurityQuals)
+	: CDXLLogical(mp),
+	  m_dxl_table_descr(table_descr),
+	  m_has_security_quals(hasSecurityQuals)
 {
 }
 
@@ -106,6 +109,10 @@ CDXLLogicalGet::SerializeToDXL(CXMLSerializer *xml_serializer,
 	xml_serializer->OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix), element_name);
 
+	xml_serializer->AddAttribute(
+		CDXLTokens::GetDXLTokenStr(EdxltokenSecurityQuals),
+		m_has_security_quals);
+
 	// serialize table descriptor
 	m_dxl_table_descr->SerializeToDXL(xml_serializer);
 
@@ -135,6 +142,12 @@ CDXLLogicalGet::IsColDefined(ULONG colid) const
 	}
 
 	return false;
+}
+
+BOOL
+CDXLLogicalGet::HasSecurityQuals() const
+{
+	return m_has_security_quals;
 }
 
 #ifdef GPOS_DEBUG

@@ -48,6 +48,9 @@ private:
 	// distribution columns (empty for coordinator only tables)
 	CColRefSet *m_pcrsDist;
 
+	// relation has row level security enabled and has security quals
+	BOOL m_has_security_quals{false};
+
 	void CreatePartCols(CMemoryPool *mp, const ULongPtrArray *pdrgpulPart);
 
 	// private copy ctor
@@ -58,10 +61,11 @@ public:
 	explicit CLogicalGet(CMemoryPool *mp);
 
 	CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
-				CTableDescriptor *ptabdesc);
+				CTableDescriptor *ptabdesc, BOOL hasSecurityQuals = false);
 
 	CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
-				CTableDescriptor *ptabdesc, CColRefArray *pdrgpcrOutput);
+				CTableDescriptor *ptabdesc, CColRefArray *pdrgpcrOutput,
+				BOOL hasSecurityQuals = false);
 
 	// dtor
 	~CLogicalGet() override;
@@ -113,6 +117,12 @@ public:
 	PdrgpdrgpcrPartColumns() const
 	{
 		return m_pdrgpdrgpcrPart;
+	}
+
+	BOOL
+	HasSecurityQuals() const
+	{
+		return m_has_security_quals;
 	}
 
 	// operator specific hash function

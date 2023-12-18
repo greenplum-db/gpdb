@@ -47,7 +47,8 @@ CParseHandlerLogicalGet::CParseHandlerLogicalGet(
 //---------------------------------------------------------------------------
 void
 CParseHandlerLogicalGet::StartElement(const XMLCh *const element_local_name,
-									  Edxltoken token_type)
+									  Edxltoken token_type,
+									  const Attributes &attr)
 {
 	if (0 != XMLString::compareString(CDXLTokens::XmlstrToken(token_type),
 									  element_local_name))
@@ -57,6 +58,10 @@ CParseHandlerLogicalGet::StartElement(const XMLCh *const element_local_name,
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiDXLUnexpectedTag,
 				   str->GetBuffer());
 	}
+
+	m_has_security_quals = CDXLOperatorFactory::ExtractConvertAttrValueToBool(
+		m_parse_handler_mgr->GetDXLMemoryManager(), attr,
+		EdxltokenSecurityQuals, token_type, true, false);
 
 	// create child node parsers
 
@@ -82,11 +87,11 @@ CParseHandlerLogicalGet::StartElement(const XMLCh *const element_local_name,
 void
 CParseHandlerLogicalGet::StartElement(const XMLCh *const,  // element_uri,
 									  const XMLCh *const element_local_name,
-									  const XMLCh *const,  // element_qname
-									  const Attributes &   //attrs
+									  const XMLCh *const,	  // element_qname
+									  const Attributes &attr  //attrs
 )
 {
-	StartElement(element_local_name, EdxltokenLogicalGet);
+	StartElement(element_local_name, EdxltokenLogicalGet, attr);
 }
 
 //---------------------------------------------------------------------------
@@ -121,7 +126,8 @@ CParseHandlerLogicalGet::EndElement(const XMLCh *const element_local_name,
 	if (EdxltokenLogicalGet == token_type)
 	{
 		m_dxl_node = GPOS_NEW(m_mp)
-			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalGet(m_mp, table_descr));
+			CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalGet(m_mp, table_descr,
+														 m_has_security_quals));
 	}
 	else
 	{

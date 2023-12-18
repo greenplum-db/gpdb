@@ -3448,6 +3448,13 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 				   GPOS_WSZ_LIT("ONLY in the FROM clause"));
 	}
 
+	BOOL rteHasSecurityQuals = false;
+
+	if (0 < gpdb::ListLength(rte->securityQuals))
+	{
+		rteHasSecurityQuals = true;
+	}
+
 	// query_id_for_target_rel is used to tag table descriptors assigned to target
 	// (result) relations one. In case of possible nested DML subqueries it's
 	// field points to target relation of corresponding Query structure of subquery.
@@ -3472,7 +3479,8 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 	}
 	else
 	{
-		dxl_op = GPOS_NEW(m_mp) CDXLLogicalGet(m_mp, dxl_table_descr);
+		dxl_op = GPOS_NEW(m_mp)
+			CDXLLogicalGet(m_mp, dxl_table_descr, rteHasSecurityQuals);
 	}
 
 	CDXLNode *dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);

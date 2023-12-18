@@ -45,12 +45,12 @@ void
 CParseHandlerLogicalForeignGet::StartElement(
 	const XMLCh *const,	 // element_uri,
 	const XMLCh *const element_local_name,
-	const XMLCh *const,	 // element_qname
-	const Attributes &	 //attrs
+	const XMLCh *const,		// element_qname
+	const Attributes &attr	//attrs
 )
 {
 	CParseHandlerLogicalGet::StartElement(element_local_name,
-										  EdxltokenLogicalForeignGet);
+										  EdxltokenLogicalForeignGet, attr);
 }
 
 //---------------------------------------------------------------------------
