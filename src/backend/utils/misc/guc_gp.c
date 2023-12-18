@@ -339,6 +339,7 @@ bool		optimizer_enable_redistribute_nestloop_loj_inner_child;
 bool		optimizer_force_comprehensive_join_implementation;
 bool		optimizer_enable_replicated_table;
 bool		optimizer_enable_foreign_table;
+bool		optimizer_enable_right_outer_join;
 
 /* Optimizer plan enumeration related GUCs */
 bool		optimizer_enumerate_plans;
@@ -2998,6 +2999,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		 GUC_NOT_IN_SAMPLE
 		},
 		&optimizer_enable_foreign_table,
+		true,
+		NULL, NULL, NULL
+	},
+	{
+		{"optimizer_enable_right_outer_join", PGC_USERSET, QUERY_TUNING_METHOD,
+		 gettext_noop("Enable Orca to generate plans containing right outer joins."),
+		 NULL,
+		 GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_right_outer_join,
 		true,
 		NULL, NULL, NULL
 	},

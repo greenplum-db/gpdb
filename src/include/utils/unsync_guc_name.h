@@ -390,6 +390,7 @@
 		"optimizer_enable_streaming_material",
 		"optimizer_enable_tablescan",
 		"optimizer_enable_foreign_table",
+		"optimizer_enable_right_outer_join",
 		"optimizer_enforce_subplans",
 		"optimizer_enumerate_plans",
 		"optimizer_expand_fulljoin",
