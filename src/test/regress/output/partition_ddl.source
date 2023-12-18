@@ -2676,7 +2676,7 @@ partition by range (f1)
   partition "Los Angeles" start (time with time zone '00:00 PST') end (time with time zone '23:00 PST') EVERY (INTERVAL '1 hour'),
   partition "New York" start (time with time zone '00:00 EST') end (time with time zone '23:00 EST') EVERY (INTERVAL '1 hour')
 );
-ERROR:  partition "mpp3523_1_prt_New York_4" would overlap partition "mpp3523_1_prt_Los Angeles_1"
+ERROR:  partition "mpp3523_1_prt_Los Angeles_1" would overlap partition "mpp3523_1_prt_New York_4"
 -- Tries to truncate first, but the partition name is still too long, so ERROR
 alter table mpp3523 rename partition "Los Angeles_1" to "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890";
 ERROR:  relation "mpp3523" does not exist
@@ -2687,7 +2687,7 @@ partition by range (f1)
   partition "Los Angeles" start (time with time zone '00:00 PST') end (time with time zone '23:00 PST') EVERY (INTERVAL '1 hour'),
   partition "New York" start (time with time zone '00:00 EST') end (time with time zone '23:00 EST') EVERY (INTERVAL '1 hour')
 );
-ERROR:  partition "mpp3523_00000000001111111111222222222233333333_1_prt_New York_4" would overlap partition "mpp3523_00000000001111111111222222222233333_1_prt_Los Angeles_1"
+ERROR:  partition "mpp3523_00000000001111111111222222222233333_1_prt_Los Angeles_1" would overlap partition "mpp3523_00000000001111111111222222222233333333_1_prt_New York_4"
 -- Truncates the table name to mpp3523_0000000000111111111122222222223333333333444444444455555, but partition name is too long, so ERROR
 alter table mpp3523_000000000011111111112222222222333333333344444444445555555555556666666666777777777788888888889999999999 rename partition "Los Angeles_1" to "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890";
 ERROR:  relation "mpp3523_0000000000111111111122222222223333333333444444444455555" does not exist
@@ -2732,6 +2732,16 @@ alter table mpp3260 drop partition for (700);
 alter table mpp3260 drop partition for (800);
 alter table mpp3260 drop partition for (900);
 insert into mpp3260 (unique1) values (1);
+create table multi_level_overlap (a int, b int, c int)
+partition by range(b) subpartition by range(c)
+(partition p1 start (1) end (5)
+  (subpartition sp1 start(1) end(9),
+   subpartition sp2 start(11) end(20)),
+ partition p2 start (5) end (10)
+   (subpartition sp1 start(1) end(9),
+   subpartition sp2 start(2) end(5)) -- overlaps
+);
+ERROR:  partition "multi_level_overlap_1_prt_p2_2_prt_sp2" would overlap partition "multi_level_overlap_1_prt_p2_2_prt_sp1"
 CREATE TABLE mpp3260a (
         unique1         int4,
         unique2         int4,

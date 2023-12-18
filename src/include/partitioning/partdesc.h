@@ -56,6 +56,7 @@ typedef struct PartitionDescData
 
 extern PartitionDesc RelationRetrievePartitionDesc(Relation rel);
 extern void RelationBuildPartitionDesc(Relation rel);
+extern void RelationValidatePartitionDesc(Relation rel);
 
 extern PartitionDirectory CreatePartitionDirectory(MemoryContext mcxt);
 extern PartitionDesc PartitionDirectoryLookup(PartitionDirectory, Relation);

@@ -184,6 +184,8 @@ extern void StorePartitionKey(Relation rel,
 extern void RemovePartitionKeyByRelId(Oid relid);
 extern void StorePartitionBound(Relation rel, Relation parent,
 								PartitionBoundSpec *bound);
+extern void StorePartitionBoundSkipInvalidation(Relation rel, Relation parent,
+												PartitionBoundSpec *bound);
 
 /* MPP-6929: metadata tracking */
 extern void MetaTrackAddObject(Oid		classid, 

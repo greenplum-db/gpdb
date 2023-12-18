@@ -899,7 +899,8 @@ generateRangePartitions(ParseState *pstate,
 			partname = elem->partName;
 
 		childstmt = makePartitionCreateStmt(parentrel, partname, boundspec,
-											copyObject(subPart), elem, partnamecomp, origin);
+											copyObject(subPart), elem, partnamecomp,
+											origin);
 		result = lappend(result, childstmt);
 	}
 
@@ -1609,7 +1610,6 @@ transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
 	ParseState				*pstate;
 	List					*partDefElems = NIL;
 	List					*encClauses = NIL;
-	bool					defaultPartDefElemFound = false;
 	PartitionKey 			partkey;
 
 	result = makeNode(GpPartitionDefinition);
@@ -1670,15 +1670,7 @@ transformGpPartitionDefinition(Oid parentrelid, const char *queryString,
 							parser_errposition(pstate, elem->location)));
 
 			if (elem->isDefault)
-			{
-				if (defaultPartDefElemFound)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("multiple default partitions are not allowed"),
-							 parser_errposition(pstate, elem->location)));
-				defaultPartDefElemFound = true;
 				partDefElems = lcons(elem, partDefElems);
-			}
 			else
 			{
 				switch (partkey->strategy)

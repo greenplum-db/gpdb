@@ -1202,6 +1202,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 		Relation	parent,
 					defaultRel = NULL;
 		RangeTblEntry *rte;
+		bool		classic_range_workflow;
 
 		/* Already have strong enough lock on the parent */
 		parent = table_open(parentId, NoLock);
@@ -1215,6 +1216,9 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 					 errmsg("\"%s\" is not partitioned",
 							RelationGetRelationName(parent))));
+
+		classic_range_workflow = stmt->origin == ORIGIN_GP_CLASSIC_CREATE_GEN &&
+			stmt->partbound->strategy == PARTITION_STRATEGY_RANGE;
 
 		/*
 		 * The partition constraint of the default partition depends on the
@@ -1234,11 +1238,19 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 		 * added or removed i.e. we should take the lock in same order at all
 		 * the places such that lock parent, lock default partition and then
 		 * lock the partition so as to avoid a deadlock.
+		 *
+		 * GPDB: The above is unnecessary if we are in the process of creating
+		 * the partition hierarchy with classic syntax.
 		 */
-		defaultPartOid =
-			get_default_oid_from_partdesc(RelationRetrievePartitionDesc(parent));
-		if (OidIsValid(defaultPartOid))
-			defaultRel = table_open(defaultPartOid, AccessExclusiveLock);
+		if (classic_range_workflow)
+			defaultPartOid = InvalidOid;
+		else
+		{
+			defaultPartOid =
+				get_default_oid_from_partdesc(RelationRetrievePartitionDesc(parent));
+			if (OidIsValid(defaultPartOid))
+				defaultRel = table_open(defaultPartOid, AccessExclusiveLock);
+		}
 
 		/* Transform the bound values */
 		pstate = make_parsestate(NULL);
@@ -1257,8 +1269,12 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 		/*
 		 * Check first that the new partition's bound is valid and does not
 		 * overlap with any of existing partitions of the parent.
+		 *
+		 * GPDB: The above is unnecessary if we are in the process of creating
+		 * partitions with classic syntax generated with the EVERY clause.
 		 */
-		check_new_partition_bound(relname, parent, bound);
+		if (!classic_range_workflow)
+			check_new_partition_bound(relname, parent, bound);
 
 		/*
 		 * If the default partition exists, its partition constraints will
@@ -1275,7 +1291,10 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId,
 		}
 
 		/* Update the pg_class entry. */
-		StorePartitionBound(rel, parent, bound);
+		if (classic_range_workflow)
+			StorePartitionBoundSkipInvalidation(rel, parent, bound);
+		else
+			StorePartitionBound(rel, parent, bound);
 
 		table_close(parent, NoLock);
 

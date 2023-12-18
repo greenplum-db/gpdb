@@ -153,6 +153,9 @@ static Node *cookConstraint(ParseState *pstate,
 							char *relname);
 static List *insert_ordered_unique_oid(List *list, Oid datum);
 
+static void StorePartitionBound_guts(Relation rel, Relation parent, PartitionBoundSpec *bound,
+									 bool invalidate_default);
+
 
 /* ----------------------------------------------------------------
  *				XXX UGLY HARD CODED BADNESS FOLLOWS XXX
@@ -4373,9 +4376,31 @@ RemovePartitionKeyByRelId(Oid relid)
  * Also, invalidate the parent's relcache, so that the next rebuild will load
  * the new partition's info into its partition descriptor.  If there is a
  * default partition, we must invalidate its relcache entry as well.
+ *
+ * If we are creating a partition hierarchy using classic syntax, the
+ * invalidations can be avoided.
  */
 void
 StorePartitionBound(Relation rel, Relation parent, PartitionBoundSpec *bound)
+{
+	StorePartitionBound_guts(rel, parent, bound, /* invalidate_default */true);
+}
+
+/*
+ * GPDB: Same as StorePartitionBound(), except we skip invalidating the default
+ * partition. This can help save on needing to construct the partition desc of
+ * the parent over and over again. For instance when we are creating partitions
+ * classic syntax)
+ */
+void
+StorePartitionBoundSkipInvalidation(Relation rel, Relation parent, PartitionBoundSpec *bound)
+{
+	StorePartitionBound_guts(rel, parent, bound, /* invalidate_default */false);
+}
+
+static void
+StorePartitionBound_guts(Relation rel, Relation parent, PartitionBoundSpec *bound,
+					bool invalidate_default)
 {
 	Relation	classRel;
 	HeapTuple	tuple,
@@ -4437,10 +4462,14 @@ StorePartitionBound(Relation rel, Relation parent, PartitionBoundSpec *bound)
 	 * partition bounds of every other partition, so we must invalidate the
 	 * relcache entry for that partition every time a partition is added or
 	 * removed.
+	 * GPDB: We skip invalidating the default partition if invalidate_default is
+	 * set.
 	 */
-	defaultPartOid = get_default_oid_from_partdesc(RelationRetrievePartitionDesc(parent));
-	if (OidIsValid(defaultPartOid))
-		CacheInvalidateRelcacheByRelid(defaultPartOid);
-
+	if (invalidate_default)
+	{
+		defaultPartOid = get_default_oid_from_partdesc(RelationRetrievePartitionDesc(parent));
+		if (OidIsValid(defaultPartOid))
+			CacheInvalidateRelcacheByRelid(defaultPartOid);
+	}
 	CacheInvalidateRelcache(parent);
 }

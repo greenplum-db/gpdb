@@ -81,6 +81,8 @@
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbendpoint.h"
 #include "cdb/cdbvars.h"
+#include "access/relation.h"
+#include "partitioning/partdesc.h"
 
 /* Hook for plugins to get control in ProcessUtility() */
 ProcessUtility_hook_type ProcessUtility_hook = NULL;
@@ -1157,6 +1159,8 @@ ProcessUtilitySlow(ParseState *pstate,
 	ObjectAddress address;
 	ObjectAddress secondaryObject = InvalidObjectAddress;
 
+	List 		*deferredValidationParts = NIL;
+
 	/* All event trigger calls are done only when isCompleteQuery is true */
 	needCleanup = isCompleteQuery && EventTriggerBeginCompleteQuery();
 
@@ -1268,6 +1272,15 @@ ProcessUtilitySlow(ParseState *pstate,
 										StoreGpPartitionTemplate(ancestors ? llast_oid(ancestors) : parentrelid,
 																 list_length(ancestors), gpPartDef);
 								}
+
+								/*
+								 * Add to list of partitions for deferred
+								 * partition constraint validation, for
+								 * performance. See RelationValidatePartitionDesc()
+								 * for details on why we do this.
+								 */
+								if (pg_strcasecmp(cstmt->partspec->strategy, "range") == 0)
+									deferredValidationParts = lappend_oid(deferredValidationParts, parentrelid);
 
 								parts = generatePartitions(parentrelid,
 														   gpPartDef,
@@ -2161,6 +2174,20 @@ ProcessUtilitySlow(ParseState *pstate,
 				elog(ERROR, "unrecognized node type: %d",
 					 (int) nodeTag(parsetree));
 				break;
+		}
+
+		{
+			/*
+			 * Perform deferred partition constraint validation.
+			 */
+			ListCell *lc;
+			foreach(lc, deferredValidationParts)
+			{
+				Relation rel = relation_open(lfirst_oid(lc), AccessShareLock);
+				RelationValidatePartitionDesc(rel);
+				relation_close(rel, AccessShareLock);
+			}
+			list_free(deferredValidationParts);
 		}
 
 		/*

@@ -46,6 +46,9 @@ typedef struct PartitionDirectoryEntry
 	Relation	rel;
 	PartitionDesc pd;
 } PartitionDirectoryEntry;
+
+static void RelationBuildPartitionDesc_guts(Relation rel, bool validate);
+
 /*
  * RelationRetrievePartitionDesc -- get partition descriptor, if relation is partitioned
  *
@@ -74,6 +77,24 @@ RelationRetrievePartitionDesc(Relation rel)
 
 	return rel->rd_partdesc;
 }
+
+/*
+ * GPDB: Build and validate the partition descriptor. Used for deferred
+ * partition constraint validation. Deferred constraint validation comes into
+ * play when we defer bounds validation to the end of command, for range
+ * partitions created with the classic syntax. This is done to avoid
+ * constructing the partition descriptor over and over again, for each and every
+ * partition added to the hierarchy. Constructing the parent's partition desc
+ * can have very significant overhead.
+ */
+void
+RelationValidatePartitionDesc(Relation rel)
+{
+	Assert (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE);
+
+	RelationBuildPartitionDesc_guts(rel, /* validate */ true);
+}
+
 /*
  * RelationBuildPartitionDesc
  *		Form rel's partition descriptor, and store in relcache entry
@@ -94,9 +115,22 @@ RelationRetrievePartitionDesc(Relation rel)
  * context the current context except in very brief code sections, out of fear
  * that some of our callees allocate memory on their own which would be leaked
  * permanently.
+ *
+ * GPDB: This function assumes that bounds validation was already performed
+ * beforehand for all partitions added to the hierarchy, if 'validate' is false.
+ *
+ * When 'validate' is true, perform bounds validation.
+ *
+ * See RelationValidatePartitionDesc() for details on when 'validate' is true.
  */
 void
 RelationBuildPartitionDesc(Relation rel)
+{
+	RelationBuildPartitionDesc_guts(rel, /* validate */ false);
+}
+
+static void
+RelationBuildPartitionDesc_guts(Relation rel, bool validate)
 {
 	PartitionDesc partdesc;
 	PartitionBoundInfo boundinfo = NULL;
@@ -247,7 +281,15 @@ RelationBuildPartitionDesc(Relation rel)
 	 * This could fail, but we haven't done any damage if so.
 	 */
 	if (nparts > 0)
-		boundinfo = partition_bounds_create(boundspecs, nparts, key, &mapping);
+	{
+		if (validate)
+			boundinfo = partition_bounds_create_and_validate(boundspecs, nparts,
+															 key, &mapping,
+															 oids);
+		else
+			boundinfo = partition_bounds_create(boundspecs, nparts, key, &mapping);
+	}
+
 
 	/*
 	 * Now build the actual relcache partition descriptor.  Note that the

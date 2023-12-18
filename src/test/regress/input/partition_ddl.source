@@ -862,6 +862,16 @@ alter table mpp3260 drop partition for (800);
 alter table mpp3260 drop partition for (900);
 insert into mpp3260 (unique1) values (1);
 
+create table multi_level_overlap (a int, b int, c int)
+partition by range(b) subpartition by range(c)
+(partition p1 start (1) end (5)
+  (subpartition sp1 start(1) end(9),
+   subpartition sp2 start(11) end(20)),
+ partition p2 start (5) end (10)
+   (subpartition sp1 start(1) end(9),
+   subpartition sp2 start(2) end(5)) -- overlaps
+);
+
 CREATE TABLE mpp3260a (
         unique1         int4,
         unique2         int4,

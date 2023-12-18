@@ -880,7 +880,7 @@ typedef struct PartitionSpec
 								 * 'range') */
 	List	   *partParams;		/* List of PartitionElems */
 
-	struct GpPartitionDefinition *gpPartDef;
+	struct GpPartitionDefinition *gpPartDef; /* contains legacy partition definition */
 	struct PartitionSpec         *subPartSpec;     /* subpartition specification */
 	int                          location;		/* token location, or -1 if unknown */
 } PartitionSpec;
@@ -2330,7 +2330,7 @@ typedef enum CreateStmtOrigin
 {
 	ORIGIN_NO_GEN,
 	ORIGIN_GP_CLASSIC_CREATE_GEN,
-	ORIGIN_GP_CLASSIC_ALTER_GEN
+	ORIGIN_GP_CLASSIC_ALTER_GEN,
 } CreateStmtOrigin;
 
 /* ----------------------

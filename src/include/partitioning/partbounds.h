@@ -89,6 +89,11 @@ extern List *get_qual_from_partbound(Relation rel, Relation parent,
 									 PartitionBoundSpec *spec);
 extern PartitionBoundInfo partition_bounds_create(PartitionBoundSpec **boundspecs,
 												  int nparts, PartitionKey key, int **mapping);
+extern PartitionBoundInfo partition_bounds_create_and_validate(PartitionBoundSpec **boundspecs,
+															   int nparts,
+															   PartitionKey key,
+															   int **mapping,
+															   Oid *oids);
 extern bool partition_bounds_equal(int partnatts, int16 *parttyplen,
 								   bool *parttypbyval, PartitionBoundInfo b1,
 								   PartitionBoundInfo b2);

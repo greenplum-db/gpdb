@@ -79,7 +79,9 @@ static PartitionBoundInfo create_hash_bounds(PartitionBoundSpec **boundspecs,
 static PartitionBoundInfo create_list_bounds(PartitionBoundSpec **boundspecs,
 											 int nparts, PartitionKey key, int **mapping);
 static PartitionBoundInfo create_range_bounds(PartitionBoundSpec **boundspecs,
-											  int nparts, PartitionKey key, int **mapping);
+											  int nparts, PartitionKey key, int **mapping,
+											  bool validate,
+											  Oid *oids);
 static PartitionRangeBound *make_one_partition_rbound(PartitionKey key, int index,
 													  List *datums, bool lower);
 static int32 partition_hbound_cmp(int modulus1, int remainder1, int modulus2,
@@ -107,6 +109,10 @@ static void get_range_key_properties(PartitionKey key, int keynum,
 									 Expr **keyCol,
 									 Const **lower_val, Const **upper_val);
 static List *get_range_nulltest(PartitionKey key);
+
+static PartitionBoundInfo
+partition_bounds_create_guts(PartitionBoundSpec **boundspecs, int nparts,
+							 PartitionKey key, int **mapping, bool validate, Oid *oids);
 
 /*
  * get_qual_from_partbound
@@ -172,9 +178,30 @@ PartitionBoundInfo
 partition_bounds_create(PartitionBoundSpec **boundspecs, int nparts,
 						PartitionKey key, int **mapping)
 {
+	return partition_bounds_create_guts(boundspecs, nparts, key, mapping,
+										/* validate */ false, NULL);
+}
+
+/*
+ * See RelationValidatePartitionDesc() for details.
+ */
+PartitionBoundInfo
+partition_bounds_create_and_validate(PartitionBoundSpec **boundspecs, int nparts,
+									 PartitionKey key, int **mapping, Oid *oids)
+{
+	return partition_bounds_create_guts(boundspecs, nparts, key, mapping,
+										/* validate */ true, oids);
+}
+
+static PartitionBoundInfo
+partition_bounds_create_guts(PartitionBoundSpec **boundspecs, int nparts,
+						PartitionKey key, int **mapping, bool validate, Oid *oids)
+{
 	int			i;
 
 	Assert(nparts > 0);
+
+	AssertImply(validate, oids);
 
 	/*
 	 * For each partitioning method, we first convert the partition bounds
@@ -205,7 +232,7 @@ partition_bounds_create(PartitionBoundSpec **boundspecs, int nparts,
 			return create_list_bounds(boundspecs, nparts, key, mapping);
 
 		case PARTITION_STRATEGY_RANGE:
-			return create_range_bounds(boundspecs, nparts, key, mapping);
+			return create_range_bounds(boundspecs, nparts, key, mapping, validate, oids);
 
 		default:
 			elog(ERROR, "unexpected partition strategy: %d",
@@ -484,10 +511,15 @@ create_list_bounds(PartitionBoundSpec **boundspecs, int nparts,
 /*
  * create_range_bounds
  *		Create a PartitionBoundInfo for a range partitioned table
+ *
+ * GPDB: Partition bound checks (check_new_partition_bound()) can be deferred
+ * during partition hierarchy construction, for performance. So, this routine
+ * has been modified to validate while constructing the supplied range bounds
+ * (if 'validate' is true). 'oids' is also passed down to help with error reporting.
  */
 static PartitionBoundInfo
 create_range_bounds(PartitionBoundSpec **boundspecs, int nparts,
-					PartitionKey key, int **mapping)
+					PartitionKey key, int **mapping, bool validate, Oid *oids)
 {
 	PartitionBoundInfo boundinfo;
 	PartitionRangeBound **rbounds = NULL;
@@ -537,6 +569,24 @@ create_range_bounds(PartitionBoundSpec **boundspecs, int nparts,
 
 		lower = make_one_partition_rbound(key, i, spec->lowerdatums, true);
 		upper = make_one_partition_rbound(key, i, spec->upperdatums, false);
+
+		/*
+		 * GPDB: Check if the resulting range would be empty with specified
+		 * lower and upper bounds.
+		 */
+		if (validate && partition_rbound_cmp(key->partnatts, key->partsupfunc,
+											 key->partcollation, lower->datums,
+											 lower->kind, true, upper) >= 0)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						errmsg("empty range bound specified for partition \"%s\"",
+							   get_rel_name(oids[i])),
+						errdetail("Specified lower bound %s is greater than or equal to upper bound %s.",
+								  get_range_partbound_string(spec->lowerdatums),
+								  get_range_partbound_string(spec->upperdatums))));
+		}
+
 		all_bounds[ndatums++] = lower;
 		all_bounds[ndatums++] = upper;
 	}
@@ -549,6 +599,26 @@ create_range_bounds(PartitionBoundSpec **boundspecs, int nparts,
 			  sizeof(PartitionRangeBound *),
 			  qsort_partition_rbound_cmp,
 			  (void *) key);
+
+	if (validate)
+	{
+		/*
+		 * GPDB: Check for range overlaps. If two consecutive bounds in the sorted
+		 * array happen to be lower bounds, there is definite overlap.
+		 */
+		for (int j = 1; j < ndatums; j++)
+		{
+			if (all_bounds[j - 1]->lower && all_bounds[j]->lower)
+			{
+				int index1 = all_bounds[j - 1]->index;
+				int index2 = all_bounds[j]->index;
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+							errmsg("partition \"%s\" would overlap partition \"%s\"",
+								   get_rel_name(oids[index2]), get_rel_name(oids[index1]))));
+			}
+		}
+	}
 
 	/* Save distinct bounds from all_bounds into rbounds. */
 	rbounds = (PartitionRangeBound **)
