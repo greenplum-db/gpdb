@@ -1,0 +1,515 @@
+create user new_user;
+create table foo_rls ( a int, b int, c int) distributed by (a);
+create table bar_rls ( p int, q int) distributed by (p);
+insert into foo_rls select i,i*10,i*100 from generate_series(1,5)i;
+insert into foo_rls values (NULL,50,500);;
+insert into foo_rls values (NULL,60,NULL);
+insert into foo_rls values (NULL,70,NULL);
+insert into foo_rls values (NULL,NULL,600);
+insert into foo_rls values (NULL,NULL,700);
+vacuum analyze foo_rls;
+grant select on foo_rls to new_user;
+grant select on bar_rls to new_user;
+alter table foo_rls enable row level security;
+CREATE OR REPLACE FUNCTION leak_data(int) RETURNS boolean AS $$
+BEGIN
+  RAISE NOTICE 'Value of column is: %',$1;
+RETURN true;
+END;
+$$ COST 0.0000001 LANGUAGE plpgsql;
+-- Permissive policy
+create policy p1 on foo_rls using (a * 10 = b and c > 300);
+set session authorization new_user;
+explain (costs off ) select * from foo_rls where leak_data(a);
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on foo_rls
+         Filter: ((((a * 10) = b) AND (c > 300)) AND leak_data(a))
+ Optimizer: GPORCA
+(4 rows)
+
+select * from foo_rls where leak_data(a);
+NOTICE:  Value of column is: 4
+NOTICE:  Value of column is: 5
+ a | b  |  c  
+---+----+-----
+ 4 | 40 | 400
+ 5 | 50 | 500
+(2 rows)
+
+reset session authorization;
+drop policy p1 on foo_rls;
+-- All permissive policies which are applicable to a given query
+-- will be combined together using the Boolean “OR” operator
+create policy p1 on foo_rls as permissive for select using (a * 10 >= 30  );
+create policy p2 on foo_rls as permissive for select
+using (LEAST(a,b) >= 2);
+set session authorization new_user;
+explain (costs off )select * from foo_rls where leak_data(c);
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on foo_rls
+         Filter: (((LEAST(a, b) >= 2) OR ((a * 10) >= 30)) AND leak_data(c))
+ Optimizer: GPORCA
+(4 rows)
+
+select * from foo_rls where leak_data(c);
+NOTICE:  Value of column is: 200
+NOTICE:  Value of column is: 500
+NOTICE:  Value of column is: 300
+NOTICE:  Value of column is: 400
+NOTICE:  Value of column is: 500
+NOTICE:  Value of column is: <NULL>
+NOTICE:  Value of column is: <NULL>
+ a | b  |  c  
+---+----+-----
+ 5 | 50 | 500
+ 2 | 20 | 200
+ 3 | 30 | 300
+ 4 | 40 | 400
+   | 50 | 500
+   | 60 |    
+   | 70 |    
+(7 rows)
+
+reset session authorization;
+drop policy p1 on foo_rls;
+drop policy p2 on foo_rls;
+-- Restrictive policies
+-- There needs to be at least one permissive policy to grant access to records
+create policy p1 on foo_rls as restrictive for select using (a > 3);
+create policy p2 on foo_rls as restrictive for select using (b > 35);
+set session authorization new_user;
+explain (costs off ) select * from foo_rls where leak_data(a);
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on foo_rls
+         Filter: (false AND leak_data(a))
+ Optimizer: GPORCA
+(4 rows)
+
+reset session authorization ;
+create policy p3 on foo_rls as permissive for select using (c % 100 = 0);
+set session authorization new_user;
+explain (costs off ) select * from foo_rls where leak_data(a);
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on foo_rls
+         Filter: ((a > 3) AND (b > 35) AND ((c % 100) = 0) AND leak_data(a))
+ Optimizer: GPORCA
+(4 rows)
+
+select * from foo_rls where leak_data(a);
+NOTICE:  Value of column is: 4
+NOTICE:  Value of column is: 5
+ a | b  |  c  
+---+----+-----
+ 5 | 50 | 500
+ 4 | 40 | 400
+(2 rows)
+
+reset session authorization;
+drop policy p1 on foo_rls;
+drop policy p2 on foo_rls;
+drop policy p3 on foo_rls;
+-- The RTE of the relation containing security quals is present inside a
+-- RTE_SUBQUERY rtekind
+create policy p1 on foo_rls as permissive for select using (b + 1 = 4 );
+create policy p2 on foo_rls as permissive for select using (b is distinct
+from c);
+set session authorization new_user;
+explain (costs off ) select * from (select * from foo_rls) t1, bar_rls where
+t1.a=bar_rls.p and bar_rls.q is null and leak_data(c);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (foo_rls.a = bar_rls.p)
+         ->  Seq Scan on foo_rls
+               Filter: (((b IS DISTINCT FROM c) OR ((b + 1) = 4)) AND leak_data(c))
+         ->  Hash
+               ->  Seq Scan on bar_rls
+                     Filter: (q IS NULL)
+ Optimizer: GPORCA
+(9 rows)
+
+-- The RTE of the relation containing security quals is present inside a
+-- SUBLINK node
+explain (costs off ) select * from bar_rls where bar_rls.p in (select a
+from foo_rls where abs(a) >= 10 and leak_data(c)) and bar_rls.q is not null;
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Semi Join
+         Hash Cond: (bar_rls.p = foo_rls.a)
+         ->  Seq Scan on bar_rls
+               Filter: (NOT (q IS NULL))
+         ->  Hash
+               ->  Seq Scan on foo_rls
+                     Filter: (((b IS DISTINCT FROM c) OR ((b + 1) = 4)) AND ((abs(a) >= 10) AND leak_data(c)))
+ Optimizer: GPORCA
+(9 rows)
+
+-- The RTE of the relation containing security quals is present inside a CTE
+explain (costs off ) with cte as (select * from foo_rls where
+a > LEAST(a,b)) select * from cte left join bar_rls on
+cte.a=bar_rls.p and q = 10 and leak_data(cte.a);
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Left Join
+         Hash Cond: (foo_rls.a = bar_rls.p)
+         Join Filter: leak_data(foo_rls.a)
+         ->  Seq Scan on foo_rls
+               Filter: (((b IS DISTINCT FROM c) OR ((b + 1) = 4)) AND (a > LEAST(a, b)))
+         ->  Hash
+               ->  Seq Scan on bar_rls
+                     Filter: (q = 10)
+ Optimizer: GPORCA
+(10 rows)
+
+reset session authorization;
+drop policy p1 on foo_rls;
+drop policy p2 on foo_rls;
+-- ORCA will fallback to planner if SUBLINK is present inside a security qual
+create policy p1 on foo_rls as permissive for select using (a in (select p
+from bar_rls));
+set session authorization new_user;
+set optimizer_trace_fallback to on;
+explain (costs off ) select * from foo_rls;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query has row level security enabled and security quals contain sublinks
+                        QUERY PLAN                         
+-----------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on foo_rls
+         Filter: (hashed SubPlan 1)
+         SubPlan 1
+           ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                 ->  Seq Scan on bar_rls
+ Optimizer: Postgres-based planner
+(7 rows)
+
+reset optimizer_trace_fallback;
+reset session authorization;
+drop policy p1 on foo_rls;
+-- ORCA will not generate any index plans when row level security is enabled
+-- for a relation
+create policy p1 on foo_rls as permissive for select using (b = 10);
+create index btindex on foo_rls using btree(a);
+-- Index Scan is generated by ORCA when the owner of the table runs the query
+set enable_seqscan to off;
+explain (costs off) select * from foo_rls where a is null and b = 10;
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Index Scan using btindex on foo_rls
+         Index Cond: (a IS NULL)
+         Filter: (b = 10)
+ Optimizer: GPORCA
+(5 rows)
+
+-- Index Scan is not generated by ORCA when RLS enabled by ORCA
+set session authorization new_user;
+explain (costs off) select * from foo_rls where a is null;
+                 QUERY PLAN                 
+--------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Seq Scan on foo_rls
+         Filter: ((b = 10) AND (a IS NULL))
+ Optimizer: GPORCA
+(4 rows)
+
+reset session authorization;
+-- Index Only Scan is generated by ORCA when the owner of the table runs the query
+set optimizer_enable_indexscan to off;
+explain (costs off) select a from foo_rls where a is null;
+                   QUERY PLAN                   
+------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Index Only Scan using btindex on foo_rls
+         Index Cond: (a IS NULL)
+ Optimizer: GPORCA
+(4 rows)
+
+-- Index Only Scan is not generated by ORCA when RLS enabled
+set session authorization new_user;
+explain (costs off) select a from foo_rls where a is null;
+                 QUERY PLAN                 
+--------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Seq Scan on foo_rls
+         Filter: ((b = 10) AND (a IS NULL))
+ Optimizer: GPORCA
+(4 rows)
+
+reset session authorization;
+set optimizer_enable_indexscan to on;
+reset enable_seqscan;
+drop policy p1 on foo_rls;
+drop table foo_rls cascade;
+drop table bar_rls cascade;
+-------------------------
+-- Partitioned Tables --
+-------------------------
+create table foo_part_rls ( a int, b int, c int) distributed by (a)
+partition by range(b) (start(0) end(100) every(20), default partition other_part);
+create table bar_part_rls ( p int, q int) distributed by (p) partition by range(q)
+(start(0) end(100) every(20));
+insert into foo_part_rls select i,i*10,i*100 from generate_series(1,5)i;
+insert into foo_part_rls values (NULL,50,500);;
+insert into foo_part_rls values (NULL,60,NULL);
+insert into foo_part_rls values (NULL,70,NULL);
+insert into foo_part_rls values (NULL,NULL,600);
+insert into foo_part_rls values (NULL,NULL,700);
+analyze foo_part_rls;
+grant select on foo_part_rls to new_user;
+grant select on bar_part_rls to new_user;
+alter table foo_part_rls enable row level security;
+-- Permissive policy
+create policy p1 on foo_part_rls using (a * 10 = b and c > 300);
+set session authorization new_user;
+explain (costs off ) select * from foo_part_rls where leak_data(a);
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Dynamic Seq Scan on foo_part_rls
+         Number of partitions to scan: 6 (out of 6)
+         Filter: ((((a * 10) = b) AND (c > 300)) AND leak_data(a))
+ Optimizer: GPORCA
+(5 rows)
+
+select * from foo_part_rls where leak_data(a);
+NOTICE:  Value of column is: 4
+NOTICE:  Value of column is: 5
+ a | b  |  c  
+---+----+-----
+ 5 | 50 | 500
+ 4 | 40 | 400
+(2 rows)
+
+reset session authorization;
+drop policy p1 on foo_part_rls;
+-- All permissive policies which are applicable to a given query
+-- will be combined together using the Boolean “OR” operator
+create policy p1 on foo_part_rls as permissive for select using (a * 10 >= 30  );
+create policy p2 on foo_part_rls as permissive for select
+using (LEAST(a,b) >= 2);
+set session authorization new_user;
+explain (costs off )select * from foo_part_rls where leak_data(c);
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Dynamic Seq Scan on foo_part_rls
+         Number of partitions to scan: 6 (out of 6)
+         Filter: (((LEAST(a, b) >= 2) OR ((a * 10) >= 30)) AND leak_data(c))
+ Optimizer: GPORCA
+(5 rows)
+
+select * from foo_part_rls where leak_data(c);
+NOTICE:  Value of column is: 200
+NOTICE:  Value of column is: 300
+NOTICE:  Value of column is: 500
+NOTICE:  Value of column is: 400
+NOTICE:  Value of column is: 500
+NOTICE:  Value of column is: <NULL>
+NOTICE:  Value of column is: <NULL>
+ a | b  |  c  
+---+----+-----
+ 5 | 50 | 500
+ 2 | 20 | 200
+ 3 | 30 | 300
+ 4 | 40 | 400
+   | 50 | 500
+   | 60 |    
+   | 70 |    
+(7 rows)
+
+reset session authorization;
+drop policy p1 on foo_part_rls;
+drop policy p2 on foo_part_rls;
+-- Restrictive policies
+-- There needs to be at least one permissive policy to grant access to records
+create policy p1 on foo_part_rls as restrictive for select using (a > 3);
+create policy p2 on foo_part_rls as restrictive for select using (b > 35);
+set session authorization new_user;
+explain (costs off ) select * from foo_part_rls where leak_data(a);
+                     QUERY PLAN                     
+----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Dynamic Seq Scan on foo_part_rls
+         Number of partitions to scan: 6 (out of 6)
+         Filter: (false AND leak_data(a))
+ Optimizer: GPORCA
+(5 rows)
+
+reset session authorization ;
+create policy p3 on foo_part_rls as permissive for select using (c % 100 = 0);
+set session authorization new_user;
+explain (costs off ) select * from foo_part_rls where leak_data(a);
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Dynamic Seq Scan on foo_part_rls
+         Number of partitions to scan: 6 (out of 6)
+         Filter: ((a > 3) AND (b > 35) AND ((c % 100) = 0) AND leak_data(a))
+ Optimizer: GPORCA
+(5 rows)
+
+select * from foo_part_rls where leak_data(a);
+NOTICE:  Value of column is: 4
+NOTICE:  Value of column is: 5
+ a | b  |  c  
+---+----+-----
+ 5 | 50 | 500
+ 4 | 40 | 400
+(2 rows)
+
+reset session authorization;
+drop policy p1 on foo_part_rls;
+drop policy p2 on foo_part_rls;
+drop policy p3 on foo_part_rls;
+-- The RTE of the relation containing security quals is present inside a
+-- RTE_SUBQUERY rtekind
+create policy p1 on foo_part_rls as permissive for select using (b + 1 = 4 );
+create policy p2 on foo_part_rls as permissive for select using (b is distinct
+from c);
+set session authorization new_user;
+explain (costs off ) select * from (select * from foo_part_rls) t1, bar_part_rls
+where t1.a=bar_part_rls.p and bar_part_rls.q is not null and leak_data(c);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (foo_part_rls.a = bar_part_rls.p)
+         ->  Dynamic Seq Scan on foo_part_rls
+               Number of partitions to scan: 6 (out of 6)
+               Filter: (((b IS DISTINCT FROM c) OR ((b + 1) = 4)) AND leak_data(c))
+         ->  Hash
+               ->  Dynamic Seq Scan on bar_part_rls
+                     Number of partitions to scan: 5 (out of 5)
+                     Filter: (NOT (q IS NULL))
+ Optimizer: GPORCA
+(11 rows)
+
+-- The RTE of the relation containing security quals is present inside a
+-- SUBLINK node
+explain (costs off ) select * from bar_part_rls where bar_part_rls.p in
+(select a from foo_part_rls where abs(a) >= 10 and leak_data(c)) and
+bar_part_rls.q is not null;
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Semi Join
+         Hash Cond: (bar_part_rls.p = foo_part_rls.a)
+         ->  Dynamic Seq Scan on bar_part_rls
+               Number of partitions to scan: 5 (out of 5)
+               Filter: (NOT (q IS NULL))
+         ->  Hash
+               ->  Dynamic Seq Scan on foo_part_rls
+                     Number of partitions to scan: 6 (out of 6)
+                     Filter: (((b IS DISTINCT FROM c) OR ((b + 1) = 4)) AND ((abs(a) >= 10) AND leak_data(c)))
+ Optimizer: GPORCA
+(11 rows)
+
+-- The RTE of the relation containing security quals is present inside a CTE
+explain (costs off ) with cte as (select * from foo_part_rls where
+a > LEAST(a,b)) select * from cte left join bar_part_rls on
+cte.a=bar_part_rls.p and q = 10 and leak_data(cte.a);
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Left Join
+         Hash Cond: (foo_part_rls.a = bar_part_rls.p)
+         Join Filter: leak_data(foo_part_rls.a)
+         ->  Dynamic Seq Scan on foo_part_rls
+               Number of partitions to scan: 6 (out of 6)
+               Filter: (((b IS DISTINCT FROM c) OR ((b + 1) = 4)) AND (a > LEAST(a, b)))
+         ->  Hash
+               ->  Dynamic Seq Scan on bar_part_rls
+                     Number of partitions to scan: 1 (out of 5)
+                     Filter: (q = 10)
+ Optimizer: GPORCA
+(12 rows)
+
+reset session authorization;
+drop policy p1 on foo_part_rls;
+drop policy p2 on foo_part_rls;
+-- ORCA will fallback to planner if SUBLINK is present inside a security qual
+create policy p1 on foo_part_rls as permissive for select using (a in
+(select p from bar_part_rls));
+set session authorization new_user;
+set optimizer_trace_fallback to on;
+explain (costs off ) select * from foo_part_rls where foo_part_rls.b <15;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query has row level security enabled and security quals contain sublinks
+                                       QUERY PLAN                                        
+-----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on foo_part_rls_1_prt_2
+               Filter: ((hashed SubPlan 1 (copy 2)) AND (b < 15))
+               SubPlan 1 (copy 2)
+                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                       ->  Append
+                             ->  Seq Scan on bar_part_rls_1_prt_1
+                             ->  Seq Scan on bar_part_rls_1_prt_2
+                             ->  Seq Scan on bar_part_rls_1_prt_3
+                             ->  Seq Scan on bar_part_rls_1_prt_4
+                             ->  Seq Scan on bar_part_rls_1_prt_5
+         ->  Seq Scan on foo_part_rls_1_prt_other_part
+               Filter: ((hashed SubPlan 1 (copy 3)) AND (b < 15))
+               SubPlan 1 (copy 3)
+                 ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                       ->  Append
+                             ->  Seq Scan on bar_part_rls_1_prt_1 bar_part_rls_1_prt_1_1
+                             ->  Seq Scan on bar_part_rls_1_prt_2 bar_part_rls_1_prt_2_1
+                             ->  Seq Scan on bar_part_rls_1_prt_3 bar_part_rls_1_prt_3_1
+                             ->  Seq Scan on bar_part_rls_1_prt_4 bar_part_rls_1_prt_4_1
+                             ->  Seq Scan on bar_part_rls_1_prt_5 bar_part_rls_1_prt_5_1
+ Optimizer: Postgres-based planner
+(23 rows)
+
+reset optimizer_trace_fallback;
+reset session authorization;
+drop policy p1 on foo_part_rls;
+-- ORCA will not generate any index plans when row level security is enabled
+-- for a relation
+create policy p1 on foo_part_rls as permissive for select using (b = 10);
+create index btindex on foo_part_rls using btree(a);
+-- Dynamic Index Scan is generated by ORCA when the owner of the table runs
+-- the query
+set enable_seqscan to off;
+explain (costs off) select * from foo_part_rls where a is null;
+                     QUERY PLAN                      
+-----------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Dynamic Index Scan on btindex on foo_part_rls
+         Index Cond: (a IS NULL)
+         Number of partitions to scan: 6 (out of 6)
+ Optimizer: GPORCA
+(5 rows)
+
+-- Dynamic Index Scan is not generated by ORCA when RLS is enabled
+set session authorization new_user;
+explain (costs off) select * from foo_part_rls where a is null;
+                     QUERY PLAN                     
+----------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Dynamic Seq Scan on foo_part_rls
+         Number of partitions to scan: 6 (out of 6)
+         Filter: ((b = 10) AND (a IS NULL))
+ Optimizer: GPORCA
+(5 rows)
+
+reset session authorization;
+reset enable_seqscan;
+drop policy p1 on foo_part_rls;
+drop table foo_part_rls cascade;
+drop table bar_part_rls cascade;
+drop function leak_data(int);
+drop user new_user;

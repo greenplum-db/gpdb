@@ -5831,7 +5831,7 @@ CTranslatorDXLToPlStmt::FetchSecurityQuals(
 		CommonTableExpr *cte = lfirst_node(CommonTableExpr, lc);
 
 		FetchSecurityQuals(castNode(Query, cte->ctequery), ctxt_security_quals);
-		if (0 < gpdb::ListLength(ctxt_security_quals->m_security_quals))
+		if (ctxt_security_quals->m_found_rte)
 		{
 			return;
 		}
@@ -5863,8 +5863,10 @@ BOOL
 CTranslatorDXLToPlStmt::FetchSecurityQualsWalker(
 	Node *node, SContextSecurityQuals *ctxt_security_quals)
 {
-	if (node == NULL)
+	if (nullptr == node)
+	{
 		return false;
+	}
 
 	// If the node is a SUBLINK, fetch its subselect node and start the
 	// search again for the RTE based on the m_relId field of

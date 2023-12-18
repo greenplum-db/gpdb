@@ -542,8 +542,10 @@ CTranslatorQueryToDXL::CheckRangeTable(Query *query)
 BOOL
 CTranslatorQueryToDXL::CheckSublinkInSecurityQuals(Node *node, void *context)
 {
-	if (node == NULL)
+	if (nullptr == node)
+	{
 		return false;
+	}
 
 	if (IsA(node, SubLink))
 	{
