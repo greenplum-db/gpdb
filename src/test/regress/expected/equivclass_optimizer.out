@@ -459,16 +459,16 @@ set session authorization regress_user_ectest;
 explain (costs off)
   select * from ec0 a, ec1 b
   where a.ff = b.ff and a.ff = 43::bigint::int8alias1;
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
-         ->  Index Scan using ec0_pkey on ec0 a
-               Index Cond: (ff = '43'::int8alias1)
-         ->  Index Scan using ec1_pkey on ec1 b
-               Index Cond: (ff = a.ff)
-               Filter: ((f1 < '5'::int8alias1) AND (ff = '43'::int8alias1))
- Optimizer: Postgres query optimizer
+         Join Filter: true
+         ->  Seq Scan on ec1
+               Filter: (f1 < '5'::int8alias1)
+         ->  Index Scan using ec0_pkey on ec0
+               Index Cond: ((ff = ec1.ff) AND (ff = '43'::int8alias1))
+ Optimizer: GPORCA
 (8 rows)
 
 reset session authorization;
