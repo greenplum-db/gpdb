@@ -28,6 +28,11 @@ namespace gpopt
 class CPhysicalRightOuterHashJoin : public CPhysicalHashJoin
 {
 private:
+	// helper for deriving hash join distribution from hashed children
+	CDistributionSpec *PdsDeriveFromHashedChildren(
+		CMemoryPool *mp, CDistributionSpec *pdsOuter,
+		CDistributionSpec *pdsInner) const;
+
 protected:
 	// create optimization requests
 	void CreateOptRequests(CMemoryPool *mp) override;
@@ -44,6 +49,9 @@ public:
 
 	// dtor
 	~CPhysicalRightOuterHashJoin() override;
+
+	CDistributionSpec *PdsDerive(CMemoryPool *mp,
+								 CExpressionHandle &exprhdl) const override;
 
 	// ident accessors
 	EOperatorId

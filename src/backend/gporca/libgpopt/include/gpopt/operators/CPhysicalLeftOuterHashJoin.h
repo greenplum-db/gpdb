@@ -27,12 +27,6 @@ namespace gpopt
 //---------------------------------------------------------------------------
 class CPhysicalLeftOuterHashJoin : public CPhysicalHashJoin
 {
-private:
-	// helper for deriving hash join distribution from hashed children
-	CDistributionSpec *PdsDeriveFromHashedChildren(
-		CMemoryPool *mp, CDistributionSpec *pdsOuter,
-		CDistributionSpec *pdsInner) const;
-
 public:
 	CPhysicalLeftOuterHashJoin(const CPhysicalLeftOuterHashJoin &) = delete;
 

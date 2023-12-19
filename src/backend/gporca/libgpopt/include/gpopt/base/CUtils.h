@@ -1021,6 +1021,9 @@ public:
 	static BOOL FScalarConstOrBinaryCoercible(CExpression *pexpr);
 
 	static BOOL FScalarIdentNullTest(CExpression *pexpr);
+
+	static CTableDescriptorHashSet *RemoveDuplicateMdids(
+		CMemoryPool *mp, CTableDescriptorHashSet *tabdescs);
 };	// class CUtils
 
 // hash set from expressions
