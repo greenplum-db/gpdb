@@ -46,6 +46,9 @@ using namespace gpopt;
 // prohibitively high penalty for cross products when in GreedyAvoidXProd
 #define GPOPT_DPV2_CROSS_JOIN_GREEDY_PENALTY 1e9
 
+// prohibitively high penalty for broadcast when it exceeds a threshold (similar to the real cost model)
+#define BROACAST_PENALTY 1e14
+
 // from cost model used during optimization in CCostModelParamsGPDB.cpp
 #define BCAST_SEND_COST 4.965e-05
 #define BCAST_RECV_COST 1.35e-06
@@ -837,7 +840,7 @@ CJoinOrderDPv2::RecursivelyMarkEdgesAsUsed(CExpression *expr)
 //     - table scan (or tree)
 //        - predicate
 //
-// In this case, we can put the PS over the TS
+// In this case, we can put the PS over the table scan
 // We make a few assumptions:
 //   1. The benefits of a PS are from the selectivity of a single table, rather than the join result between two tables. We find this table by looking for logical selects.
 //   2. The selectivty of this single table is equal to the selectivity of the PS
@@ -846,6 +849,12 @@ CJoinOrderDPv2::RecursivelyMarkEdgesAsUsed(CExpression *expr)
 // If it is, we mark this SExpressionInfo as containing a PS
 // We only consider linear trees here, since bushy trees would increase the search space and increase the
 // chance of motions between the PS and PT, which then would fail requirements during optimization
+//
+// This function includes 4 main steps:
+// 1. Exit early if group contains a partition table or if partition table already has a partition selector
+// 2. Exit if distribution specs are incompitible and motion would be added, which makes partition selector invalid
+// 3. Check whether join expression condition contains the partition key
+// 4. DPE cost adjustment
 void
 CJoinOrderDPv2::PopulateDPEInfo(SExpressionInfo *join_expr_info,
 								SGroupInfo *part_table_group_info,
@@ -854,84 +863,155 @@ CJoinOrderDPv2::PopulateDPEInfo(SExpressionInfo *join_expr_info,
 	SGroupInfoArray *atom_groups = GetGroupsForLevel(1);
 
 	CBitSetIter iter_pt(*part_table_group_info->m_atoms);
-	SGroupInfo *pt_atom = nullptr;
+	CExpression *pt_atom_expr = nullptr;
 	CPartKeysArray *partition_keys = nullptr;
+	SGroupInfo *pt_atom = nullptr;
+	// iterate through each atom of the "outer" (left) group, and look for a partition table
+	// that does not yet have a partition selector.
+	// Once a partition table is found, check if it has a valid partition selector. I
+	// if no valid partition selectors are found, continue to the next partition table.
 	while (iter_pt.Advance())
 	{
 		pt_atom = (*atom_groups)[iter_pt.Bit()];
+		pt_atom_expr = (*pt_atom->m_best_expr_info_array)[0]->m_expr;
 		partition_keys =
 			(*pt_atom->m_best_expr_info_array)[0]->m_atom_part_keys_array;
-		if (partition_keys != nullptr && partition_keys->Size() > 0)
+		// continue if there are no partition keys or if the partition table already has an
+		// associated partition selector
+		if (partition_keys == nullptr || partition_keys->Size() == 0 ||
+			join_expr_info->m_contain_PS->Get(iter_pt.Bit()))
 		{
-			break;
+			continue;
 		}
-	}
-	if (nullptr != partition_keys)
-	{
-		GPOS_ASSERT(nullptr != pt_atom);
-		GPOS_ASSERT(nullptr != partition_keys && partition_keys->Size() > 0);
+
+		// check if this join order will produce a valid partition selector
+		// this can only occur if the distribution spec matches.
+		// consider the below join tree:
+		//       HJ3
+		//   HJ2    PS2
+		// PT2  HJ1
+		//	  PT1  PS1
+		// If there is a motion between PT2 and PS2, then this is not a valid plan for partition selection
+		// Therefore, when considering a table that may produce a partition selector, we need to check the join expression
+		// below the current join.
+
+		// columns of child join condition (HJ2 in example above)
+		CColRefSet *left_child_join_condition_cols = nullptr;
+
+		// only check for a valid partition selector for joins with more than 1 level.
+		// For single level joins, eg: A HJ B, there is no join below A and we can skip this logic
+		// and go straight ahead to check if the join expr overlaps the partition key
+		if (!part_table_group_info->IsAnAtom())
+		{
+			CExpression *left_child_join_expr =
+				join_expr_info->m_left_child_expr.GetExprInfo()->m_expr;
+			left_child_join_condition_cols =
+				(*left_child_join_expr)[left_child_join_expr->Arity() - 1]
+					->DeriveUsedColumns();
+			// retrieve the table descriptor in order to get the distribution columns of the partition table
+			CLogical *popLogical = CLogical::PopConvert(pt_atom_expr->Pop());
+			CTableDescriptor *atom_table_descriptor =
+				CLogical::PtabdescFromTableGet(popLogical);
+			if (nullptr != atom_table_descriptor &&
+				nullptr != left_child_join_condition_cols)
+			{
+				CColRefArray *atomOutputColArray =
+					pt_atom_expr->DeriveOutputColumns()->Pdrgpcr(m_mp);
+				CColRefSet *pt_atom_distribution_cols = CLogical::PcrsDist(
+					m_mp, atom_table_descriptor, atomOutputColArray);
+				atomOutputColArray->Release();
+				// check that the child join condition contains the partition table's distribution columns
+				// if it doesn't, it won't be a valid partition selector due to the added redistribute
+				if (!left_child_join_condition_cols->ContainsAll(
+						pt_atom_distribution_cols))
+				{
+					pt_atom_distribution_cols->Release();
+					continue;
+				}
+				pt_atom_distribution_cols->Release();
+			}
+		}
+
 		CExpression *join_expr = join_expr_info->m_expr;
 		CExpression *scalar_expr = (*join_expr)[join_expr->Arity() - 1];
 
 		CColRefSet *join_expr_cols = scalar_expr->DeriveUsedColumns();
+
+		// iterate through each partition key of the partition table (typically of size 1)
 		for (ULONG i = 0; i < partition_keys->Size(); i++)
 		{
 			CPartKeys *part_keys = (*partition_keys)[i];
-			// If the join expr overlaps the partition key, then we consider the expression as having a possible PS for that PT
-			if (part_keys->FOverlap(join_expr_cols))
+			// If the join expr overlaps the partition key, then we consider
+			// the expression as having a possible PS for that PT, otherwise continue
+			if (!part_keys->FOverlap(join_expr_cols))
 			{
-				CBitSetIter iter_ps(*part_selector_group_info->m_atoms);
+				continue;
+			}
+			CBitSetIter iter_ps(*part_selector_group_info->m_atoms);
+			GPOS_ASSERT(part_selector_group_info->m_atoms->Size() == 1);
+			iter_ps.Advance();
+			// a partition selector atom is a potential partition selector
+			// only if it is a logical select (ie: it has a filter)
+			if ((*(*atom_groups)[iter_ps.Bit()]->m_best_expr_info_array)[0]
+					->m_expr->Pop()
+					->Eopid() == COperator::EopLogicalSelect)
+			{
+				// mark join expr as containing a partition selector
 				join_expr_info->m_contain_PS->ExchangeSet(iter_pt.Bit());
-				while (iter_ps.Advance())
-				{
-					// if the part selector group has a potential PS, ensure that one of the group's atoms is a logical select
-					if ((*(*atom_groups)[iter_ps.Bit()]
-							  ->m_best_expr_info_array)[0]
-							->m_expr->Pop()
-							->Eopid() == COperator::EopLogicalSelect)
-					{
-						SExpressionInfo *atom_ps =
-							(*(*atom_groups)[iter_ps.Bit()]
-								  ->m_best_expr_info_array)[0];
-						// This is a bit simplistic. We calculate how much we are reducing the cardinality of the atom, but also take into account the cost of broadcasting the inner rows. If the number of rows broadcasted is much larger than the savings, then PS will likely not benefit in this case
-						// The numbers are from the cost model used during optimization
+				SExpressionInfo *atom_ps =
+					(*(*atom_groups)[iter_ps.Bit()]->m_best_expr_info_array)[0];
 
-						// for a select(some_non_get_node()) ==> 0.9
-						// for a non-select node (won't even come here) ==> 0.0, in effect
-						// for a select(get) ==> 1 - (row count of select / row count of get)
-
-						CDouble percent_reduction =
-							.9;	 // an arbitary default if the logical operator is not a simple select
-						ICostModel *cost_model =
-							COptCtxt::PoctxtFromTLS()->GetCostModel();
-						CDouble num_segments = cost_model->UlHosts();
-						CDouble distribution_cost_factor =
-							(num_segments * BCAST_RECV_COST + BCAST_SEND_COST) /
-							SEQ_SCAN_COST;
-						CDouble broadcast_penalty =
-							part_selector_group_info->m_cardinality *
-							distribution_cost_factor;
-
-						if (atom_ps->m_atom_base_table_rows.Get() > 0)
-						{
-							percent_reduction =
-								(1 - (atom_ps->m_cost.Get() /
-									  atom_ps->m_atom_base_table_rows.Get()));
-						}
-
-						// Adjust the cost of the expression for each partition selector
-						join_expr_info->m_cost_adj_PS =
-							join_expr_info->m_cost_adj_PS -
-							(percent_reduction * pt_atom->m_cardinality) +
-							broadcast_penalty;
-					}
-				}
-				break;
+				// Adjust the cost of the expression for each partition selector
+				join_expr_info->m_cost_adj_PS = CostJoinWithPartitionSelection(
+					join_expr_info, atom_ps, pt_atom, part_selector_group_info);
+				return;
 			}
 		}
 	}
 }
 
+CDouble
+CJoinOrderDPv2::CostJoinWithPartitionSelection(
+	SExpressionInfo *join_expr_info, SExpressionInfo *atom_ps,
+	SGroupInfo *pt_atom, SGroupInfo *part_selector_group_info)
+{
+	COptimizerConfig *optimizer_config =
+		COptCtxt::PoctxtFromTLS()->GetOptimizerConfig();
+	ULONG broadcast_threshold =
+		optimizer_config->GetHint()->UlBroadcastThreshold();
+
+	// This is a bit simplistic. We calculate how much we are reducing the cardinality of the atom,
+	// but also take into account the cost of broadcasting the inner rows. If the number of rows
+	// broadcasted is much larger than the savings, then PS will likely not benefit in this case
+	// The numbers are from the cost model used during optimization
+
+	// for a select(some_non_get_node()) ==> 0.9
+	// for a non-select node (won't even come here) ==> 0.0, in effect
+	// for a select(get) ==> 1 - (row count of select / row count of get)
+	CDouble percent_reduction =
+		.9;	 // an arbitary default if the logical operator is not a simple select
+	ICostModel *cost_model = COptCtxt::PoctxtFromTLS()->GetCostModel();
+	CDouble num_segments = cost_model->UlHosts();
+	CDouble distribution_cost_factor =
+		(num_segments * BCAST_RECV_COST + BCAST_SEND_COST) / SEQ_SCAN_COST;
+	CDouble broadcast_cost =
+		part_selector_group_info->m_cardinality * distribution_cost_factor;
+
+	// penalize broadcast if it exceeds broadcast threshold (specified via GUC), just like
+	// in the cost model during optimization
+	if (part_selector_group_info->m_cardinality > broadcast_threshold)
+	{
+		broadcast_cost = broadcast_cost * BROACAST_PENALTY;
+	}
+
+	if (atom_ps->m_atom_base_table_rows.Get() > 0)
+	{
+		percent_reduction = (1 - (atom_ps->m_cost.Get() /
+								  atom_ps->m_atom_base_table_rows.Get()));
+	}
+	return join_expr_info->m_cost_adj_PS -
+		   (percent_reduction * pt_atom->m_cardinality) + broadcast_cost;
+}
 //---------------------------------------------------------------------------
 //	@function:
 //		CJoinOrderDPv2::SearchJoinOrders
@@ -1000,8 +1080,20 @@ CJoinOrderDPv2::SearchJoinOrders(ULONG left_level, ULONG right_level)
 					current_level_info, join_bitset, join_expr_info);
 				AddExprToGroupIfNecessary(group_info, join_expr_info);
 
-				// We only want to consider linear trees when enumerating partition selector alternatives
-				if (right_level != 1)
+				// This ensures a 2-level bushy tree such that contains partition selectors is a valid candidate.
+				// Below, Adding HJ1 to the inner side of any tree would make it "bushy", and while we
+				// typically don't want to consider such plans, 2-level bushy trees can be good if DPE occurs
+				// Eg:
+				//	HJ3
+				//	 -HJ2
+				//		-PT2
+				//		-PS2
+				//		  -Scan with predicate
+				//	 -HJ1
+				//		-PT1
+				//		-PS1
+				//		  -Scan with predicate
+				if (right_level > 2)
 				{
 					continue;
 				}
@@ -1013,12 +1105,14 @@ CJoinOrderDPv2::SearchJoinOrders(ULONG left_level, ULONG right_level)
 				join_expr_info = GetJoinExprForProperties(
 					left_group_info, right_group_info, join_props);
 
-
-
-				// TODO: Reduce non-mandatory cross products
-
-				PopulateDPEInfo(join_expr_info, left_group_info,
-								right_group_info);
+				// Only consider DPE when the partition selector group has one atom
+				// It's possible to put a partition selector above a join, but it's
+				// much less common
+				if (right_level == 1)
+				{
+					PopulateDPEInfo(join_expr_info, left_group_info,
+									right_group_info);
+				}
 				// For the first level, we should consider joining both ways
 				if (left_level == 1 && right_level == 1)
 				{
@@ -1026,6 +1120,7 @@ CJoinOrderDPv2::SearchJoinOrders(ULONG left_level, ULONG right_level)
 									left_group_info);
 				}
 
+				// Add the partition selector property if the group contains any partition selectors
 				if (join_expr_info->m_contain_PS->Size() > 0)
 				{
 					AddNewPropertyToExpr(

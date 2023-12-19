@@ -27,7 +27,9 @@
 #include "gpopt/operators/CLogicalApply.h"
 #include "gpopt/operators/CLogicalBitmapTableGet.h"
 #include "gpopt/operators/CLogicalDynamicBitmapTableGet.h"
+#include "gpopt/operators/CLogicalDynamicForeignGet.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
+#include "gpopt/operators/CLogicalForeignGet.h"
 #include "gpopt/operators/CLogicalGet.h"
 #include "gpopt/operators/CLogicalNAryJoin.h"
 #include "gpopt/operators/CLogicalSelect.h"
@@ -1263,6 +1265,10 @@ CLogical::PtabdescFromTableGet(COperator *pop)
 			return CLogicalDynamicGet::PopConvert(pop)->Ptabdesc();
 		case CLogical::EopLogicalBitmapTableGet:
 			return CLogicalBitmapTableGet::PopConvert(pop)->Ptabdesc();
+		case CLogical::EopLogicalForeignGet:
+			return CLogicalForeignGet::PopConvert(pop)->Ptabdesc();
+		case CLogical::EopLogicalDynamicForeignGet:
+			return CLogicalDynamicForeignGet::PopConvert(pop)->Ptabdesc();
 		case CLogical::EopLogicalDynamicBitmapTableGet:
 			return CLogicalDynamicBitmapTableGet::PopConvert(pop)->Ptabdesc();
 		case CLogical::EopLogicalSelect:

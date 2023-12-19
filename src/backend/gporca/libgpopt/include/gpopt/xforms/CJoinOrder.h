@@ -34,7 +34,7 @@ using namespace gpos;
 //		Helper class for creating compact join orders
 //
 //---------------------------------------------------------------------------
-class CJoinOrder : public DbgPrintMixin<CJoinOrder>
+class CJoinOrder
 {
 public:
 	enum EPosition

@@ -17,7 +17,7 @@ def _getPlatformInfo():
         for file in glob.glob('/etc/*release'):
             shutil.copy(file, '.')
     else:
-        Popen('/usr/bin/lsb_release -a > ./lsb_release.out',
+        Popen('{} -a > ./lsb_release.out'.format(which('lsb_release')),
               shell=True, stderr=PIPE)
 
     if os.path.exists('/etc/gpdb-appliance-version'):
@@ -27,13 +27,17 @@ def _getPlatformInfo():
 
 
 def _getFileInfo(coreFile):
-    cmd = Popen(['/usr/bin/file', '--version'], stdout=PIPE, stderr=STDOUT)
+    file_cmd = which('file')
+    if file_cmd is None:
+        raise Exception("cannot find file command")
+
+    cmd = Popen([file_cmd, '--version'], stdout=PIPE, stderr=STDOUT)
     fileVersion = cmd.communicate()[0].split()[0].strip().decode()
     # file allow setting parameters from command line from version 5.21, refer:
     # https://github.com/file/file/commit/6ce24f35cd4a43c4bdd249e8e0c4952c1f8eac67
     # Set ELF program sections processed for core files to suppres "too many
     # program headers" output
-    opts = ['/usr/bin/file']
+    opts = [file_cmd]
     if fileVersion >= 'file-5.21':
         opts += ['-P', 'elf_phnum=2048']
     opts += [coreFile]
