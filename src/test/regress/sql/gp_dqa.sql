@@ -484,6 +484,9 @@ select count(distinct a), sum(c) from num_table;
 explain select id, count(distinct a), avg(b), sum(c) from num_table group by grouping sets ((id,c));
 select id, count(distinct a), avg(b), sum(c) from num_table group by grouping sets ((id,c));
 
+explain (verbose on, costs off) select count(distinct b) from num_table group by c;
+select count(distinct b) from num_table group by c;
+
 reset optimizer_force_multistage_agg;
 
 -- DQA with Agg(Intermediate Agg)
