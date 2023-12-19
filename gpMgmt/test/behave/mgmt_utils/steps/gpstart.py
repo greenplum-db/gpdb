@@ -29,8 +29,8 @@ def _run_sql(sql, opts=None):
         "-c", sql,
     ], env=env)
 
-def change_hostname(content, preferred_role, hostname):
-    with closing(dbconn.connect(dbconn.DbURL(dbname="template1"), allowSystemTableMods=True, unsetSearchPath=False)) as conn:
+def change_hostname(content, preferred_role, hostname, utility=False):
+    with closing(dbconn.connect(dbconn.DbURL(dbname="template1"), utility=utility, allowSystemTableMods=True, unsetSearchPath=False)) as conn:
         dbconn.execSQL(conn, "UPDATE gp_segment_configuration SET hostname = '{0}', address = '{0}' WHERE content = {1} AND preferred_role = '{2}'".format(hostname, content, preferred_role))
 
 @when('the standby host is made unreachable')
@@ -106,8 +106,7 @@ def impl(context):
         except Exception as e:
             print("create pgpass file error")
 
-@given('the host for the {seg_type} on content {content} is made unreachable')
-def impl(context, seg_type, content):
+def _make_unreachable(context, seg_type, content, utility=False):
     if seg_type == "primary":
         preferred_role = 'p'
     elif seg_type == "mirror":
@@ -115,18 +114,25 @@ def impl(context, seg_type, content):
     else:
         raise Exception("Invalid segment type %s (options are primary and mirror)" % seg_type)
 
-    with closing(dbconn.connect(dbconn.DbURL(dbname="template1"), unsetSearchPath=False)) as conn:
+    with closing(dbconn.connect(dbconn.DbURL(dbname="template1"), utility=utility, unsetSearchPath=False)) as conn:
         dbid, hostname = dbconn.queryRow(conn, "SELECT dbid, hostname FROM gp_segment_configuration WHERE content = %s AND preferred_role = '%s'" % (content, preferred_role))
     if not hasattr(context, 'old_hostnames'):
         context.old_hostnames = {}
     context.old_hostnames[(content, preferred_role)] = hostname
-    change_hostname(content, preferred_role, 'invalid_host')
+    change_hostname(content, preferred_role, 'invalid_host', utility)
 
     if not hasattr(context, 'down_segment_dbids'):
         context.down_segment_dbids = []
     context.down_segment_dbids.append(dbid)
 
+@given('the host for the {seg_type} on content {content} is made unreachable')
+def impl(context, seg_type, content):
+    _make_unreachable(context, seg_type, content)
     wait_for_unblocked_transactions(context)
+
+@given('the host for the {seg_type} on content {content} is made unreachable and do not wait for failover')
+def impl(context, seg_type, content):
+    _make_unreachable(context, seg_type, content, utility=True)
 
 @then('gpstart should print unreachable host messages for the down segments')
 def impl(context):
@@ -146,6 +152,12 @@ def must_have_expected_status(content, preferred_role, expected_status):
         status = dbconn.querySingleton(conn, "SELECT status FROM gp_segment_configuration WHERE content = %s AND preferred_role = '%s'" % (content, preferred_role))
     if status != expected_status:
         raise Exception("Expected status for role %s to be %s, but it is %s" % (preferred_role, expected_status, status))
+
+def must_have_expected_role(content, preferred_role, expected_role):
+    with closing(dbconn.connect(dbconn.DbURL(dbname="template1"), unsetSearchPath=False)) as conn:
+        role = dbconn.querySingleton(conn, "SELECT role FROM gp_segment_configuration WHERE content = %s AND preferred_role = '%s'" % (content, preferred_role))
+    if role != expected_role:
+        raise Exception("Expected role for content %s and preferred_role %s to be %s, but it is %s" % (content, preferred_role, expected_role, role))
 
 def get_guc_value(guc):
     with closing(dbconn.connect(dbconn.DbURL(dbname="template1"), unsetSearchPath=False)) as conn:
@@ -188,6 +200,18 @@ def impl(context, seg_type, content, expected_status):
         set_guc_value(context, "gp_fts_mark_mirror_down_grace_period", orig)
 
     must_have_expected_status(content, preferred_role, expected_status)
+
+@given('the role of the {seg_type} on content {content} should be "{expected_role}"')
+@then('the role of the {seg_type} on content {content} should be "{expected_role}"')
+def impl(context, seg_type, content, expected_role):
+    if seg_type == "primary":
+        preferred_role = 'p'
+    elif seg_type == "mirror":
+        preferred_role = 'm'
+    else:
+        raise Exception("Invalid segment type %s (options are primary and mirror)" % seg_type)
+
+    must_have_expected_role(content, preferred_role, expected_role)
 
 @given('the cluster is returned to a good state')
 @then('the cluster is returned to a good state')

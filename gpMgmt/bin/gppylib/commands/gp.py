@@ -180,6 +180,10 @@ class CmdArgs(list):
             self.append("-D '%s'" % (cfg_array))
         return self
 
+    def set_mirror_fast_wait(self, mirrorFastWait):
+        if mirrorFastWait:
+            self.append("--gp-mirror-fast-wait")
+        return self
 
 
 class PgCtlBackendOptions(CmdArgs):
@@ -267,7 +271,7 @@ class PgCtlStartArgs(CmdArgs):
      '-o', '"', '-p', '5432', '--silent-mode=true', '"', 'start']
     """
 
-    def __init__(self, datadir, backend, era, wrapper, args, wait, timeout=None):
+    def __init__(self, datadir, backend, era, wrapper, args, wait, timeout=None, mirrorFastWait=False):
         """
         @param datadir: database data directory
         @param backend: backend options string from PgCtlBackendOptions
@@ -288,6 +292,7 @@ class PgCtlStartArgs(CmdArgs):
         ])
         self.set_wrapper(wrapper, args)
         self.set_wait_timeout(wait, timeout)
+        self.set_mirror_fast_wait(mirrorFastWait)
         self.extend([
             "-o", "\"", str(backend), "\"",
             "start"
@@ -381,7 +386,8 @@ class SegmentStart(Command):
     def __init__(self, name, gpdb, numContentsInCluster, era, mirrormode,
                  utilityMode=False, ctxt=LOCAL, remoteHost=None,
                  pg_ctl_wait=True, timeout=SEGMENT_TIMEOUT_DEFAULT,
-                 specialMode=None, wrapper=None, wrapper_args=None):
+                 specialMode=None, wrapper=None, wrapper_args=None,
+                 mirrorFastWait=False):
 
         # This is referenced from calling code
         self.segment = gpdb
@@ -399,7 +405,7 @@ class SegmentStart(Command):
         b.set_special(specialMode)
 
         # build pg_ctl command
-        c = PgCtlStartArgs(datadir, b, era, wrapper, wrapper_args, pg_ctl_wait, timeout)
+        c = PgCtlStartArgs(datadir, b, era, wrapper, wrapper_args, pg_ctl_wait, timeout, mirrorFastWait)
         logger.info("SegmentStart pg_ctl cmd is %s", c)
         self.cmdStr = str(c) + ' 2>&1'
 

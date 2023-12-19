@@ -256,6 +256,7 @@ class GpSegStart:
                     self.overall_status.mark_failed(datadir, msg, reasoncode)
                     continue
 
+            mirrorFastWait = seg.isSegmentMirror(current_role=True)
             cmd = gp.SegmentStart("Starting seg at dir %s" % datadir,
                                   seg,
                                   self.num_cids,
@@ -264,7 +265,8 @@ class GpSegStart:
                                   timeout=self.timeout,
                                   specialMode=self.specialMode,
                                   wrapper=self.wrapper,
-                                  wrapper_args=self.wrapper_args)
+                                  wrapper_args=self.wrapper_args,
+                                  mirrorFastWait=mirrorFastWait)
             self.pool.addCommand(cmd)
 
         self.pool.join()

@@ -242,8 +242,8 @@ def run_gprecoverseg():
     run_cmd('gprecoverseg -a -v')
 
 
-def getRows(dbname, exec_sql):
-    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), unsetSearchPath=False)) as conn:
+def getRows(dbname, exec_sql, utility=False):
+    with closing(dbconn.connect(dbconn.DbURL(dbname=dbname), utility=utility, unsetSearchPath=False)) as conn:
         curs = dbconn.query(conn, exec_sql)
         results = curs.fetchall()
     return results
@@ -298,7 +298,7 @@ def create_database(context, dbname=None, host=None, port=0, user=None):
 
 def get_segment_hostnames(context, dbname):
     sql = "SELECT DISTINCT(hostname) FROM gp_segment_configuration WHERE content != -1;"
-    return getRows(dbname, sql)
+    return getRows(dbname, sql, utility=True)
 
 
 def check_table_exists(context, dbname, table_name, table_type=None, host=None, port=0, user=None):
@@ -595,7 +595,7 @@ def check_row_count(context, tablename, dbname, nrows):
 
 def get_coordinator_hostname(dbname='template1'):
     coordinator_hostname_sql = "SELECT DISTINCT hostname FROM gp_segment_configuration WHERE content=-1 AND role='p'"
-    return getRows(dbname, coordinator_hostname_sql)
+    return getRows(dbname, coordinator_hostname_sql, utility=True)
 
 
 def get_hosts(dbname='template1'):
