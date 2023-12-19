@@ -1707,7 +1707,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
       <dxl:RelationStatistics Mdid="2.15754823.1.1" Name="s_co_plew_persl" Rows="24569200.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.15754823.1.1" Name="s_co_plew_persl" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="14,12">
+      <dxl:Relation Mdid="6.15754823.1.1" Name="s_co_plew_persl" IsTemporary="false" Rows="24569200.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="14,12">
         <dxl:Columns>
           <dxl:Column Name="dtime" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="20">
           </dxl:Column>
@@ -3261,7 +3261,7 @@ The SQL along with the DDL are in TINC repo. In the aggregates directory under q
         <dxl:ResultType Mdid="0.16.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.15754853.1.1" Name="s_kst_ps_elem_vgz" Rows="118963.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.15754853.1.1" Name="s_kst_ps_elem_vgz" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="24,22">
+      <dxl:Relation Mdid="6.15754853.1.1" Name="s_kst_ps_elem_vgz" IsTemporary="false" Rows="118963.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="24,22">
         <dxl:Columns>
           <dxl:Column Name="element_id" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="20">
           </dxl:Column>

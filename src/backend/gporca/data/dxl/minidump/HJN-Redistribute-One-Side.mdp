@@ -566,7 +566,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.5844948.1.1" Name="orders" Rows="1502372.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.5844948.1.1" Name="orders" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9">
+      <dxl:Relation Mdid="6.5844948.1.1" Name="orders" IsTemporary="false" Rows="1502372.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9">
         <dxl:Columns>
           <dxl:Column Name="o_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -1879,7 +1879,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.5844974.1.1" Name="lineitem" Rows="6003249.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.5844974.1.1" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16">
+      <dxl:Relation Mdid="6.5844974.1.1" Name="lineitem" IsTemporary="false" Rows="6003249.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16">
         <dxl:Columns>
           <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>

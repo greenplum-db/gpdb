@@ -212,7 +212,7 @@
       <dxl:ColumnStatistics Mdid="1.29434.1.1.7" Name="l_tax" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.29434.1.1.6" Name="l_discount" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.29434.1.1" Name="lineitem" Rows="0.000000"/>
-      <dxl:Relation Mdid="6.29434.1.1" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16" PartitionColumns="10" PartitionTypes="r">
+      <dxl:Relation Mdid="6.29434.1.1" Name="lineitem" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16" PartitionColumns="10" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

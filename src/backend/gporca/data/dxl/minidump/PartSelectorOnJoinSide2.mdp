@@ -158,7 +158,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.90284.1.0" Name="t1n" Rows="2000523.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.90284.1.0" Name="t1n" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.90284.1.0" Name="t1n" IsTemporary="false" Rows="2000523.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -1185,7 +1185,7 @@
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.90360.1.0" Name="t2n" Rows="2000523.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.90360.1.0" Name="t2n" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.90360.1.0" Name="t2n" IsTemporary="false" Rows="2000523.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

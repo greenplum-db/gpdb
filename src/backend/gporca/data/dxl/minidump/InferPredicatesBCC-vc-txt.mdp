@@ -47,7 +47,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.40960.1.0" Name="infer_txt" Rows="1000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.40960.1.0" Name="infer_txt" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.40960.1.0" Name="infer_txt" IsTemporary="false" Rows="1000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="3">
           </dxl:Column>
@@ -86,7 +86,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="6.40981.1.0" Name="infer_vc" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.40981.1.0" Name="infer_vc" IsTemporary="false" Rows="1000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="3">
           </dxl:Column>

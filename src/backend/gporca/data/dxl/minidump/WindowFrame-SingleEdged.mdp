@@ -165,7 +165,7 @@
         <dxl:InverseOp Mdid="0.525.1.0"/>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.17004.1.1" Name="customer" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.17004.1.1" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
+      <dxl:Relation Mdid="6.17004.1.1" Name="customer" IsTemporary="false" Rows="10.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>

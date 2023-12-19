@@ -953,7 +953,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.17762.1.0" Name="test_cover_index_on_pt_1_prt_3" Rows="3.000000" RelPages="2" RelAllVisible="2" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.17762.1.0" Name="test_cover_index_on_pt_1_prt_3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.17762.1.0" Name="test_cover_index_on_pt_1_prt_3" IsTemporary="false" Rows="3.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
           <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
@@ -1073,7 +1073,7 @@
         </dxl:Opfamilies>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.17749.1.0" Name="test_basic_cover_index" Rows="100.000000" RelPages="3" RelAllVisible="3" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.17749.1.0" Name="test_basic_cover_index" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.17749.1.0" Name="test_basic_cover_index" IsTemporary="false" Rows="100.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
           <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
@@ -1095,7 +1095,7 @@
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.17753.1.0" Name="test_cover_index_on_pt" Rows="10.000000" RelPages="6" RelAllVisible="6" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.17753.1.0" Name="test_cover_index_on_pt" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.17753.1.0" Name="test_cover_index_on_pt" IsTemporary="false" Rows="10.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
           <dxl:Column Name="b" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>

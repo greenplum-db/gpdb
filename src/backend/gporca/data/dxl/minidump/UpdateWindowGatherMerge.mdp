@@ -156,7 +156,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.251337.1.0" Name="window_agg_test" Rows="100.000000" RelPages="3" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.251337.1.0" Name="window_agg_test" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="8,2">
+      <dxl:Relation Mdid="6.251337.1.0" Name="window_agg_test" IsTemporary="false" Rows="100.000000" StorageType="Heap" DistributionPolicy="Random" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

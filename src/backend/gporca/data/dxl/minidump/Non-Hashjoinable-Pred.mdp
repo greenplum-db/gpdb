@@ -188,7 +188,7 @@
       <dxl:ColumnStatistics Mdid="1.49165.1.1.4" Name="xmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.49189.1.1" Name="case2_tbl" Rows="0.000000"/>
       <dxl:RelationStatistics Mdid="2.49165.1.1" Name="case_tbl" Rows="0.000000"/>
-      <dxl:Relation Mdid="6.49189.1.1" Name="case2_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.49189.1.1" Name="case2_tbl" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -212,7 +212,7 @@
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.49165.1.1" Name="case_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.49165.1.1" Name="case_tbl" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="dummy" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>

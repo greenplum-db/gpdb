@@ -145,7 +145,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
       <dxl:ColumnStatistics Mdid="1.1695223.1.1.1" Name="j" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.1695223.1.1.0" Name="i" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.1695223.1.1" Name="pt2" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.1695223.1.0" Name="pt2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.1695223.1.0" Name="pt2" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -395,7 +395,7 @@ explain select i, count(j) from pt2  where k=5 group by i;
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.1695223.1.1" Name="pt2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.1695223.1.1" Name="pt2" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" ConvertHashToRandom="true" Keys="8,9,3" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

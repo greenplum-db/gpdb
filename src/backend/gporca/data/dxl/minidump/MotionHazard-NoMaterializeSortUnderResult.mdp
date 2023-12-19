@@ -53,7 +53,7 @@ explain select tab3.k, (select tab2.k from tab2 where tab2.i = tab1.i limit 1) a
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.40966.1.0" Name="tab2" Rows="500.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.40966.1.0" Name="tab2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.40966.1.0" Name="tab2" IsTemporary="false" Rows="500.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -80,7 +80,7 @@ explain select tab3.k, (select tab2.k from tab2 where tab2.i = tab1.i limit 1) a
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.40960.1.0" Name="tab1" Rows="1000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.40960.1.0" Name="tab1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.40960.1.0" Name="tab1" IsTemporary="false" Rows="1000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -107,7 +107,7 @@ explain select tab3.k, (select tab2.k from tab2 where tab2.i = tab1.i limit 1) a
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.40972.1.0" Name="tab3" Rows="4994.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.40972.1.0" Name="tab3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.40972.1.0" Name="tab3" IsTemporary="false" Rows="4994.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

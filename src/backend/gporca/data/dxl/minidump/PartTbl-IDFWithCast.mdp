@@ -25,7 +25,7 @@ explain select * from L where 2::numeric is distinct from b::numeric;
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.311296.1.0" Name="l" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.311296.1.0" Name="l" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="l">
+      <dxl:Relation Mdid="6.311296.1.0" Name="l" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

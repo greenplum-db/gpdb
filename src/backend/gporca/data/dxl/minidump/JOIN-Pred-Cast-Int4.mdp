@@ -347,7 +347,7 @@
       <dxl:ColumnStatistics Mdid="1.440380.1.1.2" Name="xmin" Width="4.000000" NullFreq="0.000000"/>
       <dxl:RelationStatistics Mdid="2.440406.1.1" Name="bbigint" Rows="101.000000"/>
       <dxl:RelationStatistics Mdid="2.440380.1.1" Name="aint" Rows="100.000000"/>
-      <dxl:Relation Mdid="6.440406.1.1" Name="bbigint" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.440406.1.1" Name="bbigint" IsTemporary="false" Rows="101.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
           </dxl:Column>
@@ -369,7 +369,7 @@
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.440380.1.1" Name="aint" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.440380.1.1" Name="aint" IsTemporary="false" Rows="100.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

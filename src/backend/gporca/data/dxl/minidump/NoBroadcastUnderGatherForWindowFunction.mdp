@@ -329,7 +329,7 @@ WHERE buyer_name = 'ABC'
       <dxl:ColumnStatistics Mdid="1.32885.1.1.7" Name="tableoid" Width="4.000000" NullFreq="0.000000" NdvRemain="1.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
       <dxl:ColumnStatistics Mdid="1.32885.1.1.6" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.32885.1.1" Name="networks" Rows="2342.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.32885.1.1" Name="networks" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="8,2">
+      <dxl:Relation Mdid="6.32885.1.1" Name="networks" IsTemporary="false" Rows="2342.000000" StorageType="Heap" DistributionPolicy="Random" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="network_id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

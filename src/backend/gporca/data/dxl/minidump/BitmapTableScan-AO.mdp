@@ -205,7 +205,7 @@ explain select * from t_ao where c2 = 'HEAP';
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.21846751.1.1" Name="t_ao" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.21846751.1.0" Name="t_ao" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,7">
+      <dxl:Relation Mdid="6.21846751.1.0" Name="t_ao" IsTemporary="false" Rows="100.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,7">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -233,7 +233,7 @@ explain select * from t_ao where c2 = 'HEAP';
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.21846751.1.1" Name="t_ao" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,7">
+      <dxl:Relation Mdid="6.21846751.1.1" Name="t_ao" IsTemporary="false" Rows="100.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,7">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

@@ -165,7 +165,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.32956.1.0" Name="foo" Rows="30.000000" RelPages="0" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.32956.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,10,4" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.32956.1.0" Name="foo" IsTemporary="false" Rows="30.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,10,4" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="........pg.dropped.1........" Attno="1" Mdid="0.0.0.0" Nullable="true" ColWidth="8" IsDropped="true">
           </dxl:Column>

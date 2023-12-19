@@ -115,7 +115,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.17703.1.0" Name="t_part" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.17703.1.0" Name="t_part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.17703.1.0" Name="t_part" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -342,7 +342,7 @@
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16421.1.0" Name="r1" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.16421.1.0" Name="r1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2">
+      <dxl:Relation Mdid="6.16421.1.0" Name="r1" IsTemporary="false" Rows="100.000000" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

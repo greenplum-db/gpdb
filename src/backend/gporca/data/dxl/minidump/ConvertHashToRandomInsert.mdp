@@ -87,7 +87,7 @@ explain analyze insert into t1 select t2.a,t3.b from t2, t3 where t2.a = t3.a;
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="6.16538.1.0" Name="t2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2" ConvertHashToRandom="true">
+      <dxl:Relation Mdid="6.16538.1.0" Name="t2" IsTemporary="false" Rows="1000.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2" ConvertHashToRandom="true">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -134,7 +134,7 @@ explain analyze insert into t1 select t2.a,t3.b from t2, t3 where t2.a = t3.a;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.16543.1.0" Name="t3" Rows="1000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.16543.1.0" Name="t3" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2" ConvertHashToRandom="true">
+      <dxl:Relation Mdid="6.16543.1.0" Name="t3" IsTemporary="false" Rows="1000.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2" ConvertHashToRandom="true">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

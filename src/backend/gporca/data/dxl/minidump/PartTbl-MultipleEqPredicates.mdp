@@ -2861,7 +2861,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.119988.1.1" Name="times" Rows="2518.000000"/>
-      <dxl:Relation Mdid="6.119988.1.1" Name="times" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="23,17">
+      <dxl:Relation Mdid="6.119988.1.1" Name="times" IsTemporary="false" Rows="2518.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="23,17">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -3663,7 +3663,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.121680.1.1" Name="i_plineitem" Rows="60175.000000"/>
-      <dxl:Relation Mdid="6.121680.1.1" Name="i_plineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="23,17" PartitionColumns="0">
+      <dxl:Relation Mdid="6.121680.1.1" Name="i_plineitem" IsTemporary="false" Rows="60175.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="23,17" PartitionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="l_id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

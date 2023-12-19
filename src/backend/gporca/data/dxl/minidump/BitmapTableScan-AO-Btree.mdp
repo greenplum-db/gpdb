@@ -30,7 +30,7 @@ explain select * from indexonao where a = 21;
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.22227328.1.1" Name="indexonao" Rows="100000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.22227328.1.0" Name="indexonao" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1">
+      <dxl:Relation Mdid="6.22227328.1.0" Name="indexonao" IsTemporary="false" Rows="100000.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -46,7 +46,7 @@ explain select * from indexonao where a = 21;
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.22227328.1.1" Name="indexonao" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1">
+      <dxl:Relation Mdid="6.22227328.1.1" Name="indexonao" IsTemporary="false" Rows="100000.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Random" Keys="3,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

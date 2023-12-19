@@ -628,7 +628,7 @@
       </dxl:Index>
       <dxl:RelationExtendedStatistics Mdid="10.17774.1.0" Name="inner_1"/>
       <dxl:RelationStatistics Mdid="2.17777.1.0" Name="part" Rows="100000.000000" RelPages="114" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.17777.1.0" Name="part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="l">
+      <dxl:Relation Mdid="6.17777.1.0" Name="part" IsTemporary="false" Rows="100000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
           <dxl:Column Name="c2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
@@ -652,7 +652,7 @@
         </dxl:Partitions>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.17783.1.0" Name="part_1_prt_part2" Rows="30000.000000" RelPages="35" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.17783.1.0" Name="part_1_prt_part2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.17783.1.0" Name="part_1_prt_part2" IsTemporary="false" Rows="30000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
           <dxl:Column Name="c2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
@@ -686,7 +686,7 @@
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.17780.1.0" Name="part_1_prt_part1" Rows="40000.000000" RelPages="45" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.17780.1.0" Name="part_1_prt_part1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.17780.1.0" Name="part_1_prt_part1" IsTemporary="false" Rows="40000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
           <dxl:Column Name="c2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
@@ -721,7 +721,7 @@
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.17786.1.0" Name="part_1_prt_part3" Rows="30000.000000" RelPages="34" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.17786.1.0" Name="part_1_prt_part3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.17786.1.0" Name="part_1_prt_part3" IsTemporary="false" Rows="30000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
           <dxl:Column Name="c2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
@@ -757,7 +757,7 @@
       <dxl:ColumnStatistics Mdid="1.17774.1.0.1" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.17774.1.0.0" Name="cc" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.17789.1.0" Name="dist" Rows="100000.000000" RelPages="111" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.17789.1.0" Name="dist" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="8,2">
+      <dxl:Relation Mdid="6.17789.1.0" Name="dist" IsTemporary="false" Rows="100000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
           <dxl:Column Name="c2" Attno="2" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
@@ -1582,7 +1582,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.17774.1.0" Name="inner_1" Rows="0.000000" RelPages="1" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.17774.1.0" Name="inner_1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.17774.1.0" Name="inner_1" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="cc" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
           <dxl:Column Name="ctid" Attno="-1" Mdid="0.27.1.0" Nullable="false" ColWidth="6"/>

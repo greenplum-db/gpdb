@@ -53,7 +53,7 @@ ORDER BY 1 asc ;
       <dxl:TraceFlags Value="102001,102002,102003,102024,103046,103045,102115,102116,102117,102119,102144,103027,103033"/>
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
-      <dxl:Relation Mdid="6.16166659.1.0" Name="my_tq_agg_small" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.16166659.1.0" Name="my_tq_agg_small" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
           </dxl:Column>
@@ -232,7 +232,7 @@ ORDER BY 1 asc ;
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16166659.1.1" Name="my_tq_agg_small" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.16166659.1.1" Name="my_tq_agg_small" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.16166659.1.1" Name="my_tq_agg_small" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="ets" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
           </dxl:Column>
@@ -1489,7 +1489,7 @@ ORDER BY 1 asc ;
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.16166631.1.1" Name="my_tt_agg_small" Rows="420.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.16166631.1.1" Name="my_tt_agg_small" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.16166631.1.1" Name="my_tt_agg_small" IsTemporary="false" Rows="420.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="symbol" Attno="1" Mdid="0.1042.1.0" Nullable="true" ColWidth="16">
           </dxl:Column>

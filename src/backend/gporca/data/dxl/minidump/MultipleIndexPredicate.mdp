@@ -933,7 +933,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.74486.1.0" Name="foo" Rows="83527200.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.74486.1.0" Name="foo" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="1,0" Keys="54,52">
+      <dxl:Relation Mdid="6.74486.1.0" Name="foo" IsTemporary="false" Rows="83527200.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="1,0" Keys="54,52">
         <dxl:Columns>
           <dxl:Column Name="pl" Attno="1" Mdid="0.1043.1.0" TypeModifier="10" Nullable="false" ColWidth="7">
           </dxl:Column>

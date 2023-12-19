@@ -186,7 +186,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.19616.1.0" Name="varchar_table" Rows="2000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.19616.1.0" Name="varchar_table" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.19616.1.0" Name="varchar_table" IsTemporary="false" Rows="2000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="3">
           </dxl:Column>

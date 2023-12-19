@@ -91,7 +91,7 @@ explain select * from part;
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.32946.1.0" Name="part" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.32946.1.0" Name="part" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" ConvertHashToRandom="true">
+      <dxl:Relation Mdid="6.32946.1.0" Name="part" IsTemporary="false" Rows="0.000000" StorageType="Foreign" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" ConvertHashToRandom="true">
         <dxl:Columns>
           <dxl:Column Name="word1" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="8">
           </dxl:Column>

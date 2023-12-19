@@ -143,7 +143,7 @@
         <dxl:ResultType Mdid="0.2278.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.816512.1.1" Name="bm_dyn_test_onepart" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.816512.1.0" Name="bm_dyn_test_onepart" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.816512.1.0" Name="bm_dyn_test_onepart" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -405,7 +405,7 @@
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.816512.1.1" Name="bm_dyn_test_onepart" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.816512.1.1" Name="bm_dyn_test_onepart" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

@@ -80,7 +80,7 @@
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.172082.1.0" Name="mypt" Rows="300.000000" RelPages="5" RelAllVisible="3" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.172082.1.0" Name="mypt" IsTemporary="false" StorageType="MixedPartitioned" AppendOnlyVersion="1" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,7,1" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.172082.1.0" Name="mypt" IsTemporary="false" Rows="300.000000" StorageType="MixedPartitioned" AppendOnlyVersion="1" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,7,1" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
           </dxl:Column>

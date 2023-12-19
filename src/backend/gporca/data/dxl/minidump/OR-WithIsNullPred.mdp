@@ -178,7 +178,7 @@ explain select * from test_stat where c <> 'J' or c is null;
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.32856.1.1" Name="test_stat" Rows="2001360.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.32856.1.1" Name="test_stat" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.32856.1.1" Name="test_stat" IsTemporary="false" Rows="2001360.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
           </dxl:Column>

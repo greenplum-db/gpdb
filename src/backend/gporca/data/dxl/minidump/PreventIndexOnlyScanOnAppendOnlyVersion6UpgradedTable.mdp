@@ -580,7 +580,7 @@
         </dxl:Opfamilies>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.90461.1.0" Name="mytable" Rows="1000.000000" RelPages="1" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.90461.1.0" Name="mytable" IsTemporary="false" StorageType="AppendOnly, Row-oriented" AppendOnlyVersion="1" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.90461.1.0" Name="mytable" IsTemporary="false" Rows="1000.000000" StorageType="AppendOnly, Row-oriented" AppendOnlyVersion="1" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
           </dxl:Column>

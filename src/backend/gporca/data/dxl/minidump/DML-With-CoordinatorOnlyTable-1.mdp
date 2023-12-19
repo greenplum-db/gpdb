@@ -36,7 +36,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.49152.1.0" Name="x" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.49152.1.0" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.49152.1.0" Name="x" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -232,7 +232,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.5036.1.0" Name="gp_segment_configuration" Rows="8.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.5036.1.0" Name="gp_segment_configuration" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="16,10">
+      <dxl:Relation Mdid="6.5036.1.0" Name="gp_segment_configuration" IsTemporary="false" Rows="8.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="16,10">
         <dxl:Columns>
           <dxl:Column Name="dbid" Attno="1" Mdid="0.21.1.0" Nullable="false" ColWidth="2">
           </dxl:Column>

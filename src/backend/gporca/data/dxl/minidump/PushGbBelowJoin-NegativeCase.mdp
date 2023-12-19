@@ -210,7 +210,7 @@
       <dxl:ColumnStatistics Mdid="1.131046.1.1.1" Name="c500" Width="8.000000" NullFreq="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.131046.1.1.0" Name="c499" Width="8.000000" NullFreq="0.000000"/>
       <dxl:RelationStatistics Mdid="2.131046.1.1" Name="t39" Rows="0.000000"/>
-      <dxl:Relation Mdid="6.131046.1.1" Name="t39" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,5,0,1,4" Keys="12,6">
+      <dxl:Relation Mdid="6.131046.1.1" Name="t39" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="3,5,0,1,4" Keys="12,6">
         <dxl:Columns>
           <dxl:Column Name="c499" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

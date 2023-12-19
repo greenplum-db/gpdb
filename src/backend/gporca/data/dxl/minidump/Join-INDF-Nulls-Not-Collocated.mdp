@@ -117,7 +117,7 @@ select * from foo, (select NULL a from bar) other where foo.a is not distinct fr
       </dxl:Type>
       <dxl:ColumnStatistics Mdid="1.25522.1.0.0" Name="a" Width="4.000000" NullFreq="0.500000" NdvRemain="1.000000" FreqRemain="0.500000" ColStatsMissing="false"/>
       <dxl:RelationStatistics Mdid="2.25522.1.0" Name="foo" Rows="2.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.25522.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.25522.1.0" Name="foo" IsTemporary="false" Rows="2.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -145,7 +145,7 @@ select * from foo, (select NULL a from bar) other where foo.a is not distinct fr
         </dxl:DistrOpfamilies>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.25525.1.0" Name="bar" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.25525.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.25525.1.0" Name="bar" IsTemporary="false" Rows="1.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

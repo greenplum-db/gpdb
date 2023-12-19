@@ -760,7 +760,7 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
         </dxl:Opfamilies>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.1259.1.1" Name="pg_class" Rows="337.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.1259.1.0" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="37,30">
+      <dxl:Relation Mdid="6.1259.1.0" Name="pg_class" IsTemporary="false" Rows="337.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="37,30">
         <dxl:Columns>
           <dxl:Column Name="relname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
           </dxl:Column>
@@ -845,7 +845,7 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.1259.1.1" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="37,30">
+      <dxl:Relation Mdid="6.1259.1.1" Name="pg_class" IsTemporary="false" Rows="337.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="37,30">
         <dxl:Columns>
           <dxl:Column Name="relname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
           </dxl:Column>
@@ -1585,7 +1585,7 @@ where oid= (select reltoastrelid from pg_class where relname='fsts_alter_set_sto
                     <dxl:IndexCondList>
                       <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.93.1.0">
                         <dxl:Ident ColId="76" ColName="relname" TypeMdid="0.19.1.0"/>
-                        <dxl:ConstValue TypeMdid="0.19.1.0" Value="ZnN0c19hbHRlcl9zZXRfc3RvcmFnZV90YWJsZQAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
+                        <dxl:ConstValue TypeMdid="0.19.1.0" Value="ZnN0c19hbHRlcl9zZXRfc3RvcmFnZV90YWJsZQAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                       </dxl:Comparison>
                     </dxl:IndexCondList>
                     <dxl:Partitions/>

@@ -25,7 +25,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.24576.1.0" Name="try_distinct_array" Rows="2.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.24576.1.0" Name="try_distinct_array" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.24576.1.0" Name="try_distinct_array" IsTemporary="false" Rows="2.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="test_char" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="2">
           </dxl:Column>

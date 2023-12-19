@@ -224,7 +224,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.21292.1.0" Name="test_index_with_sort_directions_on_orderby_limit" Rows="100.000000" RelPages="3" RelAllVisible="3" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.21292.1.0" Name="test_index_with_sort_directions_on_orderby_limit" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
+      <dxl:Relation Mdid="6.21292.1.0" Name="test_index_with_sort_directions_on_orderby_limit" IsTemporary="false" Rows="100.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

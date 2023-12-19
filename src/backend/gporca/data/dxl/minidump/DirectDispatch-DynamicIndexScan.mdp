@@ -176,7 +176,7 @@ where a=1 and b>0;
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.21553.1.1" Name="dd_singlecol_part_idx" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.21553.1.0" Name="dd_singlecol_part_idx" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.21553.1.0" Name="dd_singlecol_part_idx" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -516,7 +516,7 @@ where a=1 and b>0;
           </dxl:Not>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.21553.1.1" Name="dd_singlecol_part_idx" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.21553.1.1" Name="dd_singlecol_part_idx" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,9,3" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

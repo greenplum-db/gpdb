@@ -162,7 +162,7 @@ select a1, a2 from foo_a UNION ALL (select x1, x2 FROM (select b3, b2, b1 from f
       <dxl:ColumnStatistics Mdid="1.17297865.1.1.5" Name="cmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.17297865.1.1.4" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.17297839.1.1" Name="foo_a" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.17297839.1.1" Name="foo_a" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.17297839.1.1" Name="foo_a" IsTemporary="false" Rows="10.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -281,7 +281,7 @@ select a1, a2 from foo_a UNION ALL (select x1, x2 FROM (select b3, b2, b1 from f
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.17297865.1.1" Name="foo_b" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.17297865.1.1" Name="foo_b" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.17297865.1.1" Name="foo_b" IsTemporary="false" Rows="10.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="b1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -346,7 +346,7 @@ select a1, a2 from foo_a UNION ALL (select x1, x2 FROM (select b3, b2, b1 from f
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.17297891.1.1" Name="foo_c" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.17297891.1.1" Name="foo_c" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.17297891.1.1" Name="foo_c" IsTemporary="false" Rows="10.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

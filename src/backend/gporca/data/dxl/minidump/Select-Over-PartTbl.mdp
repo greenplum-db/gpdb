@@ -293,7 +293,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.559056.1.1" Name="lineitem" Rows="1536080000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.559056.1.1" Name="lineitem" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="21,22,16" PartitionColumns="10" PartitionTypes="r">
+      <dxl:Relation Mdid="6.559056.1.1" Name="lineitem" IsTemporary="false" Rows="1536080000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="21,22,16" PartitionColumns="10" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="l_orderkey" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

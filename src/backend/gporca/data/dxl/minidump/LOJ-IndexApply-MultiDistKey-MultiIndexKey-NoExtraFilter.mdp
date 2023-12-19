@@ -207,7 +207,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.90067.1.0" Name="foo" Rows="5.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.90067.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3">
+      <dxl:Relation Mdid="6.90067.1.0" Name="foo" IsTemporary="false" Rows="5.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -234,7 +234,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.90070.1.0" Name="bar" Rows="5.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.90070.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3">
+      <dxl:Relation Mdid="6.90070.1.0" Name="bar" IsTemporary="false" Rows="5.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="d" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

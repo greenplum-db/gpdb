@@ -17,7 +17,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.25472.1.1" Name="store_sales" Rows="737331968.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.25472.1.1" Name="store_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
+      <dxl:Relation Mdid="6.25472.1.1" Name="store_sales" IsTemporary="false" Rows="737331968.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -5608,7 +5608,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.25160.1.1" Name="item" Rows="63889.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.25160.1.0" Name="item" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;28,22">
+      <dxl:Relation Mdid="6.25160.1.0" Name="item" IsTemporary="false" Rows="63889.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;28,22">
         <dxl:Columns>
           <dxl:Column Name="i_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -5674,7 +5674,7 @@ group  by item.i_item_id, item.i_item_desc, item.i_current_price;
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.25160.1.1" Name="item" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;28,22">
+      <dxl:Relation Mdid="6.25160.1.1" Name="item" IsTemporary="false" Rows="63889.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;28,22">
         <dxl:Columns>
           <dxl:Column Name="i_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>

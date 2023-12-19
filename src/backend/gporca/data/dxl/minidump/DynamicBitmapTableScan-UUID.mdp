@@ -36,7 +36,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.20355.1.0" Name="test" Rows="100000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.20355.1.0" Name="test" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.20355.1.0" Name="test" IsTemporary="false" Rows="100000.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.2950.1.0" Nullable="true" ColWidth="16">
           </dxl:Column>

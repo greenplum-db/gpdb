@@ -503,7 +503,7 @@
       <dxl:ColumnStatistics Mdid="1.40971.1.1.3" Name="xmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.40971.1.1.2" Name="ctid" Width="6.000000"/>
       <dxl:RelationStatistics Mdid="2.40971.1.1" Name="x" Rows="1000.000000"/>
-      <dxl:Relation Mdid="6.40971.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.40971.1.1" Name="x" IsTemporary="false" Rows="1000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -535,7 +535,7 @@
       <dxl:ColumnStatistics Mdid="1.40971.1.1.4" Name="cmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.761868.1.1" Name="z" Rows="10000.000000"/>
       <dxl:RelationStatistics Mdid="2.40994.1.1" Name="y" Rows="1001.000000"/>
-      <dxl:Relation Mdid="6.761868.1.1" Name="z" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.761868.1.1" Name="z" IsTemporary="false" Rows="10000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -559,7 +559,7 @@
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.40994.1.1" Name="y" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.40994.1.1" Name="y" IsTemporary="false" Rows="1001.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

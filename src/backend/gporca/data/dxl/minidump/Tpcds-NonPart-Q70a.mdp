@@ -6005,7 +6005,7 @@ with results as
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.8402992.1.1" Name="date_dim" Rows="73049.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.8402992.1.0" Name="date_dim" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;34,28">
+      <dxl:Relation Mdid="6.8402992.1.0" Name="date_dim" IsTemporary="false" Rows="73049.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -6083,7 +6083,7 @@ with results as
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.8402992.1.1" Name="date_dim" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;34,28">
+      <dxl:Relation Mdid="6.8402992.1.1" Name="date_dim" IsTemporary="false" Rows="73049.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;34,28">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -6162,7 +6162,7 @@ with results as
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.8403512.1.1" Name="store_sales" Rows="737331968.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.8403512.1.0" Name="store_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
+      <dxl:Relation Mdid="6.8403512.1.0" Name="store_sales" IsTemporary="false" Rows="737331968.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -6230,7 +6230,7 @@ with results as
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.8403512.1.1" Name="store_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
+      <dxl:Relation Mdid="6.8403512.1.1" Name="store_sales" IsTemporary="false" Rows="737331968.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -10531,7 +10531,7 @@ with results as
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.8403408.1.1" Name="store" Rows="324.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.8403408.1.0" Name="store" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
+      <dxl:Relation Mdid="6.8403408.1.0" Name="store" IsTemporary="false" Rows="324.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
         <dxl:Columns>
           <dxl:Column Name="s_store_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -10611,7 +10611,7 @@ with results as
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.8403408.1.1" Name="store" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
+      <dxl:Relation Mdid="6.8403408.1.1" Name="store" IsTemporary="false" Rows="324.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
         <dxl:Columns>
           <dxl:Column Name="s_store_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>

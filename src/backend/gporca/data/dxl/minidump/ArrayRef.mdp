@@ -119,7 +119,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="6.5060573.1.1" Name="arrtest" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="13,7">
+      <dxl:Relation Mdid="6.5060573.1.1" Name="arrtest" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Random" Keys="13,7">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1005.1.0" Nullable="true" ColWidth="8">
           </dxl:Column>

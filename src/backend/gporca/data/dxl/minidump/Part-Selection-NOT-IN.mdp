@@ -27,7 +27,7 @@ Select * from P where P.a NOT IN (1,2);
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.36394823.1.1" Name="p" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.36394823.1.1" Name="p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.36394823.1.1" Name="p" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Random" Keys="7,8,2" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

@@ -197,7 +197,7 @@
       <dxl:ColumnStatistics Mdid="1.100193.1.1.7" Name="xmax" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.100193.1.1.6" Name="cmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.100193.1.1" Name="decodenum" Rows="0.000000"/>
-      <dxl:Relation Mdid="6.100193.1.1" Name="decodenum" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="10,4" PartitionColumns="2" PartitionTypes="r">
+      <dxl:Relation Mdid="6.100193.1.1" Name="decodenum" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="10,4" PartitionColumns="2" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="numcol" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="8">
           </dxl:Column>

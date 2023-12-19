@@ -244,7 +244,7 @@ EXPLAIN SELECT * FROM foo_1_prt_p2 WHERE c > 12 OR d > 13;
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.16678.1.0" Name="foo_1_prt_p2" Rows="10000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.16678.1.0" Name="foo_1_prt_p2" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4">
+      <dxl:Relation Mdid="6.16678.1.0" Name="foo_1_prt_p2" IsTemporary="false" Rows="10000.000000" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

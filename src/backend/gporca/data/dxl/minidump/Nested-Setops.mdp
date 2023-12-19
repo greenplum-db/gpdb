@@ -146,7 +146,7 @@
       <dxl:ColumnStatistics Mdid="1.17005.1.1.3" Name="d" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.17005.1.1.2" Name="c" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.25307.1.1" Name="h" Rows="1.000000"/>
-      <dxl:Relation Mdid="6.25307.1.1" Name="h" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
+      <dxl:Relation Mdid="6.25307.1.1" Name="h" IsTemporary="false" Rows="1.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -178,7 +178,7 @@
       <dxl:ColumnStatistics Mdid="1.17005.1.1.4" Name="ctid" Width="6.000000"/>
       <dxl:RelationStatistics Mdid="2.17041.1.1" Name="s" Rows="0.000000"/>
       <dxl:RelationStatistics Mdid="2.17005.1.1" Name="r" Rows="0.000000"/>
-      <dxl:Relation Mdid="6.17041.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
+      <dxl:Relation Mdid="6.17041.1.1" Name="s" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -204,7 +204,7 @@
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.17005.1.1" Name="r" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
+      <dxl:Relation Mdid="6.17005.1.1" Name="r" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

@@ -65,7 +65,7 @@
         </dxl:OptimizerConfig>
         <dxl:Metadata SystemIds="0.GPDB">
             <dxl:RelationStatistics EmptyRelation="false" Mdid="2.16385.1.0" Name="foo" Rows="100001784.000000"/>
-            <dxl:Relation DistributionColumns="0" DistributionPolicy="Hash" IsTemporary="false" StorageType="Heap" Keys="9,3" Mdid="6.16385.1.0" Name="foo">
+            <dxl:Relation DistributionColumns="0" DistributionPolicy="Hash" IsTemporary="false" Rows="100001784.000000" StorageType="Heap" Keys="9,3" Mdid="6.16385.1.0" Name="foo">
                 <dxl:Columns>
                     <dxl:Column Attno="1" ColWidth="4" Mdid="0.23.1.0" Name="j1" Nullable="true">
                     </dxl:Column>
@@ -92,7 +92,7 @@
                 <dxl:CheckConstraints/>
             </dxl:Relation>
             <dxl:RelationStatistics EmptyRelation="false" Mdid="2.16388.1.0" Name="bar" Rows="100023.000000"/>
-            <dxl:Relation DistributionColumns="0" DistributionPolicy="Hash" IsTemporary="false" StorageType="Heap" Keys="9,3" Mdid="6.16388.1.0" Name="bar">
+            <dxl:Relation DistributionColumns="0" DistributionPolicy="Hash" IsTemporary="false" Rows="100023.000000" StorageType="Heap" Keys="9,3" Mdid="6.16388.1.0" Name="bar">
                 <dxl:Columns>
                     <dxl:Column Attno="1" ColWidth="4" Mdid="0.23.1.0" Name="j2" Nullable="true">
                     </dxl:Column>
@@ -2512,7 +2512,7 @@
                 <dxl:SumAgg Mdid="0.0.0.0"/>
                 <dxl:CountAgg Mdid="0.2147.1.0"/>
             </dxl:Type>
-            <dxl:Relation DistributionPolicy="Random" IsTemporary="false" StorageType="Heap" Keys="9,3" Mdid="6.16408.1.0" Name="jazz">
+            <dxl:Relation DistributionPolicy="Random" IsTemporary="false" Rows="99028.000000" StorageType="Heap" Keys="9,3" Mdid="6.16408.1.0" Name="jazz">
                 <dxl:Columns>
                     <dxl:Column Attno="1" ColWidth="4" Mdid="0.23.1.0" Name="j2" Nullable="true">
                     </dxl:Column>

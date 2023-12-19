@@ -155,7 +155,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.16412.1.0" Name="hottoast" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.16412.1.0" Name="hottoast" IsTemporary="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="7,1">
+      <dxl:Relation Mdid="6.16412.1.0" Name="hottoast" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Replicated" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.700.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

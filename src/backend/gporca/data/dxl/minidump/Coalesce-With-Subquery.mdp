@@ -396,7 +396,7 @@
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1260.1.1" Name="pg_authid" Rows="1.000000"/>
       <dxl:RelationStatistics Mdid="2.1262.1.1" Name="pg_database" Rows="3.000000"/>
-      <dxl:Relation Mdid="6.1260.1.1" Name="pg_authid" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="24,17">
+      <dxl:Relation Mdid="6.1260.1.1" Name="pg_authid" IsTemporary="false" Rows="1.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="24,17">
         <dxl:Columns>
           <dxl:Column Name="rolname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
           </dxl:Column>
@@ -452,7 +452,7 @@
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.1262.1.1" Name="pg_database" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="18,11">
+      <dxl:Relation Mdid="6.1262.1.1" Name="pg_database" IsTemporary="false" Rows="3.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="18,11">
         <dxl:Columns>
           <dxl:Column Name="datname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
           </dxl:Column>
@@ -546,7 +546,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1213.1.1" Name="pg_tablespace" Rows="2.000000"/>
-      <dxl:Relation Mdid="6.1213.1.1" Name="pg_tablespace" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="14,7">
+      <dxl:Relation Mdid="6.1213.1.1" Name="pg_tablespace" IsTemporary="false" Rows="2.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="14,7">
         <dxl:Columns>
           <dxl:Column Name="spcname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
           </dxl:Column>
@@ -1158,7 +1158,7 @@
                       <dxl:IndexCondList>
                         <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.93.1.0">
                           <dxl:Ident ColId="69" ColName="datname" TypeMdid="0.19.1.0"/>
-                          <dxl:ConstValue TypeMdid="0.19.1.0" Value="dGVtcGxhdGUwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
+                          <dxl:ConstValue TypeMdid="0.19.1.0" Value="dGVtcGxhdGUwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                         </dxl:Comparison>
                       </dxl:IndexCondList>
 	<dxl:Partitions/>

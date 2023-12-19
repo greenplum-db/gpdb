@@ -146,7 +146,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.16441.1.0" Name="t1" Rows="3.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.16441.1.0" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.16441.1.0" Name="t1" IsTemporary="false" Rows="3.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -171,7 +171,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16444.1.0" Name="supplier" Rows="5.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.16444.1.0" Name="supplier" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.16444.1.0" Name="supplier" IsTemporary="false" Rows="5.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="city" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="2">
           </dxl:Column>

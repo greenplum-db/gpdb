@@ -1086,7 +1086,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.516672.1.1" Name="store" Rows="14.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.516672.1.0" Name="store" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
+      <dxl:Relation Mdid="6.516672.1.0" Name="store" IsTemporary="false" Rows="14.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
         <dxl:Columns>
           <dxl:Column Name="s_store_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -1166,7 +1166,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.516672.1.1" Name="store" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
+      <dxl:Relation Mdid="6.516672.1.1" Name="store" IsTemporary="false" Rows="14.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
         <dxl:Columns>
           <dxl:Column Name="s_store_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -2558,7 +2558,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.508415.1.1" Name="customer_address" Rows="140000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.508415.1.0" Name="customer_address" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;19,13">
+      <dxl:Relation Mdid="6.508415.1.0" Name="customer_address" IsTemporary="false" Rows="140000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;19,13">
         <dxl:Columns>
           <dxl:Column Name="ca_address_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -2606,7 +2606,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.508415.1.1" Name="customer_address" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;19,13">
+      <dxl:Relation Mdid="6.508415.1.1" Name="customer_address" IsTemporary="false" Rows="140000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;19,13">
         <dxl:Columns>
           <dxl:Column Name="ca_address_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>

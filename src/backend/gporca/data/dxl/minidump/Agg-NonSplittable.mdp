@@ -145,7 +145,7 @@
       <dxl:ColumnStatistics Mdid="1.109045.1.1.7" Name="thousand" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.109045.1.1.6" Name="hundred" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.109045.1.1" Name="onek" Rows="1000.000000"/>
-      <dxl:Relation Mdid="6.109045.1.1" Name="onek" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16">
+      <dxl:Relation Mdid="6.109045.1.1" Name="onek" IsTemporary="false" Rows="1000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,16">
         <dxl:Columns>
           <dxl:Column Name="unique1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

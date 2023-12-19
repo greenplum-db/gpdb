@@ -2405,7 +2405,7 @@
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.353643.1.1" Name="shop" Rows="100.000000"/>
       <dxl:RelationStatistics Mdid="2.353591.1.1" Name="products" Rows="10412.000000"/>
-      <dxl:Relation Mdid="6.353643.1.1" Name="shop" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
+      <dxl:Relation Mdid="6.353643.1.1" Name="shop" IsTemporary="false" Rows="100.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,7">
         <dxl:Columns>
           <dxl:Column Name="shop_code" Attno="1" Mdid="0.1043.1.0" Nullable="false" ColWidth="6">
           </dxl:Column>
@@ -2439,7 +2439,7 @@
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.353591.1.1" Name="products" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9">
+      <dxl:Relation Mdid="6.353591.1.1" Name="products" IsTemporary="false" Rows="10412.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="15,9">
         <dxl:Columns>
           <dxl:Column Name="prod_code" Attno="1" Mdid="0.1043.1.0" Nullable="false" ColWidth="10">
           </dxl:Column>
@@ -3162,7 +3162,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.328293.1.1" Name="calendar" Rows="10683.000000"/>
-      <dxl:Relation Mdid="6.328293.1.1" Name="calendar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
+      <dxl:Relation Mdid="6.328293.1.1" Name="calendar" IsTemporary="false" Rows="10683.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="ymd" Attno="1" Mdid="0.1082.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -3193,7 +3193,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.328475.1.1" Name="fact_sales" Rows="15255100416.000000"/>
-      <dxl:Relation Mdid="6.328475.1.1" Name="fact_sales" IsTemporary="false" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7" PartitionColumns="0">
+      <dxl:Relation Mdid="6.328475.1.1" Name="fact_sales" IsTemporary="false" Rows="15255100416.000000" StorageType="AppendOnly, Column-oriented" DistributionPolicy="Hash" DistributionColumns="3" Keys="9,7" PartitionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="sales_date" Attno="1" Mdid="0.1082.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>

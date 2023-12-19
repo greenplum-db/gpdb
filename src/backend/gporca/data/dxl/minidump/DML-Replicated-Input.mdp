@@ -222,7 +222,7 @@ WHERE  sach_vsnr = 465132477;
       <dxl:ColumnStatistics Mdid="1.42167032.1.1.3" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:ColumnStatistics Mdid="1.42167032.1.1.2" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.42167032.1.1" Name="test_row_number_step1" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.42167032.1.1" Name="test_row_number_step1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="8,2">
+      <dxl:Relation Mdid="6.42167032.1.1" Name="test_row_number_step1" IsTemporary="false" Rows="1.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="ag" Attno="1" Mdid="0.21.1.0" Nullable="true" ColWidth="2">
           </dxl:Column>

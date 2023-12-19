@@ -270,7 +270,7 @@ SELECT pn, cn, vn FROM sale s WHERE NOT EXISTS (SELECT * FROM customer WHERE NOT
       <dxl:ColumnStatistics Mdid="1.29191993.1.1.7" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.29191993.1.1.6" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.29191945.1.1" Name="product" Rows="8.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.29191945.1.0" Name="product" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
+      <dxl:Relation Mdid="6.29191945.1.0" Name="product" IsTemporary="false" Rows="8.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
         <dxl:Columns>
           <dxl:Column Name="pn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -298,7 +298,7 @@ SELECT pn, cn, vn FROM sale s WHERE NOT EXISTS (SELECT * FROM customer WHERE NOT
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.29191945.1.1" Name="product" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
+      <dxl:Relation Mdid="6.29191945.1.1" Name="product" IsTemporary="false" Rows="8.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
         <dxl:Columns>
           <dxl:Column Name="pn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -468,7 +468,7 @@ SELECT pn, cn, vn FROM sale s WHERE NOT EXISTS (SELECT * FROM customer WHERE NOT
         </dxl:Opfamilies>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.29191849.1.1" Name="customer" Rows="4.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.29191849.1.0" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
+      <dxl:Relation Mdid="6.29191849.1.0" Name="customer" IsTemporary="false" Rows="4.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -496,7 +496,7 @@ SELECT pn, cn, vn FROM sale s WHERE NOT EXISTS (SELECT * FROM customer WHERE NOT
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.29191849.1.1" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
+      <dxl:Relation Mdid="6.29191849.1.1" Name="customer" IsTemporary="false" Rows="4.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -529,7 +529,7 @@ SELECT pn, cn, vn FROM sale s WHERE NOT EXISTS (SELECT * FROM customer WHERE NOT
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
       <dxl:RelationStatistics Mdid="2.29191993.1.1" Name="sale" Rows="12.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.29191993.1.0" Name="sale" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
+      <dxl:Relation Mdid="6.29191993.1.0" Name="sale" IsTemporary="false" Rows="12.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -563,7 +563,7 @@ SELECT pn, cn, vn FROM sale s WHERE NOT EXISTS (SELECT * FROM customer WHERE NOT
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.29191993.1.1" Name="sale" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
+      <dxl:Relation Mdid="6.29191993.1.1" Name="sale" IsTemporary="false" Rows="12.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>

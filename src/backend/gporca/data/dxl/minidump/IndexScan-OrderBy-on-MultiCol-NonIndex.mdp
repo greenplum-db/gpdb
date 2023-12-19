@@ -56,7 +56,7 @@
         </dxl:Opfamilies>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.37047.1.0" Name="test_index_with_sort_directions_on_orderby_limit" Rows="0.000000" RelPages="1" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.37047.1.0" Name="test_index_with_sort_directions_on_orderby_limit" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
+      <dxl:Relation Mdid="6.37047.1.0" Name="test_index_with_sort_directions_on_orderby_limit" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,5">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

@@ -663,7 +663,7 @@ WHERE
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.2602.1.1" Name="pg_amop" Rows="702.000000"/>
       <dxl:RelationStatistics Mdid="2.2616.1.1" Name="pg_opclass" Rows="141.000000"/>
-      <dxl:Relation Mdid="6.2602.1.1" Name="pg_amop" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
+      <dxl:Relation Mdid="6.2602.1.1" Name="pg_amop" IsTemporary="false" Rows="702.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
         <dxl:Columns>
           <dxl:Column Name="amopclaid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -696,7 +696,7 @@ WHERE
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.2616.1.1" Name="pg_opclass" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
+      <dxl:Relation Mdid="6.2616.1.1" Name="pg_opclass" IsTemporary="false" Rows="141.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
         <dxl:Columns>
           <dxl:Column Name="opcamid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -943,7 +943,7 @@ WHERE
       <dxl:ColumnStatistics Mdid="1.2601.1.1.1" Name="amstrategies" Width="2.000000"/>
       <dxl:ColumnStatistics Mdid="1.2601.1.1.0" Name="amname" Width="64.000000"/>
       <dxl:RelationStatistics Mdid="2.2601.1.1" Name="pg_am" Rows="5.000000"/>
-      <dxl:Relation Mdid="6.2601.1.1" Name="pg_am" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
+      <dxl:Relation Mdid="6.2601.1.1" Name="pg_am" IsTemporary="false" Rows="5.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly">
         <dxl:Columns>
           <dxl:Column Name="amname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
           </dxl:Column>
@@ -1452,11 +1452,11 @@ WHERE
                         <dxl:And>
                           <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.643.1.0">
                             <dxl:Ident ColId="0" ColName="amname" TypeMdid="0.19.1.0"/>
-                            <dxl:ConstValue TypeMdid="0.19.1.0" Value="Z2lzdAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
+                            <dxl:ConstValue TypeMdid="0.19.1.0" Value="Z2lzdAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                           </dxl:Comparison>
                           <dxl:Comparison ComparisonOperator="&lt;&gt;" OperatorMdid="0.643.1.0">
                             <dxl:Ident ColId="0" ColName="amname" TypeMdid="0.19.1.0"/>
-                            <dxl:ConstValue TypeMdid="0.19.1.0" Value="Z2luAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
+                            <dxl:ConstValue TypeMdid="0.19.1.0" Value="Z2luAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                           </dxl:Comparison>
                         </dxl:And>
                       </dxl:Filter>

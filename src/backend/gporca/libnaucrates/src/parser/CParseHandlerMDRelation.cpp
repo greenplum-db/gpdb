@@ -51,7 +51,8 @@ CParseHandlerMDRelation::CParseHandlerMDRelation(
 	  m_part_constraint(nullptr),
 	  m_opfamilies_parse_handler(nullptr),
 	  m_child_partitions_parse_handler(nullptr),
-	  m_foreign_server(nullptr)
+	  m_foreign_server(nullptr),
+	  m_rows(0)
 {
 }
 
@@ -137,6 +138,21 @@ CParseHandlerMDRelation::StartElement(const XMLCh *const element_uri,
 	m_is_temp_table = CDXLOperatorFactory::ExtractConvertAttrValueToBool(
 		m_parse_handler_mgr->GetDXLMemoryManager(), attrs,
 		EdxltokenRelTemporary, EdxltokenRelation);
+
+	// parse rows
+	const XMLCh *xml_rows = CDXLOperatorFactory::ExtractAttrValue(
+		attrs, EdxltokenRows, EdxltokenRelation, true);
+
+	if (nullptr != xml_rows)
+	{
+		m_rows = CDouble(CDXLOperatorFactory::ConvertAttrValueToDouble(
+			m_parse_handler_mgr->GetDXLMemoryManager(), xml_rows, EdxltokenRows,
+			EdxltokenStatsDerivedRelation));
+	}
+	else
+	{
+		m_rows = -1;
+	}
 
 	// parse storage type
 	const XMLCh *xmlszStorageType = CDXLOperatorFactory::ExtractAttrValue(
@@ -277,7 +293,7 @@ CParseHandlerMDRelation::EndElement(const XMLCh *const,	 // element_uri,
 		distr_opfamilies, m_partition_cols_array, m_str_part_types_array,
 		child_partitions, m_convert_hash_to_random, m_key_sets_arrays,
 		md_index_info_array, mdid_check_constraint_array, m_part_constraint,
-		m_foreign_server);
+		m_foreign_server, m_rows);
 
 	// deactivate handler
 	m_parse_handler_mgr->DeactivateHandler();
