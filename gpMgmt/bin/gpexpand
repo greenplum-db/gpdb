@@ -2496,7 +2496,7 @@ def main(options, args, parser):
             logger.error('Failed to connect to database.  Make sure the')
             logger.error('Greenplum instance you wish to expand is running')
             logger.error('and that your environment is correct, then rerun')
-            logger.error('gexpand ' + ' '.join(sys.argv[1:]))
+            logger.error('gpexpand ' + ' '.join(sys.argv[1:]))
             sys.exit(1)
 
         _gp_expand = gpexpand(logger, gparray, dburl, options, parallel=options.parallel)
