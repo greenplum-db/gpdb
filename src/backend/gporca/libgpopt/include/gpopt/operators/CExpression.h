@@ -292,7 +292,7 @@ public:
 	CFunctionProp *DeriveFunctionProperties();
 	CFunctionalDependencyArray *DeriveFunctionalDependencies();
 	CPartInfo *DerivePartitionInfo();
-	CTableDescriptor *DeriveTableDescriptor();
+	CTableDescriptorHashSet *DeriveTableDescriptor();
 
 	// Scalar property accessors - derived as needed
 	CColRefSet *DeriveDefinedColumns();

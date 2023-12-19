@@ -238,7 +238,7 @@ CLogicalCTEConsumer::DeriveJoinDepth(CMemoryPool *,		  //mp,
 }
 
 // derive table descriptor
-CTableDescriptor *
+CTableDescriptorHashSet *
 CLogicalCTEConsumer::DeriveTableDescriptor(CMemoryPool *,		//mp
 										   CExpressionHandle &	//exprhdl
 ) const
@@ -246,7 +246,11 @@ CLogicalCTEConsumer::DeriveTableDescriptor(CMemoryPool *,		//mp
 	CExpression *pexpr =
 		COptCtxt::PoctxtFromTLS()->Pcteinfo()->PexprCTEProducer(m_id);
 	GPOS_ASSERT(nullptr != pexpr);
-	return pexpr->DeriveTableDescriptor();
+
+	CTableDescriptorHashSet *table_descriptor_set =
+		pexpr->DeriveTableDescriptor();
+	table_descriptor_set->AddRef();
+	return table_descriptor_set;
 }
 
 //---------------------------------------------------------------------------

@@ -37,7 +37,7 @@ protected:
 	const CName *m_pnameAlias;
 
 	// table descriptor
-	CTableDescriptor *m_ptabdesc;
+	CTableDescriptorHashSet *m_ptabdesc;
 
 	// dynamic scan id
 	ULONG m_scan_id;
@@ -117,7 +117,7 @@ public:
 	virtual CTableDescriptor *
 	Ptabdesc() const
 	{
-		return m_ptabdesc;
+		return m_ptabdesc->First();
 	}
 
 	// return scan id
@@ -164,11 +164,12 @@ public:
 	}
 
 	// derive table descriptor
-	CTableDescriptor *
-	DeriveTableDescriptor(CMemoryPool *,	   // mp
+	CTableDescriptorHashSet *
+	DeriveTableDescriptor(CMemoryPool *mp GPOS_UNUSED,
 						  CExpressionHandle &  // exprhdl
 	) const override
 	{
+		m_ptabdesc->AddRef();
 		return m_ptabdesc;
 	}
 

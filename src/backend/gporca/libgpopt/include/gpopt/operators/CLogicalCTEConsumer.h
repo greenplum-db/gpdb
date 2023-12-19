@@ -146,7 +146,7 @@ public:
 								   CExpressionHandle &exprhdl) const override;
 
 	// derive table descriptor
-	CTableDescriptor *DeriveTableDescriptor(
+	CTableDescriptorHashSet *DeriveTableDescriptor(
 		CMemoryPool *mp, CExpressionHandle &exprhdl) const override;
 
 	// compute required stats columns of the n-th child

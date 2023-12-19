@@ -115,7 +115,7 @@ ULONG
 CLogicalDynamicGet::HashValue() const
 {
 	ULONG ulHash = gpos::CombineHashes(COperator::HashValue(),
-									   m_ptabdesc->MDId()->HashValue());
+									   Ptabdesc()->MDId()->HashValue());
 	ulHash =
 		gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrOutput));
 
@@ -162,9 +162,9 @@ CLogicalDynamicGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 											 colref_mapping, must_exist);
 	}
 	CColRef2dArray *pdrgpdrgpcrPart =
-		PdrgpdrgpcrCreatePartCols(mp, pdrgpcrOutput, m_ptabdesc->PdrgpulPart());
+		PdrgpdrgpcrCreatePartCols(mp, pdrgpcrOutput, Ptabdesc()->PdrgpulPart());
 	CName *pnameAlias = GPOS_NEW(mp) CName(mp, *m_pnameAlias);
-	m_ptabdesc->AddRef();
+	Ptabdesc()->AddRef();
 	m_partition_mdids->AddRef();
 
 	CConstraint *partition_cnstrs_disj = nullptr;
@@ -182,7 +182,7 @@ CLogicalDynamicGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 	}
 
 	return GPOS_NEW(mp) CLogicalDynamicGet(
-		mp, pnameAlias, m_ptabdesc, m_scan_id, pdrgpcrOutput, pdrgpdrgpcrPart,
+		mp, pnameAlias, Ptabdesc(), m_scan_id, pdrgpcrOutput, pdrgpdrgpcrPart,
 		m_partition_mdids, partition_cnstrs_disj, m_static_pruned,
 		m_foreign_server_mdids);
 }
@@ -257,7 +257,7 @@ CLogicalDynamicGet::OsPrint(IOstream &os) const
 
 		// actual name of table in catalog and columns
 		os << " (";
-		m_ptabdesc->Name().OsPrint(os);
+		Ptabdesc()->Name().OsPrint(os);
 		os << "), ";
 		os << "Columns: [";
 		CUtils::OsPrintDrgPcr(os, m_pdrgpcrOutput);
@@ -327,7 +327,7 @@ CLogicalDynamicGet::PstatsDeriveFilter(CMemoryPool *mp,
 	}
 
 	CStatistics *pstatsFullTable = dynamic_cast<CStatistics *>(
-		PstatsBaseTable(mp, exprhdl, m_ptabdesc, pcrsStat));
+		PstatsBaseTable(mp, exprhdl, Ptabdesc(), pcrsStat));
 
 	pcrsStat->Release();
 

@@ -323,8 +323,8 @@ public:
 	CPartInfo *DerivePartitionInfo() const;
 	CPartInfo *DerivePartitionInfo(ULONG child_index) const;
 
-	CTableDescriptor *DeriveTableDescriptor() const;
-	CTableDescriptor *DeriveTableDescriptor(ULONG child_index) const;
+	CTableDescriptorHashSet *DeriveTableDescriptor() const;
+	CTableDescriptorHashSet *DeriveTableDescriptor(ULONG child_index) const;
 
 	// Scalar property accessors
 	CColRefSet *DeriveDefinedColumns(ULONG child_index) const;

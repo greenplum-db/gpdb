@@ -1417,7 +1417,7 @@ CExpression::DerivePartitionInfo()
 	return m_pdprel->DerivePartitionInfo(exprhdl);
 }
 
-CTableDescriptor *
+CTableDescriptorHashSet *
 CExpression::DeriveTableDescriptor()
 {
 	CExpressionHandle exprhdl(m_mp);

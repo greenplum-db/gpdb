@@ -43,7 +43,7 @@ using namespace gpopt;
 CLogicalDynamicGetBase::CLogicalDynamicGetBase(CMemoryPool *mp)
 	: CLogical(mp),
 	  m_pnameAlias(nullptr),
-	  m_ptabdesc(nullptr),
+	  m_ptabdesc(GPOS_NEW(mp) CTableDescriptorHashSet(mp)),
 	  m_scan_id(0),
 	  m_pdrgpcrOutput(nullptr),
 	  m_pdrgpdrgpcrPart(nullptr),
@@ -67,7 +67,7 @@ CLogicalDynamicGetBase::CLogicalDynamicGetBase(
 	IMdIdArray *partition_mdids)
 	: CLogical(mp),
 	  m_pnameAlias(pnameAlias),
-	  m_ptabdesc(ptabdesc),
+	  m_ptabdesc(GPOS_NEW(mp) CTableDescriptorHashSet(mp)),
 	  m_scan_id(scan_id),
 	  m_pdrgpcrOutput(pdrgpcrOutput),
 	  m_pdrgpdrgpcrPart(pdrgpdrgpcrPart),
@@ -80,7 +80,9 @@ CLogicalDynamicGetBase::CLogicalDynamicGetBase(
 	GPOS_ASSERT(nullptr != pdrgpcrOutput);
 	GPOS_ASSERT(nullptr != pdrgpdrgpcrPart);
 
-	m_pcrsDist = CLogical::PcrsDist(mp, m_ptabdesc, m_pdrgpcrOutput);
+	m_ptabdesc->Insert(ptabdesc);
+
+	m_pcrsDist = CLogical::PcrsDist(mp, Ptabdesc(), m_pdrgpcrOutput);
 	m_root_col_mapping_per_part =
 		ConstructRootColMappingPerPart(mp, m_pdrgpcrOutput, m_partition_mdids);
 }
@@ -101,7 +103,7 @@ CLogicalDynamicGetBase::CLogicalDynamicGetBase(CMemoryPool *mp,
 											   IMdIdArray *partition_mdids)
 	: CLogical(mp),
 	  m_pnameAlias(pnameAlias),
-	  m_ptabdesc(ptabdesc),
+	  m_ptabdesc(GPOS_NEW(mp) CTableDescriptorHashSet(mp)),
 	  m_scan_id(scan_id),
 	  m_pdrgpcrOutput(nullptr),
 	  m_pcrsDist(nullptr),
@@ -110,12 +112,14 @@ CLogicalDynamicGetBase::CLogicalDynamicGetBase(CMemoryPool *mp,
 	GPOS_ASSERT(nullptr != ptabdesc);
 	GPOS_ASSERT(nullptr != pnameAlias);
 
+	m_ptabdesc->Insert(ptabdesc);
+
 	// generate a default column set for the table descriptor
-	m_pdrgpcrOutput = PdrgpcrCreateMapping(mp, m_ptabdesc->Pdrgpcoldesc(),
-										   UlOpId(), m_ptabdesc->MDId());
+	m_pdrgpcrOutput = PdrgpcrCreateMapping(mp, Ptabdesc()->Pdrgpcoldesc(),
+										   UlOpId(), Ptabdesc()->MDId());
 	m_pdrgpdrgpcrPart = PdrgpdrgpcrCreatePartCols(mp, m_pdrgpcrOutput,
-												  m_ptabdesc->PdrgpulPart());
-	m_pcrsDist = CLogical::PcrsDist(mp, m_ptabdesc, m_pdrgpcrOutput);
+												  Ptabdesc()->PdrgpulPart());
+	m_pcrsDist = CLogical::PcrsDist(mp, Ptabdesc(), m_pdrgpcrOutput);
 
 	m_root_col_mapping_per_part =
 		ConstructRootColMappingPerPart(mp, m_pdrgpcrOutput, m_partition_mdids);
@@ -174,7 +178,7 @@ CLogicalDynamicGetBase::DeriveKeyCollection(CMemoryPool *mp,
 											CExpressionHandle &	 // exprhdl
 ) const
 {
-	const CBitSetArray *pdrgpbs = m_ptabdesc->PdrgpbsKeys();
+	const CBitSetArray *pdrgpbs = Ptabdesc()->PdrgpbsKeys();
 
 	return CLogical::PkcKeysBaseTable(mp, pdrgpbs, m_pdrgpcrOutput);
 }
@@ -193,7 +197,7 @@ CLogicalDynamicGetBase::DerivePropertyConstraint(CMemoryPool *mp,
 												 CExpressionHandle &  // exprhdl
 ) const
 {
-	return PpcDeriveConstraintFromTable(mp, m_ptabdesc, m_pdrgpcrOutput);
+	return PpcDeriveConstraintFromTable(mp, Ptabdesc(), m_pdrgpcrOutput);
 }
 
 //---------------------------------------------------------------------------
@@ -209,7 +213,7 @@ CLogicalDynamicGetBase::DerivePartitionInfo(CMemoryPool *mp,
 											CExpressionHandle &	 // exprhdl
 ) const
 {
-	IMDId *mdid = m_ptabdesc->MDId();
+	IMDId *mdid = Ptabdesc()->MDId();
 	mdid->AddRef();
 	m_pdrgpdrgpcrPart->AddRef();
 

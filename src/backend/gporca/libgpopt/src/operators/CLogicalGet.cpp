@@ -40,7 +40,7 @@ using namespace gpopt;
 CLogicalGet::CLogicalGet(CMemoryPool *mp)
 	: CLogical(mp),
 	  m_pnameAlias(nullptr),
-	  m_ptabdesc(nullptr),
+	  m_ptabdesc(GPOS_NEW(mp) CTableDescriptorHashSet(mp)),
 	  m_pdrgpcrOutput(nullptr),
 	  m_pdrgpdrgpcrPart(nullptr),
 	  m_pcrsDist(nullptr)
@@ -60,7 +60,7 @@ CLogicalGet::CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
 						 CTableDescriptor *ptabdesc)
 	: CLogical(mp),
 	  m_pnameAlias(pnameAlias),
-	  m_ptabdesc(ptabdesc),
+	  m_ptabdesc(GPOS_NEW(mp) CTableDescriptorHashSet(mp)),
 	  m_pdrgpcrOutput(nullptr),
 	  m_pdrgpdrgpcrPart(nullptr),
 	  m_pcrsDist(nullptr)
@@ -68,17 +68,19 @@ CLogicalGet::CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
 	GPOS_ASSERT(nullptr != ptabdesc);
 	GPOS_ASSERT(nullptr != pnameAlias);
 
-	// generate a default column set for the table descriptor
-	m_pdrgpcrOutput = PdrgpcrCreateMapping(mp, m_ptabdesc->Pdrgpcoldesc(),
-										   UlOpId(), m_ptabdesc->MDId());
+	m_ptabdesc->Insert(ptabdesc);
 
-	if (m_ptabdesc->IsPartitioned())
+	// generate a default column set for the table descriptor
+	m_pdrgpcrOutput = PdrgpcrCreateMapping(mp, Ptabdesc()->Pdrgpcoldesc(),
+										   UlOpId(), Ptabdesc()->MDId());
+
+	if (Ptabdesc()->IsPartitioned())
 	{
 		m_pdrgpdrgpcrPart = PdrgpdrgpcrCreatePartCols(
-			mp, m_pdrgpcrOutput, m_ptabdesc->PdrgpulPart());
+			mp, m_pdrgpcrOutput, Ptabdesc()->PdrgpulPart());
 	}
 
-	m_pcrsDist = CLogical::PcrsDist(mp, m_ptabdesc, m_pdrgpcrOutput);
+	m_pcrsDist = CLogical::PcrsDist(mp, Ptabdesc(), m_pdrgpcrOutput);
 }
 
 //---------------------------------------------------------------------------
@@ -94,20 +96,22 @@ CLogicalGet::CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
 						 CColRefArray *pdrgpcrOutput)
 	: CLogical(mp),
 	  m_pnameAlias(pnameAlias),
-	  m_ptabdesc(ptabdesc),
+	  m_ptabdesc(GPOS_NEW(mp) CTableDescriptorHashSet(mp)),
 	  m_pdrgpcrOutput(pdrgpcrOutput),
 	  m_pdrgpdrgpcrPart(nullptr)
 {
 	GPOS_ASSERT(nullptr != ptabdesc);
 	GPOS_ASSERT(nullptr != pnameAlias);
 
-	if (m_ptabdesc->IsPartitioned())
+	m_ptabdesc->Insert(ptabdesc);
+
+	if (Ptabdesc()->IsPartitioned())
 	{
 		m_pdrgpdrgpcrPart = PdrgpdrgpcrCreatePartCols(
-			mp, m_pdrgpcrOutput, m_ptabdesc->PdrgpulPart());
+			mp, m_pdrgpcrOutput, Ptabdesc()->PdrgpulPart());
 	}
 
-	m_pcrsDist = CLogical::PcrsDist(mp, m_ptabdesc, m_pdrgpcrOutput);
+	m_pcrsDist = CLogical::PcrsDist(mp, Ptabdesc(), m_pdrgpcrOutput);
 }
 
 //---------------------------------------------------------------------------
@@ -141,7 +145,7 @@ ULONG
 CLogicalGet::HashValue() const
 {
 	ULONG ulHash = gpos::CombineHashes(COperator::HashValue(),
-									   m_ptabdesc->MDId()->HashValue());
+									   Ptabdesc()->MDId()->HashValue());
 	ulHash =
 		gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrOutput));
 
@@ -166,7 +170,7 @@ CLogicalGet::Matches(COperator *pop) const
 	}
 	CLogicalGet *popGet = CLogicalGet::PopConvert(pop);
 
-	return m_ptabdesc->MDId()->Equals(popGet->m_ptabdesc->MDId()) &&
+	return Ptabdesc()->MDId()->Equals(popGet->Ptabdesc()->MDId()) &&
 		   m_pdrgpcrOutput->Equals(popGet->PdrgpcrOutput());
 }
 
@@ -195,9 +199,9 @@ CLogicalGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 											 colref_mapping, must_exist);
 	}
 	CName *pnameAlias = GPOS_NEW(mp) CName(mp, *m_pnameAlias);
-	m_ptabdesc->AddRef();
+	Ptabdesc()->AddRef();
 
-	return GPOS_NEW(mp) CLogicalGet(mp, pnameAlias, m_ptabdesc, pdrgpcrOutput);
+	return GPOS_NEW(mp) CLogicalGet(mp, pnameAlias, Ptabdesc(), pdrgpcrOutput);
 }
 
 //---------------------------------------------------------------------------
@@ -291,7 +295,7 @@ CLogicalGet::DeriveKeyCollection(CMemoryPool *mp,
 								 CExpressionHandle &  // exprhdl
 ) const
 {
-	const CBitSetArray *pdrgpbs = m_ptabdesc->PdrgpbsKeys();
+	const CBitSetArray *pdrgpbs = Ptabdesc()->PdrgpbsKeys();
 
 	return CLogical::PkcKeysBaseTable(mp, pdrgpbs, m_pdrgpcrOutput);
 }
@@ -330,7 +334,7 @@ CLogicalGet::PstatsDerive(CMemoryPool *mp, CExpressionHandle &exprhdl,
 {
 	// requesting stats on distribution columns to estimate data skew
 	IStatistics *pstatsTable =
-		PstatsBaseTable(mp, exprhdl, m_ptabdesc, m_pcrsDist);
+		PstatsBaseTable(mp, exprhdl, Ptabdesc(), m_pcrsDist);
 
 	CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp, m_pdrgpcrOutput);
 	CUpperBoundNDVs *upper_bound_NDVs =
@@ -364,13 +368,13 @@ CLogicalGet::OsPrint(IOstream &os) const
 
 		// actual name of table in catalog and columns
 		os << " (";
-		m_ptabdesc->Name().OsPrint(os);
+		Ptabdesc()->Name().OsPrint(os);
 		os << "), Columns: [";
 		CUtils::OsPrintDrgPcr(os, m_pdrgpcrOutput);
 		os << "] Key sets: {";
 
 		const ULONG ulColumns = m_pdrgpcrOutput->Size();
-		const CBitSetArray *pdrgpbsKeys = m_ptabdesc->PdrgpbsKeys();
+		const CBitSetArray *pdrgpbsKeys = Ptabdesc()->PdrgpbsKeys();
 		for (ULONG ul = 0; ul < pdrgpbsKeys->Size(); ul++)
 		{
 			CBitSet *pbs = (*pdrgpbsKeys)[ul];

@@ -2430,8 +2430,10 @@ CXformUtils::PexprBuildBtreeIndexPlan(CMemoryPool *mp, CMDAccessor *md_accessor,
 
 	BOOL fDynamicGet = (COperator::EopLogicalDynamicGet == op_id);
 
-	CTableDescriptor *ptabdesc = pexprGet->DeriveTableDescriptor();
-	GPOS_ASSERT(nullptr != ptabdesc);
+	CTableDescriptorHashSet *ptabdescset = pexprGet->DeriveTableDescriptor();
+	GPOS_ASSERT(1 == ptabdescset->Size());
+	CTableDescriptor *ptabdesc = ptabdescset->First();
+
 	CColRefArray *pdrgpcrOutput = nullptr;
 	CWStringConst *alias = nullptr;
 	ULONG ulPartIndex = gpos::ulong_max;
@@ -3363,7 +3365,11 @@ CXformUtils::PexprSelect2BitmapBoolOp(CMemoryPool *mp, CExpression *pexpr)
 	CExpression *pexprScalar = (*pexpr)[1];
 	CLogical *popGet = CLogical::PopConvert(pexprRelational->Pop());
 
-	CTableDescriptor *ptabdesc = pexprRelational->DeriveTableDescriptor();
+	CTableDescriptorHashSet *ptabdescset =
+		pexprRelational->DeriveTableDescriptor();
+	GPOS_ASSERT(1 == ptabdescset->Size());
+	CTableDescriptor *ptabdesc = ptabdescset->First();
+
 	GPOS_ASSERT(nullptr != ptabdesc);
 	const ULONG ulIndices = ptabdesc->IndexCount();
 	if (0 == ulIndices)

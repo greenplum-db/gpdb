@@ -262,7 +262,21 @@ public:
 		return m_assigned_query_id_for_target_rel;
 	}
 
+	static ULONG HashValue(const CTableDescriptor *ptabdesc);
+
+	static BOOL Equals(const CTableDescriptor *ptabdescLeft,
+					   const CTableDescriptor *ptabdescRight);
+
 };	// class CTableDescriptor
+
+using CTableDescriptorHashSet =
+	CHashSet<CTableDescriptor, CTableDescriptor::HashValue,
+			 CTableDescriptor::Equals, CleanupRelease<CTableDescriptor>>;
+using CTableDescriptorHashSetIter =
+	CHashSetIter<CTableDescriptor, CTableDescriptor::HashValue,
+				 CTableDescriptor::Equals, CleanupRelease<CTableDescriptor>>;
+
+
 }  // namespace gpopt
 
 #endif	// !GPOPT_CTableDescriptor_H

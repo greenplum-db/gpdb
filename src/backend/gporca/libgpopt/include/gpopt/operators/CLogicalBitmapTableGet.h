@@ -40,7 +40,7 @@ class CLogicalBitmapTableGet : public CLogical
 {
 private:
 	// table descriptor
-	CTableDescriptor *m_ptabdesc;
+	CTableDescriptorHashSet *m_ptabdesc;
 
 	// origin operator id -- gpos::ulong_max if operator was not generated via a transformation
 	ULONG m_ulOriginOpId;
@@ -70,7 +70,7 @@ public:
 	CTableDescriptor *
 	Ptabdesc() const
 	{
-		return m_ptabdesc;
+		return m_ptabdesc->First();
 	}
 
 	// table alias
@@ -157,11 +157,12 @@ public:
 	}
 
 	// derive table descriptor
-	CTableDescriptor *
-	DeriveTableDescriptor(CMemoryPool *,	   // mp
-						  CExpressionHandle &  // exprhdl
+	CTableDescriptorHashSet *
+	DeriveTableDescriptor(CMemoryPool *mp GPOS_UNUSED,	// mp
+						  CExpressionHandle &			// exprhdl
 	) const override
 	{
+		m_ptabdesc->AddRef();
 		return m_ptabdesc;
 	}
 
