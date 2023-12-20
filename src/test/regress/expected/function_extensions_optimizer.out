@@ -553,3 +553,24 @@ SELECT count(*) FROM t7_function_scan;
      4
 (1 row)
 
+-- Test INITPLAN functions in INITPLAN
+-- more details could be found at https://github.com/greenplum-db/gpdb/issues/16679
+create or replace function hello_initplan() returns setof text as $$
+return ["hello"]
+$$ language plpython3u
+execute on initplan;
+explain select array(select f from hello_initplan() as f);
+                                    QUERY PLAN                                    
+----------------------------------------------------------------------------------
+ Result  (cost=10.25..10.26 rows=1 width=32)
+   InitPlan 1 (returns $0)
+     ->  Function Scan on hello_initplan f  (cost=0.25..10.25 rows=1000 width=32)
+ Optimizer: Postgres-based planner
+(4 rows)
+
+select array(select f from hello_initplan() as f);
+  array  
+---------
+ {hello}
+(1 row)
+
