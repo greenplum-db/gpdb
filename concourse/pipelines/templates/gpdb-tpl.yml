@@ -420,11 +420,13 @@ resources:
     - gpdb-doc/*
     - README*
 
+{% if "icw" in test_sections %}
 - name: filedump_src
   type: git
   source:
     branch: main
     uri: https://github.com/greenplum-db/filedump.git
+{% endif %}
 
 {% if os_type == compile_platform or (os_type != compile_platform and "icw" in test_sections) %}
 - name: gpdb7-[[ os_type ]]-build
