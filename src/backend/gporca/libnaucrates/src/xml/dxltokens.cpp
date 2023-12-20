@@ -126,7 +126,6 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenPhysicalLimit, GPOS_WSZ_LIT("Limit")},
 		{EdxltokenPhysicalSort, GPOS_WSZ_LIT("Sort")},
 		{EdxltokenPhysicalAggregate, GPOS_WSZ_LIT("Aggregate")},
-		{EdxltokenPhysicalSubqueryScan, GPOS_WSZ_LIT("SubqueryScan")},
 		{EdxltokenPhysicalResult, GPOS_WSZ_LIT("Result")},
 		{EdxltokenPhysicalValuesScan, GPOS_WSZ_LIT("Values")},
 		{EdxltokenPhysicalAppend, GPOS_WSZ_LIT("Append")},

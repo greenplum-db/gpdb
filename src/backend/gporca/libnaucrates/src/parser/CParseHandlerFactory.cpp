@@ -106,7 +106,6 @@ CParseHandlerFactory::Init(CMemoryPool *mp)
 		{EdxltokenPhysicalRoutedDistributeMotion,
 		 &CreateRoutedMotionParseHandler},
 		{EdxltokenPhysicalRandomMotion, &CreateRandomMotionParseHandler},
-		{EdxltokenPhysicalSubqueryScan, &CreateSubqueryScanParseHandler},
 		{EdxltokenPhysicalResult, &CreateResultParseHandler},
 		{EdxltokenPhysicalLimit, &CreateLimitParseHandler},
 		{EdxltokenPhysicalSort, &CreateSortParseHandler},
@@ -748,16 +747,6 @@ CParseHandlerFactory::CreateForeignScanParseHandler(
 {
 	return GPOS_NEW(mp)
 		CParseHandlerForeignScan(mp, parse_handler_mgr, parse_handler_root);
-}
-
-// creates a parse handler for parsing a subquery scan
-CParseHandlerBase *
-CParseHandlerFactory::CreateSubqueryScanParseHandler(
-	CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
-	CParseHandlerBase *parse_handler_root)
-{
-	return GPOS_NEW(mp)
-		CParseHandlerSubqueryScan(mp, parse_handler_mgr, parse_handler_root);
 }
 
 // creates a parse handler for parsing a result node

@@ -133,10 +133,6 @@ public:
 	static CDXLPhysical *MakeDXLTblScan(CDXLMemoryManager *dxl_memory_manager,
 										const Attributes &attrs);
 
-	// create a subquery scan operator
-	static CDXLPhysical *MakeDXLSubqScan(CDXLMemoryManager *dxl_memory_manager,
-										 const Attributes &attrs);
-
 	// create a result operator
 	static CDXLPhysical *MakeDXLResult(CDXLMemoryManager *dxl_memory_manager);
 

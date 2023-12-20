@@ -55,7 +55,6 @@ const CHAR *CParseHandlerTest::m_rgszPlanDXLFileNames[] = {
 	"../data/dxl/parse_tests/q18-Sort-TS.xml",
 	"../data/dxl/parse_tests/q19-DistinctFrom.xml",
 	"../data/dxl/parse_tests/q20-DistinctFrom-HJ.xml",
-	"../data/dxl/parse_tests/q21-SubqueryScan.xml",
 	"../data/dxl/parse_tests/q22-Result.xml",
 	"../data/dxl/parse_tests/q23-MJ.xml",
 	"../data/dxl/parse_tests/q25-AppendPartTable.xml",

@@ -102,7 +102,6 @@ enum Edxltoken
 	EdxltokenPhysicalSort,
 	EdxltokenPhysicalLimit,
 	EdxltokenPhysicalResult,
-	EdxltokenPhysicalSubqueryScan,
 	EdxltokenPhysicalAggregate,
 	EdxltokenPhysicalAppend,
 	EdxltokenPhysicalMaterialize,

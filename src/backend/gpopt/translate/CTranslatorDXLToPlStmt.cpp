@@ -80,7 +80,6 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLPhysicalRoutedDistributeMotion.h"
 #include "naucrates/dxl/operators/CDXLPhysicalSort.h"
 #include "naucrates/dxl/operators/CDXLPhysicalSplit.h"
-#include "naucrates/dxl/operators/CDXLPhysicalSubqueryScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalTVF.h"
 #include "naucrates/dxl/operators/CDXLPhysicalTableScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalValuesScan.h"
@@ -417,12 +416,6 @@ CTranslatorDXLToPlStmt::TranslateDXLOperatorToPlan(
 		{
 			plan = TranslateDXLSort(dxlnode, output_context,
 									ctxt_translation_prev_siblings);
-			break;
-		}
-		case EdxlopPhysicalSubqueryScan:
-		{
-			plan = TranslateDXLSubQueryScan(dxlnode, output_context,
-											ctxt_translation_prev_siblings);
 			break;
 		}
 		case EdxlopPhysicalResult:
@@ -3264,105 +3257,6 @@ CTranslatorDXLToPlStmt::TranslateDXLSort(
 	child_contexts->Release();
 
 	return (Plan *) sort;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorDXLToPlStmt::TranslateDXLSubQueryScan
-//
-//	@doc:
-//		Translate DXL subquery scan node into GPDB SubqueryScan plan node
-//
-//---------------------------------------------------------------------------
-Plan *
-CTranslatorDXLToPlStmt::TranslateDXLSubQueryScan(
-	const CDXLNode *subquery_scan_dxlnode, CDXLTranslateContext *output_context,
-	CDXLTranslationContextArray *ctxt_translation_prev_siblings)
-{
-	// create sort plan node
-	SubqueryScan *subquery_scan = MakeNode(SubqueryScan);
-
-	Plan *plan = &(subquery_scan->scan.plan);
-	plan->plan_node_id = m_dxl_to_plstmt_context->GetNextPlanId();
-
-	CDXLPhysicalSubqueryScan *subquery_scan_dxlop =
-		CDXLPhysicalSubqueryScan::Cast(subquery_scan_dxlnode->GetOperator());
-
-	// translate operator costs
-	TranslatePlanCosts(subquery_scan_dxlnode, plan);
-
-	// translate subplan
-	CDXLNode *child_dxlnode = (*subquery_scan_dxlnode)[EdxlsubqscanIndexChild];
-	CDXLNode *project_list_dxlnode =
-		(*subquery_scan_dxlnode)[EdxlsubqscanIndexProjList];
-	CDXLNode *filter_dxlnode =
-		(*subquery_scan_dxlnode)[EdxlsubqscanIndexFilter];
-
-	CDXLTranslateContext child_context(m_mp, false,
-									   output_context->GetColIdToParamIdMap());
-
-	Plan *child_plan = TranslateDXLOperatorToPlan(
-		child_dxlnode, &child_context, ctxt_translation_prev_siblings);
-
-	// create an rtable entry for the subquery scan
-	RangeTblEntry *rte = MakeNode(RangeTblEntry);
-	rte->rtekind = RTE_SUBQUERY;
-
-	Alias *alias = MakeNode(Alias);
-	alias->colnames = NIL;
-
-	// get table alias
-	alias->aliasname = CTranslatorUtils::CreateMultiByteCharStringFromWCString(
-		subquery_scan_dxlop->MdName()->GetMDName()->GetBuffer());
-
-	// get column names from child project list
-	CDXLTranslateContextBaseTable base_table_context(m_mp);
-
-	Index index =
-		gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
-	(subquery_scan->scan).scanrelid = index;
-	base_table_context.SetRelIndex(index);
-
-	ListCell *lc_tgtentry = nullptr;
-
-	CDXLNode *child_proj_list_dxlnode = (*child_dxlnode)[0];
-
-	ULONG ul = 0;
-
-	ForEach(lc_tgtentry, child_plan->targetlist)
-	{
-		TargetEntry *target_entry = (TargetEntry *) lfirst(lc_tgtentry);
-
-		// non-system attribute
-		CHAR *col_name_char_array = PStrDup(target_entry->resname);
-		Value *val_colname = gpdb::MakeStringValue(col_name_char_array);
-		alias->colnames = gpdb::LAppend(alias->colnames, val_colname);
-
-		// get corresponding child project element
-		CDXLScalarProjElem *sc_proj_elem_dxlop = CDXLScalarProjElem::Cast(
-			(*child_proj_list_dxlnode)[ul]->GetOperator());
-
-		// save mapping col id -> index in translate context
-		(void) base_table_context.InsertMapping(sc_proj_elem_dxlop->Id(),
-												target_entry->resno);
-		ul++;
-	}
-
-	rte->eref = alias;
-
-	// add range table entry for the subquery to the list
-	m_dxl_to_plstmt_context->AddRTE(rte);
-
-	// translate proj list and filter
-	TranslateProjListAndFilter(
-		project_list_dxlnode, filter_dxlnode,
-		&base_table_context,  // translate context for the base table
-		nullptr, &plan->targetlist, &plan->qual, output_context);
-
-	subquery_scan->subplan = child_plan;
-
-	SetParamIds(plan);
-	return (Plan *) subquery_scan;
 }
 
 //------------------------------------------------------------------------------

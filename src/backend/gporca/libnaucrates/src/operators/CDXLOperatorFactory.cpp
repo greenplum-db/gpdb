@@ -41,7 +41,6 @@
 #include "naucrates/dxl/operators/CDXLPhysicalResult.h"
 #include "naucrates/dxl/operators/CDXLPhysicalRoutedDistributeMotion.h"
 #include "naucrates/dxl/operators/CDXLPhysicalSort.h"
-#include "naucrates/dxl/operators/CDXLPhysicalSubqueryScan.h"
 #include "naucrates/dxl/operators/CDXLPhysicalTableScan.h"
 #include "naucrates/dxl/operators/CDXLScalarAggref.h"
 #include "naucrates/dxl/operators/CDXLScalarArray.h"
@@ -98,38 +97,6 @@ CDXLOperatorFactory::MakeDXLTblScan(CDXLMemoryManager *dxl_memory_manager,
 	CMemoryPool *mp = dxl_memory_manager->Pmp();
 
 	return GPOS_NEW(mp) CDXLPhysicalTableScan(mp);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CDXLOperatorFactory::MakeDXLSubqScan
-//
-//	@doc:
-//		Construct a subquery scan operator
-//
-//---------------------------------------------------------------------------
-CDXLPhysical *
-CDXLOperatorFactory::MakeDXLSubqScan(CDXLMemoryManager *dxl_memory_manager,
-									 const Attributes &attrs)
-{
-	// get the memory pool from the memory manager
-	CMemoryPool *mp = dxl_memory_manager->Pmp();
-
-	// parse subquery name from attributes
-	const XMLCh *subquery_name_xml =
-		ExtractAttrValue(attrs, EdxltokenAlias, EdxltokenPhysicalSubqueryScan);
-
-	CWStringDynamic *subquery_name_str =
-		CDXLUtils::CreateDynamicStringFromXMLChArray(dxl_memory_manager,
-													 subquery_name_xml);
-
-
-	// create a copy of the string in the CMDName constructor
-	CMDName *subquery_name = GPOS_NEW(mp) CMDName(mp, subquery_name_str);
-
-	GPOS_DELETE(subquery_name_str);
-
-	return GPOS_NEW(mp) CDXLPhysicalSubqueryScan(mp, subquery_name);
 }
 
 //---------------------------------------------------------------------------

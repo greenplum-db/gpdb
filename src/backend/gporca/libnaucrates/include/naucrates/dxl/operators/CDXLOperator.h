@@ -130,7 +130,6 @@ enum Edxlopid
 	EdxlopPhysicalIndexScan,
 	EdxlopPhysicalIndexOnlyScan,
 	EdxlopScalarBitmapIndexProbe,
-	EdxlopPhysicalSubqueryScan,
 	EdxlopPhysicalConstTable,
 	EdxlopPhysicalNLJoin,
 	EdxlopPhysicalHashJoin,

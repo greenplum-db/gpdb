@@ -302,12 +302,6 @@ private:
 			ctxt_translation_prev_siblings	// translation contexts of previous siblings
 	);
 
-	Plan *TranslateDXLSubQueryScan(
-		const CDXLNode *subquery_scan_dxlnode,
-		CDXLTranslateContext *output_context,
-		CDXLTranslationContextArray *
-			ctxt_translation_prev_siblings	// translation contexts of previous siblings
-	);
 
 	Plan *TranslateDXLProjectSet(const CDXLNode *result_dxlnode);
 
