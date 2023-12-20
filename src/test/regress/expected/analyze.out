@@ -1379,11 +1379,11 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
- public     | roottab      | a       | t         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}      |             |                   |                        | 
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}      |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds 
+--------------+---------+-----------+------------------
+ roottab      | a       | t         | {0,1,2,3,4}
+ roottableaf1 | a       | f         | {0,1,2,3,4}
 (2 rows)
 
 -- 2. Update rootTabLeaf1 to check, if it is re-sampled when a new partiton is attached.
@@ -1401,15 +1401,15 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs |        histogram_bounds         | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+---------------------------------+-------------+-------------------+------------------------+----------------------
- public     | roottab      | a       | t         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}                     |             |                   |                        | 
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}                     |           1 |                   |                        | 
- public     | roottableaf2 | a       | f         |         0 |         4 |         -1 |                  |                   | {10,11,12,13,14,15,16,17,18,19} |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited |        histogram_bounds         
+--------------+---------+-----------+---------------------------------
+ roottab      | a       | t         | {0,1,2,3,4}
+ roottableaf1 | a       | f         | {0,1,2,3,4}
+ roottableaf2 | a       | f         | {10,11,12,13,14,15,16,17,18,19}
 (3 rows)
 
--- 4. Attach new partition, and check if root stats are updated.
+-- 4. Attach new partition, and check that stats are updated.
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
 select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
    relname    | reltuples | relpages 
@@ -1420,15 +1420,15 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs |            histogram_bounds            | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+----------------------------------------+-------------+-------------------+------------------------+----------------------
- public     | roottab      | a       | t         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4,11,12,13,14,15,16,17,18,19} |             |                   |                        | 
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}                            |           1 |                   |                        | 
- public     | roottableaf2 | a       | f         |         0 |         4 |         -1 |                  |                   | {10,11,12,13,14,15,16,17,18,19}        |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited |            histogram_bounds            
+--------------+---------+-----------+----------------------------------------
+ roottab      | a       | t         | {0,1,2,3,4,11,12,13,14,15,16,17,18,19}
+ roottableaf1 | a       | f         | {0,1,2,3,4}
+ roottableaf2 | a       | f         | {10,11,12,13,14,15,16,17,18,19}
 (3 rows)
 
---5. Detach Partition (Leaf2) and check if root stats are updated.
+--5. Detach Partition (Leaf2) and check that stats are updated.
 alter table rootTabMid1 detach partition rootTabLeaf2;
 select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
    relname    | reltuples | relpages 
@@ -1439,12 +1439,12 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs |        histogram_bounds         | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+---------------------------------+-------------+-------------------+------------------------+----------------------
- public     | roottab      | a       | t         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}                     |             |                   |                        | 
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}                     |           1 |                   |                        | 
- public     | roottableaf2 | a       | f         |         0 |         4 |         -1 |                  |                   | {10,11,12,13,14,15,16,17,18,19} |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited |        histogram_bounds         
+--------------+---------+-----------+---------------------------------
+ roottab      | a       | t         | {0,1,2,3,4}
+ roottableaf1 | a       | f         | {0,1,2,3,4}
+ roottableaf2 | a       | f         | {10,11,12,13,14,15,16,17,18,19}
 (3 rows)
 
 -----------------------------------------------
@@ -1476,11 +1476,11 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
- public     | roottab      | a       | t         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}      |             |                   |                        | 
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}      |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds 
+--------------+---------+-----------+------------------
+ roottab      | a       | t         | {0,1,2,3,4}
+ roottableaf1 | a       | f         | {0,1,2,3,4}
 (2 rows)
 
 -- 2. Update rootTabLeaf1 to check, if it is re-sampled when a new partiton is attached
@@ -1488,7 +1488,7 @@ select * from pg_stats where tablename like 'root%' order by tablename;
 insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
 -- 3.Only Insert, not analyze the new partition to be added
 insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
--- 4. Attach new partition, and check if root stats are updated.
+-- 4. Attach new partition, and check that stats are not updated.
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
 select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
    relname    | reltuples | relpages 
@@ -1499,14 +1499,14 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
- public     | roottab      | a       | t         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}      |             |                   |                        | 
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}      |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds 
+--------------+---------+-----------+------------------
+ roottab      | a       | t         | {0,1,2,3,4}
+ roottableaf1 | a       | f         | {0,1,2,3,4}
 (2 rows)
 
--- 5. Detach Partition (Leaf2) and check if root stats are updated.
+-- 5. Detach Partition (Leaf2) and check that stats are not updated.
 alter table rootTabMid1 detach partition rootTabLeaf2;
 select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
    relname    | reltuples | relpages 
@@ -1517,11 +1517,11 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
- public     | roottab      | a       | t         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}      |             |                   |                        | 
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}      |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds 
+--------------+---------+-----------+------------------
+ roottab      | a       | t         | {0,1,2,3,4}
+ roottableaf1 | a       | f         | {0,1,2,3,4}
 (2 rows)
 
 -----------------------------------------------
@@ -1533,7 +1533,7 @@ select * from pg_stats where tablename like 'root%' order by tablename;
 --         Leaf1 Analyzed
 --         Leaf2 Analyzed
 -----------------------------------------------
-    -- 1. Prepare basic framework
+-- 1. Prepare basic framework
 drop table if exists rootTab;
 drop table if exists rootTabLeaf1;
 drop table if exists rootTabLeaf2;
@@ -1551,10 +1551,10 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (3 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}      |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds 
+--------------+---------+-----------+------------------
+ roottableaf1 | a       | f         | {0,1,2,3,4}
 (1 row)
 
 -- 2. Attach analyed partition(Leaf1) and check updated root stats
@@ -1567,11 +1567,11 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (3 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
- public     | roottab      | a       | t         |         0 |         4 |          0 |                  |                   | {0,1,2,3,4}      |             |                   |                        | 
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}      |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds 
+--------------+---------+-----------+------------------
+ roottab      | a       | t         | {0,1,2,3,4}
+ roottableaf1 | a       | f         | {0,1,2,3,4}
 (2 rows)
 
 -- 3. Analyze the new partition (Leaf2) to be added
@@ -1587,18 +1587,18 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs |        histogram_bounds         | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+---------------------------------+-------------+-------------------+------------------------+----------------------
- public     | roottab      | a       | t         |         0 |         4 |          0 |                  |                   | {0,1,2,3,4}                     |             |                   |                        | 
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}                     |           1 |                   |                        | 
- public     | roottableaf2 | a       | f         |         0 |         4 |         -1 |                  |                   | {10,11,12,13,14,15,16,17,18,19} |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited |        histogram_bounds         
+--------------+---------+-----------+---------------------------------
+ roottab      | a       | t         | {0,1,2,3,4}
+ roottableaf1 | a       | f         | {0,1,2,3,4}
+ roottableaf2 | a       | f         | {10,11,12,13,14,15,16,17,18,19}
 (3 rows)
 
 -- 4. Update rootTabLeaf1 to check, if it is analyzed when a new partiton is attached.
 -- These should not be present in the root stats, after attach/detach of partition
 insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
--- 5. Attach new partition, and check if root stats are updated.
+-- 5. Attach new partition, and check that stats are updated.
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
 select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
    relname    | reltuples | relpages 
@@ -1609,15 +1609,15 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs |            histogram_bounds            | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+----------------------------------------+-------------+-------------------+------------------------+----------------------
- public     | roottab      | a       | t         |         0 |         4 |          0 |                  |                   | {0,1,2,3,4,11,12,13,14,15,16,17,18,19} |             |                   |                        | 
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}                            |           1 |                   |                        | 
- public     | roottableaf2 | a       | f         |         0 |         4 |         -1 |                  |                   | {10,11,12,13,14,15,16,17,18,19}        |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited |            histogram_bounds            
+--------------+---------+-----------+----------------------------------------
+ roottab      | a       | t         | {0,1,2,3,4,11,12,13,14,15,16,17,18,19}
+ roottableaf1 | a       | f         | {0,1,2,3,4}
+ roottableaf2 | a       | f         | {10,11,12,13,14,15,16,17,18,19}
 (3 rows)
 
--- 6. Detach Partition (Leaf2) and check if root stats are updated.
+-- 6. Detach Partition (Leaf2) and check that stats are updated.
 alter table rootTabMid1 detach partition rootTabLeaf2;
 select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
    relname    | reltuples | relpages 
@@ -1628,12 +1628,12 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs |        histogram_bounds         | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+---------------------------------+-------------+-------------------+------------------------+----------------------
- public     | roottab      | a       | t         |         0 |         4 |          0 |                  |                   | {0,1,2,3,4}                     |             |                   |                        | 
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}                     |           1 |                   |                        | 
- public     | roottableaf2 | a       | f         |         0 |         4 |         -1 |                  |                   | {10,11,12,13,14,15,16,17,18,19} |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited |        histogram_bounds         
+--------------+---------+-----------+---------------------------------
+ roottab      | a       | t         | {0,1,2,3,4}
+ roottableaf1 | a       | f         | {0,1,2,3,4}
+ roottableaf2 | a       | f         | {10,11,12,13,14,15,16,17,18,19}
 (3 rows)
 
 -----------------------------------------------
@@ -1663,10 +1663,10 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (3 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}      |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds 
+--------------+---------+-----------+------------------
+ roottableaf1 | a       | f         | {0,1,2,3,4}
 (1 row)
 
 -- 2. Attach analyed partition(Leaf1) and check updated root stats
@@ -1679,11 +1679,11 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (3 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
- public     | roottab      | a       | t         |         0 |         4 |          0 |                  |                   | {0,1,2,3,4}      |             |                   |                        | 
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}      |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds 
+--------------+---------+-----------+------------------
+ roottab      | a       | t         | {0,1,2,3,4}
+ roottableaf1 | a       | f         | {0,1,2,3,4}
 (2 rows)
 
 -- 3. Create new partition (Leaf2) to be added
@@ -1692,7 +1692,7 @@ insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
 -- 4. Update rootTabLeaf1 to check, if it is analyzed when a new partiton is attached.
 -- These should not be present in the root stats, after attach/detach of partition
 insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
--- 5. Attach new partition, and check updated stats
+-- 5. Attach new partition, and check that stats are not updated
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
 select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
    relname    | reltuples | relpages 
@@ -1703,14 +1703,14 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
- public     | roottab      | a       | t         |         0 |         4 |          0 |                  |                   | {0,1,2,3,4}      |             |                   |                        | 
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}      |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds 
+--------------+---------+-----------+------------------
+ roottab      | a       | t         | {0,1,2,3,4}
+ roottableaf1 | a       | f         | {0,1,2,3,4}
 (2 rows)
 
--- 6. Detach Partition (Leaf2) and check if root stats are updated.
+-- 6. Detach Partition (Leaf2) and check that stats are updated.
 -- The existing stats of rootTabLeaf1 will be updated for root
 alter table rootTabMid1 detach partition rootTabLeaf2;
 select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
@@ -1722,11 +1722,11 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
- public     | roottab      | a       | t         |         0 |         4 |          0 |                  |                   | {0,1,2,3,4}      |             |                   |                        | 
- public     | roottableaf1 | a       | f         |         0 |         4 |         -1 |                  |                   | {0,1,2,3,4}      |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds 
+--------------+---------+-----------+------------------
+ roottab      | a       | t         | {0,1,2,3,4}
+ roottableaf1 | a       | f         | {0,1,2,3,4}
 (2 rows)
 
 -----------------------------------------------
@@ -1751,10 +1751,10 @@ alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10
 create table rootTabLeaf2(a int);
 insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
 analyze rootTabLeaf2;
-    -- 3. Update rootTabLeaf1 to check, if it is analyzed when a new partiton is attached.
-    -- These should not be present in the root stats, after attach/detach of partition
+-- 3. Update rootTabLeaf1 to check, if it is analyzed when a new partiton is attached.
+-- These should not be present in the root stats, after attach/detach of partition
 insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
--- 4. Attach new partition, and check updated stats
+-- 4. Attach new partition, and check that stats are not updated
 -- No updation of root stats expected.
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
 select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
@@ -1766,13 +1766,13 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs |        histogram_bounds         | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+---------------------------------+-------------+-------------------+------------------------+----------------------
- public     | roottableaf2 | a       | f         |         0 |         4 |         -1 |                  |                   | {10,11,12,13,14,15,16,17,18,19} |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited |        histogram_bounds         
+--------------+---------+-----------+---------------------------------
+ roottableaf2 | a       | f         | {10,11,12,13,14,15,16,17,18,19}
 (1 row)
 
--- 5. Detach Partition (Leaf2) and check updated stats.
+-- 5. Detach Partition (Leaf2) and check that stats are not updated.
 -- No updation of root stats expected.
 alter table rootTabMid1 detach partition rootTabLeaf2;
 select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
@@ -1784,10 +1784,10 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname |  tablename   | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs |        histogram_bounds         | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+--------------+---------+-----------+-----------+-----------+------------+------------------+-------------------+---------------------------------+-------------+-------------------+------------------------+----------------------
- public     | roottableaf2 | a       | f         |         0 |         4 |         -1 |                  |                   | {10,11,12,13,14,15,16,17,18,19} |           1 |                   |                        | 
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited |        histogram_bounds         
+--------------+---------+-----------+---------------------------------
+ roottableaf2 | a       | f         | {10,11,12,13,14,15,16,17,18,19}
 (1 row)
 
 -----------------------------------------------
@@ -1814,7 +1814,7 @@ insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
 -- 3. Update rootTabLeaf1 to check, if it is analyzed when a new partiton is attached.
 -- These should not be present in the root stats, after attach/detach of partition
 insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
--- 4. Attach new partition, and check updated stats
+-- 4. Attach new partition, and check that stats are not updated
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
 select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
    relname    | reltuples | relpages 
@@ -1825,12 +1825,12 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+ tablename | attname | inherited | histogram_bounds 
+-----------+---------+-----------+------------------
 (0 rows)
 
--- 5. Detach Partition (Leaf2) and check if root stats are updated.
+-- 5. Detach Partition (Leaf2) and check that stats are not updated.
 -- No updation of root stats expected.
 alter table rootTabMid1 detach partition rootTabLeaf2;
 select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
@@ -1842,12 +1842,157 @@ select relname, reltuples, relpages from pg_class where relname like 'root%' ord
  roottabmid1  |         0 |        0
 (4 rows)
 
-select * from pg_stats where tablename like 'root%' order by tablename;
- schemaname | tablename | attname | inherited | null_frac | avg_width | n_distinct | most_common_vals | most_common_freqs | histogram_bounds | correlation | most_common_elems | most_common_elem_freqs | elem_count_histogram 
-------------+-----------+---------+-----------+-----------+-----------+------------+------------------+-------------------+------------------+-------------+-------------------+------------------------+----------------------
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+ tablename | attname | inherited | histogram_bounds 
+-----------+---------+-----------+------------------
 (0 rows)
+
+-----------------------------------------------
+-- Case 7 - If a single leaf is attached/detached to/from the root.
+--          Root stats are updated when leaf is attached,
+--          but not when detached as only root is left.
+--
+--          Structure - RootTab -->  Leaf1
+--          Root  Analyzed
+--          Leaf1 Analyzed
+-----------------------------------------------
+--1. Create root table
+drop table if exists rootTab;
+drop table if exists rootTabLeaf1;
+drop table if exists rootTabLeaf2;
+create table rootTab(a int)  partition by range(a);
+analyze rootTab;
+--2. Create leaf table
+create table rootTableaf1(a int);
+insert into rootTableaf1 select i%10 from generate_series(0,7)i;
+analyze rootTableaf1;
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+   relname    | reltuples | relpages 
+--------------+-----------+----------
+ roottab      |         0 |        0
+ roottableaf1 |         8 |        3
+(2 rows)
+
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds  
+--------------+---------+-----------+-------------------
+ roottableaf1 | a       | f         | {0,1,2,3,4,5,6,7}
+(1 row)
+
+--3. Attach leaf and check that the root stats are updated
+alter table rootTab attach partition rootTableaf1 for values from (0) to (10);
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+   relname    | reltuples | relpages 
+--------------+-----------+----------
+ roottab      |         0 |        0
+ roottableaf1 |         8 |        3
+(2 rows)
+
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds  
+--------------+---------+-----------+-------------------
+ roottab      | a       | t         | {0,1,2,3,4,5,6,7}
+ roottableaf1 | a       | f         | {0,1,2,3,4,5,6,7}
+(2 rows)
+
+--4. Detach leaf and check that root stats are not updated.
+--   After Detach, only root is left, so Analyze is not performed on it.
+alter table rootTab detach partition rootTabLeaf1;
+select * from rootTab;
+ a 
+---
+(0 rows)
+
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+   relname    | reltuples | relpages 
+--------------+-----------+----------
+ roottab      |         0 |        0
+ roottableaf1 |         8 |        3
+(2 rows)
+
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds  
+--------------+---------+-----------+-------------------
+ roottab      | a       | t         | {0,1,2,3,4,5,6,7}
+ roottableaf1 | a       | f         | {0,1,2,3,4,5,6,7}
+(2 rows)
+
+-----------------------------------------------
+-- Case 8 - If root table, middle table are left after leaf is detached
+--          Root stats should be updated when leaf is attached, but not when detached
+--
+--          Structure - RootTab --> Mid --> Leaf1
+--          Root  Analyzed
+--          Leaf1 Analyzed
+-----------------------------------------------
+--1. Create root and middle table
+drop table if exists rootTab;
+drop table if exists rootTabLeaf1;
+drop table if exists rootTabLeaf2;
+create table rootTab(a int)  partition by range(a);
+create table rootTabMid1(a int) partition by range(a);
+alter table rootTab attach partition rootTabMid1 for values from (0) to (20);
+analyze rootTab;
+--2. Create leaf table
+create table rootTableaf1(a int);
+insert into rootTableaf1 select i%10 from generate_series(0,7)i;
+analyze rootTableaf1;
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+   relname    | reltuples | relpages 
+--------------+-----------+----------
+ roottab      |         0 |        0
+ roottableaf1 |         8 |        3
+ roottabmid1  |         0 |        0
+(3 rows)
+
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds  
+--------------+---------+-----------+-------------------
+ roottableaf1 | a       | f         | {0,1,2,3,4,5,6,7}
+(1 row)
+
+--3. Attach leaf and check that the root stats are updated
+alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+   relname    | reltuples | relpages 
+--------------+-----------+----------
+ roottab      |         0 |        0
+ roottableaf1 |         8 |        3
+ roottabmid1  |         0 |        0
+(3 rows)
+
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds  
+--------------+---------+-----------+-------------------
+ roottab      | a       | t         | {0,1,2,3,4,5,6,7}
+ roottableaf1 | a       | f         | {0,1,2,3,4,5,6,7}
+(2 rows)
+
+--4. Detach leaf and check that root stats are not updated.
+--   After Detach, no leaf is present, so Analyze is not performed.
+alter table rootTabMid1 detach partition rootTabLeaf1;
+select * from rootTab;
+ a 
+---
+(0 rows)
+
+select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
+   relname    | reltuples | relpages 
+--------------+-----------+----------
+ roottab      |         0 |        0
+ roottableaf1 |         8 |        3
+ roottabmid1  |         0 |        0
+(3 rows)
+
+select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
+  tablename   | attname | inherited | histogram_bounds  
+--------------+---------+-----------+-------------------
+ roottab      | a       | t         | {0,1,2,3,4,5,6,7}
+ roottableaf1 | a       | f         | {0,1,2,3,4,5,6,7}
+(2 rows)
 
 -- clean up in the end
 drop table if exists rootTab;
+drop table if exists rootTabMid1;
 drop table if exists rootTabLeaf1;
 drop table if exists rootTabLeaf2;

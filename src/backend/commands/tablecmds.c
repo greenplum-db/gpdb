@@ -5851,7 +5851,7 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 				 * Invalid class Oid (from pg_class) means
 				 * partition not attached successfully
 				 */
-				if (objAdd.classId != InvalidOid)
+				if (OidIsValid(objAdd.classId))
 				{
 					/*
 					 * 1. Check and update root stats
@@ -5861,7 +5861,7 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 					 * iff, all the existing leafs are
 					 * analyzed.
 					 */
-					update_root_stats(rel);
+					update_root_stats(rel, cmd);
 				}
 			}
 
@@ -5879,14 +5879,14 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			 * Invalid class Oid (from pg_class) means
 			 * partition not detached successfully
 			 */
-			if (objAdd.classId != InvalidOid)
+			if (OidIsValid(objAdd.classId))
 			{
 
 				/*
 				 * Check and update root stats
 				 * after detaching partition.
 				 */
-				update_root_stats(rel);
+				update_root_stats(rel, cmd);
 
 			}
 			break;

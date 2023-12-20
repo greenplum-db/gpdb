@@ -1306,18 +1306,50 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 	return !all_parts_empty;
 }
 
-/* Helper function to issue an analyze command on a specific relation */
-void update_root_stats(Relation rel)
+/*
+ * update_root_stats -- Update root stats
+ *
+ * Helper function to issue analyze command on a specific relation.
+ */
+void update_root_stats(Relation rel, AlterTableCmd *cmd)
 {
 	/*
 	 * Update stats iff, all the existing
 	 * leaf partitions are analyzed.
 	 */
-
 	Oid root_parent_relid = get_top_level_partition_root(rel->rd_id);
-
-	if (root_parent_relid != InvalidOid && leaf_parts_analyzed(root_parent_relid, InvalidOid, NIL, DEBUG2))
+	if (!OidIsValid(root_parent_relid))
 	{
+		if (!rel->rd_rel->relispartition)
+		{
+			/*
+			 * If the root is checked for the top level partition
+			 * InvalidOid will be returned.
+			 * Eg - Leaf partition is attached to root, in this case
+			 * rel->rd_id will be of the root.
+			 */
+			root_parent_relid = rel->rd_id;
+		}
+		else
+		{
+			/*
+			 * Invalid OID return
+			 */
+			return;
+		}
+	}
+
+	/*
+	 * Analyze command is issued, if leaf exist after detaching partition
+	 * or if a new partition is attached.
+	 */
+	if (leaf_parts_analyzed(root_parent_relid, InvalidOid, NIL, DEBUG2))
+	{
+
+		ereport(DEBUG2,
+			(errmsg("Analyzing relation %s after partition attached or detached",
+				get_rel_name(root_parent_relid))));
+
 		VacuumStmt *analyzeStmt;
 		VacuumRelation *relation;
 		ParseState *pstate;
