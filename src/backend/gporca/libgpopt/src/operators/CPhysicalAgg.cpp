@@ -240,7 +240,8 @@ CPhysicalAgg::PdsRequiredAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 			GPOS_ASSERT(0 < m_pdrgpcr->Size());
 
 			ULONG length = m_pdrgpcrArgDQA->Size();
-			CColRefArray *grpAndDistinctCols = CUtils::PdrgpcrExactCopy(mp, m_pdrgpcr);
+			CColRefArray *grpAndDistinctCols =
+				CUtils::PdrgpcrExactCopy(mp, m_pdrgpcr);
 
 			// add the distinct column to the group by at the first stage of
 			// the multi-level aggregation, and also deduplicate them.
