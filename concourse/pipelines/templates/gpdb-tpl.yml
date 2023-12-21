@@ -829,6 +829,7 @@ jobs:
       passed:
       {% if os_type == "rhel8" or os_type == "oel8" or os_type == "rocky8" %}
       - prepare_binary_swap_gpdb_[[ os_type ]]
+      - compile_gpdb_with_llvm_asserts_[[ compile_platform ]]
       {% endif %}
       {% if os_type == compile_platform %}
       - compile_gpdb_clients_windows
