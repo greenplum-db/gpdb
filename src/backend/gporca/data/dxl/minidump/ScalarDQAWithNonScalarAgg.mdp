@@ -18,7 +18,7 @@
                        ->  Streaming HashAggregate  (cost=0.00..441.31 rows=33334 width=8)
                              Group Key: c, b
                              ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..433.10 rows=33334 width=8)
-                                   Hash Key: c, b, b
+                                   Hash Key: c, b
                                    ->  Seq Scan on foo  (cost=0.00..431.77 rows=33334 width=8)
          Optimizer: Pivotal Optimizer (GPORCA)
         (11 rows)
@@ -1421,7 +1421,7 @@
         </dxl:LogicalGet>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="42">
+    <dxl:Plan Id="0" SpaceSize="38">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="449.305467" Rows="100000.000000" Width="8"/>
@@ -1520,9 +1520,6 @@
                   <dxl:HashExprList>
                     <dxl:HashExpr>
                       <dxl:Ident ColId="2" ColName="c" TypeMdid="0.23.1.0"/>
-                    </dxl:HashExpr>
-                    <dxl:HashExpr>
-                      <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
                     </dxl:HashExpr>
                     <dxl:HashExpr>
                       <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>

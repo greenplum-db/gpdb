@@ -498,7 +498,7 @@ select a,count(distinct a), count(distinct b) from t1 group by a
         </dxl:LogicalGroupBy>
       </dxl:Union>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1067404800">
+    <dxl:Plan Id="0" SpaceSize="398361600">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="2586.144639" Rows="134.000000" Width="20"/>

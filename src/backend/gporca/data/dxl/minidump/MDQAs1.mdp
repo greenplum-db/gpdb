@@ -451,7 +451,7 @@ SQL:
         </dxl:LogicalGet>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1874">
+    <dxl:Plan Id="0" SpaceSize="1010">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1724.007238" Rows="1.000000" Width="16"/>
