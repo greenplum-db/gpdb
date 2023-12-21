@@ -5430,6 +5430,9 @@ adjust_modifytable_subpaths(PlannerInfo *root, CmdType operation,
 
 			is_split_update = (bool) lfirst_int(lci);
 
+			if (is_split_update && rte->relkind == RELKIND_FOREIGN_TABLE)
+				elog(ERROR, "Greenplum don't support update distributed key of distributed foreign table.");
+
 			if (is_split_update)
 				subpath = create_split_update_path(root, rti, targetPolicy, subpath);
 			else

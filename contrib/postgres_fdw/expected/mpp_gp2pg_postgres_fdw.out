@@ -1,4 +1,10 @@
 -- This file is used to test the feature that there are multiple remote postgres servers.
+-- start_matchsubs
+-- m/postgres_fdw.c:\d+/
+-- s/postgres_fdw.c:\d+/postgres_fdw.c:LINE/
+-- m/pathnode.c:\d+/
+-- s/pathnode.c:\d+/pathnode.c:LINE/
+-- end_matchsubs
 -- ===================================================================
 -- create FDW objects
 -- ===================================================================
@@ -79,7 +85,7 @@ ALTER FOREIGN TABLE mpp_test OPTIONS (drop mpp_execute);
 -- Error when the value of option num_segments is NOT same as the length of option multi_hosts and multi_ports.
 ALTER SERVER pgserver OPTIONS (set num_segments '1');
 SELECT * FROM mpp_test;
-ERROR:  server option num_segments, multi_hosts and multi_ports don't match. (postgres_fdw.c:1502)  (seg0 slice1 127.0.0.1:7002 pid=24510)
+ERROR:  server option num_segments, multi_hosts and multi_ports don't match. (postgres_fdw.c:LINE)  (seg0 slice1 127.0.0.1:7002 pid=24510)
 ALTER SERVER pgserver OPTIONS (set num_segments '2');
 -- ===================================================================
 -- Simple queries
@@ -149,15 +155,6 @@ ALTER FOREIGN TABLE mpp_ft1 OPTIONS (drop use_remote_estimate);
 CREATE SCHEMA mpp_import_dest;
 IMPORT FOREIGN SCHEMA import_source FROM SERVER pgserver INTO mpp_import_dest;
 ERROR:  If there are multiple remote servers, gpdb doesn't support import foreign schema
--- ===================================================================
--- When there are multiple remote servers, we don't support INSERT/UPDATE/DELETE
--- ===================================================================
-INSERT INTO mpp_ft1 VALUES (1, 1);
-ERROR:  foreign table "mpp_ft1" does not allow inserts
-UPDATE mpp_ft1 SET c1 = c1 + 1;
-ERROR:  foreign table "mpp_ft1" does not allow updates
-DELETE FROM mpp_ft1;
-ERROR:  foreign table "mpp_ft1" does not allow deletes
 -- ===================================================================
 -- Aggregate and grouping queries
 -- ===================================================================
@@ -1028,3 +1025,120 @@ SELECT count(*), sum(t1.c1), avg(t2.c2) FROM mpp_ft2 t1 inner join mpp_ft2 t2 on
      1 |   2 | 2.0000000000000000
 (1 row)
 
+-- =====================================================================================
+-- Test DISTRIBUTED BY clause for postgres_fdw foreign table
+-- =====================================================================================
+\! env PGOPTIONS='' psql -p 5432 contrib_regression -c 'truncate "MPP_S 1"."T 1"'
+TRUNCATE TABLE
+\! env PGOPTIONS='' psql -p 5555 contrib_regression -c 'truncate "MPP_S 1"."T 1"'
+TRUNCATE TABLE
+-- Hash distribution
+CREATE FOREIGN TABLE mpp_dist (
+       c1 int,
+       c2 int
+) SERVER pgserver OPTIONS (schema_name 'MPP_S 1', table_name 'T 1') DISTRIBUTED BY (c1);
+EXPLAIN (VERBOSE, COSTS OFF) INSERT INTO mpp_dist VALUES (1, 1), (2, 2), (3, 3);
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Insert on public.mpp_dist
+   Remote SQL: INSERT INTO "MPP_S 1"."T 1"(c1, c2) VALUES ($1, $2)
+   ->  Redistribute Motion 1:2  (slice1; segments: 1)
+         Output: "*VALUES*".column1, "*VALUES*".column2
+         Hash Key: "*VALUES*".column1
+         ->  Values Scan on "*VALUES*"
+               Output: "*VALUES*".column1, "*VALUES*".column2
+ Optimizer: Postgres-based planner
+ Settings: gp_enable_minmax_optimization = 'off'
+(9 rows)
+
+INSERT INTO mpp_dist VALUES (1, 1), (2, 2), (3, 3);
+EXPLAIN (VERBOSE, COSTS OFF) SELECT * FROM mpp_dist ORDER BY c1;
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)
+   Output: c1, c2
+   Merge Key: c1
+   ->  Foreign Scan on public.mpp_dist
+         Output: c1, c2
+         Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 1" ORDER BY c1 ASC NULLS LAST
+ Optimizer: Postgres-based planner
+ Settings: gp_enable_minmax_optimization = 'off'
+(8 rows)
+
+SELECT * FROM mpp_dist ORDER BY c1;
+ c1 | c2 
+----+----
+  1 |  1
+  2 |  2
+  3 |  3
+(3 rows)
+
+\! env PGOPTIONS='' psql -p 5432 contrib_regression -c 'SELECT * FROM "MPP_S 1"."T 1" ORDER BY c1'
+ c1 | c2 
+----+----
+  2 |  2
+  3 |  3
+(2 rows)
+
+\! env PGOPTIONS='' psql -p 5555 contrib_regression -c 'SELECT * FROM "MPP_S 1"."T 1" ORDER BY c1'
+ c1 | c2 
+----+----
+  1 |  1
+(1 row)
+
+EXPLAIN (VERBOSE, COSTS OFF) SELECT * FROM mpp_dist t1 JOIN mpp_dist t2 ON t1.c1 = t2.c1 ORDER BY t1.c1;
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
+ Gather Motion 2:1  (slice1; segments: 2)
+   Output: t1.c1, t1.c2, t2.c1, t2.c2, t1.c1
+   Merge Key: t1.c1
+   ->  Sort
+         Output: t1.c1, t1.c2, t2.c1, t2.c2, t1.c1
+         Sort Key: t1.c1
+         ->  Hash Join
+               Output: t1.c1, t1.c2, t2.c1, t2.c2, t1.c1
+               Hash Cond: (t1.c1 = t2.c1)
+               ->  Foreign Scan on public.mpp_dist t1
+                     Output: t1.c1, t1.c2
+                     Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 1"
+               ->  Hash
+                     Output: t2.c1, t2.c2
+                     ->  Foreign Scan on public.mpp_dist t2
+                           Output: t2.c1, t2.c2
+                           Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 1"
+ Optimizer: Postgres-based planner
+ Settings: gp_enable_minmax_optimization = 'off'
+(19 rows)
+
+SELECT * FROM mpp_dist t1 JOIN mpp_dist t2 ON t1.c1 = t2.c1 ORDER BY t1.c1;
+ c1 | c2 | c1 | c2 
+----+----+----+----
+  1 |  1 |  1 |  1
+  2 |  2 |  2 |  2
+  3 |  3 |  3 |  3
+(3 rows)
+
+EXPLAIN (VERBOSE, COSTS OFF) UPDATE mpp_dist SET c1 = 1;
+ERROR:  Greenplum don't support update distributed key of distributed foreign table. (pathnode.c:LINE)
+UPDATE mpp_dist SET c1 = 1;
+ERROR:  Greenplum don't support update distributed key of distributed foreign table. (pathnode.c:LINE)
+EXPLAIN (VERBOSE, COSTS OFF) UPDATE mpp_dist SET c2 = 2;
+                      QUERY PLAN                       
+-------------------------------------------------------
+ Update on public.mpp_dist
+   ->  Foreign Update on public.mpp_dist
+         Remote SQL: UPDATE "MPP_S 1"."T 1" SET c2 = 2
+ Optimizer: Postgres-based planner
+ Settings: gp_enable_minmax_optimization = 'off'
+(5 rows)
+
+UPDATE mpp_dist SET c2 = 2;
+SELECT * FROM mpp_dist ORDER BY c1;
+ c1 | c2 
+----+----
+  1 |  2
+  2 |  2
+  3 |  2
+(3 rows)
+
+DELETE FROM mpp_dist;

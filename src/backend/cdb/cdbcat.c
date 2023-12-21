@@ -319,9 +319,11 @@ GpPolicyFetch(Oid tbloid)
 	HeapTuple	gp_policy_tuple = NULL;
 
 	/*
+	 * 1. Handle specific external table firstly.
+	 *
 	 * EXECUTE-type external tables have an "ON ..." specification.
-	 * See if it's "COORDINATOR_ONLY". Other types of external tables have a
-	 * gp_distribution_policy row, like normal tables.
+	 * See if it's "COORDINATOR_ONLY".
+	 *
 	 */
 	if (rel_is_external_table(tbloid))
 	{
@@ -369,41 +371,13 @@ GpPolicyFetch(Oid tbloid)
 			}
 		}
 	}
-	else if (get_rel_relkind(tbloid) == RELKIND_FOREIGN_TABLE)
-	{
-		/*
-		 * Similar to the external table creation, there is a transient state
-		 * during creation of a foreign table, where the pg_class entry has
-		 * been created, before the pg_foreign_table entry has been created.
-		 */
-		HeapTuple	tp = SearchSysCache1(FOREIGNTABLEREL, ObjectIdGetDatum(tbloid));
-
-		if (HeapTupleIsValid(tp))
-		{
-			ReleaseSysCache(tp);
-
-			ForeignTable *f = GetForeignTable(tbloid);
-
-			if (f->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
-			{
-				ForeignServer *server = GetForeignServer(f->serverid);
-				/*
-				 * Currently, foreign tables do not support a distribution
-				 * policy, as opposed to writable external tables. For now,
-				 * we will create a random partitioned policy for foreign
-				 * tables that run on all segments. This will allow writing
-				 * to foreign tables from all segments when the mpp_execute
-				 * option is set to 'all segments'
-				 */
-				if (server)
-					return createRandomPartitionedPolicy(server->num_segments);
-				else
-					return createRandomPartitionedPolicy(getgpsegmentCount());
-			}
-		}
-	}
 
 	/*
+	 * 2. Try to get gp_distribution_policy of tables from catalog.
+	 *
+	 * Normal tables, some type of external tables and common foreign tables
+	 * might have a gp_distribution_policy row.
+	 *
 	 * Select by value of the localoid field
 	 *
 	 * SELECT * FROM gp_distribution_policy WHERE localoid = :1
@@ -432,7 +406,7 @@ GpPolicyFetch(Oid tbloid)
 		 * of cluster and dispatcher cannot handle this.
 		 */
 		if ((Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE) &&
-			policyform->numsegments > getgpsegmentCount())
+			(policyform->numsegments > getgpsegmentCount() && get_rel_relkind(tbloid) != RELKIND_FOREIGN_TABLE))
 		{
 			ReleaseSysCache(gp_policy_tuple);
 			ereport(ERROR,
@@ -493,7 +467,48 @@ GpPolicyFetch(Oid tbloid)
 		ReleaseSysCache(gp_policy_tuple);
 	}
 
-	/* Interpret absence of a valid policy row as POLICYTYPE_ENTRY */
+	/*
+	 * 3. For foreign tables which don't have gp_distribution_policy row and
+	 *    exec_location == FTEXECLOCATION_ALL_SEGMENTS,
+	 *    we will make RandomPartitionedPolicy for them.
+	 */
+	if (get_rel_relkind(tbloid) == RELKIND_FOREIGN_TABLE && policy == NULL)
+	{
+		/*
+		 * Similar to the external table creation, there is a transient state
+		 * during creation of a foreign table, where the pg_class entry has
+		 * been created, before the pg_foreign_table entry has been created.
+		 */
+		HeapTuple	tp = SearchSysCache1(FOREIGNTABLEREL, ObjectIdGetDatum(tbloid));
+
+		if (HeapTupleIsValid(tp))
+		{
+			ReleaseSysCache(tp);
+
+			ForeignTable *f = GetForeignTable(tbloid);
+
+			if (f->exec_location == FTEXECLOCATION_ALL_SEGMENTS)
+			{
+				/*
+				 * If foreign tables don't have a specific distribution
+				 * policy, we will create a random partitioned policy when
+				 * mpp_execute is set to 'all segments'.
+				 *
+				 * If foreign server have option 'num_segments', we need to
+				 * use it.
+				 */
+				ForeignServer *server = GetForeignServer(f->serverid);
+				if (server)
+					policy = createRandomPartitionedPolicy(server->num_segments);
+				else
+					policy = createRandomPartitionedPolicy(getgpsegmentCount());
+			}
+		}
+	}
+
+	/*
+	 * 4. Interpret absence of a valid policy row and meaningful rules as POLICYTYPE_ENTRY.
+	 */
 	if (policy == NULL)
 	{
 		return makeGpPolicy(POLICYTYPE_ENTRY, 0, -1);

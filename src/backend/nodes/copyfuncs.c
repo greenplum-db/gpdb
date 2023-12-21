@@ -5255,6 +5255,7 @@ _copySliceTable(const SliceTable *from)
 		COPY_NODE_FIELD(slices[i].children);
 		COPY_NODE_FIELD(slices[i].primaryProcesses);
 		COPY_BITMAPSET_FIELD(slices[i].processesMap);
+		COPY_NODE_FIELD(slices[i].processesList);
 	}
 
 	COPY_SCALAR_FIELD(instrument_options);

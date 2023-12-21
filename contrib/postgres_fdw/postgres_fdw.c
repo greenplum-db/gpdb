@@ -1405,16 +1405,36 @@ postgresGetForeignPlan(PlannerInfo *root,
 }
 
 /*
- * Get the order of current QE in current gang, which is
- * used as index to decide which remote server current QE
+ * This function returns the index of current QE process in slice->processesList.
+ *
+ * We use this index to decide which remote server current QE
  * should connect to.
+ *
+ * Only when Gp_role == GP_ROLE_EXECUTE we'll call this function.
  */
 static int get_hostinfo_index(EState *estate)
 {
 	ExecSlice *current_slice = &estate->es_sliceTable->slices[currentSliceId];
+	int index = -1;
+	int i = 0;
+	ListCell *lc = NULL;
 
-	/* Get the process nth number in current gang */
-	int index = bms_member_index(current_slice->processesMap, qe_identifier);
+	/*
+	 * Using the index of current QE process in slice->processesList can make sure that
+	 * QE process in a specific segment always connect to the same remote server.
+	 *
+	 * For example, QE process in segment 0 always connects to the first remote server in
+	 * the remote servers list.
+	 */
+	foreach_with_count(lc, current_slice->processesList, i)
+	{
+		int	identifier = lfirst_int(lc);
+		if (qe_identifier == identifier)
+		{
+			index = i;
+			break;
+		}
+	}
 
 	if (index < 0)
 		ereport(ERROR, (errmsg("No valid slice number")));
@@ -1569,9 +1589,20 @@ postgresBeginForeignScan(ForeignScanState *node, int eflags)
 		/* scenario that there are multiple remote servers */
 		if (Gp_role == GP_ROLE_EXECUTE)
 		{
+			/*
+			 * Current QE will connect to a specific remote server
+			 * according to the index of current QE in slice->processList.
+			 */
 			int index = get_hostinfo_index(estate);
 			rewrite_server_options(server, index);
 			fsstate->conn = GetConnection(server, user, false);
+		}
+		else if (Gp_role == GP_ROLE_UTILITY)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_FDW_ERROR),
+					 errmsg("Greenplum doesn't support access foreign table which is distributed to " \
+							 "multiple remote servers in utility mode.")));
 		}
 		/* If there are multiple remote servers, QD won't built connection to remote pg server. */
 	}
@@ -2226,13 +2257,6 @@ postgresIsForeignRelUpdatable(Relation rel)
 	table = GetForeignTable(RelationGetRelid(rel));
 	server = GetForeignServer(table->serverid);
 
-	/*
-	 * Now if there are multiple remote servers,, we don't support INSERT/UPDATE/DELETE.
-	 * We plan to support it later.
-	 */
-	if (is_multi_servers(server, table->exec_location))
-		return 0;
-
 	foreach(lc, server->options)
 	{
 		DefElem    *def = (DefElem *) lfirst(lc);
@@ -2582,9 +2606,20 @@ postgresBeginDirectModify(ForeignScanState *node, int eflags)
 		/* scenario that there are multiple remote servers */
 		if (Gp_role == GP_ROLE_EXECUTE)
 		{
+			/*
+			 * Current QE will connect to a specific remote server
+			 * according to the index of current QE in slice->processList.
+			 */
 			int index = get_hostinfo_index(estate);
 			rewrite_server_options(server, index);
 			dmstate->conn = GetConnection(server, user, false);
+		}
+		else if (Gp_role == GP_ROLE_UTILITY)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_FDW_ERROR),
+					 errmsg("Greenplum doesn't support access foreign table which is distributed to " \
+							 "multiple remote servers in utility mode.")));
 		}
 		/* If there are multiple remote servers, QD won't built connection to remote pg server. */
 	}
@@ -3765,9 +3800,20 @@ create_foreign_modify(EState *estate,
 		/* scenario that there are multiple remote servers */
 		if (Gp_role == GP_ROLE_EXECUTE)
 		{
+			/*
+			 * Current QE will connect to a specific remote server
+			 * according to the index of current QE in slice->processList.
+			 */
 			int index = get_hostinfo_index(estate);
 			rewrite_server_options(server, index);
 			fmstate->conn = GetConnection(server, user, false);
+		}
+		else if (Gp_role == GP_ROLE_UTILITY)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_FDW_ERROR),
+					 errmsg("Greenplum doesn't support access foreign table which is distributed to " \
+							 "multiple remote servers in utility mode.")));
 		}
 		/* If there are multiple remote servers, QD won't built connection to remote pg server. */
 	}

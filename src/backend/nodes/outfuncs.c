@@ -5171,6 +5171,7 @@ _outSliceTable(StringInfo str, const SliceTable *node)
 		WRITE_DUMMY_FIELD(slices[i].primaryGang);
 		WRITE_NODE_FIELD(slices[i].primaryProcesses); /* List of (CDBProcess *) */
 		WRITE_BITMAPSET_FIELD(slices[i].processesMap);
+		WRITE_NODE_FIELD(slices[i].processesList); /* List of qe_identifier */
 	}
 	WRITE_BOOL_FIELD(hasMotions);
 	WRITE_INT_FIELD(instrument_options);

@@ -34,6 +34,23 @@ CREATE SERVER s1 FOREIGN DATA WRAPPER dummy OPTIONS (num_segments '5');
 -- CHECK FOREIGN SERVER's OPTIONS
 SELECT srvoptions FROM pg_foreign_server WHERE srvname = 's1';
 
+-- Check compatibility between FOREIGN TABLE mpp_execute option and DISTRIBUTED BY clause
+CREATE FOREIGN TABLE ft1_hash_dist (
+	c1 int
+) SERVER s1 OPTIONS (delimiter ',', mpp_execute 'coordinator') DISTRIBUTED BY (c1);     -- ERROR
+
+CREATE FOREIGN TABLE ft1_hash_dist (
+	c1 int
+) SERVER s1 OPTIONS (delimiter ',', mpp_execute 'all segments') DISTRIBUTED BY (c1);
+SELECT policytype, numsegments, distkey, distclass 
+FROM gp_distribution_policy WHERE localoid = 'ft1_hash_dist'::regclass;
+
+ALTER FOREIGN TABLE ft1_hash_dist SET DISTRIBUTED REPLICATED;
+
+CREATE FOREIGN TABLE ft1_repl_dist (
+	c1 int
+) SERVER s1 OPTIONS (delimiter ',', mpp_execute 'all segments') DISTRIBUTED REPLICATED;	-- ERROR
+
 -- start_ignore
 DROP FOREIGN DATA WRAPPER dummy CASCADE;
 -- end_ignore

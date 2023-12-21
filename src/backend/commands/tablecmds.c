@@ -5160,6 +5160,12 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		case AT_SetDistributedBy:	/* SET DISTRIBUTED BY */
 			ATSimplePermissions(rel, ATT_TABLE | ATT_FOREIGN_TABLE);
 
+			if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE && !rel_is_external_table(rel->rd_id))
+			{
+				ereport(ERROR,
+						errmsg("Greenplum doesn't support to modify distribution policy of common foreign table now."));
+			}
+
 			if (!recursing) /* MPP-5772, MPP-5784 */
 			{
 				DistributedBy *ldistro;
@@ -5232,7 +5238,9 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 
 			if (!recursing)
 			{
+				/* For foreign table, there is no need to check its rel->rd_cdbpolicy->numsegments. */
 				if (Gp_role == GP_ROLE_DISPATCH &&
+					rel->rd_rel->relkind != RELKIND_FOREIGN_TABLE &&
 					rel->rd_cdbpolicy->numsegments == getgpsegmentCount())
 					ereport(ERROR,
 							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
@@ -18051,6 +18059,8 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		else if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE ||
 			rel_is_external_table(RelationGetRelid(rel)))
 			need_reorg = false;
+		else if (rel->rd_rel->relkind == RELKIND_FOREIGN_TABLE)
+			elog(ERROR, "Greenplum doesn't support to modify distribution policy of common foreign table now.");
 		else
 			elog(ERROR, "unexpected relkind '%c'", rel->rd_rel->relkind);
 

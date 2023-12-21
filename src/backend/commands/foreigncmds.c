@@ -1669,6 +1669,34 @@ CreateForeignTable(CreateForeignTableStmt *stmt, Oid relid, bool skip_permission
 	fdw = GetForeignDataWrapper(server->fdwid);
 
 	/*
+	 * Check compatibility between Distributed By clause and mpp_execute option.
+	 *
+	 * External table is a specific kind of foreign table and have its permission check before.
+	 * So skip its check here.
+	 */
+	if (stmt->distributedBy != NULL && strcmp(stmt->servername, GP_EXTTABLE_SERVER_NAME) != 0)
+	{
+		/*
+		 * Users can NOT set stmt->distributedBy->ptype to POLICYTYPE_ENTRY by Distributed clause.
+		 * So stmt->distributedBy->ptype MUST be POLICYTYPE_REPLICATED or POLICYTYPE_PARTITIONED here.
+		 */
+		if (stmt->distributedBy->ptype == POLICYTYPE_REPLICATED)
+			ereport(ERROR, (errcode(ERRCODE_FDW_ERROR),
+							errmsg("Distribution policy can NOT be set to DISTRIBUTED REPLICATED for foreign table.")));
+
+		Assert(stmt->distributedBy->ptype == POLICYTYPE_PARTITIONED);
+
+		char mpp_execute = GetMppExecuteOption(stmt->options);
+		if (mpp_execute == FTEXECLOCATION_NOT_DEFINED)
+			mpp_execute = server->exec_location;
+
+		if (mpp_execute != FTEXECLOCATION_ALL_SEGMENTS)
+			ereport(ERROR, (errcode(ERRCODE_FDW_ERROR),
+							errmsg("The option mpp_execute of foreign table with hash or random distribution " \
+									"must be set to \"all segments\".")));
+	}
+
+	/*
 	 * Insert tuple into pg_foreign_table.
 	 */
 	memset(values, 0, sizeof(values));

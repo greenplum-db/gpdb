@@ -38,6 +38,45 @@
 extern Datum pg_options_to_table(PG_FUNCTION_ARGS);
 extern Datum postgresql_fdw_validator(PG_FUNCTION_ARGS);
 
+/* Get the mpp_execute option. */
+char
+GetMppExecuteOption(List *options)
+{
+	ListCell *lc = NULL;
+	char *mpp_execute = NULL;
+	char exec_location = FTEXECLOCATION_NOT_DEFINED;
+
+	foreach(lc, options)
+	{
+		DefElem    *def = (DefElem *) lfirst(lc);
+
+		if (strcmp(def->defname, "mpp_execute") == 0)
+		{
+			mpp_execute = defGetString(def);
+
+			if (pg_strcasecmp(mpp_execute, "any") == 0)
+				exec_location = FTEXECLOCATION_ANY;
+			else if (pg_strcasecmp(mpp_execute, "master") == 0)
+				exec_location = FTEXECLOCATION_COORDINATOR;
+			else if (pg_strcasecmp(mpp_execute, "coordinator") == 0)
+				exec_location = FTEXECLOCATION_COORDINATOR;
+			else if (pg_strcasecmp(mpp_execute, "all segments") == 0)
+				exec_location = FTEXECLOCATION_ALL_SEGMENTS;
+			else
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("\"%s\" is not a valid mpp_execute value",
+								mpp_execute)));
+			}
+
+			break;
+		}
+	}
+
+	return exec_location;
+}
+
 /* Get and separate out the mpp_execute option. */
 char
 SeparateOutMppExecute(List **options)
@@ -988,6 +1027,9 @@ BuildForeignScan(Oid relid, Index scanrelid, List *qual, List *targetlist, Query
 	root = makeNode(PlannerInfo);
 	root->is_from_orca = true;
 	root->parse = query;
+
+	/* cdb_build_distribution_keys need to makeNode in root->planner_cxt. */
+	root->planner_cxt = CurrentMemoryContext;
 
 	int	targetlist_length = scanrelid + 1;
 	/* Arrays are accessed using RT indexes (1..N) */

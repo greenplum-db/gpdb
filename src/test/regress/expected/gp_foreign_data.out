@@ -37,3 +37,24 @@ SELECT srvoptions FROM pg_foreign_server WHERE srvname = 's1';
  {num_segments=5}
 (1 row)
 
+-- Check compatibility between FOREIGN TABLE mpp_execute option and DISTRIBUTED BY clause
+CREATE FOREIGN TABLE ft1_hash_dist (
+	c1 int
+) SERVER s1 OPTIONS (delimiter ',', mpp_execute 'coordinator') DISTRIBUTED BY (c1);     -- ERROR
+ERROR:  The option mpp_execute of foreign table with hash or random distribution must be set to "all segments".
+CREATE FOREIGN TABLE ft1_hash_dist (
+	c1 int
+) SERVER s1 OPTIONS (delimiter ',', mpp_execute 'all segments') DISTRIBUTED BY (c1);
+SELECT policytype, numsegments, distkey, distclass 
+FROM gp_distribution_policy WHERE localoid = 'ft1_hash_dist'::regclass;
+ policytype | numsegments | distkey | distclass 
+------------+-------------+---------+-----------
+ p          |           5 | 1       | 10054
+(1 row)
+
+ALTER FOREIGN TABLE ft1_hash_dist SET DISTRIBUTED REPLICATED;
+ERROR:  Greenplum doesn't support to modify distribution policy of common foreign table now. (tablecmds.c:5164)
+CREATE FOREIGN TABLE ft1_repl_dist (
+	c1 int
+) SERVER s1 OPTIONS (delimiter ',', mpp_execute 'all segments') DISTRIBUTED REPLICATED;	-- ERROR
+ERROR:  Distribution policy can NOT be set to DISTRIBUTED REPLICATED for foreign table.

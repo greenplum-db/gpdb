@@ -136,6 +136,8 @@ typedef struct ExecSlice
 	List		*primaryProcesses;
 	/* A bitmap to identify which QE should execute this slice */
 	Bitmapset	*processesMap;
+	/* A list of QE identifier that should execute this slice  */
+	List		*processesList;
 } ExecSlice;
 
 /*

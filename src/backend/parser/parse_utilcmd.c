@@ -83,6 +83,12 @@
 #include "utils/memutils.h"
 #include "catalog/pg_appendonly.h"
 
+#include "catalog/pg_foreign_data_wrapper.h"
+#include "catalog/pg_foreign_server.h"
+#include "catalog/pg_foreign_table.h"
+#include "foreign/fdwapi.h"
+#include "foreign/foreign.h"
+
 /* State shared by transformCreateStmt and its subroutines */
 typedef struct
 {
@@ -411,6 +417,11 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString)
 	if (IsA(stmt, CreateForeignTableStmt))
 	{
 		DistributedBy *ft_distributedBy = ((CreateForeignTableStmt *)stmt)->distributedBy;
+		ForeignServer *server = GetForeignServerByName(((CreateForeignTableStmt *)stmt)->servername, false);
+		/* If ForeignServer has option num_segments, update ft_distributedBy->num_segments. */
+		if (ft_distributedBy && server)
+			ft_distributedBy->numsegments = server->num_segments;
+
 		if (ft_distributedBy || likeDistributedBy)
 			stmt->distributedBy = transformDistributedBy(pstate, &cxt, ft_distributedBy,
 														 likeDistributedBy, bQuiet);
