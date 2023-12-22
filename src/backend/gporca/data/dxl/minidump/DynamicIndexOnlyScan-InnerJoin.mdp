@@ -1298,7 +1298,7 @@
     <dxl:Plan Id="0" SpaceSize="54">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="12.000557" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="12.000507" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -1312,7 +1312,7 @@
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="true" OuterRefAsParam="true">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="12.000527" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="12.000477" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -1374,9 +1374,9 @@
               </dxl:Columns>
             </dxl:TableDescriptor>
           </dxl:DynamicIndexOnlyScan>
-          <dxl:IndexScan IndexScanDirection="Forward">
+          <dxl:IndexOnlyScan IndexScanDirection="Forward">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="6.000211" Rows="1.000000" Width="1"/>
+              <dxl:Cost StartupCost="0" TotalCost="6.000161" Rows="1.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList/>
             <dxl:Filter/>
@@ -1404,7 +1404,7 @@
                 <dxl:Column ColId="19" Attno="-7" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
               </dxl:Columns>
             </dxl:TableDescriptor>
-          </dxl:IndexScan>
+          </dxl:IndexOnlyScan>
           <dxl:NLJIndexParamList>
             <dxl:NLJIndexParam ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
           </dxl:NLJIndexParamList>

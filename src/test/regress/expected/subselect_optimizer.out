@@ -981,7 +981,7 @@ where (exists(select 1 from tenk1 k where k.unique1 = t.unique2) or ten < 0)
                                        Hash Key: tenk1.unique2
                                        ->  Index Scan using tenk1_thous_tenthous on tenk1
                                              Index Cond: (thousand = 1)
-                                 ->  Index Scan using tenk1_unique1 on tenk1 tenk1_1
+                                 ->  Index Only Scan using tenk1_unique1 on tenk1 tenk1_1
                                        Index Cond: (unique1 = tenk1.unique2)
  Optimizer: GPORCA
 (17 rows)

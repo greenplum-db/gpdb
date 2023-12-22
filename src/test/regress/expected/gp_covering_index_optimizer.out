@@ -490,10 +490,11 @@ SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt JOIN test_basic_cover_index 
                Heap Fetches: 0
                Number of partitions to scan: 1 (out of 4)
                Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
-         ->  Index Scan using i_test_basic_index on test_basic_cover_index (actual rows=1 loops=1)
+         ->  Index Only Scan using i_test_basic_index on test_basic_cover_index (actual rows=1 loops=1)
                Index Cond: ((a = test_cover_index_on_pt.a) AND (a < 10))
+               Heap Fetches: 0
  Optimizer: GPORCA
-(12 rows)
+(13 rows)
 
 SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt JOIN test_basic_cover_index AS t ON pt.a=t.a WHERE pt.a<10 and pt.b=2;
  a | b 
@@ -515,10 +516,11 @@ SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt LEFT JOIN test_basic_cover_i
                Heap Fetches: 0
                Number of partitions to scan: 1 (out of 4)
                Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
-         ->  Index Scan using i_test_basic_index on test_basic_cover_index (actual rows=1 loops=1)
+         ->  Index Only Scan using i_test_basic_index on test_basic_cover_index (actual rows=1 loops=1)
                Index Cond: ((a = test_cover_index_on_pt.a) AND (a < 10))
+               Heap Fetches: 0
  Optimizer: GPORCA
-(12 rows)
+(13 rows)
 
 SELECT pt.a, pt.b FROM test_cover_index_on_pt AS pt LEFT JOIN test_basic_cover_index AS t ON pt.a=t.a WHERE pt.a<10 and pt.b=2;
  a | b 

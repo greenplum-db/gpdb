@@ -621,3 +621,33 @@ set optimizer_enable_indexscan=off;
 -- identical plans
 explain select * from two_idx_tbl where x = 'cc' or y = 'dd';
 explain select * from two_idx_tbl where 'cc' = x or 'dd' = y;
+
+RESET optimizer_enable_indexscan;
+RESET optimizer_enable_indexonlyscan;
+RESET enable_indexonlyscan;
+RESET seq_page_cost;
+
+-- Test IndexNLJoin on IndexOnlyScan in ORCA (both heap and AOCS table)
+create table index_only_join_test (a int, b int) distributed by (a);
+create table index_only_join_test_aocs (a int, b int) with (appendonly='true') distributed by (a);
+
+create index index_only_join_test_a_idx on index_only_join_test(a);
+create index index_only_join_test_b_idx on index_only_join_test(b) include (a);
+create index index_only_join_test_aocs_a_idx on index_only_join_test_aocs(a);
+create index index_only_join_test_aocs_b_idx on index_only_join_test_aocs(b) include (a);
+insert into index_only_join_test select i,i from generate_series(1, 100)i;
+insert into index_only_join_test_aocs select i,i from generate_series(1, 100)i;
+analyze index_only_join_test;
+analyze index_only_join_test_aocs;
+
+set enable_nestloop to on;
+set enable_seqscan to off;
+set optimizer_enable_indexscan to off;
+explain select t1.a from index_only_join_test t1, index_only_join_test t2 where t1.a = t2.a and t1.b < 10;
+reset optimizer_enable_indexscan;
+explain select t1.a from index_only_join_test_aocs t1, index_only_join_test_aocs t2 where t1.a = t2.a and t1.b < 10;
+reset enable_nestloop;
+reset enable_seqscan;
+
+drop table index_only_join_test;
+drop table index_only_join_test_aocs;

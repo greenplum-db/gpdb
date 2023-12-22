@@ -13310,9 +13310,8 @@ explain (costs off) select * from tpart_dim d join t_ao_btree f on d.a=f.a where
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: true
-         ->  Broadcast Motion 3:3  (slice2; segments: 3)
-               ->  Seq Scan on tpart_dim
-                     Filter: (b = 1)
+         ->  Seq Scan on tpart_dim
+               Filter: (b = 1)
          ->  Index Only Scan using t_ao_btree_ix on t_ao_btree
                Index Cond: (a = tpart_dim.a)
  Optimizer: Pivotal Optimizer (GPORCA)
