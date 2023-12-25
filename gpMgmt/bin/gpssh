@@ -109,7 +109,7 @@ def parseConfigFile():
 
     try:
         config = configparser.RawConfigParser()
-        config.read(gp.get_coordinator_datadir() + '/gpssh.conf')
+        config.read(get_coordinatordatadir() + '/gpssh.conf')
         if GV.DELAY_BEFORE_SEND is None:
             GV.DELAY_BEFORE_SEND = config.getfloat('gpssh', 'delaybeforesend')
         if GV.PROMPT_VALIDATION_TIMEOUT is None:
