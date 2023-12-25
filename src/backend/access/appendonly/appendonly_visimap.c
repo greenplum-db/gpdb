@@ -25,29 +25,6 @@
 #include "utils/snapmgr.h"
 
 /*
- * Key structure for the visimap entry hash table.
- */
-typedef struct AppendOnlyVisiMapEntryKey
-{
-	/*
-	 * Segno of the dirty visimap entry.
-	 *
-	 * MPP-23546: Changed the type of segno from int to uint64.  With uint
-	 * (4-bytes), additional 4-bytes were being used for padding. The padding
-	 * bits may differ for two keys causing two otherwise equal objects to be
-	 * treated as unequal by hash functions. Keeping type to uint64 does not
-	 * change the value of sizeof(AppendOnlyVisiMapEntryKey) but eliminates
-	 * padding.
-	 */
-	uint64		segno;
-
-	/*
-	 * First row num of the dirty visimap entry.
-	 */
-	uint64		firstRowNum;
-} AppendOnlyVisiMapEntryKey;
-
-/*
  * Key/Value structure for the visimap deletion hash table.
  */
 typedef struct AppendOnlyVisiMapDeleteData
@@ -55,7 +32,7 @@ typedef struct AppendOnlyVisiMapDeleteData
 	/*
 	 * Key of the visimap entry
 	 */
-	AppendOnlyVisiMapEntryKey key;
+	AppendOnlyVisimapEntryKey key;
 
 	/*
 	 * Location of the latest dirty version of the visimap bitmap in the
@@ -71,13 +48,384 @@ typedef struct AppendOnlyVisiMapDeleteData
 } AppendOnlyVisiMapDeleteData;
 
 
-
 static void AppendOnlyVisimap_Store(
 						AppendOnlyVisimap *visiMap);
 
 static void AppendOnlyVisimap_Find(
 					   AppendOnlyVisimap *visiMap,
 					   AOTupleId *tupleId);
+
+/*
+ * Hash function for the visimap entry hash table.
+ */
+static uint32
+aovisimap_hash_key(const void *key, Size keysize)
+{
+	Assert(keysize == sizeof(AppendOnlyVisimapEntryKey));
+	return DatumGetUInt32(hash_any((const unsigned char *) key,
+								   keysize));
+}
+
+/*
+ * Hash function for comparing two keys of type
+ * AppendOnlyVisimapEntryKey.  Equality of keys is of interest and
+ * not ordering between them (greater/less).
+ */
+static int
+aovisimap_hash_match(const void *key1, const void *key2, Size keysize)
+{
+	Assert(keysize == sizeof(AppendOnlyVisimapEntryKey));
+	AppendOnlyVisimapEntryKey *k1 = (AppendOnlyVisimapEntryKey *) key1;
+	AppendOnlyVisimapEntryKey *k2 = (AppendOnlyVisimapEntryKey *) key2;
+
+	if ((k1->segno == k2->segno) && (k1->firstRowNum == k2->firstRowNum))
+	{
+		return 0;
+	}
+	return 1;
+}
+
+static inline void
+aovisimap_reset_range_desc_info(AppendOnlyVisimapRangeDesc *rdesc)
+{
+	Assert(rdesc != NULL);
+
+	rdesc->inlru = false;
+	rdesc->segno = InvalidFileSegNumber;
+	rdesc->firstrowno = InvalidAORowNum;
+	rdesc->allvisible = false;
+}
+
+/*
+ * Allocate a new rangeid, if no free slot,
+ * evict the least recently used one for reusing.
+ */
+static int
+AppendOnlyVisimapCache_Alloc(
+							 AppendOnlyVisimapCache *cache)
+{
+	AppendOnlyVisimapRangeDesc *rdescs;
+	int oldsize = cache->ndescs;
+	int newsize;
+
+	Assert(CurrentMemoryContext == cache->mctx);
+	/* oldsize cannot be greater than the limit as being guaranteed by callers */
+	Assert(oldsize >= 0 && oldsize < gp_aovisimap_max_cache_entries);
+
+	if (oldsize == 0)
+	{
+		Assert(cache->rdescs == NULL);
+	
+		newsize = 1;
+		rdescs = (AppendOnlyVisimapRangeDesc *) palloc0(sizeof(AppendOnlyVisimapRangeDesc) * (newsize + 1));
+		/* rdescs[0] is reserved for special usage */
+		aovisimap_reset_range_desc_info(&rdescs[0]);
+		rdescs[0].nextfree = 1;
+		rdescs[0].morerecently = 1;
+		rdescs[0].lessrecently = 1;
+	}
+	else
+	{
+		Assert(cache->rdescs != NULL);
+
+		rdescs = cache->rdescs;
+		newsize = oldsize * 2;
+		if (newsize > gp_aovisimap_max_cache_entries)
+			newsize = gp_aovisimap_max_cache_entries;
+
+		rdescs = (AppendOnlyVisimapRangeDesc *)repalloc(rdescs, sizeof(AppendOnlyVisimapRangeDesc) * (newsize + 1));
+	}
+
+	/* initialize new expanded slots */
+	for (int i = oldsize + 1; i <= newsize; i++)
+	{
+		aovisimap_reset_range_desc_info(&rdescs[i]);
+		rdescs[i].nextfree = i + 1;
+		rdescs[i].morerecently = 0;
+		rdescs[i].lessrecently = 0;
+	}
+	rdescs[newsize].nextfree = 0;
+
+	cache->rdescs = rdescs;
+	cache->rdescs[0].nextfree = oldsize + 1;
+	cache->ndescs = newsize;
+
+	return cache->rdescs[0].nextfree;
+}
+
+/*
+ * Free a visimap cache entry specified by rangeid,
+ * put its rangeid to the free list.
+ */
+static void
+AppendOnlyVisimapCache_Free(
+							AppendOnlyVisimapCache *cache, int rangeid)
+{
+	AppendOnlyVisimapRangeDesc *rdesc = &cache->rdescs[rangeid];
+	AppendOnlyVisimapEntryKey key;
+	AppendOnlyVisimapRangeEntry *hentry;
+
+	key.segno = rdesc->segno;
+	key.firstRowNum = rdesc->firstrowno;
+
+	aovisimap_reset_range_desc_info(rdesc);
+	rdesc->nextfree = cache->rdescs[0].nextfree;
+	rdesc->morerecently = 0;
+	rdesc->lessrecently = 0;
+	
+	cache->rdescs[0].nextfree = rangeid;
+
+	/* need to remove the corresponding hash entry as well */
+	hentry = (AppendOnlyVisimapRangeEntry *)hash_search(cache->rangetab, (void *) &key, HASH_REMOVE, NULL);
+	if (hentry == NULL)
+		elog(ERROR, 
+			 "AppendonlyVisimapCache hash table corrupted at key {" UINT64_FORMAT ", " UINT64_FORMAT "}",
+			 key.segno, key.firstRowNum);
+}
+
+/*
+ * Initialize visimap cache.
+ */
+static inline void
+AppendOnlyVisimapCache_Init(
+							AppendOnlyVisimapCache *cache,
+							MemoryContext mctx)
+{
+	HASHCTL hctl;
+
+	Assert(cache != NULL);
+	Assert(gp_aovisimap_max_cache_entries > 0);
+
+	cache->mctx = mctx;
+	cache->rdescs = NULL;
+	cache->ndescs = 0;
+	cache->lastrange.key.segno = InvalidFileSegNumber;
+	cache->lastrange.key.firstRowNum = InvalidAORowNum;
+	cache->lastrange.rangeid = 0;
+	(void) AppendOnlyVisimapCache_Alloc(cache);
+
+	MemSet(&hctl, 0, sizeof(hctl));
+	hctl.keysize = sizeof(AppendOnlyVisimapEntryKey);
+	hctl.entrysize = sizeof(AppendOnlyVisimapRangeEntry);
+	hctl.hash = aovisimap_hash_key;
+	hctl.match = aovisimap_hash_match;
+	hctl.hcxt = cache->mctx;
+	cache->rangetab = hash_create("VisimapRangeCache", gp_aovisimap_max_cache_entries, &hctl,
+								  HASH_ELEM | HASH_FUNCTION | HASH_COMPARE | HASH_CONTEXT);
+}
+
+/*
+ * Release visimap cache. 
+ */
+static inline void
+AppendOnlyVisimapCache_Finish(
+							  AppendOnlyVisimapCache *cache)
+{
+	Assert(cache != NULL);
+
+	hash_destroy(cache->rangetab);
+	cache->rangetab = NULL;
+
+	if (cache->rdescs != NULL)
+	{
+		pfree(cache->rdescs);
+		cache->rdescs = NULL;
+	}
+
+	cache->ndescs = 0;
+	cache->mctx = NULL;
+	cache->lastrange.key.segno = InvalidFileSegNumber;
+	cache->lastrange.key.firstRowNum = InvalidAORowNum;
+	cache->lastrange.rangeid = 0;
+}
+
+/*
+ * Insert a visimap cache entry to the head of LRU list.
+ */
+static inline void
+AppendOnlyVisimapCache_Insert(
+							  AppendOnlyVisimapCache *cache,
+							  int rangeid)
+{
+	AppendOnlyVisimapRangeDesc *rdesc = &cache->rdescs[rangeid];
+
+	Assert(!rdesc->inlru);
+
+	rdesc->inlru = true;
+	rdesc->morerecently = 0;
+	rdesc->lessrecently = cache->rdescs[0].lessrecently;
+	cache->rdescs[0].lessrecently = rangeid;
+	cache->rdescs[rdesc->lessrecently].morerecently = rangeid;
+}
+
+/*
+ * Delete a visimap cache entry from LRU list.
+ */
+static inline void
+AppendOnlyVisimapCache_Delete(
+							  AppendOnlyVisimapCache *cache,
+							  int rangeid)
+{
+	AppendOnlyVisimapRangeDesc *rdesc = &cache->rdescs[rangeid];
+
+	Assert(rdesc->inlru);
+
+	rdesc->inlru = false;
+	cache->rdescs[rdesc->lessrecently].morerecently = rdesc->morerecently;
+	cache->rdescs[rdesc->morerecently].lessrecently = rdesc->lessrecently;
+}
+
+/*
+ * Get the visimap cache entry specified by rangeid,
+ * move it to the head of the LRU list.
+ */
+static inline AppendOnlyVisimapRangeDesc *
+AppendOnlyVisimapCache_Get(
+						   AppendOnlyVisimapCache *cache,
+						   int rangeid)
+{
+	Assert(rangeid > 0 && rangeid <= cache->ndescs);
+
+	AppendOnlyVisimapRangeDesc *rdesc = &cache->rdescs[rangeid];
+
+	if (!rdesc->inlru)
+	{
+		/* a free entry, insert it to the head of LRU */
+		Assert(!rdesc->allvisible);
+
+		AppendOnlyVisimapCache_Insert(cache, rangeid);
+	}
+	else if (cache->rdescs[0].lessrecently != rangeid)
+	{
+		/* an existing entry, move it to the head of LRU if not */
+		AppendOnlyVisimapCache_Delete(cache, rangeid);
+		AppendOnlyVisimapCache_Insert(cache, rangeid);
+	}
+
+	return rdesc;
+}
+
+/*
+ * Allocate a new rangeid, if no free slot,
+ * evict the least recently used one for reusing.
+ */
+static int
+AppendOnlyVisimapCache_GetNextFree(
+							 	   AppendOnlyVisimapCache *cache)
+{
+	int nextfree;
+
+	if (cache->rdescs[0].nextfree > 0)
+	{
+		/* has free slot */
+		nextfree = cache->rdescs[0].nextfree;
+	}
+	else if (cache->ndescs < gp_aovisimap_max_cache_entries)
+	{
+		MemoryContext oldmctx = MemoryContextSwitchTo(cache->mctx);
+		/* no free slot, but not reach to limit */
+		nextfree = AppendOnlyVisimapCache_Alloc(cache);
+		MemoryContextSwitchTo(oldmctx);
+	}
+	else
+	{
+		/* no free slot and reach to limit, needs to evict the tail of the LRU list */
+		AppendOnlyVisimapCache_Free(cache, cache->rdescs[0].morerecently);
+		nextfree = cache->rdescs[0].nextfree;
+	}
+
+	Assert(nextfree > 0 && nextfree <= cache->ndescs);
+
+	cache->rdescs[0].nextfree = cache->rdescs[nextfree].nextfree;
+
+	return nextfree;
+}
+
+/*
+ * Map the input AOTupleId to a rangeid for cache lookup.
+ *
+ * We are assuming there is no catalog snapshot change in
+ * a scan descriptor lifecyle hence the visibility bits
+ * in cache are same as the first read of the catalog in
+ * current scan descriptor lifecycle.
+ */
+static int
+AppendOnlyVisimapCache_Find(
+							AppendOnlyVisimap *visiMap,
+							AOTupleId *aoTupleId)
+{
+	bool found;
+	AppendOnlyVisimapEntryKey key;
+	AppendOnlyVisimapRangeEntry *range;
+	AppendOnlyVisimapCache *cache;
+	int rangeid = 0;
+
+	Assert(visiMap);
+	cache = &visiMap->visimapCache;
+
+	/* calculate a hash key {segno, firstrowno} based on aoTupleId */
+	key.segno = AOTupleIdGet_segmentFileNum(aoTupleId);
+	key.firstRowNum = APPENDONLY_VISIMAP_RANGE_FIRSTROWNO(AOTupleIdGet_rowNum(aoTupleId));
+	/* same as lastrange? */
+	if (key.segno == cache->lastrange.key.segno &&
+		key.firstRowNum == cache->lastrange.key.firstRowNum)
+		rangeid = cache->lastrange.rangeid;
+	else
+	{
+		range = (AppendOnlyVisimapRangeEntry *)hash_search(cache->rangetab, (void *) &key, HASH_ENTER, &found);
+		if (found)
+			rangeid = range->rangeid;
+		else
+		{
+			rangeid = AppendOnlyVisimapCache_GetNextFree(cache);
+			range->rangeid = rangeid;
+			cache->rdescs[rangeid].segno = (int)key.segno; /* safe as segno is not greater than 128 */
+			cache->rdescs[rangeid].firstrowno = key.firstRowNum;
+		}
+
+		/* stores to lastrange for subsequent lookups */
+		cache->lastrange.key = key;
+		cache->lastrange.rangeid = rangeid;
+	}
+
+	Assert(rangeid > 0 && rangeid <= cache->ndescs);
+	Assert(cache->rdescs[rangeid].segno == key.segno);
+	Assert(cache->rdescs[rangeid].firstrowno == key.firstRowNum);
+
+	elogif(Debug_appendonly_print_visimap, LOG,
+		   "Append-only visi map: Lookup cache for (tupleId) = %s, "
+		   "Cache {segno = " UINT64_FORMAT ", firstrowno = " UINT64_FORMAT ", rangeid = %d, allvisible = %d}",
+		   AOTupleIdToString(aoTupleId), key.segno, key.firstRowNum, rangeid, cache->rdescs[rangeid].allvisible);
+
+	return rangeid;
+}
+
+/*
+ * Lookup visimap cache to check if range is all-visible.
+ */
+static inline bool
+AppendOnlyVisimapCache_RangeIsAllVisible(
+										 AppendOnlyVisimapCache *cache,
+										 int rangeid)
+{
+	AppendOnlyVisimapRangeDesc *rdesc = AppendOnlyVisimapCache_Get(cache, rangeid);
+
+	return rdesc->allvisible;
+}
+
+/*
+ * Store the allvisible flag into the visimap cache entry.
+ */
+static inline void
+AppendOnlyVisimapCache_Update(
+							  AppendOnlyVisimapCache *cache,
+							  int rangeid,
+							  bool allvisible)
+{
+	Assert(rangeid > 0 && rangeid <= cache->ndescs);
+
+	cache->rdescs[rangeid].allvisible = allvisible;
+}
 
 /*
  * Finishes the visimap operations.
@@ -96,6 +444,9 @@ AppendOnlyVisimap_Finish(
 
 	AppendOnlyVisimapStore_Finish(&visiMap->visimapStore, lockmode);
 	AppendOnlyVisimapEntry_Finish(&visiMap->visimapEntry);
+
+	if (gp_aovisimap_max_cache_entries > 0)
+		AppendOnlyVisimapCache_Finish(&visiMap->visimapCache);
 
 	MemoryContextDelete(visiMap->memoryContext);
 	visiMap->memoryContext = NULL;
@@ -137,6 +488,10 @@ AppendOnlyVisimap_Init(
 								lockmode,
 								appendOnlyMetaDataSnapshot,
 								visiMap->memoryContext);
+
+	if (gp_aovisimap_max_cache_entries > 0)
+		AppendOnlyVisimapCache_Init(&visiMap->visimapCache,
+									visiMap->memoryContext);
 
 	MemoryContextSwitchTo(oldContext);
 }
@@ -189,12 +544,22 @@ AppendOnlyVisimap_IsVisible(
 							AppendOnlyVisimap *visiMap,
 							AOTupleId *aoTupleId)
 {
+	bool isAllVisible, result;
+	int rangeid = 0;
+
 	Assert(visiMap);
 
 	elogif(Debug_appendonly_print_visimap, LOG,
 		   "Append-only visi map: Visibility check: "
 		   "(tupleId) = %s",
 		   AOTupleIdToString(aoTupleId));
+
+	if (gp_aovisimap_max_cache_entries > 0)
+	{
+		rangeid = AppendOnlyVisimapCache_Find(visiMap, aoTupleId);
+		if (AppendOnlyVisimapCache_RangeIsAllVisible(&visiMap->visimapCache, rangeid))
+			return true;
+	}
 
 	if (!AppendOnlyVisimapEntry_CoversTuple(&visiMap->visimapEntry,
 											aoTupleId))
@@ -209,8 +574,14 @@ AppendOnlyVisimap_IsVisible(
 	}
 
 	/* visimap entry is now positioned to cover the aoTupleId */
-	return AppendOnlyVisimapEntry_IsVisible(&visiMap->visimapEntry,
-											aoTupleId);
+	result = AppendOnlyVisimapEntry_IsVisible(&visiMap->visimapEntry,
+											  aoTupleId,
+											  &isAllVisible);
+	
+	if (gp_aovisimap_max_cache_entries > 0)
+		AppendOnlyVisimapCache_Update(&visiMap->visimapCache, rangeid, isAllVisible);
+	
+	return result;
 }
 
 /*
@@ -369,37 +740,6 @@ AppendOnlyVisimapScan_Finish(AppendOnlyVisimapScan *visiMapScan,
 	AppendOnlyVisimap_Finish(&visiMapScan->visimap, lockmode);
 }
 
-
-/*
- * Hash function for the visimap deletion hash table.
- */
-static uint32
-hash_entry_key(const void *key, Size keysize)
-{
-	Assert(keysize == sizeof(AppendOnlyVisiMapEntryKey));
-	return DatumGetUInt32(hash_any((const unsigned char *) key,
-								   keysize));
-}
-
-/*
- * Hash function for comparing two keys of type
- * AppendOnlyVisiMapEntryKey.  Equality of keys is of interest and
- * not ordering between them (greater/less).
- */
-static int
-hash_compare_keys(const void *key1, const void *key2, Size keysize)
-{
-	Assert(keysize == sizeof(AppendOnlyVisiMapEntryKey));
-	AppendOnlyVisiMapEntryKey *k1 = (AppendOnlyVisiMapEntryKey *) key1;
-	AppendOnlyVisiMapEntryKey *k2 = (AppendOnlyVisiMapEntryKey *) key2;
-
-	if ((k1->segno == k2->segno) && (k1->firstRowNum == k2->firstRowNum))
-	{
-		return 0;
-	}
-	return 1;
-}
-
 /*
  * Inits the visimap delete helper structure.
  *
@@ -418,10 +758,10 @@ AppendOnlyVisimapDelete_Init(
 	visiMapDelete->visiMap = visiMap;
 
 	MemSet(&hash_ctl, 0, sizeof(hash_ctl));
-	hash_ctl.keysize = sizeof(AppendOnlyVisiMapEntryKey);
+	hash_ctl.keysize = sizeof(AppendOnlyVisimapEntryKey);
 	hash_ctl.entrysize = sizeof(AppendOnlyVisiMapDeleteData);
-	hash_ctl.hash = hash_entry_key;
-	hash_ctl.match = hash_compare_keys;
+	hash_ctl.hash = aovisimap_hash_key;
+	hash_ctl.match = aovisimap_hash_match;
 	hash_ctl.hcxt = visiMap->memoryContext;
 	visiMapDelete->dirtyEntryCache = hash_create("VisimapEntryCache",
 												 4, /* start small and extend */
@@ -469,7 +809,7 @@ AppendOnlyVisimapDelete_Unstash(
 	AppendOnlyVisimap *visiMap;
 	uint64		len,
 				dataLen;
-	AppendOnlyVisiMapEntryKey key;
+	AppendOnlyVisimapEntryKey key;
 
 	Assert(visiMapDelete);
 
@@ -548,7 +888,7 @@ AppendOnlyVisimapDelete_Find(
 	AppendOnlyVisimap *visiMap;
 	uint64		firstRowNum;
 	AppendOnlyVisiMapDeleteData *r;
-	AppendOnlyVisiMapEntryKey key;
+	AppendOnlyVisimapEntryKey key;
 
 	Assert(visiMapDelete);
 	Assert(aoTupleId);
@@ -609,7 +949,7 @@ AppendOnlyVisimapDelete_Stash(
 {
 	AppendOnlyVisimap *visiMap;
 	AppendOnlyVisiMapDeleteData *r;
-	AppendOnlyVisiMapEntryKey key;
+	AppendOnlyVisimapEntryKey key;
 	MemoryContext oldContext;
 	bool		found;
 	off_t		offset;
@@ -730,7 +1070,7 @@ AppendOnlyVisimapDelete_WriteBackStashedEntries(AppendOnlyVisimapDelete *visiMap
 	
 	AppendOnlyVisimap *visiMap;
 	bool		found;
-	AppendOnlyVisiMapEntryKey key;
+	AppendOnlyVisimapEntryKey key;
 
 	visiMap = visiMapDelete->visiMap;
 	Assert(visiMap);
@@ -833,7 +1173,7 @@ AppendOnlyVisimapDelete_Finish(
 	AppendOnlyVisiMapDeleteData *deleteData;
 	AppendOnlyVisimap *visiMap;
 	bool		found;
-	AppendOnlyVisiMapEntryKey key;
+	AppendOnlyVisimapEntryKey key;
 
 	visiMap = visiMapDelete->visiMap;
 	Assert(visiMap);

@@ -445,6 +445,13 @@ double		optimizer_jit_optimize_above_cost;
 /* Switch to toggle block-directory based sampling for AO/CO tables */
 bool		gp_enable_blkdir_sampling;
 
+/*
+ * AppendOnly visimap cache size, value is between 0 and 33554432.
+ * 0 means cache disabled;
+ * max value 33554432 is AOTupleId_MaxRowNum / APPENDONLY_VISIMAP_MAX_RANGE + 1.
+ */
+int			gp_aovisimap_max_cache_entries;
+
 static const struct config_enum_entry gp_log_format_options[] = {
 	{"text", 0},
 	{"csv", 1},
@@ -4320,6 +4327,16 @@ struct config_int ConfigureNamesInt_gp[] =
 		NULL, NULL, NULL
 	},
 #endif
+
+	{
+		{"gp_aovisimap_max_cache_entries", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Set the max number of aovisimap cache entries."),
+			NULL
+		},
+		&gp_aovisimap_max_cache_entries,
+		1024, 0, 33554432,
+		NULL, NULL, NULL
+	},
 
 	/* End-of-list marker */
 	{

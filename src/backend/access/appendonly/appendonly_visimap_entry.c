@@ -442,6 +442,9 @@ AppendOnlyVisimapEntry_GetFirstRowNum(
  * Should only be called after a call to AppendOnlyVisimapEntry_Copyout or
  * AppendOnlyVisimapEntry_New.
  * Should only be called if current visimap entry covers the tuple id.
+ * 
+ * `isAllVisible` is an output parameter to indicate whether rows in
+ * current visiMapEntry are all visible or not.
  *
  * The final visibility also depends on other information, e.g. if the
  * original transaction has been aborted. Such information is
@@ -450,7 +453,8 @@ AppendOnlyVisimapEntry_GetFirstRowNum(
 bool
 AppendOnlyVisimapEntry_IsVisible(
 								 AppendOnlyVisimapEntry *visiMapEntry,
-								 AOTupleId *tupleId)
+								 AOTupleId *tupleId,
+								 bool *isAllVisible)
 {
 	int64		rowNum,
 				rowNumOffset;
@@ -459,6 +463,9 @@ AppendOnlyVisimapEntry_IsVisible(
 	Assert(visiMapEntry);
 	Assert(AppendOnlyVisimapEntry_IsValid(visiMapEntry));
 	Assert(AppendOnlyVisimapEntry_CoversTuple(visiMapEntry, tupleId));
+	Assert(isAllVisible != NULL);
+
+	*isAllVisible = false;
 
 	rowNum = AOTupleIdGet_rowNum(tupleId);
 
@@ -473,6 +480,9 @@ AppendOnlyVisimapEntry_IsVisible(
 			   "Append-only visi map entry: All entries are visibile: "
 			   "(firstRowNum, rowNum) = (" INT64_FORMAT ", " INT64_FORMAT ")",
 			   visiMapEntry->firstRowNum, rowNum);
+
+		*isAllVisible = true;
+
 		return true;
 	}
 	Assert(rowNum >= visiMapEntry->firstRowNum);

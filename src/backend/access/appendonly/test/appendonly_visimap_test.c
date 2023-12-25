@@ -13,7 +13,7 @@
 static void
 test__AppendOnlyVisimapDelete_Finish_outoforder(void **state)
 {
-	AppendOnlyVisiMapEntryKey key;
+	AppendOnlyVisimapEntryKey key;
 	AppendOnlyVisiMapDeleteData val;
 	AppendOnlyVisimapDelete visiMapDelete;
 	AppendOnlyVisimap visiMap;
