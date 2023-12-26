@@ -1238,13 +1238,13 @@ ALTER VIEW rw_view1 ALTER COLUMN bb SET DEFAULT 'View default';
 INSERT INTO rw_view1 VALUES (4, 'Row 4');
 INSERT INTO rw_view1 (aa) VALUES (5);
 SELECT * FROM base_tbl;
- a |      b       | c  
----+--------------+----
- 2 | Row 2        |  2
- 3 | Unspecified  |  3
- 4 | Row 4        | 21
- 1 | Row 1        |  1
- 5 | View default | 22
+ a |      b       | c 
+---+--------------+---
+ 2 | Row 2        | 2
+ 3 | Unspecified  | 3
+ 4 | Row 4        | 4
+ 1 | Row 1        | 1
+ 5 | View default | 5
 (5 rows)
 
 DROP TABLE base_tbl CASCADE;

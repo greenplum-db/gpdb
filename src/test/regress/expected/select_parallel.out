@@ -103,8 +103,8 @@ alter table f_star reset (parallel_workers);
 set enable_parallel_append to off;
 explain (costs off)
   select round(avg(aa)), sum(aa) from a_star;
-                     QUERY PLAN                      
------------------------------------------------------
+                   QUERY PLAN                   
+------------------------------------------------
  Finalize Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
@@ -213,8 +213,8 @@ alter table tenk1 set (parallel_workers = 4);
 explain (verbose, costs off)
 select sp_parallel_restricted(unique1) from tenk1
   where stringu1 = 'GRAAAA' order by 1;
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: (sp_parallel_restricted(unique1))
    Merge Key: (sp_parallel_restricted(unique1))
@@ -231,7 +231,7 @@ select sp_parallel_restricted(unique1) from tenk1
 -- test parallel plan when group by expression is in target list.
 explain (costs off)
 	select length(stringu1) from tenk1 group by length(stringu1);
-                         QUERY PLAN
+                         QUERY PLAN                         
 ------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  HashAggregate
@@ -266,7 +266,7 @@ explain (costs off)
                            Group Key: stringu1
                            ->  Seq Scan on tenk1
  Optimizer: Postgres query optimizer
-(10 rows)
+(12 rows)
 
 -- test that parallel plan for aggregates is not selected when
 -- target list contains parallel restricted clause.
@@ -625,7 +625,7 @@ select * from explain_parallel_sort_stats();
                      ->  Seq Scan on tenk1 (actual rows=3386 loops=1)
                            Filter: (ten < 100)
  Optimizer: Postgres query optimizer
-(11 rows)
+(12 rows)
 
 reset enable_indexscan;
 reset enable_hashjoin;
@@ -712,8 +712,8 @@ end;
 $$ language plpgsql PARALLEL SAFE;
 explain (costs off, verbose)
     select ten, sp_simple_func(ten) from tenk1 where ten < 100 order by ten;
-                                                        QUERY PLAN                                                         
----------------------------------------------------------------------------------------------------------------------------
+                                                         QUERY PLAN                                                         
+----------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: ten, (sp_simple_func(ten))
    Merge Key: ten
@@ -1025,21 +1025,6 @@ SELECT make_record(x) FROM (SELECT generate_series(1, 5) x) ss ORDER BY x;
 
 ROLLBACK TO SAVEPOINT settings;
 DROP function make_record(n int);
--- test the sanity of parallel query after the active role is dropped.
-drop role if exists regress_parallel_worker;
-create role regress_parallel_worker;
-set role regress_parallel_worker;
-reset session authorization;
-drop role regress_parallel_worker;
-set force_parallel_mode = 1;
-select count(*) from tenk1;
- count 
--------
- 10000
-(1 row)
-
-reset force_parallel_mode;
-reset role;
 -- Window function calculation can't be pushed to workers.
 explain (costs off, verbose)
   select count(*) from tenk1 a where (unique1, two) in

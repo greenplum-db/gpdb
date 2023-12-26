@@ -1575,7 +1575,7 @@ alter table atacc1 drop column value;
 alter table atacc1 add column value int check (value < 10);
 insert into atacc1(value) values (100);
 ERROR:  new row for relation "atacc1" violates check constraint "atacc1_value_check"
-DETAIL:  Failing row contains (21, 100).
+DETAIL:  Failing row contains (2, 100).
 insert into atacc1(id, value) values (null, 0);
 ERROR:  null value in column "id" violates not-null constraint
 DETAIL:  Failing row contains (null, 0).
@@ -3232,19 +3232,19 @@ insert into alter2.t1(f2) values(14);
 select * from alter2.t1;
  f1 | f2 
 ----+----
-  1 | 11
   2 | 12
- 21 | 13
- 22 | 14
+  3 | 13
+  4 | 14
+  1 | 11
 (4 rows)
 
 select * from alter2.v1;
  f1 | f2 
 ----+----
-  1 | 11
   2 | 12
- 21 | 13
- 22 | 14
+  3 | 13
+  4 | 14
+  1 | 11
 (4 rows)
 
 select alter2.plus1(41);

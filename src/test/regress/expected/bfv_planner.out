@@ -604,13 +604,13 @@ create table t_rep2 as select i from generate_series(5, 15) as i group by i havi
 select count(*) from gp_dist_random('t_rep2');
  count 
 -------
-    33
+    27
 (1 row)
 
 select count(distinct i) from gp_dist_random('t_rep2');
  count 
 -------
-    11
+     9
 (1 row)
 
 drop table t_rep2;

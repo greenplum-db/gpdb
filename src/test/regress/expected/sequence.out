@@ -264,10 +264,10 @@ INSERT INTO serialTest1 VALUES ('more');
 SELECT * FROM serialTest1;
   f1   | f2  
 -------+-----
+ more  |   3
  foo   |   1
  bar   |   2
  force | 100
- more  |  21
 (4 rows)
 
 --
@@ -511,7 +511,7 @@ WHERE sequencename ~ ANY(ARRAY['sequence_test', 'serialtest'])
  public     | sequence_test7     |           1 |                    1 | 9223372036854775807 |            1 | f     |         20 |           
  public     | sequence_test8     |           1 |                    1 |               20000 |            1 | f     |         20 |           
  public     | sequence_test9     |          -1 |               -32768 |                  -1 |           -1 | f     |         20 |           
- public     | serialtest1_f2_foo |           1 |                    1 |          2147483647 |            1 | f     |         20 |         40
+ public     | serialtest1_f2_foo |           1 |                    1 |          2147483647 |            1 | f     |         20 |         20
  public     | serialtest2_f2_seq |           1 |                    1 |          2147483647 |            1 | f     |         20 |         40
  public     | serialtest2_f3_seq |           1 |                    1 |               32767 |            1 | f     |         20 |         40
  public     | serialtest2_f4_seq |           1 |                    1 |               32767 |            1 | f     |         20 |         40

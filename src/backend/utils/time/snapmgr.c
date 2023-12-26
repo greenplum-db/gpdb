@@ -493,8 +493,9 @@ GetCatalogSnapshot(Oid relid)
 	 */
 	if (HistoricSnapshotActive())
 		return HistoricSnapshot;
-
-	return GetNonHistoricCatalogSnapshot(relid, DTX_CONTEXT_LOCAL_ONLY);
+	if (Gp_is_writer)
+		return GetNonHistoricCatalogSnapshot(relid, DTX_CONTEXT_LOCAL_ONLY);
+	return GetNonHistoricCatalogSnapshot(relid, DistributedTransactionContext);
 }
 
 /*

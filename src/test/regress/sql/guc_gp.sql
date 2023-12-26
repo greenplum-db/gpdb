@@ -189,48 +189,6 @@ SELECT * FROM reset_test;
 DISCARD ALL;
 CREATE TEMP TABLE reset_test ( data text ) ON COMMIT PRESERVE ROWS;
 
-CREATE TABLE guc_gp_t1(i int);
-INSERT INTO guc_gp_t1 VALUES(1),(2);
-
--- generate an idle redaer gang by the following query
-SELECT count(*) FROM guc_gp_t1, guc_gp_t1 t;
-
--- test create role and set role in the same transaction
-BEGIN;
-DROP ROLE IF EXISTS guc_gp_test_role1;
-CREATE ROLE guc_gp_test_role1;
-SET ROLE guc_gp_test_role1;
-RESET ROLE;
-END;
-
--- generate an idle redaer gang by the following query
-SELECT count(*) FROM guc_gp_t1, guc_gp_t1 t;
-
-BEGIN ISOLATION LEVEL REPEATABLE READ;
-DROP ROLE IF EXISTS guc_gp_test_role2;
-CREATE ROLE guc_gp_test_role2;
-SET ROLE guc_gp_test_role2;
-RESET ROLE;
-END;
-
--- test cursor case
--- cursors are also reader gangs, but they are not idle, thus will not be
--- destroyed by utility statement.
-BEGIN;
-DECLARE c1 CURSOR FOR SELECT * FROM guc_gp_t1 a, guc_gp_t1 b order by a.i, b.i;
-DECLARE c2 CURSOR FOR SELECT * FROM guc_gp_t1 a, guc_gp_t1 b order by a.i, b.i;
-FETCH c1;
-DROP ROLE IF EXISTS guc_gp_test_role1;
-CREATE ROLE guc_gp_test_role1;
-SET ROLE guc_gp_test_role1;
-RESET ROLE;
-FETCH c2;
-FETCH c1;
-FETCH c2;
-END;
-
-DROP TABLE guc_gp_t1;
-
 -- test for string guc is quoted correctly
 SET search_path = "'";
 SHOW search_path;

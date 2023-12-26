@@ -377,17 +377,6 @@ SELECT make_record(x) FROM (SELECT generate_series(1, 5) x) ss ORDER BY x;
 ROLLBACK TO SAVEPOINT settings;
 DROP function make_record(n int);
 
--- test the sanity of parallel query after the active role is dropped.
-drop role if exists regress_parallel_worker;
-create role regress_parallel_worker;
-set role regress_parallel_worker;
-reset session authorization;
-drop role regress_parallel_worker;
-set force_parallel_mode = 1;
-select count(*) from tenk1;
-reset force_parallel_mode;
-reset role;
-
 -- Window function calculation can't be pushed to workers.
 explain (costs off, verbose)
   select count(*) from tenk1 a where (unique1, two) in

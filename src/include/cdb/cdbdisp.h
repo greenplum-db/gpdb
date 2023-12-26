@@ -50,7 +50,6 @@ typedef struct CdbDispatcherState
 #ifdef USE_ASSERT_CHECKING
 	bool isGangDestroying;
 #endif
-	bool destroyIdleReaderGang;
 } CdbDispatcherState;
 
 typedef struct DispatcherInternalFuncs

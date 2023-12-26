@@ -86,6 +86,7 @@
 #include "utils/snapmgr.h"
 #include "utils/timeout.h"
 #include "utils/timestamp.h"
+#include "utils/sharedsnapshot.h"
 #include "mb/pg_wchar.h"
 
 #include "cdb/cdbutil.h"
@@ -1833,6 +1834,29 @@ exec_simple_query(const char *query_string)
 		{
 			PushActiveSnapshot(GetTransactionSnapshot());
 			snapshot_set = true;
+		}
+		else
+		{
+			if (Gp_is_writer)
+			{
+				/*
+				 * For QE writer, if current query doesn't need a snapshot, then we can make
+				 * sure that all QE writers will not change its transaction state, we can update
+				 * segmateSync safely for QE readers could read snapshot from SharedLocalSnapshot.
+				 */
+				LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
+				SharedLocalSnapshotSlot->segmateSync = QEDtxContextInfo.segmateSync;
+				SharedLocalSnapshotSlot->snapshot.curcid = GetCurrentCommandId(false);
+				LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+			}
+			else
+			{
+				/*
+				 * For QE reader, we drop current CatalogSnapshot, and fetch one if it needs
+				 * during query execution.
+				 */
+				InvalidateCatalogSnapshot();
+			}
 		}
 
 		/*
