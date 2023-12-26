@@ -1387,3 +1387,8 @@ CREATE TABLE replicated_issue_14126(c1 int, c2 text) distributed replicated;
 COPY replicated_issue_14126 FROM '@abs_srcdir@/data/copy.data' DELIMITER ',';
 DROP TABLE replicated_issue_14126;
 \set QUIET on
+
+CREATE TABLE IF NOT EXISTS motion_test_toast(c1 INT, c2 text);
+COPY motion_test_toast FROM '@abs_srcdir@/data/motion_test_toast.csv' WITH CSV HEADER;
+COPY (SELECT * FROM motion_test_toast) to '/tmp/motion_test_toast.csv';
+DROP TABLE motion_test_toast;
