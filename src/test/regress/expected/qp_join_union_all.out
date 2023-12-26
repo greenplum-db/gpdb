@@ -18,6 +18,11 @@
 -- This is an ORCA feature. The plan shape is only verified for ORCA
 -- plans. Correctness of the plans can be verified by the # of output
 -- rows
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 -- start_ignore
 drop schema if exists join_union_all cascade;
 NOTICE:  schema "join_union_all" does not exist, skipping

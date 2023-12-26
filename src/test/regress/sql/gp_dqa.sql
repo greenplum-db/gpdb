@@ -3,6 +3,10 @@
 -- are flowing from different segments in different order. Mask those
 -- differences by setting 'extra_float_digits'. This isn't enough for all of
 -- the queries, so a few also use TO_CHAR() to truncate the results further.
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 set extra_float_digits=0;
 
 SET optimizer_trace_fallback to on;

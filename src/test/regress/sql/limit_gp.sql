@@ -2,6 +2,12 @@
 -- Check for MPP-19310 and MPP-19857 where mksort produces wrong result
 -- on OPT build, and fails assertion on debug build if a "LIMIT" query
 -- spills to disk.
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
+-- start_ignore
 
 CREATE TABLE mksort_limit_test_table(dkey INT, jkey INT, rval REAL, tval TEXT default repeat('abcdefghijklmnopqrstuvwxyz', 300)) DISTRIBUTED BY (dkey);
 INSERT INTO mksort_limit_test_table VALUES(generate_series(1, 10000), generate_series(10001, 20000), sqrt(generate_series(10001, 20000)));

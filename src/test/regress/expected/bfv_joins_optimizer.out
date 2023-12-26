@@ -1,6 +1,13 @@
 --
 -- Set up
 --
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
 create schema bfv_joins;
 set search_path='bfv_joins';
 create table x (a int, b int, c int);

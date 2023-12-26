@@ -11,6 +11,11 @@
 --   revmap pages.
 -- * seg2: 2000 aborted rows -> No revmap pages.
 -- * seg3: 32768 aborted rows (1 logical heap block), 3000 committed rows -> 1 revmap page.
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 
 CREATE TABLE brin_chain_@amname@(i character(1)) USING heap;
 INSERT INTO brin_chain_@amname@ SELECT '2' FROM generate_series(1, 1000);

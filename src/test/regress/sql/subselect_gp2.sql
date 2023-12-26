@@ -6,6 +6,10 @@
 -- the count(*) calculated for each value below was 1, but it should be
 -- equal to the number of segments, because this external table produces
 -- the same rows on every segment.
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 
 CREATE EXTERNAL WEB TABLE echotable (c1 int, c2 int, c3 int) EXECUTE
 'echo "1,2,3"; echo "4,5,6";' FORMAT 'TEXT' (DELIMITER ',');

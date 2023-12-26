@@ -1,3 +1,8 @@
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
+--
 -- table to just store the coordinator's data directory path on segment.
 CREATE TABLE lockmodes_datadir(a int, dir text);
 CREATE TABLE

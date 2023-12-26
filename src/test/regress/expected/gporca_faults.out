@@ -1,6 +1,10 @@
 --
 -- ORCA tests which require gp_fault_injector
 --
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 CREATE SCHEMA gporca_faults;
 SET search_path = gporca_faults, public;
 CREATE TABLE foo (a int, b int);

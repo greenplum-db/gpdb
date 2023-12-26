@@ -1,3 +1,10 @@
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice.*\)/
+-- s/\(slice.*\)//
+-- end_matchsubs
 -- start_ignore
 create schema subselect_gp;
 set search_path to subselect_gp, public;

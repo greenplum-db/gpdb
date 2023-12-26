@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 CREATE INDEX jidx ON testjsonb USING gin (j);
 SET optimizer_enable_tablescan = off;
 SET enable_seqscan = off;

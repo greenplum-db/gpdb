@@ -14,6 +14,9 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- s/session id \=\s*\d+/session id \= DUMMY/gm
 -- m/WARNING:  Connection \(seg\d.*:.*\) is broken/
 -- s/WARNING:  Connection \(seg\d.*:.*\) is broken/WARNING:  Connection seg0 slice1 is broken/
+--
+-- m/\(cost=.*\) \(.*\)/
+-- s/\(cost=.*\) \(.*\)//
 -- end_matchsubs
 
 -- skip FTS probes always

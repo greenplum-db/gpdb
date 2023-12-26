@@ -1,6 +1,10 @@
 --
 -- Basic tests for replicated table
 --
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 create schema rpt;
 set search_path to rpt;
 

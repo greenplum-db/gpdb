@@ -1,6 +1,10 @@
 --
 -- AGGREGATES
 --
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 -- start_ignore
 SET optimizer_trace_fallback to on;
 -- end_ignore

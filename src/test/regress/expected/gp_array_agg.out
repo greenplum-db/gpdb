@@ -1,6 +1,10 @@
 --
 -- Test parallel array_agg(anynonarray) and array_agg(anyarray)
 --
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 create schema test_gp_array_agg;
 set search_path=test_gp_array_agg;
 set optimizer_trace_fallback = on;

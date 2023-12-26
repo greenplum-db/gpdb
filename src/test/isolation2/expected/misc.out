@@ -4,6 +4,11 @@
 -- NOTICE: we must connect to coordinator in utility mode because the oid of table is
 -- preassigned in QD, if we create a table in utility mode in QE, the oid might
 -- conflict with preassigned oid.
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 -1U: create table utilitymode_primary_key_tab (c1 int);
 CREATE TABLE
 -1U: create unique index idx_utilitymode_c1 on utilitymode_primary_key_tab (c1);

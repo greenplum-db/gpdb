@@ -1,5 +1,9 @@
 -- ALTER TABLE ... SET DISTRIBUTED BY
 -- This is the main interface for system expansion
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 \set DATA values(1, 2), (2, 3), (3, 4)
 -- Basic sanity tests
 set optimizer_print_missing_stats = off;

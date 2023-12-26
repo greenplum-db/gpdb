@@ -3,6 +3,10 @@
 --
 -- Test for enhancements to table function support
 -- ===================
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 CREATE SCHEMA table_function;
 SET search_path TO table_function, public;
 

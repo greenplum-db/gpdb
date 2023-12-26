@@ -5,6 +5,10 @@
 -- start_matchignore
 -- m/ERROR:  workfile compresssion is not supported by this build/
 -- end_matchignore
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 --
 -- test numeric hash join
 --

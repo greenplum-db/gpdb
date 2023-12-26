@@ -1,6 +1,14 @@
 --
 -- Test correlated subquery in subplan with motion chooses correct scan type
 --
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
 -- Given I have two distributed tables
 create table choose_seqscan_t1(id1 int,id2 int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'id1' as the Greenplum Database data distribution key for this table.

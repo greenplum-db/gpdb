@@ -2,6 +2,10 @@
 -- Test extensions to functions (MPP-16060)
 -- 	1. data access indicators
 -- -----------------------------------------------------------------
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 -- start_ignore
 CREATE LANGUAGE plpython3u;
 -- end_ignore

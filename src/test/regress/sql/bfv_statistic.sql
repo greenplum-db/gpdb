@@ -1,3 +1,10 @@
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
 create schema bfv_statistic;
 set search_path=bfv_statistic;
 create table bfv_statistics_foo (a int, b int) distributed by (a);

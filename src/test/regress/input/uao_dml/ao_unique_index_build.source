@@ -1,4 +1,9 @@
 -- Test cases to cover CREATE UNIQUE INDEX on AO/CO tables.
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 
 SET default_table_access_method TO @amname@;
 -- To force index scans for smoke tests

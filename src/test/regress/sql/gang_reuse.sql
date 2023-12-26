@@ -17,6 +17,11 @@ set gp_cached_segworkers_threshold to 10;
 set gp_vmem_idle_resource_timeout to '60s';
 set optimizer_enable_motion_broadcast to off;
 set optimizer_force_multistage_agg to on;
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 
 create table test_gang_reuse_t1 (c1 int, c2 int);
 analyze test_gang_reuse_t1;

@@ -1,4 +1,9 @@
 -- This test file verifies the correctness of Index Only Scans for AO/CO tables.
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 
 SET enable_seqscan TO off;
 SET optimizer TO off;

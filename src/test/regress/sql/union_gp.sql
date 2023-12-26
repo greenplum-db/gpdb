@@ -1,4 +1,8 @@
 -- Additional GPDB-added tests for UNION
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 SET optimizer_trace_fallback=on;
 
 create temp table t_union1 (a int, b int);

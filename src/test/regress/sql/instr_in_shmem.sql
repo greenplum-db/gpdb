@@ -2,6 +2,13 @@
 -- and EXPLAIN ANALYZE. Also instrumentation slots
 -- are correctly recycled.
 -- This test can not run in parallel with other tests.
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
 
 -- default value
 SHOW GP_ENABLE_QUERY_METRICS;

@@ -7,6 +7,10 @@
 -- the planner and the rest of the system, so the expected output can need
 -- updating, as the system improves.
 --
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 
 -- Create test table with two partitions, for values equal to '1' and values equal to '2'.
 create table parttab (n numeric, t text)

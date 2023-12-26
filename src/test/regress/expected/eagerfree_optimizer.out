@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 create schema eagerfree;
 set search_path=eagerfree;
 create table smallt (i int, t text, d date) distributed by (i);

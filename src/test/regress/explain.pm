@@ -470,7 +470,7 @@ sub analyze_node
             }
         }
 
-        my @short = $node->{txt} =~ m/\-\>\s*(.*)\s*\(cost\=/;
+        my @short = $node->{txt};
         $node->{short} = shift @short;
 
         unless(exists($node->{id}))
@@ -480,14 +480,14 @@ sub analyze_node
 
         if ($node->{id} == 1)
         {
-            @short = $node->{txt} =~ m/^\s*\|\s*(.*)\s*\(cost\=/;
+            @short = $node->{txt};
             $node->{short} = shift @short;
 
             # handle case where dashed line might have wrapped...
             unless (defined($node->{short}) && length($node->{short}))
             {
                 # might not be first line...
-                @short = $node->{txt} =~ m/\s*\|\s*(.*)\s*\(cost\=/;
+                @short = $node->{txt};
                 $node->{short} = shift @short;
             }
 
@@ -541,7 +541,7 @@ sub analyze_node
 
         # XXX XXX XXX XXX: FINAL "short" fixups
         while (defined($node->{short}) && length($node->{short})
-               && ($node->{short} =~ m/(\n)|^\s+|\s+$|(\(cost\=)/m))
+               && ($node->{short} =~ m/(\n)|^\s+|\s+$/m))
         {
             # remove leading and trailing spaces...
             $node->{short} =~ s/^\s*//;
@@ -549,9 +549,6 @@ sub analyze_node
 
             # remove newlines
             $node->{short} =~ s/(\n).*//gm;
-
-            # remove cost=...
-            $node->{short} =~ s/\(cost\=.*//gm;
 
 #            print "short fixup: $node->{short}\n\n\n";
         }
@@ -606,10 +603,6 @@ sub parse_node
         if ($row =~ m/\|(\s)*InitPlan/)
         {
             $row =~ s/InitPlan/\-\>  InitPlan/;
-            if ($row !~ m/\(cost=/)
-            {
-                $row =~ s/\|$/\(cost=\?\)|/;
-            }
         }
 
         if ($row !~ m/\|(\s)*\-\>/)
@@ -1190,7 +1183,7 @@ sub addslice
 
     if ($txt1 =~ /(slice(\d+))/)
     {
-        my @ggg = ($txt1 =~ m/(slice(\d+))/) ;
+        my @ggg = $txt1;
         $node->{slice} = shift @ggg;
 
         # check if we have explain analyze stats for the slice
@@ -1302,9 +1295,6 @@ sub prune_heavily
 
         $node->{sendsize} = int($1);
         $node->{recvsize} = int($2);
-
-        # strip the number of nodes and slice information
-        $node->{short} =~ s/\s+\d+\:\d+.*//;
 
         # Note: don't worry about removing "(slice1)" info from the
         # "short" because addslice processes node->{text}
