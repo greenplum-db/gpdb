@@ -9,6 +9,9 @@ Feature: gpcheckcat tests
         Given database "all_good" is dropped and recreated
         Then the user runs "gpcheckcat -A"
         Then gpcheckcat should return a return code of 0
+        When the user runs "gpcheckcat -C pg_class"
+        Then gpcheckcat should return a return code of 0
+        And gpcheckcat should not print "Execution error:" to stdout
         And the user runs "dropdb all_good"
 
     Scenario: gpcheckcat should drop leaked schemas
