@@ -384,7 +384,10 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 	{
 		Form_pg_attribute attr = TupleDescAttr(slot->tts_tupleDescriptor, i);
 
-		/* not using slot->tts_isnull before invoking slot_getallattrs */
+		/*
+		 * Cannot access slot->tts_isnull before invoking slot_getallattrs.
+		 * See Github Issue 16906.
+		 */
 		if (!attr->attisdropped && attr->attlen == -1)
 		{
 			hasExternalAttr = true;

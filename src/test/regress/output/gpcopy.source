@@ -1715,7 +1715,3 @@ COPY 1
 DROP TABLE replicated_issue_14126;
 DROP TABLE
 \set QUIET on
-CREATE TABLE IF NOT EXISTS motion_test_toast(c1 INT, c2 text);
-COPY motion_test_toast FROM '@abs_srcdir@/data/motion_test_toast.csv' WITH CSV HEADER;
-COPY (SELECT * FROM motion_test_toast) to '/tmp/motion_test_toast.csv';
-DROP TABLE motion_test_toast;

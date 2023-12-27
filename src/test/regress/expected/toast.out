@@ -203,3 +203,19 @@ SELECT encode(substring(a from 521*26+1 for 26), 'escape') FROM toast_chunk_test
  abcdefghijklmnopqrstuvwxyz
 (1 row)
 
+-- Test for Github Issue 16906
+create table t_16906(a int, b text) distributed by(a);
+-- Insert two rows and make sure they are in the same segment (same dist key)
+-- the 1st row's column b must be NULL;
+-- the 2nd row's column b must be a long string even after toast compression
+-- for details please refer to the issue page.
+insert into t_16906 values(1, null);
+insert into t_16906 values(1, randomtext(10240));
+-- Don't want actually fetch all data just need to test
+-- it does not hit assert fail or error. Using explain
+-- analyze might introduce a new ansfile for ORCA so here
+-- I decide to use \o.
+\o /tmp/t_16906.tmp
+select * from t_16906;
+\o
+drop table t_16906;
