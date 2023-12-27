@@ -2683,7 +2683,7 @@ can_elide_explicit_motion(PlannerInfo *root, Index rti, Path *subpath,
 }
 
 void
-set_not_allow_append_initplan_for_function_scan()
+unset_allow_append_initplan_for_function_scan()
 {
 	allow_append_initplan_for_function_scan = false;
 }

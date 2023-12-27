@@ -432,13 +432,14 @@ make_subplan(PlannerInfo *root, Query *orig_subquery,
 	subroot->curSlice->gangType = GANGTYPE_UNALLOCATED;
 
 	if (splan_is_initplan(plan_params, subLinkType))
-		set_not_allow_append_initplan_for_function_scan();
+		unset_allow_append_initplan_for_function_scan();
 
 	plan = create_plan(subroot, best_path, subroot->curSlice);
 	/* Decorate the top node of the plan with a Flow node. */
 	plan->flow = cdbpathtoplan_create_flow(subroot, best_path->locus);
 
 	set_allow_append_initplan_for_function_scan();
+	Assert(get_allow_append_initplan_for_function_scan() == true);
 
 	/* And convert to SubPlan or InitPlan format. */
 	result = build_subplan(root, plan, subroot, plan_params,
