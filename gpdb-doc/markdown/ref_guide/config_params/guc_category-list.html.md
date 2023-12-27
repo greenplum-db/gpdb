@@ -279,6 +279,7 @@ These configuration parameters control Greenplum Database logging.
 - [debug_print_slice_table](guc-list.html#debug_print_slice_table)
 - [log_autostats](guc-list.html#log_autostats)
 - [log_connections](guc-list.html#log_connections)
+- [log_directory](guc-list.html#log_directory)
 - [log_disconnections](guc-list.html#log_disconnections)
 - [log_dispatch_stats](guc-list.html#log_dispatch_stats)
 - [log_duration](guc-list.html#log_duration)

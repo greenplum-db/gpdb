@@ -202,7 +202,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.17325.1.0" Name="optimize_min_max_aggregates" Rows="10000.000000" RelPages="20" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.17325.1.0" Name="optimize_min_max_aggregates" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.17325.1.0" Name="optimize_min_max_aggregates" IsTemporary="false" Rows="10000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4"/>
           <dxl:Column Name="b" Attno="2" Mdid="0.25.1.0" Nullable="true" ColWidth="9"/>

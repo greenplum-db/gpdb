@@ -53,7 +53,7 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i not in (
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.16385.1.0" Name="a" Rows="5.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.16385.1.0" Name="a" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.16385.1.0" Name="a" IsTemporary="false" Rows="5.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -78,7 +78,7 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i not in (
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.16391.1.0" Name="c" Rows="9.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.16391.1.0" Name="c" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.16391.1.0" Name="c" IsTemporary="false" Rows="9.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -111,7 +111,7 @@ select * from A,B where exists (select * from C where C.j = A.j and B.i not in (
         <dxl:Commutator Mdid="0.518.1.0"/>
         <dxl:InverseOp Mdid="0.96.1.0"/>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="6.16388.1.0" Name="b" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.16388.1.0" Name="b" IsTemporary="false" Rows="6.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

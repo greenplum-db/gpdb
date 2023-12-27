@@ -1,5 +1,6 @@
 ConfigureNamesInt_gp
 ConfigureNamesBool_gp
 ConfigureNamesEnum_gp
+ConfigureNamesString_gp
 UpdateOrAddAttributeEncodings
 createDir

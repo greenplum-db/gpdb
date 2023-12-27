@@ -132,12 +132,15 @@ CLogicalCTEProducer::DeriveMaxCard(CMemoryPool *,  // mp
 	return exprhdl.DeriveMaxCard(0);
 }
 
-CTableDescriptor *
-CLogicalCTEProducer::DeriveTableDescriptor(CMemoryPool *,  // mp
+CTableDescriptorHashSet *
+CLogicalCTEProducer::DeriveTableDescriptor(CMemoryPool *,
 										   CExpressionHandle &exprhdl) const
 {
 	// pass on table descriptor of first child
-	return exprhdl.DeriveTableDescriptor(0);
+	CTableDescriptorHashSet *child_table_descriptor_set =
+		exprhdl.DeriveTableDescriptor(0);
+	child_table_descriptor_set->AddRef();
+	return child_table_descriptor_set;
 }
 
 //---------------------------------------------------------------------------

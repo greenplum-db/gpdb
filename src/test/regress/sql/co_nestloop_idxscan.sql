@@ -13,6 +13,10 @@
 -- Heap Scan. So for a new outer slot, the inner plan need to rescan from
 -- the begining.
 --
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 
 create schema co_nestloop_idxscan;
 create table co_nestloop_idxscan.foo (id bigint, data text) with (appendonly=true, orientation=column)

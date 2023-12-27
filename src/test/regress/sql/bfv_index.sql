@@ -1,4 +1,11 @@
 -- tests index filter with outer refs
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
 drop table if exists bfv_tab1;
 
 CREATE TABLE bfv_tab1 (

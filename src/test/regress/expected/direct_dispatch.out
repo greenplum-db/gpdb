@@ -1,3 +1,10 @@
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
 -- turn off autostats so we don't have to worry about the logging of the autostat queries
 set gp_autostats_mode = None;
 -- create needed tables (in a transaction, for speed)

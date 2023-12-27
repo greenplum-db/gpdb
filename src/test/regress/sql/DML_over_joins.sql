@@ -1,6 +1,10 @@
 -- ----------------------------------------------------------------------
 -- Test: setup_schema.sql
 -- ----------------------------------------------------------------------
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 create schema DML_over_joins;
 set search_path to DML_over_joins;
 

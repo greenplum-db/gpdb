@@ -3038,11 +3038,6 @@ aocs_writecol_add(Oid relid, List *newvals, List *constraints, TupleDesc oldDesc
 			 * Create new segfiles for new columns for current
 			 * appendonly segment.
 			 */
-			RelFileNodeBackend rnode;
-
-			rnode.node = rel->rd_node;
-			rnode.backend = rel->rd_backend;
-
 			aocs_writecol_newsegfiles(idesc, segInfos[segi]);
 
 			aocs_writecol_writesegfiles(idesc, sdesc, constraints, econtext, slot);

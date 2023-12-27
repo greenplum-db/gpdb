@@ -1,4 +1,9 @@
 -- Test bitmap AND and OR
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 SET default_statistics_target=1000;
 -- Encourage index use
 SET seq_page_cost=100;

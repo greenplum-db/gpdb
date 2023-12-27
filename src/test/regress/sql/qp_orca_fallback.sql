@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 -- start_ignore
 CREATE SCHEMA qp_orca_fallback;
 SET search_path to qp_orca_fallback;

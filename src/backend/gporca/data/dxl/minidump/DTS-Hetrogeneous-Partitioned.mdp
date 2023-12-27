@@ -175,7 +175,7 @@ explain select * from t;
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.181410.1.0" Name="t" Rows="0.000000" RelPages="0" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.181410.1.0" Name="t" IsTemporary="false" StorageType="MixedPartitioned" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="0" PartitionTypes="l">
+      <dxl:Relation Mdid="6.181410.1.0" Name="t" IsTemporary="false" Rows="0.000000" StorageType="MixedPartitioned" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="0" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

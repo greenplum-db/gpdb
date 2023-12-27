@@ -1,6 +1,11 @@
 -- White-box tests asserting composition of AO/CO block directory entries.
 -- All tuples are directed to seg0 and each INSERT has an increasing row count
 -- to make their identification easy.
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 
 --------------------------------------------------------------------------------
 -- AO tables

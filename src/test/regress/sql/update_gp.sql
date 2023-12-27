@@ -3,6 +3,13 @@
 -- a different distribution key. 'p' table's distribution key matches
 -- that of 'r', but 'p2's doesn't. Test that the planner adds a Motion
 -- node correctly for p2.
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice.*\)/
+-- s/\(slice.*\)//
+-- end_matchsubs
 create table todelete (a int) distributed by (a);
 create table parent (a int, b int, c int) distributed by (a);
 create table child (a int, b int, c int) inherits (parent) distributed by (b);

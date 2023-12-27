@@ -64,11 +64,6 @@ public:
 		EspHigh		// operator has high priority for stat derivation
 	};
 
-private:
-	// private copy ctor
-	CLogical(const CLogical &);
-
-
 protected:
 	// set of locally used columns
 	CColRefSet *m_pcrsLocalUsed;
@@ -176,6 +171,8 @@ protected:
 											 CColRefSet *pcrsUsedAdditional);
 
 public:
+	CLogical(const CLogical &) = delete;
+
 	// ctor
 	explicit CLogical(CMemoryPool *mp);
 
@@ -258,7 +255,7 @@ public:
 	virtual CFunctionProp *DeriveFunctionProperties(
 		CMemoryPool *mp, CExpressionHandle &exprhdl) const;
 
-	virtual CTableDescriptor *DeriveTableDescriptor(
+	virtual CTableDescriptorHashSet *DeriveTableDescriptor(
 		CMemoryPool *mp, CExpressionHandle &exprhdl) const;
 
 	//-------------------------------------------------------------------------------------
@@ -329,9 +326,6 @@ public:
 
 	// returns the table descriptor for (Dynamic)(BitmapTable)Get operators
 	static CTableDescriptor *PtabdescFromTableGet(COperator *pop);
-
-	// returns the output columns for selected operator
-	static CColRefArray *PoutputColsFromTableGet(COperator *pop);
 
 	// extract the output columns descriptor from a logical get or dynamic get operator
 	static CColRefArray *PdrgpcrOutputFromLogicalGet(CLogical *pop);

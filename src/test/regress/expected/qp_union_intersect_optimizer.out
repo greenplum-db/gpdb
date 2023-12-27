@@ -9,6 +9,8 @@
 -- start_matchsubs
 -- m/DETAIL:  Failing row contains \(.*\)/
 -- s/DETAIL:  Failing row contains \(.*\)/DETAIL:  Failing row contains (#####)/
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
 -- end_matchsubs
 begin;
 CREATE TABLE dml_union_r (

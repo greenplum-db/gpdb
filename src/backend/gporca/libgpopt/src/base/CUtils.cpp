@@ -2193,7 +2193,7 @@ CUtils::PexprLogicalSelect(CMemoryPool *mp, CExpression *pexpr,
 		pexpr->Pop()->Eopid() == CLogical::EopLogicalGet ||
 		pexpr->Pop()->Eopid() == CLogical::EopLogicalDynamicGet)
 	{
-		ptabdesc = pexpr->DeriveTableDescriptor();
+		ptabdesc = pexpr->DeriveTableDescriptor()->First();
 		// there are some cases where we don't populate LogicalSelect currently
 		GPOS_ASSERT_IMP(pexpr->Pop()->Eopid() != CLogical::EopLogicalSelect,
 						nullptr != ptabdesc);
@@ -5033,5 +5033,34 @@ CUtils::AddExprs(CExpressionArrays *results_exprs,
 		results_exprs->Append(exprs);
 	}
 	GPOS_ASSERT(results_exprs->Size() >= input_exprs->Size());
+}
+
+
+// Given a table desriptor set, return a new table descriptor set without
+// duplicate mdids. This can happen if there is more than one table desriptor
+// for the same table, but using different alias names.
+CTableDescriptorHashSet *
+CUtils::RemoveDuplicateMdids(CMemoryPool *mp, CTableDescriptorHashSet *tabdescs)
+{
+	GPOS_ASSERT(nullptr != tabdescs);
+	CTableDescriptorHashSet *result = GPOS_NEW(mp) CTableDescriptorHashSet(mp);
+
+	MdidHashSet *mdids = GPOS_NEW(mp) MdidHashSet(mp);
+	CTableDescriptorHashSetIter hsiter(tabdescs);
+	while (hsiter.Advance())
+	{
+		CTableDescriptor *tabdesc =
+			const_cast<CTableDescriptor *>(hsiter.Get());
+		if (mdids->Insert(tabdesc->MDId()))
+		{
+			tabdesc->MDId()->AddRef();
+			if (result->Insert(tabdesc))
+			{
+				tabdesc->AddRef();
+			}
+		}
+	}
+	mdids->Release();
+	return result;
 }
 // EOF

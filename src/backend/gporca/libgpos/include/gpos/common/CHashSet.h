@@ -236,6 +236,17 @@ public:
 		return m_size;
 	}
 
+	T *
+	First()
+	{
+		if (m_elements->Size() == 0 || m_size == 0)
+		{
+			return nullptr;
+		}
+
+		return (*m_elements)[0];
+	}
+
 };	// class CHashSet
 
 }  // namespace gpos

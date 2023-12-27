@@ -4,6 +4,13 @@ set search_path=bfv_aggregate;
 --
 -- Window function with outer references in PARTITION BY/ORDER BY clause
 --
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
 
 -- SETUP
 create table x_outer (a int, b int, c int);

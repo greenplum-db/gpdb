@@ -27,6 +27,8 @@
 -- s/Hash chain length \d+\.\d+ avg, \d+ max/Hash chain length ###/
 -- m/using \d+ of \d+ buckets/
 -- s/using \d+ of \d+ buckets/using ## of ### buckets/
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
 -- end_matchsubs
 
 drop schema if exists dpe_single cascade;

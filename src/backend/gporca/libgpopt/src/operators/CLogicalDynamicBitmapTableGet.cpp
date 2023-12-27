@@ -82,7 +82,7 @@ ULONG
 CLogicalDynamicBitmapTableGet::HashValue() const
 {
 	ULONG ulHash = gpos::CombineHashes(COperator::HashValue(),
-									   m_ptabdesc->MDId()->HashValue());
+									   Ptabdesc()->MDId()->HashValue());
 	ulHash = gpos::CombineHashes(ulHash, gpos::HashValue(&m_scan_id));
 	ulHash =
 		gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrOutput));
@@ -118,7 +118,7 @@ CPropConstraint *
 CLogicalDynamicBitmapTableGet::DerivePropertyConstraint(
 	CMemoryPool *mp, CExpressionHandle &exprhdl) const
 {
-	return PpcDeriveConstraintFromTableWithPredicates(mp, exprhdl, m_ptabdesc,
+	return PpcDeriveConstraintFromTableWithPredicates(mp, exprhdl, Ptabdesc(),
 													  m_pdrgpcrOutput);
 }
 
@@ -167,7 +167,7 @@ CLogicalDynamicBitmapTableGet::OsPrint(IOstream &os) const
 {
 	os << SzId() << " ";
 	os << ", Table Name: (";
-	m_ptabdesc->Name().OsPrint(os);
+	Ptabdesc()->Name().OsPrint(os);
 	os << ") Scan Id: " << m_scan_id;
 	os << ", Columns: [";
 	CUtils::OsPrintDrgPcr(os, m_pdrgpcrOutput);
@@ -201,14 +201,14 @@ CLogicalDynamicBitmapTableGet::PopCopyWithRemappedColumns(
 	}
 	CName *pnameAlias = GPOS_NEW(mp) CName(mp, *m_pnameAlias);
 
-	m_ptabdesc->AddRef();
+	Ptabdesc()->AddRef();
 	m_partition_mdids->AddRef();
 
 	CColRef2dArray *pdrgpdrgpcrPart = CUtils::PdrgpdrgpcrRemap(
 		mp, m_pdrgpdrgpcrPart, colref_mapping, must_exist);
 
 	return GPOS_NEW(mp) CLogicalDynamicBitmapTableGet(
-		mp, m_ptabdesc, m_ulOriginOpId, pnameAlias, m_scan_id, pdrgpcrOutput,
+		mp, Ptabdesc(), m_ulOriginOpId, pnameAlias, m_scan_id, pdrgpcrOutput,
 		pdrgpdrgpcrPart, m_partition_mdids);
 }
 

@@ -138,7 +138,7 @@ public:
 		return PpartinfoPassThruOuter(exprhdl);
 	}
 
-	CTableDescriptor *DeriveTableDescriptor(
+	CTableDescriptorHashSet *DeriveTableDescriptor(
 		CMemoryPool *mp, CExpressionHandle &exprhdl) const override;
 	// compute required stats columns of the n-th child
 	CColRefSet *

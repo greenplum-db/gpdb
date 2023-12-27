@@ -10,7 +10,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.1962051.1.1" Name="store_sales" Rows="2880303.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.1962051.1.1" Name="store_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
+      <dxl:Relation Mdid="6.1962051.1.1" Name="store_sales" IsTemporary="false" Rows="2880303.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;29,23">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -6873,7 +6873,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1961591.1.1" Name="store_returns" Rows="287727.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.1961591.1.1" Name="store_returns" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;26,20">
+      <dxl:Relation Mdid="6.1961591.1.1" Name="store_returns" IsTemporary="false" Rows="287727.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9;26,20">
         <dxl:Columns>
           <dxl:Column Name="sr_returned_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

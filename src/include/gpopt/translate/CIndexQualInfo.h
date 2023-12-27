@@ -48,20 +48,9 @@ public:
 	// original index qual expression
 	Expr *m_original_expr;
 
-	// index strategy information
-	StrategyNumber m_strategy_num;
-
-	// index subtype
-	OID m_index_subtype_oid;
-
 	// ctor
-	CIndexQualInfo(AttrNumber attno, Expr *expr, Expr *original_expr,
-				   StrategyNumber strategy_number, OID index_subtype_oid)
-		: m_attno(attno),
-		  m_expr(expr),
-		  m_original_expr(original_expr),
-		  m_strategy_num(strategy_number),
-		  m_index_subtype_oid(index_subtype_oid)
+	CIndexQualInfo(AttrNumber attno, Expr *expr, Expr *original_expr)
+		: m_attno(attno), m_expr(expr), m_original_expr(original_expr)
 	{
 		GPOS_ASSERT((IsA(m_expr, OpExpr) && IsA(m_original_expr, OpExpr)) ||
 					(IsA(m_expr, ScalarArrayOpExpr) &&

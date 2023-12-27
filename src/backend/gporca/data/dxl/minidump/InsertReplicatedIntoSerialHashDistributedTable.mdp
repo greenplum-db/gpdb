@@ -38,7 +38,7 @@ EXPLAIN (COSTS OFF) INSERT INTO distributed_table (val1, val2) SELECT val1, val2
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.32768.1.0" Name="replicated_table" Rows="100.000000" RelPages="1" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.32768.1.0" Name="replicated_table" IsTemporary="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2">
+      <dxl:Relation Mdid="6.32768.1.0" Name="replicated_table" IsTemporary="false" Rows="100.000000" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="val1" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="19">
           </dxl:Column>

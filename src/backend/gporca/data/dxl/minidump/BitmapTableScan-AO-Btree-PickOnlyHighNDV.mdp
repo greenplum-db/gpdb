@@ -48,7 +48,7 @@
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.49547.1.0" Name="jazz" Rows="10000000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.49547.1.0" Name="jazz" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2">
+      <dxl:Relation Mdid="6.49547.1.0" Name="jazz" IsTemporary="false" Rows="10000000.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="4,2">
         <dxl:Columns>
           <dxl:Column Name="hi_ndv" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

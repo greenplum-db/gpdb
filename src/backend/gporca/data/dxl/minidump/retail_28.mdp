@@ -2187,7 +2187,7 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.4435137.1.1" Name="order_lineitems" Rows="8371700224.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.4435137.1.0" Name="order_lineitems" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="33,34,32" PartitionColumns="7" PartitionTypes="r">
+      <dxl:Relation Mdid="6.4435137.1.0" Name="order_lineitems" IsTemporary="false" Rows="8371700224.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="33,34,32" PartitionColumns="7" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="order_id" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="21">
           </dxl:Column>
@@ -2289,7 +2289,7 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
           <dxl:Opfamily Mdid="0.3041.1.0"/>
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
-      <dxl:Relation Mdid="6.4435137.1.1" Name="order_lineitems" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="33,34,32" PartitionColumns="7" PartitionTypes="r">
+      <dxl:Relation Mdid="6.4435137.1.1" Name="order_lineitems" IsTemporary="false" Rows="8371700224.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="33,34,32" PartitionColumns="7" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="order_id" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="21">
           </dxl:Column>
@@ -4148,7 +4148,7 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
                 </dxl:Comparison>
                 <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.2372.1.0">
                   <dxl:Ident ColId="8" ColName="order_datetime" TypeMdid="0.1114.1.0"/>
-                  <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+Q4AAA==" LintValue="3833"/>
+                  <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+Q4AAA==" DoubleValue="331171200000000.000000"/>
                 </dxl:Comparison>
               </dxl:And>
               <dxl:LogicalGet>
@@ -4397,13 +4397,13 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
                                 <dxl:And>
                                   <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.2372.1.0">
                                     <dxl:PartBound Level="0" Type="0.1114.1.0" LowerBound="true"/>
-                                    <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+Q4AAA==" LintValue="3833"/>
+                                    <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+Q4AAA==" DoubleValue="331171200000000.000000"/>
                                   </dxl:Comparison>
                                   <dxl:PartBoundInclusion Level="0" LowerBound="true"/>
                                 </dxl:And>
                                 <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.2371.1.0">
                                   <dxl:PartBound Level="0" Type="0.1114.1.0" LowerBound="true"/>
-                                  <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+Q4AAA==" LintValue="3833"/>
+                                  <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+Q4AAA==" DoubleValue="331171200000000.000000"/>
                                 </dxl:Comparison>
                               </dxl:Or>
                             </dxl:And>
@@ -4430,7 +4430,7 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
                             </dxl:Comparison>
                             <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.2372.1.0">
                               <dxl:Ident ColId="7" ColName="order_datetime" TypeMdid="0.1114.1.0"/>
-                              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+Q4AAA==" LintValue="3833"/>
+                              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+Q4AAA==" DoubleValue="331171200000000.000000"/>
                             </dxl:Comparison>
                           </dxl:And>
                         </dxl:PartFilterExpr>
@@ -4458,7 +4458,7 @@ ORDER BY to_char(order_datetime,'YYYY-Q')
                             </dxl:Comparison>
                             <dxl:Comparison ComparisonOperator="&lt;=" OperatorMdid="0.2372.1.0">
                               <dxl:Ident ColId="7" ColName="order_datetime" TypeMdid="0.1114.1.0"/>
-                              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+Q4AAA==" LintValue="3833"/>
+                              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="+Q4AAA==" DoubleValue="331171200000000.000000"/>
                             </dxl:Comparison>
                           </dxl:And>
                         </dxl:Filter>

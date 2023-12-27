@@ -1497,7 +1497,7 @@
       <dxl:MDCast Mdid="3.1114.1.0;1114.1.0" Name="timestamp" BinaryCoercible="true" SourceTypeId="0.1114.1.0" DestinationTypeId="0.1114.1.0" CastFuncId="0.0.0.0"/>
       <dxl:MDCast Mdid="3.1043.1.0;25.1.0" Name="text" BinaryCoercible="true" SourceTypeId="0.1043.1.0" DestinationTypeId="0.25.1.0" CastFuncId="0.0.0.0"/>
       <dxl:RelationStatistics Mdid="2.2284492.1.1" Name="coverage" Rows="3780020.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.2284492.1.1" Name="coverage" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="2" Keys="15,13">
+      <dxl:Relation Mdid="6.2284492.1.1" Name="coverage" IsTemporary="false" Rows="3780020.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="2" Keys="15,13">
         <dxl:Columns>
           <dxl:Column Name="date" Attno="1" Mdid="0.1114.1.0" Nullable="true" ColWidth="8">
           </dxl:Column>
@@ -3284,7 +3284,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.2372852.1.1" Name="asset_records" Rows="43026700.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.2372852.1.1" Name="asset_records" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="5" Keys="25,26,24" PartitionColumns="23" PartitionTypes="r">
+      <dxl:Relation Mdid="6.2372852.1.1" Name="asset_records" IsTemporary="false" Rows="43026700.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="5" Keys="25,26,24" PartitionColumns="23" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="parent" Attno="1" Mdid="0.16.1.0" Nullable="true" ColWidth="1">
           </dxl:Column>

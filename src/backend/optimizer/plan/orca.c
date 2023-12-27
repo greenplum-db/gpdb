@@ -410,6 +410,15 @@ push_down_expr_mutator(Node *node, List *child_tlist)
 		{
 			TargetEntry *child_tle = (TargetEntry *)
 				list_nth(child_tlist, var->varattno - 1);
+			// The const expr pertatining to a column in a child result node
+			// has const.consttypmod set as default value.
+			// correct typmod can be found at var.vartypmod.
+			// const.consttypmod value needs to be fixed before replacing var with const.
+			if (IsA(child_tle->expr, Const))
+			{
+				((Const *) child_tle->expr)->consttypmod = ((Var *) node)->vartypmod;
+			}
+
 			return (Node *) child_tle->expr;
 		}
 	}

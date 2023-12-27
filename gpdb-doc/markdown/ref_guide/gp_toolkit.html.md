@@ -36,10 +36,27 @@ These are the categories for views in the `gp_toolkit` schema.
 
 -   **[Checking for Missing and Orphaned Data Files](gp_toolkit.html#missingfiles)**  
 
+-   **[Moving Orphaned Data Files](gp_toolkit.html#moveorphanfiles)**  
+
 -   **[Checking for Uneven Data Distribution](gp_toolkit.html#topic49)**  
 
 
 **Parent topic:** [Greenplum Database Reference Guide](ref_guide.html)
+
+
+## <a id="about"></a>About the Extension
+
+`gp_toolkit` is implemented as an extension in Greenplum 7. Because this extension is registered in the `template1` database, it is both registered an immediately available to use in every Greenplum database that you create.
+
+## <a id="upgrade"></a>Upgrading the Extension
+
+The `gp_toolkit` extension is installed when you install or upgrade Greenplum Database. A previous version of the extension will continue to work in existing databases after you upgrade Greenplum. To upgrade to the most recent version of the extension, you must:
+
+```
+ALTER EXTENSION gp_toolkit UPDATE TO '1.4';
+```
+
+in **every** database in which you use the extension.
 
 ## <a id="topic2"></a>Checking for Tables that Need Routine Maintenance 
 
@@ -915,10 +932,9 @@ The `gp_check_orphaned_files` view scans the default and user-defined tablespace
 | gp_segment_id | The Greenplum Database segment identifier. |
 | tablespace | The identifier of the tablespace in which the orphaned file resides. |
 | filename | The file name of the orphaned data file. |
-| filepath | The file system path of the orphaned data file, relative to `$COORDINATOR_DATA_DIRECTORY`. |
+| filepath | The file system path of the orphaned data file, relative to the data directory of the coordinator or segment. |
 
 > **Caution** Use this view as one of many data points to identify orphaned data files. Do not delete files based solely on results from querying this view.
-
 
 ### <a id="mf_missing"></a>gp_check_missing_files
 
@@ -943,6 +959,47 @@ The `gp_check_missing_files_ext` view scans only append-optimized, column-orient
 | relname | The name of the table that has a missing extended data file(s). |
 | filename | The file name of the missing extended data file. |
 
+## <a id="moveorphanfiles"></a>Moving Orphaned Data Files
+
+The `gp_move_orphaned_files()` user-defined function (UDF) moves orphaned files found by the [gp_check_orphaned_files](#mf_orphaned) view into a file system location that you specify.
+
+The function signature is: `gp_move_orphaned_files( <target_directory> TEXT )`.
+
+`<target_directory>` must exist on all segment hosts before you move the files, and the specified directory must be accessible by the `gpadmin` user. If you specify a relative path for `<target_directory>`, it is considered relative to the data directory of the coordinator or segment.
+
+Greenplum Database renames each moved data file to one that reflects the original location of the file in the data directory. The file name format differs depending on the tablespace in which the orphaned file resides:
+
+| Tablespace | Renamed File Format|
+|------|-----------|
+| default | `seg<num>_base_<database-oid>_<relfilenode>` |
+| global | `seg<num>_global_<relfilenode>` |
+| user-defined | `seg<num>_pg_tblspc_<tablespace-oid>_<gpdb-version>_<database-oid>_<relfilenode>` |
+
+For example, if a file named `12345` in the default tablespace is orphaned on primary segment 2,
+
+```
+SELECT * FROM gp_move_orphaned_files('/home/gpadmin/orphaned');
+```
+
+moves and renames the file as follows:
+
+| Original Location | New Location and File Name |
+|------|-----------|
+| `<data_directory>/base/13700/12345` | `/home/gpadmin/orphaned/seg2_base_13700_12345` |
+
+`gp_move_orphaned_files()` returns both the original and the new file system locations for each file that it moves, and also provides an indication of the success or failure of the move operation. For example:
+
+```
+SELECT * FROM gp_toolkit.gp_move_orphaned_files('/home/gpadmin/orphaned');
+ gp_segment_id | move_success |           oldpath          |         newpath
+---------------+--------------+----------------------------+-----------------------------------
+            -1 | t            | /<data_dir>/base/13715/99999 | /home/gpadmin/orphaned/seg-1_base_13715_99999
+             1 | t            | /<data_dir>/base/13715/99999 | /home/gpadmin/orphaned/seg1_base_13715_99999
+             2 | t            | /<data_dir>/base/13715/99999 | /home/gpadmin/orphaned/seg2_base_13715_99999
+(3 rows)
+```
+
+Once you move the files, you may choose to remove them or to back them up.
 
 ## <a id="topic49"></a>Checking for Uneven Data Distribution 
 

@@ -23,6 +23,8 @@
 #include "gpopt/metadata/CPartConstraint.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpressionHandle.h"
+#include "naucrates/md/CMDIdRelStats.h"
+#include "naucrates/md/IMDRelStats.h"
 #include "naucrates/statistics/CFilterStatsProcessor.h"
 #include "naucrates/statistics/CStatistics.h"
 #include "naucrates/statistics/CStatsPredUtils.h"
@@ -115,7 +117,7 @@ ULONG
 CLogicalDynamicGet::HashValue() const
 {
 	ULONG ulHash = gpos::CombineHashes(COperator::HashValue(),
-									   m_ptabdesc->MDId()->HashValue());
+									   Ptabdesc()->MDId()->HashValue());
 	ulHash =
 		gpos::CombineHashes(ulHash, CUtils::UlHashColArray(m_pdrgpcrOutput));
 
@@ -162,9 +164,9 @@ CLogicalDynamicGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 											 colref_mapping, must_exist);
 	}
 	CColRef2dArray *pdrgpdrgpcrPart =
-		PdrgpdrgpcrCreatePartCols(mp, pdrgpcrOutput, m_ptabdesc->PdrgpulPart());
+		PdrgpdrgpcrCreatePartCols(mp, pdrgpcrOutput, Ptabdesc()->PdrgpulPart());
 	CName *pnameAlias = GPOS_NEW(mp) CName(mp, *m_pnameAlias);
-	m_ptabdesc->AddRef();
+	Ptabdesc()->AddRef();
 	m_partition_mdids->AddRef();
 
 	CConstraint *partition_cnstrs_disj = nullptr;
@@ -182,7 +184,7 @@ CLogicalDynamicGet::PopCopyWithRemappedColumns(CMemoryPool *mp,
 	}
 
 	return GPOS_NEW(mp) CLogicalDynamicGet(
-		mp, pnameAlias, m_ptabdesc, m_scan_id, pdrgpcrOutput, pdrgpdrgpcrPart,
+		mp, pnameAlias, Ptabdesc(), m_scan_id, pdrgpcrOutput, pdrgpdrgpcrPart,
 		m_partition_mdids, partition_cnstrs_disj, m_static_pruned,
 		m_foreign_server_mdids);
 }
@@ -257,7 +259,7 @@ CLogicalDynamicGet::OsPrint(IOstream &os) const
 
 		// actual name of table in catalog and columns
 		os << " (";
-		m_ptabdesc->Name().OsPrint(os);
+		Ptabdesc()->Name().OsPrint(os);
 		os << "), ";
 		os << "Columns: [";
 		CUtils::OsPrintDrgPcr(os, m_pdrgpcrOutput);
@@ -327,7 +329,7 @@ CLogicalDynamicGet::PstatsDeriveFilter(CMemoryPool *mp,
 	}
 
 	CStatistics *pstatsFullTable = dynamic_cast<CStatistics *>(
-		PstatsBaseTable(mp, exprhdl, m_ptabdesc, pcrsStat));
+		PstatsBaseTable(mp, exprhdl, Ptabdesc(), pcrsStat));
 
 	pcrsStat->Release();
 
@@ -364,13 +366,58 @@ CLogicalDynamicGet::PstatsDeriveFilter(CMemoryPool *mp,
 		pexprFilterNew = pexprFilter;
 	}
 
+	// Derive cardinality from unpruned partitions
+	CDouble selected_partitions_rows = CStatistics::MinRows;
+	if (dyn_get->FStaticPruned())
+	{
+		// Get unpruned partitions
+		IMdIdArray *partition_mdids = GetPartitionMdids();
+		CMDAccessor *md_accessor = COptCtxt::PoctxtFromTLS()->Pmda();
+
+		// Iterate through the unpruned partitions, and add up the rows.
+		// This is more accurate than deriving cardinality using constraints
+		// converted from predicates on partition keys through histogram
+		// bucket sampling.
+		DOUBLE unpruned_partitions_rows = 0;
+		for (ULONG ul = 0; ul < partition_mdids->Size(); ++ul)
+		{
+			IMDId *partition_mdid = (*partition_mdids)[ul];
+
+			// Retrieve row count from Relation objects
+			CDouble part_rows =
+				md_accessor->RetrieveRel(partition_mdid)->Rows();
+
+			// Accessing Relation objects is significantly faster than
+			// accessing RelationStatistics objects.
+			// However, if the row count in the Relation object is -1,
+			// retrieve row count from RelationStatistics objects.
+			// This functions as a backup mechanism, given our
+			// expectation that all leaf Relations should have a
+			// non-negative row count, and negative row count just
+			// indicates the leaf stats are missing from the Relation
+			// objects, which could happen in old MDP's.
+			if (-1 == part_rows)
+			{
+				partition_mdid->AddRef();
+				CMDIdRelStats *rel_stats_mdid = GPOS_NEW(mp)
+					CMDIdRelStats(CMDIdGPDB::CastMdid(partition_mdid));
+				part_rows = md_accessor->Pmdrelstats(rel_stats_mdid)->Rows();
+				rel_stats_mdid->Release();
+			}
+			unpruned_partitions_rows += part_rows.Get();
+		}
+		selected_partitions_rows =
+			std::max(selected_partitions_rows.Get(), unpruned_partitions_rows);
+	}
+
 	CStatsPred *pred_stats = CStatsPredUtils::ExtractPredStats(
 		mp, pexprFilterNew, nullptr /*outer_refs*/
 	);
 	pexprFilterNew->Release();
 
 	IStatistics *result_stats = CFilterStatsProcessor::MakeStatsFilter(
-		mp, pstatsFullTable, pred_stats, true /* do_cap_NDVs */);
+		mp, pstatsFullTable, pred_stats, true /* do_cap_NDVs */,
+		selected_partitions_rows);
 	pred_stats->Release();
 	pstatsFullTable->Release();
 

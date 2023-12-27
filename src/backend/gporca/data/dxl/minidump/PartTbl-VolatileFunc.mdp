@@ -159,7 +159,7 @@
       <dxl:ColumnStatistics Mdid="1.47578.1.1.3" Name="xmin" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.47578.1.1.2" Name="ctid" Width="6.000000"/>
       <dxl:RelationStatistics Mdid="2.47578.1.1" Name="p" Rows="0.000000"/>
-      <dxl:Relation Mdid="6.47578.1.1" Name="p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.47578.1.1" Name="p" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

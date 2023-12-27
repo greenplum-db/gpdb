@@ -2,7 +2,7 @@
 
 A machine language-generated embedding is a complex object transformed into a list of numbers (vector) that reflects both the semantic and syntactic relationships of the data. The `pgvector` module provides vector similarity search capabilities for Greenplum Database that enable you to search, store, and query embeddings at large scale.
 
-The Greenplum Database `pgvector` module is equivalent to version 0.5.0 of the `pgvector` module used with PostgreSQL. The limitations of the Greenplum version of the module are described in the [Greenplum Database Limitations](#limits) topic.
+The Greenplum Database `pgvector` module is equivalent to version 0.5.1 of the `pgvector` module used with PostgreSQL. The limitations of the Greenplum version of the module are described in the [Greenplum Database Limitations](#limits) topic.
 
 
 ## <a id="topic_reg"></a>Installing and Registering the Module
@@ -15,6 +15,15 @@ CREATE EXTENSION vector;
 
 Refer to [Installing Additional Supplied Modules](../../../install_guide/install_modules.html) for more information.
 
+## <a id="topic_upgrading"></a>Upgrading the Module
+
+The `pgvector` module is installed when you install or upgrade Greenplum Database. A previous version of the extension will continue to work in existing databases after you upgrade Greenplum. To upgrade to the most recent version of the extension, you must:
+
+```
+ALTER EXTENSION vector UPDATE TO '0.5.1';
+```
+
+in **every** database in which you registered/use the extension.
 
 ## <a id="using"></a>About the vector Types, Operators, and Functions
 

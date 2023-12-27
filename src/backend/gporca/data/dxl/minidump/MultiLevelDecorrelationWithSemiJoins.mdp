@@ -175,7 +175,7 @@
       </dxl:GPDBAgg>
       <dxl:RelationStatistics Mdid="2.122961.1.1" Name="t4" Rows="0.000000"/>
       <dxl:RelationStatistics Mdid="2.122915.1.1" Name="t2" Rows="0.000000"/>
-      <dxl:Relation Mdid="6.122961.1.1" Name="t4" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
+      <dxl:Relation Mdid="6.122961.1.1" Name="t4" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="c4" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -197,7 +197,7 @@
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.122915.1.1" Name="t2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
+      <dxl:Relation Mdid="6.122915.1.1" Name="t2" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="c2" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -229,7 +229,7 @@
       <dxl:ColumnStatistics Mdid="1.122892.1.1.4" Name="xmax" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.122938.1.1" Name="t3" Rows="0.000000"/>
       <dxl:RelationStatistics Mdid="2.122892.1.1" Name="t1" Rows="0.000000"/>
-      <dxl:Relation Mdid="6.122938.1.1" Name="t3" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
+      <dxl:Relation Mdid="6.122938.1.1" Name="t3" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="c3" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -251,7 +251,7 @@
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.122892.1.1" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
+      <dxl:Relation Mdid="6.122892.1.1" Name="t1" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0">
         <dxl:Columns>
           <dxl:Column Name="c1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

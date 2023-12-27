@@ -583,7 +583,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.1255.1.1" Name="pg_proc" Rows="3009.000000"/>
-      <dxl:Relation Mdid="6.1255.1.1" Name="pg_proc" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="30,23">
+      <dxl:Relation Mdid="6.1255.1.1" Name="pg_proc" IsTemporary="false" Rows="3009.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="30,23">
         <dxl:Columns>
           <dxl:Column Name="proname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
           </dxl:Column>
@@ -655,7 +655,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.2615.1.1" Name="pg_namespace" Rows="7.000000"/>
-      <dxl:Relation Mdid="6.2615.1.1" Name="pg_namespace" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="10,3">
+      <dxl:Relation Mdid="6.2615.1.1" Name="pg_namespace" IsTemporary="false" Rows="7.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="10,3">
         <dxl:Columns>
           <dxl:Column Name="nspname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
           </dxl:Column>
@@ -1043,7 +1043,7 @@
                         <dxl:IndexCondList>
                           <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.93.1.0">
                             <dxl:Ident ColId="73" ColName="nspname" TypeMdid="0.19.1.0"/>
-                            <dxl:ConstValue TypeMdid="0.19.1.0" Value="cGdfY2F0YWxvZwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
+                            <dxl:ConstValue TypeMdid="0.19.1.0" Value="cGdfY2F0YWxvZwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                           </dxl:Comparison>
                         </dxl:IndexCondList>
 	<dxl:Partitions/>
@@ -1145,7 +1145,7 @@
                       <dxl:IndexCondList>
                         <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.93.1.0">
                           <dxl:Ident ColId="31" ColName="nspname" TypeMdid="0.19.1.0"/>
-                          <dxl:ConstValue TypeMdid="0.19.1.0" Value="dGlkeWNhdAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#xA;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
+                          <dxl:ConstValue TypeMdid="0.19.1.0" Value="dGlkeWNhdAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&#10;AAAAAAAAAAAAAAAAAAAAAAAAAA=="/>
                         </dxl:Comparison>
                       </dxl:IndexCondList>
 	<dxl:Partitions/>

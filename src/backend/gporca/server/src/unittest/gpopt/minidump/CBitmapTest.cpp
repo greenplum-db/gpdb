@@ -34,7 +34,6 @@ const CHAR *rgszBitmapFileNames[] = {
 	"../data/dxl/minidump/BitmapTableScan-Basic.mdp",
 	"../data/dxl/minidump/BitmapTableScan-ColumnOnRightSide.mdp",
 	"../data/dxl/minidump/BitmapTableScan-AndCondition.mdp",
-	"../data/dxl/minidump/BitmapIndexProbeMergeFilters.mdp",
 	"../data/dxl/minidump/DynamicBitmapTableScan-Basic.mdp",
 	"../data/dxl/minidump/DynamicBitmapTableScan-Heterogeneous.mdp",
 	"../data/dxl/minidump/DynamicBitmapTableScan-UUID.mdp",

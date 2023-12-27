@@ -151,7 +151,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.884139.1.1" Name="r_p" Rows="0.000000"/>
-      <dxl:Relation Mdid="6.884139.1.1" Name="r_p" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="10,4" PartitionColumns="0" PartitionTypes="l">
+      <dxl:Relation Mdid="6.884139.1.1" Name="r_p" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Random" Keys="10,4" PartitionColumns="0" PartitionTypes="l">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -422,7 +422,7 @@
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.884235.1.1" Name="s" Rows="8.000000"/>
-      <dxl:Relation Mdid="6.884235.1.1" Name="s" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="9,3">
+      <dxl:Relation Mdid="6.884235.1.1" Name="s" IsTemporary="false" Rows="8.000000" StorageType="Heap" DistributionPolicy="Random" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

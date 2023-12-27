@@ -109,6 +109,16 @@ public:
 		return dynamic_cast<CLogicalProject *>(pop);
 	}
 
+	CTableDescriptorHashSet *
+	DeriveTableDescriptor(CMemoryPool *,
+						  CExpressionHandle &exprhdl) const override
+	{
+		CTableDescriptorHashSet *table_descriptor_set =
+			exprhdl.DeriveTableDescriptor(0);
+		table_descriptor_set->AddRef();
+		return table_descriptor_set;
+	}
+
 };	// class CLogicalProject
 
 }  // namespace gpopt

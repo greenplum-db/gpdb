@@ -236,7 +236,7 @@ Result  (cost=0.00..8.00 rows=2 width=36)
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.573456.1.0" Name="gist_tbl2" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.573456.1.0" Name="gist_tbl2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.573456.1.0" Name="gist_tbl2" IsTemporary="false" Rows="10.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -422,7 +422,7 @@ Result  (cost=0.00..8.00 rows=2 width=36)
                 </dxl:ProjElem>
                 <dxl:ProjElem ColId="10" Alias="?column?">
                   <dxl:OpExpr OperatorName="&lt;-&gt;" OperatorMdid="0.712.1.0" OperatorType="0.701.1.0">
-                    <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAWAMAAAAAAAAAAMBVQAAAAAAAwFVAAAAAAABAVUAAAAAAAEBVQAAAAAAA&#xA;gFVAAAAAAACAVUAAAAAAAEBVQAAAAAAAwFVAAAAAAADAVUAAAAAAAEBVQA=="/>
+                    <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAWAMAAAAAAAAAAMBVQAAAAAAAwFVAAAAAAABAVUAAAAAAAEBVQAAAAAAA&#10;gFVAAAAAAACAVUAAAAAAAEBVQAAAAAAAwFVAAAAAAADAVUAAAAAAAEBVQA=="/>
                     <dxl:Ident ColId="1" ColName="p" TypeMdid="0.604.1.0"/>
                   </dxl:OpExpr>
                 </dxl:ProjElem>
@@ -447,13 +447,13 @@ Result  (cost=0.00..8.00 rows=2 width=36)
                 <dxl:Filter>
                   <dxl:Comparison ComparisonOperator="&lt;@" OperatorMdid="0.489.1.0">
                     <dxl:Ident ColId="1" ColName="p" TypeMdid="0.604.1.0"/>
-                    <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAWAMAAAAAAAAAAMBVQAAAAAAAwFVAAAAAAABAVUAAAAAAAEBVQAAAAAAA&#xA;gFVAAAAAAACAVUAAAAAAAEBVQAAAAAAAwFVAAAAAAADAVUAAAAAAAEBVQA=="/>
+                    <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAWAMAAAAAAAAAAMBVQAAAAAAAwFVAAAAAAABAVUAAAAAAAEBVQAAAAAAA&#10;gFVAAAAAAACAVUAAAAAAAEBVQAAAAAAAwFVAAAAAAADAVUAAAAAAAEBVQA=="/>
                   </dxl:Comparison>
                 </dxl:Filter>
                 <dxl:IndexCondList>
                   <dxl:Comparison ComparisonOperator="&lt;@" OperatorMdid="0.489.1.0">
                     <dxl:Ident ColId="1" ColName="p" TypeMdid="0.604.1.0"/>
-                    <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAWAMAAAAAAAAAAMBVQAAAAAAAwFVAAAAAAABAVUAAAAAAAEBVQAAAAAAA&#xA;gFVAAAAAAACAVUAAAAAAAEBVQAAAAAAAwFVAAAAAAADAVUAAAAAAAEBVQA=="/>
+                    <dxl:ConstValue TypeMdid="0.604.1.0" Value="AAAAWAMAAAAAAAAAAMBVQAAAAAAAwFVAAAAAAABAVUAAAAAAAEBVQAAAAAAA&#10;gFVAAAAAAACAVUAAAAAAAEBVQAAAAAAAwFVAAAAAAADAVUAAAAAAAEBVQA=="/>
                   </dxl:Comparison>
                 </dxl:IndexCondList>
                 <dxl:Partitions/>

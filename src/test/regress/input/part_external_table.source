@@ -23,6 +23,9 @@
 -- m/DETAIL:  Found \d+ URLs and \d+ primary segments./
 -- s/Found.+//
 --
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
 -- end_matchsubs
 
 set optimizer_trace_fallback=on;

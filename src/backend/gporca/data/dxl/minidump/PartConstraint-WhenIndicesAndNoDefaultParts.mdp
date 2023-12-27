@@ -51,7 +51,7 @@ EXPLAIN SELECT * FROM date_parts WHERE year BETWEEN 2002 AND 2003;
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.3747400.1.0" Name="date_parts" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.3747400.1.0" Name="date_parts" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="1,2,3" PartitionTypes="r,l,r">
+      <dxl:Relation Mdid="6.3747400.1.0" Name="date_parts" IsTemporary="false" Rows="10.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,11,5" PartitionColumns="1,2,3" PartitionTypes="r,l,r">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

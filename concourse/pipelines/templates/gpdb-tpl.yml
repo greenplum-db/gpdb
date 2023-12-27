@@ -420,11 +420,13 @@ resources:
     - gpdb-doc/*
     - README*
 
+{% if "icw" in test_sections %}
 - name: filedump_src
   type: git
   source:
     branch: main
     uri: https://github.com/greenplum-db/filedump.git
+{% endif %}
 
 {% if os_type == compile_platform or (os_type != compile_platform and "icw" in test_sections) %}
 - name: gpdb7-[[ os_type ]]-build
@@ -827,6 +829,7 @@ jobs:
       passed:
       {% if os_type == "rhel8" or os_type == "oel8" or os_type == "rocky8" %}
       - prepare_binary_swap_gpdb_[[ os_type ]]
+      - compile_gpdb_with_llvm_asserts_[[ compile_platform ]]
       {% endif %}
       {% if os_type == compile_platform %}
       - compile_gpdb_clients_windows

@@ -89,7 +89,8 @@ public:
 	static CStatistics *MakeStatsFilter(CMemoryPool *mp,
 										const CStatistics *input_stats,
 										CStatsPred *base_pred_stats,
-										BOOL do_cap_NDVs);
+										BOOL do_cap_NDVs,
+										CDouble rows_filter = 0);
 
 	// derive statistics for filter operation based on given scalar expression
 	static IStatistics *MakeStatsFilterForScalarExpr(

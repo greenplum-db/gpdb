@@ -962,10 +962,7 @@ CDistributionSpecHashed *
 CDistributionSpecHashed::Combine(CMemoryPool *mp,
 								 CDistributionSpecHashed *other_spec)
 {
-	if (nullptr == other_spec)
-	{
-		return this;
-	}
+	GPOS_ASSERT(nullptr != other_spec);
 
 	CDistributionSpecHashed *combined_spec = other_spec->Copy(mp);
 	CDistributionSpecHashed *prev = nullptr, *next = nullptr;

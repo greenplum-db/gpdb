@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 create table cost_agg_t1(a int, b int, c int);
 insert into cost_agg_t1 select i, random() * 99999, i % 2000 from generate_series(1, 1000000) i;
 create table cost_agg_t2 as select * from cost_agg_t1 with no data;

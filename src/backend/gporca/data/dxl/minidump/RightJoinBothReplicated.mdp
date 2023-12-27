@@ -597,7 +597,7 @@
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.7898656.1.0" Name="foo" Rows="1000.000000" RelPages="2" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.7898656.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2">
+      <dxl:Relation Mdid="6.7898656.1.0" Name="foo" IsTemporary="false" Rows="1000.000000" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -622,7 +622,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.7898659.1.0" Name="bar" Rows="10.000000" RelPages="1" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.7898659.1.0" Name="bar" IsTemporary="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2">
+      <dxl:Relation Mdid="6.7898659.1.0" Name="bar" IsTemporary="false" Rows="10.000000" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

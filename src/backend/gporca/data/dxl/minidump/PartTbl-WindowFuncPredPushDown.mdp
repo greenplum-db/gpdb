@@ -172,7 +172,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="6.50202.1.0" Name="sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1,3" PartitionTypes="r,l">
+      <dxl:Relation Mdid="6.50202.1.0" Name="sales" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1,3" PartitionTypes="r,l">
         <dxl:Columns>
           <dxl:Column Name="trans_id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -338,7 +338,7 @@
           <dxl:And>
             <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.1097.1.0">
               <dxl:Ident ColId="14" ColName="date" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" LintValue="4077"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" DoubleValue="352252800000000.000000"/>
             </dxl:Comparison>
             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
               <dxl:Ident ColId="16" ColName="region" TypeMdid="0.25.1.0"/>
@@ -479,7 +479,7 @@
                     <dxl:Or>
                       <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.1097.1.0">
                         <dxl:PartBound Level="0" Type="0.1082.1.0" LowerBound="false"/>
-                        <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" LintValue="4077"/>
+                        <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" DoubleValue="352252800000000.000000"/>
                       </dxl:Comparison>
                       <dxl:Or>
                         <dxl:DefaultPart Level="0"/>
@@ -504,7 +504,7 @@
                     <dxl:And>
                       <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.1097.1.0">
                         <dxl:Ident ColId="13" ColName="date" TypeMdid="0.1082.1.0"/>
-                        <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" LintValue="4077"/>
+                        <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" DoubleValue="352252800000000.000000"/>
                       </dxl:Comparison>
                       <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
                         <dxl:Ident ColId="15" ColName="region" TypeMdid="0.25.1.0"/>
@@ -535,7 +535,7 @@
                     <dxl:And>
                       <dxl:Comparison ComparisonOperator="&gt;" OperatorMdid="0.1097.1.0">
                         <dxl:Ident ColId="13" ColName="date" TypeMdid="0.1082.1.0"/>
-                        <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" LintValue="4077"/>
+                        <dxl:ConstValue TypeMdid="0.1082.1.0" Value="7Q8AAA==" DoubleValue="352252800000000.000000"/>
                       </dxl:Comparison>
                       <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
                         <dxl:Ident ColId="15" ColName="region" TypeMdid="0.25.1.0"/>

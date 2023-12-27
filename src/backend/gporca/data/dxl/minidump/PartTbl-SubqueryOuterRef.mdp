@@ -286,7 +286,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.284979.1.1" Name="t1" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.284979.1.1" Name="t1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.284979.1.1" Name="t1" IsTemporary="false" Rows="100.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,4,2" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -683,7 +683,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.285165.1.1" Name="t2" Rows="10.000000" EmptyRelation="false"/>
       <dxl:ColumnStatistics Mdid="1.284979.1.1.4" Name="gp_segment_id" Width="4.000000" NullFreq="0.000000" NdvRemain="2.000000" FreqRemain="1.000000" ColStatsMissing="false"/>
-      <dxl:Relation Mdid="6.285165.1.1" Name="t2" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,1">
+      <dxl:Relation Mdid="6.285165.1.1" Name="t2" IsTemporary="false" Rows="10.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,1">
         <dxl:Columns>
           <dxl:Column Name="c" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -762,7 +762,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
     <dxl:Plan Id="0" SpaceSize="116">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1293.004074" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1293.003295" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -776,7 +776,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
         <dxl:SortingColumnList/>
         <dxl:NestedLoopJoin JoinType="In" IndexNestedLoopJoin="false" OuterRefAsParam="false">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1293.004038" Rows="1.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="1293.003259" Rows="1.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -792,7 +792,7 @@ explain select * from t1 where a = 1 and b in (select b from t2);
           </dxl:JoinFilter>
           <dxl:DynamicTableScan SelectorIds="">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.003902" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.003123" Rows="1.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="a">

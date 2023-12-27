@@ -6,7 +6,7 @@
 //		CXformRightOuterJoin2HashJoin.h
 //
 //	@doc:
-//		Transform left outer join to left outer hash join
+//		Transform right outer join to right outer hash join
 //---------------------------------------------------------------------------
 #ifndef GPOPT_CXformRightOuterJoin2HashJoin_H
 #define GPOPT_CXformRightOuterJoin2HashJoin_H
@@ -24,7 +24,7 @@ using namespace gpos;
 //		CXformRightOuterJoin2HashJoin
 //
 //	@doc:
-//		Transform left outer join to left outer hash join
+//		Transform right outer join to right outer hash join
 //
 //---------------------------------------------------------------------------
 class CXformRightOuterJoin2HashJoin : public CXformImplementation

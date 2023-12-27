@@ -521,34 +521,34 @@ select * from customer_address, store where customer_address.ca_county::text = s
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.516672.1.1.3" Name="s_rec_end_date" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">
         <dxl:StatsBucket Frequency="0.642215" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2v7//w==" LintValue="-294"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2v7//w==" LintValue="-294"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2v7//w==" DoubleValue="-25401600000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2v7//w==" DoubleValue="-25401600000000.000000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.214072" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="RwAAAA==" LintValue="71"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="RwAAAA==" LintValue="71"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="RwAAAA==" DoubleValue="6134400000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="RwAAAA==" DoubleValue="6134400000000.000000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.142714" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tAEAAA==" LintValue="436"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="tAEAAA==" LintValue="436"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tAEAAA==" DoubleValue="37670400000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="tAEAAA==" DoubleValue="37670400000000.000000"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.516672.1.1.2" Name="s_rec_start_date" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">
         <dxl:StatsBucket Frequency="0.570858" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="APz//w==" LintValue="-1024"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="APz//w==" LintValue="-1024"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="APz//w==" DoubleValue="-88473600000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="APz//w==" DoubleValue="-88473600000000.000000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.142714" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2/7//w==" LintValue="-293"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2/7//w==" LintValue="-293"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="2/7//w==" DoubleValue="-25315200000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="2/7//w==" DoubleValue="-25315200000000.000000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.142714" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="SAAAAA==" LintValue="72"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="SAAAAA==" LintValue="72"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="SAAAAA==" DoubleValue="6220800000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="SAAAAA==" DoubleValue="6220800000000.000000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.142714" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tQEAAA==" LintValue="437"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="tQEAAA==" LintValue="437"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="tQEAAA==" DoubleValue="37756800000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="tQEAAA==" DoubleValue="37756800000000.000000"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:Type Mdid="0.1700.1.0" Name="numeric" IsRedistributable="true" IsHashable="true" IsMergeJoinable="true" IsComposite="false" IsFixedLength="false" Length="-1" PassByValue="false">
@@ -1086,7 +1086,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.516672.1.1" Name="store" Rows="14.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.516672.1.0" Name="store" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
+      <dxl:Relation Mdid="6.516672.1.0" Name="store" IsTemporary="false" Rows="14.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
         <dxl:Columns>
           <dxl:Column Name="s_store_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -1166,7 +1166,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.516672.1.1" Name="store" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
+      <dxl:Relation Mdid="6.516672.1.1" Name="store" IsTemporary="false" Rows="14.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;35,29">
         <dxl:Columns>
           <dxl:Column Name="s_store_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -2558,7 +2558,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.508415.1.1" Name="customer_address" Rows="140000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.508415.1.0" Name="customer_address" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;19,13">
+      <dxl:Relation Mdid="6.508415.1.0" Name="customer_address" IsTemporary="false" Rows="140000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;19,13">
         <dxl:Columns>
           <dxl:Column Name="ca_address_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -2606,7 +2606,7 @@ select * from customer_address, store where customer_address.ca_county::text = s
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.508415.1.1" Name="customer_address" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;19,13">
+      <dxl:Relation Mdid="6.508415.1.1" Name="customer_address" IsTemporary="false" Rows="140000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;19,13">
         <dxl:Columns>
           <dxl:Column Name="ca_address_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>

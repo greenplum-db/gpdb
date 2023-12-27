@@ -55,7 +55,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.81923.1.0" Name="ss" Rows="270.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.81923.1.0" Name="ss" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3">
+      <dxl:Relation Mdid="6.81923.1.0" Name="ss" IsTemporary="false" Rows="270.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="ss_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -82,7 +82,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.81920.1.0" Name="cs" Rows="13000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.81920.1.0" Name="cs" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3">
+      <dxl:Relation Mdid="6.81920.1.0" Name="cs" IsTemporary="false" Rows="13000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="cs_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -109,7 +109,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.81926.1.0" Name="it" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.81926.1.0" Name="it" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.81926.1.0" Name="it" IsTemporary="false" Rows="100.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -134,7 +134,7 @@ explain select * from cs catalog_sales, it item, sr store_returns, ss store_sale
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.81929.1.0" Name="sr" Rows="10200.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.81929.1.0" Name="sr" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3">
+      <dxl:Relation Mdid="6.81929.1.0" Name="sr" IsTemporary="false" Rows="10200.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="sr_item_sk" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

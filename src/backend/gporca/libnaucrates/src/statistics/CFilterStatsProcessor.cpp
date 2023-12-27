@@ -209,15 +209,16 @@ CStatistics *
 CFilterStatsProcessor::MakeStatsFilter(CMemoryPool *mp,
 									   const CStatistics *input_stats,
 									   CStatsPred *base_pred_stats,
-									   BOOL do_cap_NDVs)
+									   BOOL do_cap_NDVs, CDouble rows_filter)
 {
 	GPOS_ASSERT(nullptr != base_pred_stats);
 
 	CDouble input_rows =
 		std::max(CStatistics::MinRows.Get(), input_stats->Rows().Get());
+	rows_filter = std::min(input_rows.Get(), rows_filter.Get());
 	CDouble scale_factor(1.0);
 	ULONG num_predicates = 1;
-	CDouble rows_filter = CStatistics::MinRows;
+
 	UlongToHistogramMap *histograms_new = nullptr;
 
 	UlongToHistogramMap *histograms_copy = input_stats->CopyHistograms(mp);
@@ -225,6 +226,7 @@ CFilterStatsProcessor::MakeStatsFilter(CMemoryPool *mp,
 	CStatisticsConfig *stats_config = input_stats->GetStatsConfig();
 	if (input_stats->IsEmpty())
 	{
+		rows_filter = CStatistics::MinRows;
 		histograms_new = GPOS_NEW(mp) UlongToHistogramMap(mp);
 		CHistogram::AddEmptyHistogram(mp, histograms_new, histograms_copy);
 	}
@@ -234,8 +236,14 @@ CFilterStatsProcessor::MakeStatsFilter(CMemoryPool *mp,
 			mp, stats_config, histograms_copy, input_rows, base_pred_stats,
 			&scale_factor, input_stats);
 
-		GPOS_ASSERT(CStatistics::MinRows.Get() <= scale_factor.Get());
-		rows_filter = input_rows / scale_factor;
+		// Default rows_filter is 0, which is below stats MinRows
+		// Use rows_filter as is if assigned a non-zero value
+		// Otherwise, use scale factor to calculate cardinality
+		if (0 == rows_filter)
+		{
+			GPOS_ASSERT(CStatistics::MinRows.Get() <= scale_factor.Get());
+			rows_filter = input_rows / scale_factor;
+		}
 		rows_filter = std::max(CStatistics::MinRows.Get(), rows_filter.Get());
 	}
 

@@ -37,7 +37,7 @@ private:
 	const CName *m_pnameAlias;
 
 	// table descriptor
-	CTableDescriptor *m_ptabdesc;
+	CTableDescriptorHashSet *m_ptabdesc;
 
 	// output columns
 	CColRefArray *m_pdrgpcrOutput;
@@ -105,7 +105,7 @@ public:
 	CTableDescriptor *
 	Ptabdesc() const
 	{
-		return m_ptabdesc;
+		return m_ptabdesc->First();
 	}
 
 	// partition columns
@@ -156,7 +156,8 @@ public:
 							 CExpressionHandle &  // exprhdl
 	) const override
 	{
-		return PpcDeriveConstraintFromTable(mp, m_ptabdesc, m_pdrgpcrOutput);
+		return PpcDeriveConstraintFromTable(mp, m_ptabdesc->First(),
+											m_pdrgpcrOutput);
 	}
 
 	// derive join depth
@@ -169,11 +170,12 @@ public:
 	}
 
 	// derive table descriptor
-	CTableDescriptor *
-	DeriveTableDescriptor(CMemoryPool *,	   // mp
+	CTableDescriptorHashSet *
+	DeriveTableDescriptor(CMemoryPool *mp GPOS_UNUSED,
 						  CExpressionHandle &  // exprhdl
 	) const override
 	{
+		m_ptabdesc->AddRef();
 		return m_ptabdesc;
 	}
 

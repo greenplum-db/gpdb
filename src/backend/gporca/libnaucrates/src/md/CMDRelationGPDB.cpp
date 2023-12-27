@@ -38,7 +38,7 @@ CMDRelationGPDB::CMDRelationGPDB(
 	IMdIdArray *partition_oids, BOOL convert_hash_to_random,
 	ULongPtr2dArray *keyset_array, CMDIndexInfoArray *md_index_info_array,
 	IMdIdArray *mdid_check_constraint_array, CDXLNode *mdpart_constraint,
-	IMDId *foreign_server)
+	IMDId *foreign_server, CDouble rows)
 	: m_mp(mp),
 	  m_mdid(mdid),
 	  m_mdname(mdname),
@@ -62,7 +62,8 @@ CMDRelationGPDB::CMDRelationGPDB(
 	  m_foreign_server(foreign_server),
 	  m_colpos_nondrop_colpos_map(nullptr),
 	  m_attrno_nondrop_col_pos_map(nullptr),
-	  m_nondrop_col_pos_array(nullptr)
+	  m_nondrop_col_pos_array(nullptr),
+	  m_rows(rows)
 {
 	GPOS_ASSERT(mdid->IsValid());
 	GPOS_ASSERT(nullptr != mdcol_array);
@@ -595,6 +596,11 @@ CMDRelationGPDB::ForeignServer() const
 	return m_foreign_server;
 }
 
+CDouble
+CMDRelationGPDB::Rows() const
+{
+	return m_rows;
+}
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -619,6 +625,13 @@ CMDRelationGPDB::Serialize(CXMLSerializer *xml_serializer) const
 								 m_mdname->GetMDName());
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenRelTemporary), m_is_temp_table);
+
+	if (m_rows > 0)
+	{
+		xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenRows),
+									 m_rows);
+	}
+
 	xml_serializer->AddAttribute(
 		CDXLTokens::GetDXLTokenStr(EdxltokenRelStorageType),
 		IMDRelation::GetStorageTypeStr(m_rel_storage_type));

@@ -2,6 +2,14 @@
 -- TODO: partition tables
 -- TODO: ao tables
 -- TODO: tables and temp tables
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
 
 \set explain 'explain analyze'
 

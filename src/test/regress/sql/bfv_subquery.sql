@@ -1,4 +1,8 @@
 -- count number of certain operators in a given plan
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 -- start_ignore
 create language plpython3u;
 -- end_ignore

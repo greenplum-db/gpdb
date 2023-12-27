@@ -1,6 +1,13 @@
 -- ----------------------------------------------------------------------
 -- Test: setup.sql
 -- ----------------------------------------------------------------------
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
 create schema qp_correlated_query;
 set search_path to qp_correlated_query;
 set optimizer_trace_fallback TO on;

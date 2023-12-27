@@ -2,6 +2,14 @@
 -- OLAP_WINDOW 
 --
 -- Changes here should also be made to olap_window_seq.sql
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
 -- reduce noise, specifying a precision
 set extra_float_digits=-2;
 -- 1 -- Null window specification -- OVER () --

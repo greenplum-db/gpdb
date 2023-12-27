@@ -238,9 +238,25 @@ CPhysicalAgg::PdsRequiredAgg(CMemoryPool *mp, CExpressionHandle &exprhdl,
 		{
 			GPOS_ASSERT(1 == ulOptReq);
 			GPOS_ASSERT(0 < m_pdrgpcr->Size());
-			CColRefArray *grpAndDistinctCols = GPOS_NEW(mp) CColRefArray(mp);
-			grpAndDistinctCols->AppendArray(m_pdrgpcr);
-			grpAndDistinctCols->AppendArray(m_pdrgpcrArgDQA);
+
+			ULONG length = m_pdrgpcrArgDQA->Size();
+			CColRefArray *grpAndDistinctCols =
+				CUtils::PdrgpcrExactCopy(mp, m_pdrgpcr);
+
+			// add the distinct column to the group by at the first stage of
+			// the multi-level aggregation, and also deduplicate them.
+			CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp, m_pdrgpcr);
+			for (ULONG ul = 0; ul < length; ul++)
+			{
+				CColRef *colref = (*m_pdrgpcrArgDQA)[ul];
+				if (!pcrs->FMember(colref))
+				{
+					grpAndDistinctCols->Append(colref);
+					pcrs->Include(colref);
+				}
+			}
+			pcrs->Release();
+
 			CDistributionSpec *pdsSpec =
 				PdsMaximalHashed(mp, grpAndDistinctCols);
 			grpAndDistinctCols->Release();

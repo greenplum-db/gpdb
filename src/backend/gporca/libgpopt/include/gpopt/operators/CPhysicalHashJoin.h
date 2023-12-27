@@ -55,6 +55,15 @@ private:
 	CDistributionSpec *PdsMatch(CMemoryPool *mp, CDistributionSpec *pds,
 								ULONG ulSourceChildIndex) const;
 
+	// helper for deriving hash join distribution from hashed children
+	CDistributionSpec *PdsDeriveFromHashedChildren(
+		CMemoryPool *mp, CExpressionHandle &exprhdl,
+		CDistributionSpec *pdsOuter, CDistributionSpec *pdsInner) const;
+
+	BOOL FSelfJoinWithMatchingJoinKeys(CMemoryPool *mp,
+									   CExpressionHandle &exprhdl) const;
+
+
 protected:
 	// compute required hashed distribution from the n-th child
 	CDistributionSpecHashed *PdshashedRequired(CMemoryPool *mp,
@@ -126,6 +135,9 @@ protected:
 
 	CPartitionPropagationSpec *PppsDeriveForJoins(
 		CMemoryPool *mp, CExpressionHandle &exprhdl) const;
+
+	CDistributionSpec *PdsDeriveForOuterJoin(CMemoryPool *mp,
+											 CExpressionHandle &exprhdl) const;
 
 public:
 	CPhysicalHashJoin(const CPhysicalHashJoin &) = delete;

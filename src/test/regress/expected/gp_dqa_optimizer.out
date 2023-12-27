@@ -3,6 +3,10 @@
 -- are flowing from different segments in different order. Mask those
 -- differences by setting 'extra_float_digits'. This isn't enough for all of
 -- the queries, so a few also use TO_CHAR() to truncate the results further.
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 set extra_float_digits=0;
 SET optimizer_trace_fallback to on;
 drop table if exists dqa_t1;
@@ -2722,6 +2726,43 @@ select id, count(distinct a), avg(b), sum(c) from num_table group by grouping se
   1 |     1 | 1.00000000000000000000 |   1
   2 |     1 |     2.0000000000000000 |   2
   3 |     1 |     3.0000000000000000 |   3
+(3 rows)
+
+explain (verbose on, costs off) select count(distinct b) from num_table group by c;
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: (count(b))
+   ->  GroupAggregate
+         Output: count(b)
+         Group Key: num_table.c
+         ->  Sort
+               Output: b, c
+               Sort Key: num_table.c
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Output: b, c
+                     Hash Key: c
+                     ->  GroupAggregate
+                           Output: b, c
+                           Group Key: num_table.c, num_table.b
+                           ->  Sort
+                                 Output: b, c
+                                 Sort Key: num_table.c, num_table.b
+                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                       Output: b, c
+                                       Hash Key: c, b
+                                       ->  Seq Scan on public.num_table
+                                             Output: b, c
+ Optimizer: GPORCA
+ Settings: enable_groupagg = 'off', gp_motion_cost_per_row = '1', optimizer_force_multistage_agg = 'on'
+(24 rows)
+
+select count(distinct b) from num_table group by c;
+ count 
+-------
+     1
+     1
+     1
 (3 rows)
 
 reset optimizer_force_multistage_agg;

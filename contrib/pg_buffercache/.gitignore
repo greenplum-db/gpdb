@@ -1,1 +1,4 @@
-/pg_buffercache.sql
+# Generated subdirectories
+/log/
+/results/
+/tmp_check/

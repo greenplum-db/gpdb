@@ -209,7 +209,7 @@
         </dxl:Partitions>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.172033.1.0" Name="mypt" Rows="0.000000" RelPages="3" RelAllVisible="0" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.172033.1.0" Name="mypt" IsTemporary="false" StorageType="MixedPartitioned" AppendOnlyVersion="2" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,7,1" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.172033.1.0" Name="mypt" IsTemporary="false" Rows="0.000000" StorageType="MixedPartitioned" AppendOnlyVersion="2" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,7,1" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
           </dxl:Column>

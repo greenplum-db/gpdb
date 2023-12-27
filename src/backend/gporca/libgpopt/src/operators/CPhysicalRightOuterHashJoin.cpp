@@ -52,6 +52,14 @@ CPhysicalRightOuterHashJoin::CPhysicalRightOuterHashJoin(
 //---------------------------------------------------------------------------
 CPhysicalRightOuterHashJoin::~CPhysicalRightOuterHashJoin() = default;
 
+CDistributionSpec *
+CPhysicalRightOuterHashJoin::PdsDerive(CMemoryPool *mp,
+									   CExpressionHandle &exprhdl) const
+{
+	return PdsDeriveForOuterJoin(mp, exprhdl);
+}
+
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CPhysicalRightOuterHashJoin::PdsRequired

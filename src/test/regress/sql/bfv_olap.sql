@@ -2,6 +2,11 @@
 
 -- First create a schema to contain the test tables, and few common test
 -- tables that are shared by several test queries.
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 create schema bfv_olap;
 set search_path=bfv_olap;
 

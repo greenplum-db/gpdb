@@ -736,7 +736,7 @@
         <dxl:ResultType Mdid="0.23.1.0"/>
       </dxl:GPDBFunc>
       <dxl:RelationStatistics Mdid="2.9255103.1.1" Name="test_fct_unnest" Rows="3000000.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.9255103.1.1" Name="test_fct_unnest" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4">
+      <dxl:Relation Mdid="6.9255103.1.1" Name="test_fct_unnest" IsTemporary="false" Rows="3000000.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4">
         <dxl:Columns>
           <dxl:Column Name="field1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

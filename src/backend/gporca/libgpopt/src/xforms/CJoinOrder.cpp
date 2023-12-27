@@ -27,7 +27,6 @@
 
 using namespace gpopt;
 
-FORCE_GENERATE_DBGSTR(CJoinOrder);
 FORCE_GENERATE_DBGSTR(CJoinOrder::SEdge);
 FORCE_GENERATE_DBGSTR(CJoinOrder::SComponent);
 

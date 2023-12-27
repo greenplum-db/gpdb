@@ -1,0 +1,165 @@
+CREATE EXTENSION pg_buffercache;
+select count(*) = (select setting::bigint
+                   from pg_settings
+                   where name = 'shared_buffers')
+from pg_buffercache;
+ ?column? 
+----------
+ t
+(1 row)
+
+select buffers_used + buffers_unused > 0,
+        buffers_dirty <= buffers_used,
+        buffers_pinned <= buffers_used
+from pg_buffercache_summary();
+ ?column? | ?column? | ?column? 
+----------+----------+----------
+ t        | t        | t
+(1 row)
+
+SELECT count(*) > 0 FROM pg_buffercache_usage_counts() WHERE buffers >= 0;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- Test GPDB functions/views
+SELECT count(*) = (select setting::bigint
+                   from pg_settings
+                   where name = 'shared_buffers') *
+                   (select count(*) from gp_segment_configuration where role='p')
+                   as buffers
+FROM gp_buffercache;
+ buffers 
+---------
+ t
+(1 row)
+
+SELECT buffers_used + buffers_unused > 0,
+        buffers_dirty <= buffers_used,
+        buffers_pinned <= buffers_used
+FROM gp_buffercache_summary;
+ ?column? | ?column? | ?column? 
+----------+----------+----------
+ t        | t        | t
+ t        | t        | t
+ t        | t        | t
+ t        | t        | t
+(4 rows)
+
+SELECT buffers_used + buffers_unused > 0,
+        buffers_dirty <= buffers_used,
+        buffers_pinned <= buffers_used
+FROM gp_buffercache_summary_aggregated;
+ ?column? | ?column? | ?column? 
+----------+----------+----------
+ t        | t        | t
+(1 row)
+
+SELECT count(*) > 0 FROM gp_buffercache_usage_counts WHERE buffers >= 0;
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT count(*) > 0 FROM gp_buffercache_usage_counts_aggregated WHERE buffers >= 0;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- Check that the functions / views can't be accessed by default.
+CREATE ROLE buffercache_test;
+SET ROLE buffercache_test;
+SELECT * FROM pg_buffercache;
+ERROR:  permission denied for view pg_buffercache
+SELECT * FROM pg_buffercache_pages() AS p (wrong int);
+ERROR:  permission denied for function pg_buffercache_pages
+SELECT * FROM pg_buffercache_summary();
+ERROR:  permission denied for function pg_buffercache_summary
+SELECT * FROM pg_buffercache_usage_counts();
+ERROR:  permission denied for function pg_buffercache_usage_counts
+-- GPDB
+SELECT * FROM pg_buffercache_summary;
+ERROR:  permission denied for view pg_buffercache_summary
+SELECT * FROM pg_buffercache_usage_counts;
+ERROR:  permission denied for view pg_buffercache_usage_counts
+SELECT * FROM gp_buffercache;
+ERROR:  permission denied for view gp_buffercache
+SELECT * FROM gp_buffercache_summary;
+ERROR:  permission denied for view gp_buffercache_summary
+SELECT * FROM gp_buffercache_usage_counts;
+ERROR:  permission denied for view gp_buffercache_usage_counts
+SELECT * FROM gp_buffercache_summary_aggregated;
+ERROR:  permission denied for view gp_buffercache_summary_aggregated
+SELECT * FROM gp_buffercache_usage_counts_aggregated;
+ERROR:  permission denied for view gp_buffercache_usage_counts_aggregated
+RESET ROLE;
+-- Check that pg_monitor is allowed to query view / function
+SET ROLE pg_monitor;
+SELECT count(*) > 0 FROM pg_buffercache;
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT buffers_used + buffers_unused > 0 FROM pg_buffercache_summary();
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT count(*) > 0 FROM pg_buffercache_usage_counts();
+ ?column? 
+----------
+ t
+(1 row)
+
+-- GPDB
+SELECT count(*) > 0 FROM pg_buffercache_summary;
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT count(*) > 0 FROM pg_buffercache_usage_counts;
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT count(*) > 0 FROM gp_buffercache;
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT buffers_used + buffers_unused > 0 FROM gp_buffercache_summary;
+ ?column? 
+----------
+ t
+ t
+ t
+ t
+(4 rows)
+
+SELECT buffers_used + buffers_unused > 0 FROM gp_buffercache_summary_aggregated;
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT count(*) > 0 FROM gp_buffercache_usage_counts;
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT count(*) > 0 FROM gp_buffercache_usage_counts_aggregated;
+ ?column? 
+----------
+ t
+(1 row)
+
+RESET ROLE;
+DROP ROLE buffercache_test;

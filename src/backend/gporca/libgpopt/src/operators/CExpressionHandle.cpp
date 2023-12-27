@@ -1983,7 +1983,7 @@ CExpressionHandle::DerivePartitionInfo() const
 	return GetRelationalProperties()->GetPartitionInfo();
 }
 
-CTableDescriptor *
+CTableDescriptorHashSet *
 CExpressionHandle::DeriveTableDescriptor() const
 {
 	if (nullptr != Pexpr())
@@ -1994,7 +1994,7 @@ CExpressionHandle::DeriveTableDescriptor() const
 	return GetRelationalProperties()->GetTableDescriptor();
 }
 
-CTableDescriptor *
+CTableDescriptorHashSet *
 CExpressionHandle::DeriveTableDescriptor(ULONG child_index) const
 {
 	if (nullptr != Pexpr())

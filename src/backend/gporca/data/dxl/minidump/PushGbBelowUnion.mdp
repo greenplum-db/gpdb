@@ -237,7 +237,7 @@
       <dxl:ColumnStatistics Mdid="1.57356.1.1.5" Name="xmax" Width="4.000000" NullFreq="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.57356.1.1.4" Name="cmin" Width="4.000000" NullFreq="0.000000"/>
       <dxl:RelationStatistics Mdid="2.27319.1.1" Name="x" Rows="610848.000000"/>
-      <dxl:Relation Mdid="6.27319.1.1" Name="x" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.27319.1.1" Name="x" IsTemporary="false" Rows="610848.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -583,7 +583,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.57356.1.1" Name="a" Rows="10000.000000"/>
-      <dxl:Relation Mdid="6.57356.1.1" Name="a" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.57356.1.1" Name="a" IsTemporary="false" Rows="10000.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

@@ -109,6 +109,7 @@ extern int gp_resource_group_queuing_timeout;
 extern bool gp_resource_group_bypass_catalog_query;
 extern int gp_resource_group_move_timeout;
 extern bool gp_resource_group_bypass_direct_dispatch;
+extern char *gp_resource_group_cgroup_parent;
 
 /*
  * Non-GUC global variables.

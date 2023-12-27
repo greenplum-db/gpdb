@@ -1258,7 +1258,7 @@ def checkTableACL(cat):
     try:
         conn = connect2(GV.cfg[GV.coordinator_dbid], utilityMode=False)
         with conn.cursor() as curs:
-            curs = db.execute(qry)
+            curs.execute(qry)
             nrows = curs.rowcount
 
             if nrows == 0:

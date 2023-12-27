@@ -158,7 +158,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.90284.1.0" Name="t1n" Rows="2000523.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.90284.1.0" Name="t1n" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.90284.1.0" Name="t1n" IsTemporary="false" Rows="2000523.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -1185,7 +1185,7 @@
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.90360.1.0" Name="t2n" Rows="2000523.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.90360.1.0" Name="t2n" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.90360.1.0" Name="t2n" IsTemporary="false" Rows="2000523.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,10,4" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -2658,7 +2658,7 @@
     <dxl:Plan Id="0" SpaceSize="6">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="2157.192890" Rows="1479264.726597" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1490.625659" Rows="59.155120" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -2672,7 +2672,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="2113.091078" Rows="1479264.726597" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="1490.623896" Rows="59.155120" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">
@@ -2735,7 +2735,7 @@
           </dxl:DynamicTableScan>
           <dxl:PartitionSelector RelationMdid="6.90284.1.0" SelectorId="0" ScanId="1" Partitions="0,1,2,3,4,5,6,7,8,9">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="847.578426" Rows="1479264.726597" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.016659" Rows="59.155120" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="11" Alias="a">
@@ -2756,7 +2756,7 @@
             </dxl:PartFilterExpr>
             <dxl:DynamicTableScan SelectorIds="">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="847.578426" Rows="1479264.726597" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.016659" Rows="59.155120" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="11" Alias="a">

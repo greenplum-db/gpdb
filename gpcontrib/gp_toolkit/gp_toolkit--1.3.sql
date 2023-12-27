@@ -868,7 +868,12 @@ GRANT SELECT ON TABLE gp_toolkit.gp_skew_idle_fractions TO public;
 --        gp_toolkit.gp_stats_missing
 --
 -- @doc:
---        List all tables with no or insufficient stats; includes empty tables
+--        List all tables with no or insufficient stats. For partitioned
+--        tables, always skip interior partitions, as stats are never collected
+--        and this would add noise. If all leaves are empty and table is
+--        analyzed, the root will still be displayed as we can't differentiate
+--        between an analyzed and unanalyzed root based on relpages.
+--        GPDB_14_MERGE_FIXME: Change this to relpages > -1 after 3d351d9
 --
 --------------------------------------------------------------------------------
 CREATE VIEW gp_toolkit.gp_stats_missing
@@ -876,12 +881,12 @@ AS
     SELECT
         aut.autnspname as smischema,
         aut.autrelname as smitable,
-        CASE WHEN aut.autrelpages = 0 OR aut.autreltuples = 0 THEN false ELSE true END AS smisize,
+        CASE WHEN aut.autrelpages = 0 THEN false ELSE true END AS smisize,
         attcnt AS smicols,
         COALESCE(stacnt, 0) AS smirecs
     FROM
         gp_toolkit.__gp_user_tables aut
-
+        join pg_class pgc on aut.autoid=pgc.oid
         JOIN
         (
             SELECT attrelid, count(*) AS attcnt
@@ -898,8 +903,9 @@ AS
             GROUP BY starelid
         ) bar
         ON aut.autoid = starelid
-    WHERE aut.autrelkind = 'r'
-    AND (aut.autrelpages = 0 OR aut.autreltuples = 0) OR (stacnt IS NOT NULL AND attcnt > stacnt);
+    WHERE aut.autrelkind in ('r', 'p', 'm')
+    AND NOT (pgc.relispartition AND aut.autrelkind = 'p')
+    AND (aut.autrelpages = 0 AND (stacnt IS NULL OR attcnt > stacnt));
 
 GRANT SELECT ON TABLE gp_toolkit.gp_stats_missing TO public;
 

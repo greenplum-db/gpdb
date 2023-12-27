@@ -1,6 +1,10 @@
 -- ----------------------------------------------------------------------
 -- Test: setup.sql
 -- ----------------------------------------------------------------------
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 
 create schema qp_targeted_dispatch;
 set search_path to qp_targeted_dispatch;

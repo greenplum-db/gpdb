@@ -15,6 +15,8 @@
 -- s/segment \d+/segment ###/
 -- m/using \d+ of \d+ buckets/
 -- s/using \d+ of \d+ buckets/using ## of ### buckets/
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
 -- end_matchsubs
 
 create schema bfv_partition_plans;

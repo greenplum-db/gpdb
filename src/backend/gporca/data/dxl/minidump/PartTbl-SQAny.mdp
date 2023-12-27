@@ -220,7 +220,7 @@
       <dxl:ColumnStatistics Mdid="1.24588.1.1.4" Name="cmin" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.24756.1.1" Name="smallt2_part" Rows="0.000000"/>
       <dxl:RelationStatistics Mdid="2.24588.1.1" Name="smallt_part" Rows="0.000000"/>
-      <dxl:Relation Mdid="6.24756.1.1" Name="smallt2_part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.24756.1.1" Name="smallt2_part" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -280,11 +280,11 @@
             </dxl:IsNotNull>
             <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1098.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="vPH//w==" LintValue="-3652"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="vPH//w==" DoubleValue="-315532800000000.000000"/>
             </dxl:Comparison>
             <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="AAAAAA==" LintValue="0"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="AAAAAA==" DoubleValue="0.000000"/>
             </dxl:Comparison>
           </dxl:And>
         </dxl:PartConstraint>
@@ -319,11 +319,11 @@
             </dxl:IsNotNull>
             <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1098.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="AAAAAA==" LintValue="0"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="AAAAAA==" DoubleValue="0.000000"/>
             </dxl:Comparison>
             <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="RQ4AAA==" LintValue="3653"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="RQ4AAA==" DoubleValue="315619200000000.000000"/>
             </dxl:Comparison>
           </dxl:And>
         </dxl:PartConstraint>
@@ -358,11 +358,11 @@
             </dxl:IsNotNull>
             <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1098.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="RQ4AAA==" LintValue="3653"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="RQ4AAA==" DoubleValue="315619200000000.000000"/>
             </dxl:Comparison>
             <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="iRwAAA==" LintValue="7305"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="iRwAAA==" DoubleValue="631152000000000.000000"/>
             </dxl:Comparison>
           </dxl:And>
         </dxl:PartConstraint>
@@ -397,16 +397,16 @@
             </dxl:IsNotNull>
             <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1098.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="iRwAAA==" LintValue="7305"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="iRwAAA==" DoubleValue="631152000000000.000000"/>
             </dxl:Comparison>
             <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="zioAAA==" LintValue="10958"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="zioAAA==" DoubleValue="946771200000000.000000"/>
             </dxl:Comparison>
           </dxl:And>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.24588.1.1" Name="smallt_part" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.24588.1.1" Name="smallt_part" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -466,11 +466,11 @@
             </dxl:IsNotNull>
             <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1098.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="vPH//w==" LintValue="-3652"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="vPH//w==" DoubleValue="-315532800000000.000000"/>
             </dxl:Comparison>
             <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="AAAAAA==" LintValue="0"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="AAAAAA==" DoubleValue="0.000000"/>
             </dxl:Comparison>
           </dxl:And>
         </dxl:PartConstraint>
@@ -505,11 +505,11 @@
             </dxl:IsNotNull>
             <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1098.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="AAAAAA==" LintValue="0"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="AAAAAA==" DoubleValue="0.000000"/>
             </dxl:Comparison>
             <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="RQ4AAA==" LintValue="3653"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="RQ4AAA==" DoubleValue="315619200000000.000000"/>
             </dxl:Comparison>
           </dxl:And>
         </dxl:PartConstraint>
@@ -544,11 +544,11 @@
             </dxl:IsNotNull>
             <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1098.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="RQ4AAA==" LintValue="3653"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="RQ4AAA==" DoubleValue="315619200000000.000000"/>
             </dxl:Comparison>
             <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="iRwAAA==" LintValue="7305"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="iRwAAA==" DoubleValue="631152000000000.000000"/>
             </dxl:Comparison>
           </dxl:And>
         </dxl:PartConstraint>
@@ -583,11 +583,11 @@
             </dxl:IsNotNull>
             <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1098.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="iRwAAA==" LintValue="7305"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="iRwAAA==" DoubleValue="631152000000000.000000"/>
             </dxl:Comparison>
             <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
               <dxl:Ident ColId="2" ColName="d" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="zioAAA==" LintValue="10958"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="zioAAA==" DoubleValue="946771200000000.000000"/>
             </dxl:Comparison>
           </dxl:And>
         </dxl:PartConstraint>

@@ -1,6 +1,10 @@
 --
 -- ARRAYS
 --
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 CREATE TABLE arrtest (
 	a 			int2[],
 	b 			int4[][][],

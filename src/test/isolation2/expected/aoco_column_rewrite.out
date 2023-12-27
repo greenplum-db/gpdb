@@ -1613,6 +1613,489 @@ select * from atsetenc;
  1  | 2  | 4  | 5  | 6  | 7  | 8  
 (2 rows)
 
+-- 6. GENERATED new column value by existing column
+drop table if exists ataddcolgenerated;
+DROP TABLE
+create table ataddcolgenerated (a int, b text) using ao_column;
+CREATE TABLE
+insert into ataddcolgenerated select i,'str_' || i::text from generate_series(1, 5)i;
+INSERT 0 5
+select * from ataddcolgenerated;
+ a | b     
+---+-------
+ 1 | str_1 
+ 5 | str_5 
+ 2 | str_2 
+ 3 | str_3 
+ 4 | str_4 
+(5 rows)
+alter table ataddcolgenerated add column c int generated always as (a * a) stored;
+ALTER TABLE
+alter table ataddcolgenerated add column d text generated always as (a::text || ',' || a::text) stored;
+ALTER TABLE
+alter table ataddcolgenerated add column e text generated always as (right(b, 2)) stored;
+ALTER TABLE
+-- with UDF
+create or replace function pylen(a text) returns int as $$ return (len(a.split('_'))) $$ immutable language plpython3u;
+CREATE FUNCTION
+alter table ataddcolgenerated add column f int generated always as (pylen(b)) stored;
+ALTER TABLE
+select * from ataddcolgenerated;
+ a | b     | c  | d   | e  | f 
+---+-------+----+-----+----+---
+ 2 | str_2 | 4  | 2,2 | _2 | 2 
+ 3 | str_3 | 9  | 3,3 | _3 | 2 
+ 4 | str_4 | 16 | 4,4 | _4 | 2 
+ 5 | str_5 | 25 | 5,5 | _5 | 2 
+ 1 | str_1 | 1  | 1,1 | _1 | 2 
+(5 rows)
+-- external table
+drop external table if exists ataddcolgeneratedext;
+DROP FOREIGN TABLE
+create external web table ataddcolgeneratedext (a int, b text) execute 'echo 1, str_1' on coordinator format 'csv';
+CREATE EXTERNAL TABLE
+select * from ataddcolgeneratedext;
+ a | b      
+---+--------
+ 1 |  str_1 
+(1 row)
+alter table ataddcolgeneratedext add column c int generated always as (a * a) stored;
+ALTER TABLE
+alter table ataddcolgeneratedext add column d text generated always as (a::text || ',' || a::text) stored;
+ALTER TABLE
+alter table ataddcolgeneratedext add column e int generated always as (pylen(b)) stored;
+ALTER TABLE
+select * from ataddcolgeneratedext;
+ a | b      | c | d | e 
+---+--------+---+---+---
+ 1 |  str_1 |   |   |   
+(1 row)
+alter table ataddcolgeneratedext add column f int default 10;
+ALTER TABLE
+select * from ataddcolgeneratedext;
+ERROR:  missing data for column "f"
+CONTEXT:  External table ataddcolgeneratedext, line 1 of execute:echo 1, str_1: "1, str_1"
+-- partitioned table
+drop table if exists ataddcolgenpart;
+DROP TABLE
+create table ataddcolgenpart(a int, b text, c int) using ao_column partition by range (c) (start(1) end(11) every (2));
+CREATE TABLE
+insert into ataddcolgenpart select i,'str_' || i::text,i from generate_series(1, 10)i;
+INSERT 0 10
+select * from ataddcolgenpart;
+ a  | b      | c  
+----+--------+----
+ 1  | str_1  | 1  
+ 5  | str_5  | 5  
+ 6  | str_6  | 6  
+ 9  | str_9  | 9  
+ 10 | str_10 | 10 
+ 2  | str_2  | 2  
+ 3  | str_3  | 3  
+ 4  | str_4  | 4  
+ 7  | str_7  | 7  
+ 8  | str_8  | 8  
+(10 rows)
+alter table ataddcolgenpart add column d text generated always as ('d') stored;
+ALTER TABLE
+alter table ataddcolgenpart add column e text generated always as (a::text || ',' || right(b, 2)) stored;
+ALTER TABLE
+alter table ataddcolgenpart add column f text generated always as (pylen(b)) stored;
+ALTER TABLE
+select * from ataddcolgenpart;
+ a  | b      | c  | d | e     | f 
+----+--------+----+---+-------+---
+ 1  | str_1  | 1  | d | 1,_1  | 2 
+ 5  | str_5  | 5  | d | 5,_5  | 2 
+ 6  | str_6  | 6  | d | 6,_6  | 2 
+ 9  | str_9  | 9  | d | 9,_9  | 2 
+ 10 | str_10 | 10 | d | 10,10 | 2 
+ 2  | str_2  | 2  | d | 2,_2  | 2 
+ 3  | str_3  | 3  | d | 3,_3  | 2 
+ 4  | str_4  | 4  | d | 4,_4  | 2 
+ 7  | str_7  | 7  | d | 7,_7  | 2 
+ 8  | str_8  | 8  | d | 8,_8  | 2 
+(10 rows)
+-- mixed partitions: case1, parent on ao_column, children on heap, ao_row, ao_column
+drop table if exists aocomixedpart;
+DROP TABLE
+create table aocomixedpart (a int, b text, c int) with (appendonly=true, orientation=column) partition by range(c) ( start (1) end (6) with (appendonly=false), start (6) end (11) with (appendonly=true, orientation=row), start (11) end (16) with (appendonly=true, orientation=column), start (16) end (21) with (appendonly=false), start (21) end (26) with (appendonly=true, orientation=row), start (26) end (31) with (appendonly=true, orientation=column) );
+CREATE TABLE
+insert into aocomixedpart select i,'str_' || i::text,i from generate_series(1, 30)i;
+INSERT 0 30
+alter table aocomixedpart add column d text generated always as ('d') stored;
+ALTER TABLE
+alter table aocomixedpart add column e text generated always as (a::text || ',' || right(b, 2)) stored;
+ALTER TABLE
+alter table aocomixedpart add column f text generated always as (pylen(b)) stored;
+ALTER TABLE
+select * from aocomixedpart;
+ a  | b      | c  | d | e     | f 
+----+--------+----+---+-------+---
+ 2  | str_2  | 2  | d | 2,_2  | 2 
+ 3  | str_3  | 3  | d | 3,_3  | 2 
+ 4  | str_4  | 4  | d | 4,_4  | 2 
+ 7  | str_7  | 7  | d | 7,_7  | 2 
+ 8  | str_8  | 8  | d | 8,_8  | 2 
+ 16 | str_16 | 16 | d | 16,16 | 2 
+ 18 | str_18 | 18 | d | 18,18 | 2 
+ 19 | str_19 | 19 | d | 19,19 | 2 
+ 22 | str_22 | 22 | d | 22,22 | 2 
+ 24 | str_24 | 24 | d | 24,24 | 2 
+ 27 | str_27 | 27 | d | 27,27 | 2 
+ 29 | str_29 | 29 | d | 29,29 | 2 
+ 1  | str_1  | 1  | d | 1,_1  | 2 
+ 12 | str_12 | 12 | d | 12,12 | 2 
+ 15 | str_15 | 15 | d | 15,15 | 2 
+ 20 | str_20 | 20 | d | 20,20 | 2 
+ 23 | str_23 | 23 | d | 23,23 | 2 
+ 26 | str_26 | 26 | d | 26,26 | 2 
+ 30 | str_30 | 30 | d | 30,30 | 2 
+ 5  | str_5  | 5  | d | 5,_5  | 2 
+ 6  | str_6  | 6  | d | 6,_6  | 2 
+ 9  | str_9  | 9  | d | 9,_9  | 2 
+ 10 | str_10 | 10 | d | 10,10 | 2 
+ 11 | str_11 | 11 | d | 11,11 | 2 
+ 13 | str_13 | 13 | d | 13,13 | 2 
+ 14 | str_14 | 14 | d | 14,14 | 2 
+ 17 | str_17 | 17 | d | 17,17 | 2 
+ 21 | str_21 | 21 | d | 21,21 | 2 
+ 25 | str_25 | 25 | d | 25,25 | 2 
+ 28 | str_28 | 28 | d | 28,28 | 2 
+(30 rows)
+-- mixed partitions: case2, parent on ao_row, children on heap, ao_row, ao_column, attach external partition
+drop table if exists aocomixedpart;
+DROP TABLE
+create table aocomixedpart (a int, b text, c int) with (appendonly=true, orientation=row) partition by range(c) ( start (1) end (6) with (appendonly=false), start (6) end (11) with (appendonly=true, orientation=row), start (11) end (16) with (appendonly=true, orientation=column), start (16) end (21) with (appendonly=false), start (21) end (26) with (appendonly=true, orientation=row), start (26) end (31) with (appendonly=true, orientation=column) );
+CREATE TABLE
+insert into aocomixedpart select i,'str_' || i::text,i from generate_series(1, 30)i;
+INSERT 0 30
+-- external partition
+drop external table if exists ataddcolgeneratedext;
+DROP FOREIGN TABLE
+create external web table ataddcolgeneratedext (a int, b text, c int) execute 'echo 21,str_21,21' on coordinator format 'csv';
+CREATE EXTERNAL TABLE
+alter table aocomixedpart attach partition ataddcolgeneratedext for values from (31) to (36);
+ALTER TABLE
+select * from aocomixedpart;
+ a  | b      | c  
+----+--------+----
+ 2  | str_2  | 2  
+ 3  | str_3  | 3  
+ 4  | str_4  | 4  
+ 5  | str_5  | 5  
+ 1  | str_1  | 1  
+ 6  | str_6  | 6  
+ 9  | str_9  | 9  
+ 10 | str_10 | 10 
+ 7  | str_7  | 7  
+ 8  | str_8  | 8  
+ 12 | str_12 | 12 
+ 15 | str_15 | 15 
+ 11 | str_11 | 11 
+ 13 | str_13 | 13 
+ 14 | str_14 | 14 
+ 16 | str_16 | 16 
+ 18 | str_18 | 18 
+ 19 | str_19 | 19 
+ 20 | str_20 | 20 
+ 17 | str_17 | 17 
+ 22 | str_22 | 22 
+ 24 | str_24 | 24 
+ 23 | str_23 | 23 
+ 21 | str_21 | 21 
+ 25 | str_25 | 25 
+ 27 | str_27 | 27 
+ 29 | str_29 | 29 
+ 26 | str_26 | 26 
+ 30 | str_30 | 30 
+ 28 | str_28 | 28 
+(30 rows)
+alter table aocomixedpart add column d text generated always as ('d') stored;
+ALTER TABLE
+alter table aocomixedpart add column e text generated always as (a::text || ',' || right(b, 2)) stored;
+ALTER TABLE
+alter table aocomixedpart add column f text generated always as (pylen(b)) stored;
+ALTER TABLE
+select * from aocomixedpart;
+ a  | b      | c  | d | e     | f 
+----+--------+----+---+-------+---
+ 1  | str_1  | 1  | d | 1,_1  | 2 
+ 5  | str_5  | 5  | d | 5,_5  | 2 
+ 2  | str_2  | 2  | d | 2,_2  | 2 
+ 3  | str_3  | 3  | d | 3,_3  | 2 
+ 4  | str_4  | 4  | d | 4,_4  | 2 
+ 7  | str_7  | 7  | d | 7,_7  | 2 
+ 8  | str_8  | 8  | d | 8,_8  | 2 
+ 6  | str_6  | 6  | d | 6,_6  | 2 
+ 9  | str_9  | 9  | d | 9,_9  | 2 
+ 10 | str_10 | 10 | d | 10,10 | 2 
+ 12 | str_12 | 12 | d | 12,12 | 2 
+ 15 | str_15 | 15 | d | 15,15 | 2 
+ 11 | str_11 | 11 | d | 11,11 | 2 
+ 13 | str_13 | 13 | d | 13,13 | 2 
+ 14 | str_14 | 14 | d | 14,14 | 2 
+ 16 | str_16 | 16 | d | 16,16 | 2 
+ 18 | str_18 | 18 | d | 18,18 | 2 
+ 19 | str_19 | 19 | d | 19,19 | 2 
+ 20 | str_20 | 20 | d | 20,20 | 2 
+ 17 | str_17 | 17 | d | 17,17 | 2 
+ 22 | str_22 | 22 | d | 22,22 | 2 
+ 24 | str_24 | 24 | d | 24,24 | 2 
+ 23 | str_23 | 23 | d | 23,23 | 2 
+ 21 | str_21 | 21 | d | 21,21 | 2 
+ 25 | str_25 | 25 | d | 25,25 | 2 
+ 27 | str_27 | 27 | d | 27,27 | 2 
+ 29 | str_29 | 29 | d | 29,29 | 2 
+ 26 | str_26 | 26 | d | 26,26 | 2 
+ 30 | str_30 | 30 | d | 30,30 | 2 
+ 28 | str_28 | 28 | d | 28,28 | 2 
+(30 rows)
+-- mixed partitions: case3, parent on heap, children on heap, ao_row, ao_column, exchange with external partition
+drop table if exists aocomixedpart;
+DROP TABLE
+create table aocomixedpart (a int, b text, c int) with (appendonly=false) partition by range(c) ( start (1) end (6) with (appendonly=false), start (6) end (11) with (appendonly=true, orientation=row), start (11) end (16) with (appendonly=true, orientation=column), start (16) end (21) with (appendonly=false), start (21) end (26) with (appendonly=true, orientation=row) );
+CREATE TABLE
+alter table aocomixedpart add partition exch_part start (26) end (31);
+ALTER TABLE
+insert into aocomixedpart select i,'str_' || i::text,i from generate_series(1, 30)i;
+INSERT 0 30
+-- external partition
+drop external table if exists ataddcolgeneratedext;
+DROP FOREIGN TABLE
+create external web table ataddcolgeneratedext (a int, b text, c int) execute 'echo 21,str_21,21' on coordinator format 'csv';
+CREATE EXTERNAL TABLE
+alter table aocomixedpart exchange partition exch_part with table ataddcolgeneratedext;
+ALTER TABLE
+select * from aocomixedpart;
+ a  | b      | c  
+----+--------+----
+ 2  | str_2  | 2  
+ 3  | str_3  | 3  
+ 4  | str_4  | 4  
+ 5  | str_5  | 5  
+ 1  | str_1  | 1  
+ 7  | str_7  | 7  
+ 8  | str_8  | 8  
+ 6  | str_6  | 6  
+ 9  | str_9  | 9  
+ 10 | str_10 | 10 
+ 12 | str_12 | 12 
+ 15 | str_15 | 15 
+ 11 | str_11 | 11 
+ 13 | str_13 | 13 
+ 14 | str_14 | 14 
+ 16 | str_16 | 16 
+ 18 | str_18 | 18 
+ 19 | str_19 | 19 
+ 20 | str_20 | 20 
+ 17 | str_17 | 17 
+ 22 | str_22 | 22 
+ 24 | str_24 | 24 
+ 23 | str_23 | 23 
+ 21 | str_21 | 21 
+ 25 | str_25 | 25 
+(25 rows)
+alter table aocomixedpart add column d text generated always as ('d') stored;
+ALTER TABLE
+alter table aocomixedpart add column e text generated always as (a::text || ',' || right(b, 2)) stored;
+ALTER TABLE
+alter table aocomixedpart add column f text generated always as (pylen(b)) stored;
+ALTER TABLE
+select * from aocomixedpart;
+ a  | b      | c  | d | e     | f 
+----+--------+----+---+-------+---
+ 5  | str_5  | 5  | d | 5,_5  | 2 
+ 1  | str_1  | 1  | d | 1,_1  | 2 
+ 2  | str_2  | 2  | d | 2,_2  | 2 
+ 3  | str_3  | 3  | d | 3,_3  | 2 
+ 4  | str_4  | 4  | d | 4,_4  | 2 
+ 7  | str_7  | 7  | d | 7,_7  | 2 
+ 8  | str_8  | 8  | d | 8,_8  | 2 
+ 6  | str_6  | 6  | d | 6,_6  | 2 
+ 9  | str_9  | 9  | d | 9,_9  | 2 
+ 10 | str_10 | 10 | d | 10,10 | 2 
+ 12 | str_12 | 12 | d | 12,12 | 2 
+ 15 | str_15 | 15 | d | 15,15 | 2 
+ 11 | str_11 | 11 | d | 11,11 | 2 
+ 13 | str_13 | 13 | d | 13,13 | 2 
+ 14 | str_14 | 14 | d | 14,14 | 2 
+ 16 | str_16 | 16 | d | 16,16 | 2 
+ 18 | str_18 | 18 | d | 18,18 | 2 
+ 19 | str_19 | 19 | d | 19,19 | 2 
+ 20 | str_20 | 20 | d | 20,20 | 2 
+ 17 | str_17 | 17 | d | 17,17 | 2 
+ 22 | str_22 | 22 | d | 22,22 | 2 
+ 24 | str_24 | 24 | d | 24,24 | 2 
+ 23 | str_23 | 23 | d | 23,23 | 2 
+ 21 | str_21 | 21 | d | 21,21 | 2 
+ 25 | str_25 | 25 | d | 25,25 | 2 
+(25 rows)
+-- multiple sub-commands containing both add-column and rewrite-column
+drop table if exists ataddcolgenerated;
+DROP TABLE
+create table ataddcolgenerated (a int, b text) using ao_column;
+CREATE TABLE
+insert into ataddcolgenerated select i,'str_' || i::text from generate_series(1, 5)i;
+INSERT 0 5
+select * from ataddcolgenerated;
+ a | b     
+---+-------
+ 1 | str_1 
+ 2 | str_2 
+ 3 | str_3 
+ 4 | str_4 
+ 5 | str_5 
+(5 rows)
+alter table ataddcolgenerated add column c int generated always as (a * a) stored;
+ALTER TABLE
+select * from ataddcolgenerated;
+ a | b     | c  
+---+-------+----
+ 2 | str_2 | 4  
+ 3 | str_3 | 9  
+ 4 | str_4 | 16 
+ 1 | str_1 | 1  
+ 5 | str_5 | 25 
+(5 rows)
+alter table ataddcolgenerated add column d text generated always as (a::text || ',' || a::text) stored, alter column c type text;
+ALTER TABLE
+select * from ataddcolgenerated;
+ a | b     | c  | d   
+---+-------+----+-----
+ 1 | str_1 | 1  | 1,1 
+ 5 | str_5 | 25 | 5,5 
+ 2 | str_2 | 4  | 2,2 
+ 3 | str_3 | 9  | 3,3 
+ 4 | str_4 | 16 | 4,4 
+(5 rows)
+-- multiple sub-commands containing both add-column and rewrite-column, mixed partitioned table
+drop table if exists aocomixedpart;
+DROP TABLE
+create table aocomixedpart (a int, b text, c int) with (appendonly=true, orientation=column) partition by range(c) ( start (1) end (6) with (appendonly=false), start (6) end (11) with (appendonly=true, orientation=row), start (11) end (16) with (appendonly=true, orientation=column), start (16) end (21) with (appendonly=false), start (21) end (26) with (appendonly=true, orientation=row), start (26) end (31) with (appendonly=true, orientation=column) );
+CREATE TABLE
+insert into aocomixedpart select i,'str_' || i::text,i from generate_series(1, 30)i;
+INSERT 0 30
+drop external table if exists aocomixedpartext;
+DROP FOREIGN TABLE
+create external web table aocomixedpartext (a int, b text, c int) execute 'echo 31,str_31,31' on coordinator format 'csv';
+CREATE EXTERNAL TABLE
+alter table aocomixedpart attach partition aocomixedpartext for values from (31) to (36);
+ALTER TABLE
+select * from aocomixedpart;
+ a  | b      | c  
+----+--------+----
+ 1  | str_1  | 1  
+ 5  | str_5  | 5  
+ 2  | str_2  | 2  
+ 3  | str_3  | 3  
+ 4  | str_4  | 4  
+ 7  | str_7  | 7  
+ 8  | str_8  | 8  
+ 6  | str_6  | 6  
+ 9  | str_9  | 9  
+ 10 | str_10 | 10 
+ 12 | str_12 | 12 
+ 15 | str_15 | 15 
+ 11 | str_11 | 11 
+ 13 | str_13 | 13 
+ 14 | str_14 | 14 
+ 16 | str_16 | 16 
+ 18 | str_18 | 18 
+ 19 | str_19 | 19 
+ 20 | str_20 | 20 
+ 17 | str_17 | 17 
+ 22 | str_22 | 22 
+ 24 | str_24 | 24 
+ 23 | str_23 | 23 
+ 21 | str_21 | 21 
+ 25 | str_25 | 25 
+ 27 | str_27 | 27 
+ 29 | str_29 | 29 
+ 26 | str_26 | 26 
+ 30 | str_30 | 30 
+ 28 | str_28 | 28 
+ 31 | str_31 | 31 
+(31 rows)
+alter table aocomixedpart add column d text generated always as (a) stored;
+ALTER TABLE
+alter table aocomixedpart add column e text generated always as (a::text || ',' || right(b, 2)) stored, alter column d type text;
+ALTER TABLE
+select * from aocomixedpart;
+ a  | b      | c  | d  | e     
+----+--------+----+----+-------
+ 2  | str_2  | 2  | 2  | 2,_2  
+ 3  | str_3  | 3  | 3  | 3,_3  
+ 4  | str_4  | 4  | 4  | 4,_4  
+ 1  | str_1  | 1  | 1  | 1,_1  
+ 5  | str_5  | 5  | 5  | 5,_5  
+ 7  | str_7  | 7  | 7  | 7,_7  
+ 8  | str_8  | 8  | 8  | 8,_8  
+ 6  | str_6  | 6  | 6  | 6,_6  
+ 9  | str_9  | 9  | 9  | 9,_9  
+ 10 | str_10 | 10 | 10 | 10,10 
+ 11 | str_11 | 11 | 11 | 11,11 
+ 13 | str_13 | 13 | 13 | 13,13 
+ 14 | str_14 | 14 | 14 | 14,14 
+ 12 | str_12 | 12 | 12 | 12,12 
+ 15 | str_15 | 15 | 15 | 15,15 
+ 16 | str_16 | 16 | 16 | 16,16 
+ 18 | str_18 | 18 | 18 | 18,18 
+ 19 | str_19 | 19 | 19 | 19,19 
+ 20 | str_20 | 20 | 20 | 20,20 
+ 17 | str_17 | 17 | 17 | 17,17 
+ 22 | str_22 | 22 | 22 | 22,22 
+ 24 | str_24 | 24 | 24 | 24,24 
+ 23 | str_23 | 23 | 23 | 23,23 
+ 21 | str_21 | 21 | 21 | 21,21 
+ 25 | str_25 | 25 | 25 | 25,25 
+ 27 | str_27 | 27 | 27 | 27,27 
+ 29 | str_29 | 29 | 29 | 29,29 
+ 26 | str_26 | 26 | 26 | 26,26 
+ 30 | str_30 | 30 | 30 | 30,30 
+ 28 | str_28 | 28 | 28 | 28,28 
+ 31 | str_31 | 31 |    |       
+(31 rows)
+-- multiple sub-commands containing both add-column and rewrite-column, pure aoco tables
+drop table if exists ataddcolgenpart;
+DROP TABLE
+create table ataddcolgenpart(a int, b text, c int) using ao_column partition by range (c) (start(1) end(11) every (2));
+CREATE TABLE
+insert into ataddcolgenpart select i,'str_' || i::text,i from generate_series(1, 10)i;
+INSERT 0 10
+select * from ataddcolgenpart;
+ a  | b      | c  
+----+--------+----
+ 5  | str_5  | 5  
+ 6  | str_6  | 6  
+ 9  | str_9  | 9  
+ 10 | str_10 | 10 
+ 2  | str_2  | 2  
+ 3  | str_3  | 3  
+ 4  | str_4  | 4  
+ 7  | str_7  | 7  
+ 8  | str_8  | 8  
+ 1  | str_1  | 1  
+(10 rows)
+alter table ataddcolgenpart add column d text generated always as (a) stored;
+ALTER TABLE
+alter table ataddcolgenpart alter column d type varchar, add column e text generated always as (c) stored, alter column b set encoding (compresstype=zlib, compresslevel=5);
+ALTER TABLE
+select * from ataddcolgenpart;
+ a  | b      | c  | d  | e  
+----+--------+----+----+----
+ 1  | str_1  | 1  | 1  | 1  
+ 5  | str_5  | 5  | 5  | 5  
+ 6  | str_6  | 6  | 6  | 6  
+ 9  | str_9  | 9  | 9  | 9  
+ 10 | str_10 | 10 | 10 | 10 
+ 2  | str_2  | 2  | 2  | 2  
+ 3  | str_3  | 3  | 3  | 3  
+ 4  | str_4  | 4  | 4  | 4  
+ 7  | str_7  | 7  | 7  | 7  
+ 8  | str_8  | 8  | 8  | 8  
+(10 rows)
+
 --
 -- partition table
 --

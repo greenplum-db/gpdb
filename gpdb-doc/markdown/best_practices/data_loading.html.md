@@ -32,7 +32,7 @@ You can run multiple concurrent `COPY` commands to improve performance.
 
 External tables provide access to data in sources outside of Greenplum Database. They can be accessed with `SELECT` statements and are commonly used with the Extract, Load, Transform \(ELT\) pattern, a variant of the Extract, Transform, Load \(ETL\) pattern that takes advantage of Greenplum Database's fast parallel data loading capability.
 
-With ETL, data is extracted from its source, transformed outside of the database using external transformation tools, such as Informatica or Datastage, and then loaded into the database.
+With ETL, data is extracted from its source, transformed outside of the database using external transformation tools, such as Datastage, and then loaded into the database.
 
 With ELT, Greenplum external tables provide access to data in external sources, which could be read-only files \(for example, text, CSV, or XML files\), Web servers, Hadoop file systems, executable OS programs, or the Greenplum `gpfdist` file server, described in the next section. External tables support SQL operations such as select, sort, and join so the data can be loaded and transformed simultaneously, or loaded into a *load table* and transformed in the database into target tables.
 
@@ -106,9 +106,6 @@ The load is accomplished in a single transaction.
     ```
 
 -   By default, `gpfdist` assumes a maximum record size of 32K. To load data records larger than 32K, you must increase the maximum row size parameter by specifying the `-m <*bytes*>` option on the `gpfdist` command line. If you use `gpload`, set the `MAX_LINE_LENGTH` parameter in the `gpload` control file.
-
-    > **Note** Integrations with Informatica Power Exchange are currently limited to the default 32K record length.
-
 
 ### <a id="addinfo"></a>Additional Information 
 

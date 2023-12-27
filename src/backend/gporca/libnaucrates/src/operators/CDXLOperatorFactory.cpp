@@ -2611,7 +2611,6 @@ CDXLOperatorFactory::GetDatumVal(CDXLMemoryManager *dxl_memory_manager,
 		case GPDB_TEXT:
 		case GPDB_CASH:
 		case GPDB_UUID:
-		case GPDB_DATE:
 		{
 			return GetDatumStatsLintMappable(dxl_memory_manager, attrs,
 											 target_elem, mdid, is_const_null);
@@ -2625,6 +2624,7 @@ CDXLOperatorFactory::GetDatumVal(CDXLMemoryManager *dxl_memory_manager,
 		case GPDB_CIDR:
 		case GPDB_MACADDR:
 		// time-related types
+		case GPDB_DATE:
 		case GPDB_TIME:
 		case GPDB_TIMETZ:
 		case GPDB_TIMESTAMP:

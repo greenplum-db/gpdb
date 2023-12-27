@@ -517,6 +517,15 @@ CConfigParamMapping::PackConfigParamInBitset(
 	// enable using opfamilies in distribution specs for GPDB 6
 	traceflag_bitset->ExchangeSet(EopttraceConsiderOpfamiliesForDistribution);
 
+	if (!optimizer_enable_right_outer_join)
+	{
+		// disable right outer join if the corresponding GUC is turned off
+		traceflag_bitset->ExchangeSet(
+			GPOPT_DISABLE_XFORM_TF(CXform::ExfLeftJoin2RightJoin));
+		traceflag_bitset->ExchangeSet(
+			GPOPT_DISABLE_XFORM_TF(CXform::ExfRightOuterJoin2HashJoin));
+	}
+
 	return traceflag_bitset;
 }
 

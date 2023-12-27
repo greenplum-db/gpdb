@@ -343,7 +343,7 @@ select a,count(distinct a), count(distinct b) from t1 group by a
       </dxl:ColumnStatistics>
       <dxl:MDCast Mdid="3.23.1.0;23.1.0" Name="int4" BinaryCoercible="true" SourceTypeId="0.23.1.0" DestinationTypeId="0.23.1.0" CastFuncId="0.0.0.0"/>
       <dxl:RelationStatistics Mdid="2.1639448.1.1" Name="t1" Rows="111.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.1639448.1.1" Name="t1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.1639448.1.1" Name="t1" IsTemporary="false" Rows="111.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -498,7 +498,7 @@ select a,count(distinct a), count(distinct b) from t1 group by a
         </dxl:LogicalGroupBy>
       </dxl:Union>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1067404800">
+    <dxl:Plan Id="0" SpaceSize="398361600">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="2586.144639" Rows="134.000000" Width="20"/>

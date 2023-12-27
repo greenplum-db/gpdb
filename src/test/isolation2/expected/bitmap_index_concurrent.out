@@ -24,6 +24,11 @@
 -- With the below transacions in each session, on seg0, the bitmap for id=97
 -- will generate two bitmap pages, and the first page is a full page.
 -- Use heap table, delete tuples and then vacuum should be the same. But it needs huge tuples.
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 CREATE TABLE bmupdate (id int) with(appendonly = true) DISTRIBUTED BY (id);
 CREATE TABLE
 

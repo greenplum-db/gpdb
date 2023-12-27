@@ -1,4 +1,9 @@
 -- Test bitmap AND and OR
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 
 SET default_statistics_target=1000;
 

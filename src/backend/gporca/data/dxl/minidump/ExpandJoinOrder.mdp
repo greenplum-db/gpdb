@@ -169,7 +169,7 @@
       <dxl:ColumnStatistics Mdid="1.90124.1.1.5" Name="tableoid" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.90124.1.1.4" Name="ctid" Width="6.000000"/>
       <dxl:RelationStatistics Mdid="2.91393.1.1" Name="t49" Rows="10.000000"/>
-      <dxl:Relation Mdid="6.91393.1.1" Name="t49" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="16,14">
+      <dxl:Relation Mdid="6.91393.1.1" Name="t49" IsTemporary="false" Rows="10.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="16,14">
         <dxl:Columns>
           <dxl:Column Name="c586" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="67753">
           </dxl:Column>
@@ -210,7 +210,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.92365.1.1" Name="t86" Rows="10.000000"/>
-      <dxl:Relation Mdid="6.92365.1.1" Name="t86" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,9">
+      <dxl:Relation Mdid="6.92365.1.1" Name="t86" IsTemporary="false" Rows="10.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="11,9">
         <dxl:Columns>
           <dxl:Column Name="c1047" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="75051">
           </dxl:Column>
@@ -241,7 +241,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.92635.1.1" Name="t97" Rows="10.000000"/>
-      <dxl:Relation Mdid="6.92635.1.1" Name="t97" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,11">
+      <dxl:Relation Mdid="6.92635.1.1" Name="t97" IsTemporary="false" Rows="10.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="13,11">
         <dxl:Columns>
           <dxl:Column Name="c1190" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="74602">
           </dxl:Column>
@@ -289,7 +289,7 @@
       <dxl:ColumnStatistics Mdid="1.92068.1.1.6" Name="c916" Width="65586.000000"/>
       <dxl:ColumnStatistics Mdid="1.92068.1.1.14" Name="c924" Width="67649.000000"/>
       <dxl:RelationStatistics Mdid="2.90124.1.1" Name="t0" Rows="10.000000"/>
-      <dxl:Relation Mdid="6.90124.1.1" Name="t0" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4">
+      <dxl:Relation Mdid="6.90124.1.1" Name="t0" IsTemporary="false" Rows="10.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,4">
         <dxl:Columns>
           <dxl:Column Name="c0" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="55337">
           </dxl:Column>
@@ -315,7 +315,7 @@
       <dxl:ColumnStatistics Mdid="1.92365.1.1.3" Name="c1050" Width="99445.000000"/>
       <dxl:ColumnStatistics Mdid="1.90124.1.1.6" Name="gp_segment_id" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.92068.1.1" Name="t74" Rows="10.000000"/>
-      <dxl:Relation Mdid="6.92068.1.1" Name="t74" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,20">
+      <dxl:Relation Mdid="6.92068.1.1" Name="t74" IsTemporary="false" Rows="10.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="22,20">
         <dxl:Columns>
           <dxl:Column Name="c910" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="58834">
           </dxl:Column>

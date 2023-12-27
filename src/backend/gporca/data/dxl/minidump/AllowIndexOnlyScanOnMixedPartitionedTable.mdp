@@ -334,7 +334,7 @@
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.172061.1.0" Name="mypt" Rows="300.000000" RelPages="7" RelAllVisible="6" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.172061.1.0" Name="mypt" IsTemporary="false" StorageType="MixedPartitioned" AppendOnlyVersion="2" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,7,1" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.172061.1.0" Name="mypt" IsTemporary="false" Rows="300.000000" StorageType="MixedPartitioned" AppendOnlyVersion="2" DistributionPolicy="Hash" DistributionColumns="0" Keys="6,7,1" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.20.1.0" Nullable="true" ColWidth="8">
           </dxl:Column>
@@ -800,7 +800,7 @@
     <dxl:Plan Id="0" SpaceSize="3">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="6.000255" Rows="1.006711" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="6.000255" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">

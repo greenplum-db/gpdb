@@ -261,6 +261,16 @@ public:
 	static IOstream &OsPrintGbAggType(IOstream &os,
 									  COperator::EGbAggType egbaggtype);
 
+	CTableDescriptorHashSet *
+	DeriveTableDescriptor(CMemoryPool *,
+						  CExpressionHandle &exprhdl) const override
+	{
+		CTableDescriptorHashSet *table_descriptor_set =
+			exprhdl.DeriveTableDescriptor(0);
+		table_descriptor_set->AddRef();
+		return table_descriptor_set;
+	}
+
 private:
 	// array of grouping columns
 	CColRefArray *m_pdrgpcr;

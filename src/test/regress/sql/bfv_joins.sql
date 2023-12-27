@@ -1,6 +1,13 @@
 --
 -- Set up
 --
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
 create schema bfv_joins;
 set search_path='bfv_joins';
 
@@ -427,6 +434,60 @@ select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from
 explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3;
 explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 is distinct from b3;
 explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not distinct from a3 and b2 = b3;
+
+-- Test hashed distribution spec derived from a self join
+truncate o1;
+truncate o2;
+
+insert into o1 select i, i from generate_series(1,9) i;
+insert into o1 values (NULL, NULL);
+insert into o2 select i, NULL from generate_series(11,100) i;
+insert into o2 values (NULL, NULL);
+
+analyze o1;
+analyze o2;
+
+-- Self join maintains the distribution keys from both children (i.e. the join
+-- result produces a combine hash distribution spec)
+--
+-- Expect no redistribute under the joins
+explain select t2.b1 from (select distinct a1 from o1) t1
+left outer join (select a1, b1 from o1) t2 on t1.a1 = t2.a1
+left outer join o1 t3 on t2.a1 = t3.a1
+left outer join o1 t4 on t2.a1 = t4.a1;
+select t2.b1 from (select distinct a1 from o1) t1
+left outer join (select a1, b1 from o1) t2 on t1.a1 = t2.a1
+left outer join o1 t3 on t2.a1 = t3.a1
+left outer join o1 t4 on t2.a1 = t4.a1;
+
+-- Self join maintains the distribution keys from both children (i.e. the join
+-- result produces a combine hash distribution spec)
+--
+-- Expect no redistribute under the joins
+explain (costs off) select t2.b1 from o1 t3
+right outer join (select a1, b1 from o1) t2 on t2.a1 = t3.a1
+right outer join o1 t4 on t2.a1 = t4.a1
+right outer join (select distinct a1 from o1) t1 on t1.a1 = t2.a1;
+select t2.b1 from o1 t3
+right outer join (select a1, b1 from o1) t2 on t2.a1 = t3.a1
+right outer join o1 t4 on t2.a1 = t4.a1
+right outer join (select distinct a1 from o1) t1 on t1.a1 = t2.a1;
+
+-- Self join, but the projected distribution key value is changed
+--
+-- Expect redistribute under the joins
+explain select t2.b1 from (select distinct a1+1 as a1 from o1) t1
+left outer join o1 t2 on t2.a1 = t1.a1;
+select t2.b1 from (select distinct a1+1 as a1 from o1) t1
+left outer join o1 t2 on t2.a1 = t1.a1;
+
+-- Self join, but the joined distribution key value is changed
+--
+-- Expect redistribute under the joins
+explain select t2.b1 from (select distinct a1 from o1) t1
+left outer join o1 t2 on t2.a1 = t1.a1+1;
+select t2.b1 from (select distinct a1 from o1) t1
+left outer join o1 t2 on t2.a1 = t1.a1+1;
 
 -- Test case from community Github PR 13722
 create table t_13722(id int, tt timestamp)

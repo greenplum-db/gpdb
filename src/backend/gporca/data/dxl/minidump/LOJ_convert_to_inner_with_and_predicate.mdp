@@ -203,7 +203,7 @@
         </dxl:Opfamilies>
       </dxl:GPDBScalarOp>
       <dxl:RelationStatistics Mdid="2.63862.1.0" Name="jazz" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.63862.1.0" Name="jazz" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.63862.1.0" Name="jazz" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -235,7 +235,7 @@
       <dxl:GPDBFunc Mdid="0.1780.1.0" Name="to_date" ReturnsSet="false" Stability="Stable" IsStrict="true">
         <dxl:ResultType Mdid="0.1082.1.0"/>
       </dxl:GPDBFunc>
-      <dxl:Relation Mdid="6.63859.1.0" Name="foo" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.63859.1.0" Name="foo" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -289,7 +289,7 @@
               </dxl:Cast>
               <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAD3l5eXktbW1tLWRk" LintValue="2057460884"/>
             </dxl:FuncExpr>
-            <dxl:ConstValue TypeMdid="0.1082.1.0" Value="LRwAAA==" LintValue="7213"/>
+            <dxl:ConstValue TypeMdid="0.1082.1.0" Value="LRwAAA==" DoubleValue="623203200000000.000000"/>
           </dxl:Comparison>
         </dxl:And>
         <dxl:LogicalJoin JoinType="Left">
@@ -452,7 +452,7 @@
                     </dxl:Cast>
                     <dxl:ConstValue TypeMdid="0.25.1.0" Value="AAAAD3l5eXktbW1tLWRk" LintValue="2057460884"/>
                   </dxl:FuncExpr>
-                  <dxl:ConstValue TypeMdid="0.1082.1.0" Value="LRwAAA==" LintValue="7213"/>
+                  <dxl:ConstValue TypeMdid="0.1082.1.0" Value="LRwAAA==" DoubleValue="623203200000000.000000"/>
                 </dxl:Comparison>
               </dxl:And>
             </dxl:Filter>

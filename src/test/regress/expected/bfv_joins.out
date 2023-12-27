@@ -1,6 +1,13 @@
 --
 -- Set up
 --
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
 create schema bfv_joins;
 set search_path='bfv_joins';
 create table x (a int, b int, c int);
@@ -3806,6 +3813,183 @@ explain select * from o1 left join o2 on a1 = a2 left join o3 on a2 is not disti
                ->  Seq Scan on o1  (cost=0.00..321.00 rows=28700 width=8)
  Optimizer: Postgres query optimizer
 (18 rows)
+
+-- Test hashed distribution spec derived from a self join
+truncate o1;
+truncate o2;
+insert into o1 select i, i from generate_series(1,9) i;
+insert into o1 values (NULL, NULL);
+insert into o2 select i, NULL from generate_series(11,100) i;
+insert into o2 values (NULL, NULL);
+analyze o1;
+analyze o2;
+-- Self join maintains the distribution keys from both children (i.e. the join
+-- result produces a combine hash distribution spec)
+--
+-- Expect no redistribute under the joins
+explain select t2.b1 from (select distinct a1 from o1) t1
+left outer join (select a1, b1 from o1) t2 on t1.a1 = t2.a1
+left outer join o1 t3 on t2.a1 = t3.a1
+left outer join o1 t4 on t2.a1 = t4.a1;
+                                    QUERY PLAN                                     
+-----------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=3.29..4.57 rows=9 width=4)
+   ->  Hash Right Join  (cost=3.29..4.45 rows=3 width=4)
+         Hash Cond: (o1.a1 = o1_1.a1)
+         ->  Hash Left Join  (cost=2.15..3.27 rows=3 width=8)
+               Hash Cond: (o1.a1 = t4.a1)
+               ->  Hash Left Join  (cost=1.08..2.15 rows=3 width=8)
+                     Hash Cond: (o1.a1 = t3.a1)
+                     ->  Seq Scan on o1  (cost=0.00..1.03 rows=3 width=8)
+                     ->  Hash  (cost=1.03..1.03 rows=3 width=4)
+                           ->  Seq Scan on o1 t3  (cost=0.00..1.03 rows=3 width=4)
+               ->  Hash  (cost=1.03..1.03 rows=3 width=4)
+                     ->  Seq Scan on o1 t4  (cost=0.00..1.03 rows=3 width=4)
+         ->  Hash  (cost=1.10..1.10 rows=3 width=4)
+               ->  HashAggregate  (cost=1.04..1.07 rows=3 width=4)
+                     Group Key: o1_1.a1
+                     ->  Seq Scan on o1 o1_1  (cost=0.00..1.03 rows=3 width=4)
+ Optimizer: Postgres-based planner
+(17 rows)
+
+select t2.b1 from (select distinct a1 from o1) t1
+left outer join (select a1, b1 from o1) t2 on t1.a1 = t2.a1
+left outer join o1 t3 on t2.a1 = t3.a1
+left outer join o1 t4 on t2.a1 = t4.a1;
+ b1 
+----
+  2
+  3
+  4
+  7
+  8
+   
+  1
+  5
+  6
+  9
+(10 rows)
+
+-- Self join maintains the distribution keys from both children (i.e. the join
+-- result produces a combine hash distribution spec)
+--
+-- Expect no redistribute under the joins
+explain (costs off) select t2.b1 from o1 t3
+right outer join (select a1, b1 from o1) t2 on t2.a1 = t3.a1
+right outer join o1 t4 on t2.a1 = t4.a1
+right outer join (select distinct a1 from o1) t1 on t1.a1 = t2.a1;
+                   QUERY PLAN                    
+-------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Right Join
+         Hash Cond: (o1.a1 = o1_1.a1)
+         ->  Hash Left Join
+               Hash Cond: (o1.a1 = t3.a1)
+               ->  Hash Join
+                     Hash Cond: (o1.a1 = t4.a1)
+                     ->  Seq Scan on o1
+                     ->  Hash
+                           ->  Seq Scan on o1 t4
+               ->  Hash
+                     ->  Seq Scan on o1 t3
+         ->  Hash
+               ->  HashAggregate
+                     Group Key: o1_1.a1
+                     ->  Seq Scan on o1 o1_1
+ Optimizer: Postgres-based planner
+(17 rows)
+
+select t2.b1 from o1 t3
+right outer join (select a1, b1 from o1) t2 on t2.a1 = t3.a1
+right outer join o1 t4 on t2.a1 = t4.a1
+right outer join (select distinct a1 from o1) t1 on t1.a1 = t2.a1;
+ b1 
+----
+  1
+  5
+  6
+  9
+  2
+  3
+  4
+  7
+  8
+   
+(10 rows)
+
+-- Self join, but the projected distribution key value is changed
+--
+-- Expect redistribute under the joins
+explain select t2.b1 from (select distinct a1+1 as a1 from o1) t1
+left outer join o1 t2 on t2.a1 = t1.a1;
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1.22..2.41 rows=9 width=4)
+   ->  Hash Right Join  (cost=1.22..2.29 rows=3 width=4)
+         Hash Cond: (t2.a1 = ((o1.a1 + 1)))
+         ->  Seq Scan on o1 t2  (cost=0.00..1.03 rows=3 width=8)
+         ->  Hash  (cost=1.18..1.18 rows=3 width=4)
+               ->  Unique  (cost=1.14..1.15 rows=3 width=4)
+                     Group Key: ((o1.a1 + 1))
+                     ->  Sort  (cost=1.14..1.15 rows=3 width=4)
+                           Sort Key: ((o1.a1 + 1))
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.11 rows=3 width=4)
+                                 Hash Key: ((o1.a1 + 1))
+                                 ->  Seq Scan on o1  (cost=0.00..1.04 rows=3 width=4)
+ Optimizer: Postgres-based planner
+(13 rows)
+
+select t2.b1 from (select distinct a1+1 as a1 from o1) t1
+left outer join o1 t2 on t2.a1 = t1.a1;
+ b1 
+----
+  5
+  6
+  9
+   
+  2
+  3
+  4
+  7
+  8
+   
+(10 rows)
+
+-- Self join, but the joined distribution key value is changed
+--
+-- Expect redistribute under the joins
+explain select t2.b1 from (select distinct a1 from o1) t1
+left outer join o1 t2 on t2.a1 = t1.a1+1;
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1.20..2.40 rows=9 width=4)
+   ->  Hash Right Join  (cost=1.20..2.28 rows=3 width=4)
+         Hash Cond: (t2.a1 = (o1.a1 + 1))
+         ->  Seq Scan on o1 t2  (cost=0.00..1.03 rows=3 width=8)
+         ->  Hash  (cost=1.16..1.16 rows=3 width=4)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=1.04..1.16 rows=3 width=4)
+                     Hash Key: (o1.a1 + 1)
+                     ->  HashAggregate  (cost=1.04..1.07 rows=3 width=4)
+                           Group Key: o1.a1
+                           ->  Seq Scan on o1  (cost=0.00..1.03 rows=3 width=4)
+ Optimizer: Postgres-based planner
+(11 rows)
+
+select t2.b1 from (select distinct a1 from o1) t1
+left outer join o1 t2 on t2.a1 = t1.a1+1;
+ b1 
+----
+  5
+  6
+  9
+   
+  2
+  3
+  4
+  7
+  8
+   
+(10 rows)
 
 -- Test case from community Github PR 13722
 create table t_13722(id int, tt timestamp)

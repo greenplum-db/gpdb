@@ -2,6 +2,10 @@
 -- Test the planner's ability to produce different kinds of plans to implement
 -- grouping and aggregation.
 --
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 
 drop table if exists olap_test;
 drop table if exists olap_test_single;

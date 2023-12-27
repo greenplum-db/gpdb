@@ -263,6 +263,13 @@ public:
 		return nullptr;
 	}
 
+	CDouble
+	Rows() const override
+	{
+		GPOS_ASSERT("Function should not be called for CTAS tables");
+		return 0;
+	}
+
 #ifdef GPOS_DEBUG
 	// debug print of the metadata relation
 	void DebugPrint(IOstream &os) const override;

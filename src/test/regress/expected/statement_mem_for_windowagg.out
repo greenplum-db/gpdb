@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 CREATE TABLE dummy_table(x int, y int) DISTRIBUTED BY (y);
 INSERT INTO dummy_table SELECT generate_series(0, 20000), 0;
 INSERT INTO dummy_table SELECT generate_series(0, 20000), 3;

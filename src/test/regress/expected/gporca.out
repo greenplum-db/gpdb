@@ -1,6 +1,13 @@
 --
 -- ORCA tests
 --
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
 -- show version
 SELECT count(*) from gp_opt_version();
  count 
@@ -13119,6 +13126,25 @@ explain (costs off) select count(*), t2.c from roj1 t1 left join roj2 t2 on t1.a
  Optimizer: Postgres query optimizer
 (11 rows)
 
+-- check that ROJ can be disabled via GUC
+set optimizer_enable_right_outer_join=off;
+explain (costs off) select count(*), t2.c from roj1 t1 left join roj2 t2 on t1.a = t2.c group by t2.c;
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  HashAggregate
+         Group Key: t2.c
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: t2.c
+               ->  Hash Right Join
+                     Hash Cond: (t2.c = t1.a)
+                     ->  Seq Scan on roj2 t2
+                     ->  Hash
+                           ->  Seq Scan on roj1 t1
+ Optimizer: Postgres-based planner
+(11 rows)
+
+reset optimizer_enable_right_outer_join;
 reset optimizer_enable_motion_redistribute;
 reset enable_sort;
 -- simple check for btree indexes on AO tables
@@ -14778,5 +14804,35 @@ SELECT CAST(a AS TEXT[]) FROM array_coerceviaio;
 ---------
  {1,2,3}
 (1 row)
+
+---------------------------------------------------------------------------------
+DROP TABLE IF EXISTS schema_test_table;
+CREATE TABLE schema_test_table(a numeric, b numeric(5,2), c char(10) NOT NULL) distributed by (a);
+-- In 7x, redundant Result nodes in planned_stmt are being removed by ORCA,
+-- which caused the loss of typmod info of column type in plan.
+-- Below query is used by external libraries to fetch schema of table.
+-- Test that the typmod of column type is correct in explain plan.
+EXPLAIN (VERBOSE, COSTS OFF) SELECT * FROM schema_test_table WHERE 1=0;
+                                                                      QUERY PLAN                                                                      
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ Result
+   Output: a, b, c
+   One-Time Filter: false
+ Optimizer: Postgres-based planner
+ Settings: optimizer = 'off', optimizer_enable_coordinator_only_queries = 'on', optimizer_enable_master_only_queries = 'on', optimizer_segments = '3'
+(5 rows)
+
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+-- Test ALL NULL scalar array compare 
+create table DatumSortedSet_core (a int, b character varying NOT NULL) distributed by (a);
+explain select * from DatumSortedSet_core where b in (NULL, NULL);
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..240.69 rows=1 width=36)
+   ->  Seq Scan on datumsortedset_core  (cost=0.00..240.67 rows=1 width=36)
+         Filter: ((b)::text = ANY ('{NULL,NULL}'::text[]))
+ Optimizer: Postgres-based planner
+(4 rows)
 
 ---------------------------------------------------------------------------------

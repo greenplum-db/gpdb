@@ -187,7 +187,7 @@
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.32899.1.0" Name="part" Rows="2000000.000000" RelPages="0" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.32899.1.0" Name="part" IsTemporary="false" StorageType="Foreign" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" ConvertHashToRandom="true">
+      <dxl:Relation Mdid="6.32899.1.0" Name="part" IsTemporary="false" Rows="2000000.000000" StorageType="Foreign" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,8,2" PartitionColumns="1" PartitionTypes="r" ConvertHashToRandom="true">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -305,7 +305,7 @@
     <dxl:Plan Id="0" SpaceSize="1">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="456.474133" Rows="320000.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="431.000255" Rows="3.200000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="a">
@@ -319,7 +319,7 @@
         <dxl:SortingColumnList/>
         <dxl:DynamicForeignScan SelectorIds="" ForeignServerOid="13212">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="446.933867" Rows="320000.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="431.000159" Rows="3.200000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="a">

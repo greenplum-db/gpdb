@@ -76,6 +76,7 @@ CDrvdPropRelational::~CDrvdPropRelational()
 		CRefCount::SafeRelease(m_ppartinfo);
 		CRefCount::SafeRelease(m_ppc);
 		CRefCount::SafeRelease(m_pfp);
+		CRefCount::SafeRelease(m_table_descriptor);
 	}
 }
 
@@ -586,20 +587,28 @@ CDrvdPropRelational::DeriveFunctionProperties(CExpressionHandle &exprhdl)
 }
 
 // table descriptor
-CTableDescriptor *
+CTableDescriptorHashSet *
 CDrvdPropRelational::GetTableDescriptor() const
 {
 	GPOS_RTL_ASSERT(IsComplete());
 	return m_table_descriptor;
 }
 
-CTableDescriptor *
+CTableDescriptorHashSet *
 CDrvdPropRelational::DeriveTableDescriptor(CExpressionHandle &exprhdl)
 {
 	if (!m_is_prop_derived->ExchangeSet(EdptTableDescriptor))
 	{
-		CLogical *popLogical = CLogical::PopConvert(exprhdl.Pop());
-		m_table_descriptor = popLogical->DeriveTableDescriptor(m_mp, exprhdl);
+		if (exprhdl.Pop()->FLogical())
+		{
+			CLogical *popLogical = CLogical::PopConvert(exprhdl.Pop());
+			m_table_descriptor =
+				popLogical->DeriveTableDescriptor(m_mp, exprhdl);
+		}
+		else
+		{
+			m_table_descriptor = GPOS_NEW(m_mp) CTableDescriptorHashSet(m_mp);
+		}
 	}
 
 	return m_table_descriptor;

@@ -1,4 +1,8 @@
 --  MPP-21536: Duplicated rows inserted when ORCA is turned on
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 
 create schema bfv_dml;
 set search_path=bfv_dml;

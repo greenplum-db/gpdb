@@ -4,6 +4,11 @@
 -- There was a bug that swap_relation_files inplace update the old entry in the
 -- pg_class and the pg_class entry has incorrect relfrozenxid after the
 -- transaction is aborted.
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 
 1: CREATE TABLE vacuum_full_interrupt(a int, b int, c int);
 1: CREATE INDEX vacuum_full_interrupt_idx on vacuum_full_interrupt(b);

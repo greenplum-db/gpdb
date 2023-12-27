@@ -1,3 +1,10 @@
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
 set DateStyle="ISO, MDY";
 set gp_create_table_random_default_distribution=off;
 set optimizer_print_missing_stats = off;

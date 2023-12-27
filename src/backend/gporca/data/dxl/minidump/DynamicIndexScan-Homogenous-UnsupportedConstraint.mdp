@@ -197,7 +197,7 @@
       <dxl:ColumnStatistics Mdid="1.310650.1.1.0" Name="id" Width="8.000000"/>
       <dxl:ColumnStatistics Mdid="1.310650.1.1.1" Name="ship_date" Width="8.000000"/>
       <dxl:RelationStatistics Mdid="2.310650.1.1" Name="test_orders" Rows="0.000000"/>
-      <dxl:Relation Mdid="6.310650.1.1" Name="test_orders" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" PartitionColumns="1" PartitionTypes="r">
+      <dxl:Relation Mdid="6.310650.1.1" Name="test_orders" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3" PartitionColumns="1" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="id" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -265,11 +265,11 @@
             </dxl:IsNotNull>
             <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1098.1.0">
               <dxl:Ident ColId="2" ColName="ship_date" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="RQ4AAA==" LintValue="3653"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="RQ4AAA==" DoubleValue="315619200000000.000000"/>
             </dxl:Comparison>
             <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
               <dxl:Ident ColId="2" ColName="ship_date" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" LintValue="5479"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" DoubleValue="473385600000000.000000"/>
             </dxl:Comparison>
           </dxl:And>
         </dxl:PartConstraint>
@@ -309,11 +309,11 @@
             </dxl:IsNotNull>
             <dxl:Comparison ComparisonOperator="&gt;=" OperatorMdid="0.1098.1.0">
               <dxl:Ident ColId="2" ColName="ship_date" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" LintValue="5479"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="ZxUAAA==" DoubleValue="473385600000000.000000"/>
             </dxl:Comparison>
             <dxl:Comparison ComparisonOperator="&lt;" OperatorMdid="0.1095.1.0">
               <dxl:Ident ColId="2" ColName="ship_date" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="iRwAAA==" LintValue="7305"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="iRwAAA==" DoubleValue="631152000000000.000000"/>
             </dxl:Comparison>
           </dxl:And>
         </dxl:PartConstraint>
@@ -329,7 +329,7 @@
       <dxl:LogicalSelect>
         <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
           <dxl:Ident ColId="2" ColName="ship_date" TypeMdid="0.1082.1.0"/>
-          <dxl:ConstValue TypeMdid="0.1082.1.0" Value="PxEAAA==" LintValue="4415"/>
+          <dxl:ConstValue TypeMdid="0.1082.1.0" Value="PxEAAA==" DoubleValue="381456000000000.000000"/>
         </dxl:Comparison>
         <dxl:LogicalGet>
           <dxl:TableDescriptor Mdid="6.310650.1.1" TableName="test_orders">
@@ -386,7 +386,7 @@
           <dxl:IndexCondList>
             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1093.1.0">
               <dxl:Ident ColId="1" ColName="ship_date" TypeMdid="0.1082.1.0"/>
-              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="PxEAAA==" LintValue="4415"/>
+              <dxl:ConstValue TypeMdid="0.1082.1.0" Value="PxEAAA==" DoubleValue="381456000000000.000000"/>
             </dxl:Comparison>
           </dxl:IndexCondList>
           <dxl:Partitions>

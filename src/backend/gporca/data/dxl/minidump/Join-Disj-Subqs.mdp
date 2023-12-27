@@ -403,7 +403,7 @@ OR
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.1260.1.1.18" Name="oid" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.2898.1.1" Name="pg_foreign_data_wrapper" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.2898.1.1" Name="pg_foreign_data_wrapper" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="12,5">
+      <dxl:Relation Mdid="6.2898.1.1" Name="pg_foreign_data_wrapper" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="12,5">
         <dxl:Columns>
           <dxl:Column Name="fdwname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="8">
           </dxl:Column>
@@ -508,7 +508,7 @@ OR
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.1260.1.1.0" Name="rolname" Width="64.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.1260.1.1" Name="pg_authid" Rows="1.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.1260.1.0" Name="pg_authid" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="24,17">
+      <dxl:Relation Mdid="6.1260.1.0" Name="pg_authid" IsTemporary="false" Rows="1.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="24,17">
         <dxl:Columns>
           <dxl:Column Name="rolname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
           </dxl:Column>
@@ -568,7 +568,7 @@ OR
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.1260.1.1" Name="pg_authid" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="24,17">
+      <dxl:Relation Mdid="6.1260.1.1" Name="pg_authid" IsTemporary="false" Rows="1.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="24,17">
         <dxl:Columns>
           <dxl:Column Name="rolname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
           </dxl:Column>

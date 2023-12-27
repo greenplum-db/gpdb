@@ -375,7 +375,7 @@
                   <dxl:GroupingColumns/>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="13" Alias="sum">
-                      <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Normal" AggKind="n"  AggArgTypes="">
+                      <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                         <dxl:ValuesList ParamType="aggargs">
                           <dxl:OpExpr OperatorName="*" OperatorMdid="0.594.1.0" OperatorType="0.701.1.0">
                             <dxl:If TypeMdid="0.701.1.0">
@@ -397,7 +397,7 @@
                       </dxl:AggFunc>
                     </dxl:ProjElem>
                     <dxl:ProjElem ColId="14" Alias="sum">
-                      <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Normal" AggKind="n"  AggArgTypes="">
+                      <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
                         <dxl:ValuesList ParamType="aggargs">
                           <dxl:OpExpr OperatorName="*" OperatorMdid="0.594.1.0" OperatorType="0.701.1.0">
                             <dxl:FuncExpr FuncId="0.316.1.0" FuncRetSet="false" TypeMdid="0.701.1.0">
@@ -500,12 +500,12 @@
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="1" Alias="val">
                     <dxl:FuncExpr FuncId="0.2331.1.0" FuncRetSet="true" TypeMdid="0.25.1.0" FuncVariadic="false">
-                      <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAqAEAAAAAAAAAGQAAABEAAAABAAAAAAAACXJlcnVtAAAAAAAACXZlbGl0&#xA;AAAAAAAABXAAAAAAAAAFcQAAAAAAAAVyAAAAAAAABXMAAAAAAAAFdAAAAAAA&#xA;AAZ1bQAAAAAABXYAAAAAAAAFcQAAAAAAAAV3AAAAAAAABWUAAAAAAAAFcgAA&#xA;AAAAAAV0AAAAAAAABXkAAAAAAAAFdQAAAAAAAAVpAAAA"/>
+                      <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAqAEAAAAAAAAAGQAAABEAAAABAAAAAAAACXJlcnVtAAAAAAAACXZlbGl0&#10;AAAAAAAABXAAAAAAAAAFcQAAAAAAAAVyAAAAAAAABXMAAAAAAAAFdAAAAAAA&#10;AAZ1bQAAAAAABXYAAAAAAAAFcQAAAAAAAAV3AAAAAAAABWUAAAAAAAAFcgAA&#10;AAAAAAV0AAAAAAAABXkAAAAAAAAFdQAAAAAAAAVpAAAA"/>
                     </dxl:FuncExpr>
                   </dxl:ProjElem>
                   <dxl:ProjElem ColId="2" Alias="wt">
                     <dxl:FuncExpr FuncId="0.2331.1.0" FuncRetSet="true" TypeMdid="0.701.1.0" FuncVariadic="false">
-                      <dxl:ConstValue TypeMdid="0.1022.1.0" Value="AAAAoAEAAAAAAAAAvQIAABEAAAABAAAAAAAAAAAA8D8AAAAAAADwPwAAAAAA&#xA;APA/AAAAAAAA8D8AAAAAAADwPwAAAAAAAPA/AAAAAAAA8D8AAAAAAADwPwAA&#xA;AAAAAPA/AAAAAAAA8D8AAAAAAADwPwAAAAAAAPA/AAAAAAAA8D8AAAAAAADw&#xA;PwAAAAAAAPA/AAAAAAAA8D8AAAAAAADwPw=="/>
+                      <dxl:ConstValue TypeMdid="0.1022.1.0" Value="AAAAoAEAAAAAAAAAvQIAABEAAAABAAAAAAAAAAAA8D8AAAAAAADwPwAAAAAA&#10;APA/AAAAAAAA8D8AAAAAAADwPwAAAAAAAPA/AAAAAAAA8D8AAAAAAADwPwAA&#10;AAAAAPA/AAAAAAAA8D8AAAAAAADwPwAAAAAAAPA/AAAAAAAA8D8AAAAAAADw&#10;PwAAAAAAAPA/AAAAAAAA8D8AAAAAAADwPw=="/>
                     </dxl:FuncExpr>
                   </dxl:ProjElem>
                 </dxl:ProjList>
@@ -712,7 +712,7 @@
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="12" Alias="val">
                               <dxl:FuncExpr FuncId="0.2331.1.0" FuncRetSet="true" TypeMdid="0.25.1.0" FuncVariadic="false">
-                                <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAZAEAAAAAAAAAGQAAAAkAAAABAAAAAAAACG9kaW8AAAAKYmVhdGFlAAAA&#xA;AAAFYQAAAAAAAAViAAAAAAAABWMAAAAAAAAFZAAAAAAAAAVlAAAAAAAABWYA&#xA;AAAAAAAFZwAAAA=="/>
+                                <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAZAEAAAAAAAAAGQAAAAkAAAABAAAAAAAACG9kaW8AAAAKYmVhdGFlAAAA&#10;AAAFYQAAAAAAAAViAAAAAAAABWMAAAAAAAAFZAAAAAAAAAVlAAAAAAAABWYA&#10;AAAAAAAFZwAAAA=="/>
                               </dxl:FuncExpr>
                             </dxl:ProjElem>
                           </dxl:ProjList>

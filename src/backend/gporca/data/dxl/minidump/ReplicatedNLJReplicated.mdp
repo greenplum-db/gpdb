@@ -96,7 +96,7 @@
         <dxl:SumAgg Mdid="0.0.0.0"/>
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
-      <dxl:Relation Mdid="6.16409.1.0" Name="r2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2">
+      <dxl:Relation Mdid="6.16409.1.0" Name="r2" IsTemporary="false" Rows="1000.000000" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -151,7 +151,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.16421.1.0" Name="r1" Rows="100.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.16421.1.0" Name="r1" IsTemporary="false" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2">
+      <dxl:Relation Mdid="6.16421.1.0" Name="r1" IsTemporary="false" Rows="100.000000" StorageType="Heap" DistributionPolicy="Replicated" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

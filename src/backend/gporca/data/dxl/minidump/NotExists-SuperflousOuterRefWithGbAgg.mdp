@@ -38,7 +38,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
     </dxl:OptimizerConfig>
     <dxl:Metadata SystemIds="0.GPDB">
       <dxl:RelationStatistics Mdid="2.24577.1.0" Name="a" Rows="5.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.24577.1.0" Name="a" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.24577.1.0" Name="a" IsTemporary="false" Rows="5.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -63,7 +63,7 @@ explain select * from A where not exists (select sum(C.i) from C where C.i = A.i
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.24583.1.0" Name="c" Rows="9.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.24583.1.0" Name="c" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
+      <dxl:Relation Mdid="6.24583.1.0" Name="c" IsTemporary="false" Rows="9.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="8,2">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

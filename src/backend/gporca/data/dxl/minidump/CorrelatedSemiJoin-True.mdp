@@ -269,7 +269,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
       <dxl:ColumnStatistics Mdid="1.29191993.1.1.7" Name="xmin" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.29191993.1.1.6" Name="ctid" Width="6.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:RelationStatistics Mdid="2.29191945.1.1" Name="product" Rows="8.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.29191945.1.0" Name="product" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
+      <dxl:Relation Mdid="6.29191945.1.0" Name="product" IsTemporary="false" Rows="8.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
         <dxl:Columns>
           <dxl:Column Name="pn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -297,7 +297,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.29191945.1.1" Name="product" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
+      <dxl:Relation Mdid="6.29191945.1.1" Name="product" IsTemporary="false" Rows="8.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
         <dxl:Columns>
           <dxl:Column Name="pn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -467,7 +467,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
         </dxl:Opfamilies>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.29191849.1.1" Name="customer" Rows="4.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.29191849.1.0" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
+      <dxl:Relation Mdid="6.29191849.1.0" Name="customer" IsTemporary="false" Rows="4.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -495,7 +495,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.29191849.1.1" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
+      <dxl:Relation Mdid="6.29191849.1.1" Name="customer" IsTemporary="false" Rows="4.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;9,3">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -528,7 +528,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
         <dxl:IntermediateResultType Mdid="0.20.1.0"/>
       </dxl:GPDBAgg>
       <dxl:RelationStatistics Mdid="2.29191993.1.1" Name="sale" Rows="12.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.29191993.1.0" Name="sale" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
+      <dxl:Relation Mdid="6.29191993.1.0" Name="sale" IsTemporary="false" Rows="12.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -562,7 +562,7 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
         </dxl:IndexInfoList>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.29191993.1.1" Name="sale" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
+      <dxl:Relation Mdid="6.29191993.1.1" Name="sale" IsTemporary="false" Rows="12.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0,1,2" Keys="0,1,2;12,6">
         <dxl:Columns>
           <dxl:Column Name="cn" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -661,28 +661,28 @@ SELECT pn, cn, vn FROM sale s WHERE EXISTS (SELECT * FROM customer WHERE EXISTS 
       <dxl:ColumnStatistics Mdid="1.29191993.1.1.10" Name="cmax" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.29191993.1.1.3" Name="dt" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">
         <dxl:StatsBucket Frequency="0.083333" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ZKn8/w==" LintValue="-218780"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="ZKn8/w==" LintValue="-218780"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="ZKn8/w==" DoubleValue="-18902592000000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="ZKn8/w==" DoubleValue="-18902592000000000.000000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.083333" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="n6n8/w==" LintValue="-218721"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="n6n8/w==" LintValue="-218721"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="n6n8/w==" DoubleValue="-18897494400000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="n6n8/w==" DoubleValue="-18897494400000000.000000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.083333" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="vqn8/w==" LintValue="-218690"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="vqn8/w==" LintValue="-218690"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="vqn8/w==" DoubleValue="-18894816000000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="vqn8/w==" DoubleValue="-18894816000000000.000000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.083333" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="3Kn8/w==" LintValue="-218660"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="3Kn8/w==" LintValue="-218660"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="3Kn8/w==" DoubleValue="-18892224000000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="3Kn8/w==" DoubleValue="-18892224000000000.000000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.083333" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="3an8/w==" LintValue="-218659"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="3an8/w==" LintValue="-218659"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="3an8/w==" DoubleValue="-18892137600000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="3an8/w==" DoubleValue="-18892137600000000.000000"/>
         </dxl:StatsBucket>
         <dxl:StatsBucket Frequency="0.583333" DistinctValues="1.000000">
-          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="+6n8/w==" LintValue="-218629"/>
-          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="+6n8/w==" LintValue="-218629"/>
+          <dxl:LowerBound Closed="true" TypeMdid="0.1082.1.0" Value="+6n8/w==" DoubleValue="-18889545600000000.000000"/>
+          <dxl:UpperBound Closed="true" TypeMdid="0.1082.1.0" Value="+6n8/w==" DoubleValue="-18889545600000000.000000"/>
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.29191993.1.1.2" Name="pn" Width="4.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000">

@@ -1,4 +1,9 @@
 -- This file is used to test the feature that there are multiple remote postgres servers.
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 -- ===================================================================
 -- create FDW objects
 -- ===================================================================

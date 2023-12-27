@@ -30,6 +30,7 @@ import traceback
 import select
 import psycopg2
 import io
+import shutil
 
 ## FIXME: When converting 'INTERVAL' typed value to Python Object, psycopg2 doesn't
 ## recognize the literal string '@ 0'. It's probably caused by the 'DateStyle' GUC
@@ -101,7 +102,12 @@ class GlobalShellExecutor(object):
         self.v_cnt = 0
         # open pseudo-terminal to interact with subprocess
         self.primary_fd, self.subsidiary_fd = pty.openpty()
-        self.sh_proc = subprocess.Popen(['/bin/bash', '--noprofile', '--norc', '--noediting', '-i'],
+
+        bash_cmd = shutil.which('bash')
+        if bash_cmd is None:
+            raise GlobalShellExecutor.ExecutionError("cannot find bash command")
+
+        self.sh_proc = subprocess.Popen([bash_cmd, '--noprofile', '--norc', '--noediting', '-i'],
                                         stdin=self.subsidiary_fd,
                                         stdout=self.subsidiary_fd,
                                         stderr=self.subsidiary_fd,

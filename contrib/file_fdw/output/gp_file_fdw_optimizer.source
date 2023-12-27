@@ -1,6 +1,11 @@
 --
 -- Test foreign-data wrapper file_fdw. Greenplum MPP specific
 --
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 -- Clean up in case a prior regression run failed
 SET client_min_messages TO 'error';
 SET optimizer_trace_fallback = on;

@@ -676,7 +676,7 @@
       <dxl:ColumnStatistics Mdid="1.897052.1.1.7" Name="d_dow" Width="4.000000"/>
       <dxl:ColumnStatistics Mdid="1.897052.1.1.6" Name="d_year" Width="4.000000"/>
       <dxl:RelationStatistics Mdid="2.904881.1.1" Name="store_sales" Rows="29490999296.000000"/>
-      <dxl:Relation Mdid="6.904881.1.1" Name="store_sales" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;29,23" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.904881.1.1" Name="store_sales" IsTemporary="false" Rows="29490999296.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="2,9" Keys="2,9,0;29,23" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="ss_sold_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -1155,7 +1155,7 @@
         </dxl:PartConstraint>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.897052.1.1" Name="date_dim" Rows="73049.000000"/>
-      <dxl:Relation Mdid="6.897052.1.1" Name="date_dim" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28" PartitionColumns="6" PartitionTypes="r">
+      <dxl:Relation Mdid="6.897052.1.1" Name="date_dim" IsTemporary="false" Rows="73049.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0,6;34,28" PartitionColumns="6" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="d_date_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -2167,7 +2167,7 @@
     <dxl:Plan Id="0" SpaceSize="187">
       <dxl:GatherMotion InputSegments="0,1" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="23460.637588" Rows="12277684.984527" Width="246"/>
+          <dxl:Cost StartupCost="0" TotalCost="30628.200259" Rows="16177180.067825" Width="246"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="ss_sold_date_sk">
@@ -2328,7 +2328,7 @@
         <dxl:SortingColumnList/>
         <dxl:HashJoin JoinType="Inner">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="9899.443415" Rows="12277684.984527" Width="246"/>
+            <dxl:Cost StartupCost="0" TotalCost="12759.857787" Rows="16177180.067825" Width="246"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="ss_sold_date_sk">
@@ -2495,7 +2495,7 @@
           </dxl:HashCondList>
           <dxl:DynamicTableScan SelectorIds="0">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1001.605410" Rows="12277684.984527" Width="139"/>
+              <dxl:Cost StartupCost="0" TotalCost="1182.834444" Rows="16177180.067825" Width="139"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="ss_sold_date_sk">
@@ -2613,7 +2613,7 @@
           </dxl:DynamicTableScan>
           <dxl:PartitionSelector RelationMdid="6.904881.1.1" SelectorId="0" ScanId="1" Partitions="0,1,2,3,4">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="438.536236" Rows="24.329392" Width="107"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.016438" Rows="2.000000" Width="107"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="30" Alias="d_date_sk">
@@ -2709,7 +2709,7 @@
             </dxl:PartFilterExpr>
             <dxl:BroadcastMotion InputSegments="0,1" OutputSegments="0,1">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="438.536236" Rows="24.329392" Width="107"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.016438" Rows="2.000000" Width="107"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="30" Alias="d_date_sk">
@@ -2801,7 +2801,7 @@
               <dxl:SortingColumnList/>
               <dxl:HashJoin JoinType="Inner">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="438.502166" Rows="12.164696" Width="107"/>
+                  <dxl:Cost StartupCost="0" TotalCost="431.010837" Rows="1.000000" Width="107"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="30" Alias="d_date_sk">
@@ -2899,7 +2899,7 @@
                 </dxl:HashCondList>
                 <dxl:DynamicTableScan SelectorIds="">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="432.100848" Rows="29219.600000" Width="107"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.001507" Rows="40.000000" Width="107"/>
                   </dxl:Properties>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="30" Alias="d_date_sk">

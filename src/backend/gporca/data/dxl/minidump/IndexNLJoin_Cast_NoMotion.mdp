@@ -176,7 +176,7 @@ explain select * from R1 inner join S1 on a = b union all select * from R2 inner
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.130073.1.0" Name="r2" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.130073.1.0" Name="r2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;7,1">
+      <dxl:Relation Mdid="6.130073.1.0" Name="r2" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;7,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="false" ColWidth="8">
           </dxl:Column>
@@ -201,7 +201,7 @@ explain select * from R1 inner join S1 on a = b union all select * from R2 inner
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.130094.1.0" Name="s2" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.130094.1.0" Name="s2" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;7,1">
+      <dxl:Relation Mdid="6.130094.1.0" Name="s2" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="0;7,1">
         <dxl:Columns>
           <dxl:Column Name="b" Attno="1" Mdid="0.1043.1.0" Nullable="false" ColWidth="8">
           </dxl:Column>
@@ -240,7 +240,7 @@ explain select * from R1 inner join S1 on a = b union all select * from R2 inner
       </dxl:Index>
       <dxl:ColumnStatistics Mdid="1.130094.1.0.0" Name="b" Width="8.000000" NullFreq="0.000000" NdvRemain="0.000000" FreqRemain="0.000000" ColStatsMissing="true"/>
       <dxl:RelationStatistics Mdid="2.122064.1.0" Name="r1" Rows="11.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.122064.1.0" Name="r1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,1">
+      <dxl:Relation Mdid="6.122064.1.0" Name="r1" IsTemporary="false" Rows="11.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,1">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="2">
           </dxl:Column>
@@ -257,7 +257,7 @@ explain select * from R1 inner join S1 on a = b union all select * from R2 inner
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.122074.1.0" Name="s1" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.122074.1.0" Name="s1" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,1">
+      <dxl:Relation Mdid="6.122074.1.0" Name="s1" IsTemporary="false" Rows="0.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="3,1">
         <dxl:Columns>
           <dxl:Column Name="b" Attno="1" Mdid="0.1043.1.0" Nullable="true" ColWidth="2">
           </dxl:Column>

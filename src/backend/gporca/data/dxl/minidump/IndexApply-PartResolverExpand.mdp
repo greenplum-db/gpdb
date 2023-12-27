@@ -263,7 +263,7 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.26854881.1.1" Name="x10" Rows="10.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.26854881.1.1" Name="x10" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
+      <dxl:Relation Mdid="6.26854881.1.1" Name="x10" IsTemporary="false" Rows="10.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="10,4">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
           </dxl:Column>
@@ -292,7 +292,7 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.26854909.1.1" Name="y10" Rows="0.000000" EmptyRelation="true"/>
-      <dxl:Relation Mdid="6.26854909.1.0" Name="y10" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.26854909.1.0" Name="y10" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
           </dxl:Column>
@@ -328,7 +328,7 @@ select count(*) from x10, y10 where (x10.i > y10.j AND x10.j <= y10.i);
           </dxl:Comparison>
         </dxl:PartConstraint>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.26854909.1.1" Name="y10" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
+      <dxl:Relation Mdid="6.26854909.1.1" Name="y10" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="1" Keys="9,10,4" PartitionColumns="0" PartitionTypes="r">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.25.1.0" Nullable="true" ColWidth="33">
           </dxl:Column>

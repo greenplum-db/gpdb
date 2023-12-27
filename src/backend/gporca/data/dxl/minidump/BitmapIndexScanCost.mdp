@@ -211,7 +211,7 @@
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.16434.1.0" Name="ix_test" Rows="15877726.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.16434.1.0" Name="ix_test" IsTemporary="false" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,3">
+      <dxl:Relation Mdid="6.16434.1.0" Name="ix_test" IsTemporary="false" Rows="15877726.000000" StorageType="AppendOnly, Row-oriented" DistributionPolicy="Hash" DistributionColumns="0" Keys="5,3">
         <dxl:Columns>
           <dxl:Column Name="message_id" Attno="1" Mdid="0.25.1.0" Nullable="false" ColWidth="33">
           </dxl:Column>

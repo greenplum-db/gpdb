@@ -36,6 +36,12 @@ CDatumSortedSet::CDatumSortedSet(CMemoryPool *mp, CExpression *pexprArray,
 			aprngdatum->Append(datum);
 		}
 	}
+
+	// ALL NULLs, just return empty set
+	if (aprngdatum->Size() == 0)
+	{
+		return;
+	}
 	aprngdatum->Sort(&CUtils::IDatumCmp);
 
 	// de-duplicate

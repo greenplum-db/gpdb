@@ -18,6 +18,8 @@
 -- s/using \d+ of \d+ buckets/using ## of ### buckets/
 -- m/Extra Text: \(seg\d+\)/
 -- s/Extra Text: \(seg\d+\)/Extra Text: \(seg#\)/
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
 -- end_matchsubs
 
 -- start_ignore

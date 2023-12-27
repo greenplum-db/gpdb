@@ -3,6 +3,10 @@
 -- are flowing from different segments in different order. Mask those
 -- differences by setting 'extra_float_digits'. This isn't enough for all of
 -- the queries, so a few also use TO_CHAR() to truncate the results further.
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 set extra_float_digits=0;
 
 SET optimizer_trace_fallback to on;
@@ -483,6 +487,9 @@ select count(distinct a), sum(c) from num_table;
 
 explain select id, count(distinct a), avg(b), sum(c) from num_table group by grouping sets ((id,c));
 select id, count(distinct a), avg(b), sum(c) from num_table group by grouping sets ((id,c));
+
+explain (verbose on, costs off) select count(distinct b) from num_table group by c;
+select count(distinct b) from num_table group by c;
 
 reset optimizer_force_multistage_agg;
 

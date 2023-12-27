@@ -122,6 +122,9 @@ private:
 	// array of column widths including dropped columns
 	CDoubleArray *m_col_width_array;
 
+	// rows
+	CDouble m_rows;
+
 public:
 	CMDRelationGPDB(const CMDRelationGPDB &) = delete;
 
@@ -135,7 +138,7 @@ public:
 		IMdIdArray *partition_oids, BOOL convert_hash_to_random,
 		ULongPtr2dArray *keyset_array, CMDIndexInfoArray *md_index_info_array,
 		IMdIdArray *mdid_check_constraint_array, CDXLNode *mdpart_constraint,
-		IMDId *foreign_server);
+		IMDId *foreign_server, CDouble rows);
 
 	// dtor
 	~CMDRelationGPDB() override;
@@ -242,6 +245,8 @@ public:
 	IMdIdArray *ChildPartitionMdids() const override;
 
 	IMDId *ForeignServer() const override;
+
+	CDouble Rows() const override;
 
 #ifdef GPOS_DEBUG
 	// debug print of the metadata relation

@@ -344,7 +344,7 @@
       <dxl:ColumnStatistics Mdid="1.440380.1.1.3" Name="cmin" Width="4.000000" NullFreq="0.000000"/>
       <dxl:ColumnStatistics Mdid="1.440380.1.1.2" Name="xmin" Width="4.000000" NullFreq="0.000000"/>
       <dxl:RelationStatistics Mdid="2.489376.1.1" Name="cdouble" Rows="100.000000"/>
-      <dxl:Relation Mdid="6.489376.1.1" Name="cdouble" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.489376.1.1" Name="cdouble" IsTemporary="false" Rows="100.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.1700.1.0" Nullable="true" ColWidth="9">
           </dxl:Column>
@@ -367,7 +367,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.440380.1.1" Name="aint" Rows="100.000000"/>
-      <dxl:Relation Mdid="6.440380.1.1" Name="aint" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
+      <dxl:Relation Mdid="6.440380.1.1" Name="aint" IsTemporary="false" Rows="100.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="i" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

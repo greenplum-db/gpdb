@@ -2021,6 +2021,18 @@ This outputs a line to the server log detailing each successful connection. Some
 |-----------|-------|-------------------|
 |Boolean|off|local, system, reload|
 
+## <a id="log_directory"></a>log\_directory
+
+Sets the destination directory for log files. You may specify its value as relative to the coordinator and segments data directory or as absolute path. Only superusers and users privilege can change this setting. The default value, `log`, indicates that the logs are located in the `log` directory under the coordinator and segment data directory.
+
+When you specify the value as an absolute path, or as a relative path that is outside the data directory, Greenplum appends a subdirectory with a unique identifier (DBID) to the directory specified by this parameter. The unique identifier matches the value of `dbid` from `gp_segment_configuration`. For example, if you set `log_directory` as `/tmp/logs`, Greenplum creates the directories: `/tmp/logs/1` for the coordinator, `/tmp/logs/2` for seg0, `/tmp/logs/3` for seg1, etcetera. 
+
+> **Important** Do not remove the default log directories as some Greenplum utilities will still need them during initialization.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|String|log|coordinator, system, reload, superuser|
+
 ## <a id="log_disconnections"></a>log\_disconnections 
 
 This outputs a line in the server log at termination of a client session, and includes the duration of the session.

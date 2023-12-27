@@ -671,7 +671,7 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 		mdcol_array, distr_cols, distr_op_families, part_keys, part_types,
 		partition_oids, convert_hash_to_random, keyset_array,
 		md_index_info_array, check_constraint_mdids, mdpart_constraint,
-		foreign_server_mdid);
+		foreign_server_mdid, rel->rd_rel->reltuples);
 
 	return md_rel;
 }

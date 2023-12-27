@@ -87,6 +87,9 @@ protected:
 	// foreign server (if exists)
 	IMDId *m_foreign_server;
 
+	// rows
+	CDouble m_rows;
+
 	// helper function to parse main relation attributes: name, id,
 	// distribution policy and keys
 	void ParseRelationAttributes(const Attributes &attrs,

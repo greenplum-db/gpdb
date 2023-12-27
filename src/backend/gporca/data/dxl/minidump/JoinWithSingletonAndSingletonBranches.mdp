@@ -896,7 +896,7 @@
       </dxl:ColumnStatistics>
       <dxl:ColumnStatistics Mdid="1.1259.1.1.0" Name="relname" Width="64.000000" NullFreq="0.000000" NdvRemain="405.000000" FreqRemain="1.000000"/>
       <dxl:RelationStatistics Mdid="2.1259.1.1" Name="pg_class" Rows="405.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.1259.1.1" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="37,30">
+      <dxl:Relation Mdid="6.1259.1.1" Name="pg_class" IsTemporary="false" Rows="405.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="37,30">
         <dxl:Columns>
           <dxl:Column Name="relname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
           </dxl:Column>

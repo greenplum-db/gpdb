@@ -2,6 +2,13 @@
 -- NOTIN 
 -- Test NOTIN clauses
 --
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
 
 create schema notin;
 set search_path=notin;

@@ -1,3 +1,7 @@
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+-- end_matchsubs
 SELECT min_val, max_val FROM pg_settings WHERE name = 'gp_resqueue_priority_cpucores_per_segment';
  min_val | max_val 
 ---------+---------
@@ -798,7 +802,7 @@ ___________
       'recvsize' => 3,
       'segments' => 3,
       'sendsize' => 3,
-      'short' => 'Redistribute Motion'
+      'short' => 'Redistribute Motion 3:3  (slice1; segments: 3)'
     }
   ],
   'id' => 1,
@@ -824,7 +828,7 @@ ___________
       'recvsize' => 3,
       'segments' => 3,
       'sendsize' => 3,
-      'short' => 'Redistribute Motion'
+      'short' => 'Redistribute Motion 3:3  (slice1; segments: 3)'
     }
   ],
   'id' => 1,

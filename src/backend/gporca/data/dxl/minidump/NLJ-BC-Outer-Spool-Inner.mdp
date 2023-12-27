@@ -115,7 +115,7 @@ insert into int4_tbl values(123456), (-2147483647), (0), (-123456), (2147483647)
         <dxl:CountAgg Mdid="0.2147.1.0"/>
       </dxl:Type>
       <dxl:RelationStatistics Mdid="2.38364130.1.1" Name="int4_tbl" Rows="5.000000" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.38364130.1.1" Name="int4_tbl" IsTemporary="false" StorageType="Heap" DistributionPolicy="Random" Keys="7,1">
+      <dxl:Relation Mdid="6.38364130.1.1" Name="int4_tbl" IsTemporary="false" Rows="5.000000" StorageType="Heap" DistributionPolicy="Random" Keys="7,1">
         <dxl:Columns>
           <dxl:Column Name="f1" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>

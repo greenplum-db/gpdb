@@ -30,6 +30,8 @@ The following table shows the locations of the various Greenplum Database log fi
 |`$GPDATA_DIR/primary/segprefixN/log/*.csv`|primary segment database logs|
 |`/var/log/messages`|Global Linux system messages|
 
+> **Note** If you manually set the server configuration parameter [log_directory](../ref_guide/config_params/guc-list.html#log_directory) to specify a different directory for log files, the items on the table above whose path is under `$COORDINATOR_DATA_DIRECTORY` or `$GPDATA_DIR` should point to the value of `log_directory` instead. Note that when you specify the value as an absolute path, or as a relative path that is outside the data directory, Greenplum appends a subdirectory with a unique identifier (DBID) to the directory specified by this parameter. The unique identifier matches the value of `dbid` from `gp_segment_configuration`. For example, if you set `log_directory` as `/tmp/logs`, Greenplum creates the directories: `/tmp/logs/1` for the coordinator, `/tmp/logs/2` for seg0, `/tmp/logs/3` for seg1, etcetera. 
+
 Use `gplogfilter -t` \(`--trouble`\) first to search the coordinator log for messages beginning with `ERROR:`, `FATAL:`, or `PANIC:`. Messages beginning with `WARNING` may also provide useful information.
 
 To search log files on the segment hosts, use the Greenplum `gplogfilter` utility with `gpssh` to connect to segment hosts from the coordinator host. You can identify corresponding log entries in segment logs by the `statement_id`.

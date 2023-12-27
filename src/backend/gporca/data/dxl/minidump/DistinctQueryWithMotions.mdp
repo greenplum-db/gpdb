@@ -22,7 +22,7 @@
                                      ->  Sort  (cost=0.00..431.00 rows=14 width=8)
                                            Sort Key: gp_segment_id, b
                                            ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=14 width=8)
-                                                 Hash Key: gp_segment_id, b, b
+                                                 Hash Key: gp_segment_id, b
                                                  ->  Seq Scan on t  (cost=0.00..431.00 rows=14 width=8)
                  Optimizer: Pivotal Optimizer (GPORCA)
                 (13 rows)
@@ -167,7 +167,7 @@
       </dxl:Type>
       <dxl:RelationExtendedStatistics Mdid="10.23148.1.0" Name="t"/>
       <dxl:RelationStatistics Mdid="2.23148.1.0" Name="t" Rows="40.000000" RelPages="1" RelAllVisible="0" EmptyRelation="false"/>
-      <dxl:Relation Mdid="6.23148.1.0" Name="t" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
+      <dxl:Relation Mdid="6.23148.1.0" Name="t" IsTemporary="false" Rows="40.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="9,3">
         <dxl:Columns>
           <dxl:Column Name="a" Attno="1" Mdid="0.23.1.0" Nullable="true" ColWidth="4">
           </dxl:Column>
@@ -305,7 +305,7 @@
         </dxl:LogicalGet>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="38">
+    <dxl:Plan Id="0" SpaceSize="34">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="431.007097" Rows="40.000000" Width="12"/>
@@ -417,9 +417,6 @@
                   <dxl:HashExprList>
                     <dxl:HashExpr Opfamily="0.1977.1.0">
                       <dxl:Ident ColId="9" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
-                    </dxl:HashExpr>
-                    <dxl:HashExpr Opfamily="0.1977.1.0">
-                      <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
                     </dxl:HashExpr>
                     <dxl:HashExpr Opfamily="0.1977.1.0">
                       <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>

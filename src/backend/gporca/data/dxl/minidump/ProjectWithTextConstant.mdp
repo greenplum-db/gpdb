@@ -1712,7 +1712,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.504088.1.1" Name="customer" Rows="998706.000000"/>
-      <dxl:Relation Mdid="6.504088.1.1" Name="customer" IsTemporary="false" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="24,18">
+      <dxl:Relation Mdid="6.504088.1.1" Name="customer" IsTemporary="false" Rows="998706.000000" StorageType="Heap" DistributionPolicy="Hash" DistributionColumns="0" Keys="24,18">
         <dxl:Columns>
           <dxl:Column Name="c_customer_sk" Attno="1" Mdid="0.23.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>

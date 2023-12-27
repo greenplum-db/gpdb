@@ -997,7 +997,7 @@
         </dxl:Opfamilies>
       </dxl:Index>
       <dxl:RelationStatistics Mdid="2.1260.1.1" Name="pg_authid" Rows="1.000000"/>
-      <dxl:Relation Mdid="6.1260.1.1" Name="pg_authid" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="24,17">
+      <dxl:Relation Mdid="6.1260.1.1" Name="pg_authid" IsTemporary="false" Rows="1.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="24,17">
         <dxl:Columns>
           <dxl:Column Name="rolname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
           </dxl:Column>
@@ -1058,7 +1058,7 @@
         <dxl:CheckConstraints/>
       </dxl:Relation>
       <dxl:RelationStatistics Mdid="2.2608.1.1" Name="pg_depend" Rows="5602.000000"/>
-      <dxl:Relation Mdid="6.2608.1.1" Name="pg_depend" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="13,7">
+      <dxl:Relation Mdid="6.2608.1.1" Name="pg_depend" IsTemporary="false" Rows="5602.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="13,7">
         <dxl:Columns>
           <dxl:Column Name="classid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
@@ -1410,7 +1410,7 @@
       <dxl:ColumnStatistics Mdid="1.1259.1.1.29" Name="reloptions" Width="0.000000" NullFreq="1.000000"/>
       <dxl:RelationStatistics Mdid="2.1213.1.1" Name="pg_tablespace" Rows="2.000000"/>
       <dxl:RelationStatistics Mdid="2.1259.1.1" Name="pg_class" Rows="337.000000"/>
-      <dxl:Relation Mdid="6.1213.1.1" Name="pg_tablespace" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="14,7">
+      <dxl:Relation Mdid="6.1213.1.1" Name="pg_tablespace" IsTemporary="false" Rows="2.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="14,7">
         <dxl:Columns>
           <dxl:Column Name="spcname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
           </dxl:Column>
@@ -1446,7 +1446,7 @@
         <dxl:IndexInfoList/>
         <dxl:CheckConstraints/>
       </dxl:Relation>
-      <dxl:Relation Mdid="6.1259.1.1" Name="pg_class" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="37,30">
+      <dxl:Relation Mdid="6.1259.1.1" Name="pg_class" IsTemporary="false" Rows="337.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="37,30">
         <dxl:Columns>
           <dxl:Column Name="relname" Attno="1" Mdid="0.19.1.0" Nullable="false" ColWidth="64">
           </dxl:Column>
@@ -1671,7 +1671,7 @@
         </dxl:StatsBucket>
       </dxl:ColumnStatistics>
       <dxl:RelationStatistics Mdid="2.5011.1.1" Name="pg_partition_rule" Rows="0.000000"/>
-      <dxl:Relation Mdid="6.5011.1.1" Name="pg_partition_rule" IsTemporary="false" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="21,14">
+      <dxl:Relation Mdid="6.5011.1.1" Name="pg_partition_rule" IsTemporary="false" Rows="0.000000" StorageType="Heap" DistributionPolicy="CoordinatorOnly" Keys="21,14">
         <dxl:Columns>
           <dxl:Column Name="paroid" Attno="1" Mdid="0.26.1.0" Nullable="false" ColWidth="4">
           </dxl:Column>
