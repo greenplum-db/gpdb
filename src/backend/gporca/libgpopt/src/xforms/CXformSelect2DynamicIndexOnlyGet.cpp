@@ -86,6 +86,17 @@ CXformSelect2DynamicIndexOnlyGet::Transform(CXformContext *pxfctxt,
 		return;
 	}
 
+	// We need to early exit when the relation contains security quals
+	// because we are adding the security quals when translating from DXL to
+	// Planned Statement as a filter. If we don't early exit then it may happen
+	// that we generate a plan where the index condition contains non-leakproof
+	// expressions. This can lead to data leak as we always want our security
+	// quals to be executed first.
+	if (popGet->HasSecurityQuals())
+	{
+		return;
+	}
+
 	CMemoryPool *mp = pxfctxt->Pmp();
 
 	// extract components

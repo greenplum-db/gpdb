@@ -475,26 +475,31 @@ CTranslatorQueryToDXL::CheckRangeTable(Query *query)
 		}
 
 		// In a rewritten parse tree
+		//
 		// [1] When hasRowSecurity=false and security_quals are not
 		// present in an rte, means that the relations present in a
 		// query don't have row level security enabled.
+		//
 		// [2] When hasRowSecurity=true and security_quals are present
 		// in an rte, means that the relations present in a query have
 		// row level security enabled.
+		//
 		// [3] When hasRowSecurity=true and security_quals are not
 		// present in an rte, means that the relations present in
 		// a query have row level security enabled but the query is
 		// executed by the owner of the relation.
+		//
 		// [4] When hasRowSecurity=false and security_quals are
 		// present in an rte example: A view with security barrier
 		// enabled and the view contains a relation with rules.
 		// Example query is below
+		//
+		// ```SQL
 		// CREATE TABLE foo(id int PRIMARY KEY, data text, deleted boolean);
-		// CREATE RULE foo_del_rule AS ON DELETE TO foo DO INSTEAD UPDATE
-		// foo SET deleted = true WHERE id = old.id;
-		// CREATE VIEW rw_view1 WITH (security_barrier=true) AS SELECT id,
-		// data FROM foo WHERE NOT deleted;
+		// CREATE RULE foo_del_rule AS ON DELETE TO foo DO INSTEAD UPDATE foo SET deleted = true WHERE id = old.id;
+		// CREATE VIEW rw_view1 WITH (security_barrier=true) AS SELECT id, data FROM foo WHERE NOT deleted;
 		// DELETE FROM rw_view1 WHERE id = 1;
+		// ```
 		// ORCA will fallback to planner for this case [4].
 		if (!query->hasRowSecurity && nullptr != rte->securityQuals)
 		{
@@ -3450,12 +3455,8 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet(const RangeTblEntry *rte,
 				   GPOS_WSZ_LIT("ONLY in the FROM clause"));
 	}
 
-	BOOL rteHasSecurityQuals = false;
 
-	if (0 < gpdb::ListLength(rte->securityQuals))
-	{
-		rteHasSecurityQuals = true;
-	}
+	BOOL rteHasSecurityQuals = gpdb::ListLength(rte->securityQuals) > 0;
 
 	// query_id_for_target_rel is used to tag table descriptors assigned to target
 	// (result) relations one. In case of possible nested DML subqueries it's

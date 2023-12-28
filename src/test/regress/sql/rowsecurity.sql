@@ -6,7 +6,7 @@
 
 -- Suppress NOTICE messages when users/groups don't exist
 SET client_min_messages TO 'warning';
-
+set optimizer_trace_fallback to on;
 DROP USER IF EXISTS regress_rls_alice;
 DROP USER IF EXISTS regress_rls_bob;
 DROP USER IF EXISTS regress_rls_carol;
@@ -1916,3 +1916,4 @@ CREATE POLICY p1 ON rls_tbl_force USING (c1 = 5) WITH CHECK (c1 < 5);
 CREATE POLICY p2 ON rls_tbl_force FOR SELECT USING (c1 = 8);
 CREATE POLICY p3 ON rls_tbl_force FOR UPDATE USING (c1 = 8) WITH CHECK (c1 >= 5);
 CREATE POLICY p4 ON rls_tbl_force FOR DELETE USING (c1 = 8);
+reset optimizer_trace_fallback;

@@ -115,13 +115,8 @@ private:
 		// List to hold the security quals present in an RTE
 		List *m_security_quals{NIL};
 
-		// Field to indicate that the search for an RTE with the given relid is
-		// done
-		BOOL m_found_rte;
-
 		// ctor
-		SContextSecurityQuals(const OID relId, BOOL foundRTE)
-			: m_relId(relId), m_found_rte(foundRTE)
+		SContextSecurityQuals(const OID relId) : m_relId(relId)
 		{
 		}
 	};	// SContextSecurityQuals
@@ -165,7 +160,7 @@ private:
 	static BOOL FetchSecurityQualsWalker(
 		Node *node, SContextSecurityQuals *ctxt_security_quals);
 
-	static void FetchSecurityQuals(Query *parsetree,
+	static BOOL FetchSecurityQuals(Query *parsetree,
 								   SContextSecurityQuals *ctxt_security_quals);
 
 	static BOOL SetSecurityQualsVarnoWalker(Node *node, Index *index);

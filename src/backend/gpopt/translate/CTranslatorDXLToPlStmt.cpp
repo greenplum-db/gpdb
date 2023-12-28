@@ -679,24 +679,19 @@ CTranslatorDXLToPlStmt::TranslateDXLTblScan(
 
 		// List to hold the quals which contain both security quals and query
 		// quals.
-		List *qual = NIL;
+		List *security_query_quals = NIL;
 
 		// Fetching the RTE of the relation from the rewritten parse tree
 		// based on the oidRel and adding the security quals of the RTE in
-		// the qual list.
-		AddSecurityQuals(oidRel, &qual, &index);
+		// the security_query_quals list.
+		AddSecurityQuals(oidRel, &security_query_quals, &index);
 
 		// The security quals should always be executed first when
-		// compared to other quals. So appending query quals to the qual list
-		// after the security quals.
-		ListCell *lc;
-		foreach (lc, query_quals)
-		{
-			Expr *expr = (Expr *) lfirst(lc);
-			qual = gpdb::LAppend(qual, expr);
-		}
-
-		plan->qual = qual;
+		// compared to other quals. So appending query quals to the
+		// security_query_quals list after the security quals.
+		security_query_quals =
+			gpdb::ListConcat(security_query_quals, query_quals);
+		plan->qual = security_query_quals;
 	}
 
 
@@ -4288,33 +4283,27 @@ CTranslatorDXLToPlStmt::TranslateDXLDynTblScan(
 
 	// List to hold the quals which contain both security quals and query
 	// quals.
-	List *qual = NIL;
+	List *security_query_quals = NIL;
 
 	// List to hold the quals after translating filter_dxlnode node.
-	List *query_qual = NIL;
+	List *query_quals = NIL;
 
 	// Fetching the RTE of the relation from the rewritten parse tree
 	// based on the oidRel and adding the security quals of the RTE in
-	// the qual list.
-	AddSecurityQuals(oidRel, &qual, &index);
+	// the security_query_quals list.
+	AddSecurityQuals(oidRel, &security_query_quals, &index);
 
 	TranslateProjListAndFilter(
 		project_list_dxlnode, filter_dxlnode,
 		&base_table_context,  // translate context for the base table
 		nullptr,			  // translate_ctxt_left and pdxltrctxRight,
-		&plan->targetlist, &query_qual, output_context);
+		&plan->targetlist, &query_quals, output_context);
 
 	// The security quals should always be executed first when compared to
-	// other quals. So appending query quals to the qual list after the
-	// security quals.
-	ListCell *lc;
-	foreach (lc, query_qual)
-	{
-		Expr *expr = (Expr *) lfirst(lc);
-		qual = gpdb::LAppend(qual, expr);
-	}
-
-	plan->qual = qual;
+	// other quals. So appending query quals to the security_query_quals
+	// list after the security quals.
+	security_query_quals = gpdb::ListConcat(security_query_quals, query_quals);
+	plan->qual = security_query_quals;
 
 	SetParamIds(plan);
 
@@ -5746,7 +5735,7 @@ CTranslatorDXLToPlStmt::TranslateProjListAndFilter(
 void
 CTranslatorDXLToPlStmt::AddSecurityQuals(OID relId, List **qual, Index *index)
 {
-	SContextSecurityQuals ctxt_security_quals(relId, false);
+	SContextSecurityQuals ctxt_security_quals(relId);
 
 	// Find the RTE in the parse tree based on the relId and add the security
 	// quals of that RTE to the m_security_quals list present in
@@ -5765,13 +5754,7 @@ CTranslatorDXLToPlStmt::AddSecurityQuals(OID relId, List **qual, Index *index)
 								index);
 
 	// Adding the security quals from m_security_quals list to the qual list
-	ListCell *lc;
-
-	foreach (lc, ctxt_security_quals.m_security_quals)
-	{
-		Expr *expr = (Expr *) lfirst(lc);
-		*qual = gpdb::LAppend(*qual, expr);
-	}
+	*qual = gpdb::ListConcat(*qual, ctxt_security_quals.m_security_quals);
 }
 
 //---------------------------------------------------------------------------
@@ -5786,7 +5769,7 @@ CTranslatorDXLToPlStmt::AddSecurityQuals(OID relId, List **qual, Index *index)
 //		m_security_quals list of ctxt_security_quals struct.
 //
 //---------------------------------------------------------------------------
-void
+BOOL
 CTranslatorDXLToPlStmt::FetchSecurityQuals(
 	Query *parsetree, SContextSecurityQuals *ctxt_security_quals)
 {
@@ -5804,24 +5787,16 @@ CTranslatorDXLToPlStmt::FetchSecurityQuals(
 		if (RTE_RELATION == rte->rtekind &&
 			rte->relid == ctxt_security_quals->m_relId)
 		{
-			ListCell *l;
-			foreach (l, rte->securityQuals)
-			{
-				Expr *expr = (Expr *) lfirst(l);
-				ctxt_security_quals->m_security_quals =
-					gpdb::LAppend(ctxt_security_quals->m_security_quals, expr);
-			}
-			ctxt_security_quals->m_found_rte = true;
-			return;
+			ctxt_security_quals->m_security_quals = gpdb::ListConcat(
+				ctxt_security_quals->m_security_quals, rte->securityQuals);
+			return true;
 		}
 
-		if (RTE_SUBQUERY == rte->rtekind || RTE_TABLEFUNCTION == rte->rtekind)
+		if ((RTE_SUBQUERY == rte->rtekind ||
+			 RTE_TABLEFUNCTION == rte->rtekind) &&
+			FetchSecurityQuals(rte->subquery, ctxt_security_quals))
 		{
-			FetchSecurityQuals(rte->subquery, ctxt_security_quals);
-			if (ctxt_security_quals->m_found_rte)
-			{
-				return;
-			}
+			return true;
 		}
 	}
 
@@ -5830,10 +5805,10 @@ CTranslatorDXLToPlStmt::FetchSecurityQuals(
 	{
 		CommonTableExpr *cte = lfirst_node(CommonTableExpr, lc);
 
-		FetchSecurityQuals(castNode(Query, cte->ctequery), ctxt_security_quals);
-		if (ctxt_security_quals->m_found_rte)
+		if (FetchSecurityQuals(castNode(Query, cte->ctequery),
+							   ctxt_security_quals))
 		{
-			return;
+			return true;
 		}
 	}
 
@@ -5843,11 +5818,13 @@ CTranslatorDXLToPlStmt::FetchSecurityQuals(
 	// ctelist
 	if (parsetree->hasSubLinks)
 	{
-		gpdb::WalkQueryTree(
+		return gpdb::WalkQueryTree(
 			parsetree,
 			(BOOL(*)()) CTranslatorDXLToPlStmt::FetchSecurityQualsWalker,
 			ctxt_security_quals, QTW_IGNORE_RC_SUBQUERIES);
 	}
+
+	return false;
 }
 
 //---------------------------------------------------------------------------
@@ -5877,10 +5854,8 @@ CTranslatorDXLToPlStmt::FetchSecurityQualsWalker(
 	{
 		SubLink *sub = (SubLink *) node;
 
-		FetchSecurityQuals(castNode(Query, sub->subselect),
-						   ctxt_security_quals);
-
-		if (ctxt_security_quals->m_found_rte)
+		if (FetchSecurityQuals(castNode(Query, sub->subselect),
+							   ctxt_security_quals))
 		{
 			return true;
 		}

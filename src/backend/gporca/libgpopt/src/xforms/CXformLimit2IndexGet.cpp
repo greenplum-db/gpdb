@@ -94,6 +94,18 @@ CXformLimit2IndexGet::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	CExpression *pexprScalarRows = (*pexpr)[2];
 
 	CLogicalGet *popGet = CLogicalGet::PopConvert(pexprRelational->Pop());
+
+	// We need to early exit when the relation contains security quals
+	// because we are adding the security quals when translating from DXL to
+	// Planned Statement as a filter. If we don't early exit then it may happen
+	// that we generate a plan where the index condition contains non-leakproof
+	// expressions. This can lead to data leak as we always want our security
+	// quals to be executed first.
+	if (popGet->HasSecurityQuals())
+	{
+		return;
+	}
+
 	// get the indices count of this relation
 	const ULONG ulIndices = popGet->Ptabdesc()->IndexCount();
 	// Ignore xform if relation doesn't have any indices

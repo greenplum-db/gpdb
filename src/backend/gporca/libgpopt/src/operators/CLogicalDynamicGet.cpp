@@ -149,10 +149,7 @@ CLogicalDynamicGet::Matches(COperator *pop) const
 
 	CLogicalDynamicGet *popGet = CLogicalDynamicGet::PopConvert(pop);
 
-	// match if the table descriptors are identical
-	return this->ScanId() == popGet->ScanId() &&
-		   this->Ptabdesc()->MDId()->Equals(popGet->Ptabdesc()->MDId()) &&
-		   this->PdrgpcrOutput()->Equals(popGet->PdrgpcrOutput()) &&
+	return CUtils::FMatchDynamicScan(this, pop) &&
 		   this->HasSecurityQuals() == popGet->HasSecurityQuals();
 }
 
