@@ -55,7 +55,7 @@
 #include <pg_config.h>
 #include <pg_config_manual.h>
 #include "gpfdist_helper.h"
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 #include <zstd.h>
 #endif
 #ifdef USE_SSL
@@ -88,14 +88,6 @@ struct block_t
 	char*		cdata;
 };
 
-typedef struct zstd_buffer zstd_buffer;
-struct zstd_buffer
-{
-	char	*buf;
-	int		size;
-	int		pos;	
-};
-
 /*  Get session id for this request */
 #define GET_SID(r)	((r->sid))
 
@@ -104,7 +96,7 @@ static long SESSION_SEQ = 0;		/*  sequence number for session */
 #ifndef WIN32
 static sem_t THREAD_NUM;			/* limit total thread number */
 #endif
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 static long OUT_BUFFER_SIZE = 0;	/* zstd out buffer size */
 
 typedef struct zstd_buffer zstd_buffer;
@@ -114,8 +106,8 @@ struct zstd_buffer
 	int		size;
 	int		pos;
 };
-
 #endif
+
 static bool base16_decode(char* data);
 
 #ifdef USE_SSL
@@ -326,13 +318,13 @@ struct request_t
 		char*  	wbuf;		/* data buf for decompressed data for writing into file,
 					         	its capacity equals to MAX_FRAME_SIZE. */
 		int 	wbuftop;	/* last index for decompressed data */
-		int 	woffset;		/* mark whether there is left data in compress ctx */
+		int 	decompress_offset;		/* mark whether there is left data in compress ctx */
 	} in;
 
 	block_t	outblock;	/* next block to send out */
 	char*           line_delim_str;
 	int             line_delim_length;
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 	ZSTD_CCtx*		zstd_cctx;	/* zstd compression context */
 	ZSTD_DCtx*		zstd_dctx;	/* zstd decompression context */
 #endif
@@ -408,7 +400,7 @@ static int session_active_segs_isempty(session_t* session);
 static int request_validate(request_t *r);
 static int request_set_path(request_t *r, const char* d, char* p, char* pp, char* path);
 static int request_path_validate(request_t *r, const char* path);
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 static int compress_zstd(const request_t *r, block_t* block, int buflen);
 static int decompress_data(request_t *r, zstd_buffer *in, zstd_buffer *out);
 static int decompress_zstd(request_t* r, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout);
@@ -625,7 +617,7 @@ static void usage_error(const char* msg, int print_usage)
 #ifdef GPFXDIST
 					    "        -c file    : configuration file for transformations\n"
 #endif
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 						"        --compress : open compression transmission\n"
 						"        --multi_thread num : the max number of working thread for compression transmission\n"
 #endif
@@ -695,7 +687,7 @@ static void parse_command_line(int argc, const char* const argv[],
 	{ "version", 256, 0, "print version number" },
 	{ NULL, 'w', 1, "wait for session timeout in seconds" },
 	{ NULL, 'k', 1, "timeout to clean up sessions in seconds" },
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 	{"compress", 258, 0, "turn on compressed transmission"},
 	{"multi_thread", 259, 1, "turn on multi-thread and compressed transmission"},
 #endif
@@ -786,7 +778,7 @@ static void parse_command_line(int argc, const char* const argv[],
 		case 'k':
 			opt.k = atoi(arg);
 			break;
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 		case 258:
 			opt.compress = 1;
 			break;
@@ -805,7 +797,8 @@ static void parse_command_line(int argc, const char* const argv[],
 		case 259:
 			usage_error("Multi-thread transmission relies on zstd, but zstd is not supported by this build", 0);
 #endif
-
+		}
+	}
 	if (e != APR_EOF)
 		usage_error("Error: illegal arguments", 1);
 
@@ -1331,7 +1324,7 @@ static int local_send(request_t *r, const char* buf, int buflen)
 				else
 #endif
 				{
-					session_end(r->session, 0);
+					session_end(r->session, 0, NULL);
 				}
 			}
 		} else {
@@ -1347,7 +1340,7 @@ static int local_send(request_t *r, const char* buf, int buflen)
 	return n;
 }
 
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 static
 int wait_for_thread_join(request_t *r)
 {
@@ -1362,8 +1355,7 @@ int wait_for_thread_join(request_t *r)
  * result of the data transmission. If there is unexpected returned value, it will
  * handle the error case.
  */
-static
-int recycle_thread(request_t *r)
+static int recycle_thread(request_t *r)
 {
 	int last_send = 0;
 	if (r->is_running)
@@ -1372,7 +1364,7 @@ int recycle_thread(request_t *r)
 
 		if (r->session_end)
 		{
-			session_end(r->session, 0);
+			session_end(r->session, 0, NULL);
 		}
 
 		if(last_send < 0)
@@ -1643,20 +1635,6 @@ session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, i
 	retblock->top = size;
 	/* fill the block header with meta data for the client to parse and use */
 	block_fill_header(r, retblock, &fos);
-
-#ifdef USE_ZSTD
-	if (r->zstd)
-	{
-		int res = compress_zstd(r, retblock, size);
-		
-		if (res < 0)
-		{
-			return r->zstd_error;
-		}
-
-		retblock->top = res;
-	}
-#endif
 
 	return 0;
 }
@@ -2132,7 +2110,7 @@ static void do_write(int fd, short event, void* arg)
 		gfatal(r, "internal error - non matching fd (%d) "
 					  "and socket (%d)", fd, r->sock);
 
-#ifndef WIN32
+#ifdef HAVE_LIBZSTD
 	/* It is essential to recycle threads before we read file.
 	 * Since session_get_block will change value of top and content
 	 * in outblock in request, main thread and sub thread will cause
@@ -2178,7 +2156,7 @@ static void do_write(int fd, short event, void* arg)
 		 * write out the block data
 		 */
 		n = datablock->top - datablock->bot;
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 		if (r->zstd)
 		{
 			n = local_send_with_zstd(r);
@@ -3395,11 +3373,9 @@ int check_output_to_file(request_t *r, int wrote)
 	}
 	else
 	{
-		/* wrote up to last line, some data left over in buffer. move to front */
-		int bytes_left_over = *buftop - wrote;
-
-		memmove(buf, buf + wrote, bytes_left_over);
-		*buftop = bytes_left_over;
+		/* This should not be entered */
+		gwarning(r, "handle_post_request, left incomplete line: %d bytes", *buftop);
+		*buftop = 0;
 	}
 	return 0;
 }
@@ -3602,38 +3578,10 @@ static void handle_post_request(request_t *r, int header_end)
 			r->bytes += n;
 			r->last = apr_time_now();
 			r->in.dbuftop += n;
-
-			/* success is a flag to check whether data is written into file successfully.
-			 * There is no need to do anything when success is less than 0, since all
-			 * error handling has been done in 'check_output_to_file' function.
-			 */
-			int success = 0;
-
-			/* if filled our buffer or no more data expected, write it */
-			if (r->in.dbufmax == r->in.dbuftop || r->in.davailable == 0)
-			{
-#ifdef USE_ZSTD
-				/* only write up to end of last row */
-				if (r->zstd)
-				{
-					success = decompress_write_loop(r);
-				}
-				else
-#endif
-				{
-					wrote = fstream_write(session->fstream, r->in.dbuf, r->in.dbuftop, 1, r->line_delim_str, r->line_delim_length);
-					gdebug(r, "wrote %d bytes to file", wrote);
-					delay_watchdog_timer();
-
-					success = check_output_to_file(r, wrote);
-				}
-			}
-			if (success < 0)
-				return;
 		}
 	}
 	/* if filled our buffer or no more data expected, write it */
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 	if (r->zstd)
 	{
 		wrote = decompress_write_loop(r);
@@ -3646,27 +3594,10 @@ static void handle_post_request(request_t *r, int header_end)
 		wrote = fstream_write(session->fstream, r->in.dbuf, r->in.dbuftop, 1, r->line_delim_str, r->line_delim_length);
 		gdebug(r, "wrote %d bytes to file", wrote);
 		delay_watchdog_timer();
-	}
 
-	if (wrote == -1)
-	{
-		/* write error */
-		gwarning(r, "handle_post_request, write error: %s", fstream_get_error(session->fstream));
-		http_error(r, FDIST_INTERNAL_ERROR, fstream_get_error(session->fstream));
-		request_end(r, 1, 0);
-		session_end(session, 1, fstream_get_error(session->fstream));
-		return;
-	}
-	else if (wrote == r->in.dbuftop)
-	{
-		/* wrote the whole buffer. clean it for next round */
-		r->in.dbuftop = 0;
-	}
-	else
-	{
-		/* This should not be entered */
-		gwarning(r, "handle_post_request, left incomplete line: %d bytes", r->in.dbuftop - wrote);
-		r->in.dbuftop = 0;
+		if (check_output_to_file(r, wrote) < 0){
+			return;
+		}
 	}
 
 done_processing_request:
@@ -3905,7 +3836,7 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 		}
 	}
 
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 	if (r->zstd)
 	{
 		if (!r->is_get)
@@ -4917,7 +4848,7 @@ static void request_cleanup(request_t *r)
 {
 	request_shutdown_sock(r);
 	setup_do_close(r);
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 	if(r->is_running)
 		wait_for_thread_join(r);
 
@@ -4930,10 +4861,6 @@ static void request_cleanup(request_t *r)
 	{
 		ZSTD_freeDCtx(r->zstd_dctx);
 		r->zstd_cctx = NULL;
-	}
-	if ( r->zstd && !r->is_get )
-	{
-		ZSTD_freeDCtx(r->zstd_dctx);
 	}
 #endif
 }
@@ -5051,7 +4978,7 @@ static void delay_watchdog_timer()
 }
 #endif
 
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 
 /* decompress the data and write data to the file.
  * Finally, the function will check the write result,
@@ -5062,11 +4989,10 @@ int decompress_write_loop(request_t *r)
 {
 	session_t *session = r->session;
 	int wrote_total = 0;
-	do
+
+	while(r->in.decompress_offset != r->in.dbuftop)
 	{
-		int offset = 0;
-		if (r->in.woffset)
-			offset = r->in.woffset;
+		int offset = r->in.decompress_offset;
 
 		zstd_buffer in = {r->in.dbuf, r->in.dbuftop, offset};
 		zstd_buffer out = {r->in.wbuf + r->in.wbuftop, MAX_FRAME_SIZE - r->in.wbuftop, 0};
@@ -5090,8 +5016,7 @@ int decompress_write_loop(request_t *r)
 		{
 			return -1;
 		}
-
-	} while(r->in.woffset);
+	}
 	return wrote_total;
 }
 
@@ -5133,11 +5058,11 @@ static int decompress_data(request_t* r, zstd_buffer *in, zstd_buffer *out){
 	r->in.wbuftop += outSize;
 	if (inbuf.pos == inbuf.size)
 	{
-		r->in.woffset = 0;
+		r->in.decompress_offset = inbuf.size;
 	}
 	else
 	{
-		r->in.woffset = inbuf.pos;
+		r->in.decompress_offset = inbuf.pos;
 	}
 	gdebug(r, "decompress_zstd finished, input size = %d, output size = %d.", r->in.wbuftop, r->in.dbuftop);
 	return outSize;

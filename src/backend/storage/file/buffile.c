@@ -187,7 +187,7 @@ makeBufFile(File firstfile)
 	file->maxoffset = 0L;
 	file->buffer = palloc(BLCKSZ);
 
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 	file->compressed_buffer_size = 0;
 #endif
 

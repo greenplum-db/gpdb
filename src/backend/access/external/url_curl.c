@@ -30,7 +30,7 @@
 #include "utils/guc.h"
 #include "utils/resowner.h"
 #include "utils/uri.h"
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 #include <zstd.h>
 #include <zstd_errors.h>
 #endif
@@ -45,7 +45,7 @@
 typedef struct curlhandle_t
 {
 	CURL			*handle;		/* The curl handle */
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 	ZSTD_DCtx		*zstd_dctx;		/* The zstd decompression context */
 	ZSTD_CCtx		*zstd_cctx;		/* The zstd compression context */
 #endif
@@ -88,6 +88,7 @@ typedef struct
 	{
 		char	   	*ptr;		/* palloc-ed buffer */
 		char		*cptr;
+		int			compressed_size;
 		int			max;
 		int			bot,
 					top;
@@ -201,7 +202,7 @@ create_curlhandle(void)
 	h->x_httpheader = NULL;
 	h->in_multi_handle = false;
 
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 	h->zstd_dctx = NULL;
 	h->zstd_cctx = NULL;
 #endif
@@ -249,7 +250,7 @@ destroy_curlhandle(curlhandle_t *h)
 		curl_easy_cleanup(h->handle);
 		h->handle = NULL;
 	}
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 	if (h->zstd_dctx) 
 	{
 		ZSTD_freeDCtx(h->zstd_dctx);
@@ -415,15 +416,18 @@ header_callback(void *ptr_, size_t size, size_t nmemb, void *userp)
 				buf[i] = ptr[i];
 
 			buf[i] = 0;
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 			url->zstd = strtol(buf, 0, 0);
 
 			if (url->for_write && url->zstd)
 			{	
 				url->curl->zstd_cctx = ZSTD_createCCtx();
+				int	bufsize = writable_external_table_bufsize * 1024;
 				// allocate out.cptr whose size equals to out.ptr
-				url->out.cptr = (char *) palloc(writable_external_table_bufsize * 1024);
+				int compressed_size = ZSTD_compressBound(bufsize);	/* worst case */
+				url->out.cptr = (char *) palloc(compressed_size);
 				url->lastsize = 0;
+				url->out.compressed_size = compressed_size;
 			}
 			else if (url->zstd)
 			{
@@ -1320,7 +1324,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 	set_httpheader(file, "X-GP-SEGMENT-COUNT", ev->GP_SEGMENT_COUNT);
 	set_httpheader(file, "X-GP-LINE-DELIM-STR", ev->GP_LINE_DELIM_STR);
 	set_httpheader(file, "X-GP-LINE-DELIM-LENGTH", ev->GP_LINE_DELIM_LENGTH);
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 		set_httpheader(file, "X-GP-ZSTD", "1");
 #endif
 
@@ -1628,7 +1632,7 @@ gp_proto0_read(char *buf, int bufsz, URL_CURL_FILE *file)
 	return n;
 }
 
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 int 
 decompress_zstd_data(ZSTD_DCtx* ctx, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout)
 {
@@ -1653,7 +1657,20 @@ decompress_zstd_data(ZSTD_DCtx* ctx, ZSTD_inBuffer* bin, ZSTD_outBuffer* bout)
 static int
 compress_zstd_data(URL_CURL_FILE *file)
 {
-	return ZSTD_compressCCtx(file->curl->zstd_cctx, file->out.cptr, file->out.top, file->out.ptr, file->out.top, file->zstd);
+	size_t ret =  ZSTD_compressCCtx(file->curl->zstd_cctx, 
+									file->out.cptr, 
+									file->out.compressed_size, 
+									file->out.ptr, 
+									file->out.top, 
+									file->zstd);
+
+	if (ZSTD_isError(ret))
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_CONNECTION_FAILURE),
+				errmsg("ZSTD_compressCCtx failed, error is %s", ZSTD_getErrorName(ret))));
+	}
+	return ret;
 }
 #endif
 
@@ -1838,7 +1855,7 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 		 */
 		if (file->lastsize > left_bytes || file->block.datalen == len)
 		{
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 			int wantsz = ZSTD_DStreamInSize() - left_bytes;
 			fill_buffer(file, wantsz);
 			/* Gpfdist could be aborted unexpectedly. Thus gpdb would recieve the partial data, which 
@@ -1884,7 +1901,7 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 	if (n > bufsz)
 		n = bufsz;
 
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 	if (file->zstd && file->curl->zstd_dctx && !file->eof)
 	{
 		int ret;
@@ -1936,7 +1953,7 @@ gp_proto0_write(URL_CURL_FILE *file, CopyState pstate)
 {	
 	char*		buf;
 	int		nbytes;
-#ifdef USE_ZSTD
+#ifdef HAVE_LIBZSTD
 	if(file->zstd){
 		nbytes = compress_zstd_data(file);
 		buf = file->out.cptr;
@@ -2053,6 +2070,7 @@ curl_fwrite(char *buf, int nbytes, URL_CURL_FILE *file, CopyState pstate)
 				if (!newbuf)
 					elog(ERROR, "out of compress memory (curl_fwrite)");
 				file->out.cptr = newbuf;
+				file->out.compressed_size = n;
 			}
 
 			file->out.max = n;
