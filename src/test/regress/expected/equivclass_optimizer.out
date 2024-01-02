@@ -513,3 +513,16 @@ explain (costs off)  -- this should not require a sort
  Optimizer: Postgres query optimizer
 (4 rows)
 
+-- please refer to https://github.com/greenplum-db/gpdb/issues/15079 
+CREATE TABLE IF NOT EXISTS issue_15079(c0 REAL , c1 boolean );
+SELECT BOOL_OR(issue_15079.c1) FROM issue_15079 GROUP BY random();
+ bool_or 
+---------
+(0 rows)
+
+SELECT * FROM (SELECT BOOL_OR(issue_15079.c1) FROM issue_15079 GROUP BY random()) as result;
+ bool_or 
+---------
+(0 rows)
+
+DROP TABLE issue_15079;

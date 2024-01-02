@@ -269,3 +269,9 @@ create temp view overview as
   select f1::information_schema.sql_identifier as sqli, f2 from undername;
 explain (costs off)  -- this should not require a sort
   select * from overview where sqli = 'foo' order by sqli;
+
+-- please refer to https://github.com/greenplum-db/gpdb/issues/15079 
+CREATE TABLE IF NOT EXISTS issue_15079(c0 REAL , c1 boolean );
+SELECT BOOL_OR(issue_15079.c1) FROM issue_15079 GROUP BY random();
+SELECT * FROM (SELECT BOOL_OR(issue_15079.c1) FROM issue_15079 GROUP BY random()) as result;
+DROP TABLE issue_15079;

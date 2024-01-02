@@ -484,6 +484,19 @@ cdbpathlocus_from_subquery(struct PlannerInfo *root,
 				EquivalenceClass *sub_ec = (EquivalenceClass *) lfirst(ec_cell);
 				EquivalenceClass *outer_ec;
 
+				/*
+				 * Since the results of volatile functions are unpredictable, 
+				 * an EquivalenceClass containing volatile functions should not 
+				 * be considered for pull-up optimization.
+				 */
+				if (sub_ec->ec_has_volatile)
+				{
+					if (sub_ec->ec_sortref != 0)
+						continue;
+					else
+						elog(ERROR, "volatile EquivalenceClass has no sortref");
+				}
+
 				outer_ec = cdb_pull_up_eclass(root,
 											  sub_ec,
 											  rel->relids,
