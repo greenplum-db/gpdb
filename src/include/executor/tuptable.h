@@ -289,11 +289,11 @@ typedef struct MinimalTupleTableSlot
 
 typedef struct MemTupleTableSlot
 {
-    TupleTableSlot base;
+	TupleTableSlot base;
 #define FIELDNO_MEMTUPLETABLESLOT_TUPLE 1
-    MemTuple tuple;
+	MemTuple tuple;
 #define FIELDNO_MEMTUPLETABLESLOT_BINDING 2
-    MemTupleBinding *mt_bind;
+	MemTupleBinding *mt_bind;
 } MemTupleTableSlot;
 
 /*

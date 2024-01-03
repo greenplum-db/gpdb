@@ -126,7 +126,7 @@ struct TupleTableSlotOps;
 extern LLVMValueRef slot_compile_deform(struct LLVMJitContext *context, TupleDesc desc,
 										const struct TupleTableSlotOps *ops, int natts);
 
-extern LLVMValueRef slot_compile_deform_ao(struct LLVMJitContext *context, TupleDesc desc,
+extern LLVMValueRef slot_compile_deform_mem_tuple(struct LLVMJitContext *context, TupleDesc desc,
                                            const struct TupleTableSlotOps *ops, int natts);
 
 /*

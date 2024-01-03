@@ -3436,8 +3436,9 @@ static TupleTableSlot *appendonly_store_memtuple(TupleTableSlot *slot,
 
 	slot->tts_flags &= ~TTS_FLAG_EMPTY;
 
+	memtuple_deform(mtup, mslot->mt_bind, slot->tts_values, slot->tts_isnull);
 	mslot->tuple = mtup;
-	slot->tts_nvalid = 0;
+	slot->tts_nvalid = slot->tts_tupleDescriptor->natts;
 
 	if (shouldFree)
 		slot->tts_flags |= TTS_FLAG_SHOULDFREE;

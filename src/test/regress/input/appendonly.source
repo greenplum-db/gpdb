@@ -883,8 +883,11 @@ abort;
 -- test for AO tuple deform in JIT
 SET jit = on;
 SET jit_above_cost = 0;
+SET gp_explain_jit = on;
 create table ao_tuple_deform (c1 int, c2 int) with (appendonly = true);
 insert into ao_tuple_deform values (1, 1);
+-- check the tuple deforming process is JIT-ed
+explain analyze verbose select * from ao_tuple_deform where c1 = 1;
 select * from ao_tuple_deform where c1 = 1;
 
 -- AO tuple with missing attributes deform in JIT
@@ -900,3 +903,4 @@ insert into ao_tuple_deform values (3, 3, 'hello'), (3, 3, 'world');
 select * from ao_tuple_deform where c1 = 3;
 RESET jit;
 RESET jit_above_cost;
+RESET gp_explain_jit;

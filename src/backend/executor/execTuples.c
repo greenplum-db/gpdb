@@ -931,6 +931,7 @@ tts_mem_getsomeattrs(TupleTableSlot *slot, int natts)
 static Datum
 tts_mem_getsysattr(TupleTableSlot *slot, int attnum, bool *isnull)
 {
+	Assert(!TTS_EMPTY(slot));
 	/*
 	 * GPDB: AppendOptimized relations do need to get sysattrs AND use memory
 	 * tuples to pass around data. It is assumed that the caller knows what is
@@ -942,8 +943,6 @@ tts_mem_getsysattr(TupleTableSlot *slot, int attnum, bool *isnull)
 
 		return Int32GetDatum(GpIdentity.segindex);
 	}
-
-	Assert(!TTS_EMPTY(slot));
 
 	ereport(ERROR,
 			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -1014,33 +1013,33 @@ tts_mem_copyslot(TupleTableSlot *dstslot, TupleTableSlot *srcslot)
 static HeapTuple
 tts_mem_copy_heap_tuple(TupleTableSlot *slot)
 {
-    MemTupleTableSlot *mslot = (MemTupleTableSlot *) slot;
-    Assert(!TTS_EMPTY(slot));
-    if (slot->tts_nvalid < slot->tts_tupleDescriptor->natts)
-    {
-        memtuple_deform(mslot->tuple, mslot->mt_bind, slot->tts_values, slot->tts_isnull);
-        slot->tts_nvalid = slot->tts_tupleDescriptor->natts;
-    }
+	MemTupleTableSlot *mslot = (MemTupleTableSlot *) slot;
+	Assert(!TTS_EMPTY(slot));
+	if (slot->tts_nvalid < slot->tts_tupleDescriptor->natts)
+	{
+		memtuple_deform(mslot->tuple, mslot->mt_bind, slot->tts_values, slot->tts_isnull);
+		slot->tts_nvalid = slot->tts_tupleDescriptor->natts;
+	}
 
-    return heap_form_tuple(slot->tts_tupleDescriptor,
-                           slot->tts_values,
-                           slot->tts_isnull);
+	return heap_form_tuple(slot->tts_tupleDescriptor,
+						   slot->tts_values,
+						   slot->tts_isnull);
 }
 
 static MinimalTuple
 tts_mem_copy_minimal_tuple(TupleTableSlot *slot)
 {
-    MemTupleTableSlot *mslot = (MemTupleTableSlot *) slot;
-    Assert(!TTS_EMPTY(slot));
-    if (slot->tts_nvalid < slot->tts_tupleDescriptor->natts)
-    {
-        memtuple_deform(mslot->tuple, mslot->mt_bind, slot->tts_values, slot->tts_isnull);
-        slot->tts_nvalid = slot->tts_tupleDescriptor->natts;
-    }
+	MemTupleTableSlot *mslot = (MemTupleTableSlot *) slot;
+	Assert(!TTS_EMPTY(slot));
+	if (slot->tts_nvalid < slot->tts_tupleDescriptor->natts)
+	{
+		memtuple_deform(mslot->tuple, mslot->mt_bind, slot->tts_values, slot->tts_isnull);
+		slot->tts_nvalid = slot->tts_tupleDescriptor->natts;
+	}
 
-    return heap_form_minimal_tuple(slot->tts_tupleDescriptor,
-                                   slot->tts_values,
-                                   slot->tts_isnull);
+	return heap_form_minimal_tuple(slot->tts_tupleDescriptor,
+								   slot->tts_values,
+								   slot->tts_isnull);
 }
 
 static inline void
@@ -1235,13 +1234,10 @@ slot_deform_mem_tuple(TupleTableSlot *slot, int natts)
 	/* We can only fetch as many attributes as the tuple has. */
 	natts = Min(slot->tts_tupleDescriptor->natts, natts);
 
-	for (; attnum < natts; attnum++)
-	{
-		if (attnum < pbind->natts)
-			slot->tts_values[attnum] = memtuple_getattr(tuple, pbind, attnum + 1, &isnull[attnum]);
-		else
-			slot->tts_values[attnum] = getmissingattr(pbind->tupdesc, attnum + 1, &isnull[attnum]);
-	}
+	for (; attnum < pbind->natts; ++attnum)
+		slot->tts_values[attnum] = memtuple_getattr(tuple, pbind, attnum + 1, &isnull[attnum]);
+	for (; attnum < natts; ++attnum)
+		slot->tts_values[attnum] = getmissingattr(pbind->tupdesc, attnum + 1, &isnull[attnum]);
 
 	/*
 	 * Save state for next execution
@@ -1321,23 +1317,23 @@ const TupleTableSlotOps TTSOpsBufferHeapTuple = {
 };
 
 const TupleTableSlotOps TTSOpsMemTuple = {
-    .base_slot_size = sizeof(MemTupleTableSlot),
-    .init = tts_mem_init,
-    .release = tts_mem_release,
-    .clear = tts_mem_clear,
-    .getsomeattrs = tts_mem_getsomeattrs,
-    .getsysattr = tts_mem_getsysattr,
-    .materialize = tts_mem_materialize,
-    .copyslot = tts_mem_copyslot,
+	.base_slot_size = sizeof(MemTupleTableSlot),
+	.init = tts_mem_init,
+	.release = tts_mem_release,
+	.clear = tts_mem_clear,
+	.getsomeattrs = tts_mem_getsomeattrs,
+	.getsysattr = tts_mem_getsysattr,
+	.materialize = tts_mem_materialize,
+	.copyslot = tts_mem_copyslot,
 
-    /*
-     * A memory tuple table slot can not "own" a heap tuple or a minimal
-     * tuple.
-     */
-    .get_heap_tuple = NULL,
-    .get_minimal_tuple = NULL,
-    .copy_heap_tuple = tts_mem_copy_heap_tuple,
-    .copy_minimal_tuple = tts_mem_copy_minimal_tuple
+	/*
+	* A memory tuple table slot can not "own" a heap tuple or a minimal
+	* tuple.
+	*/
+	.get_heap_tuple = NULL,
+	.get_minimal_tuple = NULL,
+	.copy_heap_tuple = tts_mem_copy_heap_tuple,
+	.copy_minimal_tuple = tts_mem_copy_minimal_tuple
 };
 
 /* ----------------------------------------------------------------
@@ -1566,6 +1562,11 @@ ExecSetSlotDescriptor(TupleTableSlot *slot, /* slot to change */
 		MemoryContextAlloc(slot->tts_mcxt, tupdesc->natts * sizeof(Datum));
 	slot->tts_isnull = (bool *)
 		MemoryContextAlloc(slot->tts_mcxt, tupdesc->natts * sizeof(bool));
+
+	/*
+	 * And allow slot type specific initialization.
+	 */
+	slot->tts_ops->init(slot);
 }
 
 /* --------------------------------

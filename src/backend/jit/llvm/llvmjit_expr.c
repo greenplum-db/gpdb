@@ -323,10 +323,10 @@ llvm_compile_expr(ExprState *state)
 					 */
 					if (tts_ops && desc && (context->base.flags & PGJIT_DEFORM))
 					{
-                        l_jit_deform =
-                            slot_compile_deform(context, desc,
-                                                tts_ops,
-                                                op->d.fetch.last_var);
+						l_jit_deform =
+							slot_compile_deform(context, desc,
+												tts_ops,
+												op->d.fetch.last_var);
 					}
 
 					if (l_jit_deform)
