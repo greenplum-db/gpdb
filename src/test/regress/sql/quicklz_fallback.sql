@@ -12,7 +12,7 @@
 -- s/zstd/VALID/g
 -- m/zlib/
 -- s/zlib/VALID/g
--- m/none
+-- m/none/
 -- s/none/VALID/g
 -- end_matchsubs
 
