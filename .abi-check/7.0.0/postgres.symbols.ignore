@@ -4,6 +4,3 @@ ConfigureNamesEnum_gp
 ConfigureNamesString_gp
 UpdateOrAddAttributeEncodings
 createDir
-generatePartitions
-MergeAttributes
-makePartitionCreateStmt
