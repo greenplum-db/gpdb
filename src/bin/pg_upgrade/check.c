@@ -1319,7 +1319,7 @@ check_for_appendonly_materialized_view_with_relfrozenxid(ClusterInfo *cluster)
 	char		output_path[MAXPGPATH];
 	bool		found = false;
 
-	prep_status("Checking for appendonly materialized view with relfrozenxid\n");
+	prep_status("Checking for appendonly materialized view with relfrozenxid");
 
 	snprintf(output_path,
 				sizeof(output_path),
