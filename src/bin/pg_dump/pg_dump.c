@@ -5442,6 +5442,10 @@ getIndexes(Archive *fout, TableInfo tblinfo[], int numTables)
 		if (!tbinfo->hasindex)
 			continue;
 
+		/* Ignore indexes of tables not to be dumped */
+		if (!tbinfo->dobj.dump)
+			continue;
+
 		/*
 		 * We can ignore indexes of uninteresting tables.
 		 */
