@@ -23,10 +23,10 @@ FROM gp_buffercache;
 CREATE ROLE buffercache_test;
 SET ROLE buffercache_test;
 SELECT * FROM pg_buffercache;
-ERROR:  permission denied for view pg_buffercache
+ERROR:  permission denied for relation pg_buffercache
 SELECT * FROM pg_buffercache_pages() AS p (wrong int);
 ERROR:  permission denied for function pg_buffercache_pages
 SELECT * FROM gp_buffercache;
-ERROR:  permission denied for view gp_buffercache
+ERROR:  permission denied for relation gp_buffercache
 RESET ROLE;
 DROP ROLE buffercache_test;
