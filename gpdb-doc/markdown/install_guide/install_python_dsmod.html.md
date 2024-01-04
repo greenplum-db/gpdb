@@ -31,7 +31,7 @@ The following table lists the modules that are provided in the Data Science Pack
 | blis | The Blis BLAS-like linear algebra library, as a self-contained C-extension |
 | cachetools | Extensible memoizing collections and decorators |
 | catalogue | Super lightweight function registries for your library |
-| catboost | A fast, scalable, high performance gradient boosting on decision trees library |
+| catboost | A high-performance open source library for gradient boosting on decision trees |
 | certifi | Python package for providing Mozilla's CA Bundle |
 | cffi | Foreign Function Interface for Python calling C code |
 | cftime | Time-handling functionality from netcdf4-python |
