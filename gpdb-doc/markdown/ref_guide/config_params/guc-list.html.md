@@ -2568,6 +2568,22 @@ For information about GPORCA, see [About GPORCA](../../admin_guide/query/topics/
 |-----------|-------|-------------------|
 |Boolean|on|coordinator, session, reload|
 
+## <a id="optimizer_enable_right_outer_join"></a>optimizer_enable_right_outer_join 
+
+When GPORCA is enabled (the default), this parameter allows you to control whether GPORCA generates right outer joins. 
+
+When set to the default value of `on`, GPORCA may both generate right outer joins and convert left outer joins to right outer joins if the situation calls for it. By setting this to `off`, you force GPORCA to generate equivalent left outer joins for incoming right outer joins and never generate right outer joins. 
+
+In situations in which you are observing poor performance related to right outer joins you may choose to suppress their use by setting this parameter to `off`.
+
+You may set this parameter for a database system, an individual database, or a session or query. However, we recommend that you set this parameter at the query level, as there are a number of use cases where right outer join is the correct query plan alternative to choose.
+
+For information about GPORCA, see the [About GPORCA topic](../../admin_guide/query/topics/query-piv-optimizer.html).
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|on|coordinator, session, reload|
+
 ## <a id="optimizer_force_agg_skew_avoidance"></a>optimizer\_force\_agg\_skew\_avoidance 
 
 When GPORCA is enabled \(the default\), this parameter affects the query plan alternatives that GPORCA considers when 3 stage aggregate plans are generated. When the value is `true`, the default, GPORCA considers only 3 stage aggregate plans where the intermediate aggregation uses the `GROUP BY` and `DISTINCT` columns for distribution to reduce the effects of processing skew.
