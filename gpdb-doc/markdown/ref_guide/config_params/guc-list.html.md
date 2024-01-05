@@ -2578,7 +2578,7 @@ In situations in which you are observing poor performance related to right outer
 
 You may set this parameter for a database system, an individual database, or a session or query. However, we recommend that you set this parameter at the query level, as there are a number of use cases where right outer join is the correct query plan alternative to choose.
 
-For information about GPORCA, see the [About GPORCA topic](../../admin_guide/query/topics/query-piv-optimizer.html).
+For information about GPORCA, see the [About GPORCA](../../admin_guide/query/topics/query-piv-optimizer.html) topic.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
