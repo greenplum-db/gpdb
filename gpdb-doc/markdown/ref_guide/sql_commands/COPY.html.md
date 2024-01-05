@@ -60,7 +60,7 @@ table\_name
 column\_name
 :   An optional list of columns to be copied. If no column list is specified, all columns of the table except generated columns will be copied.
 
-:   XXX When copying in text format, the default, a row of data in a column of type `bytea` can be up to 256MB.
+:   When copying in text format, the default, a row of data in a column of type `bytea` can be up to 256MB.
 
 query
 :   A [SELECT](SELECT.html), [VALUES](VALUES.html), [INSERT](INSERT.html), [UPDATE](UPDATE.html), or [DELETE](DELETE.html) command whose results are to be copied. Note that parentheses are required around the query.
@@ -211,7 +211,7 @@ Similarly, to copy data from a partitioned table with a leaf partition that is a
 COPY (SELECT * from my_sales ) TO stdout;
 ```
 
-`COPY FROM` can be used with plain, foreign, or partitioned tables XXX or with views that have INSTEAD OF INSERT triggers. XXX
+`COPY FROM` can be used with plain, foreign, or partitioned tables or with views that have INSTEAD OF INSERT triggers.
 
 You must have `SELECT` privilege on the table whose values are read by `COPY TO`, and `INSERT` privilege on the table into which values are inserted by `COPY FROM`. It is sufficient to have column privileges on the columns listed in the command.
 
@@ -225,7 +225,7 @@ Always specify the file name used in `COPY` as an absolute path. This is enforce
 
 Executing a command with `PROGRAM` might be restricted by the operating system's access control mechanisms.
 
-`COPY FROM` will invoke any triggers and check constraints on the destination table. However, it will not invoke rules. XXX Note that in this release, violations of constraints are not evaluated for single row error isolation mode. XXX
+`COPY FROM` will invoke any triggers and check constraints on the destination table. However, it will not invoke rules. Note that in this release, violations of constraints are not evaluated for single row error isolation mode. 
 
 For identity columns, the `COPY FROM` command will always write the column values provided in the input data, like the `INSERT` option `OVERRIDING SYSTEM VALUE`.
 
@@ -233,11 +233,9 @@ For identity columns, the `COPY FROM` command will always write the column value
 
 Input data is interpreted according to `ENCODING` option or the current client encoding, and output data is encoded in `ENCODING` or the current client encoding, even if the data does not pass through the client but is read from or written to a file directly by the server.
 
-By default, `COPY` stops operation at the first error. This should not lead to problems in the event of a `COPY TO`, but the target table will already have received earlier rows in a `COPY FROM`. These rows will not be visible or accessible, but they still occupy disk space. This may amount to a considerable amount of wasted disk space if the failure happened well into a large `COPY FROM` operation. You may choose to invoke `VACUUM` to recover the wasted space. XXX Another option would be to use single row error isolation mode to filter out error rows while still loading good rows. XXX
+By default, `COPY` stops operation at the first error. This should not lead to problems in the event of a `COPY TO`, but the target table will already have received earlier rows in a `COPY FROM`. These rows will not be visible or accessible, but they still occupy disk space. This may amount to a considerable amount of wasted disk space if the failure happened well into a large `COPY FROM` operation. You may choose to invoke `VACUUM` to recover the wasted space. Another option would be to use single row error isolation mode to filter out error rows while still loading good rows.
 
 `FORCE_NULL` and `FORCE_NOT_NULL` can be used simultaneously on the same column. This results in converting quoted null strings to null values and unquoted null strings to empty strings.
-
-XXX
 
 The `BINARY` keyword causes all data to be stored/read as binary format rather than as text. It is somewhat faster than the normal text mode, but a binary-format file is less portable across machine architectures and Greenplum Database versions. Also, you cannot run `COPY FROM` in single row error isolation mode if the data is in binary format.
 
@@ -281,8 +279,6 @@ A non-superuser can run only these types of `COPY` commands:
 
 For information about resource queues, refer to [Using Resource Queues](../../admin_guide/workload_mgmt.html) in the *Greenplum Database Administrator Guide*.
 
-XXX
-
 ## <a id="section7"></a>File Formats 
 
 The file formats supported by `COPY` include text, CSV, and binary.
@@ -318,8 +314,6 @@ All backslash sequences are interpreted after encoding conversion. The bytes spe
 
 `COPY TO` will terminate each row with a Unix-style newline (`\n`). Servers running on Microsoft Windows instead output carriage return/newline (`\r\n`), but only for `COPY` to a server file; for consistency across platforms, `COPY TO STDOUT` always sends `\n` regardless of server platform. `COPY FROM` can handle lines ending with newlines, carriage returns, or carriage return/newlines. To reduce the risk of error due to un-backslashed newlines or carriage returns that were meant as data, `COPY FROM` issues a warning if the line endings in the input are not all alike.
 
-XXX
-
 To summarize, two reserved characters have special meaning to `COPY`:
 
 -   The designated delimiter character \(tab by default\), which is used to separate fields in the data file.
@@ -343,8 +337,6 @@ percentage sign = % | vertical bar = *| | backslash = \
 ```
 
 Notice how the pipe character that is part of the data has been escaped using the asterisk character \(\*\). Also notice that we do not need to escape the backslash since we are using an alternative escape character.
-
-XXX
 
 ### <a id="section7c"></a>CSV Format
 
@@ -422,7 +414,7 @@ To copy into a compressed file, you can pipe the output through an external comp
 COPY country TO PROGRAM 'gzip > /usr1/proj/bray/sql/country_data.gz';
 ```
 
-XXX Greenplum-specific examples START
+Greenplum-specific examples START
 
 Copy data from a file into the `sales` table using single row error isolation mode and log errors:
 
@@ -500,7 +492,7 @@ This example uses the `PROGRAM` and `ON SEGMENT` clauses to copy data from files
 COPY lineitem_4 FROM PROGRAM 'cat /tmp/lineitem_program<SEGID>.csv' ON SEGMENT CSV;
 ```
 
-XXX Greenplum-specific examples END
+Greenplum-specific examples END
 
 ## <a id="section12"></a>Compatibility 
 
