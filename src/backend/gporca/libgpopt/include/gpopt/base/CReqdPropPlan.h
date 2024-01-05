@@ -210,8 +210,9 @@ public:
 
 	// map input required and derived plan properties into new required plan properties
 	static CReqdPropPlan *PrppRemapForCTE(CMemoryPool *mp,
-										  CReqdPropPlan *prppInput,
-										  CDrvdPropPlan *pdpplanInput,
+										  CReqdPropPlan *prppProducer,
+										  CDrvdPropPlan *pdpplanProducer,
+										  CDrvdPropPlan *pdpplanConsumer,
 										  UlongToColRefMap *colref_mapping);
 
 	// print function

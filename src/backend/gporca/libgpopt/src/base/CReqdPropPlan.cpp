@@ -675,20 +675,29 @@ CReqdPropPlan::FEqualForCostBounding(const CReqdPropPlan *prppFst,
 //
 //---------------------------------------------------------------------------
 CReqdPropPlan *
-CReqdPropPlan::PrppRemapForCTE(CMemoryPool *mp, CReqdPropPlan *prppInput,
-							   CDrvdPropPlan *pdpplanInput,
+CReqdPropPlan::PrppRemapForCTE(CMemoryPool *mp, CReqdPropPlan *prppProducer,
+							   CDrvdPropPlan *pdpplanProducer,
+							   CDrvdPropPlan *pdpplanConsumer,
 							   UlongToColRefMap *colref_mapping)
 {
 	GPOS_ASSERT(NULL != colref_mapping);
-	GPOS_ASSERT(NULL != prppInput);
-	GPOS_ASSERT(NULL != pdpplanInput);
+	GPOS_ASSERT(NULL != prppProducer);
+	GPOS_ASSERT(NULL != pdpplanProducer);
+	GPOS_ASSERT(NULL != pdpplanConsumer);
 
 	// Remap derived sort order to a required sort order.
-	COrderSpec *pos = pdpplanInput->Pos()->PosCopyWithRemappedColumns(
+	COrderSpec *pos = pdpplanConsumer->Pos()->PosCopyWithRemappedColumns(
 		mp, colref_mapping, false /*must_exist*/);
-	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, prppInput->Peo()->Eom());
+	CEnfdOrder *peo = GPOS_NEW(mp) CEnfdOrder(pos, prppProducer->Peo()->Eom());
 
-	// Remap derived distribution only if it can be used as required distribution.
+	// Remap derived distribution only if:
+	// (1) it can be used as required distribution, and
+	// (2) either the producer's derived distribution spec isn't duplicate
+	// sensitive, or, the consumer's derived distribution spec is duplicate
+	// sensitive. This is to ensure we don't accidentally raise a duplicate
+	// insensitive request when it's supposed to be duplicate sensitive,
+	// such as when the input is replicated.
+	//
 	// Also, fix distribution specs with equivalent columns, since those may come
 	// from different consumers and NOT be equivalent in the producer.
 	// For example:
@@ -697,35 +706,49 @@ CReqdPropPlan::PrppRemapForCTE(CMemoryPool *mp, CReqdPropPlan *prppInput,
 	// On the query side, columns x1.a and x2.b are equivalent, but we should NOT
 	// treat columns a and b of the producer as equivalent.
 
-	CDistributionSpec *pdsDerived = pdpplanInput->Pds();
+	CDistributionSpec *pdsDerivedProducer = pdpplanProducer->Pds();
+	CDistributionSpec *pdsDerivedConsumer = pdpplanConsumer->Pds();
+
+	BOOL producer_duplicate_sensitive =
+		CDistributionSpec::EdtRandom == pdsDerivedProducer->Edt()
+			? CDistributionSpecRandom::PdsConvert(pdsDerivedProducer)
+				  ->IsDuplicateSensitive()
+			: false;
+	BOOL consumer_duplicate_sensitive =
+		CDistributionSpec::EdtRandom == pdsDerivedConsumer->Edt()
+			? CDistributionSpecRandom::PdsConvert(pdsDerivedConsumer)
+				  ->IsDuplicateSensitive()
+			: false;
 	CEnfdDistribution *ped = NULL;
-	if (pdsDerived->FRequirable())
+	if (pdsDerivedConsumer->FRequirable() &&
+		(!producer_duplicate_sensitive || consumer_duplicate_sensitive))
 	{
-		CDistributionSpec *pdsNoEquiv = pdsDerived->StripEquivColumns(mp);
+		CDistributionSpec *pdsNoEquiv =
+			pdsDerivedConsumer->StripEquivColumns(mp);
 		CDistributionSpec *pds = pdsNoEquiv->PdsCopyWithRemappedColumns(
 			mp, colref_mapping, false /*must_exist*/);
-		ped = GPOS_NEW(mp) CEnfdDistribution(pds, prppInput->Ped()->Edm());
+		ped = GPOS_NEW(mp) CEnfdDistribution(pds, prppProducer->Ped()->Edm());
 		pdsNoEquiv->Release();
 	}
 	else
 	{
-		prppInput->Ped()->AddRef();
-		ped = prppInput->Ped();
+		prppProducer->Ped()->AddRef();
+		ped = prppProducer->Ped();
 	}
 
 	// other properties are copied from input
 
-	prppInput->PcrsRequired()->AddRef();
-	CColRefSet *pcrsRequired = prppInput->PcrsRequired();
+	prppProducer->PcrsRequired()->AddRef();
+	CColRefSet *pcrsRequired = prppProducer->PcrsRequired();
 
-	prppInput->Per()->AddRef();
-	CEnfdRewindability *per = prppInput->Per();
+	prppProducer->Per()->AddRef();
+	CEnfdRewindability *per = prppProducer->Per();
 
-	prppInput->Pepp()->AddRef();
-	CEnfdPartitionPropagation *pepp = prppInput->Pepp();
+	prppProducer->Pepp()->AddRef();
+	CEnfdPartitionPropagation *pepp = prppProducer->Pepp();
 
-	prppInput->Pcter()->AddRef();
-	CCTEReq *pcter = prppInput->Pcter();
+	prppProducer->Pcter()->AddRef();
+	CCTEReq *pcter = prppProducer->Pcter();
 
 	return GPOS_NEW(mp) CReqdPropPlan(pcrsRequired, peo, ped, per, pepp, pcter);
 }

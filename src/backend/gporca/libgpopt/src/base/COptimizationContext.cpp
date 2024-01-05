@@ -440,7 +440,8 @@ COptimizationContext::PrppCTEProducer(CMemoryPool *mp,
 			mp, popProducer->UlCTEId(), pcrsInnerOutput,
 			popProducer->Pdrgpcr());
 	CReqdPropPlan *prppProducer = CReqdPropPlan::PrppRemapForCTE(
-		mp, pocProducer->Prpp(), pccConsumer->Pdpplan(), colref_mapping);
+		mp, pocProducer->Prpp(), pccProducer->Pdpplan(), pccConsumer->Pdpplan(),
+		colref_mapping);
 	colref_mapping->Release();
 
 	if (prppProducer->Equals(pocProducer->Prpp()))

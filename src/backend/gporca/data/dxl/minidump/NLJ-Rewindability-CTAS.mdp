@@ -444,10 +444,10 @@
         </dxl:LogicalCTEAnchor>
       </dxl:LogicalCTAS>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="84">
+    <dxl:Plan Id="0" SpaceSize="210">
       <dxl:PhysicalCTAS Name="fake ctas rel" IsTemporary="true" HasOids="false" StorageType="Heap" DistributionPolicy="Random" InsertColumns="20" VarTypeModList="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="1324033.270477" Rows="1.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="1324033.270495" Rows="1.000000" Width="8"/>
         </dxl:Properties>
         <dxl:DistrOpclasses/>
         <dxl:Columns>
@@ -459,76 +459,37 @@
             <dxl:Ident ColId="20" ColName="coalesce" TypeMdid="0.701.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:Result>
+        <dxl:RandomMotion InputSegments="0,1,2" OutputSegments="0,1,2">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="1324033.254852" Rows="1.000000" Width="12"/>
+            <dxl:Cost StartupCost="0" TotalCost="1324033.254870" Rows="1.000000" Width="12"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="20" Alias="coalesce">
               <dxl:Ident ColId="20" ColName="coalesce" TypeMdid="0.701.1.0"/>
             </dxl:ProjElem>
             <dxl:ProjElem ColId="38" Alias="ColRef_0038">
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+              <dxl:Ident ColId="38" ColName="ColRef_0038" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
           </dxl:ProjList>
           <dxl:Filter/>
-          <dxl:OneTimeFilter/>
-          <dxl:Sequence>
+          <dxl:SortingColumnList/>
+          <dxl:Result>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="1324033.254848" Rows="1.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="1324033.254858" Rows="1.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="20" Alias="coalesce">
                 <dxl:Ident ColId="20" ColName="coalesce" TypeMdid="0.701.1.0"/>
               </dxl:ProjElem>
+              <dxl:ProjElem ColId="38" Alias="ColRef_0038">
+                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+              </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:CTEProducer CTEId="0" Columns="1,2">
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="0.000118" Rows="1.000000" Width="1"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="1" Alias="val">
-                  <dxl:Ident ColId="1" ColName="val" TypeMdid="0.25.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="2" Alias="wt">
-                  <dxl:Ident ColId="2" ColName="wt" TypeMdid="0.701.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Result>
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="0.000117" Rows="1.000000" Width="16"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="1" Alias="val">
-                    <dxl:FuncExpr FuncId="0.2331.1.0" FuncRetSet="true" TypeMdid="0.25.1.0">
-                      <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAqAEAAAAAAAAAGQAAABEAAAABAAAAAAAACXJlcnVtAAAAAAAACXZlbGl0&#xA;AAAAAAAABXAAAAAAAAAFcQAAAAAAAAVyAAAAAAAABXMAAAAAAAAFdAAAAAAA&#xA;AAZ1bQAAAAAABXYAAAAAAAAFcQAAAAAAAAV3AAAAAAAABWUAAAAAAAAFcgAA&#xA;AAAAAAV0AAAAAAAABXkAAAAAAAAFdQAAAAAAAAVpAAAA"/>
-                    </dxl:FuncExpr>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="2" Alias="wt">
-                    <dxl:FuncExpr FuncId="0.2331.1.0" FuncRetSet="true" TypeMdid="0.701.1.0">
-                      <dxl:ConstValue TypeMdid="0.1022.1.0" Value="AAAAoAEAAAAAAAAAvQIAABEAAAABAAAAAAAAAAAA8D8AAAAAAADwPwAAAAAA&#xA;APA/AAAAAAAA8D8AAAAAAADwPwAAAAAAAPA/AAAAAAAA8D8AAAAAAADwPwAA&#xA;AAAAAPA/AAAAAAAA8D8AAAAAAADwPwAAAAAAAPA/AAAAAAAA8D8AAAAAAADw&#xA;PwAAAAAAAPA/AAAAAAAA8D8AAAAAAADwPw=="/>
-                    </dxl:FuncExpr>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:OneTimeFilter/>
-                <dxl:Result>
-                  <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="0.000001" Rows="1.000000" Width="1"/>
-                  </dxl:Properties>
-                  <dxl:ProjList>
-                    <dxl:ProjElem ColId="0" Alias="">
-                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                    </dxl:ProjElem>
-                  </dxl:ProjList>
-                  <dxl:Filter/>
-                  <dxl:OneTimeFilter/>
-                </dxl:Result>
-              </dxl:Result>
-            </dxl:CTEProducer>
+            <dxl:Filter/>
+            <dxl:OneTimeFilter/>
             <dxl:RandomMotion InputSegments="0" OutputSegments="0,1,2" DuplicateSensitive="true">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1324033.254728" Rows="1.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="1324033.254854" Rows="1.000000" Width="8"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="20" Alias="coalesce">
@@ -537,108 +498,139 @@
               </dxl:ProjList>
               <dxl:Filter/>
               <dxl:SortingColumnList/>
-              <dxl:Result>
+              <dxl:Sequence>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1324033.254707" Rows="1.000000" Width="8"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1324033.254833" Rows="1.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="20" Alias="coalesce">
-                    <dxl:Coalesce TypeMdid="0.701.1.0">
-                      <dxl:OpExpr OperatorName="/" OperatorMdid="0.593.1.0" OperatorType="0.701.1.0">
-                        <dxl:Ident ColId="18" ColName="sum" TypeMdid="0.701.1.0"/>
-                        <dxl:NullIf OperatorMdid="0.670.1.0" TypeMdid="0.701.1.0">
-                          <dxl:Ident ColId="19" ColName="sum" TypeMdid="0.701.1.0"/>
-                          <dxl:ConstValue TypeMdid="0.701.1.0" Value="AAAAAAAAAAA=" DoubleValue="0.000000"/>
-                        </dxl:NullIf>
-                      </dxl:OpExpr>
-                      <dxl:ConstValue TypeMdid="0.701.1.0" Value="AAAAAAAAAAA=" DoubleValue="0.000000"/>
-                    </dxl:Coalesce>
+                    <dxl:Ident ColId="20" ColName="coalesce" TypeMdid="0.701.1.0"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:OneTimeFilter/>
-                <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
+                <dxl:CTEProducer CTEId="0" Columns="1,2">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="1324033.254699" Rows="1.000000" Width="16"/>
+                    <dxl:Cost StartupCost="0" TotalCost="0.000118" Rows="1.000000" Width="1"/>
                   </dxl:Properties>
-                  <dxl:GroupingColumns/>
                   <dxl:ProjList>
-                    <dxl:ProjElem ColId="18" Alias="sum">
-                      <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
-                        <dxl:ValuesList ParamType="aggargs">
-                          <dxl:OpExpr OperatorName="*" OperatorMdid="0.594.1.0" OperatorType="0.701.1.0">
-                            <dxl:If TypeMdid="0.701.1.0">
-                              <dxl:Not>
-                                <dxl:IsDistinctFrom OperatorMdid="0.98.1.0">
-                                  <dxl:Ident ColId="9" ColName="val" TypeMdid="0.25.1.0"/>
-                                  <dxl:Ident ColId="12" ColName="val" TypeMdid="0.25.1.0"/>
-                                </dxl:IsDistinctFrom>
-                              </dxl:Not>
-                              <dxl:Ident ColId="10" ColName="wt" TypeMdid="0.701.1.0"/>
-                              <dxl:ConstValue TypeMdid="0.701.1.0" Value="AAAAAAAAAAA=" DoubleValue="0.000000"/>
-                            </dxl:If>
-                            <dxl:ConstValue TypeMdid="0.701.1.0" Value="AAAAAAAAAEA=" DoubleValue="2.000000"/>
-                          </dxl:OpExpr>
-                        </dxl:ValuesList>
-                        <dxl:ValuesList ParamType="aggdirectargs"/>
-                        <dxl:ValuesList ParamType="aggorder"/>
-                        <dxl:ValuesList ParamType="aggdistinct"/>
-                      </dxl:AggFunc>
+                    <dxl:ProjElem ColId="1" Alias="val">
+                      <dxl:Ident ColId="1" ColName="val" TypeMdid="0.25.1.0"/>
                     </dxl:ProjElem>
-                    <dxl:ProjElem ColId="19" Alias="sum">
-                      <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
-                        <dxl:ValuesList ParamType="aggargs">
-                          <dxl:OpExpr OperatorName="*" OperatorMdid="0.594.1.0" OperatorType="0.701.1.0">
-                            <dxl:Cast TypeMdid="0.701.1.0" FuncId="0.316.1.0">
-                              <dxl:If TypeMdid="0.23.1.0">
+                    <dxl:ProjElem ColId="2" Alias="wt">
+                      <dxl:Ident ColId="2" ColName="wt" TypeMdid="0.701.1.0"/>
+                    </dxl:ProjElem>
+                  </dxl:ProjList>
+                  <dxl:Result>
+                    <dxl:Properties>
+                      <dxl:Cost StartupCost="0" TotalCost="0.000117" Rows="1.000000" Width="16"/>
+                    </dxl:Properties>
+                    <dxl:ProjList>
+                      <dxl:ProjElem ColId="1" Alias="val">
+                        <dxl:FuncExpr FuncId="0.2331.1.0" FuncRetSet="true" TypeMdid="0.25.1.0" FuncVariadic="false">
+                          <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAqAEAAAAAAAAAGQAAABEAAAABAAAAAAAACXJlcnVtAAAAAAAACXZlbGl0&#xA;AAAAAAAABXAAAAAAAAAFcQAAAAAAAAVyAAAAAAAABXMAAAAAAAAFdAAAAAAA&#xA;AAZ1bQAAAAAABXYAAAAAAAAFcQAAAAAAAAV3AAAAAAAABWUAAAAAAAAFcgAA&#xA;AAAAAAV0AAAAAAAABXkAAAAAAAAFdQAAAAAAAAVpAAAA"/>
+                        </dxl:FuncExpr>
+                      </dxl:ProjElem>
+                      <dxl:ProjElem ColId="2" Alias="wt">
+                        <dxl:FuncExpr FuncId="0.2331.1.0" FuncRetSet="true" TypeMdid="0.701.1.0" FuncVariadic="false">
+                          <dxl:ConstValue TypeMdid="0.1022.1.0" Value="AAAAoAEAAAAAAAAAvQIAABEAAAABAAAAAAAAAAAA8D8AAAAAAADwPwAAAAAA&#xA;APA/AAAAAAAA8D8AAAAAAADwPwAAAAAAAPA/AAAAAAAA8D8AAAAAAADwPwAA&#xA;AAAAAPA/AAAAAAAA8D8AAAAAAADwPwAAAAAAAPA/AAAAAAAA8D8AAAAAAADw&#xA;PwAAAAAAAPA/AAAAAAAA8D8AAAAAAADwPw=="/>
+                        </dxl:FuncExpr>
+                      </dxl:ProjElem>
+                    </dxl:ProjList>
+                    <dxl:Filter/>
+                    <dxl:OneTimeFilter/>
+                    <dxl:Result>
+                      <dxl:Properties>
+                        <dxl:Cost StartupCost="0" TotalCost="0.000001" Rows="1.000000" Width="1"/>
+                      </dxl:Properties>
+                      <dxl:ProjList>
+                        <dxl:ProjElem ColId="0" Alias="">
+                          <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                        </dxl:ProjElem>
+                      </dxl:ProjList>
+                      <dxl:Filter/>
+                      <dxl:OneTimeFilter/>
+                    </dxl:Result>
+                  </dxl:Result>
+                </dxl:CTEProducer>
+                <dxl:Result>
+                  <dxl:Properties>
+                    <dxl:Cost StartupCost="0" TotalCost="1324033.254707" Rows="1.000000" Width="8"/>
+                  </dxl:Properties>
+                  <dxl:ProjList>
+                    <dxl:ProjElem ColId="20" Alias="coalesce">
+                      <dxl:Coalesce TypeMdid="0.701.1.0">
+                        <dxl:OpExpr OperatorName="/" OperatorMdid="0.593.1.0" OperatorType="0.701.1.0">
+                          <dxl:Ident ColId="18" ColName="sum" TypeMdid="0.701.1.0"/>
+                          <dxl:NullIf OperatorMdid="0.670.1.0" TypeMdid="0.701.1.0">
+                            <dxl:Ident ColId="19" ColName="sum" TypeMdid="0.701.1.0"/>
+                            <dxl:ConstValue TypeMdid="0.701.1.0" Value="AAAAAAAAAAA=" DoubleValue="0.000000"/>
+                          </dxl:NullIf>
+                        </dxl:OpExpr>
+                        <dxl:ConstValue TypeMdid="0.701.1.0" Value="AAAAAAAAAAA=" DoubleValue="0.000000"/>
+                      </dxl:Coalesce>
+                    </dxl:ProjElem>
+                  </dxl:ProjList>
+                  <dxl:Filter/>
+                  <dxl:OneTimeFilter/>
+                  <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
+                    <dxl:Properties>
+                      <dxl:Cost StartupCost="0" TotalCost="1324033.254699" Rows="1.000000" Width="16"/>
+                    </dxl:Properties>
+                    <dxl:GroupingColumns/>
+                    <dxl:ProjList>
+                      <dxl:ProjElem ColId="18" Alias="sum">
+                        <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                          <dxl:ValuesList ParamType="aggargs">
+                            <dxl:OpExpr OperatorName="*" OperatorMdid="0.594.1.0" OperatorType="0.701.1.0">
+                              <dxl:If TypeMdid="0.701.1.0">
                                 <dxl:Not>
                                   <dxl:IsDistinctFrom OperatorMdid="0.98.1.0">
                                     <dxl:Ident ColId="9" ColName="val" TypeMdid="0.25.1.0"/>
                                     <dxl:Ident ColId="12" ColName="val" TypeMdid="0.25.1.0"/>
                                   </dxl:IsDistinctFrom>
                                 </dxl:Not>
-                                <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
-                                <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                                <dxl:Ident ColId="10" ColName="wt" TypeMdid="0.701.1.0"/>
+                                <dxl:ConstValue TypeMdid="0.701.1.0" Value="AAAAAAAAAAA=" DoubleValue="0.000000"/>
                               </dxl:If>
-                            </dxl:Cast>
-                            <dxl:Coalesce TypeMdid="0.701.1.0">
-                              <dxl:Ident ColId="10" ColName="wt" TypeMdid="0.701.1.0"/>
-                              <dxl:Ident ColId="14" ColName="w" TypeMdid="0.701.1.0"/>
-                            </dxl:Coalesce>
-                          </dxl:OpExpr>
-                        </dxl:ValuesList>
-                        <dxl:ValuesList ParamType="aggdirectargs"/>
-                        <dxl:ValuesList ParamType="aggorder"/>
-                        <dxl:ValuesList ParamType="aggdistinct"/>
-                      </dxl:AggFunc>
-                    </dxl:ProjElem>
-                  </dxl:ProjList>
-                  <dxl:Filter/>
-                  <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
-                    <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="1324033.254613" Rows="3.000000" Width="32"/>
-                    </dxl:Properties>
-                    <dxl:ProjList>
-                      <dxl:ProjElem ColId="9" Alias="val">
-                        <dxl:Ident ColId="9" ColName="val" TypeMdid="0.25.1.0"/>
+                              <dxl:ConstValue TypeMdid="0.701.1.0" Value="AAAAAAAAAEA=" DoubleValue="2.000000"/>
+                            </dxl:OpExpr>
+                          </dxl:ValuesList>
+                          <dxl:ValuesList ParamType="aggdirectargs"/>
+                          <dxl:ValuesList ParamType="aggorder"/>
+                          <dxl:ValuesList ParamType="aggdistinct"/>
+                        </dxl:AggFunc>
                       </dxl:ProjElem>
-                      <dxl:ProjElem ColId="10" Alias="wt">
-                        <dxl:Ident ColId="10" ColName="wt" TypeMdid="0.701.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="12" Alias="val">
-                        <dxl:Ident ColId="12" ColName="val" TypeMdid="0.25.1.0"/>
-                      </dxl:ProjElem>
-                      <dxl:ProjElem ColId="14" Alias="w">
-                        <dxl:Ident ColId="14" ColName="w" TypeMdid="0.701.1.0"/>
+                      <dxl:ProjElem ColId="19" Alias="sum">
+                        <dxl:AggFunc AggMdid="0.2111.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                          <dxl:ValuesList ParamType="aggargs">
+                            <dxl:OpExpr OperatorName="*" OperatorMdid="0.594.1.0" OperatorType="0.701.1.0">
+                              <dxl:Cast TypeMdid="0.701.1.0" FuncId="0.316.1.0">
+                                <dxl:If TypeMdid="0.23.1.0">
+                                  <dxl:Not>
+                                    <dxl:IsDistinctFrom OperatorMdid="0.98.1.0">
+                                      <dxl:Ident ColId="9" ColName="val" TypeMdid="0.25.1.0"/>
+                                      <dxl:Ident ColId="12" ColName="val" TypeMdid="0.25.1.0"/>
+                                    </dxl:IsDistinctFrom>
+                                  </dxl:Not>
+                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+                                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                                </dxl:If>
+                              </dxl:Cast>
+                              <dxl:Coalesce TypeMdid="0.701.1.0">
+                                <dxl:Ident ColId="10" ColName="wt" TypeMdid="0.701.1.0"/>
+                                <dxl:Ident ColId="14" ColName="w" TypeMdid="0.701.1.0"/>
+                              </dxl:Coalesce>
+                            </dxl:OpExpr>
+                          </dxl:ValuesList>
+                          <dxl:ValuesList ParamType="aggdirectargs"/>
+                          <dxl:ValuesList ParamType="aggorder"/>
+                          <dxl:ValuesList ParamType="aggdistinct"/>
+                        </dxl:AggFunc>
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:JoinFilter>
-                      <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-                    </dxl:JoinFilter>
-                    <dxl:MergeJoin JoinType="Full" UniqueOuter="false">
+                    <dxl:NestedLoopJoin JoinType="Inner" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000759" Rows="3.000000" Width="24"/>
+                        <dxl:Cost StartupCost="0" TotalCost="1324033.254613" Rows="3.000000" Width="32"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="9" Alias="val">
@@ -650,18 +642,17 @@
                         <dxl:ProjElem ColId="12" Alias="val">
                           <dxl:Ident ColId="12" ColName="val" TypeMdid="0.25.1.0"/>
                         </dxl:ProjElem>
+                        <dxl:ProjElem ColId="14" Alias="w">
+                          <dxl:Ident ColId="14" ColName="w" TypeMdid="0.701.1.0"/>
+                        </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:JoinFilter/>
-                      <dxl:MergeCondList>
-                        <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
-                          <dxl:Ident ColId="9" ColName="val" TypeMdid="0.25.1.0"/>
-                          <dxl:Ident ColId="12" ColName="val" TypeMdid="0.25.1.0"/>
-                        </dxl:Comparison>
-                      </dxl:MergeCondList>
-                      <dxl:Sort SortDiscardDuplicates="false">
+                      <dxl:JoinFilter>
+                        <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                      </dxl:JoinFilter>
+                      <dxl:MergeJoin JoinType="Full" UniqueOuter="false">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000039" Rows="1.000000" Width="16"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000759" Rows="3.000000" Width="24"/>
                         </dxl:Properties>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="9" Alias="val">
@@ -670,14 +661,19 @@
                           <dxl:ProjElem ColId="10" Alias="wt">
                             <dxl:Ident ColId="10" ColName="wt" TypeMdid="0.701.1.0"/>
                           </dxl:ProjElem>
+                          <dxl:ProjElem ColId="12" Alias="val">
+                            <dxl:Ident ColId="12" ColName="val" TypeMdid="0.25.1.0"/>
+                          </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:SortingColumnList>
-                          <dxl:SortingColumn ColId="9" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                        </dxl:SortingColumnList>
-                        <dxl:LimitCount/>
-                        <dxl:LimitOffset/>
-                        <dxl:CTEConsumer CTEId="0" Columns="9,10">
+                        <dxl:JoinFilter/>
+                        <dxl:MergeCondList>
+                          <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.98.1.0">
+                            <dxl:Ident ColId="9" ColName="val" TypeMdid="0.25.1.0"/>
+                            <dxl:Ident ColId="12" ColName="val" TypeMdid="0.25.1.0"/>
+                          </dxl:Comparison>
+                        </dxl:MergeCondList>
+                        <dxl:Sort SortDiscardDuplicates="false">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="431.000039" Rows="1.000000" Width="16"/>
                           </dxl:Properties>
@@ -689,100 +685,119 @@
                               <dxl:Ident ColId="10" ColName="wt" TypeMdid="0.701.1.0"/>
                             </dxl:ProjElem>
                           </dxl:ProjList>
-                        </dxl:CTEConsumer>
-                      </dxl:Sort>
-                      <dxl:Sort SortDiscardDuplicates="false">
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="0.000109" Rows="1.000000" Width="8"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="12" Alias="val">
-                            <dxl:Ident ColId="12" ColName="val" TypeMdid="0.25.1.0"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:SortingColumnList>
-                          <dxl:SortingColumn ColId="12" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-                        </dxl:SortingColumnList>
-                        <dxl:LimitCount/>
-                        <dxl:LimitOffset/>
-                        <dxl:Result>
+                          <dxl:Filter/>
+                          <dxl:SortingColumnList>
+                            <dxl:SortingColumn ColId="9" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                          </dxl:SortingColumnList>
+                          <dxl:LimitCount/>
+                          <dxl:LimitOffset/>
+                          <dxl:CTEConsumer CTEId="0" Columns="9,10">
+                            <dxl:Properties>
+                              <dxl:Cost StartupCost="0" TotalCost="431.000039" Rows="1.000000" Width="16"/>
+                            </dxl:Properties>
+                            <dxl:ProjList>
+                              <dxl:ProjElem ColId="9" Alias="val">
+                                <dxl:Ident ColId="9" ColName="val" TypeMdid="0.25.1.0"/>
+                              </dxl:ProjElem>
+                              <dxl:ProjElem ColId="10" Alias="wt">
+                                <dxl:Ident ColId="10" ColName="wt" TypeMdid="0.701.1.0"/>
+                              </dxl:ProjElem>
+                            </dxl:ProjList>
+                          </dxl:CTEConsumer>
+                        </dxl:Sort>
+                        <dxl:Sort SortDiscardDuplicates="false">
                           <dxl:Properties>
                             <dxl:Cost StartupCost="0" TotalCost="0.000109" Rows="1.000000" Width="8"/>
                           </dxl:Properties>
                           <dxl:ProjList>
                             <dxl:ProjElem ColId="12" Alias="val">
-                              <dxl:FuncExpr FuncId="0.2331.1.0" FuncRetSet="true" TypeMdid="0.25.1.0">
-                                <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAZAEAAAAAAAAAGQAAAAkAAAABAAAAAAAACG9kaW8AAAAKYmVhdGFlAAAA&#xA;AAAFYQAAAAAAAAViAAAAAAAABWMAAAAAAAAFZAAAAAAAAAVlAAAAAAAABWYA&#xA;AAAAAAAFZwAAAA=="/>
-                              </dxl:FuncExpr>
+                              <dxl:Ident ColId="12" ColName="val" TypeMdid="0.25.1.0"/>
                             </dxl:ProjElem>
                           </dxl:ProjList>
                           <dxl:Filter/>
-                          <dxl:OneTimeFilter/>
+                          <dxl:SortingColumnList>
+                            <dxl:SortingColumn ColId="12" SortOperatorMdid="0.664.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                          </dxl:SortingColumnList>
+                          <dxl:LimitCount/>
+                          <dxl:LimitOffset/>
                           <dxl:Result>
                             <dxl:Properties>
-                              <dxl:Cost StartupCost="0" TotalCost="0.000001" Rows="1.000000" Width="1"/>
+                              <dxl:Cost StartupCost="0" TotalCost="0.000109" Rows="1.000000" Width="8"/>
                             </dxl:Properties>
                             <dxl:ProjList>
-                              <dxl:ProjElem ColId="13" Alias="">
-                                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                              <dxl:ProjElem ColId="12" Alias="val">
+                                <dxl:FuncExpr FuncId="0.2331.1.0" FuncRetSet="true" TypeMdid="0.25.1.0" FuncVariadic="false">
+                                  <dxl:ConstValue TypeMdid="0.1009.1.0" Value="AAAAZAEAAAAAAAAAGQAAAAkAAAABAAAAAAAACG9kaW8AAAAKYmVhdGFlAAAA&#xA;AAAFYQAAAAAAAAViAAAAAAAABWMAAAAAAAAFZAAAAAAAAAVlAAAAAAAABWYA&#xA;AAAAAAAFZwAAAA=="/>
+                                </dxl:FuncExpr>
                               </dxl:ProjElem>
                             </dxl:ProjList>
                             <dxl:Filter/>
                             <dxl:OneTimeFilter/>
+                            <dxl:Result>
+                              <dxl:Properties>
+                                <dxl:Cost StartupCost="0" TotalCost="0.000001" Rows="1.000000" Width="1"/>
+                              </dxl:Properties>
+                              <dxl:ProjList>
+                                <dxl:ProjElem ColId="13" Alias="">
+                                  <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                                </dxl:ProjElem>
+                              </dxl:ProjList>
+                              <dxl:Filter/>
+                              <dxl:OneTimeFilter/>
+                            </dxl:Result>
                           </dxl:Result>
-                        </dxl:Result>
-                      </dxl:Sort>
-                    </dxl:MergeJoin>
-                    <dxl:Materialize Eager="false">
-                      <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.000028" Rows="1.000000" Width="8"/>
-                      </dxl:Properties>
-                      <dxl:ProjList>
-                        <dxl:ProjElem ColId="14" Alias="w">
-                          <dxl:Ident ColId="14" ColName="w" TypeMdid="0.701.1.0"/>
-                        </dxl:ProjElem>
-                      </dxl:ProjList>
-                      <dxl:Filter/>
-                      <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
+                        </dxl:Sort>
+                      </dxl:MergeJoin>
+                      <dxl:Materialize Eager="false">
                         <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.000020" Rows="1.000000" Width="8"/>
+                          <dxl:Cost StartupCost="0" TotalCost="431.000028" Rows="1.000000" Width="8"/>
                         </dxl:Properties>
-                        <dxl:GroupingColumns/>
                         <dxl:ProjList>
                           <dxl:ProjElem ColId="14" Alias="w">
-                            <dxl:AggFunc AggMdid="0.2105.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
-                              <dxl:ValuesList ParamType="aggargs">
-                                <dxl:Ident ColId="16" ColName="wt" TypeMdid="0.701.1.0"/>
-                              </dxl:ValuesList>
-                              <dxl:ValuesList ParamType="aggdirectargs"/>
-                              <dxl:ValuesList ParamType="aggorder"/>
-                              <dxl:ValuesList ParamType="aggdistinct"/>
-                            </dxl:AggFunc>
+                            <dxl:Ident ColId="14" ColName="w" TypeMdid="0.701.1.0"/>
                           </dxl:ProjElem>
                         </dxl:ProjList>
                         <dxl:Filter/>
-                        <dxl:CTEConsumer CTEId="0" Columns="15,16">
+                        <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
                           <dxl:Properties>
-                            <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="8"/>
+                            <dxl:Cost StartupCost="0" TotalCost="431.000020" Rows="1.000000" Width="8"/>
                           </dxl:Properties>
+                          <dxl:GroupingColumns/>
                           <dxl:ProjList>
-                            <dxl:ProjElem ColId="15" Alias="val">
-                              <dxl:Ident ColId="15" ColName="val" TypeMdid="0.25.1.0"/>
-                            </dxl:ProjElem>
-                            <dxl:ProjElem ColId="16" Alias="wt">
-                              <dxl:Ident ColId="16" ColName="wt" TypeMdid="0.701.1.0"/>
+                            <dxl:ProjElem ColId="14" Alias="w">
+                              <dxl:AggFunc AggMdid="0.2105.1.0" AggDistinct="false" AggStage="Normal" AggKind="n">
+                                <dxl:ValuesList ParamType="aggargs">
+                                  <dxl:Ident ColId="16" ColName="wt" TypeMdid="0.701.1.0"/>
+                                </dxl:ValuesList>
+                                <dxl:ValuesList ParamType="aggdirectargs"/>
+                                <dxl:ValuesList ParamType="aggorder"/>
+                                <dxl:ValuesList ParamType="aggdistinct"/>
+                              </dxl:AggFunc>
                             </dxl:ProjElem>
                           </dxl:ProjList>
-                        </dxl:CTEConsumer>
-                      </dxl:Aggregate>
-                    </dxl:Materialize>
-                  </dxl:NestedLoopJoin>
-                </dxl:Aggregate>
-              </dxl:Result>
+                          <dxl:Filter/>
+                          <dxl:CTEConsumer CTEId="0" Columns="15,16">
+                            <dxl:Properties>
+                              <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="1.000000" Width="8"/>
+                            </dxl:Properties>
+                            <dxl:ProjList>
+                              <dxl:ProjElem ColId="15" Alias="val">
+                                <dxl:Ident ColId="15" ColName="val" TypeMdid="0.25.1.0"/>
+                              </dxl:ProjElem>
+                              <dxl:ProjElem ColId="16" Alias="wt">
+                                <dxl:Ident ColId="16" ColName="wt" TypeMdid="0.701.1.0"/>
+                              </dxl:ProjElem>
+                            </dxl:ProjList>
+                          </dxl:CTEConsumer>
+                        </dxl:Aggregate>
+                      </dxl:Materialize>
+                    </dxl:NestedLoopJoin>
+                  </dxl:Aggregate>
+                </dxl:Result>
+              </dxl:Sequence>
             </dxl:RandomMotion>
-          </dxl:Sequence>
-        </dxl:Result>
+          </dxl:Result>
+        </dxl:RandomMotion>
       </dxl:PhysicalCTAS>
     </dxl:Plan>
   </dxl:Thread>
