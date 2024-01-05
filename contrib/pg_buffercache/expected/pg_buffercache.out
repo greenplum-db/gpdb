@@ -21,6 +21,7 @@ FROM gp_buffercache;
 
 -- Check that the functions / views can't be accessed by default.
 CREATE ROLE buffercache_test;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET ROLE buffercache_test;
 SELECT * FROM pg_buffercache;
 ERROR:  permission denied for relation pg_buffercache
