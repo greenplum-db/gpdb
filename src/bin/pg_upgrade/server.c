@@ -247,15 +247,15 @@ start_postmaster(ClusterInfo *cluster, bool report_and_exit_on_error)
 	 */
 	char *version_opts = "";
 	if (GET_MAJOR_VERSION(cluster->major_version) >= 904)
-		version_opts = "-c synchronous_standby_names='' --xid_warn_limit=10000000";
+		version_opts = " -c synchronous_standby_names='' --xid_warn_limit=10000000";
 	else
 	{
 		if (is_greenplum_dispatcher_mode())
 			version_opts =
-				"-c gp_dbid=1 -c gp_contentid=-1 -c gp_num_contents_in_cluster=1";
+				" -c gp_dbid=1 -c gp_contentid=-1 -c gp_num_contents_in_cluster=1";
 		else
 			version_opts =
-				"-c gp_dbid=1 -c gp_contentid=0 -c gp_num_contents_in_cluster=1";
+				" -c gp_dbid=1 -c gp_contentid=0 -c gp_num_contents_in_cluster=1";
 	}
 
 	snprintf(cmd, sizeof(cmd),
