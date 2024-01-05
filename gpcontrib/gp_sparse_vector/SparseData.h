@@ -252,7 +252,7 @@ static inline int64 compword_to_int8(const char *entry)
 	char *numptr2 = (char *)(&num_2);
 	int32_t num_4;
 	char *numptr4 = (char *)(&num_4);
-	int64 num;
+	int64 num = 0;
 	char *numptr8 = (char *)(&num);
 
 	switch(size) {
@@ -284,6 +284,13 @@ static inline int64 compword_to_int8(const char *entry)
 			numptr8[6] = entry[7];
 			numptr8[7] = entry[8];
 			break;
+
+		default:
+		{
+			ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("compword_to_int8 got an error size %d", size)));
+		}
 	}
 
 	return num;
@@ -759,7 +766,8 @@ static inline SparseData op_sdata_by_sdata(int operation,SparseData left,
 		}
 		tot_run_length += (nextpos-lastpos);
 //		printf("New_value,runlength = %f,%d\n",new_value,nextpos-lastpos);
-		if ((left_nxt==right_nxt)&&(left_nxt==(left->total_value_count))) {
+		if ((left_nxt>=(left->total_value_count)) &&
+			(right_nxt>=(right->total_value_count))) {
 //			printf("STOPPING: i,j,left_nxt,right_nxt,nextpos=%d,%d,%d,%d,%d\n",i,j,nextpos,left_nxt,right_nxt);
 			break;
 		} else if (left_nxt==right_nxt) {
