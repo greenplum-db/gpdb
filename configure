@@ -22164,6 +22164,8 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
+# force set char to signed char
+CFLAGS="-fsigned-char $CFLAGS"
 
 # Begin output steps
 

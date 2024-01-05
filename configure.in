@@ -2873,6 +2873,8 @@ tr '.' '	' |
 $AWK '{printf "%d%02d%02d", $1, $2, (NF >= 3) ? $3 : 0}'`"]
 AC_DEFINE_UNQUOTED(GP_VERSION_NUM, $GP_VERSION_NUM, [Greenplum version as a number])
 
+# force set char to signed char
+CFLAGS="-fsigned-char $CFLAGS"
 
 # Begin output steps
 

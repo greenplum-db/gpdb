@@ -3,8 +3,6 @@ ifeq "$(CC)" "icc"
 	USE_ICC = 1
 endif
 
-override CFLAGS+=-std=gnu99
-
 MODULE_big = gp_svec
 EXTENSION = gp_sparse_vector
 DATA = gp_sparse_vector--1.0.1.sql gp_sparse_vector--1.0.0--1.0.1.sql
@@ -21,6 +19,8 @@ else
 	include $(top_builddir)/src/Makefile.global
 	include $(top_srcdir)/contrib/contrib-global.mk
 endif
+
+override CFLAGS+=-std=gnu99
 
 ifdef USE_ICC
 	override CFLAGS=-O3 -Werror -std=c99 -vec-report2 -vec-threshold0
