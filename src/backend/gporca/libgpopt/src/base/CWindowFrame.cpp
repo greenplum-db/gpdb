@@ -21,7 +21,8 @@ FORCE_GENERATE_DBGSTR(CWindowFrame);
 
 // string encoding of frame specification
 const CHAR rgszFrameSpec[][10] = {"Rows", "Range", "Groups"};
-GPOS_CPL_ASSERT(CWindowFrame::EfsSentinel == GPOS_ARRAY_SIZE(rgszFrameSpec));
+GPOS_CPL_ASSERT(CWindowFrame::EfsSentinel == GPOS_ARRAY_SIZE(rgszFrameSpec),
+				"");
 
 // string encoding of frame boundary
 const CHAR rgszFrameBoundary[][40] = {"Unbounded Preceding",
@@ -31,14 +32,15 @@ const CHAR rgszFrameBoundary[][40] = {"Unbounded Preceding",
 									  "Bounded Following",
 									  "Delayed Bounded Preceding",
 									  "Delayed Bounded Following"};
-GPOS_CPL_ASSERT(CWindowFrame::EfbSentinel ==
-				GPOS_ARRAY_SIZE(rgszFrameBoundary));
+GPOS_CPL_ASSERT(CWindowFrame::EfbSentinel == GPOS_ARRAY_SIZE(rgszFrameBoundary),
+				"");
 
 // string encoding of frame exclusion strategy
 const CHAR rgszFrameExclusionStrategy[][20] = {"None", "Nulls", "Current",
 											   "MatchingOthers", "Ties"};
 GPOS_CPL_ASSERT(CWindowFrame::EfesSentinel ==
-				GPOS_ARRAY_SIZE(rgszFrameExclusionStrategy));
+					GPOS_ARRAY_SIZE(rgszFrameExclusionStrategy),
+				"");
 
 // empty window frame
 const CWindowFrame CWindowFrame::m_wfEmpty;

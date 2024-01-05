@@ -59,14 +59,14 @@ using MODE_T = mode_t;
 // by fixed sizes rather than min requirements
 
 using ULONG = uint32_t;
-GPOS_CPL_ASSERT(4 == sizeof(ULONG));
+GPOS_CPL_ASSERT(4 == sizeof(ULONG), "");
 enum
 {
 	ulong_max = ((::gpos::ULONG) -1)
 };
 
 using ULLONG = uint64_t;
-GPOS_CPL_ASSERT(8 == sizeof(ULLONG));
+GPOS_CPL_ASSERT(8 == sizeof(ULLONG), "");
 enum
 {
 	ullong_max = ((::gpos::ULLONG) -1)
@@ -81,10 +81,10 @@ using INT = int32_t;
 using LINT = int64_t;
 using INT_PTR = intptr_t;
 
-GPOS_CPL_ASSERT(2 == sizeof(USINT));
-GPOS_CPL_ASSERT(2 == sizeof(SINT));
-GPOS_CPL_ASSERT(4 == sizeof(INT));
-GPOS_CPL_ASSERT(8 == sizeof(LINT));
+GPOS_CPL_ASSERT(2 == sizeof(USINT), "");
+GPOS_CPL_ASSERT(2 == sizeof(SINT), "");
+GPOS_CPL_ASSERT(4 == sizeof(INT), "");
+GPOS_CPL_ASSERT(8 == sizeof(LINT), "");
 
 enum
 {
@@ -112,7 +112,7 @@ enum
 using DOUBLE = double;
 
 // holds for all platforms
-GPOS_CPL_ASSERT(sizeof(ULONG_PTR) == sizeof(void *));
+GPOS_CPL_ASSERT(sizeof(ULONG_PTR) == sizeof(void *), "");
 
 // variadic parameter list type
 using VA_LIST = va_list;

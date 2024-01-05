@@ -24,7 +24,7 @@ using namespace gpmd;
 
 // string encoding of null treatment
 const CHAR rgszNullCode[][16] = {"Auto", "NULLsFirst", "NULLsLast"};
-GPOS_CPL_ASSERT(COrderSpec::EntSentinel == GPOS_ARRAY_SIZE(rgszNullCode));
+GPOS_CPL_ASSERT(COrderSpec::EntSentinel == GPOS_ARRAY_SIZE(rgszNullCode), "");
 
 
 //---------------------------------------------------------------------------

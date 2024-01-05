@@ -22,7 +22,8 @@ using namespace gpos;
 
 
 // logger buffer must be large enough to store error messages
-GPOS_CPL_ASSERT(GPOS_ERROR_MESSAGE_BUFFER_SIZE <= GPOS_LOG_ENTRY_BUFFER_SIZE);
+GPOS_CPL_ASSERT(GPOS_ERROR_MESSAGE_BUFFER_SIZE <= GPOS_LOG_ENTRY_BUFFER_SIZE,
+				"");
 
 
 //---------------------------------------------------------------------------

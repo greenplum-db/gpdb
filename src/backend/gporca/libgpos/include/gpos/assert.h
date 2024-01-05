@@ -49,7 +49,7 @@
 #define GPOS_ASSERT_IFF(x, y) GPOS_ASSERT((!(x) || (y)) && (!(y) || (x)))
 
 // compile assert
-#define GPOS_CPL_ASSERT(x) extern int assert_array[(x) ? 1 : -1]
+#define GPOS_CPL_ASSERT static_assert
 
 // debug assert, with message
 #define GPOS_ASSERT_MSG(x, msg) GPOS_ASSERT((x) && (msg))
