@@ -427,6 +427,7 @@ check_exec(const char *dir, const char *program, bool check_version)
 	char	line[MAXPGPATH];
 	char	cmd[MAXPGPATH];
 	char	versionstr[128];
+	char	gp_versionstr[128];
 	int		ret;
 
 	snprintf(path, sizeof(path), "%s/%s", dir, program);
@@ -450,10 +451,11 @@ check_exec(const char *dir, const char *program, bool check_version)
 	{
 		pg_strip_crlf(line);
 
-		snprintf(versionstr, sizeof(versionstr), "%s (Greenplum Database) " PG_VERSION, program);
+		snprintf(versionstr, sizeof(versionstr), "%s (PostgreSQL) " PG_VERSION, program);
+		snprintf(gp_versionstr, sizeof(gp_versionstr), "%s (Greenplum Database) " PG_VERSION, program);
 
-		if (strcmp(line, versionstr) != 0)
-			pg_fatal("check for \"%s\" failed: incorrect version: found \"%s\", expected \"%s\"\n",
-					 path, line, versionstr);
+		if (strcmp(line, versionstr) != 0 && strcmp(line, gp_versionstr) != 0)
+			pg_fatal("check for \"%s\" failed: incorrect version: found \"%s\", expected \"%s\" or \"%s\"\n",
+					 path, line, versionstr, gp_versionstr);
 	}
 }
