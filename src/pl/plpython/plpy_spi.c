@@ -367,7 +367,28 @@ PLy_spi_execute_query(char *query, int64 limit)
 	oldcontext = CurrentMemoryContext;
 	oldowner = CurrentResourceOwner;
 
-	PLy_spi_subtransaction_begin(oldcontext, oldowner);
+	/*
+	 * Catch the error when begin a subtransaction.
+	 * Set the python error indicator if any error occurs to free
+	 * the traced pyobjects.
+	 */
+	PG_TRY();
+	{
+		BeginInternalSubTransaction(NULL);
+		/* Want to run inside function's memory context */
+		MemoryContextSwitchTo(oldcontext);
+	}
+	PG_CATCH();
+	{
+		MemoryContextSwitchTo(oldcontext);
+		CurrentResourceOwner = oldowner;
+
+		ErrorData *edata = CopyErrorData();
+		PLy_spi_exception_set(PyExc_Exception, edata);
+		FreeErrorData(edata);
+		return NULL;
+	}
+	PG_END_TRY();
 
 	PG_TRY();
 	{
