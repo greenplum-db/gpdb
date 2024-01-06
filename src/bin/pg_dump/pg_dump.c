@@ -1906,20 +1906,49 @@ selectDumpableType(TypeInfo *tyinfo, Archive *fout)
  *		Mark a function as to be dumped or not
  */
 static void
-selectDumpableFunction(FuncInfo *finfo)
+selectDumpableFunction(FuncInfo *finfo, Archive *fout)
 {
+
+	if (checkExtensionMembership(&finfo->dobj, fout))
+		return;					/* extension membership overrides all else */
+
 	/*
 	 * If specific functions are being dumped, dump just those functions; else, dump
 	 * according to the parent namespace's dump flag if parent namespace is not null;
 	 * else, always dump the function.
 	 */
-	if (function_include_oids.head != NULL)
-		finfo->dobj.dump = simple_oid_list_member(&function_include_oids,
-												   finfo->dobj.catId.oid);
+	if (function_include_oids.head != NULL && 
+			simple_oid_list_member(&function_include_oids, finfo->dobj.catId.oid))
+		finfo->dobj.dump = DUMP_COMPONENT_ALL;
 	else if (finfo->dobj.namespace)
 		finfo->dobj.dump = finfo->dobj.namespace->dobj.dump;
 	else
-		finfo->dobj.dump = true;
+		finfo->dobj.dump = DUMP_COMPONENT_ALL;
+}
+
+/*
+ * selectDumpableAggregate: policy-setting subroutine
+ *		Mark a function as to be dumped or not
+ */
+static void
+selectDumpableAggregate(AggInfo *agginfo, Archive *fout)
+{
+
+	if (checkExtensionMembership(&agginfo->aggfn.dobj, fout))
+		return;					/* extension membership overrides all else */
+
+	/*
+	 * If specific aggregates are being dumped, dump just those aggregates; else, dump
+	 * according to the parent namespace's dump flag if parent namespace is not null;
+	 * else, always dump the function.
+	 */
+	if (function_include_oids.head != NULL && 
+			simple_oid_list_member(&function_include_oids, agginfo->aggfn.dobj.catId.oid))
+		agginfo->aggfn.dobj.dump = DUMP_COMPONENT_ALL;
+	else if (agginfo->aggfn.dobj.namespace)
+		agginfo->aggfn.dobj.dump = agginfo->aggfn.dobj.namespace->dobj.dump;
+	else
+		agginfo->aggfn.dobj.dump = DUMP_COMPONENT_ALL;
 }
 
 /*
@@ -5995,7 +6024,7 @@ getAggregates(Archive *fout, int *numAggs)
 		}
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(agginfo[i].aggfn.dobj), fout);
+		selectDumpableAggregate(&(agginfo[i]), fout);
 
 		/* Mark whether aggregate has an ACL */
 		if (!PQgetisnull(res, i, i_aggacl))
@@ -6328,7 +6357,7 @@ getFuncs(Archive *fout, int *numFuncs)
 		}
 
 		/* Decide whether we want to dump it */
-		selectDumpableFunction(&finfo[i]);
+		selectDumpableFunction(&finfo[i], fout);
 
 		/* Mark whether function has an ACL */
 		if (!PQgetisnull(res, i, i_proacl))
