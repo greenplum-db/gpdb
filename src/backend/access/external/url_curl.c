@@ -1337,7 +1337,7 @@ url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 	set_httpheader(file, "X-GP-LINE-DELIM-STR", ev->GP_LINE_DELIM_STR);
 	set_httpheader(file, "X-GP-LINE-DELIM-LENGTH", ev->GP_LINE_DELIM_LENGTH);
 #ifdef HAVE_LIBZSTD
-		set_httpheader(file, "X-GP-ZSTD", "1");
+	set_httpheader(file, "X-GP-ZSTD", "1");
 #endif
 
 	if (forwrite)
@@ -1973,7 +1973,8 @@ gp_proto0_write(URL_CURL_FILE *file, CopyState pstate)
 	char*		buf;
 	int		nbytes;
 #ifdef HAVE_LIBZSTD
-	if(file->zstd){
+	if (file->zstd)
+	{
 		nbytes = compress_zstd_data(file);
 		buf = file->out.cptr;
 	}

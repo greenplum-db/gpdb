@@ -791,7 +791,7 @@ static void parse_command_line(int argc, const char* const argv[],
 		case 259:
 			if (atoi(arg) <= 0) 
 			{
-				usage_error("The number of thread must be more than zero!", 0);
+				usage_error("The number of threads must be more than zero!", 0);
 				break;
 			}
 			opt.multi_thread = atoi(arg);
@@ -803,6 +803,7 @@ static void parse_command_line(int argc, const char* const argv[],
 			break;
 		case 259:
 			usage_error("Multi-thread transmission relies on zstd, but zstd is not supported by this build", 0);
+			break;
 #endif
 		}
 	}
@@ -1287,7 +1288,7 @@ static void request_end(request_t* r, int error, const char* errmsg)
 	{
 		gwarning(r, "request failure resulting in session failure: top = %d, bot = %d", r->outblock.top, r->outblock.bot);
 		if (s)
-			session_end(s, 1, "request failure resulting in session failure");
+			session_end(s, ERROR_CODE_GENERIC, "request failure resulting in session failure");
 	}
 	else
 	{
@@ -1333,9 +1334,10 @@ static int local_send(request_t *r, const char* buf, int buflen)
 				else
 #endif
 				{
-					session_end(r->session, 0, NULL);
+					session_end(r->session, ERROR_CODE_SUCCESS, NULL);
 				}
 			}
+		/* For POST request, we did not send response successfully, so allow peer retry */
 		} else {
 			if (!ok) 
 			{
@@ -1377,7 +1379,7 @@ static int recycle_thread(request_t *r)
 
 		if (r->session_end)
 		{
-			session_end(r->session, 0, NULL);
+			session_end(r->session, ERROR_CODE_SUCCESS, NULL);
 		}
 
 		if (last_send < 0)
@@ -1620,7 +1622,7 @@ session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, i
 	if (session->is_error || 0 == session->fstream)
 	{
 		gprintln(NULL, "session_get_block: end session is_error: %d", session->is_error);
-		session_end(session, 0, NULL);
+		session_end(session, ERROR_CODE_SUCCESS, NULL);
 		return 0;
 	}
 
@@ -1635,7 +1637,7 @@ session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, i
 	{
 		gprintln(NULL, "session_get_block: end session due to EOF");
 		gcb.read_bytes += fstream_get_compressed_size(session->fstream);
-		session_end(session, 0, NULL);
+		session_end(session, ERROR_CODE_SUCCESS, NULL);
 		return 0;
 	}
 
@@ -1645,7 +1647,7 @@ session_get_block(const request_t* r, block_t* retblock, char* line_delim_str, i
 	{
 		const char* ferror = fstream_get_error(session->fstream);
 		gwarning(NULL, "session_get_block end session due to %s", ferror);
-		session_end(session, 1, ferror);
+		session_end(session, ERROR_CODE_GENERIC, ferror);
 		return ferror;
 	}
 
@@ -1991,7 +1993,7 @@ static int session_attach(request_t* r)
 	if (session->is_error)
 	{
 		http_error(r, FDIST_INTERNAL_ERROR, session->errmsg);
-		request_end(r, 1, 0);
+		request_end(r, ERROR_CODE_GENERIC, 0);
 		return -1;
 	}
 	/* session already ended. send an empty response, and close. */
@@ -2135,7 +2137,8 @@ static void do_write(int fd, short event, void* arg)
 					  "and socket (%d)", fd, r->sock);
 
 #ifdef HAVE_LIBZSTD
-	/* It is essential to recycle threads before we read file.
+	/* 
+	 * It is essential to recycle threads before we read file.
 	 * Since session_get_block will change value of top and content
 	 * in outblock in request, main thread and sub thread will cause
 	 * data conflict in outblock. So when the thread servering this
@@ -3372,6 +3375,8 @@ int check_output_to_file(request_t *r, int wrote)
 	session_t *session = r->session;
 	char *buf;
 	int *buftop;
+	char error_msg[128];
+
 	if (r->zstd)
 	{
 		buf = r->in.wbuf;
@@ -3398,9 +3403,10 @@ int check_output_to_file(request_t *r, int wrote)
 	}
 	else
 	{
-		/* This should not be entered */
-		gwarning(r, "handle_post_request, left incomplete line: %d bytes", *buftop);
-		*buftop = 0;
+		gwarning(r, "handle_post_request, left incomplete line: %d bytes", *buftop - wrote);
+		snprintf(error_msg, sizeof(error_msg), "Incomplete data written into file, left bytes: %d bytes", *buftop - wrote);
+		request_end(r, ERROR_CODE_GENERIC, error_msg);
+		return -1;
 	}
 	return 0;
 }
@@ -3507,7 +3513,7 @@ static void handle_post_request(request_t *r, int header_end)
 	{
 		http_error(r, FDIST_BAD_REQUEST, "invalid Content-Length");
 		gwarning(r, "got an request with invalid Content-Length: %d", r->in.davailable);
-		request_end(r, 1, 0);
+		request_end(r, ERROR_CODE_GENERIC, 0);
 		return;
 	}
 
@@ -3592,7 +3598,7 @@ static void handle_post_request(request_t *r, int header_end)
 				gwarning(r, "handle_post_request receive errno: %d, msg: %s", e, strerror(e));
 				/* Give another chance for retry */
 				http_error(r, FDIST_TIMEOUT, "receive POST data from network error");
-				request_end(r, 1, 0);
+				request_end(r, ERROR_CODE_GENERIC, 0);
 				return;
 			}
 		}
@@ -3871,9 +3877,6 @@ static int request_parse_gp_headers(request_t *r, int opt_g)
 #ifdef HAVE_LIBZSTD
 	if (r->zstd)
 	{
-		if (!r->is_get)
-			r->zstd_dctx = ZSTD_createDCtx();
-
 		OUT_BUFFER_SIZE = ZSTD_CStreamOutSize();
 		r->outblock.cdata = palloc_safe(r, r->pool, opt.m, "out of memory when allocating buffer for compressed data: %d bytes", opt.m);
 		r->is_running = 0;
@@ -4888,7 +4891,7 @@ static void request_cleanup(request_t *r)
 	request_shutdown_sock(r);
 	setup_do_close(r);
 #ifdef HAVE_LIBZSTD
-	if(r->is_running)
+	if (r->is_running)
 		wait_for_thread_join(r);
 
 	if (r->zstd && r->is_get)
@@ -5048,11 +5051,11 @@ int decompress_write_loop(request_t *r)
 
 		int wrote = fstream_write(session->fstream, r->in.wbuf, r->in.wbuftop, 0, r->line_delim_str, r->line_delim_length);
 		delay_watchdog_timer();
+		gdebug(r, "wrote %d bytes to file", wrote);
 
 		if (check_output_to_file(r, wrote) < 0)
 			return -1;
 
-		gdebug(r, "wrote %d bytes to file", wrote);
 		wrote_total += wrote;
 	}
 	return wrote_total;
@@ -5097,14 +5100,7 @@ static int decompress_data(request_t* r, zstd_buffer *in, zstd_buffer *out)
 	}
 
 	r->in.wbuftop += outSize;
-	if (inbuf.pos == inbuf.size)
-	{
-		r->in.decompress_offset = inbuf.size;
-	}
-	else
-	{
-		r->in.decompress_offset = inbuf.pos;
-	}
+	r->in.decompress_offset = inbuf.pos;
 	gdebug(r, "decompress_zstd finished, input size = %d, output size = %d.", r->in.wbuftop, r->in.dbuftop);
 	return outSize;
 }
