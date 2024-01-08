@@ -3538,6 +3538,9 @@ CopyFrom(CopyState cstate)
 	bool	   *baseNulls;
 	GpDistributionData *part_distData = NULL;
 	int			firstBufferedLineNo = 0;
+	bool		isdefault = false;
+	bool		isleaf = false;
+	List		*partition_attrs = NIL;
 
 	Assert(cstate->rel);
 
@@ -3876,6 +3879,14 @@ CopyFrom(CopyState cstate)
 			if (!cstate->on_segment)
 				SendCopyFromForwardedHeader(cstate, cdbCopy);
 		}
+
+		Oid relid = RelationGetRelid(resultRelInfo->ri_RelationDesc);
+		if (rel_part_status(relid) == PART_STATUS_LEAF)
+		{
+			isleaf = true;
+			isdefault = rel_is_default_partition(relid);
+			partition_attrs = rel_partition_key_attrs(rel_partition_get_master(relid));
+		}
 	}
 
 	CopyInitDataParser(cstate);
@@ -4011,6 +4022,25 @@ CopyFrom(CopyState cstate)
 
 			if (cstate->dispatch_mode == COPY_DISPATCH)
 			{
+				/* 
+				 * In QE, gpdb checks partition constraints.
+				 * However, constraint check pass when target value is null even null value is invalid for target partition.
+				 * So gpdb need to check target slot in QD before dispatch slot to QE.
+				 * */
+				if (isleaf && !isdefault && partition_attrs != NIL)
+				{
+					ListCell   *lc;
+					foreach (lc, partition_attrs)
+					{
+						int attnum = lfirst_int(lc);
+						if (slot_get_isnull(slot)!= NULL && slot_get_isnull(slot)[attnum])
+							ereport(ERROR,
+								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								 errmsg("Cannot copy to leaf partition,"
+							                "partition check violates.")));
+					}	
+				}				
+
 				/* In QD, compute the target segment to send this row to. */
 				part_distData = GetDistributionPolicyForPartition(
 																  distData,
