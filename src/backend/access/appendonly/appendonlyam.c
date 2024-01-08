@@ -830,9 +830,9 @@ AppendOnlyExecutorReadBlock_BindingInit(AppendOnlyExecutorReadBlock *executorRea
 	Assert(largestAttnum > 0);
 	Assert(executorReadBlock->attnum_to_rownum != NULL);
 
-	/* Find the first attnum that has a larger lastrownum than rowNum. */
+	/* Find the number of attributes that are not missing in the row. */
 	while (largestAttnum < slot->tts_tupleDescriptor->natts && 
-			rowNum >= executorReadBlock->attnum_to_rownum[largestAttnum * MAX_AOREL_CONCURRENCY + segno])
+			!AO_ATTR_VAL_IS_MISSING(rowNum, largestAttnum, segno, executorReadBlock->attnum_to_rownum))
 		largestAttnum++;
 
 	/*
