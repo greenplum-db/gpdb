@@ -138,7 +138,8 @@ FTSReplicationStatusCreateIfNotExist(const char *app_name)
 		return;
 	}
 
-	/* No need to release LWLock before fatal since abort will release it */
+	LWLockRelease(FTSReplicationStatusLock);
+
 	ereport(FATAL,
 			(errcode(ERRCODE_TOO_MANY_CONNECTIONS),
 				errmsg("number of requested standby connections "
