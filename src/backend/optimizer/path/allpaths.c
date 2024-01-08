@@ -948,7 +948,13 @@ set_rel_consider_parallel(PlannerInfo *root, RelOptInfo *rel,
 			if (!is_parallel_safe(root, (Node *) rte->functions))
 				return;
 
-			/* GPDB_96_MERGE_FIXME: other than the function itself, I guess this is like RTE_SUBQUERY... */
+			/* Other than the function itself, this is like RTE_SUBQUERY. */
+			{
+				Query	   *subquery = castNode(Query, rte->subquery);
+
+				if (limit_needed(subquery))
+					return;
+			}
 			break;
 
 		case RTE_TABLEFUNC:
