@@ -145,12 +145,15 @@ test__aocs_writecol_init(void **state)
  * chosen for headerscan during ALTER TABLE ADD COLUMN operation.
  */
 static void
-test__column_to_scan(void **state)
+test__get_anchor_col(void **state)
 {
 	RelationData reldata;
 	AOCSFileSegInfo *segInfos[4];
 	int numcols = 3;
 	int col;
+	bool *lastrownums_exist;
+	HeapTupleData dummy_tuple;
+	AttrNumber proj_atts[2];
 
 	/* Empty segment, should be skipped over */
 	segInfos[0] = (AOCSFileSegInfo *)
@@ -208,9 +211,31 @@ test__column_to_scan(void **state)
 	segInfos[3]->vpinfo.entry[2].eof = 100;
 	segInfos[3]->vpinfo.entry[2].eof_uncompressed = 120;
 
-	/* Column 1 (vpe index 1) has the smallest eof */
-	col = column_to_scan(segInfos, 4, numcols, &reldata);
+	/* col=0 has lastrownums, meaning it has missing values, won't be picked in any case */
+	lastrownums_exist = (bool*) palloc(numcols * sizeof(bool));
+	lastrownums_exist[0] = true;
+	lastrownums_exist[1] = false;
+	lastrownums_exist[2] = false;
+	expect_any_count(ExistValidLastrownums, relid, 2);
+	expect_any_count(ExistValidLastrownums, natts, 2);
+	will_return_count(ExistValidLastrownums, lastrownums_exist, 2);
+
+	/* purpose of dummy tuple: make the column appear non-dropped*/
+	expect_any_count(SearchSysCacheAttNum, relid, -1);
+	expect_any_count(SearchSysCacheAttNum, attnum, -1);
+	will_return_count(SearchSysCacheAttNum, &dummy_tuple, -1);
+	expect_any_count(ReleaseSysCache, tuple, -1);
+	will_be_called_count(ReleaseSysCache, -1);
+
+	/* Without projection, col=1 (vpe index 1) has the smallest eof */
+	col = get_anchor_col(segInfos, 4, numcols, &reldata, NULL, 0);
 	assert_int_equal(col, 1);
+
+	/* With projection (excluding col=1), col=2 is going to be picked */
+	proj_atts[0] = 0;
+	proj_atts[1] = 2;
+	col = get_anchor_col(segInfos, 4, numcols, &reldata, proj_atts, 2);
+	assert_int_equal(col, 2);
 }
 
 int
@@ -221,7 +246,7 @@ main(int argc, char *argv[])
 	const		UnitTest tests[] = {
 		unit_test(test__aocs_begin_headerscan),
 		unit_test(test__aocs_writecol_init),
-		unit_test(test__column_to_scan)
+		unit_test(test__get_anchor_col)
 	};
 
 	MemoryContextInit();

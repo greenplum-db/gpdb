@@ -23,6 +23,7 @@
 #include "access/heapam.h"
 #include "access/hio.h"
 #include "access/reloptions.h"
+#include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/gp_fastsequence.h"
 #include "catalog/index.h"
@@ -61,7 +62,6 @@ static AOCSScanDesc aocs_beginscan_internal(Relation relation,
 						Snapshot appendOnlyMetaDataSnapshot,
 						bool *proj,
 						uint32 flags);
-
 /*
  * Open the segment file for a specified column associated with the datum
  * stream.
@@ -305,37 +305,53 @@ close_ds_write(DatumStreamWrite **ds, int nvp)
 	}
 }
 
-static void
+/*
+ * Move the anchor column into the anchor position in the projection array, 
+ * which is index 0. If the anchor column is not in the projection, add it.
+ * If it's already in the projection, swap it with the current first.
+ *
+ * Return the new length of the projection array.
+ */
+int aoco_proj_move_anchor_first(AttrNumber *proj_atts,
+								int num_proj_atts,
+								int anchor_colno)
+{
+	int 			anchor_proj_i;
+
+	Assert(proj_atts);
+
+	/* if anchor is already at the first, nothing to do. */
+	if (proj_atts[ANCHOR_COL_IN_PROJ] == anchor_colno)
+		return num_proj_atts;
+
+	/* find the anchor colno in the projection */
+	for (anchor_proj_i = 0; anchor_proj_i < num_proj_atts; anchor_proj_i++)
+		if (proj_atts[anchor_proj_i] == anchor_colno)
+			break;
+
+	/* move the current first colno elsewhere */
+	if (anchor_proj_i == num_proj_atts)
+		/* no anchor column in projection, append the current first to the end */
+		proj_atts[num_proj_atts++] = proj_atts[ANCHOR_COL_IN_PROJ];
+	else
+		/* an anchor column is in projection, move the current first there */
+		proj_atts[anchor_proj_i] = proj_atts[ANCHOR_COL_IN_PROJ];
+
+	/* finally, place anchor column at first */
+	proj_atts[ANCHOR_COL_IN_PROJ] = anchor_colno;
+
+	return num_proj_atts;
+}
+
+void
 initscan_with_colinfo(AOCSScanDesc scan)
 {
 	MemoryContext	oldCtx;
 	AttrNumber		natts;
+	int 			anchor_colno;
 
 	Assert(scan->columnScanInfo.relationTupleDesc);
 	natts = scan->columnScanInfo.relationTupleDesc->natts;
-
-	oldCtx = MemoryContextSwitchTo(scan->columnScanInfo.scanCtx);
-
-	if (scan->columnScanInfo.ds == NULL)
-		scan->columnScanInfo.ds = (DatumStreamRead **)
-								  palloc0(natts * sizeof(DatumStreamRead *));
-
-	if (scan->columnScanInfo.proj_atts == NULL)
-	{
-		scan->columnScanInfo.num_proj_atts = natts;
-		scan->columnScanInfo.proj_atts = (AttrNumber *)
-										 palloc0(natts * sizeof(AttrNumber));
-
-		for (AttrNumber attno = 0; attno < natts; attno++)
-			scan->columnScanInfo.proj_atts[attno] = attno;
-	}
-
-	open_ds_read(scan->rs_base.rs_rd, scan->columnScanInfo.ds,
-				 scan->columnScanInfo.relationTupleDesc,
-				 scan->columnScanInfo.proj_atts, scan->columnScanInfo.num_proj_atts,
-				 scan->checksum);
-
-	MemoryContextSwitchTo(oldCtx);
 
 	scan->cur_seg = -1;
 	scan->segrowsprocessed = 0;
@@ -343,6 +359,48 @@ initscan_with_colinfo(AOCSScanDesc scan)
 	ItemPointerSet(&scan->cdb_fake_ctid, 0, 0);
 
 	scan->totalBytesRead = 0;
+
+	/* if the table has zero column, the rest of this function is no-op */
+	if (natts == 0)
+		return;
+
+	oldCtx = MemoryContextSwitchTo(scan->columnScanInfo.scanCtx);
+
+	if (scan->columnScanInfo.ds == NULL)
+		scan->columnScanInfo.ds = (DatumStreamRead **)
+								  palloc0(natts * sizeof(DatumStreamRead *));
+
+	/* pick the anchor column to scan first */
+	anchor_colno = get_anchor_col(scan->seginfo, 
+											scan->total_seg,
+											natts,
+											scan->rs_base.rs_rd,
+											scan->columnScanInfo.proj_atts,
+											scan->columnScanInfo.num_proj_atts);
+
+	/* the anchor column should be a valid column in the table */
+	Assert(anchor_colno >= 0 && anchor_colno < natts);
+
+	if (scan->columnScanInfo.projKind == AOCS_PROJ_ALL)
+	{
+		scan->columnScanInfo.num_proj_atts = natts;
+
+		for (AttrNumber attno = 0; attno < natts; attno++)
+			scan->columnScanInfo.proj_atts[attno] = attno;
+	}
+	else
+		Assert(scan->columnScanInfo.projKind == AOCS_PROJ_SOME);
+
+	scan->columnScanInfo.num_proj_atts = aoco_proj_move_anchor_first(scan->columnScanInfo.proj_atts,
+												scan->columnScanInfo.num_proj_atts,
+												anchor_colno);
+
+	open_ds_read(scan->rs_base.rs_rd, scan->columnScanInfo.ds,
+				 scan->columnScanInfo.relationTupleDesc,
+				 scan->columnScanInfo.proj_atts, scan->columnScanInfo.num_proj_atts,
+				 scan->checksum);
+
+	MemoryContextSwitchTo(oldCtx);
 
 	pgstat_count_heap_scan(scan->rs_base.rs_rd);
 }
@@ -361,9 +419,11 @@ open_next_scan_seg(AOCSScanDesc scan)
 			/*
 			 * If the segment is entirely empty, nothing to do.
 			 *
-			 * We assume the corresponding segments for every column to be in
-			 * the same state. So somewhat arbitrarily, we check the state of
-			 * the first column we'll be accessing.
+			 * We used to assume the corresponding segments for every column to
+			 * be in the same state, and check the state of the first column.
+			 * Since the introduction of missing-mode ADD COLUMN, a column could
+			 * have missing values in them and we have to find the anchor column
+			 * to scan.
 			 */
 
 			/*
@@ -376,7 +436,7 @@ open_next_scan_seg(AOCSScanDesc scan)
 			{
 				AOCSVPInfoEntry *e;
 
-				e = getAOCSVPEntry(curSegInfo, scan->columnScanInfo.proj_atts[0]);
+				e = getAOCSVPEntry(curSegInfo, scan->columnScanInfo.proj_atts[ANCHOR_COL_IN_PROJ]);
 				if (e->eof == 0)
 					elog(ERROR, "inconsistent segment state for relation %s, segment %d, tuple count " INT64_FORMAT,
 						 RelationGetRelationName(scan->rs_base.rs_rd),
@@ -595,6 +655,15 @@ aocs_beginscan_internal(Relation relation,
 	/* relationTupleDesc will be inited by the slot when needed */
 	scan->columnScanInfo.relationTupleDesc = NULL;
 
+	/* get the attnums info */
+	scan->columnScanInfo.attnum_to_rownum = GetAttnumToLastrownumMapping(RelationGetRelid(relation), RelationGetNumberOfAttributes(relation));
+
+	natts = RelationGetNumberOfAttributes(relation);
+
+	/* always allocate all, but assign one/some/all columns later */
+	scan->columnScanInfo.proj_atts = (AttrNumber *)
+									 palloc0(natts * sizeof(AttrNumber));
+
 	/*
 	 * We get an array of booleans to indicate which columns are needed. But
 	 * if you have a very wide table, and you only select a few columns from
@@ -602,14 +671,11 @@ aocs_beginscan_internal(Relation relation,
 	 * needed can incur a noticeable overhead in aocs_getnext. So convert it
 	 * into an array of the attribute numbers of the required columns.
 	 *
-	 * However, if no array is given, then let it get lazily initialized when
-	 * needed since all the attributes will be fetched.
+	 * If no array is given, we need to scan all columns.
 	 */
 	if (proj)
 	{
-		natts = RelationGetNumberOfAttributes(relation);
-		scan->columnScanInfo.proj_atts = (AttrNumber *)
-										 palloc0(natts * sizeof(AttrNumber));
+		scan->columnScanInfo.projKind = AOCS_PROJ_SOME;
 		scan->columnScanInfo.num_proj_atts = 0;
 
 		for (AttrNumber i = 0; i < natts; i++)
@@ -618,6 +684,8 @@ aocs_beginscan_internal(Relation relation,
 				scan->columnScanInfo.proj_atts[scan->columnScanInfo.num_proj_atts++] = i;
 		}
 	}
+	else
+		scan->columnScanInfo.projKind = AOCS_PROJ_ALL;
 
 	scan->columnScanInfo.ds = NULL;
 
@@ -765,6 +833,12 @@ aocs_endscan(AOCSScanDesc scan)
 
 	if (scan->columnScanInfo.proj_atts)
 		pfree(scan->columnScanInfo.proj_atts);
+
+	if (scan->columnScanInfo.attnum_to_rownum)
+	{
+		pfree(scan->columnScanInfo.attnum_to_rownum);
+		scan->columnScanInfo.attnum_to_rownum = NULL;
+	}
 
 	for (int i = 0; i < scan->total_seg; ++i)
 	{
@@ -990,8 +1064,9 @@ aocs_block_remaining_rows(DatumStreamRead *ds)
 
 /*
  * fetches a single column value corresponding to `endrow` (equals to `targrow`)
+ * return the physical row number if the row is visible, and InvalidAORowNum if otherwise.
  */
-static bool
+static int64
 aocs_gettuple_column(AOCSScanDesc scan, AttrNumber attno, int64 startrow, int64 endrow, bool chkvisimap, TupleTableSlot *slot)
 {
 	bool isSnapshotAny = (scan->rs_base.rs_snapshot == SnapshotAny);
@@ -999,7 +1074,6 @@ aocs_gettuple_column(AOCSScanDesc scan, AttrNumber attno, int64 startrow, int64 
 	int segno = scan->seginfo[scan->cur_seg]->segno;
 	ItemPointerData fake_ctid;
 	AOTupleId *aotid = (AOTupleId *) &fake_ctid;
-	bool ret = true;
 	int64 rowstoprocess, nrows, rownum;
 	Datum *values;
 	bool *nulls;
@@ -1023,7 +1097,7 @@ aocs_gettuple_column(AOCSScanDesc scan, AttrNumber attno, int64 startrow, int64 
 		if (slot != NULL)
 			ExecClearTuple(slot);
 
-		ret = false;
+		rownum = InvalidAORowNum;
 		/* must update tracking vars before return */
 		goto out;
 	}
@@ -1042,11 +1116,11 @@ out:
 
 	elogif(Debug_appendonly_print_datumstream, LOG,
 		   "aocs_gettuple_column(): [attno: %d, targrow: %ld, startrow: %ld, segno: %d, rownum: %ld, "
-		   "segfirstrow: %ld, segrowsprocessed: %ld, nth: %d, blockRowCount: %d, blockRowsProcessed: %d, ret: %d]",
+		   "segfirstrow: %ld, segrowsprocessed: %ld, nth: %d, blockRowCount: %d, blockRowsProcessed: %d, ret: %ld]",
 		   attno, endrow, startrow, segno, rownum, scan->segfirstrow, scan->segrowsprocessed, datumstreamread_nth(ds),
-		   ds->blockRowCount, ds->blockRowsProcessed, (int)ret);
+		   ds->blockRowCount, ds->blockRowsProcessed, rownum);
 
-	return ret;
+	return rownum;
 }
 
 /*
@@ -1058,7 +1132,7 @@ aocs_gettuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
 	bool ret = true;
 	int64 rowcount = InvalidAORowNum;
 	int64 rowstoprocess;
-	bool chkvisimap = true;
+	int64 phyrow = 0;
 
 	Assert(scan->cur_seg >= 0);
 	Assert(slot != NULL);
@@ -1073,6 +1147,24 @@ aocs_gettuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
 		AttrNumber attno = scan->columnScanInfo.proj_atts[i];
 		DatumStreamRead *ds = scan->columnScanInfo.ds[attno];
 		int64 startrow = scan->segfirstrow + scan->segrowsprocessed;
+		/* only need to check visimap for the anchor column */
+		bool chkvisimap = (i == ANCHOR_COL_IN_PROJ);
+
+		/* after scanning the anchor column, we check the missing value first */
+		if (attno != scan->columnScanInfo.proj_atts[ANCHOR_COL_IN_PROJ])
+		{
+			/* physical rownum smaller than 0 means it's invisible */
+			if (phyrow >= 0 && AO_ATTR_VAL_IS_MISSING(phyrow,
+														attno,
+														scan->seginfo[scan->cur_seg]->segno,
+														scan->columnScanInfo.attnum_to_rownum))
+			{
+				slot->tts_values[attno] = getmissingattr(slot->tts_tupleDescriptor,
+															attno + 1,
+															&slot->tts_isnull[attno]);
+				continue;
+			}
+		}
 
 		if (ds->blockRowCount <= 0)
 			; /* haven't read block */
@@ -1084,10 +1176,10 @@ aocs_gettuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
 
 			if (startrow + rowcount - 1 >= targrow)
 			{
-				if (!aocs_gettuple_column(scan, attno, startrow, targrow, chkvisimap, slot))
+				phyrow = aocs_gettuple_column(scan, attno, startrow, targrow, chkvisimap, slot);
+				if (phyrow == InvalidAORowNum)
 					ret = false;
 
-				chkvisimap = false;
 				/* haven't finished scanning on current block */
 				continue;
 			}
@@ -1122,10 +1214,10 @@ aocs_gettuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
 					pgstat_count_buffer_read_ao(scan->rs_base.rs_rd,
 												blocksRead);
 
-					if (!aocs_gettuple_column(scan, attno, startrow, targrow, chkvisimap, slot))
+					phyrow = aocs_gettuple_column(scan, attno, startrow, targrow, chkvisimap, slot);
+					if (phyrow == InvalidAORowNum)
 						ret = false;
 
-					chkvisimap = false;
 					/* done this column */
 					break;
 				}
@@ -1258,6 +1350,31 @@ ReadNext:
 		{
 			AttrNumber	attno = scan->columnScanInfo.proj_atts[i];
 
+			/*
+			 * Check missing value before reading from data files.
+			 * 
+			 * We don't need to check the missing value for the anchor column.
+			 * In fact, we cannot do that either because we don't have the
+			 * row number until we've scanned the anchor column.
+			 */
+			if (attno != scan->columnScanInfo.proj_atts[ANCHOR_COL_IN_PROJ])
+			{
+				Assert(rowNum > 0);
+				if (AO_ATTR_VAL_IS_MISSING(rowNum,
+															attno,
+															curseginfo->segno,
+															scan->columnScanInfo.attnum_to_rownum))
+				{
+					/*
+					 * XXX: should we temporarily store the missing value to avoid repeatedly calling
+					 * getmissingattr? The performance gain seems not much though. 
+					 */
+					d[attno] = getmissingattr(slot->tts_tupleDescriptor, attno + 1, &null[attno]);
+					continue;
+				}
+			}
+
+			/* otherwise, read from data file */
 			err = datumstreamread_advance(scan->columnScanInfo.ds[attno]);
 			Assert(err >= 0);
 			if (err == 0)
@@ -1848,6 +1965,10 @@ aocs_fetch_init(Relation relation,
 	aocsFetchDesc->segmentFileName[0] = '\0';
 	aocsFetchDesc->basepath = basePath;
 
+	/* lastrownums info */
+	aocsFetchDesc->attnum_to_rownum = GetAttnumToLastrownumMapping(
+		RelationGetRelid(relation),RelationGetNumberOfAttributes(relation));
+
 	Assert(proj);
 
     bool checksum = true;
@@ -1898,7 +2019,8 @@ aocs_fetch_init(Relation relation,
 	{
 
 		aocsFetchDesc->datumStreamFetchDesc[colno] = NULL;
-		if (proj[colno])
+		/* always need to initialize for the anchor column */
+		if (proj[colno] || colno == aocsFetchDesc->blockDirectory.proj_atts[ANCHOR_COL_IN_PROJ])
 		{
 			char	   *ct;
 			int32		clvl;
@@ -1950,6 +2072,48 @@ aocs_fetch_init(Relation relation,
 }
 
 /*
+ * Similar to AppendOnlyBlockDirectory_GetEntry, but taking into consideration that
+ * some AOCO column might be missing values and might not have block directory
+ * entry for the rowNum we are checking.
+ */
+static bool
+aocs_blkdir_getentry(AOCSFetchDesc aocsFetchDesc,
+							AOTupleId *aoTupleId,
+							int columnGroupNo,
+							AppendOnlyBlockDirectoryEntry *directoryEntry)
+{
+	int 		ret;
+	int 		segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
+	int64 		rowNum = AOTupleIdGet_rowNum(aoTupleId); 
+	bool 		valmissing = columnGroupNo != aocsFetchDesc->blockDirectory.proj_atts[ANCHOR_COL_IN_PROJ] &&
+								AO_ATTR_VAL_IS_MISSING(rowNum,
+											columnGroupNo,
+											segmentFileNum,
+											aocsFetchDesc->attnum_to_rownum);
+
+	if (valmissing)
+	{
+		/*
+		 * If value is missing, we know there's no blkdir entry for it, so no
+		 * point checking. Instead, check the anchor column for the confirm.
+		 */
+		ret = blkdir_entry_exists(&aocsFetchDesc->blockDirectory, aoTupleId, aocsFetchDesc->blockDirectory.proj_atts[ANCHOR_COL_IN_PROJ]);
+	}
+	else
+	{
+		/*
+		 * If value is not missing, conduct the regular blkdir entry check.
+		 */
+		ret = AppendOnlyBlockDirectory_GetEntry(&aocsFetchDesc->blockDirectory,
+										   aoTupleId,
+										   columnGroupNo,
+										   directoryEntry,
+										   aocsFetchDesc->attnum_to_rownum);
+	}
+	return ret;
+}
+
+/*
  * Fetch the tuple based on the given tuple id.
  *
  * If the 'slot' is not NULL, the tuple will be assigned to the slot.
@@ -1964,9 +2128,10 @@ aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 	int			segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
 	int64		rowNum = AOTupleIdGet_rowNum(aoTupleId);
 	int			numCols = aocsFetchDesc->relation->rd_att->natts;
-	int			colno;
+	int			colno = 0; /* initialize to placate compiler, but it should be overwritten later in any case */
 	bool		found = true;
 	bool		isSnapshotAny = (aocsFetchDesc->snapshot == SnapshotAny);
+	bool 		valmissing;
 
 	Assert(numCols > 0);
 
@@ -1979,9 +2144,11 @@ aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 				 		rowNum, segmentFileNum, aocsFetchDesc->relation->rd_node.relNode)));
 
 	/*
-	 * if the rowNum is bigger than lastsequence, skip it.
+	 * skip if the rowNum is not discoverable:
+	 * 1. rowNum is 0 which is invalid.
+	 * 2. rowNum bigger than lastsequence of the segment.
 	 */
-	if (rowNum > aocsFetchDesc->lastSequence[segmentFileNum])
+	if (rowNum == 0 || rowNum > aocsFetchDesc->lastSequence[segmentFileNum])
 	{
 		if (slot != NULL)
 			slot = ExecClearTuple(slot);
@@ -1993,8 +2160,10 @@ aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 	 * requested tuple. If so, fetch it. Otherwise, read the block that
 	 * contains the requested tuple.
 	 */
-	for (colno = 0; colno < numCols; colno++)
+	for (int i = 0; i < aocsFetchDesc->blockDirectory.num_proj_atts; i++)
 	{
+		colno = aocsFetchDesc->blockDirectory.proj_atts[i];
+
 		DatumStreamFetchDesc datumStreamFetchDesc = aocsFetchDesc->datumStreamFetchDesc[colno];
 
 		/* If this column does not need to be fetched, skip it. */
@@ -2027,6 +2196,23 @@ aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 					break;
 				}
 
+				/* Check any missing value before reading from the block. */
+				if (colno != aocsFetchDesc->blockDirectory.proj_atts[ANCHOR_COL_IN_PROJ])
+				{
+					Assert(rowNum > 0);
+					if (AO_ATTR_VAL_IS_MISSING(rowNum,
+														colno,
+														segmentFileNum,
+														aocsFetchDesc->attnum_to_rownum))
+					{
+						slot->tts_values[colno] = getmissingattr(slot->tts_tupleDescriptor,
+															colno + 1,
+															&slot->tts_isnull[colno]);
+						continue;
+					}
+				}
+
+				/* not a missing value, fetch from the current block */
 				fetchFromCurrentBlock(aocsFetchDesc, rowNum, slot, colno);
 				continue;
 			}
@@ -2090,9 +2276,22 @@ aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 			Assert(!datumStreamFetchDesc->currentSegmentFile.isOpen);
 		}
 
+		/*
+		 * Check if this row value is missing in the column.
+		 * Note that, however, even if the value is missing we cannot just
+		 * fetch the missing value and continue at this point. We still need
+		 * to go through the the block directory and the visibilityMap checks.
+		 */
+		valmissing = colno != aocsFetchDesc->blockDirectory.proj_atts[ANCHOR_COL_IN_PROJ] &&
+									AO_ATTR_VAL_IS_MISSING(rowNum,
+												colno,
+												segmentFileNum,
+												aocsFetchDesc->attnum_to_rownum);
+
 		if (!datumStreamFetchDesc->currentSegmentFile.isOpen)
 		{
-			if (!openFetchSegmentFile(aocsFetchDesc,
+			/* no point opening the file if the value is missing in it */
+			if (!valmissing && !openFetchSegmentFile(aocsFetchDesc,
 									  segmentFileNum,
 									  colno))
 			{
@@ -2109,10 +2308,7 @@ aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 		/*
 		 * Need to get the Block Directory entry that covers the TID.
 		 */
-		if (!AppendOnlyBlockDirectory_GetEntry(&aocsFetchDesc->blockDirectory,
-											   aoTupleId,
-											   colno,
-											   &datumStreamFetchDesc->currentBlock.blockDirectoryEntry))
+		if (!aocs_blkdir_getentry(aocsFetchDesc, aoTupleId, colno, &datumStreamFetchDesc->currentBlock.blockDirectoryEntry))
 		{
 			found = false;		/* Row not represented in Block Directory. */
 			/* Must be aborted or deleted and reclaimed. */
@@ -2132,6 +2328,17 @@ aocs_fetch(AOCSFetchDesc aocsFetchDesc,
 
 		positionLimitToEndOfRange(datumStreamFetchDesc);
 
+		/* fetch missing value and proceed to next column */
+		if (valmissing)
+		{
+			slot->tts_values[colno] = getmissingattr(slot->tts_tupleDescriptor,
+												colno + 1,
+												&slot->tts_isnull[colno]);
+
+			continue;
+		}
+
+		/* otherwise, fetch from the segmentfile */
 		if (!scanToFetchValue(aocsFetchDesc, rowNum, slot, colno))
 		{
 			found = false;
@@ -2187,6 +2394,12 @@ aocs_fetch_finish(AOCSFetchDesc aocsFetchDesc)
 		FreeAllAOCSSegFileInfo(aocsFetchDesc->segmentFileInfo, aocsFetchDesc->totalSegfiles);
 		pfree(aocsFetchDesc->segmentFileInfo);
 		aocsFetchDesc->segmentFileInfo = NULL;
+	}
+
+	if (aocsFetchDesc->attnum_to_rownum)
+	{
+		pfree(aocsFetchDesc->attnum_to_rownum);
+		aocsFetchDesc->attnum_to_rownum = NULL;
 	}
 
 	RelationDecrementReferenceCount(aocsFetchDesc->relation);
@@ -2427,7 +2640,7 @@ aocs_writecol_init(Relation rel, List *newvals, AOCSWriteColumnOperation op)
 	foreach(lc, newvals)
 	{
 		NewColumnValue *newval = lfirst(lc);
-		if (op == newval->op)
+		if (op == newval->op || (op == AOCSADDCOLUMN && newval->op == AOCSADDCOLUMN_MISSINGMODE))
 			desc->newcolvals = lappend(desc->newcolvals, newval);
 	}
 
@@ -2457,7 +2670,7 @@ aocs_writecol_init(Relation rel, List *newvals, AOCSWriteColumnOperation op)
 		int blocksize = -1;
 
 		initStringInfo(&titleBuf);
-		if (op==AOCSADDCOLUMN)
+		if (op == AOCSADDCOLUMN)
 			appendStringInfo(&titleBuf, "ALTER TABLE ADD COLUMN new segfile");
 		else
 			appendStringInfo(&titleBuf, "ALTER TABLE REWRITE COLUMN new segfile");
@@ -2748,25 +2961,52 @@ aocs_addcol_emptyvpe(Relation rel,
 }
 
 /*
- * Choose the column that has the smallest segfile size so as to
+ * Choose the anchor column that has the smallest segfile size so as to
  * minimize disk I/O in subsequent varblock header scan. The natts arg
  * includes only existing columns and not the ones being added. Once
  * we find a segfile with nonzero tuplecount and find the column with
  * the smallest eof to return, we continue the loop but skip over all
  * segfiles except for those in AOSEG_STATE_AWAITING_DROP state which
  * we need to append to our drop list.
+ * 
+ * Note that, the anchor columns has to be "complete", i.e. no missing
+ * values in its data file. We consider the column "complete" column as
+ * indicated by pg_attribute_encoding.lastrownums field of the column -
+ * non-empty means not complete. In addition, the caller can optionally
+ * provide a set of projected columns, and we will pick one from those
+ * over the other columns, if a complete column is being found.
  */
-static int
-column_to_scan(AOCSFileSegInfo **segInfos, int nseg, int natts, Relation aocsrel)
+int
+get_anchor_col(AOCSFileSegInfo **segInfos, int nseg, int natts,
+						Relation aocsrel, 
+						AttrNumber *proj_atts,
+						AttrNumber num_proj_atts)
 {
-	int scancol = -1;
+	int scancol_all = -1;
+	int scancol_proj = -1;
 	int segi;
 	int i;
 	AOCSVPInfoEntry *vpe;
-	int64 min_eof = 0;
+	bool *column_not_complete;
+	Bitmapset *proj_bms = NULL;
+
+	/* 
+	 * Get an array in which each bool indicates whether pg_attribute_encoding.lastrownums
+	 * is not NULL (i.e. exists) for each column. We translate that into meaning whether
+	 * column is complete (exists == not complete).
+	 */
+	column_not_complete = ExistValidLastrownums(RelationGetRelid(aocsrel), natts);
+
+	/* build a bitmapset of the projected columns */
+	for (i = 0; i < num_proj_atts; ++i)
+		proj_bms = bms_add_member(proj_bms, proj_atts[i]);
 
 	for (segi = 0; segi < nseg; ++segi)
 	{
+		HeapTuple atttup;
+		int64 min_eof_all = 0;
+		int64 min_eof_proj = 0;
+
 		/*
 		 * Don't use a AOSEG_STATE_AWAITING_DROP segfile. That seems
 		 * like a bad idea in general, but there's one particular problem:
@@ -2779,21 +3019,119 @@ column_to_scan(AOCSFileSegInfo **segInfos, int nseg, int natts, Relation aocsrel
 		/*
 		 * Skip over appendonly segments with no tuples (caused by VACUUM)
 		 */
-		if (segInfos[segi]->total_tupcount > 0 && scancol == -1)
+		if (segInfos[segi]->total_tupcount > 0)
 		{
 			for (i = 0; i < natts; ++i)
 			{
+				/* skip non-complete (i.e. missing or partially missing column) */
+				if (column_not_complete[i])
+					continue;
+
+				atttup = SearchSysCacheAttNum(RelationGetRelid(aocsrel), i + 1);
+				/* skip dropped column */
+				if (!atttup)
+					continue;
+				ReleaseSysCache(atttup);
+
+				/* 
+				 * skip those do not have aoseg entry yet - this can happen
+				 * when we are in the process of adding a new column
+				 */
+				if (i >= segInfos[segi]->vpinfo.nEntry)
+					continue;
+
 				vpe = getAOCSVPEntry(segInfos[segi], i);
-				if (vpe->eof > 0 && (!min_eof || vpe->eof < min_eof))
+				if (vpe->eof <= 0)
+					continue;
+
+				if (!min_eof_all || vpe->eof < min_eof_all)
 				{
-					min_eof = vpe->eof;
-					scancol = i;
+					min_eof_all = vpe->eof;
+					scancol_all = i;
+				}
+				if (bms_is_member(i, proj_bms) && (!min_eof_proj || vpe->eof < min_eof_proj))
+				{
+					min_eof_proj = vpe->eof;
+					scancol_proj = i;
 				}
 			}
 		}
+
+		/* stop if we've found our candidate */
+		if (scancol_proj >= 0 || scancol_all >= 0)
+			break;
 	}
 
-	return scancol;
+	/* Use projected column if found. If there's no column found (e.g. no data in table at all), just return 0 */
+	return scancol_proj != -1 ? scancol_proj : (scancol_all == -1 ? 0 : scancol_all);
+}
+
+/* 
+ * A helper for aocs_writecol_writesegfiles(). It evaluates expression stored in 
+ * the 'exprstate' field of the 'newvals', and store the values in 'slot'. In
+ * addition, it performs NULL and check constraint checks of the values.
+ *
+ * The function is used only for ADD COLUMN so it expects one of the AOCSADDCOLUMN
+ * and AOCSADDCOLUMN_MISSINGMODE. And it only performs the above for the indicated
+ * operation.
+ */
+static void eval_expr_and_check_constr(List *newvals, List *constraints, ExprContext *econtext, TupleTableSlot *slot, TupleDesc tupdesc, AOCSWriteColumnOperation op)
+{
+	NewColumnValue 		*newval;
+	Form_pg_attribute 	attr;
+	Datum 			*values = slot->tts_values;
+	bool 			*isnull = slot->tts_isnull;
+	ListCell 		*l;
+
+	Assert(op == AOCSADDCOLUMN || op == AOCSADDCOLUMN_MISSINGMODE);
+
+	foreach (l, newvals)
+	{
+		newval = lfirst(l);
+		if (newval->op != op)
+			continue;
+
+		values[newval->attnum-1] =
+			ExecEvalExprSwitchContext(newval->exprstate,
+									  econtext,
+									  &isnull[newval->attnum-1]);
+		/*
+		 * Ensure that NOT NULL constraint for the newly
+		 * added columns is not being violated.  This
+		 * covers the case when explicit "CHECK()"
+		 * constraint is not specified but only "NOT NULL"
+		 * is specified in the new column's definition.
+		 */
+		attr = TupleDescAttr(tupdesc, newval->attnum - 1);
+		if (attr->attnotnull &&	isnull[newval->attnum-1])
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_NOT_NULL_VIOLATION),
+						errmsg("column \"%s\" contains null values",
+							   NameStr(attr->attname))));
+		}
+	}
+
+	foreach (l, constraints)
+	{
+		NewConstraint *con = lfirst(l);
+		switch(con->contype)
+		{
+			case CONSTR_CHECK:
+				if(!ExecCheck(con->qualstate, econtext))
+					ereport(ERROR,
+							(errcode(ERRCODE_CHECK_VIOLATION),
+								errmsg("check constraint \"%s\" is violated by some row",
+									   con->name)));
+				break;
+			case CONSTR_FOREIGN:
+				/* Nothing to do */
+				break;
+			default:
+				elog(ERROR, "Unrecognized constraint type: %d",
+					 (int) con->contype);
+		}
+	}
 }
 
 /*
@@ -2807,12 +3145,37 @@ aocs_writecol_writesegfiles(
 {
 	NewColumnValue *newval;
 	TupleDesc tupdesc = RelationGetDescr(idesc->rel);
-	Form_pg_attribute attr;
 	Datum *values = slot->tts_values;
 	bool *isnull = slot->tts_isnull;
 	int64 expectedFRN = -1; /* expected firstRowNum of the next varblock */
 	ListCell *l;
 	int i;
+	bool missing_mode_only = true;
+
+	/*
+	 * Although we do not need to fill the slot for missing-mode columns, we
+	 * still need to verify constraints for them.
+	 */
+	eval_expr_and_check_constr(idesc->newcolvals, constraints, econtext, slot, tupdesc, AOCSADDCOLUMN_MISSINGMODE);
+	ResetExprContext(econtext);
+
+	/*
+	 * Also check if there's just missing-mode column to add. If so, we don't
+	 * need the rest of the function.
+	 */
+	foreach (l, idesc->newcolvals)
+	{
+		newval = lfirst(l);
+		if (newval->op == AOCSADDCOLUMN)
+		{
+			missing_mode_only = false;
+			break;
+		}
+	}
+	if (missing_mode_only)
+		return;
+
+	/* Now we deal with non-missing columns */
 
 	/* Loop over each varblock in an appendonly segno. */
 	while (aocs_get_nextheader(sdesc))
@@ -2852,49 +3215,7 @@ aocs_writecol_writesegfiles(
 			}
 			for (i = 0; i < sdesc->ao_read.current.rowCount; ++i)
 			{
-				foreach (l, idesc->newcolvals)
-				{
-					newval = lfirst(l);
-					values[newval->attnum-1] =
-						ExecEvalExprSwitchContext(newval->exprstate,
-												  econtext,
-												  &isnull[newval->attnum-1]);
-					/*
-					 * Ensure that NOT NULL constraint for the newly
-					 * added columns is not being violated.  This
-					 * covers the case when explicit "CHECK()"
-					 * constraint is not specified but only "NOT NULL"
-					 * is specified in the new column's definition.
-					 */
-					attr = TupleDescAttr(tupdesc, newval->attnum - 1);
-					if (attr->attnotnull &&	isnull[newval->attnum-1])
-					{
-						ereport(ERROR,
-								(errcode(ERRCODE_NOT_NULL_VIOLATION),
-									errmsg("column \"%s\" contains null values",
-										   NameStr(attr->attname))));
-					}
-				}
-				foreach (l, constraints)
-				{
-					NewConstraint *con = lfirst(l);
-					switch(con->contype)
-					{
-						case CONSTR_CHECK:
-							if(!ExecCheck(con->qualstate, econtext))
-								ereport(ERROR,
-										(errcode(ERRCODE_CHECK_VIOLATION),
-											errmsg("check constraint \"%s\" is violated by some row",
-												   con->name)));
-							break;
-						case CONSTR_FOREIGN:
-							/* Nothing to do */
-							break;
-						default:
-							elog(ERROR, "Unrecognized constraint type: %d",
-								 (int) con->contype);
-					}
-				}
+				eval_expr_and_check_constr(idesc->newcolvals, constraints, econtext, slot, tupdesc, AOCSADDCOLUMN);
 				aocs_writecol_insert_datum(idesc,
 										   values,
 										   isnull);
@@ -2968,25 +3289,25 @@ aocs_writecol_add(Oid relid, List *newvals, List *constraints, TupleDesc oldDesc
 	Assert(RelationIsAoCols(rel));
 
 	/*
-     * There might be AWAITING_DROP segments occupying spaces for failing
-     * to drop at VACUUM in the case of cleaning up happened concurrently
-     * with earlier readers which was accessing the dead segment files.
-     *
-     * We used to call AppendOptimizedRecycleDeadSegments() (current name is
-     * ao_vacuum_rel_recycle_dead_segments) to recycle those segfiles to save
-     * spaces in this scenario. But it didn't do corresponding index tuples
-     * cleanup for unknown reason.
-     *
-     * After optimizing VACUUM AO strategy, we did refactor for
-     * AppendOptimizedRecycleDeadSegments() a little bit and combine
-     * dead segfiles cleanup with corresponding indexes cleanup together.
-     * While it seems to be impossible to pass index vacuuming parameter in
-     * this scenario, so we removed AppendOptimizedRecycleDeadSegments() out
-     * of this function and dedicated it to be called only in VACUUM scenario.
-     *
-     * We are supposed to be fine without recycling spaces here, or find
-     * another way to fix it if that does become a real problem.
-     */
+	 * There might be AWAITING_DROP segments occupying spaces for failing
+	 * to drop at VACUUM in the case of cleaning up happened concurrently
+	 * with earlier readers which was accessing the dead segment files.
+	 *
+	 * We used to call AppendOptimizedRecycleDeadSegments() (current name is
+	 * ao_vacuum_rel_recycle_dead_segments) to recycle those segfiles to save
+	 * spaces in this scenario. But it didn't do corresponding index tuples
+	 * cleanup for unknown reason.
+	 *
+	 * After optimizing VACUUM AO strategy, we did refactor for
+	 * AppendOptimizedRecycleDeadSegments() a little bit and combine
+	 * dead segfiles cleanup with corresponding indexes cleanup together.
+	 * While it seems to be impossible to pass index vacuuming parameter in
+	 * this scenario, so we removed AppendOptimizedRecycleDeadSegments() out
+	 * of this function and dedicated it to be called only in VACUUM scenario.
+	 *
+	 * We are supposed to be fine without recycling spaces here, or find
+	 * another way to fix it if that does become a real problem.
+	 */
 
 	segInfos = GetAllAOCSFileSegInfo(rel, snapshot, &nseg, NULL);
 	basepath = relpathbackend(rel->rd_node, rel->rd_backend, MAIN_FORKNUM);
@@ -2994,7 +3315,7 @@ aocs_writecol_add(Oid relid, List *newvals, List *constraints, TupleDesc oldDesc
 	if (nseg > 0)
 		aocs_addcol_emptyvpe(rel, segInfos, nseg, numaddcols);
 
-	scancol = column_to_scan(segInfos, nseg, oldDesc->natts, rel);
+	scancol = get_anchor_col(segInfos, nseg, oldDesc->natts, rel, NULL, 0);
 	elogif(Debug_appendonly_print_storage_headers, LOG,
 		   "using column %d of relation %s for alter table scan",
 		   scancol, RelationGetRelationName(rel));
@@ -3088,15 +3409,12 @@ static void
 aocs_writecol_rewritesegfiles(
 	AOCSWriteColumnDesc idesc, AOCSScanDesc scanDesc,
 	ExprContext *econtext, TupleTableSlot *oldslot,
-	TupleTableSlot *newslot)
+	TupleTableSlot *newslot, int colno)
 {
 	ListCell *l;
 	/* expected first row number of the next varblock */
 	int64 expectedFRN = -1;
 	Assert(list_length(idesc->newcolvals) > 0);
-
-	/* take any column that we are altering, for reading the header info */
-	int colno = ((NewColumnValue*)linitial(idesc->newcolvals))->attnum-1;
 
 	/* Loop over each row in the segment. */
 	while (aocs_getnext(scanDesc, ForwardScanDirection, oldslot))
@@ -3220,7 +3538,7 @@ aocs_writecol_reindex(Oid relid, List *newvals)
 		foreach (lc, newvals)
 		{
 			newval = lfirst(lc);
-			if (newval->op == AOCSADDCOLUMN)
+			if (newval->op == AOCSADDCOLUMN || newval->op == AOCSADDCOLUMN_MISSINGMODE)
 				continue;
 			AttrNumber rewrittenattnum = newval->attnum;
 			for (int i = 0; i < indnatts; ++i)
@@ -3257,9 +3575,7 @@ void
 aocs_writecol_rewrite(Oid relid, List *newvals, TupleDesc oldDesc)
 {
 	Relation rel = relation_open(relid, NoLock);
-	AttrNumber natts = RelationGetNumberOfAttributes(rel);
 	Snapshot snapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
-	bool *proj = palloc0(sizeof(bool*) * natts);
 	ListCell *l;
 	EState *estate;
 	AOCSFileSegInfo **segInfos;
@@ -3280,7 +3596,6 @@ aocs_writecol_rewrite(Oid relid, List *newvals, TupleDesc oldDesc)
 		foreach(l, idesc->newcolvals)
 		{
 			NewColumnValue *ex = lfirst(l);
-			proj[ex->attnum - 1] = true;
 			/* expr already planned */
 			ex->exprstate = ExecInitExpr((Expr *) ex->expr, NULL);
 		}
@@ -3331,7 +3646,7 @@ aocs_writecol_rewrite(Oid relid, List *newvals, TupleDesc oldDesc)
 			 */
 			scanDesc = aocs_beginrangescan(rel,
 										   SnapshotAny, NULL,
-										   &(segInfos[segi]->segno), 1, proj);
+										   &(segInfos[segi]->segno), 1, NULL);
 
 			aocs_writecol_newsegfiles(idesc, segInfos[segi]);
 			if (idesc->blockDirectory.blkdirRel != NULL)
@@ -3353,6 +3668,9 @@ aocs_writecol_rewrite(Oid relid, List *newvals, TupleDesc oldDesc)
 				}
 			}
 
+			/* take any column that we are altering, for reading the header info */
+			int colno = get_anchor_col(segInfos, nseg, rel->rd_att->natts, rel, NULL, 0);
+
 			/*
 			 * Rewrite segfiles for columns for current appendonly segment.
 			 */
@@ -3360,7 +3678,8 @@ aocs_writecol_rewrite(Oid relid, List *newvals, TupleDesc oldDesc)
 										scanDesc,
 										econtext,
 										oldslot,
-										newslot);
+										newslot,
+										colno);
 			aocs_endscan(scanDesc);
 		}
 
@@ -3370,14 +3689,15 @@ aocs_writecol_rewrite(Oid relid, List *newvals, TupleDesc oldDesc)
 		ExecDropSingleTupleTableSlot(newslot);
 	}
 
-	/* Update the filenum and any encoding options in pg_attribute_encoding */
+	/* Update the filenum, lastrownums, any encoding options in pg_attribute_encoding */
 	foreach(l, newvals)
 	{
 		Datum newattoptions = (Datum)0;
 		NewColumnValue *ex = lfirst(l);
 
-		if (ex->op == AOCSADDCOLUMN)
+		if (ex->op == AOCSADDCOLUMN || ex->op == AOCSADDCOLUMN_MISSINGMODE)
 			continue;
+
 		newfilenum = GetFilenumForRewriteAttribute(RelationGetRelid(rel), ex->attnum);
 		/* get the attoptions string to be stored in pg_attribute_encoding */
 		if (ex->new_encoding)
@@ -3389,7 +3709,20 @@ aocs_writecol_rewrite(Oid relid, List *newvals, TupleDesc oldDesc)
 											true,
 											false);
 		}
-		update_attribute_encoding_entry(RelationGetRelid(rel), ex->attnum, newfilenum, 0/*lastrownums*/, newattoptions);
+
+		update_attribute_encoding_entry(RelationGetRelid(rel), 
+									ex->attnum,
+									newfilenum,
+									0,
+									newattoptions);
+		/*
+		 * lastrownums is not useful after rewriting the column, so clear them.
+		 * As we just update the catalog we need to increment command counter.
+		 * XXX: change update_attribute_encoding_entry so we can nullify
+		 * lastrownums in one call, or use something like NullableDatum.
+		 */
+		CommandCounterIncrement();
+		ClearAttributeEncodingLastrownumsByAttnum(RelationGetRelid(rel), ex->attnum);
 	}
 
 	/* Re-index the ones that contain the columns we just rewrote */
@@ -3397,6 +3730,5 @@ aocs_writecol_rewrite(Oid relid, List *newvals, TupleDesc oldDesc)
 
 	heap_close(rel, NoLock);
 	UnregisterSnapshot(snapshot);
-	pfree(proj);
 }
 

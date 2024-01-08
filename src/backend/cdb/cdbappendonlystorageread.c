@@ -315,18 +315,6 @@ AppendOnlyStorageRead_OpenFile(AppendOnlyStorageRead *storageRead,
 	Assert(storageRead->isActive);
 	Assert(filePathName != NULL);
 
-	/*
-	 * The EOF must be greater than 0, otherwise we risk transactionally
-	 * created segment files from disappearing if a concurrent write
-	 * transaction aborts.
-	 */
-	if (logicalEof == 0)
-		ereport(ERROR,
-				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("append-only storage read segment file '%s' EOF must be > 0 for relation '%s'",
-						filePathName,
-						storageRead->relationName)));
-
 	file = AppendOnlyStorageRead_DoOpenFile(storageRead,
 											filePathName);
 	if (file < 0)

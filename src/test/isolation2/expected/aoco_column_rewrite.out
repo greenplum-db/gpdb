@@ -110,7 +110,7 @@ SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco') ORDER BY segment_id, co
  1          | 1     | 0          | 1              | 3        | 144 | 144              | 5        | 3             | 1     
  1          | 1     | 1          | 204929         | 3        | 144 | 144              | 5        | 3             | 1     
  1          | 1     | 2          | 257            | 3        | 144 | 144              | 5        | 3             | 1     
- 1          | 1     | 3          | 385            | 3        | 144 | 144              | 5        | 3             | 1     
+ 1          | 1     | 3          | 385            | 3        | 48  | 48               | 5        | 3             | 1     
 (4 rows)
 DROP TABLE alter_type_aoco;
 DROP TABLE
@@ -1394,7 +1394,7 @@ execute attribute_encoding_check('atsetenc');
 select relname, attnum, size, compression_ratio from gp_toolkit.gp_column_size where relid::regclass::text = 'atsetenc' and gp_segment_id = 0 and attnum = 3;
  relname  | attnum | size  | compression_ratio 
 ----------+--------+-------+-------------------
- atsetenc | 3      | 10096 | 1.00              
+ atsetenc | 3      | 10048 | 1.00              
 (1 row)
 execute capturerelfilenodebefore('set encoding - compress effect', 'atsetenc');
 INSERT 0 4

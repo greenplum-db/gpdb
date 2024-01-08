@@ -541,3 +541,66 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan4_i_idx', 2), 'aoco_partial_scan4_i_idx');
+
+--------------------------------------------------------------------------------
+-- Scenario 5: BRIN index includes a column that has missing rownums
+--------------------------------------------------------------------------------
+
+CREATE TABLE aoco_partial_scan5(i int) USING ao_column;
+
+-- Insert one logical heap block worth of committed rows.
+INSERT INTO aoco_partial_scan5 SELECT 1 FROM generate_series(1, 32767);
+
+-- add a new column j
+ALTER TABLE aoco_partial_scan5 ADD COLUMN j int DEFAULT 10;
+
+-- First index: built on column i and j.
+-- Doing an index build will result in scanning the table.
+-- But the new column won't have any blocks to scan.
+-- The number of scanned blocks equal to the total number of blocks of the
+-- table shown by gp_toolkit.__gp_aoblkdir later.
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+CREATE INDEX ON aoco_partial_scan5 USING brin(i, j) WITH (pages_per_range = 3);
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- no blkdir entry for column j
+1U: SELECT * FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan5') ORDER BY 1,2,3,4,5;
+
+-- but the summarization shows expected default value for the column j
+1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan5_i_j_idx', 2), 'aoco_partial_scan5_i_j_idx');
+
+-- Second index built only on column j. The block count should be the same as 
+-- the first index because we'll use the first column as the anchor column.
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+CREATE INDEX ON aoco_partial_scan5 USING brin(j) WITH (pages_per_range = 3);
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid)
+  FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+
+-- we should see correct summarization even the only column is incomplete
+1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan5_j_idx', 2), 'aoco_partial_scan5_j_idx');
+
+-- now desummarize everything
+SELECT brin_desummarize_range('aoco_partial_scan5_i_j_idx', 33554432);
+SELECT brin_desummarize_range('aoco_partial_scan5_j_idx', 33554432);
+
+-- Insert some new rows. The new column will physically contain values for these rows.
+INSERT INTO aoco_partial_scan5 SELECT 20, k FROM generate_series(1, 50000) k;
+
+-- column j will have blkdir entries for the newly added rows
+1U: SELECT * FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan5') ORDER BY 1,2,3,4,5;
+
+-- summarize from the very first rownum which is missing in column j
+SELECT brin_summarize_range('aoco_partial_scan5_i_j_idx', 33554432);
+SELECT brin_summarize_range('aoco_partial_scan5_j_idx', 33554432);
+
+-- but we should see correct summarization for it
+1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan5_i_j_idx', 2), 'aoco_partial_scan5_i_j_idx');
+1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan5_j_idx', 2), 'aoco_partial_scan5_j_idx');
+

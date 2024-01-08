@@ -111,7 +111,6 @@ typedef struct AppendOnlyBlockDirectory
 	CatalogIndexState indinfo;
 	int numColumnGroups;
 	bool isAOCol;
-	bool *proj; /* projected columns, used only if isAOCol = TRUE */
 
 	MemoryContext memoryContext;
 
@@ -138,6 +137,10 @@ typedef struct AppendOnlyBlockDirectory
 	int numScanKeys;
 	ScanKey scanKeys;
 	StrategyNumber *strategyNumbers;
+
+	/* Column numbers (zero based) of columns we need to fetch */
+	AttrNumber		   *proj_atts;
+	AttrNumber			num_proj_atts;
 
 }	AppendOnlyBlockDirectory;
 
@@ -205,7 +208,8 @@ extern bool AppendOnlyBlockDirectory_GetEntry(
 	AppendOnlyBlockDirectory		*blockDirectory,
 	AOTupleId 						*aoTupleId,
 	int                             columnGroupNo,
-	AppendOnlyBlockDirectoryEntry	*directoryEntry);
+	AppendOnlyBlockDirectoryEntry	*directoryEntry,
+	int64 				*attnum_to_rownum);
 extern bool AppendOnlyBlockDirectory_GetEntryForPartialScan(
 	AppendOnlyBlockDirectory		*blockDirectory,
 	BlockNumber 					blkno,
@@ -221,6 +225,9 @@ extern int64 AOBlkDirScan_GetRowNum(
 extern bool AppendOnlyBlockDirectory_CoversTuple(
 	AppendOnlyBlockDirectory		*blockDirectory,
 	AOTupleId 						*aoTupleId);
+extern bool blkdir_entry_exists(AppendOnlyBlockDirectory *blockDirectory,
+	AOTupleId 				*aoTupleId,
+	int 					columnGroupNo);
 extern void AppendOnlyBlockDirectory_Init_forInsert(
 	AppendOnlyBlockDirectory *blockDirectory,
 	Snapshot appendOnlyMetaDataSnapshot,
@@ -287,7 +294,6 @@ extern void AppendOnlyBlockDirectory_InsertPlaceholder(AppendOnlyBlockDirectory 
 												  int64 firstRowNum,
 												  int64 fileOffset,
 												  int columnGroupNo);
-
 /*
  * AppendOnlyBlockDirectory_UniqueCheck
  *

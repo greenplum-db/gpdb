@@ -600,6 +600,8 @@ RESET
 
 --------------------------------------------------------------------------------
 -- AOCO tables
+-- A difference with AO table is that new column can have zero rows and does not
+-- have block directory entry. So make the test cover that case.
 --------------------------------------------------------------------------------
 
 CREATE TABLE aoco_blkdir_test(i int, j int) USING ao_column DISTRIBUTED BY (j);
@@ -618,11 +620,32 @@ SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_
  (0,2)   | 1     | 1              | 0        | 1            | 0           | 10        
 (2 rows)
 
+-- new column is in missing mode, no block directory entry will be created.
+ALTER TABLE aoco_blkdir_test ADD COLUMN newcol1 int DEFAULT 1;
+ALTER TABLE
+SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
+ tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------+-------+----------------+----------+--------------+-------------+-----------
+ (0,1)   | 1     | 0              | 0        | 1            | 0           | 10        
+ (0,2)   | 1     | 1              | 0        | 1            | 0           | 10        
+(2 rows)
+-- check new column data is fine
+SELECT count(*) = sum(newcol1) from aoco_blkdir_test;
+ ?column? 
+----------
+ t        
+(1 row)
+
 1: INSERT INTO aoco_blkdir_test SELECT i, 2 FROM generate_series(11, 30) i;
 INSERT 0 20
+-- 1. For non-missing columns:
 -- There should be 2 block directory rows, carrying 2 entries each. The rows
 -- from the previous INSERT should not be visible. The entries from the first
 -- INSERT should remain unchanged.
+-- 2. For missing columns:
+-- Some new rows have been inserted to the table after the missing-mode column
+-- was added, so the column is containing data from the block inserted in that
+-- new INSERT. The block directory should reflect that change.
 SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
  tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
 ---------+-------+----------------+----------+--------------+-------------+-----------
@@ -630,7 +653,14 @@ SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_
  (0,3)   | 1     | 0              | 1        | 101          | 80          | 20        
  (0,4)   | 1     | 1              | 0        | 1            | 0           | 10        
  (0,4)   | 1     | 1              | 1        | 101          | 80          | 20        
-(4 rows)
+ (0,5)   | 1     | 2              | 0        | 101          | 0           | 20        
+(5 rows)
+-- check new column data is fine
+SELECT count(*) = sum(newcol1) from aoco_blkdir_test;
+ ?column? 
+----------
+ t        
+(1 row)
 
 1: BEGIN;
 BEGIN
@@ -650,22 +680,25 @@ COMMIT
 SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
  tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
 ---------+-------+----------------+----------+--------------+-------------+-----------
- (0,5)   | 1     | 0              | 0        | 1            | 0           | 10        
- (0,5)   | 1     | 0              | 1        | 101          | 80          | 20        
- (0,5)   | 1     | 0              | 2        | 201          | 200         | 30        
- (0,6)   | 1     | 1              | 0        | 1            | 0           | 10        
- (0,6)   | 1     | 1              | 1        | 101          | 80          | 20        
- (0,6)   | 1     | 1              | 2        | 201          | 200         | 30        
- (0,7)   | 2     | 0              | 0        | 1            | 0           | 40        
- (0,8)   | 2     | 1              | 0        | 1            | 0           | 40        
-(8 rows)
+ (0,6)   | 1     | 0              | 0        | 1            | 0           | 10        
+ (0,6)   | 1     | 0              | 1        | 101          | 80          | 20        
+ (0,6)   | 1     | 0              | 2        | 201          | 200         | 30        
+ (0,7)   | 1     | 1              | 0        | 1            | 0           | 10        
+ (0,7)   | 1     | 1              | 1        | 101          | 80          | 20        
+ (0,7)   | 1     | 1              | 2        | 201          | 200         | 30        
+ (0,8)   | 1     | 2              | 0        | 101          | 0           | 20        
+ (0,8)   | 1     | 2              | 1        | 201          | 120         | 30        
+ (0,9)   | 2     | 0              | 0        | 1            | 0           | 40        
+ (0,10)  | 2     | 1              | 0        | 1            | 0           | 40        
+ (0,11)  | 2     | 2              | 0        | 1            | 0           | 40        
+(11 rows)
 
 TRUNCATE aoco_blkdir_test;
 TRUNCATE TABLE
 -- Insert enough rows to overflow the first block directory minipage by 2.
 INSERT INTO aoco_blkdir_test SELECT i, 2 FROM generate_series(1, 1317143) i;
 INSERT 0 1317143
--- There should be 2 block directory rows, 2 for each column, one with 161
+-- There should be 3 block directory rows, 2 for each column, two with 161
 -- entries covering 1317141 rows and the other with 1 entry covering the 2
 -- overflow rows.
 SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
@@ -993,9 +1026,171 @@ SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_
  (0,2)   | 1     | 1              | 158      | 1292599      | 5177344     | 8181      
  (0,2)   | 1     | 1              | 159      | 1300780      | 5210112     | 8181      
  (0,2)   | 1     | 1              | 160      | 1308961      | 5242880     | 8181      
- (0,3)   | 1     | 0              | 0        | 1317142      | 5275648     | 2         
- (0,4)   | 1     | 1              | 0        | 1317142      | 5275648     | 2         
-(324 rows)
+ (0,3)   | 1     | 2              | 0        | 1            | 0           | 8181      
+ (0,3)   | 1     | 2              | 1        | 8182         | 32768       | 8181      
+ (0,3)   | 1     | 2              | 2        | 16363        | 65536       | 8181      
+ (0,3)   | 1     | 2              | 3        | 24544        | 98304       | 8181      
+ (0,3)   | 1     | 2              | 4        | 32725        | 131072      | 8181      
+ (0,3)   | 1     | 2              | 5        | 40906        | 163840      | 8181      
+ (0,3)   | 1     | 2              | 6        | 49087        | 196608      | 8181      
+ (0,3)   | 1     | 2              | 7        | 57268        | 229376      | 8181      
+ (0,3)   | 1     | 2              | 8        | 65449        | 262144      | 8181      
+ (0,3)   | 1     | 2              | 9        | 73630        | 294912      | 8181      
+ (0,3)   | 1     | 2              | 10       | 81811        | 327680      | 8181      
+ (0,3)   | 1     | 2              | 11       | 89992        | 360448      | 8181      
+ (0,3)   | 1     | 2              | 12       | 98173        | 393216      | 8181      
+ (0,3)   | 1     | 2              | 13       | 106354       | 425984      | 8181      
+ (0,3)   | 1     | 2              | 14       | 114535       | 458752      | 8181      
+ (0,3)   | 1     | 2              | 15       | 122716       | 491520      | 8181      
+ (0,3)   | 1     | 2              | 16       | 130897       | 524288      | 8181      
+ (0,3)   | 1     | 2              | 17       | 139078       | 557056      | 8181      
+ (0,3)   | 1     | 2              | 18       | 147259       | 589824      | 8181      
+ (0,3)   | 1     | 2              | 19       | 155440       | 622592      | 8181      
+ (0,3)   | 1     | 2              | 20       | 163621       | 655360      | 8181      
+ (0,3)   | 1     | 2              | 21       | 171802       | 688128      | 8181      
+ (0,3)   | 1     | 2              | 22       | 179983       | 720896      | 8181      
+ (0,3)   | 1     | 2              | 23       | 188164       | 753664      | 8181      
+ (0,3)   | 1     | 2              | 24       | 196345       | 786432      | 8181      
+ (0,3)   | 1     | 2              | 25       | 204526       | 819200      | 8181      
+ (0,3)   | 1     | 2              | 26       | 212707       | 851968      | 8181      
+ (0,3)   | 1     | 2              | 27       | 220888       | 884736      | 8181      
+ (0,3)   | 1     | 2              | 28       | 229069       | 917504      | 8181      
+ (0,3)   | 1     | 2              | 29       | 237250       | 950272      | 8181      
+ (0,3)   | 1     | 2              | 30       | 245431       | 983040      | 8181      
+ (0,3)   | 1     | 2              | 31       | 253612       | 1015808     | 8181      
+ (0,3)   | 1     | 2              | 32       | 261793       | 1048576     | 8181      
+ (0,3)   | 1     | 2              | 33       | 269974       | 1081344     | 8181      
+ (0,3)   | 1     | 2              | 34       | 278155       | 1114112     | 8181      
+ (0,3)   | 1     | 2              | 35       | 286336       | 1146880     | 8181      
+ (0,3)   | 1     | 2              | 36       | 294517       | 1179648     | 8181      
+ (0,3)   | 1     | 2              | 37       | 302698       | 1212416     | 8181      
+ (0,3)   | 1     | 2              | 38       | 310879       | 1245184     | 8181      
+ (0,3)   | 1     | 2              | 39       | 319060       | 1277952     | 8181      
+ (0,3)   | 1     | 2              | 40       | 327241       | 1310720     | 8181      
+ (0,3)   | 1     | 2              | 41       | 335422       | 1343488     | 8181      
+ (0,3)   | 1     | 2              | 42       | 343603       | 1376256     | 8181      
+ (0,3)   | 1     | 2              | 43       | 351784       | 1409024     | 8181      
+ (0,3)   | 1     | 2              | 44       | 359965       | 1441792     | 8181      
+ (0,3)   | 1     | 2              | 45       | 368146       | 1474560     | 8181      
+ (0,3)   | 1     | 2              | 46       | 376327       | 1507328     | 8181      
+ (0,3)   | 1     | 2              | 47       | 384508       | 1540096     | 8181      
+ (0,3)   | 1     | 2              | 48       | 392689       | 1572864     | 8181      
+ (0,3)   | 1     | 2              | 49       | 400870       | 1605632     | 8181      
+ (0,3)   | 1     | 2              | 50       | 409051       | 1638400     | 8181      
+ (0,3)   | 1     | 2              | 51       | 417232       | 1671168     | 8181      
+ (0,3)   | 1     | 2              | 52       | 425413       | 1703936     | 8181      
+ (0,3)   | 1     | 2              | 53       | 433594       | 1736704     | 8181      
+ (0,3)   | 1     | 2              | 54       | 441775       | 1769472     | 8181      
+ (0,3)   | 1     | 2              | 55       | 449956       | 1802240     | 8181      
+ (0,3)   | 1     | 2              | 56       | 458137       | 1835008     | 8181      
+ (0,3)   | 1     | 2              | 57       | 466318       | 1867776     | 8181      
+ (0,3)   | 1     | 2              | 58       | 474499       | 1900544     | 8181      
+ (0,3)   | 1     | 2              | 59       | 482680       | 1933312     | 8181      
+ (0,3)   | 1     | 2              | 60       | 490861       | 1966080     | 8181      
+ (0,3)   | 1     | 2              | 61       | 499042       | 1998848     | 8181      
+ (0,3)   | 1     | 2              | 62       | 507223       | 2031616     | 8181      
+ (0,3)   | 1     | 2              | 63       | 515404       | 2064384     | 8181      
+ (0,3)   | 1     | 2              | 64       | 523585       | 2097152     | 8181      
+ (0,3)   | 1     | 2              | 65       | 531766       | 2129920     | 8181      
+ (0,3)   | 1     | 2              | 66       | 539947       | 2162688     | 8181      
+ (0,3)   | 1     | 2              | 67       | 548128       | 2195456     | 8181      
+ (0,3)   | 1     | 2              | 68       | 556309       | 2228224     | 8181      
+ (0,3)   | 1     | 2              | 69       | 564490       | 2260992     | 8181      
+ (0,3)   | 1     | 2              | 70       | 572671       | 2293760     | 8181      
+ (0,3)   | 1     | 2              | 71       | 580852       | 2326528     | 8181      
+ (0,3)   | 1     | 2              | 72       | 589033       | 2359296     | 8181      
+ (0,3)   | 1     | 2              | 73       | 597214       | 2392064     | 8181      
+ (0,3)   | 1     | 2              | 74       | 605395       | 2424832     | 8181      
+ (0,3)   | 1     | 2              | 75       | 613576       | 2457600     | 8181      
+ (0,3)   | 1     | 2              | 76       | 621757       | 2490368     | 8181      
+ (0,3)   | 1     | 2              | 77       | 629938       | 2523136     | 8181      
+ (0,3)   | 1     | 2              | 78       | 638119       | 2555904     | 8181      
+ (0,3)   | 1     | 2              | 79       | 646300       | 2588672     | 8181      
+ (0,3)   | 1     | 2              | 80       | 654481       | 2621440     | 8181      
+ (0,3)   | 1     | 2              | 81       | 662662       | 2654208     | 8181      
+ (0,3)   | 1     | 2              | 82       | 670843       | 2686976     | 8181      
+ (0,3)   | 1     | 2              | 83       | 679024       | 2719744     | 8181      
+ (0,3)   | 1     | 2              | 84       | 687205       | 2752512     | 8181      
+ (0,3)   | 1     | 2              | 85       | 695386       | 2785280     | 8181      
+ (0,3)   | 1     | 2              | 86       | 703567       | 2818048     | 8181      
+ (0,3)   | 1     | 2              | 87       | 711748       | 2850816     | 8181      
+ (0,3)   | 1     | 2              | 88       | 719929       | 2883584     | 8181      
+ (0,3)   | 1     | 2              | 89       | 728110       | 2916352     | 8181      
+ (0,3)   | 1     | 2              | 90       | 736291       | 2949120     | 8181      
+ (0,3)   | 1     | 2              | 91       | 744472       | 2981888     | 8181      
+ (0,3)   | 1     | 2              | 92       | 752653       | 3014656     | 8181      
+ (0,3)   | 1     | 2              | 93       | 760834       | 3047424     | 8181      
+ (0,3)   | 1     | 2              | 94       | 769015       | 3080192     | 8181      
+ (0,3)   | 1     | 2              | 95       | 777196       | 3112960     | 8181      
+ (0,3)   | 1     | 2              | 96       | 785377       | 3145728     | 8181      
+ (0,3)   | 1     | 2              | 97       | 793558       | 3178496     | 8181      
+ (0,3)   | 1     | 2              | 98       | 801739       | 3211264     | 8181      
+ (0,3)   | 1     | 2              | 99       | 809920       | 3244032     | 8181      
+ (0,3)   | 1     | 2              | 100      | 818101       | 3276800     | 8181      
+ (0,3)   | 1     | 2              | 101      | 826282       | 3309568     | 8181      
+ (0,3)   | 1     | 2              | 102      | 834463       | 3342336     | 8181      
+ (0,3)   | 1     | 2              | 103      | 842644       | 3375104     | 8181      
+ (0,3)   | 1     | 2              | 104      | 850825       | 3407872     | 8181      
+ (0,3)   | 1     | 2              | 105      | 859006       | 3440640     | 8181      
+ (0,3)   | 1     | 2              | 106      | 867187       | 3473408     | 8181      
+ (0,3)   | 1     | 2              | 107      | 875368       | 3506176     | 8181      
+ (0,3)   | 1     | 2              | 108      | 883549       | 3538944     | 8181      
+ (0,3)   | 1     | 2              | 109      | 891730       | 3571712     | 8181      
+ (0,3)   | 1     | 2              | 110      | 899911       | 3604480     | 8181      
+ (0,3)   | 1     | 2              | 111      | 908092       | 3637248     | 8181      
+ (0,3)   | 1     | 2              | 112      | 916273       | 3670016     | 8181      
+ (0,3)   | 1     | 2              | 113      | 924454       | 3702784     | 8181      
+ (0,3)   | 1     | 2              | 114      | 932635       | 3735552     | 8181      
+ (0,3)   | 1     | 2              | 115      | 940816       | 3768320     | 8181      
+ (0,3)   | 1     | 2              | 116      | 948997       | 3801088     | 8181      
+ (0,3)   | 1     | 2              | 117      | 957178       | 3833856     | 8181      
+ (0,3)   | 1     | 2              | 118      | 965359       | 3866624     | 8181      
+ (0,3)   | 1     | 2              | 119      | 973540       | 3899392     | 8181      
+ (0,3)   | 1     | 2              | 120      | 981721       | 3932160     | 8181      
+ (0,3)   | 1     | 2              | 121      | 989902       | 3964928     | 8181      
+ (0,3)   | 1     | 2              | 122      | 998083       | 3997696     | 8181      
+ (0,3)   | 1     | 2              | 123      | 1006264      | 4030464     | 8181      
+ (0,3)   | 1     | 2              | 124      | 1014445      | 4063232     | 8181      
+ (0,3)   | 1     | 2              | 125      | 1022626      | 4096000     | 8181      
+ (0,3)   | 1     | 2              | 126      | 1030807      | 4128768     | 8181      
+ (0,3)   | 1     | 2              | 127      | 1038988      | 4161536     | 8181      
+ (0,3)   | 1     | 2              | 128      | 1047169      | 4194304     | 8181      
+ (0,3)   | 1     | 2              | 129      | 1055350      | 4227072     | 8181      
+ (0,3)   | 1     | 2              | 130      | 1063531      | 4259840     | 8181      
+ (0,3)   | 1     | 2              | 131      | 1071712      | 4292608     | 8181      
+ (0,3)   | 1     | 2              | 132      | 1079893      | 4325376     | 8181      
+ (0,3)   | 1     | 2              | 133      | 1088074      | 4358144     | 8181      
+ (0,3)   | 1     | 2              | 134      | 1096255      | 4390912     | 8181      
+ (0,3)   | 1     | 2              | 135      | 1104436      | 4423680     | 8181      
+ (0,3)   | 1     | 2              | 136      | 1112617      | 4456448     | 8181      
+ (0,3)   | 1     | 2              | 137      | 1120798      | 4489216     | 8181      
+ (0,3)   | 1     | 2              | 138      | 1128979      | 4521984     | 8181      
+ (0,3)   | 1     | 2              | 139      | 1137160      | 4554752     | 8181      
+ (0,3)   | 1     | 2              | 140      | 1145341      | 4587520     | 8181      
+ (0,3)   | 1     | 2              | 141      | 1153522      | 4620288     | 8181      
+ (0,3)   | 1     | 2              | 142      | 1161703      | 4653056     | 8181      
+ (0,3)   | 1     | 2              | 143      | 1169884      | 4685824     | 8181      
+ (0,3)   | 1     | 2              | 144      | 1178065      | 4718592     | 8181      
+ (0,3)   | 1     | 2              | 145      | 1186246      | 4751360     | 8181      
+ (0,3)   | 1     | 2              | 146      | 1194427      | 4784128     | 8181      
+ (0,3)   | 1     | 2              | 147      | 1202608      | 4816896     | 8181      
+ (0,3)   | 1     | 2              | 148      | 1210789      | 4849664     | 8181      
+ (0,3)   | 1     | 2              | 149      | 1218970      | 4882432     | 8181      
+ (0,3)   | 1     | 2              | 150      | 1227151      | 4915200     | 8181      
+ (0,3)   | 1     | 2              | 151      | 1235332      | 4947968     | 8181      
+ (0,3)   | 1     | 2              | 152      | 1243513      | 4980736     | 8181      
+ (0,3)   | 1     | 2              | 153      | 1251694      | 5013504     | 8181      
+ (0,3)   | 1     | 2              | 154      | 1259875      | 5046272     | 8181      
+ (0,3)   | 1     | 2              | 155      | 1268056      | 5079040     | 8181      
+ (0,3)   | 1     | 2              | 156      | 1276237      | 5111808     | 8181      
+ (0,3)   | 1     | 2              | 157      | 1284418      | 5144576     | 8181      
+ (0,3)   | 1     | 2              | 158      | 1292599      | 5177344     | 8181      
+ (0,3)   | 1     | 2              | 159      | 1300780      | 5210112     | 8181      
+ (0,3)   | 1     | 2              | 160      | 1308961      | 5242880     | 8181      
+ (0,4)   | 1     | 0              | 0        | 1317142      | 5275648     | 2         
+ (0,5)   | 1     | 1              | 0        | 1317142      | 5275648     | 2         
+ (0,6)   | 1     | 2              | 0        | 1317142      | 5275648     | 2         
+(486 rows)
 
 -- Unique index white box tests
 DROP TABLE aoco_blkdir_test;
@@ -1141,9 +1336,14 @@ COMMIT
 DELETE FROM aoco_blkdir_test_rowcount WHERE j = 7;
 DELETE 50
 
+-- add a new column
+ALTER TABLE aoco_blkdir_test_rowcount ADD COLUMN newcol int DEFAULT 1;
+ALTER TABLE
+
 CREATE INDEX aoco_blkdir_test_rowcount_idx ON aoco_blkdir_test_rowcount(i);
 CREATE INDEX
 
+-- for the new column, no block directory entry but the aocsseg reflects same info as other columns
 SELECT segno, columngroup_no, sum(row_count) AS totalrows FROM (SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno, columngroup_no;
  segno | columngroup_no | totalrows 
 -------+----------------+-----------
@@ -1161,13 +1361,17 @@ SELECT segno, column_num, sum(tupcount) AS totalrows FROM gp_toolkit.__gp_aocsse
 -------+------------+-----------
  1     | 0          | 10        
  1     | 1          | 10        
+ 1     | 2          | 10        
  2     | 0          | 20        
  2     | 1          | 20        
+ 2     | 2          | 20        
  3     | 0          | 40        
  3     | 1          | 40        
+ 3     | 2          | 40        
  4     | 0          | 50        
  4     | 1          | 50        
-(8 rows)
+ 4     | 2          | 50        
+(12 rows)
 
 -- Case2: with VACUUM ANALYZE
 DROP TABLE aoco_blkdir_test_rowcount;
@@ -1217,11 +1421,16 @@ ROLLBACK
 4: COMMIT;
 COMMIT
 
+-- add a new column
+ALTER TABLE aoco_blkdir_test_rowcount ADD COLUMN newcol int DEFAULT 1;
+ALTER TABLE
+
 DELETE FROM aoco_blkdir_test_rowcount WHERE j = 7;
 DELETE 200
 VACUUM ANALYZE aoco_blkdir_test_rowcount;
 VACUUM
 
+-- for the new column, no block directory entry but the aocsseg reflects same info as other columns
 SELECT segno, columngroup_no, sum(row_count) AS totalrows FROM (SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno, columngroup_no;
  segno | columngroup_no | totalrows 
 -------+----------------+-----------
@@ -1235,13 +1444,17 @@ SELECT segno, column_num, sum(tupcount) AS totalrows FROM gp_toolkit.__gp_aocsse
 -------+------------+-----------
  1     | 0          | 40        
  1     | 1          | 40        
+ 1     | 2          | 40        
  2     | 0          | 80        
  2     | 1          | 80        
+ 2     | 2          | 80        
  3     | 0          | 0         
  3     | 1          | 0         
+ 3     | 2          | 0         
  4     | 0          | 0         
  4     | 1          | 0         
-(8 rows)
+ 4     | 2          | 0         
+(12 rows)
 
 UPDATE aoco_blkdir_test_rowcount SET i = i + 1;
 UPDATE 120
@@ -1253,19 +1466,31 @@ SELECT segno, columngroup_no, sum(row_count) AS totalrows FROM (SELECT (gp_toolk
 -------+----------------+-----------
  3     | 0              | 120       
  3     | 1              | 120       
-(2 rows)
+ 3     | 2              | 120       
+(3 rows)
 SELECT segno, column_num, sum(tupcount) AS totalrows FROM gp_toolkit.__gp_aocsseg('aoco_blkdir_test_rowcount') WHERE segment_id = 0 GROUP BY segno, column_num;
  segno | column_num | totalrows 
 -------+------------+-----------
  1     | 0          | 0         
  1     | 1          | 0         
+ 1     | 2          | 0         
  2     | 0          | 0         
  2     | 1          | 0         
+ 2     | 2          | 0         
  3     | 0          | 120       
  3     | 1          | 120       
+ 3     | 2          | 120       
  4     | 0          | 0         
  4     | 1          | 0         
-(8 rows)
+ 4     | 2          | 0         
+(12 rows)
+
+-- check new column data is fine
+SELECT count(*) = sum(newcol) FROM aoco_blkdir_test_rowcount;
+ ?column? 
+----------
+ t        
+(1 row)
 
 DROP TABLE aoco_blkdir_test_rowcount;
 DROP TABLE
@@ -1279,6 +1504,8 @@ CREATE INDEX ON aoco_fetch_hole(i);
 CREATE INDEX
 INSERT INTO aoco_fetch_hole VALUES (2, 0);
 INSERT 0 1
+ALTER TABLE aoco_fetch_hole ADD COLUMN newcol int DEFAULT 1;
+ALTER TABLE
 -- Create a hole after the last entry (of the last minipage) in the blkdir.
 BEGIN;
 BEGIN
@@ -1286,6 +1513,7 @@ INSERT INTO aoco_fetch_hole SELECT 3, j FROM generate_series(1, 20) j;
 INSERT 0 20
 ABORT;
 ROLLBACK
+-- the new column is still completely missing after ABORT, so no block directory entry
 SELECT (gp_toolkit.__gp_aoblkdir('aoco_fetch_hole')).* FROM gp_dist_random('gp_id') WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
  tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
 ---------+-------+----------------+----------+--------------+-------------+-----------
@@ -1331,6 +1559,38 @@ SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'status', db
  
 (1 row)
 
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'reset', dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- Now do the same if only fetch the new column
+EXPLAIN SELECT newcol FROM aoco_fetch_hole WHERE i = 3;
+ QUERY PLAN                                                                                
+-------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=4.75..39.51 rows=78 width=4)              
+   ->  Bitmap Heap Scan on aoco_fetch_hole  (cost=4.75..38.47 rows=26 width=4)             
+         Recheck Cond: (i = 3)                                                             
+         ->  Bitmap Index Scan on aoco_fetch_hole_i_idx  (cost=0.00..4.75 rows=26 width=0) 
+               Index Cond: (i = 3)                                                         
+ Optimizer: Postgres-based planner                                                         
+(6 rows)
+SELECT gp_inject_fault_infinite('AppendOnlyBlockDirectory_GetEntry_sysscan', 'skip', dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+SELECT newcol FROM aoco_fetch_hole WHERE i = 3;
+ newcol 
+--------
+(0 rows)
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'status', dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+ gp_inject_fault                                                                                                                                                                                                                                  
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Success: fault name:'AppendOnlyBlockDirectory_GetEntry_sysscan' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'20' 
+ 
+(1 row)
 SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'reset', dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
  gp_inject_fault 
 -----------------

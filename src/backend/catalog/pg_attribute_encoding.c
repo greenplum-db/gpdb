@@ -367,6 +367,57 @@ ClearAttributeEncodingLastrownums(Oid attrelid)
 	heap_close(encrel, RowExclusiveLock);
 }
 
+/*
+ * Clear the lastrownum field (i.e. write NULL) for one of the 
+ * pg_attribute_encoding entries of the given relation.
+ */
+void
+ClearAttributeEncodingLastrownumsByAttnum(Oid attrelid, int attnum)
+{
+	Relation	encrel;
+	ScanKeyData 	skey;
+	SysScanDesc 	scan;
+	HeapTuple	oldtup;
+	HeapTuple	newtup;
+	Datum	   	values[Natts_pg_attribute_encoding];
+	bool	    	nulls[Natts_pg_attribute_encoding];
+	bool		repl[Natts_pg_attribute_encoding];
+
+	encrel = heap_open(AttributeEncodingRelationId, RowExclusiveLock);
+
+	ScanKeyInit(&skey,
+				Anum_pg_attribute_encoding_attrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(attrelid));
+	scan = systable_beginscan(encrel, AttributeEncodingAttrelidIndexId, true,
+							  NULL, 1, &skey);
+	while (HeapTupleIsValid(oldtup = systable_getnext(scan)))
+	{
+		Form_pg_attribute_encoding tupform = (Form_pg_attribute_encoding) GETSTRUCT(oldtup);
+
+		if (tupform->attnum != attnum)
+			continue;
+
+		MemSet(values, 0, sizeof(values));
+		MemSet(nulls, false, sizeof(nulls));
+		MemSet(repl, false, sizeof(repl));
+
+		heap_deform_tuple(oldtup, RelationGetDescr(encrel), values, nulls);
+
+		repl[Anum_pg_attribute_encoding_lastrownums - 1] = true;
+		nulls[Anum_pg_attribute_encoding_lastrownums - 1] = true;
+
+		newtup = heap_modify_tuple(oldtup, RelationGetDescr(encrel), values, nulls, repl);
+
+		CatalogTupleUpdate(encrel, &oldtup->t_self, newtup);
+		heap_freetuple(newtup);
+	}
+
+	systable_endscan(scan);
+
+	heap_close(encrel, RowExclusiveLock);
+}
+
 void
 UpdateAttributeEncodings(Oid relid, List *new_attr_encodings)
 {
@@ -851,6 +902,60 @@ GetAttnumToLastrownumMapping(Oid relid, int natts)
 	heap_close(rel, AccessShareLock);
 
 	return attnum_to_lastrownum;
+}
+
+/*
+ * Check if an attribute has valid lastrownums field in pg_attribute_encoding.
+ * Used for checking if the attribute is complete or not.
+ * 
+ * Return a palloc'ed array based on the number of attributes
+ */
+bool*
+ExistValidLastrownums(Oid relid, int natts)
+{
+	bool 		*lastrownums_exist = (bool*) palloc0(natts * sizeof(bool));
+	Relation    	encrel;
+	SysScanDesc 	scan;
+	ScanKeyData 	skey[1];
+	HeapTuple	tup;
+	bool 		isnull;
+
+	Assert(OidIsValid(relid));
+
+	encrel = heap_open(AttributeEncodingRelationId, AccessShareLock);
+
+	ScanKeyInit(&skey[0],
+				Anum_pg_attribute_encoding_attrelid,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(relid));
+	scan = systable_beginscan(encrel, AttributeEncodingAttrelidIndexId, true,
+							  NULL, 1, skey);
+
+	while (HeapTupleIsValid(tup = systable_getnext(scan)))
+	{
+		int 		attnum;
+
+		attnum = heap_getattr(tup, Anum_pg_attribute_encoding_attnum,
+							   RelationGetDescr(encrel), &isnull);
+		Assert(!isnull); /* an entry have to have a valid attnum */
+
+		/* 
+		 * do not go beyond what caller expects (e.g. new column already has 
+		 * pg_attribute_encoding entry, but they are empty and we won't consider).
+		 */
+		if (attnum > natts)
+			continue;
+
+		heap_getattr(tup, Anum_pg_attribute_encoding_lastrownums,
+							   RelationGetDescr(encrel), &isnull);
+		if (!isnull)
+			lastrownums_exist[attnum - 1] = true;
+	}
+
+	systable_endscan(scan);
+	heap_close(encrel, AccessShareLock);
+
+	return lastrownums_exist;
 }
 
 /*

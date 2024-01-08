@@ -2756,7 +2756,8 @@ appendonly_fetch(AppendOnlyFetchDesc aoFetchDesc,
 										   &aoFetchDesc->blockDirectory,
 										   aoTupleId,
 										   0,
-										   &aoFetchDesc->currentBlock.blockDirectoryEntry))
+										   &aoFetchDesc->currentBlock.blockDirectoryEntry,
+										   NULL))
 	{
 		if (slot != NULL)
 		{

@@ -36,6 +36,7 @@
 #include "utils/snapshot.h"
 
 #include "access/appendonlytid.h"
+#include "access/appendonlywriter.h"
 
 #include "cdb/cdbbufferedappend.h"
 #include "cdb/cdbbufferedread.h"

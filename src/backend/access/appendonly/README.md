@@ -313,3 +313,44 @@ as a source of tuple visibility determination.
 
 [1] https://github.com/greenplum-db/gpdb/commit/258ec966b26929430fc5dc9f6e6fe09854644302
 [2] https://github.com/greenplum-db/gpdb/commit/9d7cfbf62d06cf4825de6589b321c11d7596a947
+
+# Missing values
+
+Append-optimized table can have missing values, i.e. values that are not 
+physically stored in the data files, but are scannable when you select from the
+table. That is the outcome of the "missing-mode" ALTER TABLE ... ADD COLUMN 
+optimization. At the time of ADD COLUMN, we do not write any data for the new 
+column but just record the missing value for the new column in 
+pg_attribute.attmissingval. Then, at the time of table scan, we read the
+missing value instead of reading from data file for that column. This is the
+same mechanism as we have already been doing for heap tables[1].
+
+There is however some difference between AO row-oriented and column-oriented
+tables in how we handle the missing values. For AO row-oriented tables, things 
+are relatively simple. Compared to heap tables, the only difference is that we 
+do not store the number of attributes in memtuple so we do not know what 
+attributes are "missing". Instead, we keep track of a snapshot of "last row 
+numbers" (stored in pg_attribute_encoding.lastrownums) for a newly added column.
+If a row in a particular segment file has a row number equal to or smaller than
+the "last row number" of that segment for a column, we know that this row does 
+not contain that column, i.e. the attribute value is "missing" in the row. So 
+we will use the "missing value" for that column.
+
+For AO column-oriented tables, the same mechanism of "last row numbers" is used.
+However, there is added complexity about scanning newly-added column *alone*. 
+As mentioned, in order to check if a column is missing in a row, we need to 
+know the row number first. But column-oriented tables allow scanning a subset 
+of columns (i.e. column projection). If we scan a newly-added column alone (or 
+scan several such columns), we are not able to get the full set of row numbers 
+that are supposed to be in the table, so the scan result will be incomplete.
+Our solution is to always scan an "anchor" column first, which has the full set
+of row numbers in the table. In the process of scanning a row, once we scan the
+datum for the anchor column, we will use its row number to check if other 
+columns have it missing or not.
+
+In addition, for column-oriented tables, the missing values do not have 
+corresponding block directory entry that represent their row numbers. This is
+because the block directory describes what is stored in physical blocks. We 
+should not ever need to scan it for the missing values, so we should be fine.
+
+[1] https://github.com/greenplum-db/gpdb/commit/16828d5c0273b4fe5f10f42588005f16b415b2d8

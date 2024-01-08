@@ -236,6 +236,8 @@ RESET optimizer;
 
 --------------------------------------------------------------------------------
 -- AOCO tables
+-- A difference with AO table is that new column can have zero rows and does not
+-- have block directory entry. So make the test cover that case.
 --------------------------------------------------------------------------------
 
 CREATE TABLE aoco_blkdir_test(i int, j int) USING ao_column DISTRIBUTED BY (j);
@@ -247,12 +249,26 @@ CREATE INDEX aoco_blkdir_test_idx ON aoco_blkdir_test(i);
 SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_id')
 WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
 
+-- new column is in missing mode, no block directory entry will be created.
+ALTER TABLE aoco_blkdir_test ADD COLUMN newcol1 int DEFAULT 1;
+SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_id')
+WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
+-- check new column data is fine
+SELECT count(*) = sum(newcol1) from aoco_blkdir_test;
+
 1: INSERT INTO aoco_blkdir_test SELECT i, 2 FROM generate_series(11, 30) i;
+-- 1. For non-missing columns:
 -- There should be 2 block directory rows, carrying 2 entries each. The rows
 -- from the previous INSERT should not be visible. The entries from the first
 -- INSERT should remain unchanged.
+-- 2. For missing columns:
+-- Some new rows have been inserted to the table after the missing-mode column
+-- was added, so the column is containing data from the block inserted in that
+-- new INSERT. The block directory should reflect that change.
 SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_id')
 WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
+-- check new column data is fine
+SELECT count(*) = sum(newcol1) from aoco_blkdir_test;
 
 1: BEGIN;
 1: INSERT INTO aoco_blkdir_test SELECT i, 2 FROM generate_series(31, 60) i;
@@ -269,7 +285,7 @@ WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
 TRUNCATE aoco_blkdir_test;
 -- Insert enough rows to overflow the first block directory minipage by 2.
 INSERT INTO aoco_blkdir_test SELECT i, 2 FROM generate_series(1, 1317143) i;
--- There should be 2 block directory rows, 2 for each column, one with 161
+-- There should be 3 block directory rows, 2 for each column, two with 161
 -- entries covering 1317141 rows and the other with 1 entry covering the 2
 -- overflow rows.
 SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test')).* FROM gp_dist_random('gp_id')
@@ -363,8 +379,12 @@ CREATE TABLE aoco_blkdir_test_rowcount(i int, j int) USING ao_column DISTRIBUTED
 4: COMMIT;
 DELETE FROM aoco_blkdir_test_rowcount WHERE j = 7;
 
+-- add a new column
+ALTER TABLE aoco_blkdir_test_rowcount ADD COLUMN newcol int DEFAULT 1;
+
 CREATE INDEX aoco_blkdir_test_rowcount_idx ON aoco_blkdir_test_rowcount(i);
 
+-- for the new column, no block directory entry but the aocsseg reflects same info as other columns
 SELECT segno, columngroup_no, sum(row_count) AS totalrows FROM
     (SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id')
      WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno, columngroup_no;
@@ -396,9 +416,13 @@ CREATE INDEX aoco_blkdir_test_rowcount_idx ON aoco_blkdir_test_rowcount(i);
 3: ABORT;
 4: COMMIT;
 
+-- add a new column
+ALTER TABLE aoco_blkdir_test_rowcount ADD COLUMN newcol int DEFAULT 1;
+
 DELETE FROM aoco_blkdir_test_rowcount WHERE j = 7;
 VACUUM ANALYZE aoco_blkdir_test_rowcount;
 
+-- for the new column, no block directory entry but the aocsseg reflects same info as other columns
 SELECT segno, columngroup_no, sum(row_count) AS totalrows FROM
     (SELECT (gp_toolkit.__gp_aoblkdir('aoco_blkdir_test_rowcount')).* FROM gp_dist_random('gp_id')
      WHERE gp_segment_id = 0)s GROUP BY segno, columngroup_no ORDER BY segno, columngroup_no;
@@ -414,6 +438,9 @@ SELECT segno, columngroup_no, sum(row_count) AS totalrows FROM
 SELECT segno, column_num, sum(tupcount) AS totalrows FROM
     gp_toolkit.__gp_aocsseg('aoco_blkdir_test_rowcount') WHERE segment_id = 0 GROUP BY segno, column_num;
 
+-- check new column data is fine
+SELECT count(*) = sum(newcol) FROM aoco_blkdir_test_rowcount;
+
 DROP TABLE aoco_blkdir_test_rowcount;
 
 --
@@ -422,10 +449,12 @@ DROP TABLE aoco_blkdir_test_rowcount;
 CREATE TABLE aoco_fetch_hole(i int, j int) USING ao_row;
 CREATE INDEX ON aoco_fetch_hole(i);
 INSERT INTO aoco_fetch_hole VALUES (2, 0);
+ALTER TABLE aoco_fetch_hole ADD COLUMN newcol int DEFAULT 1;
 -- Create a hole after the last entry (of the last minipage) in the blkdir.
 BEGIN;
 INSERT INTO aoco_fetch_hole SELECT 3, j FROM generate_series(1, 20) j;
 ABORT;
+-- the new column is still completely missing after ABORT, so no block directory entry
 SELECT (gp_toolkit.__gp_aoblkdir('aoco_fetch_hole')).* FROM gp_dist_random('gp_id')
 WHERE gp_segment_id = 0 ORDER BY 1,2,3,4,5;
 
@@ -443,6 +472,16 @@ SELECT count(*) FROM aoco_fetch_hole WHERE i = 3;
 SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'status', dbid)
 FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
 
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'reset', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+
+-- Now do the same if only fetch the new column
+EXPLAIN SELECT newcol FROM aoco_fetch_hole WHERE i = 3;
+SELECT gp_inject_fault_infinite('AppendOnlyBlockDirectory_GetEntry_sysscan', 'skip', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
+SELECT newcol FROM aoco_fetch_hole WHERE i = 3;
+SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'status', dbid)
+FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
 SELECT gp_inject_fault('AppendOnlyBlockDirectory_GetEntry_sysscan', 'reset', dbid)
 FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
 
