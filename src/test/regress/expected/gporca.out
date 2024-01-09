@@ -13263,6 +13263,27 @@ explain (costs off) select count(*), t2.c from roj1 t1 left join roj2 t2 on t1.a
  Optimizer: Postgres query optimizer
 (13 rows)
 
+-- check that ROJ can be disabled via GUC
+set optimizer_enable_right_outer_join=off;
+explain (costs off) select count(*), t2.c from roj1 t1 left join roj2 t2 on t1.a = t2.c group by t2.c;
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  HashAggregate
+         Group Key: t2.c
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Hash Key: t2.c
+               ->  HashAggregate
+                     Group Key: t2.c
+                     ->  Hash Right Join
+                           Hash Cond: (t2.c = t1.a)
+                           ->  Seq Scan on roj2 t2
+                           ->  Hash
+                                 ->  Seq Scan on roj1 t1
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+reset optimizer_enable_right_outer_join;
 reset optimizer_enable_motion_redistribute;
 reset optimizer_trace_fallback;
 reset enable_sort;

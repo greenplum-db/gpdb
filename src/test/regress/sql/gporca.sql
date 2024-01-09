@@ -2822,6 +2822,12 @@ analyze roj2;
 set optimizer_enable_motion_redistribute=off;
 select count(*), t2.c from roj1 t1 left join roj2 t2 on t1.a = t2.c group by t2.c;
 explain (costs off) select count(*), t2.c from roj1 t1 left join roj2 t2 on t1.a = t2.c group by t2.c;
+
+-- check that ROJ can be disabled via GUC
+set optimizer_enable_right_outer_join=off;
+explain (costs off) select count(*), t2.c from roj1 t1 left join roj2 t2 on t1.a = t2.c group by t2.c;
+reset optimizer_enable_right_outer_join;
+
 reset optimizer_enable_motion_redistribute;
 
 reset optimizer_trace_fallback;
