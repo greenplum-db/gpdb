@@ -159,8 +159,8 @@ public:
 		  m_elems(nullptr)
 	{
 		// do not allocate in constructor; defer allocation to first insertion
-		static_assert(nullptr != CleanupFn,
-					  "No valid destroy function specified");
+		GPOS_CPL_ASSERT(nullptr != CleanupFn,
+						"No valid destroy function specified");
 	}
 
 	// dtor
