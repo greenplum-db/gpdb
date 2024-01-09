@@ -103,7 +103,7 @@ choose_setop_type(List *pathlist)
 }
 
 
-void
+bool
 adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSetOpType setop_type)
 {
 	ListCell   *pathcell;
@@ -117,6 +117,26 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 		List	   *subtlist = (List *) lfirst(tlistcell);
 
 		adjusted_path = subpath;
+
+		if (CdbPathLocus_IsOuterQuery(subpath->locus)
+			&& setop_type != PSETOP_SEQUENTIAL_OUTERQUERY)
+		{
+			return false;
+		}
+
+		if (CdbPathLocus_IsBottleneck(subpath->locus)
+			&& setop_type == PSETOP_PARALLEL_PARTITIONED)
+		{
+			return false;
+		}
+
+		if ((CdbPathLocus_IsGeneral(subpath->locus)
+			|| CdbPathLocus_IsReplicated(subpath->locus))
+			&& setop_type != PSETOP_GENERAL)
+		{
+			return false;
+		}
+
 		switch (setop_type)
 		{
 			case PSETOP_GENERAL:
@@ -144,9 +164,9 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 					case CdbLocusType_Replicated:
 					case CdbLocusType_OuterQuery:
 					case CdbLocusType_End:
-						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
+						ereport(DEBUG1, (errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
-						break;
+						return false;
 				}
 				break;
 
@@ -183,9 +203,9 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 					case CdbLocusType_Null:
 					case CdbLocusType_Replicated:
 					case CdbLocusType_End:
-						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
+						ereport(DEBUG1, (errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
-						break;
+						return false;
 				}
 				break;
 
@@ -220,17 +240,17 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 					case CdbLocusType_Null:
 					case CdbLocusType_Replicated:
 					case CdbLocusType_End:
-						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
+						ereport(DEBUG1, (errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
-						break;
+						return false;
 				}
 				break;
 
 			default:
 				/* Can't happen! */
-				ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
+				ereport(DEBUG1, (errcode(ERRCODE_INTERNAL_ERROR),
 								errmsg("unexpected arguments to set operation")));
-				break;
+				return false;
 		}
 
 		/* If we made changes, inject them into the argument list. */
@@ -241,7 +261,7 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 		}
 	}
 
-	return;
+	return true;
 }
 
 /*

@@ -62,7 +62,7 @@ extern
 GpSetOpType choose_setop_type(List *pathlist);
 
 extern
-void adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSetOpType setop_type);
+bool adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSetOpType setop_type);
 
 
 extern Path *make_motion_hash_all_targets(PlannerInfo *root, Path *subpath, List *tlist);

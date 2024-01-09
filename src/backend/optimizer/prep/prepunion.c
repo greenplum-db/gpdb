@@ -832,24 +832,6 @@ generate_nonunion_paths(SetOperationStmt *op, PlannerInfo *root,
 		firstFlag = 1;
 	}
 
-	/* GPDB_96_MERGE_FIXME: We should use the new pathified upper planner
-	 * infrastructure for this. I think we should create multiple Paths,
-	 * representing different kinds of PSETOP_* implementations, and
-	 * let the "add_path()" choose the cheapest one.
-	 */
-
-	/* CDB: Decide on approach, condition argument plans to suit. */
-	if ( Gp_role == GP_ROLE_DISPATCH )
-	{
-		optype = choose_setop_type(pathlist);
-		adjust_setop_arguments(root, pathlist, tlist_list, optype);
-	}
-	else if ( Gp_role == GP_ROLE_UTILITY 
-			|| Gp_role == GP_ROLE_EXECUTE ) /* MPP-2928 */
-	{
-		optype = PSETOP_SEQUENTIAL_QD;
-	}
-
 	/*
 	 * Generate tlist for Append plan node.
 	 *
@@ -868,13 +850,6 @@ generate_nonunion_paths(SetOperationStmt *op, PlannerInfo *root,
 	result_rel = fetch_upper_rel(root, UPPERREL_SETOP,
 								 bms_union(lrel->relids, rrel->relids));
 	result_rel->reltarget = create_pathtarget(root, tlist);
-
-	/*
-	 * Append the child results together.
-	 */
-	path = (Path *) create_append_path(root, result_rel, pathlist, NIL,
-									   NIL, NULL, 0, false, NIL, -1);
-	mark_append_locus(path, optype); /* CDB: Mark the plan result locus. */
 
 	/* Identify the grouping semantics */
 	groupList = generate_setop_grouplist(op, tlist);
@@ -898,51 +873,76 @@ generate_nonunion_paths(SetOperationStmt *op, PlannerInfo *root,
 		dNumOutputRows = op->all ? Min(lpath->rows, rpath->rows) : dNumGroups;
 	}
 
-	/*
-	 * Decide whether to hash or sort, and add a sort node if needed.
+	/* We should use the new pathified upper planner
+	 * infrastructure for this. I think we should create multiple Paths,
+	 * representing different kinds of PSETOP_* implementations, and
+	 * let the "add_path()" choose the cheapest one.
 	 */
-	use_hash = choose_hashed_setop(root, groupList, path,
-								   dNumGroups, dNumOutputRows,
-								   (op->op == SETOP_INTERSECT) ? "INTERSECT" : "EXCEPT");
-
-	if (groupList && !use_hash)
-		path = (Path *) create_sort_path(root,
-										 result_rel,
-										 path,
-										 make_pathkeys_for_sortclauses(root,
-																	   groupList,
-																	   tlist),
-										 -1.0);
-
-	/*
-	 * Finally, add a SetOp path node to generate the correct output.
-	 */
-	switch (op->op)
+	for(optype = PSETOP_PARALLEL_PARTITIONED; optype <= PSETOP_GENERAL; optype++)
 	{
-		case SETOP_INTERSECT:
-			cmd = op->all ? SETOPCMD_INTERSECT_ALL : SETOPCMD_INTERSECT;
-			break;
-		case SETOP_EXCEPT:
-			cmd = op->all ? SETOPCMD_EXCEPT_ALL : SETOPCMD_EXCEPT;
-			break;
-		default:
-			elog(ERROR, "unrecognized set op: %d", (int) op->op);
-			cmd = SETOPCMD_INTERSECT;	/* keep compiler quiet */
-			break;
-	}
-	path = (Path *) create_setop_path(root,
-									  result_rel,
-									  path,
-									  cmd,
-									  use_hash ? SETOP_HASHED : SETOP_SORTED,
-									  groupList,
-									  list_length(op->colTypes) + 1,
-									  use_hash ? firstFlag : -1,
-									  dNumGroups,
-									  dNumOutputRows);
+		if ( (Gp_role == GP_ROLE_UTILITY || Gp_role == GP_ROLE_EXECUTE) 
+				&& optype != PSETOP_SEQUENTIAL_QD )
+			continue;
+		
+		bool adjust = adjust_setop_arguments(root, pathlist, tlist_list, optype);
+		
+		if (!adjust)
+			continue;
 
-	result_rel->rows = path->rows;
-	add_path(result_rel, path);
+		/*
+		* Append the child results together.
+		*/
+		path = (Path *) create_append_path(root, result_rel, pathlist, NIL,
+										NIL, NULL, 0, false, NIL, -1);
+		mark_append_locus(path, optype); /* CDB: Mark the plan result locus. */
+
+		/*
+		* Decide whether to hash or sort, and add a sort node if needed.
+		*/
+		use_hash = choose_hashed_setop(root, groupList, path,
+									dNumGroups, dNumOutputRows,
+									(op->op == SETOP_INTERSECT) ? "INTERSECT" : "EXCEPT");
+
+		if (groupList && !use_hash)
+			path = (Path *) create_sort_path(root,
+											result_rel,
+											path,
+											make_pathkeys_for_sortclauses(root,
+																		groupList,
+																		tlist),
+											-1.0);
+
+		/*
+		* Finally, add a SetOp path node to generate the correct output.
+		*/
+		switch (op->op)
+		{
+			case SETOP_INTERSECT:
+				cmd = op->all ? SETOPCMD_INTERSECT_ALL : SETOPCMD_INTERSECT;
+				break;
+			case SETOP_EXCEPT:
+				cmd = op->all ? SETOPCMD_EXCEPT_ALL : SETOPCMD_EXCEPT;
+				break;
+			default:
+				elog(ERROR, "unrecognized set op: %d", (int) op->op);
+				cmd = SETOPCMD_INTERSECT;	/* keep compiler quiet */
+				break;
+		}
+		path = (Path *) create_setop_path(root,
+										result_rel,
+										path,
+										cmd,
+										use_hash ? SETOP_HASHED : SETOP_SORTED,
+										groupList,
+										list_length(op->colTypes) + 1,
+										use_hash ? firstFlag : -1,
+										dNumGroups,
+										dNumOutputRows);
+
+		result_rel->rows = path->rows;
+		add_path(result_rel, path);
+	}
+	
 	return result_rel;
 }
 
