@@ -163,9 +163,9 @@ TABLESAMPLE sampling_method ( argument [, ...] ) [ REPEATABLE ( seed ) ]
 
   Sampling performance on append-optimized tables will improve if the table has a block directory (if the table has any index or had any index in the past) and the improvement is directly proportional to the degree of compression of the table and inversely proportional to the size of the sample requested. To create a block directory for a table that doesn't have an index, issue the following command: 
  
-     ```
-     CREATE INDEX dummy ON tab(i) WHERE false; DROP INDEX dummy;
-     ```
+      ```
+      CREATE INDEX dummy ON tab(i) WHERE false; DROP INDEX dummy;
+      ```
 
 :   The optional `REPEATABLE` clause specifies a seed number or expression to use for generating random numbers within the sampling method. The seed value can be any non-null floating-point value. Two queries that specify the same seed and argument values will select the same sample of the table, if the table has not been changed meanwhile. But different seed values usually produce different samples. If `REPEATABLE` is not specified, then Greenplum Database selects a new random sample for each query, based upon a system-generated seed. Note that some add-on sampling methods do not accept `REPEATABLE`, and will always produce new samples on each use.
 
