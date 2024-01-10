@@ -20,7 +20,7 @@ The available sub-commands for `gpv config` are `deploy`, `list`, and `validate`
 
 ### <a id="deploy"></a>deploy
 
-Deploy Greenplum based on your configuration. The `gpv greenplum deploy` command clones the provided `base-template-name` virtual machine into a new virtual machine called `base-vm-name`, configures the OS of `base-vm-name` virtual machine, provisions and powers on all the coordinator and segment virtual machines, initializes the Greenplum Database cluster, and enables and starts the Postmaster Service that provides high availability.
+Deploy Greenplum based on your configuration. The `gpv greenplum deploy` command clones the provided `base-template-name` virtual machine into a new virtual machine called `base-vm-name`, configures the operating system of `base-vm-name` virtual machine, provisions and powers on all the coordinator and segment virtual machines, initializes the Greenplum Database cluster, and enables and starts the Postmaster Service that provides high availability.
 
 ```
 gpv greenplum deploy
