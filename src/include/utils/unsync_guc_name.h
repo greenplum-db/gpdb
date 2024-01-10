@@ -263,6 +263,7 @@
 		"huge_pages",
 		"ident_file",
 		"idle_in_transaction_session_timeout",
+		"ignore_invalid_pages",
 		"integer_datetimes",
 		"is_superuser",
 		"jit_provider",
