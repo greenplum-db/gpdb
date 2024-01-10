@@ -161,7 +161,7 @@ TABLESAMPLE sampling_method ( argument [, ...] ) [ REPEATABLE ( seed ) ]
    >**IMPORTANT**
    >To call the `SYSTEM_ROWS` and `SYSTEM_TIME` sampling methods, you must install the VMware Greenplum extensions that provide access to them: `tsm_system_rows` and `tsm_system_time`, repectively. See the [tsm_system_rows](../modules/tsm_system_rows.html) and [tsm_system_time](../modules/tsm_system_time.html) topics for details.
 
-    Sampling performance on append-optimized tables will improve if the table has a block directory (if the table has any index or had any index in the past) and the improvement is directly proportional to the degree of compression of the table and inversely proportional to the size of the sample requested. To create a block directory for a table that doesn't have an index, issue the following command: 
+  Sampling performance on append-optimized tables will improve if the table has a block directory (if the table has any index or had any index in the past) and the improvement is directly proportional to the degree of compression of the table and inversely proportional to the size of the sample requested. To create a block directory for a table that doesn't have an index, issue the following command: 
  
      ```
      CREATE INDEX dummy ON tab(i) WHERE false; DROP INDEX dummy;
