@@ -2019,6 +2019,40 @@ explain  select foo.a, bar.b from foo left join bar on foo.a = bar.a
  Optimizer: GPORCA
 (17 rows)
 
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a union
+select bar.a,bar.b from bar left join foo on foo.a=bar.a;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
+   ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=8)
+         Group Key: foo.a, foo.b
+         ->  Sort  (cost=0.00..862.00 rows=1 width=8)
+               Sort Key: foo.a, foo.b
+               ->  Append  (cost=0.00..862.00 rows=1 width=8)
+                     ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: GPORCA
+(9 rows)
+
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a union
+select bar.a,foo.b from bar left join foo on foo.a=bar.a;
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..868.00 rows=1 width=8)
+   ->  GroupAggregate  (cost=0.00..868.00 rows=1 width=8)
+         Group Key: foo.a, foo.b
+         ->  Sort  (cost=0.00..868.00 rows=1 width=8)
+               Sort Key: foo.a, foo.b
+               ->  Append  (cost=0.00..868.00 rows=1 width=8)
+                     ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=8)
+                           Join Filter: true
+                           ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Index Scan using foo_pkey on foo foo_1  (cost=0.00..6.00 rows=1 width=4)
+                                 Index Cond: (a = bar.a)
+ Optimizer: GPORCA
+(13 rows)
+
 drop table foo;
 drop table bar;
 -----------------------------------------------------------------

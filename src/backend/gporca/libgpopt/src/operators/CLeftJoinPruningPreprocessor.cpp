@@ -12,6 +12,7 @@
 #include "gpopt/operators/CLeftJoinPruningPreprocessor.h"
 
 #include "gpopt/base/CColRefSetIter.h"
+#include "gpopt/operators/CLogicalUnionAll.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarSubquery.h"
 #include "gpopt/operators/CScalarSubqueryQuantified.h"
@@ -94,6 +95,13 @@ CLeftJoinPruningPreprocessor::CheckJoinPruningCondOnInnerRel(
 {
 	GPOS_ASSERT(nullptr != pexprNew);
 	GPOS_ASSERT(nullptr != output_columns);
+
+	// if the output_columns is empty for a CLogicalLeftOuterJoin, then don't
+	// prune the join
+	if (0 == output_columns->Size())
+	{
+		return false;
+	}
 
 	CExpression *inner_rel = (*pexprNew)[1];
 	const CColRefSet *derive_output_columns_inner_rel =
@@ -418,6 +426,59 @@ CLeftJoinPruningPreprocessor::ComputeOutputColumns(
 
 	// Computing output columns of the child tree
 	childs_output_columns->Include(output_columns);
+
+	// Consider the below algebrized tree
+	// CLogicalUnionAll Output: ("b" (10)), Input: [("b" (10)), ("b" (28))]
+	//  |--CLogicalLeftOuterJoin
+	//  |  |--CLogicalGet "t1" ("t1"), Columns: ["a" (0), "b" (1)]
+	//  |  |--CLogicalGet "t2" ("t2"), Columns: ["a" (9), "b" (10)]
+	//  |  +--CScalarCmp (=)
+	//  |     |--CScalarIdent "a" (0)
+	//  |     +--CScalarIdent "a" (9)
+	//  +--CLogicalLeftOuterJoin
+	//     |--CLogicalGet "t1" ("t1"), Columns: ["a" (18), "b" (19)]
+	//     |--CLogicalGet "t2" ("t2"), Columns: ["a" (27), "b" (28)]
+	//     +--CScalarCmp (=)
+	//        |--CScalarIdent "a" (18)
+	//        +--CScalarIdent "a" (27)
+	// In this case the output_columns of CLogicalUnionAll will only contain
+	// b(10). In the case of CLogicalUnion or CLogicalUnionAll , the output
+	// columns are from the outer child. Due to this the output_columns of inner
+	// CLogicalLeftOuterJoin will be empty. So join pruning will not be possible
+	// in such cases. The Input in CLogicalUnion/CLogicalUnionAll signifies the
+	// columns from the childs. So including those columns in the
+	// childs_output_columns of CLogicalUnionAll to perform pruning of the inner
+	// child if possible.
+
+	BOOL isLogicalUnion = (pexpr->Pop()->Eopid() == COperator::EopLogicalUnion);
+	BOOL isLogicalUnionAll =
+		(pexpr->Pop()->Eopid() == COperator::EopLogicalUnionAll);
+
+	if (isLogicalUnion || isLogicalUnionAll)
+	{
+		CLogicalUnion *pop = nullptr;
+
+		if (isLogicalUnion)
+		{
+			pop = CLogicalUnion::PopConvert(pexpr->Pop());
+		}
+		else
+		{
+			pop = CLogicalUnionAll::PopConvert(pexpr->Pop());
+		}
+
+		for (ULONG uli = 0; uli < pop->PdrgpdrgpcrInput()->Size(); uli++)
+		{
+			for (ULONG ulj = 0; ulj < (*pop->PdrgpdrgpcrInput())[uli]->Size();
+				 ulj++)
+			{
+				childs_output_columns->Include(
+					(*(*pop->PdrgpdrgpcrInput())[uli])[ulj]);
+			}
+		}
+	}
+
+
 	ULONG arity = pexpr->Arity();
 	for (ULONG ul = 0; ul < arity; ul++)
 	{

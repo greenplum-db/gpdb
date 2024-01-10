@@ -2028,6 +2028,40 @@ explain  select foo.a, bar.b from foo left join bar on foo.a = bar.a
  Optimizer: Postgres-based planner
 (17 rows)
 
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a union
+select bar.a,bar.b from bar left join foo on foo.a=bar.a;
+                                             QUERY PLAN
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2938.00..5808.00 rows=172200 width=8)
+   ->  HashAggregate  (cost=2938.00..3512.00 rows=57400 width=8)
+         Group Key: foo.a, foo.b
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..2651.00 rows=57400 width=8)
+               Hash Key: foo.a, foo.b
+               ->  Append  (cost=0.00..1503.00 rows=57400 width=8)
+                     ->  Seq Scan on foo  (cost=0.00..321.00 rows=28700 width=8)
+                     ->  Seq Scan on bar  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres-based planner
+(9 rows)
+
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a union
+select bar.a,foo.b from bar left join foo on foo.a=bar.a;
+                                             QUERY PLAN
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=3980.09..6850.09 rows=172200 width=8)
+   ->  HashAggregate  (cost=3980.09..4554.09 rows=57400 width=8)
+         Group Key: foo.a, foo.b
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..3693.09 rows=57400 width=8)
+               Hash Key: foo.a, foo.b
+               ->  Append  (cost=0.00..2545.09 rows=57400 width=8)
+                     ->  Seq Scan on foo  (cost=0.00..321.00 rows=28700 width=8)
+                     ->  Hash Left Join  (cost=679.75..1363.09 rows=28700 width=8)
+                           Hash Cond: (bar.a = foo_1.a)
+                           ->  Seq Scan on bar  (cost=0.00..321.00 rows=28700 width=4)
+                           ->  Hash  (cost=321.00..321.00 rows=28700 width=8)
+                                 ->  Seq Scan on foo foo_1  (cost=0.00..321.00 rows=28700 width=8)
+ Optimizer: Postgres-based planner
+(13 rows)
+
 drop table foo;
 drop table bar;
 -----------------------------------------------------------------

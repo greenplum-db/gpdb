@@ -838,9 +838,17 @@ drop table barJoinPruning;
 --
 create table foo(a int primary key, b int);
 create table bar(a int primary key, b int);
+
 explain  select foo.a, bar.b from foo left join bar on foo.a = bar.a
  union
    select foo.a, bar.b from foo join bar on foo.a = bar.a;
+
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a union
+select bar.a,bar.b from bar left join foo on foo.a=bar.a;
+
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a union
+select bar.a,foo.b from bar left join foo on foo.a=bar.a;
+
 drop table foo;
 drop table bar;
 -----------------------------------------------------------------
