@@ -16,7 +16,7 @@ The `gpv config` command allows you to configure a Greenplum cluster on VMware v
 
 ## <a id="info"></a>Required Inputs
 
-The following table lists all the information that is required to deploy a Greenplum Database cluster using the `gpv` utility. Be sure you have this information available before you start the deployment.
+The following table lists all the information that you require to deploy a Greenplum Database cluster using the `gpv` utility. Be sure you have this information available before you start the deployment.
 
 |Configuration|Description|
 |-|-|
