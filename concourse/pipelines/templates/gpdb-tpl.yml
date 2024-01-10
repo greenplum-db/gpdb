@@ -458,7 +458,13 @@ resources:
   type: registry-image
   source:
     tag: latest
+  {% if compile_platform == "rhel9" %}
+    repository: gcr.io/data-gpdb-private-images/gpdb7-[[ compile_platform ]]-build
+    username: _json_key
+    password: ((data-gpdb-private-images-container-registry-readonly-service-account-key))
+  {% else %}
     repository: gcr.io/data-gpdb-public-images/gpdb7-[[ compile_platform ]]-build
+  {% endif %}
 {% endif %}
 
 - name: gpdb7-[[ os_type ]]-test
