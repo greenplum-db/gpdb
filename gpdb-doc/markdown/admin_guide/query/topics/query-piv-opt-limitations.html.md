@@ -23,12 +23,13 @@ These features are unsupported when GPORCA is enabled \(the default\):
 
 -   Prepared statements that have parameterized values.
 -   SP-GiST indexing method. GPORCA supports only B-tree, bitmap, GIN, and GiST indexes. GPORCA ignores indexes created with unsupported methods.
--   External parameters
+-   The `SELECT` command's `TABLESAMPLE` clause.
+-   External parameters.
 -   Multi-level partitioned tables.
 -   Non-uniform partitioned tables.
 -   SortMergeJoin \(SMJ\).
 -   Ordered aggregations.
--   Multi-argument `DISTINCT` qualified aggregates, for example `SELECT corr(DISTINCT a, b) FROM tbl1;`
+-   Multi-argument `DISTINCT` qualified aggregates, for example `SELECT corr(DISTINCT a, b) FROM tbl1;`.
 -   Multiple grouping sets specified using a duplicate alias in a null-producing grouping set spec. Such queries fall back to the Postgres-based planner unless you directly coerce the alias to a separate variable as shown in the example below:
 
     ``` sql
