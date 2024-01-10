@@ -1864,6 +1864,8 @@ BuildQueueStatusContext(QueueStatusContext *fctx)
 	 */
 	LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
 
+	if (!ResQueueHash)
+		elog(PANIC, "corruption of resource queue hash table in shared memory encountered.");
 	/* Initialize for a sequential scan of the resource queue hash. */
 	hash_seq_init(&status, ResQueueHash);
 	num_calls = hash_get_num_entries(ResQueueHash);
