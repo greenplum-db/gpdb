@@ -2087,7 +2087,8 @@ CTranslatorExprToDXL::PdxlnFromFilter(CExpression *pexprFilter,
 									  CColRefArray *colref_array,
 									  CDistributionSpecArray *pdrgpdsBaseTables,
 									  ULONG *pulNonGatherMotions, BOOL *pfDML,
-									  CDXLPhysicalProperties *dxl_properties)
+									  CDXLPhysicalProperties *dxl_properties,
+									  CExpression *parentPexprScalar)
 {
 	GPOS_ASSERT(nullptr != pexprFilter);
 	GPOS_ASSERT(nullptr != dxl_properties);
@@ -2101,6 +2102,21 @@ CTranslatorExprToDXL::PdxlnFromFilter(CExpression *pexprFilter,
 	{
 		COptCtxt::PoctxtFromTLS()->AddDirectDispatchableFilterCandidate(
 			pexprFilter);
+	}
+
+	// Merge parent expression
+	if (nullptr != parentPexprScalar)
+	{
+		if (CUtils::FScalarConstTrue(pexprScalar))
+			pexprScalar = parentPexprScalar;
+		else
+		{
+			CExpressionArray *pdrgpexpr = GPOS_NEW(m_mp) CExpressionArray(m_mp);
+			pdrgpexpr->Append(pexprScalar);
+			pdrgpexpr->Append(parentPexprScalar);
+			pexprScalar = CUtils::PexprScalarBoolOp(
+				m_mp, CScalarBoolOp::EboolopAnd, pdrgpexpr);
+		}
 	}
 
 	// if the filter predicate is a constant TRUE, skip to translating relational child
@@ -2174,11 +2190,20 @@ CTranslatorExprToDXL::PdxlnFromFilter(CExpression *pexprFilter,
 											   pdrgpdsBaseTables, pexprScalar,
 											   dxl_properties);
 		}
+		// If child is also a Filter, push filter down
+		case COperator::EopPhysicalFilter:
+		{
+			dxl_properties->AddRef();
+			return PdxlnFromFilter(pexprRelational, colref_array,
+								   pdrgpdsBaseTables, pulNonGatherMotions,
+								   pfDML, dxl_properties, pexprScalar);
+		}
 		default:
 		{
 			return PdxlnResultFromFilter(pexprFilter, colref_array,
 										 pdrgpdsBaseTables, pulNonGatherMotions,
-										 pfDML);
+										 pfDML,
+										 pexprScalar);	// use merged filter
 		}
 	}
 }
@@ -2196,13 +2221,16 @@ CDXLNode *
 CTranslatorExprToDXL::PdxlnResultFromFilter(
 	CExpression *pexprFilter, CColRefArray *colref_array,
 	CDistributionSpecArray *pdrgpdsBaseTables, ULONG *pulNonGatherMotions,
-	BOOL *pfDML)
+	BOOL *pfDML, CExpression *mergedPexprScalar)
 {
 	GPOS_ASSERT(nullptr != pexprFilter);
 
 	// extract components
 	CExpression *pexprRelational = (*pexprFilter)[0];
-	CExpression *pexprScalar = (*pexprFilter)[1];
+	CExpression *pexprScalar =
+		mergedPexprScalar
+			? mergedPexprScalar
+			: (*pexprFilter)[1];  // Use merged filter if available
 	CColRefSet *pcrsOutput = pexprFilter->Prpp()->PcrsRequired();
 
 	CDXLPhysicalProperties *dxl_properties = GetProperties(pexprFilter);

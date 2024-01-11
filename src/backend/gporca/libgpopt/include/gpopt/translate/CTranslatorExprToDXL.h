@@ -174,7 +174,8 @@ private:
 	CDXLNode *PdxlnResultFromFilter(CExpression *pexprFilter,
 									CColRefArray *colref_array,
 									CDistributionSpecArray *pdrgpdsBaseTables,
-									ULONG *pulNonGatherMotions, BOOL *pfDML);
+									ULONG *pulNonGatherMotions, BOOL *pfDML,
+									CExpression *mergedPexprScalar = nullptr);
 
 	CDXLNode *PdxlnResult(CExpression *pexprFilter, CColRefArray *colref_array,
 						  CDistributionSpecArray *pdrgpdsBaseTables,
@@ -197,7 +198,8 @@ private:
 							  CColRefArray *colref_array,
 							  CDistributionSpecArray *pdrgpdsBaseTables,
 							  ULONG *pulNonGatherMotions, BOOL *pfDML,
-							  CDXLPhysicalProperties *dxl_properties);
+							  CDXLPhysicalProperties *dxl_properties,
+							  CExpression *parentPexprScalar = nullptr);
 
 	CDXLNode *PdxlnResult(CExpression *pexprRelational,
 						  CColRefArray *colref_array,

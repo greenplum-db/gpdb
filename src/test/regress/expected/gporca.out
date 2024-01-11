@@ -14886,3 +14886,42 @@ ERROR:  permission denied to set parameter "gp_max_system_slices"
 reset session authorization;
 drop user ruser;
 drop table foo, bar;
+-- test merge filter in orca
+CREATE TABLE merge_filter_test1 (i int, j int, k int) distributed by (i);
+EXPLAIN VERBOSE WITH cte1 AS (SELECT j, k FROM merge_filter_test1 WHERE i > 1) , cte2 AS (SELECT j, k FROM cte1 WHERE j < 40) SELECT * FROM cte2 WHERE k > 101 ORDER BY 1,2;
+                                                                      QUERY PLAN                                                                      
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=692.13..839.39 rows=10395 width=8)
+   Output: merge_filter_test1.j, merge_filter_test1.k
+   Merge Key: merge_filter_test1.j, merge_filter_test1.k
+   ->  Sort  (cost=692.13..700.79 rows=3465 width=8)
+         Output: merge_filter_test1.j, merge_filter_test1.k
+         Sort Key: merge_filter_test1.j, merge_filter_test1.k
+         ->  Seq Scan on orca.merge_filter_test1  (cost=0.00..488.42 rows=3465 width=8)
+               Output: merge_filter_test1.j, merge_filter_test1.k
+               Filter: ((merge_filter_test1.i > 1) AND (merge_filter_test1.j < 40) AND (merge_filter_test1.k > 101))
+ Optimizer: Postgres-based planner
+ Settings: optimizer = 'off', optimizer_enable_coordinator_only_queries = 'on', optimizer_enable_master_only_queries = 'on', optimizer_segments = '3'
+(11 rows)
+
+EXPLAIN VERBOSE WITH cte1 AS (SELECT j, k FROM merge_filter_test1 union all SELECT j, k FROM merge_filter_test1) , cte2 AS (SELECT j, k FROM cte1 WHERE j < 40) SELECT * FROM cte2 WHERE k > 101 ORDER BY 1,2;
+                                                                      QUERY PLAN                                                                      
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1660.90..2085.67 rows=29984 width=8)
+   Output: merge_filter_test1.j, merge_filter_test1.k
+   Merge Key: merge_filter_test1.j, merge_filter_test1.k
+   ->  Sort  (cost=1660.90..1685.89 rows=9995 width=8)
+         Output: merge_filter_test1.j, merge_filter_test1.k
+         Sort Key: merge_filter_test1.j, merge_filter_test1.k
+         ->  Append  (cost=0.00..996.92 rows=9995 width=8)
+               ->  Seq Scan on orca.merge_filter_test1  (cost=0.00..423.50 rows=4997 width=8)
+                     Output: merge_filter_test1.j, merge_filter_test1.k
+                     Filter: ((merge_filter_test1.j < 40) AND (merge_filter_test1.k > 101))
+               ->  Seq Scan on orca.merge_filter_test1 merge_filter_test1_1  (cost=0.00..423.50 rows=4997 width=8)
+                     Output: merge_filter_test1_1.j, merge_filter_test1_1.k
+                     Filter: ((merge_filter_test1_1.j < 40) AND (merge_filter_test1_1.k > 101))
+ Optimizer: Postgres-based planner
+ Settings: optimizer = 'off', optimizer_enable_coordinator_only_queries = 'on', optimizer_enable_master_only_queries = 'on', optimizer_segments = '3'
+(15 rows)
+
+DROP TABLE merge_filter_test1;
