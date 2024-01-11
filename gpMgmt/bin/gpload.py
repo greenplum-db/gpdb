@@ -2868,7 +2868,8 @@ class gpload:
                 "a.attrelid = p.localoid and " + \
                 "a.attnum = any (p.distkey) and " + \
                 "c.relnamespace = n.oid and " + \
-                "n.nspname = '%s' and c.relname = '%s'; " % (quote_unident(self.schema), quote_unident(self.table))
+                "n.nspname = '%s' and c.relname = '%s' " % (quote_unident(self.schema), quote_unident(self.table)) + \
+                "order by position(concat(' ',a.attnum::text,' ') in concat(' ',p.distkey::text,' ')); "
 
         try:
                 resultList = self.db.query(sql.encode('utf-8')).getresult()
