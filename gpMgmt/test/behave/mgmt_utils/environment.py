@@ -69,6 +69,12 @@ def before_feature(context, feature):
         dbconn.execSQL(context.conn, 'insert into t1 values(1, 2)')
         dbconn.execSQL(context.conn, 'insert into t2 values(1, 3)')
         dbconn.execSQL(context.conn, 'insert into t3 values(1, 4)')
+        # minirepro tests require statistical data about the contents of the database
+        # we should execute 'ANALYZE' to fill the pg_statistic catalog table.
+        dbconn.execSQL(context.conn, 'analyze t1')
+        dbconn.execSQL(context.conn, 'analyze t2')
+        dbconn.execSQL(context.conn, 'analyze t3')
+        dbconn.execSQL(context.conn, 'create or replace function select_one() returns integer as $$ select 1 $$ language sql')
         context.conn.commit()
 
     if 'gppkg' in feature.tags:

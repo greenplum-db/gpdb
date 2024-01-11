@@ -263,3 +263,15 @@ Feature: Dump minimum database objects that is related to the query
       And the output file "/tmp/out.sql" should contain "Table: t3, Attribute: f"
       And the output file "/tmp/out.sql" should be loaded to database "minidb_tmp" without error
       And the file "/tmp/in.sql" should be executed in database "minidb_tmp" without error
+
+    @minirepro_core
+    Scenario: Dump database objects of only functions
+      Given the file "/tmp/in.sql" exists and contains "SELECT select_one()"
+      And the file "/tmp/out.sql" does not exist
+      When the user runs "minirepro minireprodb -q /tmp/in.sql -f /tmp/out.sql"
+      Then the output file "/tmp/out.sql" should exist
+      And the output file "/tmp/out.sql" should contain "CREATE FUNCTION public.select_one() RETURNS integer"
+      And the output file "/tmp/out.sql" should contain "LANGUAGE sql"
+      And the output file "/tmp/out.sql" should contain "AS $$ select 1 $$;"
+      And the output file "/tmp/out.sql" should be loaded to database "minidb_tmp" without error
+      And the file "/tmp/in.sql" should be executed in database "minidb_tmp" without error

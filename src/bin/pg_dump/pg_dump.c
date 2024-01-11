@@ -1634,6 +1634,27 @@ selectDumpableFunction(FuncInfo *finfo)
 }
 
 /*
+ * selectDumpableFunction: policy-setting subroutine
+ *		Mark a function as to be dumped or not
+ */
+static void
+selectDumpableAggregate(AggInfo *agginfo)
+{
+	/*
+	 * If specific aggregates are being dumped, dump just those aggregates; else, dump
+	 * according to the parent namespace's dump flag if parent namespace is not null;
+	 * else, always dump the function.
+	 */
+	if (function_include_oids.head != NULL)
+		agginfo->aggfn.dobj.dump = simple_oid_list_member(&function_include_oids,
+												   agginfo->aggfn.dobj.catId.oid);
+	else if (agginfo->aggfn.dobj.namespace)
+		agginfo->aggfn.dobj.dump = agginfo->aggfn.dobj.namespace->dobj.dump;
+	else
+		agginfo->aggfn.dobj.dump = true;
+}
+
+/*
  * selectDumpableDefaultACL: policy-setting subroutine
  *		Mark a default ACL as to be dumped or not
  *
@@ -4390,7 +4411,7 @@ getAggregates(Archive *fout, int *numAggs)
 		}
 
 		/* Decide whether we want to dump it */
-		selectDumpableObject(&(agginfo[i].aggfn.dobj));
+		selectDumpableAggregate(&(agginfo[i]));
 	}
 
 	PQclear(res);
@@ -4621,7 +4642,6 @@ getFuncs(Archive *fout, int *numFuncs)
 
 		/* Decide whether we want to dump it */
 		selectDumpableFunction(&finfo[i]);
-		selectDumpableObject(&(finfo[i].dobj));
 	}
 
 	PQclear(res);
