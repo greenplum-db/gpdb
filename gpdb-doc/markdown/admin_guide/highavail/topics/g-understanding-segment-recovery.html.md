@@ -98,9 +98,6 @@ Full recovery
 Differential recovery
 :   Differential recovery performs a filesystem-level diff between the primary and mirror segments, and copies from the primary to the mirror only those files that have changed on the primary. With differential recovery, you may only do in-place recovery. Differential recovery uses the `rsync` command to copy files.
 
-    >**Note**
-    >Differential recovery is not supported when using input configuration files (`gprecoverseg -i`).
-
 Incremental recovery (default)
 :   Incremental recovery brings the mirror segment contents into sync with the primary segment contents with the aid of write-ahead log files (WAL files). With incremental recovery, you may only do in-place recovery. Incremental recovery uses the `pg_rewind` utility to copy files. 
 
