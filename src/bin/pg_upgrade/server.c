@@ -228,9 +228,7 @@ start_postmaster(ClusterInfo *cluster, bool report_and_exit_on_error)
 	if (cluster->sockdir)
 		snprintf(socket_string + strlen(socket_string),
 				 sizeof(socket_string) - strlen(socket_string),
-				 " -c %s='%s'",
-				 (GET_MAJOR_VERSION(cluster->major_version) <= 902) ?
-				 "unix_socket_directory" : "unix_socket_directories",
+				 " -c unix_socket_directories='%s'",
 				 cluster->sockdir);
 #endif
 

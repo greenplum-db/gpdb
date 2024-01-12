@@ -198,33 +198,10 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 		pg_fatal("could not get control data using %s: %s\n",
 				 cmd, strerror(errno));
 
-	if (GET_MAJOR_VERSION(cluster->major_version) == 803)
-	{
-		cluster->controldata.float8_pass_by_value = false;
-		got_float8_pass_by_value = true;
-	}
-
 	/* we have the result of cmd in "output". so parse it line by line now */
 	while (fgets(bufin, sizeof(bufin), output))
 	{
 		pg_log(PG_VERBOSE, "%s", bufin);
-
-#ifdef WIN32
-
-		/*
-		 * Due to an installer bug, LANG=C doesn't work for PG 8.3.3, but does
-		 * work 8.2.6 and 8.3.7, so check for non-ASCII output and suggest a
-		 * minor upgrade.
-		 */
-		if (GET_MAJOR_VERSION(cluster->major_version) == 803)
-		{
-			for (p = bufin; *p; p++)
-				if (!isascii((unsigned char) *p))
-					pg_fatal("The 8.3 cluster's pg_controldata is incapable of outputting ASCII, even\n"
-							 "with LANG=C.  You must upgrade this cluster to a newer version of PostgreSQL\n"
-							 "8.3 to fix this bug.  PostgreSQL 8.3.7 and later are known to work properly.\n");
-		}
-#endif
 
 		if ((p = strstr(bufin, "pg_control version number:")) != NULL)
 		{
@@ -576,22 +553,6 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 	pg_free(lc_messages);
 
 	/*
-	 * Before 9.3, pg_resetwal reported the xlogid and segno of the first log
-	 * file after reset as separate lines. Starting with 9.3, it reports the
-	 * WAL file name. If the old cluster is older than 9.3, we construct the
-	 * WAL file name from the tli, xlogid, and segno.
-	 */
-	if (GET_MAJOR_VERSION(cluster->major_version) <= 902)
-	{
-		if (got_tli && got_log_id && got_log_seg)
-		{
-			snprintf(cluster->controldata.nextxlogfile, 25, "%08X%08X%08X",
-					 tli, logid, segno);
-			got_nextxlogfile = true;
-		}
-	}
-
-	/*
 	 * GPDB specific: No such entry in pg_control data on gpdb 6 and below.
 	 * We set it as FirstDistributedTransactionId instead.
 	 *
@@ -682,11 +643,9 @@ get_control_data(ClusterInfo *cluster, bool live_check)
 		if (!got_date_is_int)
 			pg_log(PG_REPORT, "  dates/times are integers?\n");
 
-		/* value added in Postgres 8.4 */
 		if (!got_float8_pass_by_value)
 			pg_log(PG_REPORT, "  float8 argument passing method\n");
 
-		/* value added in Postgres 9.3 */
 		if (!got_data_checksum_version)
 			pg_log(PG_REPORT, "  data checksum version\n");
 
@@ -730,23 +689,6 @@ check_control_data(ControlData *oldctrl,
 	if (oldctrl->large_object != 0 &&
 		oldctrl->large_object != newctrl->large_object)
 		pg_fatal("old and new pg_controldata large-object chunk sizes are invalid or do not match\n");
-
-	/* 
-	 * GPDB, since 9.5, pg_upgrade removed the support for 8.3, however, GPDB
-	 * still keep it to support upgrading from GPDB 5
-	 */
-	if (oldctrl->date_is_int != newctrl->date_is_int)
-	{
-		pg_log(PG_WARNING,
-			   "\nOld and new pg_controldata date/time storage types do not match.\n");
-
-		/*
-		 * This is a common 8.3 -> 8.4 upgrade problem, so we are more verbose
-		 */
-		pg_fatal("You will need to rebuild the new server with configure option\n"
-				 "--disable-integer-datetimes or get server binaries built with those\n"
-				 "options.\n");
-	}
 
 	/*
 	 * float8_pass_by_value does not need to match, but is used in

@@ -476,7 +476,8 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 			 "  WHERE relkind IN (" CppAsString2(RELKIND_RELATION) ", "
 			 CppAsString2(RELKIND_AOSEGMENTS) ", "
 			 CppAsString2(RELKIND_AOBLOCKDIR) ", "
-			 CppAsString2(RELKIND_MATVIEW) " %s) AND "
+			 CppAsString2(RELKIND_MATVIEW) ", "
+			 CppAsString2(RELKIND_SEQUENCE) ") AND "
 	/* exclude possible orphaned temp tables */
 			 "    ((n.nspname !~ '^pg_temp_' AND "
 			 "      n.nspname !~ '^pg_toast_temp_' AND "
@@ -486,9 +487,7 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 			 "      c.oid >= %u::pg_catalog.oid) OR "
 			 "     (n.nspname = 'pg_catalog' AND "
 			 "      relname IN ('pg_largeobject') ))), ",
-	/* see the comment at the top of old_8_3_create_sequence_script() */
-			 (GET_MAJOR_VERSION(old_cluster.major_version) == 803) ?
-			 "" : ", " CppAsString2(RELKIND_SEQUENCE), FirstNormalObjectId);
+			 FirstNormalObjectId);
 
 	/*
 	 * Add a CTE that collects OIDs of toast tables belonging to the tables

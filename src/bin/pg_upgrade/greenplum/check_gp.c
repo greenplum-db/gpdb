@@ -63,12 +63,6 @@ check_online_expansion(void)
 	int			dbnum;
 
 	/*
-	 * Only need to check cluster expansion status in gpdb6 or later.
-	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) < 804)
-		return;
-
-	/*
 	 * We only need to check the cluster expansion status on master.
 	 * On the other hand the status can not be detected correctly on segments.
 	 */

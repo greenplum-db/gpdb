@@ -202,7 +202,7 @@ main(int argc, char **argv)
 	check_ok();
 
 	/*
-	 * In upgrading from GPDB4, copy the pg_distributedlog over in vanilla.
+	 * XXX: Copy the pg_distributedlog over in vanilla.
 	 * The assumption that this works needs to be verified
 	 */
 	copy_subdir_files("pg_distributedlog", "pg_distributedlog");
@@ -668,13 +668,6 @@ create_new_objects(void)
 	end_progress_output();
 	check_ok();
 
-	/*
-	 * We don't have minmxids for databases or relations in pre-9.3 clusters,
-	 * so set those after we have restored the schema.
-	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 902)
-		set_frozenxids(true);
-
 	/* update new_cluster info now that we have objects in the databases */
 	get_db_and_rel_infos(&new_cluster);
 
@@ -956,11 +949,6 @@ set_frozenxids(bool minmxid_only)
 			PQclear(executeQueryOrDie(conn,
 									  "UPDATE	pg_catalog.pg_class "
 									  "SET	relfrozenxid = '%u' "
-			/*
-			 * GPDB: if we ever backport this to Greenplum 5X, remove 'm' first
-			 * and then replace 'M' with 'm', because 'm' used to be RELKIND
-			 * visimap in 4.3/5X, not matview
-			 */
 			/* only heap, materialized view, and TOAST are vacuumed */
 									  "WHERE	relkind IN ("
 									  CppAsString2(RELKIND_RELATION) ", "
