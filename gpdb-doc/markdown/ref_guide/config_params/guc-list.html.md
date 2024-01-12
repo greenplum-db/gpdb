@@ -614,6 +614,18 @@ The `gp_autostats_allow_nonowner` configuration parameter can be changed only by
 |-----------|-------|-------------------|
 |Boolean|false|coordinator, session, reload, superuser|
 
+## <a id="gp_autostats_lock_wait"></a>gp_autostats_lock_wait 
+
+The `gp_autostats_lock_wait` server configuration parameter allows you to control whether `ANALYZE` commands triggered by automatic statistics collection will block if they cannot acquire the table lock.
+
+The default value is `off`; `ANALYZE` commands will proceed without possession of the table lock. Keeping this parameter turned off will prevent deadlocks and make automatic statistics collection sessions finish in a more timely and predictable fashion.
+
+When set to `on`, the `ANALYZE` command will block until the table lock is acquired.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|coordinator, session, session, reload|
+
 ## <a id="gp_autostats_mode"></a>gp\_autostats\_mode 
 
 Specifies the mode for triggering automatic statistics collection with `ANALYZE`. The `on_no_stats` option triggers statistics collection for `CREATE TABLE AS SELECT`, `INSERT`, or `COPY` operations on any table that has no existing statistics.

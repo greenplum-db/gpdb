@@ -337,6 +337,7 @@ These parameters control the server statistics collection feature. When statisti
 When automatic statistics collection is enabled, you can run `ANALYZE` automatically in the same transaction as an `INSERT`, `UPDATE`, `DELETE`, `COPY` or `CREATE TABLE...AS SELECT` statement when a certain threshold of rows is affected \(`on_change`\), or when a newly generated table has no statistics \(`on_no_stats`\). To enable this feature, set the following server configuration parameters in your Greenplum Database coordinator `postgresql.conf` file and restart Greenplum Database:
 
 - [gp_autostats_allow_nonowner](guc-list.html#gp_autostats_allow_nonowner)
+- [gp_autostats_lock_wait](guc-list.html#gp_autostats_lock_wait)
 - [gp_autostats_mode](guc-list.html#gp_autostats_mode)
 - [gp_autostats_mode_in_functions](guc-list.html#gp_autostats_mode_in_functions)
 - [gp_autostats_on_change_threshold](guc-list.html#gp_autostats_on_change_threshold)
