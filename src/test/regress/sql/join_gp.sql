@@ -843,10 +843,44 @@ explain  select foo.a, bar.b from foo left join bar on foo.a = bar.a
  union
    select foo.a, bar.b from foo join bar on foo.a = bar.a;
 
+-- join will be pruned
 explain select foo.a,foo.b from foo left join bar on foo.a=bar.a union
 select bar.a,bar.b from bar left join foo on foo.a=bar.a;
 
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a union all
+select bar.a,bar.b from bar left join foo on foo.a=bar.a;
+
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a intersect
+select bar.a,bar.b from bar left join foo on foo.a=bar.a;
+
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a intersect all
+select bar.a,bar.b from bar left join foo on foo.a=bar.a;
+
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a except
+select bar.a,bar.b from bar left join foo on foo.a=bar.a;
+
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a except all
+select bar.a,bar.b from bar left join foo on foo.a=bar.a;
+
+-- join will not be pruned
+-- the outer query of union/intersect/except will be pruned but the inner
+-- query will not be pruned.
 explain select foo.a,foo.b from foo left join bar on foo.a=bar.a union
+select bar.a,foo.b from bar left join foo on foo.a=bar.a;
+
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a union all
+select bar.a,foo.b from bar left join foo on foo.a=bar.a;
+
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a intersect
+select bar.a,foo.b from bar left join foo on foo.a=bar.a;
+
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a intersect all
+select bar.a,foo.b from bar left join foo on foo.a=bar.a;
+
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a except
+select bar.a,foo.b from bar left join foo on foo.a=bar.a;
+
+explain select foo.a,foo.b from foo left join bar on foo.a=bar.a except all
 select bar.a,foo.b from bar left join foo on foo.a=bar.a;
 
 drop table foo;

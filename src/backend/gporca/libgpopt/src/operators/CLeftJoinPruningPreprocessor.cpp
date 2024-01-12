@@ -12,6 +12,10 @@
 #include "gpopt/operators/CLeftJoinPruningPreprocessor.h"
 
 #include "gpopt/base/CColRefSetIter.h"
+#include "gpopt/operators/CLogicalDifference.h"
+#include "gpopt/operators/CLogicalDifferenceAll.h"
+#include "gpopt/operators/CLogicalIntersect.h"
+#include "gpopt/operators/CLogicalIntersectAll.h"
 #include "gpopt/operators/CLogicalUnionAll.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarSubquery.h"
@@ -448,25 +452,55 @@ CLeftJoinPruningPreprocessor::ComputeOutputColumns(
 	// in such cases. The Input in CLogicalUnion/CLogicalUnionAll signifies the
 	// columns from the childs. So including those columns in the
 	// childs_output_columns of CLogicalUnionAll to perform pruning of the inner
-	// child if possible.
+	// child if possible. Similar is the case for Intersect/IntersectAll and
+	// Difference/DifferenceAll.
 
-	BOOL isLogicalUnion = (pexpr->Pop()->Eopid() == COperator::EopLogicalUnion);
-	BOOL isLogicalUnionAll =
-		(pexpr->Pop()->Eopid() == COperator::EopLogicalUnionAll);
-
-	if (isLogicalUnion || isLogicalUnionAll)
+	CLogicalSetOp *pop = nullptr;
+	BOOL isLogicalSetOp = false;
+	switch (pexpr->Pop()->Eopid())
 	{
-		CLogicalUnion *pop = nullptr;
-
-		if (isLogicalUnion)
+		case COperator::EopLogicalUnion:
 		{
 			pop = CLogicalUnion::PopConvert(pexpr->Pop());
+			isLogicalSetOp = true;
+			break;
 		}
-		else
+		case COperator::EopLogicalUnionAll:
 		{
 			pop = CLogicalUnionAll::PopConvert(pexpr->Pop());
+			isLogicalSetOp = true;
+			break;
 		}
+		case COperator::EopLogicalIntersect:
+		{
+			pop = CLogicalIntersect::PopConvert(pexpr->Pop());
+			isLogicalSetOp = true;
+			break;
+		}
+		case COperator::EopLogicalIntersectAll:
+		{
+			pop = CLogicalIntersectAll::PopConvert(pexpr->Pop());
+			isLogicalSetOp = true;
+			break;
+		}
+		case COperator::EopLogicalDifference:
+		{
+			pop = CLogicalDifference::PopConvert(pexpr->Pop());
+			isLogicalSetOp = true;
+			break;
+		}
+		case COperator::EopLogicalDifferenceAll:
+		{
+			pop = CLogicalDifferenceAll::PopConvert(pexpr->Pop());
+			isLogicalSetOp = true;
+			break;
+		}
+		default:
+			break;
+	}
 
+	if (isLogicalSetOp)
+	{
 		for (ULONG uli = 0; uli < pop->PdrgpdrgpcrInput()->Size(); uli++)
 		{
 			for (ULONG ulj = 0; ulj < (*pop->PdrgpdrgpcrInput())[uli]->Size();
