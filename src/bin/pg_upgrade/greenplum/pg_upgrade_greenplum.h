@@ -79,7 +79,6 @@ bool        is_appendonly(char relstorage);
 /* version_gp.c */
 
 void check_hash_partition_usage(void);
-void old_GPDB5_check_for_unsupported_distribution_key_data_types(void);
 void old_GPDB6_check_for_unsupported_sha256_password_hashes(void);
 void new_gpdb_invalidate_bitmap_indexes(void);
 
