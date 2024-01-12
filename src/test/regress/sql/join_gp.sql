@@ -1112,3 +1112,10 @@ drop table if exists repli_t1_pk;
 drop table if exists repli_t2_pk;
 drop table if exists repli_t3_pk;
 drop table if exists repli_t4_pk;
+
+-- test issue https://github.com/greenplum-db/gpdb/issues/16315
+create table t_16315_left(a int, b int) distributed by (a, b);
+create table t_16315_right(a int, b int) distributed by (a, b);
+explain select * from t_16315_left left join t_16315_right on t_16315_left.a = t_16315_right.a and t_16315_left.b = t_16315_right.b where t_16315_left.a = 2;
+drop table t_16315_left;
+drop table t_16315_right;

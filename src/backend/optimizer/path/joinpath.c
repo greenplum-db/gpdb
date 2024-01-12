@@ -2233,12 +2233,15 @@ select_cdb_redistribute_clauses(PlannerInfo *root,
 		 */
 		update_mergeclause_eclasses(root, restrictinfo);
 
+		/* keep redundant restrict in redistribute clauses */
+		/*
 		if (EC_MUST_BE_REDUNDANT(restrictinfo->left_ec) ||
 			EC_MUST_BE_REDUNDANT(restrictinfo->right_ec))
 		{
 			have_nonmergeable_joinclause = true;
-			continue;			/* can't handle redundant eclasses */
+			continue;
 		}
+		*/
 
 		result_list = lappend(result_list, restrictinfo);
 	}
