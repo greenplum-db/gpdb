@@ -5,6 +5,7 @@
 import datetime
 import subprocess
 import os
+import pwd
 import platform
 import sys
 import re
@@ -200,7 +201,7 @@ def main():
     # OK - now let's setup all the arguments & options
     db = args[0]
     host = options.host or platform.node()
-    user = options.user or os.getlogin()
+    user = options.user or ('PGUSER' in envOpts and envOpts['PGUSER']) or pwd.getpwuid(os.geteuid())[0]
     port = options.port or '5432'
     inclSchema = options.dumpSchema
     inclHLL = options.dumpHLL
