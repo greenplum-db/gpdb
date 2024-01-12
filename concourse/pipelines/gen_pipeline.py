@@ -30,6 +30,7 @@ from __future__ import print_function
 import argparse
 import datetime
 import os
+import pwd
 import re
 import subprocess
 import yaml
@@ -364,7 +365,7 @@ def main():
         '--user',
         action='store',
         dest='user',
-        default=os.getlogin(),
+        default=pwd.getpwuid(os.geteuid())[0],
         help='Developer userid to use for pipeline name and filename.'
     )
 
@@ -407,7 +408,7 @@ def main():
     validate_target(args.pipeline_target)
 
     output_path_is_set = os.path.basename(args.output_filepath) != default_output_filename
-    if (args.user != os.getlogin() and output_path_is_set):
+    if (args.user != pwd.getpwuid(os.geteuid())[0] and output_path_is_set):
         print("You can only use one of --output or --user.")
         exit(1)
 
@@ -444,7 +445,7 @@ def main():
     # don't overwrite the 6X_STABLE pipeline
     if args.pipeline_target != 'prod' and not output_path_is_set:
         pipeline_file_suffix = suggested_git_branch()
-        if args.user != os.getlogin():
+        if args.user != pwd.getpwuid(os.geteuid())[0]:
             pipeline_file_suffix = args.user
         default_dev_output_filename = 'gpdb-' + args.pipeline_target + '-' + pipeline_file_suffix + '.yml'
         args.output_filepath = os.path.join(PIPELINES_DIR, default_dev_output_filename)
