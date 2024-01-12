@@ -17,18 +17,29 @@
 /* Tuple Chunks */
 /*--------------*/
 
+//typedef enum TupleChunkType
+//{
+//	TC_WHOLE,					/* Contains a whole tuple. */
+//	TC_PARTIAL_START,			/* Contains the starting portion of a tuple. */
+//	TC_PARTIAL_MID,				/* Contains a middle part of a tuple. */
+//	TC_PARTIAL_END,				/* Contains the final portion of a tuple. */
+//	TC_END_OF_STREAM,			/* Indicates "end of tuples" from this source. */
+//	TC_EMPTY,					/* Empty tuple */
+//	TC_MAXVAL					/* For range checks on type values. */
+//} TupleChunkType;
 
-typedef enum TupleChunkType
-{
-	TC_WHOLE,					/* Contains a whole tuple. */
-	TC_PARTIAL_START,			/* Contains the starting portion of a tuple. */
-	TC_PARTIAL_MID,				/* Contains a middle part of a tuple. */
-	TC_PARTIAL_END,				/* Contains the final portion of a tuple. */
-	TC_END_OF_STREAM,			/* Indicates "end of tuples" from this source. */
-	TC_EMPTY,					/* Empty tuple */
-	TC_MAXVAL					/* For range checks on type values. */
-} TupleChunkType;
+typedef uint32 TupleChunkType;
 
+#define TC_WHOLE 			((uint32)1 << 20)
+#define TC_PARTIAL_START 	((uint32)1 << 21)
+#define TC_PARTIAL_MID 		((uint32)1 << 22)
+#define TC_PARTIAL_END 		((uint32)1 << 23)
+#define TC_END_OF_STREAM 	((uint32)1 << 24)
+#define TC_EMPTY 			((uint32)1 << 25)
+#define TC_MAXVAL 			((uint32)1 << 26)
+
+#define TC_TYPE_BITS		0xFFF00000
+#define TC_SIZE_BITS		0x000FFFFF
 
 
 /* This is the size of a tuple-chunk header, as it appears in the packet that
@@ -71,16 +82,34 @@ typedef enum TupleChunkType
 #define GetChunkDataPtr(tcItem) \
 	(((tcItem)->inplace != NULL) ? ((char *)((tcItem)->inplace)) : ((char *)((tcItem)->chunk_data)))
 
-#define GetChunkDataSize(tcItem, sizep)	\
-	do { uint16 sizeid; memcpy(&sizeid, (GetChunkDataPtr(tcItem)), sizeof(uint16)); *(sizep) = sizeid; } while (0)
+#define InitializeChunkHeader(/* uint8 * */tc_data) \
+	do { uint32 val = 0; memcpy((tc_data), &val, sizeof(uint32)); } while (0)
 
-#define GetChunkType(/* uint 8 * */tcItem, /* TupleChunkType * */typep) \
-	do { uint16 typeid; memcpy(&typeid, (GetChunkDataPtr(tcItem) + 2), sizeof(uint16)); *(typep) = typeid; } while (0)
+#define GetChunkHeader(/* uint8 * */tc_data, /* uint32 * */value) \
+	do { uint32 val; memcpy(&val, (tc_data), sizeof(uint32)); *(value) = val; } while (0)
 
-#define SetChunkDataSize(/* uint8 * */tc_data, /* uint16 */value) \
-	do { uint16 val = (value); memcpy((tc_data), &val, sizeof(uint16)); } while (0)
+#define SetChunkHeader(/* uint8 * */tc_data, /* uint32 */value) \
+	do { uint32 val = (value); memcpy((tc_data), &val, sizeof(uint32)); } while (0)
 
-#define SetChunkType(/* uint8 * */tc_data, /* TupleChunkType */value) \
-	do { uint16 val = (value); memcpy(((tc_data)+2), &val, sizeof(uint16)); } while (0)
+#define GetChunkType(/* uint 8 */tc_item, /* uint32 * */tc_type) \
+	do { uint32 current; GetChunkHeader(GetChunkDataPtr(tc_item), &current); *(tc_type) = current & TC_TYPE_BITS; } while (0)
+
+#define SetChunkType(/* uint8 */tc_data, /* uint32 */value) \
+	do { uint32 current; GetChunkHeader((tc_data), &current); SetChunkHeader((tc_data), current | (value)); } while (0)
+
+#define ClearChunkType(/* uint8 **/tc_data) \
+	do { uint32 current; GetChunkHeader((tc_data), &current); SetChunkHeader((tc_data), current & TC_SIZE_BITS); } while (0)
+
+#define GetChunkDataSize(/* uint8 */tc_data, /* uint32 */tc_size) \
+	do { uint32 current; GetChunkHeader((tc_data), &current); *(tc_size) = current & TC_SIZE_BITS; } while (0)
+
+#define SetChunkDataSize(/* uint8 */tc_data, /* uint32 */value) \
+	do { uint32 current; GetChunkHeader((tc_data), &current); SetChunkHeader((tc_data), current | (value)); } while (0)
+
+#define SetChunkTupleSize(/* uint8 * */tc_data, /* uint32 */value) \
+	do { uint32 current = (value); memcpy((tc_data) + TUPLE_CHUNK_HEADER_SIZE, &current, sizeof(uint32)); } while (0)
+
+#define SetChunkTupleContent(/* uint8 * */tc_data, /* uint8 * */tuple, /* uint32 */length) \
+	do { memcpy((tc_data) + TUPLE_CHUNK_HEADER_SIZE + sizeof(uint32), (tuple), (length)); } while (0)
 
 #endif   /* TUPCHUNK_H */

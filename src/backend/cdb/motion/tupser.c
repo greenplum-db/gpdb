@@ -225,7 +225,8 @@ addByteStringToChunkList(TupleChunkList tcList, char *data, int datalen, TupleCh
 			tcList->serialized_data_length += copyLen;
 			curSize += copyLen;
 
-			SetChunkDataSize(tcItem->chunk_data, curSize - TUPLE_CHUNK_HEADER_SIZE);
+			SetChunkDataSize(tcItem->chunk_data, 0);
+			SetChunkDataSize(tcItem->chunk_data, copyLen);
 			tcItem->chunk_length = curSize;
 		}
 
@@ -234,6 +235,7 @@ addByteStringToChunkList(TupleChunkList tcList, char *data, int datalen, TupleCh
 
 		tcItem = getChunkFromCache(chunkCache);
 		tcItem->chunk_length = TUPLE_CHUNK_HEADER_SIZE;
+		InitializeChunkHeader(tcItem->chunk_data);
 		SetChunkType(tcItem->chunk_data, TC_PARTIAL_MID);
 		appendChunkToTCList(tcList, tcItem);
 	} while (remain != 0);
@@ -367,6 +369,7 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 	if (natts == 0 && CandidateForSerializeDirect(targetRoute, b))
 	{
 		/* TC_EMPTY is just one chunk */
+		InitializeChunkHeader(b->pri);
 		SetChunkType(b->pri, TC_EMPTY);
 		SetChunkDataSize(b->pri, 0);
 
@@ -437,26 +440,22 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 
 	tupbody = (char *) mintuple + MINIMAL_TUPLE_DATA_OFFSET;
 	tupbodylen = mintuple->t_len - MINIMAL_TUPLE_DATA_OFFSET;
-
-	/* total on-wire footprint: */
-	tuplen = tupbodylen + sizeof(int);
+	/* add the space of actual length of minimal tuple, the type is uint32 */
+	tuplen = tupbodylen + sizeof(uint32);
 
 	if (CandidateForSerializeDirect(targetRoute, b) &&
 		tuplen + TUPLE_CHUNK_HEADER_SIZE <= b->prilen)
 	{
-		/*
-		 * The tuple fits in the direct transport buffer.
-		 */
-		memcpy(b->pri + TUPLE_CHUNK_HEADER_SIZE, &tupbodylen, sizeof(tupbodylen));
-		memcpy(b->pri + TUPLE_CHUNK_HEADER_SIZE + sizeof(int), tupbody, tupbodylen);
-
-		dataSize += tuplen;
-
+		InitializeChunkHeader(b->pri);
 		SetChunkType(b->pri, TC_WHOLE);
-		SetChunkDataSize(b->pri, dataSize - TUPLE_CHUNK_HEADER_SIZE);
+		SetChunkDataSize(b->pri, tuplen);
+		SetChunkTupleSize(b->pri, tupbodylen);
+		SetChunkTupleContent(b->pri, tupbody, tupbodylen);
 
 		if (shouldFreeTuple)
 			pfree(mintuple);
+
+		dataSize += tuplen;
 		return dataSize;
 	}
 
@@ -465,6 +464,7 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 	 * out-of-line serialization.
 	 */
 	tcItem = getChunkFromCache(&pSerInfo->chunkCache);
+	InitializeChunkHeader(tcItem->chunk_data);
 	SetChunkType(tcItem->chunk_data, TC_WHOLE);
 	tcItem->chunk_length = TUPLE_CHUNK_HEADER_SIZE;
 	appendChunkToTCList(tcList, tcItem);
@@ -488,6 +488,8 @@ SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTranspor
 		Assert(first != last);
 		Assert(last != NULL);
 
+		ClearChunkType(first->chunk_data);
+		ClearChunkType(last->chunk_data);
 		SetChunkType(first->chunk_data, TC_PARTIAL_START);
 		SetChunkType(last->chunk_data, TC_PARTIAL_END);
 

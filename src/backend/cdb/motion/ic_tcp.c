@@ -538,7 +538,7 @@ startOutgoingConnections(ChunkTransportState *transportStates,
 		if (cdbProc)
 		{
 			conn->cdbProc = cdbProc;
-			conn->pBuff = palloc(Gp_max_packet_size);
+			conn->pBuff = palloc0(Gp_max_packet_size);
 			conn->state = mcsSetupOutgoingConnection;
 			(*pOutgoingCount)++;
 		}
@@ -1200,7 +1200,7 @@ acceptIncomingConnection(void)
 	 */
 	conn = palloc0(sizeof(MotionConn));
 	conn->sockfd = newsockfd;
-	conn->pBuff = palloc(Gp_max_packet_size);
+	conn->pBuff = palloc0(Gp_max_packet_size);
 	conn->msgSize = 0;
 	conn->recvBytes = 0;
 	conn->msgPos = 0;

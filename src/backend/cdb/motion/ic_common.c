@@ -25,6 +25,7 @@
 #include "cdb/ml_ipc.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp.h"
+#include "cdb/tupchunk.h"
 
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -130,7 +131,8 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 							   conn->msgSize, bytesProcessed, TUPLE_CHUNK_HEADER_SIZE)));
 		}
 
-		tcSize = TUPLE_CHUNK_HEADER_SIZE + (*(uint16 *) (conn->msgPos + bytesProcessed));
+		GetChunkDataSize(conn->msgPos + bytesProcessed, &tcSize);
+		tcSize += TUPLE_CHUNK_HEADER_SIZE;
 
 		/* sanity check */
 		if (tcSize > Gp_max_packet_size)
