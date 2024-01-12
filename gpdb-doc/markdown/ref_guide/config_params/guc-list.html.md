@@ -616,9 +616,11 @@ The `gp_autostats_allow_nonowner` configuration parameter can be changed only by
 
 ## <a id="gp_autostats_lock_wait"></a>gp_autostats_lock_wait 
 
-The `gp_autostats_lock_wait` server configuration parameter allows you to control whether `ANALYZE` commands triggered by automatic statistics collection will block if they cannot acquire the table lock.
+The `gp_autostats_lock_wait` server configuration parameter allows you to control whether `ANALYZE` commands triggered by autostats collection will block if they cannot acquire the table lock.
 
-The default value is `off`; `ANALYZE` commands will proceed without possession of the table lock. Keeping this parameter turned off will prevent deadlocks and make automatic statistics collection sessions finish in a more timely and predictable fashion.
+The default value is `off`; `ANALYZE` commands will attempt locks on tables and, if unsuccessful, will proceed without possession of the table lock. 
+
+Keeping this parameter turned off will prevent deadlocks and make automatic statistics collection sessions finish in a more timely and predictable fashion.
 
 When set to `on`, the `ANALYZE` command will block until the table lock is acquired.
 
