@@ -3638,6 +3638,25 @@ create table DatumSortedSet_core (a int, b character varying NOT NULL) distribut
 explain select * from DatumSortedSet_core where b in (NULL, NULL);
 ---------------------------------------------------------------------------------
 
+-- Test fill argtypes of PopAggFunc
+-- start_ignore
+drop table if exists foo;
+drop table if exists bar;
+-- end_ignore
+
+set optimizer_enable_eageragg = on;
+create table foo (j1 int, g1 int, s1 int);
+insert into foo select i%10, i %10, i from generate_series(1,100) i;
+create table bar (j2 int, g2 int, s2 int);
+insert into bar select i%1, i %10, i from generate_series(1,10) i;
+analyze foo;
+analyze bar;
+
+explain (costs off) select max(s1) from foo inner join bar on j1 = j2 group by g1;
+drop table foo;
+drop table bar;
+reset optimizer_enable_eageragg;
+
 -- Testcases to validate the behavior of the GUC gp_max_system_slices
 
 -- start_ignore

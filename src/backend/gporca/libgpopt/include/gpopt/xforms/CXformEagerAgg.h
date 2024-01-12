@@ -101,7 +101,7 @@ private:
 		CMemoryPool *mp,  // memory pool
 		IMDId *agg_mdid,  // original global aggregate function
 		CWStringConst *agg_name, CExpressionArray *agg_arg_array,
-		BOOL is_distinct,
+		BOOL is_distinct, ULongPtrArray *arg_types,
 		CExpression **lower_proj_elem_expr	// output project element of the new
 											// lower aggregate
 	);
@@ -111,7 +111,7 @@ private:
 		CMemoryPool *mp,  // memory pool
 		IMDId *agg_mdid,  // aggregate mdid to create
 		CWStringConst *agg_name, CColRef *lower_colref, CColRef *output_colref,
-		BOOL is_distinct,
+		BOOL is_distinct, ULongPtrArray *arg_types,
 		CExpression **upper_proj_elem_expr	// output project element of the new
 											// upper aggregate
 	);

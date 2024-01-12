@@ -14929,6 +14929,45 @@ explain select * from DatumSortedSet_core where b in (NULL, NULL);
 (3 rows)
 
 ---------------------------------------------------------------------------------
+-- Test fill argtypes of PopAggFunc
+-- start_ignore
+drop table if exists foo;
+drop table if exists bar;
+-- end_ignore
+set optimizer_enable_eageragg = on;
+create table foo (j1 int, g1 int, s1 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'j1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into foo select i%10, i %10, i from generate_series(1,100) i;
+create table bar (j2 int, g2 int, s2 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'j2' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+insert into bar select i%1, i %10, i from generate_series(1,10) i;
+analyze foo;
+analyze bar;
+explain (costs off) select max(s1) from foo inner join bar on j1 = j2 group by g1;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Finalize GroupAggregate
+         Group Key: foo.g1
+         ->  Sort
+               Sort Key: foo.g1
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: foo.g1
+                     ->  Streaming Partial HashAggregate
+                           Group Key: foo.g1
+                           ->  Hash Join
+                                 Hash Cond: (foo.j1 = bar.j2)
+                                 ->  Seq Scan on foo
+                                 ->  Hash
+                                       ->  Seq Scan on bar
+ Optimizer: GPORCA
+(15 rows)
+
+drop table foo;
+drop table bar;
+reset optimizer_enable_eageragg;
 -- Testcases to validate the behavior of the GUC gp_max_system_slices
 -- start_ignore
 drop table if exists foo;
