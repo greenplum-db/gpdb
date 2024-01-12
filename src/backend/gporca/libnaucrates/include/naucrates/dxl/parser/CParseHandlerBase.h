@@ -43,6 +43,7 @@ enum EDxlParseHandlerType
 	EdxlphStatisticsConfig,
 	EdxlphCTEConfig,
 	EdxlphHint,
+	EdxlphPlanHint,
 	EdxlphWindowOids,
 	EdxlphTraceFlags,
 	EdxlphPlan,

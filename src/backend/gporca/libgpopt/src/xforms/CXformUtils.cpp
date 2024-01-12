@@ -22,6 +22,7 @@
 #include "gpopt/base/CKeyCollection.h"
 #include "gpopt/base/CUtils.h"
 #include "gpopt/exception.h"
+#include "gpopt/hints/CHintUtils.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalAssert.h"
 #include "gpopt/operators/CLogicalBitmapTableGet.h"
@@ -2557,6 +2558,21 @@ CXformUtils::PexprBuildBtreeIndexPlan(CMemoryPool *mp, CMDAccessor *md_accessor,
 					GPOS_NEW(mp) CName(mp, CName(alias)), ulPartIndex,
 					pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids,
 					ulUnindexedPredColCount);
+			if (!CHintUtils::SatisfiesPlanHints(
+					CLogicalDynamicIndexOnlyGet::PopConvert(popLogicalGet),
+					COptCtxt::PoctxtFromTLS()
+						->GetOptimizerConfig()
+						->GetPlanHint()))
+			{
+				// clean up
+				GPOS_DELETE(alias);
+				pdrgppcrIndexCols->Release();
+				pdrgpexprResidual->Release();
+				pdrgpexprIndex->Release();
+				outer_refs_in_index_get->Release();
+				popLogicalGet->Release();
+				return nullptr;
+			}
 		}
 		else
 		{
@@ -2566,6 +2582,21 @@ CXformUtils::PexprBuildBtreeIndexPlan(CMemoryPool *mp, CMDAccessor *md_accessor,
 					GPOS_NEW(mp) CName(mp, CName(alias)), ulPartIndex,
 					pdrgpcrOutput, pdrgpdrgpcrPart, partition_mdids,
 					ulUnindexedPredColCount);
+			if (!CHintUtils::SatisfiesPlanHints(
+					CLogicalDynamicIndexGet::PopConvert(popLogicalGet),
+					COptCtxt::PoctxtFromTLS()
+						->GetOptimizerConfig()
+						->GetPlanHint()))
+			{
+				// clean up
+				GPOS_DELETE(alias);
+				pdrgppcrIndexCols->Release();
+				pdrgpexprResidual->Release();
+				pdrgpexprIndex->Release();
+				outer_refs_in_index_get->Release();
+				popLogicalGet->Release();
+				return nullptr;
+			}
 		}
 	}
 	else
@@ -2577,6 +2608,21 @@ CXformUtils::PexprBuildBtreeIndexPlan(CMemoryPool *mp, CMDAccessor *md_accessor,
 					mp, pmdindex, ptabdesc, ulOriginOpId,
 					GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput,
 					ulUnindexedPredColCount, indexscanDirection);
+			if (!CHintUtils::SatisfiesPlanHints(
+					CLogicalIndexOnlyGet::PopConvert(popLogicalGet),
+					COptCtxt::PoctxtFromTLS()
+						->GetOptimizerConfig()
+						->GetPlanHint()))
+			{
+				// clean up
+				GPOS_DELETE(alias);
+				pdrgppcrIndexCols->Release();
+				pdrgpexprResidual->Release();
+				pdrgpexprIndex->Release();
+				outer_refs_in_index_get->Release();
+				popLogicalGet->Release();
+				return nullptr;
+			}
 		}
 		else
 		{
@@ -2584,6 +2630,21 @@ CXformUtils::PexprBuildBtreeIndexPlan(CMemoryPool *mp, CMDAccessor *md_accessor,
 				mp, pmdindex, ptabdesc, ulOriginOpId,
 				GPOS_NEW(mp) CName(mp, CName(alias)), pdrgpcrOutput,
 				ulUnindexedPredColCount, indexscanDirection);
+			if (!CHintUtils::SatisfiesPlanHints(
+					CLogicalIndexGet::PopConvert(popLogicalGet),
+					COptCtxt::PoctxtFromTLS()
+						->GetOptimizerConfig()
+						->GetPlanHint()))
+			{
+				// clean up
+				GPOS_DELETE(alias);
+				pdrgppcrIndexCols->Release();
+				pdrgpexprResidual->Release();
+				pdrgpexprIndex->Release();
+				outer_refs_in_index_get->Release();
+				popLogicalGet->Release();
+				return nullptr;
+			}
 		}
 	}
 
@@ -3033,11 +3094,19 @@ CXformUtils::PexprBitmapSelectBestIndex(
 		pexprIndexFinal->AddRef();
 		(*ppexprRecheck) = pexprIndexFinal;
 
-		return GPOS_NEW(mp) CExpression(
-			mp,
-			GPOS_NEW(mp) CScalarBitmapIndexProbe(
-				mp, pindexdesc, pmdindex->GetIndexRetItemTypeMdid()),
-			pexprIndexFinal);
+		ptabdesc->AddRef();
+		CScalarBitmapIndexProbe *pop = GPOS_NEW(mp) CScalarBitmapIndexProbe(
+			mp, pindexdesc, ptabdesc, pmdindex->GetIndexRetItemTypeMdid());
+		if (!CHintUtils::SatisfiesPlanHints(
+				pop,
+				COptCtxt::PoctxtFromTLS()->GetOptimizerConfig()->GetPlanHint()))
+		{
+			pop->Release();
+			pexprIndexFinal->Release();
+			(*ppexprResidual) = pexprPred;
+			return nullptr;
+		}
+		return GPOS_NEW(mp) CExpression(mp, pop, pexprIndexFinal);
 	}
 
 	// else the unmatched predicate becomes the residual

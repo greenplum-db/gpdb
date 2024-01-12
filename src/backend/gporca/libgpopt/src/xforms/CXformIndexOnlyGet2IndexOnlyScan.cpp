@@ -16,12 +16,14 @@
 #include "gpos/base.h"
 
 #include "gpopt/base/COptCtxt.h"
+#include "gpopt/hints/CHintUtils.h"
 #include "gpopt/metadata/CIndexDescriptor.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CExpressionHandle.h"
 #include "gpopt/operators/CLogicalIndexOnlyGet.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalIndexOnlyScan.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/xforms/CXformUtils.h"
 #include "naucrates/md/CMDIndexGPDB.h"
 
@@ -95,6 +97,13 @@ CXformIndexOnlyGet2IndexOnlyScan::Transform(CXformContext *pxfctxt,
 	CExpression *pexprIndexCond = (*pexpr)[0];
 	if (pexprIndexCond->DeriveHasSubquery() ||
 		!CXformUtils::FCoverIndex(mp, pindexdesc, ptabdesc, pdrgpcrOutput))
+	{
+		return;
+	}
+
+	if (!CHintUtils::SatisfiesPlanHints(
+			pop,
+			COptCtxt::PoctxtFromTLS()->GetOptimizerConfig()->GetPlanHint()))
 	{
 		return;
 	}

@@ -414,6 +414,12 @@ CoveringIndexTest:
 CoveringIndex-1 CoveringIndex-2 CoveringIndex-3 CoveringIndex-Cost-1 CoveringIndex-Cost-2
 CoveringIndex-DoesSupport-Gist CoveringIndex-DoesNotSupport-Gin;
 
+CPlanHintsTest:
+Hint-SeqScan-Over-Table Hint-SeqScan-Over-Join
+Hint-IndexScan-Over-Table Hint-IndexScan-Over-Join Hint-NoIndexScan-Over-Table
+Hint-IndexOnlyScan-Over-Table Hint-NoIndexOnlyScan-Over-Table
+Hint-BitmapScan-Over-Table Hint-NoBitmapScan-Over-Table;
+
 CForeignPartTest:
 ForeignPartUniform PartForeignMixed PartForeignDifferentServer PartForeignDifferentExecLocation PartForeignMixedDPE PartForeignMixedSPE PartForeignUniformSPE ForeignScanExecLocAnySimpleScan ForeignScanExecLocAnyJoin ForeignPartOneTimeFilterDPE
 ")

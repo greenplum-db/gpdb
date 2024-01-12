@@ -20,6 +20,7 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CScalar.h"
 
 namespace gpopt
@@ -42,6 +43,9 @@ private:
 	// index descriptor
 	CIndexDescriptor *m_pindexdesc;
 
+	// table descriptor
+	CTableDescriptor *m_ptabdesc;
+
 	// bitmap type id
 	IMDId *m_pmdidBitmapType;
 
@@ -51,7 +55,7 @@ private:
 public:
 	// ctor
 	CScalarBitmapIndexProbe(CMemoryPool *mp, CIndexDescriptor *pindexdesc,
-							IMDId *pmdidBitmapType);
+							CTableDescriptor *ptabdesc, IMDId *pmdidBitmapType);
 
 	// ctor
 	// only for transforms
@@ -65,6 +69,13 @@ public:
 	Pindexdesc() const
 	{
 		return m_pindexdesc;
+	}
+
+	// return table's descriptor
+	CTableDescriptor *
+	Ptabdesc() const
+	{
+		return m_ptabdesc;
 	}
 
 	// bitmap type id

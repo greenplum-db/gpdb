@@ -16,6 +16,8 @@
 
 #include "gpos/base.h"
 #include "gpos/common/CAutoP.h"
+#include "gpos/common/CEnumSet.h"
+#include "gpos/common/CEnumSetIter.h"
 #include "gpos/io/IOstream.h"
 #include "gpos/string/CWStringDynamic.h"
 
@@ -251,6 +253,11 @@ public:
 	static CWStringDynamic *Serialize(
 		CMemoryPool *mp, const CDynamicPtrArray<T, CleanupFn> *arr);
 
+	template <typename T, ULONG sentinel_index>
+	static CWStringDynamic *Serialize(
+		CMemoryPool *mp, const CEnumSet<T, sentinel_index> *dynamic_set,
+		const WCHAR *(*func)(T));
+
 	// serialize a list of lists of integers into a comma-separate string
 	static CWStringDynamic *Serialize(CMemoryPool *mp,
 									  const ULongPtr2dArray *pdrgpul);
@@ -258,6 +265,10 @@ public:
 	// serialize a list of chars into a comma-separate string
 	static CWStringDynamic *SerializeToCommaSeparatedString(
 		CMemoryPool *mp, const CharPtrArray *pdrgpsz);
+
+	// serialize a list of strings into a comma-separate string
+	static CWStringDynamic *SerializeToCommaSeparatedString(
+		CMemoryPool *mp, const StringPtrArray *pdrgpsz);
 
 	// decode a byte array from a string
 	static BYTE *DecodeByteArrayFromString(CMemoryPool *mp,
@@ -319,6 +330,32 @@ CDXLUtils::Serialize(CMemoryPool *mp,
 	}
 
 	return string_var.Reset();
+}
+
+template <typename T, ULONG sentinel_index>
+CWStringDynamic *
+CDXLUtils::Serialize(CMemoryPool *mp,
+					 const CEnumSet<T, sentinel_index> *dynamic_set,
+					 const WCHAR *(*func)(T))
+{
+	CAutoP<CWStringDynamic> str(GPOS_NEW(mp) CWStringDynamic(mp));
+
+	CEnumSetIter<T, sentinel_index> iter(*dynamic_set);
+	ULONG idx = 0;
+	while (iter.Advance())
+	{
+		const WCHAR *index = func(iter.TBit());
+		str->AppendWideCharArray(index);
+		if (idx != dynamic_set->Size() - 1)
+		{
+			str->AppendFormat(
+				GPOS_WSZ_LIT("%ls"),
+				CDXLTokens::GetDXLTokenStr(EdxltokenComma)->GetBuffer());
+		}
+		idx += 1;
+	}
+
+	return str.Reset();
 }
 
 }  // namespace gpdxl

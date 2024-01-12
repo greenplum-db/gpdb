@@ -389,8 +389,10 @@ CExpressionTest::EresUnittest_BitmapGet()
 	CMDIdGPDB *mdid = GPOS_NEW(mp) CMDIdGPDB(CMDIdGPDB::m_mdid_unknown);
 	CIndexDescriptor *pindexdesc =
 		CIndexDescriptor::Pindexdesc(mp, ptabdesc, pmdindex);
+	ptabdesc->AddRef();
 	CExpression *pexprBitmapIndex = GPOS_NEW(mp) CExpression(
-		mp, GPOS_NEW(mp) CScalarBitmapIndexProbe(mp, pindexdesc, mdid),
+		mp,
+		GPOS_NEW(mp) CScalarBitmapIndexProbe(mp, pindexdesc, ptabdesc, mdid),
 		pexprIndexCond);
 
 	CColRefArray *pdrgpcrTable = GPOS_NEW(mp) CColRefArray(mp);
@@ -440,8 +442,10 @@ CExpressionTest::EresUnittest_BitmapGet()
 		CIndexDescriptor::Pindexdesc(mp, ptabdesc, pmdindex);
 	CExpression *pexprIndexCond2 = CUtils::PexprScalarEqCmp(
 		mp, pcrFirst, CUtils::PexprScalarConstInt4(mp, 20 /*val*/));
+	ptabdesc->AddRef();
 	CExpression *pexprBitmapIndex2 = GPOS_NEW(mp) CExpression(
-		mp, GPOS_NEW(mp) CScalarBitmapIndexProbe(mp, pindexdesc2, pmdid2),
+		mp,
+		GPOS_NEW(mp) CScalarBitmapIndexProbe(mp, pindexdesc2, ptabdesc, pmdid2),
 		pexprIndexCond2);
 	CWStringDynamic strIndex2(mp);
 	COstreamString ossIndex2(&strIndex2);

@@ -42,6 +42,7 @@ class CMDAccessor;
 class CQueryContext;
 class COptimizerConfig;
 class ICostModel;
+class CPlanHint;
 }  // namespace gpopt
 
 struct PlannedStmt;
@@ -120,7 +121,8 @@ private:
 
 	// create optimizer configuration object
 	static COptimizerConfig *CreateOptimizerConfig(CMemoryPool *mp,
-												   ICostModel *cost_model);
+												   ICostModel *cost_model,
+												   CPlanHint *plan_hints);
 
 	// optimize a query to a physical DXL
 	static void *OptimizeTask(void *ptr);
@@ -142,6 +144,9 @@ private:
 
 	// generate an instance of optimizer cost model
 	static ICostModel *GetCostModel(CMemoryPool *mp, ULONG num_segments);
+
+	// create optimizer plan hints
+	static CPlanHint *GetPlanHints(CMemoryPool *mp, Query *query);
 
 	// print warning messages for columns with missing statistics
 	static void PrintMissingStatsWarning(CMemoryPool *mp,

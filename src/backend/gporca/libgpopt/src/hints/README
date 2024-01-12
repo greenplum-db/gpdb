@@ -1,0 +1,116 @@
+What are hints?
+--------------
+
+A hint allows the user to override the optimizer in order to coerce a plan
+shape by disregarding its estimated cost compared to alternative plans. It may
+only be used to coerce plans that exist in ORCA's plan space.
+
+In Greenplum, plan hints are enabled through a custom extension [1] that
+provides a similar interface to pg_hint_plan [2], which is based on Postgres.
+
+
+Parser
+------
+
+Writing a parser is hard. Instead, let's utilize the parser provided by
+pg_hint_plan. But, how can ORCA access an extension's parsed data structures?
+Hooks!
+
+When the hint extension is loaded, it sets plan_hint_hook to the hint parser
+routine. When ORCA finds plan_hint_hook is set, it executes the parser routine
+and then translates the pg_hint_plan HintState into ORCA hint structures.
+
+There are 4 hint types:
+
+  1. Scan
+  2. Row
+  3. Join
+  4. Motion
+
+
+Hint Container
+--------------
+
+CPlanHint is a container that holds all the parsed hints. It is a globally
+accessible structure attached to COptimizerConfig.
+
+In DXL format it might look like:
+```
+<dxl:OptimizerConfig>
+  ...
+  <dxl:PlanHint>
+    <dxl:ScanHint Alias="table_1" OperatorName="NoIndexScan,NoIndexOnlyScan"/>
+    <dxl:ScanHint Alias="table_2" OperatorName="ScanScan"/>
+    <dxl:ScanHint Alias="table_3" OperatorName="IndexScan" IndexName="my_awesome_index"/>
+  </dxl:PlanHint>
+  ...
+</dxl:OptimizerConfig>
+```
+
+
+Scan Hints
+----------
+
+How is it represented?
+
+CScanHint contains all the scan hints on a single relation. There may be more
+than one hint per relation.
+
+How does it work?
+
+In exploration phase, transfoms add logical plan alternatives. If scan hints
+are specified, then the transformed operators must satisfy the hints in order
+to be considered as a valid alternative.
+
+Each relevant operator has a CHintUtils::SatisfiesPlanHints() function. That
+function is responsible for checking that the proposed alternative operator
+satisfies all corresponding hints.
+
+Each scan hint specifies one ore more scan types (e.g. NoSeqScan, NoIndexScan,
+etc). It is the responsiblity of CScanHint::SatisfiesOperator() to check that
+the proposed alternative operator satisfies all of the hint's scan types.
+
+
+Row Hints
+---------
+TODO
+
+
+Join Hints
+----------
+TODO
+
+
+Motion Hints
+------------
+TODO
+
+
+Supported Hints
+---------------
+  SeqScan
+  NoSeqScan
+  IndexScan
+  NoIndexScan
+  IndexOnlyScan
+  NoIndexOnlyScan,
+  BitmapScan
+  NoBitmapScan.
+
+
+Unsupported Hints
+-----------------
+  TidScan
+  NoTidScan
+  NestLoop
+  NoNestLoop
+  HashJoin
+  NoHashJoin
+  MergeJoin,
+  NoMergeJoin
+  Leading
+  Rows
+  Parallel
+
+[1] https://github.com/pivotal/pg_hint_plan/tree/PG12
+[2] https://github.com/ossc-db/pg_hint_plan

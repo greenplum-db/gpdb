@@ -3083,7 +3083,7 @@ CDXLOperatorFactory::ExtractConvertSegmentIdsToArray(
 //		CDXLOperatorFactory::ExtractConvertStrsToArray
 //
 //	@doc:
-//		Parse a semicolon-separated list of strings into a dynamic array.
+//		Parse a comma-separated list of strings into a dynamic array.
 //
 //---------------------------------------------------------------------------
 StringPtrArray *
@@ -3094,8 +3094,8 @@ CDXLOperatorFactory::ExtractConvertStrsToArray(
 
 	StringPtrArray *array_strs = GPOS_NEW(mp) StringPtrArray(mp);
 
-	XMLStringTokenizer mdid_components(
-		xml_val, CDXLTokens::XmlstrToken(EdxltokenSemicolon));
+	XMLStringTokenizer mdid_components(xml_val,
+									   CDXLTokens::XmlstrToken(EdxltokenComma));
 	const ULONG num_tokens = mdid_components.countTokens();
 
 	for (ULONG ul = 0; ul < num_tokens; ul++)

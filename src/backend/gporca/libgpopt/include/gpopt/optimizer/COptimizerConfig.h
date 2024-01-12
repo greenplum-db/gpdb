@@ -21,6 +21,7 @@
 #include "gpopt/engine/CEnumeratorConfig.h"
 #include "gpopt/engine/CHint.h"
 #include "gpopt/engine/CStatisticsConfig.h"
+#include "gpopt/hints/CPlanHint.h"
 
 namespace gpopt
 {
@@ -62,6 +63,9 @@ private:
 	// hint configuration
 	CHint *m_hint;
 
+	// optimizer plan hints
+	CPlanHint *m_plan_hint{nullptr};
+
 	// default window oids
 	CWindowOids *m_window_oids;
 
@@ -69,7 +73,7 @@ public:
 	// ctor
 	COptimizerConfig(CEnumeratorConfig *pec, CStatisticsConfig *stats_config,
 					 CCTEConfig *pcteconf, ICostModel *pcm, CHint *phint,
-					 CWindowOids *pdefoidsGPDB);
+					 CPlanHint *pplanhint, CWindowOids *pdefoidsGPDB);
 
 	// dtor
 	~COptimizerConfig() override;
@@ -115,6 +119,12 @@ public:
 	GetHint() const
 	{
 		return m_hint;
+	}
+
+	CPlanHint *
+	GetPlanHint() const
+	{
+		return m_plan_hint;
 	}
 
 	// generate default optimizer configurations

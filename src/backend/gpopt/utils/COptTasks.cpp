@@ -17,6 +17,8 @@
 
 extern "C" {
 #include "cdb/cdbvars.h"
+#include "optimizer/hints.h"
+#include "optimizer/orca.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
 }
@@ -39,6 +41,7 @@ extern "C" {
 #include "gpopt/eval/CConstExprEvaluatorDXL.h"
 #include "gpopt/exception.h"
 #include "gpopt/gpdbwrappers.h"
+#include "gpopt/hints/CPlanHint.h"
 #include "gpopt/mdcache/CAutoMDAccessor.h"
 #include "gpopt/mdcache/CMDCache.h"
 #include "gpopt/minidump/CMinidumperUtils.h"
@@ -83,6 +86,8 @@ using namespace gpdbcost;
 
 // default id for the source system
 const CSystemId default_sysid(IMDId::EmdidGeneral, GPOS_WSZ_STR_LENGTH("GPDB"));
+
+plan_hint_hook_type plan_hint_hook = nullptr;
 
 
 //---------------------------------------------------------------------------
@@ -346,7 +351,8 @@ COptTasks::LoadSearchStrategy(CMemoryPool *mp, char *path)
 //
 //---------------------------------------------------------------------------
 COptimizerConfig *
-COptTasks::CreateOptimizerConfig(CMemoryPool *mp, ICostModel *cost_model)
+COptTasks::CreateOptimizerConfig(CMemoryPool *mp, ICostModel *cost_model,
+								 CPlanHint *plan_hints)
 {
 	// get chosen plan number, cost threshold
 	ULLONG plan_id = (ULLONG) optimizer_plan_id;
@@ -384,6 +390,7 @@ COptTasks::CreateOptimizerConfig(CMemoryPool *mp, ICostModel *cost_model)
 								      * enforce them ourselves in the executor */
 				  push_group_by_below_setop_threshold, xform_bind_threshold,
 				  skew_factor),
+		plan_hints,
 		GPOS_NEW(mp) CWindowOids(OID(F_WINDOW_ROW_NUMBER), OID(F_WINDOW_RANK)));
 }
 
@@ -443,6 +450,118 @@ COptTasks::GetCostModel(CMemoryPool *mp, ULONG num_segments)
 	SetCostModelParams(cost_model);
 
 	return cost_model;
+}
+
+
+//---------------------------------------------------------------------------
+//      @function:
+//			COptTasks::GetPlanHints
+//
+//      @doc:
+//			Generate an instance of plan hints by parsing the query tree.
+//
+//---------------------------------------------------------------------------
+CPlanHint *
+COptTasks::GetPlanHints(CMemoryPool *mp, Query *query)
+{
+	HintState *hintstate = nullptr;
+	if (plan_hint_hook != nullptr)
+	{
+		hintstate = (HintState *) plan_hint_hook(query);
+	}
+
+	if (nullptr == hintstate)
+	{
+		return nullptr;
+	}
+
+	CPlanHint *plan_hints = GPOS_NEW(mp) CPlanHint(mp);
+
+	for (int ul = 0; ul < hintstate->num_hints[HINT_TYPE_SCAN_METHOD]; ul++)
+	{
+		ScanMethodHint *scan_hint =
+			(ScanMethodHint *) hintstate->scan_hints[ul];
+		if (nullptr == scan_hint->relname)
+		{
+			continue;
+		}
+
+		StringPtrArray *indexnames = GPOS_NEW(mp) StringPtrArray(mp);
+		CScanHint::EType type = CScanHint::Sentinal;
+		switch (scan_hint->base.hint_keyword)
+		{
+			case HINT_KEYWORD_SEQSCAN:
+			{
+				type = CScanHint::SeqScan;
+				break;
+			}
+			case HINT_KEYWORD_NOSEQSCAN:
+			{
+				type = CScanHint::NoSeqScan;
+				break;
+			}
+			case HINT_KEYWORD_INDEXSCAN:
+			{
+				type = CScanHint::IndexScan;
+				break;
+			}
+			case HINT_KEYWORD_NOINDEXSCAN:
+			{
+				type = CScanHint::NoIndexScan;
+				break;
+			}
+			case HINT_KEYWORD_INDEXONLYSCAN:
+			{
+				type = CScanHint::IndexOnlyScan;
+				break;
+			}
+			case HINT_KEYWORD_NOINDEXONLYSCAN:
+			{
+				type = CScanHint::NoIndexOnlyScan;
+				break;
+			}
+			case HINT_KEYWORD_BITMAPSCAN:
+			{
+				type = CScanHint::BitmapScan;
+				break;
+			}
+			case HINT_KEYWORD_NOBITMAPSCAN:
+			{
+				type = CScanHint::NoBitmapScan;
+				break;
+			}
+			default:
+			{
+				CWStringDynamic *error_message = GPOS_NEW(mp) CWStringDynamic(
+					mp, GPOS_WSZ_LIT("Unsupported plan hint: "));
+				error_message->AppendFormat(GPOS_WSZ_LIT("%s"),
+											scan_hint->base.keyword);
+
+				GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
+						   error_message->GetBuffer());
+				break;
+			}
+		}
+
+		ListCell *l;
+		foreach (l, scan_hint->indexnames)
+		{
+			char *indexname = (char *) lfirst(l);
+			indexnames->Append(GPOS_NEW(mp) CWStringConst(mp, indexname));
+		}
+
+		CScanHint *hint = plan_hints->GetScanHint(scan_hint->relname);
+		if (nullptr == hint)
+		{
+			hint = GPOS_NEW(mp) CScanHint(
+				mp, GPOS_NEW(mp) CWStringConst(mp, scan_hint->relname),
+				indexnames);
+			plan_hints->AddHint(hint);
+		}
+		hint->AddType(type);
+	}
+
+	return plan_hints;
 }
 
 //---------------------------------------------------------------------------
@@ -533,8 +652,9 @@ COptTasks::OptimizeTask(void *ptr)
 				mp, &mda, (Query *) opt_ctxt->m_query);
 
 			ICostModel *cost_model = GetCostModel(mp, num_segments_for_costing);
+			CPlanHint *plan_hints = GetPlanHints(mp, opt_ctxt->m_query);
 			COptimizerConfig *optimizer_config =
-				CreateOptimizerConfig(mp, cost_model);
+				CreateOptimizerConfig(mp, cost_model, plan_hints);
 			CConstExprEvaluatorProxy expr_eval_proxy(mp, &mda);
 			IConstExprEvaluator *expr_evaluator =
 				GPOS_NEW(mp) CConstExprEvaluatorDXL(mp, &mda, &expr_eval_proxy);

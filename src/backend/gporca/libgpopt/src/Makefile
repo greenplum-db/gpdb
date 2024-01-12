@@ -10,7 +10,7 @@ include $(top_builddir)/src/Makefile.global
 
 include $(top_srcdir)/src/backend/gporca/gporca.mk
 
-SUBDIRS     = base engine eval mdcache metadata minidump operators optimizer search translate xforms
+SUBDIRS     = base engine eval hints mdcache metadata minidump operators optimizer search translate xforms
 OBJS        = exception.o init.o
 
 include $(top_srcdir)/src/backend/common.mk

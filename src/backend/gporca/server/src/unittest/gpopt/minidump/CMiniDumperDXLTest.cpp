@@ -126,7 +126,8 @@ CMiniDumperDXLTest::EresUnittest_Basic()
 			CEnumeratorConfig::GetEnumeratorCfg(mp, 0 /*plan_id*/),
 			CStatisticsConfig::PstatsconfDefault(mp),
 			CCTEConfig::PcteconfDefault(mp), ICostModel::PcmDefault(mp),
-			CHint::PhintDefault(mp), CWindowOids::GetWindowOids(mp));
+			CHint::PhintDefault(mp), nullptr /* pplanhint */,
+			CWindowOids::GetWindowOids(mp));
 
 		// setup opt ctx
 		CAutoOptCtxt aoc(mp, &mda, nullptr, /* pceeval */

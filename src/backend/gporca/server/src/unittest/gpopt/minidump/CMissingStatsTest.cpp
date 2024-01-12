@@ -88,7 +88,7 @@ CMissingStatsTest::EresUnittest_RunTests()
 			CEnumeratorConfig::GetEnumeratorCfg(mp, 0 /*plan_id*/),
 			CStatisticsConfig::PstatsconfDefault(mp),
 			CCTEConfig::PcteconfDefault(mp), pcm, CHint::PhintDefault(mp),
-			CWindowOids::GetWindowOids(mp));
+			nullptr /* pplanhint */, CWindowOids::GetWindowOids(mp));
 		SMissingStatsTestCase testCase = rgtc[ul];
 
 		CDXLNode *pdxlnPlan = CMinidumperUtils::PdxlnExecuteMinidump(

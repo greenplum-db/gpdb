@@ -1706,6 +1706,33 @@ CDXLUtils::SerializeToCommaSeparatedString(CMemoryPool *mp,
 	return dxl_string;
 }
 
+// Serialize a list of chars into a comma-separated string
+CWStringDynamic *
+CDXLUtils::SerializeToCommaSeparatedString(CMemoryPool *mp,
+										   const StringPtrArray *str_ptr_array)
+{
+	CWStringDynamic *dxl_string = GPOS_NEW(mp) CWStringDynamic(mp);
+
+	ULONG length = str_ptr_array->Size();
+	for (ULONG ul = 0; ul < length; ul++)
+	{
+		CWStringBase *value = (*str_ptr_array)[ul];
+		if (ul == length - 1)
+		{
+			// last element: do not print a comma
+			dxl_string->AppendFormat(GPOS_WSZ_LIT("%ls"), value->GetBuffer());
+		}
+		else
+		{
+			dxl_string->AppendFormat(
+				GPOS_WSZ_LIT("%ls%ls"), value->GetBuffer(),
+				CDXLTokens::GetDXLTokenStr(EdxltokenComma)->GetBuffer());
+		}
+	}
+
+	return dxl_string;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CDXLUtils::CreateMultiByteCharStringFromWCString

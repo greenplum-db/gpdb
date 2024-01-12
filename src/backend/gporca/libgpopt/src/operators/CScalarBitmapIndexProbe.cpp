@@ -38,11 +38,16 @@ using namespace gpopt;
 //---------------------------------------------------------------------------
 CScalarBitmapIndexProbe::CScalarBitmapIndexProbe(CMemoryPool *mp,
 												 CIndexDescriptor *pindexdesc,
+												 CTableDescriptor *ptabdesc,
 												 IMDId *pmdidBitmapType)
-	: CScalar(mp), m_pindexdesc(pindexdesc), m_pmdidBitmapType(pmdidBitmapType)
+	: CScalar(mp),
+	  m_pindexdesc(pindexdesc),
+	  m_ptabdesc(ptabdesc),
+	  m_pmdidBitmapType(pmdidBitmapType)
 {
 	GPOS_ASSERT(nullptr != mp);
 	GPOS_ASSERT(nullptr != pindexdesc);
+	GPOS_ASSERT(nullptr != ptabdesc);
 	GPOS_ASSERT(nullptr != pmdidBitmapType);
 }
 
@@ -57,6 +62,7 @@ CScalarBitmapIndexProbe::CScalarBitmapIndexProbe(CMemoryPool *mp,
 CScalarBitmapIndexProbe::~CScalarBitmapIndexProbe()
 {
 	m_pindexdesc->Release();
+	m_ptabdesc->Release();
 	m_pmdidBitmapType->Release();
 }
 

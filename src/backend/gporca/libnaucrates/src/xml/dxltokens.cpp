@@ -74,6 +74,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenCostModelType, GPOS_WSZ_LIT("CostModelType")},
 		{EdxltokenSegmentsForCosting, GPOS_WSZ_LIT("SegmentsForCosting")},
 		{EdxltokenHint, GPOS_WSZ_LIT("Hint")},
+		{EdxltokenPlanHint, GPOS_WSZ_LIT("PlanHint")},
+		{EdxltokenScanHint, GPOS_WSZ_LIT("ScanHint")},
 		{EdxltokenJoinArityForAssociativityCommutativity,
 		 GPOS_WSZ_LIT("JoinArityForAssociativityCommutativity")},
 		{EdxltokenArrayExpansionThreshold,

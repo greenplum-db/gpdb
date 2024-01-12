@@ -24,6 +24,10 @@
 extern PlannedStmt * optimize_query(Query *parse, int cursorOptions, ParamListInfo boundParams);
 extern Node *transformGroupedWindows(Node *node, void *context);
 
+// plan_hint_hook generates HintState by parsing a Query.
+typedef void *(*plan_hint_hook_type) (Query *parse);
+extern PGDLLIMPORT plan_hint_hook_type plan_hint_hook;
+
 #endif
 
 #endif /* ORCA_H */

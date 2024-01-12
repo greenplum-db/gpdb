@@ -13,10 +13,12 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/hints/CHintUtils.h"
 #include "gpopt/metadata/CPartConstraint.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CLogicalDynamicGet.h"
 #include "gpopt/operators/CPhysicalDynamicTableScan.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
 
 using namespace gpopt;
 
@@ -69,6 +71,13 @@ CXformDynamicGet2DynamicTableScan::Transform(CXformContext *pxfctxt,
 	GPOS_ASSERT(FCheckPattern(pexpr));
 
 	CLogicalDynamicGet *popGet = CLogicalDynamicGet::PopConvert(pexpr->Pop());
+	if (!CHintUtils::SatisfiesPlanHints(
+			popGet,
+			COptCtxt::PoctxtFromTLS()->GetOptimizerConfig()->GetPlanHint()))
+	{
+		return;
+	}
+
 	CMemoryPool *mp = pxfctxt->Pmp();
 
 	// create/extract components for alternative

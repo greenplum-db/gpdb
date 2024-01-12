@@ -13,11 +13,13 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/hints/CHintUtils.h"
 #include "gpopt/metadata/CPartConstraint.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CLogicalDynamicIndexGet.h"
 #include "gpopt/operators/CPatternLeaf.h"
 #include "gpopt/operators/CPhysicalDynamicIndexScan.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
 
 using namespace gpopt;
 
@@ -80,6 +82,13 @@ CXformDynamicIndexGet2DynamicIndexScan::Transform(
 	CLogicalDynamicIndexGet *popIndexGet =
 		CLogicalDynamicIndexGet::PopConvert(pexpr->Pop());
 	CMemoryPool *mp = pxfctxt->Pmp();
+
+	if (!CHintUtils::SatisfiesPlanHints(
+			popIndexGet,
+			COptCtxt::PoctxtFromTLS()->GetOptimizerConfig()->GetPlanHint()))
+	{
+		return;
+	}
 
 	// create/extract components for alternative
 	CName *pname = GPOS_NEW(mp) CName(mp, popIndexGet->Name());

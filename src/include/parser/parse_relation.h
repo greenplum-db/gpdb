@@ -134,5 +134,6 @@ extern Oid	attnumCollationId(Relation rd, int attid);
 extern bool isQueryUsingTempRelation(Query *query);
 
 extern bool isSimplyUpdatableRelation(Oid relid, bool noerror);
+extern bool isAliasPartitionedTable(Query *query, const char *alias);
 
 #endif							/* PARSE_RELATION_H */
