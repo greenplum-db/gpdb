@@ -608,3 +608,300 @@ select * from t1_15793 cross join t2_15793 where not ((t1_15793.c0)+(t1_15793.c0
 
 drop table t1_15793;
 drop table t2_15793;
+-- test left join with IN/ANY subquery correlated to the outer join side.
+-- fix case
+EXPLAIN (verbose on, costs off) SELECT * FROM
+(values (1), (2), (3)) t1(a2)
+left join (values (5)) t2(a2)
+ON (
+    t2.a2 in (
+        SELECT a1 FROM 
+        (values (5,1), (5,2), (5,3)) t3(a1, a2) 
+        WHERE t3.a2 = t1.a2
+    )
+);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Nested Loop Left Join
+   Output: "*VALUES*".column1, (5)
+   Join Filter: (SubPlan 1)
+   ->  Values Scan on "*VALUES*"
+         Output: "*VALUES*".column1
+   ->  Materialize
+         Output: (5)
+         ->  Result
+               Output: 5
+   SubPlan 1
+     ->  Values Scan on "*VALUES*_1"
+           Output: "*VALUES*_1".column1
+           Filter: ("*VALUES*_1".column2 = "*VALUES*".column1)
+ Optimizer: Postgres-based planner
+(14 rows)
+
+SELECT * FROM
+(values (1), (2), (3)) t1(a2)
+left join (values (5)) t2(a2)
+ON (
+    t2.a2 in (
+        SELECT a1 FROM 
+        (values (5,1), (5,2), (5,3)) t3(a1, a2) 
+        WHERE t3.a2 = t1.a2
+    )
+);
+ a2 | a2 
+----+----
+  1 |  5
+  2 |  5
+  3 |  5
+(3 rows)
+
+create table t1_16968(a int, b int, c int) distributed by (a);
+create table t2_16968(a int, b int, c int) distributed by (a);
+create table t3_16968(a int, b int, c int) distributed by (a);
+create table t4_16968(a int, b int, c int) distributed by (a);
+-- support case:(convert to semi join)
+-- 1. where-clause refer inner side of left join in parent level
+EXPLAIN (verbose on, costs off) SELECT * FROM
+t1_16968 left join t2_16968
+ON (
+    t2_16968.a in (
+        SELECT a FROM t3_16968
+        WHERE t3_16968.b = t2_16968.b
+    )
+);
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: t1_16968.a, t1_16968.b, t1_16968.c, t2_16968.a, t2_16968.b, t2_16968.c
+   ->  Nested Loop Left Join
+         Output: t1_16968.a, t1_16968.b, t1_16968.c, t2_16968.a, t2_16968.b, t2_16968.c
+         Join Filter: true
+         ->  Seq Scan on public.t1_16968
+               Output: t1_16968.a, t1_16968.b, t1_16968.c
+         ->  Materialize
+               Output: t2_16968.a, t2_16968.b, t2_16968.c
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     Output: t2_16968.a, t2_16968.b, t2_16968.c
+                     ->  Hash Semi Join
+                           Output: t2_16968.a, t2_16968.b, t2_16968.c
+                           Hash Cond: ((t2_16968.b = t3_16968.b) AND (t2_16968.a = t3_16968.a))
+                           ->  Seq Scan on public.t2_16968
+                                 Output: t2_16968.a, t2_16968.b, t2_16968.c
+                                 Filter: (NOT (t2_16968.b IS NULL))
+                           ->  Hash
+                                 Output: t3_16968.a, t3_16968.b
+                                 ->  Seq Scan on public.t3_16968
+                                       Output: t3_16968.a, t3_16968.b
+ Optimizer: GPORCA
+(22 rows)
+
+-- 2. targetlist refer inner side of left join in parent level
+EXPLAIN (verbose on, costs off) SELECT * FROM
+t1_16968 left join t2_16968
+ON (
+    t2_16968.a in (
+        SELECT t2_16968.a FROM t3_16968
+        WHERE t3_16968.b = t2_16968.b
+    )
+);
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: t1_16968.a, t1_16968.b, t1_16968.c, t2_16968.a, t2_16968.b, t2_16968.c
+   ->  Nested Loop Left Join
+         Output: t1_16968.a, t1_16968.b, t1_16968.c, t2_16968.a, t2_16968.b, t2_16968.c
+         Join Filter: true
+         ->  Seq Scan on public.t1_16968
+               Output: t1_16968.a, t1_16968.b, t1_16968.c
+         ->  Materialize
+               Output: t2_16968.a, t2_16968.b, t2_16968.c
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     Output: t2_16968.a, t2_16968.b, t2_16968.c
+                     ->  Hash Semi Join
+                           Output: t2_16968.a, t2_16968.b, t2_16968.c
+                           Hash Cond: (t2_16968.b = t3_16968.b)
+                           ->  Seq Scan on public.t2_16968
+                                 Output: t2_16968.a, t2_16968.b, t2_16968.c
+                                 Filter: ((NOT (t2_16968.b IS NULL)) AND (t2_16968.a = t2_16968.a))
+                           ->  Hash
+                                 Output: t3_16968.b
+                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                       Output: t3_16968.b
+                                       ->  Seq Scan on public.t3_16968
+                                             Output: t3_16968.b
+ Optimizer: GPORCA
+(24 rows)
+
+-- 3. refer levelup > 1 vars
+EXPLAIN (verbose on, costs off) select (SELECT t1_16968.a FROM
+t1_16968 left join t2_16968
+ON (
+    t2_16968.a in (
+        SELECT a FROM t3_16968
+        WHERE t3_16968.b = t4_16968.b
+    )
+)) a
+from t4_16968;
+                                             QUERY PLAN                                              
+-----------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: ((SubPlan 1))
+   ->  Seq Scan on public.t4_16968
+         Output: (SubPlan 1)
+         SubPlan 1
+           ->  Nested Loop Left Join
+                 Output: t1_16968.a
+                 ->  Materialize
+                       Output: t1_16968.a
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                             Output: t1_16968.a
+                             ->  Seq Scan on public.t1_16968
+                                   Output: t1_16968.a
+                 ->  Materialize
+                       ->  Hash Join
+                             Inner Unique: true
+                             Hash Cond: (t2_16968.a = t3_16968.a)
+                             ->  Materialize
+                                   Output: t2_16968.a
+                                   ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                         Output: t2_16968.a
+                                         ->  Seq Scan on public.t2_16968
+                                               Output: t2_16968.a
+                             ->  Hash
+                                   Output: t3_16968.a, t3_16968.b
+                                   ->  HashAggregate
+                                         Output: t3_16968.a, t3_16968.b
+                                         Group Key: t3_16968.a
+                                         ->  Result
+                                               Output: t3_16968.a, t3_16968.b
+                                               Filter: (t3_16968.b = t4_16968.b)
+                                               ->  Materialize
+                                                     Output: t3_16968.a, t3_16968.b
+                                                     ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                                           Output: t3_16968.a, t3_16968.b
+                                                           ->  Seq Scan on public.t3_16968
+                                                                 Output: t3_16968.a, t3_16968.b
+ Optimizer: Postgres-based planner
+(38 rows)
+
+-- upsupport case:(back to subplan)
+-- 1. where-clause refer outer side of left join in parent level
+EXPLAIN (verbose on, costs off) SELECT * FROM
+t1_16968 left join t2_16968
+ON (
+    t2_16968.a in (
+        SELECT a FROM t3_16968
+        WHERE t3_16968.b = t1_16968.b
+    )
+);
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: t1_16968.a, t1_16968.b, t1_16968.c, t2_16968.a, t2_16968.b, t2_16968.c
+   ->  Nested Loop Left Join
+         Output: t1_16968.a, t1_16968.b, t1_16968.c, t2_16968.a, t2_16968.b, t2_16968.c
+         Join Filter: (SubPlan 1)
+         ->  Seq Scan on public.t1_16968
+               Output: t1_16968.a, t1_16968.b, t1_16968.c
+         ->  Materialize
+               Output: t2_16968.a, t2_16968.b, t2_16968.c
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     Output: t2_16968.a, t2_16968.b, t2_16968.c
+                     ->  Seq Scan on public.t2_16968
+                           Output: t2_16968.a, t2_16968.b, t2_16968.c
+         SubPlan 1
+           ->  Result
+                 Output: t3_16968.a
+                 Filter: (t3_16968.b = t1_16968.b)
+                 ->  Materialize
+                       Output: t3_16968.a, t3_16968.b
+                       ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                             Output: t3_16968.a, t3_16968.b
+                             ->  Seq Scan on public.t3_16968
+                                   Output: t3_16968.a, t3_16968.b
+ Optimizer: Postgres-based planner
+(24 rows)
+
+-- 2. targetlist refer outer side of left join in parent level
+EXPLAIN (verbose on, costs off) SELECT * FROM
+t1_16968 left join t2_16968
+ON (
+    (t2_16968.a, true) in (
+        SELECT a, t1_16968.a = t3_16968.b FROM t3_16968
+    )
+);
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: t1_16968.a, t1_16968.b, t1_16968.c, t2_16968.a, t2_16968.b, t2_16968.c
+   ->  Nested Loop Left Join
+         Output: t1_16968.a, t1_16968.b, t1_16968.c, t2_16968.a, t2_16968.b, t2_16968.c
+         Join Filter: (SubPlan 1)
+         ->  Seq Scan on public.t1_16968
+               Output: t1_16968.a, t1_16968.b, t1_16968.c
+         ->  Materialize
+               Output: t2_16968.a, t2_16968.b, t2_16968.c
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     Output: t2_16968.a, t2_16968.b, t2_16968.c
+                     ->  Seq Scan on public.t2_16968
+                           Output: t2_16968.a, t2_16968.b, t2_16968.c
+         SubPlan 1
+           ->  Result
+                 Output: t3_16968.a, (t1_16968.a = t3_16968.b)
+                 ->  Materialize
+                       Output: t3_16968.a, t3_16968.b
+                       ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                             Output: t3_16968.a, t3_16968.b
+                             ->  Seq Scan on public.t3_16968
+                                   Output: t3_16968.a, t3_16968.b
+ Optimizer: Postgres-based planner
+(23 rows)
+
+-- 3. contain correlated vars in on-clause
+EXPLAIN (verbose on, costs off) SELECT * FROM
+t1_16968 left join t2_16968
+ON (
+    t2_16968.a in (
+        SELECT t3_16968.a FROM t3_16968 join t4_16968 on t4_16968.c = t2_16968.c
+        WHERE t3_16968.b = t2_16968.b
+    )
+);
+                                                          QUERY PLAN                                                          
+------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: t1_16968.a, t1_16968.b, t1_16968.c, t2_16968.a, t2_16968.b, t2_16968.c
+   ->  Nested Loop Left Join
+         Output: t1_16968.a, t1_16968.b, t1_16968.c, t2_16968.a, t2_16968.b, t2_16968.c
+         Join Filter: true
+         ->  Seq Scan on public.t1_16968
+               Output: t1_16968.a, t1_16968.b, t1_16968.c
+         ->  Materialize
+               Output: t2_16968.a, t2_16968.b, t2_16968.c
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     Output: t2_16968.a, t2_16968.b, t2_16968.c
+                     ->  Hash Semi Join
+                           Output: t2_16968.a, t2_16968.b, t2_16968.c
+                           Hash Cond: ((t2_16968.c = t4_16968.c) AND (t2_16968.b = t3_16968.b) AND (t2_16968.a = t3_16968.a))
+                           ->  Seq Scan on public.t2_16968
+                                 Output: t2_16968.a, t2_16968.b, t2_16968.c
+                                 Filter: ((NOT (t2_16968.b IS NULL)) AND (NOT (t2_16968.c IS NULL)))
+                           ->  Hash
+                                 Output: t3_16968.a, t3_16968.b, t4_16968.c
+                                 ->  Nested Loop
+                                       Output: t3_16968.a, t3_16968.b, t4_16968.c
+                                       Join Filter: true
+                                       ->  Seq Scan on public.t3_16968
+                                             Output: t3_16968.a, t3_16968.b
+                                       ->  Materialize
+                                             Output: t4_16968.c
+                                             ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                                   Output: t4_16968.c
+                                                   ->  Seq Scan on public.t4_16968
+                                                         Output: t4_16968.c
+ Optimizer: GPORCA
+(31 rows)
+
+drop table t1_16968;
+drop table t2_16968;
+drop table t3_16968;
+drop table t4_16968;

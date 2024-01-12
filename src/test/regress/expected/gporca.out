@@ -12339,25 +12339,23 @@ select *
 from tcorr1 out
 where out.b in (select coalesce(tcorr2.a, 99)
                 from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
-                                                   QUERY PLAN                                                   
-----------------------------------------------------------------------------------------------------------------
- Nested Loop Semi Join  (cost=10000000001.05..10000000003.20 rows=3 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
-         ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
-   ->  Materialize  (cost=1.05..2.17 rows=1 width=4)
-         ->  Subquery Scan on "ANY_subquery"  (cost=1.05..2.16 rows=1 width=4)
-               Filter: ("out".b = "ANY_subquery"."coalesce")
-               ->  Hash Left Join  (cost=1.05..2.12 rows=3 width=4)
-                     Hash Cond: (tcorr1.a = (tcorr2.a + "out".a))
-                     ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
-                           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
-                                 ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
-                     ->  Hash  (cost=1.03..1.03 rows=1 width=4)
-                           ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
-                                 ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
-                                       ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=4)
- Optimizer: Postgres query optimizer
-(16 rows)
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
+   ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Hash Left Join  (cost=1.05..2.12 rows=3 width=4)
+                 Hash Cond: (tcorr1.a = (tcorr2.a + "out".a))
+                 ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                             ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
+                 ->  Hash  (cost=1.03..1.03 rows=1 width=4)
+                       ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
+                             ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                                   ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=4)
+ Optimizer: Postgres-based planner
+(14 rows)
 
 -- expect 1 row
 select *
@@ -12409,28 +12407,7 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              from tcorr2
                                              where tcorr2.b = out.b
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
-                                                      QUERY PLAN                                                      
-----------------------------------------------------------------------------------------------------------------------
- Nested Loop Semi Join  (cost=10000000001.08..10000000003.20 rows=3 width=8)
-   Join Filter: ("out".b = COALESCE((count(*)), '99'::bigint))
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
-         ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
-   ->  Materialize  (cost=1.08..2.17 rows=3 width=8)
-         ->  Hash Left Join  (cost=1.08..2.15 rows=3 width=8)
-               Hash Cond: (tcorr1.a = tcorr2.a)
-               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
-                     ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
-               ->  Hash  (cost=1.07..1.07 rows=1 width=12)
-                     ->  HashAggregate  (cost=1.05..1.06 rows=1 width=12)
-                           Group Key: tcorr2.a
-                           ->  Result  (cost=0.00..1.04 rows=1 width=4)
-                                 Filter: (tcorr2.b = "out".b)
-                                 ->  Materialize  (cost=0.00..1.03 rows=1 width=8)
-                                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
-                                             ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=8)
- Optimizer: Postgres query optimizer
-(18 rows)
-
+ERROR:  correlated subquery with skip-level correlations is not supported
 -- expect 1 row
 select *
 from tcorr1 out
@@ -12439,11 +12416,7 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              from tcorr2
                                              where tcorr2.b = out.b
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
- a | b  
----+----
- 1 | 99
-(1 row)
-
+ERROR:  correlated subquery with skip-level correlations is not supported
 -- expect 1 row
 select *
 from tcorr1 out
@@ -12460,25 +12433,23 @@ select *
 from tcorr1 out
 where out.b in (select coalesce(tcorr2.a, 99)
                 from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
-                                                   QUERY PLAN                                                   
-----------------------------------------------------------------------------------------------------------------
- Nested Loop Semi Join  (cost=10000000001.05..10000000003.20 rows=3 width=8)
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
-         ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
-   ->  Materialize  (cost=1.05..2.17 rows=1 width=4)
-         ->  Subquery Scan on "ANY_subquery"  (cost=1.05..2.16 rows=1 width=4)
-               Filter: ("out".b = "ANY_subquery"."coalesce")
-               ->  Hash Left Join  (cost=1.05..2.12 rows=3 width=4)
-                     Hash Cond: (tcorr1.a = (tcorr2.a + "out".a))
-                     ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
-                           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
-                                 ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
-                     ->  Hash  (cost=1.03..1.03 rows=1 width=4)
-                           ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
-                                 ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
-                                       ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=4)
- Optimizer: Postgres query optimizer
-(16 rows)
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
+   ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Hash Left Join  (cost=1.05..2.12 rows=3 width=4)
+                 Hash Cond: (tcorr1.a = (tcorr2.a + "out".a))
+                 ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                             ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
+                 ->  Hash  (cost=1.03..1.03 rows=1 width=4)
+                       ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
+                             ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                                   ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=4)
+ Optimizer: Postgres-based planner
+(14 rows)
 
 -- expect 1 row
 select *
@@ -12530,28 +12501,7 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              from tcorr2
                                              where tcorr2.b = out.b
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
-                                                      QUERY PLAN                                                      
-----------------------------------------------------------------------------------------------------------------------
- Nested Loop Semi Join  (cost=10000000001.08..10000000003.20 rows=3 width=8)
-   Join Filter: ("out".b = COALESCE((count(*)), '99'::bigint))
-   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
-         ->  Seq Scan on tcorr1 "out"  (cost=0.00..1.01 rows=1 width=8)
-   ->  Materialize  (cost=1.08..2.17 rows=3 width=8)
-         ->  Hash Left Join  (cost=1.08..2.15 rows=3 width=8)
-               Hash Cond: (tcorr1.a = tcorr2.a)
-               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
-                     ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
-               ->  Hash  (cost=1.07..1.07 rows=1 width=12)
-                     ->  HashAggregate  (cost=1.05..1.06 rows=1 width=12)
-                           Group Key: tcorr2.a
-                           ->  Result  (cost=0.00..1.04 rows=1 width=4)
-                                 Filter: (tcorr2.b = "out".b)
-                                 ->  Materialize  (cost=0.00..1.03 rows=1 width=8)
-                                       ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
-                                             ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=8)
- Optimizer: Postgres query optimizer
-(18 rows)
-
+ERROR:  correlated subquery with skip-level correlations is not supported
 -- expect 1 row
 select *
 from tcorr1 out
@@ -12560,11 +12510,7 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              from tcorr2
                                              where tcorr2.b = out.b
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
- a | b  
----+----
- 1 | 99
-(1 row)
-
+ERROR:  correlated subquery with skip-level correlations is not supported
 -- expect 1 row
 select *
 from tcorr1 out
@@ -13028,26 +12974,23 @@ from foo l1 where b in (select ab
                                     on l2.a=tbtree_derived.a and l2.b=tbtree_derived.b
                         where l2.c = 1
                        );
-                                      QUERY PLAN                                      
---------------------------------------------------------------------------------------
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  HashAggregate
-         Group Key: (RowIdExpr)
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)
-               Hash Key: (RowIdExpr)
-               ->  Nested Loop
-                     Join Filter: ((l1.a + tbtree.b) = l1.b)
-                     ->  Broadcast Motion 3:3  (slice3; segments: 3)
-                           ->  Seq Scan on foo l1
-                     ->  Materialize
-                           ->  Hash Join
-                                 Hash Cond: ((tbtree.a = l2.a) AND (tbtree.b = l2.b))
-                                 ->  Seq Scan on tbtree
-                                 ->  Hash
-                                       ->  Seq Scan on foo l2
-                                             Filter: (c = 1)
- Optimizer: Postgres query optimizer
-(17 rows)
+   ->  Seq Scan on foo l1
+         Filter: (SubPlan 1)
+         SubPlan 1
+           ->  Result
+                 ->  Materialize
+                       ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                             ->  Hash Join
+                                   Hash Cond: ((tbtree.a = l2.a) AND (tbtree.b = l2.b))
+                                   ->  Seq Scan on tbtree
+                                   ->  Hash
+                                         ->  Seq Scan on foo l2
+                                               Filter: (c = 1)
+ Optimizer: Postgres-based planner
+(14 rows)
 
 -- 16 group by columns are not a superset of the distribution columns - no index scan
 explain (costs off)

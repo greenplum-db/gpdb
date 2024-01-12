@@ -1517,6 +1517,11 @@ convert_ANY_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 	Node	   *quals;
 	bool		correlated;
 	ParseState *pstate;
+	Node	   *whereClause;
+	List	   *targetlist;
+	/* Upper varnos in subselect */
+	Relids	subselect_consider_upper_varnos;	/* WhereClause & targetlist */
+	Relids	subselect_other_upper_varnos;		/* Others */
 
 	Assert(sublink->subLinkType == ANY_SUBLINK);
 	Assert(IsA(subselect, Query));
@@ -1562,12 +1567,36 @@ convert_ANY_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 			return NULL;
 	}
 
+	/* Consider correlated Var in subselect */
+	whereClause = subselect->jointree->quals;
+	targetlist = subselect->targetList;
+	/* Notice: do not return before reset whereClause & targetlist */
+	subselect->jointree->quals = NULL;
+	subselect->targetList = NULL;
+	subselect_other_upper_varnos = pull_varnos_of_level((Node *)subselect, 1);
+	subselect->targetList = targetlist;
+	subselect->jointree->quals = whereClause;
+	/* Notice: reset done */
+
+	/* The rest of the sub-select must not refer to any Vars of the parent.*/
+	if (!bms_is_empty(subselect_other_upper_varnos))
+		return NULL;
+
+	/* Add correlated Vars in whereClause & targetlist to be considered */
+	subselect_consider_upper_varnos = pull_varnos_of_level(whereClause, 1);
+	subselect_consider_upper_varnos =
+		bms_add_members(subselect_consider_upper_varnos,
+						pull_varnos_of_level((Node *)targetlist, 1));
+
 	/*
 	 * The test expression must contain some Vars of the parent query,
 	 * else it's not gonna be a join.  (Note that it won't have Vars
 	 * referring to the subquery, rather Params.)
 	 */
 	upper_varnos = pull_varnos(root, sublink->testexpr);
+	/* Add upper varnos in subselect into upper varnos */
+	upper_varnos = bms_add_members(upper_varnos,
+								   subselect_consider_upper_varnos);
 	if (bms_is_empty(upper_varnos))
 		return NULL;
 

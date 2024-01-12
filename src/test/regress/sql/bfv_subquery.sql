@@ -368,3 +368,101 @@ select * from t1_15793 cross join t2_15793 where not ((t1_15793.c0)+(t1_15793.c0
 
 drop table t1_15793;
 drop table t2_15793;
+
+-- test left join with IN/ANY subquery correlated to the outer join side.
+
+-- fix case
+EXPLAIN (verbose on, costs off) SELECT * FROM
+(values (1), (2), (3)) t1(a2)
+left join (values (5)) t2(a2)
+ON (
+    t2.a2 in (
+        SELECT a1 FROM 
+        (values (5,1), (5,2), (5,3)) t3(a1, a2) 
+        WHERE t3.a2 = t1.a2
+    )
+);
+SELECT * FROM
+(values (1), (2), (3)) t1(a2)
+left join (values (5)) t2(a2)
+ON (
+    t2.a2 in (
+        SELECT a1 FROM 
+        (values (5,1), (5,2), (5,3)) t3(a1, a2) 
+        WHERE t3.a2 = t1.a2
+    )
+);
+
+create table t1_16968(a int, b int, c int) distributed by (a);
+create table t2_16968(a int, b int, c int) distributed by (a);
+create table t3_16968(a int, b int, c int) distributed by (a);
+create table t4_16968(a int, b int, c int) distributed by (a);
+
+-- support case:(convert to semi join)
+
+-- 1. where-clause refer inner side of left join in parent level
+EXPLAIN (verbose on, costs off) SELECT * FROM
+t1_16968 left join t2_16968
+ON (
+    t2_16968.a in (
+        SELECT a FROM t3_16968
+        WHERE t3_16968.b = t2_16968.b
+    )
+);
+
+-- 2. targetlist refer inner side of left join in parent level
+EXPLAIN (verbose on, costs off) SELECT * FROM
+t1_16968 left join t2_16968
+ON (
+    t2_16968.a in (
+        SELECT t2_16968.a FROM t3_16968
+        WHERE t3_16968.b = t2_16968.b
+    )
+);
+
+-- 3. refer levelup > 1 vars
+EXPLAIN (verbose on, costs off) select (SELECT t1_16968.a FROM
+t1_16968 left join t2_16968
+ON (
+    t2_16968.a in (
+        SELECT a FROM t3_16968
+        WHERE t3_16968.b = t4_16968.b
+    )
+)) a
+from t4_16968;
+
+-- upsupport case:(back to subplan)
+
+-- 1. where-clause refer outer side of left join in parent level
+EXPLAIN (verbose on, costs off) SELECT * FROM
+t1_16968 left join t2_16968
+ON (
+    t2_16968.a in (
+        SELECT a FROM t3_16968
+        WHERE t3_16968.b = t1_16968.b
+    )
+);
+
+-- 2. targetlist refer outer side of left join in parent level
+EXPLAIN (verbose on, costs off) SELECT * FROM
+t1_16968 left join t2_16968
+ON (
+    (t2_16968.a, true) in (
+        SELECT a, t1_16968.a = t3_16968.b FROM t3_16968
+    )
+);
+
+-- 3. contain correlated vars in on-clause
+EXPLAIN (verbose on, costs off) SELECT * FROM
+t1_16968 left join t2_16968
+ON (
+    t2_16968.a in (
+        SELECT t3_16968.a FROM t3_16968 join t4_16968 on t4_16968.c = t2_16968.c
+        WHERE t3_16968.b = t2_16968.b
+    )
+);
+
+drop table t1_16968;
+drop table t2_16968;
+drop table t3_16968;
+drop table t4_16968;
