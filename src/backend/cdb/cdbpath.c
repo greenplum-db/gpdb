@@ -184,6 +184,9 @@ cdbpath_create_motion_path(PlannerInfo *root,
 	if (cdbpathlocus_equal(subpath->locus, locus))
 		return subpath;
 
+	if (IsA(subpath, CdbMotionPath))
+		return subpath;
+
 	/* Moving subpath output to a single executor process (qDisp or qExec)? */
 	if (CdbPathLocus_IsOuterQuery(locus))
 	{
