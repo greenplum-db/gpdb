@@ -5442,30 +5442,11 @@ adjust_modifytable_subpaths(PlannerInfo *root, CmdType operation,
 	/*
 	 * Set the distribution of the ModifyTable node itself. If there is only
 	 * one subplan, or all the subplans have a compatible distribution, then
-	 * we could mark the ModifyTable with the same distribution key. However,
-	 * currently, because a ModifyTable node can only be at the top of the
-	 * plan, it won't make any difference to the overall plan.
-	 *
-	 * GPDB_96_MERGE_FIXME: it might with e.g. a INSERT RETURNING in a CTE
-	 * I tried here, the locus setting is quite simple, but failed if it's not
-	 * in a CTE and the locus is General. Haven't figured out how to create
-	 * flow in that case.
-	 * Example:
-	 * CREATE TABLE cte_returning_locus(c1 int) DISTRIBUTED BY (c1);
-	 * COPY cte_returning_locus FROM PROGRAM 'seq 1 100';
-	 * EXPLAIN WITH aa AS (
-	 *        INSERT INTO cte_returning_locus SELECT generate_series(3,300) RETURNING c1
-	 * )
-	 * SELECT count(*) FROM aa,cte_returning_locus WHERE aa.c1 = cte_returning_locus.c1;
-	 *
-	 * The returning doesn't need a motion to be hash joined, works fine. But
-	 * without the WITH, what is the proper flow? FLOW_SINGLETON returns
-	 * nothing, FLOW_PARTITIONED without hashExprs(General locus has no
-	 * distkeys) returns duplication.
-	 *
-	 * GPDB_90_MERGE_FIXME: I've hacked a basic implementation of the above for
-	 * the case where all the subplans are POLICYTYPE_ENTRY, but it seems like
-	 * there should be a more general way to do this.
+	 * we could mark the ModifyTable with the same distribution key. Otherwise,
+	 * mark the ModifyTable with Strewn.
+	 * We may set a proper locus of Hashed for the ModifyTable to eliminate
+	 * extra redistribution, but after discussion we decided it's not worthy
+	 * to do because the scenario is not common and the benefit is limited.
 	 */
 	if (all_subplans_entry)
 	{
