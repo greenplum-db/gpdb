@@ -455,59 +455,16 @@ CLeftJoinPruningPreprocessor::ComputeOutputColumns(
 	// child if possible. Similar is the case for Intersect/IntersectAll and
 	// Difference/DifferenceAll.
 
-	CLogicalSetOp *pop = nullptr;
-	BOOL isLogicalSetOp = false;
-	switch (pexpr->Pop()->Eopid())
+	if (CUtils::FLogicalSetOp(pexpr->Pop()))
 	{
-		case COperator::EopLogicalUnion:
+		CLogicalSetOp *pop = CLogicalSetOp::PopConvert(pexpr->Pop());
+		for (ULONG i = 0; i < pop->PdrgpdrgpcrInput()->Size(); i++)
 		{
-			pop = CLogicalUnion::PopConvert(pexpr->Pop());
-			isLogicalSetOp = true;
-			break;
-		}
-		case COperator::EopLogicalUnionAll:
-		{
-			pop = CLogicalUnionAll::PopConvert(pexpr->Pop());
-			isLogicalSetOp = true;
-			break;
-		}
-		case COperator::EopLogicalIntersect:
-		{
-			pop = CLogicalIntersect::PopConvert(pexpr->Pop());
-			isLogicalSetOp = true;
-			break;
-		}
-		case COperator::EopLogicalIntersectAll:
-		{
-			pop = CLogicalIntersectAll::PopConvert(pexpr->Pop());
-			isLogicalSetOp = true;
-			break;
-		}
-		case COperator::EopLogicalDifference:
-		{
-			pop = CLogicalDifference::PopConvert(pexpr->Pop());
-			isLogicalSetOp = true;
-			break;
-		}
-		case COperator::EopLogicalDifferenceAll:
-		{
-			pop = CLogicalDifferenceAll::PopConvert(pexpr->Pop());
-			isLogicalSetOp = true;
-			break;
-		}
-		default:
-			break;
-	}
-
-	if (isLogicalSetOp)
-	{
-		for (ULONG uli = 0; uli < pop->PdrgpdrgpcrInput()->Size(); uli++)
-		{
-			for (ULONG ulj = 0; ulj < (*pop->PdrgpdrgpcrInput())[uli]->Size();
-				 ulj++)
+			ULONG size = (*pop->PdrgpdrgpcrInput())[i]->Size();
+			for (ULONG j = 0; j < size; j++)
 			{
 				childs_output_columns->Include(
-					(*(*pop->PdrgpdrgpcrInput())[uli])[ulj]);
+					(*(*pop->PdrgpdrgpcrInput())[i])[j]);
 			}
 		}
 	}
