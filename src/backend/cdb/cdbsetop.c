@@ -137,6 +137,9 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 			return false;
 		}
 
+		if (IsA(subpath, CdbMotionPath))
+			return false;
+
 		switch (setop_type)
 		{
 			case PSETOP_GENERAL:
