@@ -6,7 +6,7 @@ Greenplum Database provides an administrative schema called `gp_toolkit` that yo
 => ALTER ROLE myrole SET search_path TO myschema,gp_toolkit;
 ```
 
-This documentation describes the most useful views in `gp_toolkit`. You may notice other objects \(views, functions, and external tables\) within the `gp_toolkit` schema that are not described in this documentation \(these are supporting objects to the views described in this section\).
+This documentation describes the most useful views and user-defined functions (UDFs) in `gp_toolkit`. You may notice other objects (views, functions, and external tables) within the `gp_toolkit` schema that are not described in this documentation (these are supporting objects to the views described in this section).
 
 > **Caution** Do not change database objects in the gp\_toolkit schema. Do not create database objects in the schema. Changes to objects in the schema might affect the accuracy of administrative information returned by schema objects. Any changes made in the gp\_toolkit schema are lost when the database is backed up and then restored with the `gpbackup` and `gprestore` utilities.
 
@@ -40,9 +40,7 @@ These are the categories for views in the `gp_toolkit` schema.
 
 -   **[Checking for Uneven Data Distribution](gp_toolkit.html#topic49)**  
 
-
-**Parent topic:** [Greenplum Database Reference Guide](ref_guide.html)
-
+-   **[Maintaining Partitions](gp_toolkit.html#maintainingpartitions)**
 
 ## <a id="about"></a>About the Extension
 
@@ -1032,3 +1030,30 @@ This view shows data distribution skew by calculating the percentage of the syst
 |sifrelname|The table name.|
 |siffraction|The percentage of the system that is idle during a table scan, which is an indicator of uneven data distribution or query processing skew. For example, a value of 0.1 indicates 10% skew, a value of 0.5 indicates 50% skew, and so on. Tables that have more than 10% skew should have their distribution policies evaluated.|
 
+## <a id="maintaining_partitions"></a>Maintaining Partitions
+
+If your your database employs partitions you will need to perform certain tasks regularly to help maintain those parititons. To help you with this, VMware Greenplum includes a system view and a number of user-defined functions to help with these tasks. 
+
+### The gp_partitions View
+
+The `gp_partitions` view shows the structure of partitioned tables in a database.
+
+This view provides backwards compatibility with the legacy `pg_partitions` view (available in lower major versions of VMware Greenplum). 
+
+|Column|Type|Description|
+|------|------|---------|
+|schemaname|name|The name of the schema the partitioned table is in.|
+|tablename|name|The name of the top-level parent table.|
+|partitionschemaname|name|The namespace of the partition table.|
+|partitiontablename|name|The relation name of the partitioned table (this is the table name to use if accessing the partition directly).|
+|parentpartitiontablename|regclass|The relation name of the parent table one level up from this partition.|
+|partitiontype|text|The type of partition (range or list).|
+|partitionlevel|integer	The level of this partition in the hierarchy.|
+|partitionrank|integer|For range partitions, the rank of the partition compared to other partitions of the same level.|
+|partitionlistvalues|text|For list partitions, the list value(s) associated with this partition.|
+|partitionrangestart|text|For range partitions, the start value of this partition.|
+|partitionrangeend|text|For range partitions, the end value of this partition.|
+|partitionisdefault|boolean|T if this is a default partition, otherwise F.|
+|partitionboundary|text|The entire partition specification for this partition.|
+|parenttablespace|name|The tablespace of the parent table one level up from this partition.|
+|partitiontablespace|name|The tablespace of this partition.|
