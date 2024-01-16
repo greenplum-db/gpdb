@@ -137,7 +137,7 @@ check_external_partition(void)
 	/*
 	 * This was only a problem with GPDB 6 and below.
 	 *
-	 * GPDB_12_MERGE_FIXME: Could we support upgrading these to GPDB 7,
+	 * GPDB_UPGRADE_FIXME: Could we support upgrading these to GPDB 7,
 	 * even though it wasn't possible before? The upstream syntax used in
 	 * GPDB 7 to recreate the partition hierarchy is more flexible, and
 	 * could possibly handle this. If so, we could remove this check
@@ -398,7 +398,7 @@ check_partition_indexes(void)
 	/*
 	 * This was only a problem with GPDB 6 and below.
 	 *
-	 * GPDB_12_MERGE_FIXME: Could we support upgrading these to GPDB 7,
+	 * GPDB_UPGRADE_FIXME: Could we support upgrading these to GPDB 7,
 	 * even though it wasn't possible before? The upstream syntax used in
 	 * GPDB 7 to recreate the partition hierarchy is more flexible, and
 	 * could possibly handle this. If so, we could remove this check
@@ -650,7 +650,7 @@ check_for_array_of_partition_table_types(ClusterInfo *cluster)
 	/*
 	 * This was only a problem with GPDB 6 and below.
 	 *
-	 * GPDB_12_MERGE_FIXME: Could we support upgrading these to GPDB 7,
+	 * GPDB_UPGRADE_FIXME: Could we support upgrading these to GPDB 7,
 	 * even though it wasn't possible before? The upstream syntax used in
 	 * GPDB 7 to recreate the partition hierarchy is more flexible, and
 	 * could possibly handle this. If so, we could remove this check

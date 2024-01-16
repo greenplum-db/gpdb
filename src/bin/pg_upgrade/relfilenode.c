@@ -221,7 +221,7 @@ transfer_relfile(FileNameMap *map, const char *type_suffix, bool vm_must_add_fro
  * file (the one without an extent suffix) for a relation is also fatal, since
  * we expect that to exist for both heap and AO tables in any case.
  *
- * TODO: verify that AO tables must always have a segment zero.
+ * GPDB_UPGRADE_FIXME: verify that AO tables must always have a segment zero.
  */
 static bool
 transfer_relfile_segment(int segno, FileNameMap *map,

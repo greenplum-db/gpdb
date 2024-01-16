@@ -62,7 +62,7 @@ retain_tempdir=0
 
 # For performance testing, we want to skip everything other than what we need
 # to upgrade to the new cluster.  This tests the nominal production use case.
-# TODO: what about the pg_upgrade precheck for upgrade?
+# GPDB_UPGRADE_FIXME: what about the pg_upgrade precheck for upgrade?
 perf_test=0
 
 # Not all platforms have a realpath binary in PATH, most notably macOS doesn't,
@@ -132,7 +132,7 @@ check_vacuum_worked()
         return 0;
     fi
 
-	# GPDB_94_MERGE_FIXME: This test doesn't work in 9.4 anymore, because
+	# GPDB_UPGRADE_FIXME: This test doesn't work in 9.4 anymore, because
 	# freezing no longer resets 'xmin', it just sets a new flag in the
 	# tuple header to indicate that the row is frozen. See upstream commit
 	# 37484ad2aa. Need to find a new way to verify this.
@@ -202,7 +202,7 @@ upgrade_segment()
 	fi
 	popd
 
-	# TODO: run check_vacuum_worked on each segment, too, once we have a good
+	# GPDB_UPGRADE_FIXME: run check_vacuum_worked on each segment, too, once we have a good
 	# candidate catalog table (gp_segment_configuration doesn't exist on
 	# segments).
 }
@@ -276,7 +276,7 @@ diff_and_exit() {
 	# shouldn't be a cause of difference in the files but it is. Partitioning info
 	# is generated via backend functionality in the cluster being dumped, and not
 	# in pg_dump, so whitespace changes can trip up the diff.
-	# FIXME: Maybe we should not use '-w' in the future since it is too aggressive.
+	# GPDB_UPGRADE_FIXME: Maybe we should not use '-w' in the future since it is too aggressive.
 	if ! diff -w "$temp_root/dump1.sql" "$temp_root/dump2.sql" >/dev/null; then
 		# To aid debugging in pipelines, print the diff to stdout. Ignore
 		# whitespace, as above, to avoid misdirecting the troubleshooter.

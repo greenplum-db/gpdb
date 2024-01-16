@@ -83,7 +83,7 @@ restore_aosegment_table(PGconn *conn, RelInfo *rel)
 
 	res = executeQueryOrDie(conn, "%s", query->data);
 
-	/* XXX We should really find an aosegments table here */
+	/* GPDB_UPGRADE_FIXME We should really find an aosegments table here */
 	if (PQntuples(res) == 0)
 	{
 		PQclear(res);

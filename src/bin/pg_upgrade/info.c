@@ -147,7 +147,7 @@ gen_db_file_maps(DbInfo *old_db, DbInfo *new_db,
 			continue;
 		}
 
-		/* XXX Why are we doing this here and not in get_rel_infos()? */
+		/* GPDB_UPGRADE_FIXME Why are we doing this here and not in get_rel_infos()? */
 		if (old_rel->aosegments != NULL)
 			old_rel->reltype = AO;
 		else if (old_rel->aocssegments != NULL)

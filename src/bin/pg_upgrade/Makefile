@@ -43,7 +43,7 @@ clean distclean maintainer-clean:
 greenplum/aomd_filehandler.c: $(top_srcdir)/src/backend/access/appendonly/aomd_filehandler.c
 	rm -f $@ && cd greenplum && $(LN_S) ../$< aomd_filehandler.c
 
-# GPDB_95_MERGE_FIXME:
+# GPDB_UPGRADE_FIXME:
 # GPDB want to run installcheck of pg_upgrade in the end of installcheck-world
 # let installcheck be a no-op, so "make -C src/bin/ installcheck" does nothing on
 # src/bin/pg_upgrade, the real test of pg_upgrade will be triggered by

@@ -164,7 +164,7 @@ old_GPDB6_check_for_unsupported_sha256_password_hashes(void)
 /*
  * new_gpdb_invalidate_bitmap_indexes()
  *
- * TODO: We are currently missing the support to migrate over bitmap indexes.
+ * GPDB_UPGRADE_FIXME: We are currently missing the support to migrate over bitmap indexes.
  * Hence, mark all bitmap indexes as invalid.
  */
 void
