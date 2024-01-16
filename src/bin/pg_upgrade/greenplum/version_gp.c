@@ -99,7 +99,7 @@ check_hash_partition_usage(void)
 }
 
 /*
- * old_GPDB6_check_for_unsupported_distribution_key_data_types()
+ * old_GPDB6_check_for_unsupported_sha256_password_hashes()
  *
  *  Support for password_hash_algorithm='sha-256' was removed in GPDB 7. Check if
  *  any roles have SHA-256 password hashes.
