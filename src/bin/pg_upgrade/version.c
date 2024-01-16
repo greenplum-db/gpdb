@@ -190,38 +190,6 @@ check_for_data_type_usage(ClusterInfo *cluster,
 
 
 /*
- * old_9_3_check_for_line_data_type_usage()
- *	9.3 -> 9.4
- *	Fully implement the 'line' data type in 9.4, which previously returned
- *	"not enabled" by default and was only functionally enabled with a
- *	compile-time switch; as of 9.4 "line" has a different on-disk
- *	representation format.
- */
-void
-old_9_3_check_for_line_data_type_usage(ClusterInfo *cluster)
-{
-	char		output_path[MAXPGPATH];
-
-	prep_status("Checking for incompatible \"line\" data type");
-
-	snprintf(output_path, sizeof(output_path), "tables_using_line.txt");
-
-	if (check_for_data_type_usage(cluster, "pg_catalog.line", output_path))
-	{
-		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains the \"line\" data type in user tables.  This\n"
-				 "data type changed its internal and input/output format between your old\n"
-				 "and new clusters so this cluster cannot currently be upgraded.  You can\n"
-				 "remove the problem tables and restart the upgrade.  A list of the problem\n"
-				 "columns is in the file:\n"
-				 "    %s\n\n", output_path);
-	}
-	else
-		check_ok();
-}
-
-
-/*
  * old_9_6_check_for_unknown_data_type_usage()
  *	9.6 -> 10
  *	It's no longer allowed to create tables or views with "unknown"-type

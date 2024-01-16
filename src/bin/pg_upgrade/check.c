@@ -169,11 +169,6 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 		old_cluster.controldata.cat_ver < JSONB_FORMAT_CHANGE_CAT_VER)
 		check_for_jsonb_9_4_usage(&old_cluster);
 
-	/* Pre-PG 9.4 had a different 'line' data type internal format */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 903)
-		old_9_3_check_for_line_data_type_usage(&old_cluster);
-
-
 	teardown_GPDB6_data_type_checks(&old_cluster);
 
 dump_old_cluster:
