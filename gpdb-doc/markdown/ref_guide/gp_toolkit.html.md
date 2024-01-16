@@ -1032,7 +1032,7 @@ This view shows data distribution skew by calculating the percentage of the syst
 
 ## <a id="maintaining_partitions"></a>Maintaining Partitions
 
-If your your database employs partitions you will need to perform certain tasks regularly to help maintain those parititons. To help you with this, VMware Greenplum includes a view and a number of user-defined functions to help with these tasks. 
+If your database employs partitions you will need to perform certain tasks regularly to help maintain those partitions. VMware Greenplum includes a view and a number of user-defined functions to help with these tasks. 
 
 ### The gp_partitions View
 
