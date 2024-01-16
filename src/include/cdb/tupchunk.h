@@ -17,26 +17,15 @@
 /* Tuple Chunks */
 /*--------------*/
 
-//typedef enum TupleChunkType
-//{
-//	TC_WHOLE,					/* Contains a whole tuple. */
-//	TC_PARTIAL_START,			/* Contains the starting portion of a tuple. */
-//	TC_PARTIAL_MID,				/* Contains a middle part of a tuple. */
-//	TC_PARTIAL_END,				/* Contains the final portion of a tuple. */
-//	TC_END_OF_STREAM,			/* Indicates "end of tuples" from this source. */
-//	TC_EMPTY,					/* Empty tuple */
-//	TC_MAXVAL					/* For range checks on type values. */
-//} TupleChunkType;
-
 typedef uint32 TupleChunkType;
 
-#define TC_WHOLE 			((uint32)1 << 20)
-#define TC_PARTIAL_START 	((uint32)1 << 21)
-#define TC_PARTIAL_MID 		((uint32)1 << 22)
-#define TC_PARTIAL_END 		((uint32)1 << 23)
-#define TC_END_OF_STREAM 	((uint32)1 << 24)
-#define TC_EMPTY 			((uint32)1 << 25)
-#define TC_MAXVAL 			((uint32)1 << 26)
+#define TC_WHOLE 			((uint32)1 << 20)	/* Contains a whole tuple. */
+#define TC_PARTIAL_START 	((uint32)1 << 21)	/* Contains the starting portion of a tuple. */
+#define TC_PARTIAL_MID 		((uint32)1 << 22)	/* Contains a middle part of a tuple. */
+#define TC_PARTIAL_END 		((uint32)1 << 23)	/* Contains the final portion of a tuple. */
+#define TC_END_OF_STREAM 	((uint32)1 << 24)	/* Indicates "end of tuples" from this source. */
+#define TC_EMPTY 			((uint32)1 << 25)	/* Empty tuple */
+#define TC_MAXVAL 			((uint32)1 << 26)	/* For range checks on type values. */
 
 #define TC_TYPE_BITS		0xFFF00000
 #define TC_SIZE_BITS		0x000FFFFF
@@ -46,11 +35,16 @@ typedef uint32 TupleChunkType;
  * comes from the network.	Thus, some values are packed into 2 bytes or 1
  * byte in this header.  The break-down is as follows:
  *
- *	  Offset	  Description			Size
- *		0	 Tuple Chunk Size		  2 bytes
- *		2	 Tuple Type				  2 byte
- *	 ------------------------------------------
- *							  TOTAL:  4 BYTES
+ *             31           20                          0
+ *             ┌────────────┬───────────────────────────┐
+ *             └────────────┴───────────────────────────┘
+ *               chunk type           chunk size
+ *
+ *	  Bits Offset	  Description			   Size
+ *		00~19	    Tuple Chunk Size		  20 bits
+ *		20~31	    Tuple Type				  12 bits
+ *	 ------------------------------------------------------
+ *							  				TOTAL:  4 BYTES
  *
  * Yes, we could make this smaller. But we're doing lots of memcpy()s
  * of data immediately following these headers. Let's align the data on
@@ -91,19 +85,19 @@ typedef uint32 TupleChunkType;
 #define SetChunkHeader(/* uint8 * */tc_data, /* uint32 */value) \
 	do { uint32 val = (value); memcpy((tc_data), &val, sizeof(uint32)); } while (0)
 
-#define GetChunkType(/* uint 8 */tc_item, /* uint32 * */tc_type) \
+#define GetChunkType(/* uint 8 * */tc_item, /* uint32 * */tc_type) \
 	do { uint32 current; GetChunkHeader(GetChunkDataPtr(tc_item), &current); *(tc_type) = current & TC_TYPE_BITS; } while (0)
 
-#define SetChunkType(/* uint8 */tc_data, /* uint32 */value) \
+#define SetChunkType(/* uint8 * */tc_data, /* uint32 */value) \
 	do { uint32 current; GetChunkHeader((tc_data), &current); SetChunkHeader((tc_data), current | (value)); } while (0)
 
-#define ClearChunkType(/* uint8 **/tc_data) \
+#define ClearChunkType(/* uint8 * */tc_data) \
 	do { uint32 current; GetChunkHeader((tc_data), &current); SetChunkHeader((tc_data), current & TC_SIZE_BITS); } while (0)
 
-#define GetChunkDataSize(/* uint8 */tc_data, /* uint32 */tc_size) \
+#define GetChunkDataSize(/* uint8 * */tc_data, /* uint32 * */tc_size) \
 	do { uint32 current; GetChunkHeader((tc_data), &current); *(tc_size) = current & TC_SIZE_BITS; } while (0)
 
-#define SetChunkDataSize(/* uint8 */tc_data, /* uint32 */value) \
+#define SetChunkDataSize(/* uint8 * */tc_data, /* uint32 */value) \
 	do { uint32 current; GetChunkHeader((tc_data), &current); SetChunkHeader((tc_data), current | (value)); } while (0)
 
 #define SetChunkTupleSize(/* uint8 * */tc_data, /* uint32 */value) \
