@@ -218,7 +218,7 @@
         </dxl:LogicalCTEAnchor>
       </dxl:LogicalProject>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="100">
+    <dxl:Plan Id="0" SpaceSize="116">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.000192" Rows="3.000000" Width="8"/>

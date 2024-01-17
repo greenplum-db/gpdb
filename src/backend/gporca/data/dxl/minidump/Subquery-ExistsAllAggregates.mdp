@@ -568,7 +568,7 @@
         </dxl:LogicalGet>
       </dxl:LogicalGroupBy>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="449">
+    <dxl:Plan Id="0" SpaceSize="701">
       <dxl:Aggregate AggregationStrategy="Plain" StreamSafe="false">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1356695751.048855" Rows="1.000000" Width="16"/>
@@ -785,7 +785,7 @@
                 <dxl:ProjElem ColId="40" Alias="ColRef_0040">
                   <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="16">
                     <dxl:ValuesList ParamType="aggargs">
-                      <dxl:Ident ColId="50" ColName="ColRef_0050" TypeMdid="0.20.1.0"/>
+                      <dxl:Ident ColId="48" ColName="ColRef_0048" TypeMdid="0.20.1.0"/>
                     </dxl:ValuesList>
                     <dxl:ValuesList ParamType="aggdirectargs"/>
                     <dxl:ValuesList ParamType="aggorder"/>
@@ -795,7 +795,7 @@
                 <dxl:ProjElem ColId="42" Alias="ColRef_0042">
                   <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="23">
                     <dxl:ValuesList ParamType="aggargs">
-                      <dxl:Ident ColId="51" ColName="ColRef_0051" TypeMdid="0.20.1.0"/>
+                      <dxl:Ident ColId="49" ColName="ColRef_0049" TypeMdid="0.20.1.0"/>
                     </dxl:ValuesList>
                     <dxl:ValuesList ParamType="aggdirectargs"/>
                     <dxl:ValuesList ParamType="aggorder"/>
@@ -833,15 +833,17 @@
                   <dxl:ProjElem ColId="8" Alias="gp_segment_id">
                     <dxl:Ident ColId="8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
-                  <dxl:ProjElem ColId="50" Alias="ColRef_0050">
-                    <dxl:Ident ColId="50" ColName="ColRef_0050" TypeMdid="0.20.1.0"/>
+                  <dxl:ProjElem ColId="48" Alias="ColRef_0048">
+                    <dxl:Ident ColId="48" ColName="ColRef_0048" TypeMdid="0.20.1.0"/>
                   </dxl:ProjElem>
-                  <dxl:ProjElem ColId="51" Alias="ColRef_0051">
-                    <dxl:Ident ColId="51" ColName="ColRef_0051" TypeMdid="0.20.1.0"/>
+                  <dxl:ProjElem ColId="49" Alias="ColRef_0049">
+                    <dxl:Ident ColId="49" ColName="ColRef_0049" TypeMdid="0.20.1.0"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
                 <dxl:SortingColumnList>
+                  <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                  <dxl:SortingColumn ColId="1" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
                   <dxl:SortingColumn ColId="2" SortOperatorMdid="0.2799.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
                   <dxl:SortingColumn ColId="8" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
                 </dxl:SortingColumnList>
@@ -864,16 +866,22 @@
                     <dxl:ProjElem ColId="8" Alias="gp_segment_id">
                       <dxl:Ident ColId="8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
-                    <dxl:ProjElem ColId="50" Alias="ColRef_0050">
-                      <dxl:Ident ColId="50" ColName="ColRef_0050" TypeMdid="0.20.1.0"/>
+                    <dxl:ProjElem ColId="48" Alias="ColRef_0048">
+                      <dxl:Ident ColId="48" ColName="ColRef_0048" TypeMdid="0.20.1.0"/>
                     </dxl:ProjElem>
-                    <dxl:ProjElem ColId="51" Alias="ColRef_0051">
-                      <dxl:Ident ColId="51" ColName="ColRef_0051" TypeMdid="0.20.1.0"/>
+                    <dxl:ProjElem ColId="49" Alias="ColRef_0049">
+                      <dxl:Ident ColId="49" ColName="ColRef_0049" TypeMdid="0.20.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
                   <dxl:SortingColumnList/>
                   <dxl:HashExprList>
+                    <dxl:HashExpr>
+                      <dxl:Ident ColId="0" ColName="a" TypeMdid="0.23.1.0"/>
+                    </dxl:HashExpr>
+                    <dxl:HashExpr>
+                      <dxl:Ident ColId="1" ColName="b" TypeMdid="0.23.1.0"/>
+                    </dxl:HashExpr>
                     <dxl:HashExpr>
                       <dxl:Ident ColId="2" ColName="ctid" TypeMdid="0.27.1.0"/>
                     </dxl:HashExpr>
@@ -898,11 +906,11 @@
                       <dxl:ProjElem ColId="8" Alias="gp_segment_id">
                         <dxl:Ident ColId="8" ColName="gp_segment_id" TypeMdid="0.23.1.0"/>
                       </dxl:ProjElem>
-                      <dxl:ProjElem ColId="50" Alias="ColRef_0050">
-                        <dxl:Ident ColId="50" ColName="ColRef_0050" TypeMdid="0.20.1.0"/>
+                      <dxl:ProjElem ColId="48" Alias="ColRef_0048">
+                        <dxl:Ident ColId="48" ColName="ColRef_0048" TypeMdid="0.20.1.0"/>
                       </dxl:ProjElem>
-                      <dxl:ProjElem ColId="51" Alias="ColRef_0051">
-                        <dxl:Ident ColId="51" ColName="ColRef_0051" TypeMdid="0.20.1.0"/>
+                      <dxl:ProjElem ColId="49" Alias="ColRef_0049">
+                        <dxl:Ident ColId="49" ColName="ColRef_0049" TypeMdid="0.20.1.0"/>
                       </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
@@ -918,7 +926,7 @@
                         <dxl:GroupingColumn ColId="8"/>
                       </dxl:GroupingColumns>
                       <dxl:ProjList>
-                        <dxl:ProjElem ColId="50" Alias="ColRef_0050">
+                        <dxl:ProjElem ColId="48" Alias="ColRef_0048">
                           <dxl:AggFunc AggMdid="0.2147.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="16">
                             <dxl:ValuesList ParamType="aggargs">
                               <dxl:Ident ColId="39" ColName="ColRef_0039" TypeMdid="0.16.1.0"/>
@@ -928,7 +936,7 @@
                             <dxl:ValuesList ParamType="aggdistinct"/>
                           </dxl:AggFunc>
                         </dxl:ProjElem>
-                        <dxl:ProjElem ColId="51" Alias="ColRef_0051">
+                        <dxl:ProjElem ColId="49" Alias="ColRef_0049">
                           <dxl:AggFunc AggMdid="0.2108.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="23">
                             <dxl:ValuesList ParamType="aggargs">
                               <dxl:Ident ColId="41" ColName="ColRef_0041" TypeMdid="0.23.1.0"/>
@@ -978,6 +986,8 @@
                         </dxl:ProjList>
                         <dxl:Filter/>
                         <dxl:SortingColumnList>
+                          <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
+                          <dxl:SortingColumn ColId="1" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
                           <dxl:SortingColumn ColId="2" SortOperatorMdid="0.2799.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
                           <dxl:SortingColumn ColId="8" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
                         </dxl:SortingColumnList>

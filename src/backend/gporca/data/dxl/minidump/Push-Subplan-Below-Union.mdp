@@ -614,7 +614,7 @@ union
         </dxl:LogicalSelect>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="203400432">
+    <dxl:Plan Id="0" SpaceSize="1385319984">
       <dxl:Result>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="7327.003376" Rows="2.000000" Width="36"/>

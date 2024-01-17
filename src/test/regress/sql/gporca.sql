@@ -3691,6 +3691,17 @@ reset session authorization;
 drop user ruser;
 drop table foo, bar;
 
+-- ensure we choose a redistribute instead of a gather motion when optimizer_force_multistage_agg enabled
+create table foo (a int, b int, c int, d date);
+create table bar (a int, b int, c int, d date);
+insert into foo select i,i,i from generate_series(1,10)i;
+insert into bar select i,i,i from generate_series(1,10)i;
+analyze foo;
+analyze bar;
+set optimizer_force_multistage_agg=on;
+explain (COSTS OFF) create table jazz as select foo.a, foo.d, (clock_timestamp() at time zone 'America/Chicago')::Date as create_date from foo join bar on foo.a=bar.a group by 1,2,3 distributed by (a);
+reset optimizer_force_multistage_agg;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

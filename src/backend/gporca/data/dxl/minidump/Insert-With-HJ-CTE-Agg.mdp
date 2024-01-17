@@ -475,10 +475,10 @@
         </dxl:LogicalProject>
       </dxl:LogicalInsert>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="1390">
+    <dxl:Plan Id="0" SpaceSize="2430">
       <dxl:DMLInsert Columns="38,39,42,43,44" ActionCol="48" CtidCol="0" SegmentIdCol="0">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="867.122533" Rows="96.000000" Width="36"/>
+          <dxl:Cost StartupCost="0" TotalCost="867.148180" Rows="96.000000" Width="36"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
         <dxl:ProjList>
@@ -516,7 +516,7 @@
         </dxl:TableDescriptor>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.122533" Rows="96.000000" Width="40"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.148180" Rows="96.000000" Width="40"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="38" Alias="?column?">
@@ -548,7 +548,7 @@
           <dxl:OneTimeFilter/>
           <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.118053" Rows="96.000000" Width="32"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.143700" Rows="96.000000" Width="32"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="19" Alias="lang_count">
@@ -576,7 +576,7 @@
             </dxl:HashExprList>
             <dxl:Result>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="862.114848" Rows="96.000000" Width="32"/>
+                <dxl:Cost StartupCost="0" TotalCost="862.140495" Rows="96.000000" Width="32"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="19" Alias="lang_count">
@@ -599,7 +599,7 @@
               <dxl:OneTimeFilter/>
               <dxl:Result>
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="862.114848" Rows="96.000000" Width="32"/>
+                  <dxl:Cost StartupCost="0" TotalCost="862.140495" Rows="96.000000" Width="32"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="38" Alias="?column?">
@@ -622,7 +622,7 @@
                 <dxl:OneTimeFilter/>
                 <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="false">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="862.113824" Rows="96.000000" Width="8"/>
+                    <dxl:Cost StartupCost="0" TotalCost="862.139471" Rows="96.000000" Width="8"/>
                   </dxl:Properties>
                   <dxl:GroupingColumns>
                     <dxl:GroupingColumn ColId="20"/>
@@ -630,8 +630,10 @@
                   </dxl:GroupingColumns>
                   <dxl:ProjList>
                     <dxl:ProjElem ColId="19" Alias="lang_count">
-                      <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Normal" AggKind="n" AggArgTypes="">
-                        <dxl:ValuesList ParamType="aggargs"/>
+                      <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Final" AggKind="n" AggArgTypes="">
+                        <dxl:ValuesList ParamType="aggargs">
+                          <dxl:Ident ColId="47" ColName="ColRef_0047" TypeMdid="0.20.1.0"/>
+                        </dxl:ValuesList>
                         <dxl:ValuesList ParamType="aggdirectargs"/>
                         <dxl:ValuesList ParamType="aggorder"/>
                         <dxl:ValuesList ParamType="aggdistinct"/>
@@ -645,9 +647,9 @@
                     </dxl:ProjElem>
                   </dxl:ProjList>
                   <dxl:Filter/>
-                  <dxl:HashJoin JoinType="Inner">
+                  <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
                     <dxl:Properties>
-                      <dxl:Cost StartupCost="0" TotalCost="862.094337" Rows="240.000000" Width="8"/>
+                      <dxl:Cost StartupCost="0" TotalCost="862.119984" Rows="240.000000" Width="16"/>
                     </dxl:Properties>
                     <dxl:ProjList>
                       <dxl:ProjElem ColId="20" Alias="code">
@@ -656,84 +658,154 @@
                       <dxl:ProjElem ColId="21" Alias="countrycode">
                         <dxl:Ident ColId="21" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7"/>
                       </dxl:ProjElem>
+                      <dxl:ProjElem ColId="47" Alias="ColRef_0047">
+                        <dxl:Ident ColId="47" ColName="ColRef_0047" TypeMdid="0.20.1.0"/>
+                      </dxl:ProjElem>
                     </dxl:ProjList>
                     <dxl:Filter/>
-                    <dxl:JoinFilter/>
-                    <dxl:HashCondList>
-                      <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
-                        <dxl:Ident ColId="21" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7"/>
+                    <dxl:SortingColumnList/>
+                    <dxl:HashExprList>
+                      <dxl:HashExpr>
                         <dxl:Ident ColId="20" ColName="code" TypeMdid="0.1042.1.0" TypeModifier="7"/>
-                      </dxl:Comparison>
-                      <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
+                      </dxl:HashExpr>
+                      <dxl:HashExpr>
                         <dxl:Ident ColId="21" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7"/>
-                        <dxl:Ident ColId="20" ColName="code" TypeMdid="0.1042.1.0" TypeModifier="7"/>
-                      </dxl:Comparison>
-                    </dxl:HashCondList>
-                    <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
+                      </dxl:HashExpr>
+                    </dxl:HashExprList>
+                    <dxl:Result>
                       <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.015820" Rows="1000.000000" Width="4"/>
-                      </dxl:Properties>
-                      <dxl:ProjList>
-                        <dxl:ProjElem ColId="21" Alias="countrycode">
-                          <dxl:Ident ColId="21" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7"/>
-                        </dxl:ProjElem>
-                      </dxl:ProjList>
-                      <dxl:Filter/>
-                      <dxl:SortingColumnList/>
-                      <dxl:HashExprList>
-                        <dxl:HashExpr>
-                          <dxl:Ident ColId="21" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7"/>
-                        </dxl:HashExpr>
-                      </dxl:HashExprList>
-                      <dxl:TableScan>
-                        <dxl:Properties>
-                          <dxl:Cost StartupCost="0" TotalCost="431.009167" Rows="1000.000000" Width="4"/>
-                        </dxl:Properties>
-                        <dxl:ProjList>
-                          <dxl:ProjElem ColId="21" Alias="countrycode">
-                            <dxl:Ident ColId="21" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7"/>
-                          </dxl:ProjElem>
-                        </dxl:ProjList>
-                        <dxl:Filter/>
-                        <dxl:TableDescriptor Mdid="6.57366.1.0" TableName="countrylanguage">
-                          <dxl:Columns>
-                            <dxl:Column ColId="21" Attno="1" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7" ColWidth="4"/>
-                            <dxl:Column ColId="30" Attno="2" ColName="language" TypeMdid="0.25.1.0" ColWidth="16"/>
-                            <dxl:Column ColId="31" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                            <dxl:Column ColId="32" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="33" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="34" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="35" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="36" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                            <dxl:Column ColId="37" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                          </dxl:Columns>
-                        </dxl:TableDescriptor>
-                      </dxl:TableScan>
-                    </dxl:RedistributeMotion>
-                    <dxl:TableScan>
-                      <dxl:Properties>
-                        <dxl:Cost StartupCost="0" TotalCost="431.001672" Rows="240.000000" Width="4"/>
+                        <dxl:Cost StartupCost="0" TotalCost="862.115977" Rows="240.000000" Width="16"/>
                       </dxl:Properties>
                       <dxl:ProjList>
                         <dxl:ProjElem ColId="20" Alias="code">
                           <dxl:Ident ColId="20" ColName="code" TypeMdid="0.1042.1.0" TypeModifier="7"/>
                         </dxl:ProjElem>
+                        <dxl:ProjElem ColId="21" Alias="countrycode">
+                          <dxl:Ident ColId="21" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7"/>
+                        </dxl:ProjElem>
+                        <dxl:ProjElem ColId="47" Alias="ColRef_0047">
+                          <dxl:Ident ColId="47" ColName="ColRef_0047" TypeMdid="0.20.1.0"/>
+                        </dxl:ProjElem>
                       </dxl:ProjList>
                       <dxl:Filter/>
-                      <dxl:TableDescriptor Mdid="6.57345.1.0" TableName="country">
-                        <dxl:Columns>
-                          <dxl:Column ColId="20" Attno="1" ColName="code" TypeMdid="0.1042.1.0" TypeModifier="7" ColWidth="4"/>
-                          <dxl:Column ColId="23" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                          <dxl:Column ColId="24" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                          <dxl:Column ColId="25" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                          <dxl:Column ColId="26" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                          <dxl:Column ColId="27" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                          <dxl:Column ColId="28" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                          <dxl:Column ColId="29" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                        </dxl:Columns>
-                      </dxl:TableDescriptor>
-                    </dxl:TableScan>
-                  </dxl:HashJoin>
+                      <dxl:OneTimeFilter/>
+                      <dxl:Aggregate AggregationStrategy="Hashed" StreamSafe="true">
+                        <dxl:Properties>
+                          <dxl:Cost StartupCost="0" TotalCost="862.115977" Rows="240.000000" Width="16"/>
+                        </dxl:Properties>
+                        <dxl:GroupingColumns>
+                          <dxl:GroupingColumn ColId="20"/>
+                          <dxl:GroupingColumn ColId="21"/>
+                        </dxl:GroupingColumns>
+                        <dxl:ProjList>
+                          <dxl:ProjElem ColId="47" Alias="ColRef_0047">
+                            <dxl:AggFunc AggMdid="0.2803.1.0" AggDistinct="false" AggStage="Partial" AggKind="n" AggArgTypes="">
+                              <dxl:ValuesList ParamType="aggargs"/>
+                              <dxl:ValuesList ParamType="aggdirectargs"/>
+                              <dxl:ValuesList ParamType="aggorder"/>
+                              <dxl:ValuesList ParamType="aggdistinct"/>
+                            </dxl:AggFunc>
+                          </dxl:ProjElem>
+                          <dxl:ProjElem ColId="20" Alias="code">
+                            <dxl:Ident ColId="20" ColName="code" TypeMdid="0.1042.1.0" TypeModifier="7"/>
+                          </dxl:ProjElem>
+                          <dxl:ProjElem ColId="21" Alias="countrycode">
+                            <dxl:Ident ColId="21" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7"/>
+                          </dxl:ProjElem>
+                        </dxl:ProjList>
+                        <dxl:Filter/>
+                        <dxl:HashJoin JoinType="Inner">
+                          <dxl:Properties>
+                            <dxl:Cost StartupCost="0" TotalCost="862.094337" Rows="240.000000" Width="8"/>
+                          </dxl:Properties>
+                          <dxl:ProjList>
+                            <dxl:ProjElem ColId="20" Alias="code">
+                              <dxl:Ident ColId="20" ColName="code" TypeMdid="0.1042.1.0" TypeModifier="7"/>
+                            </dxl:ProjElem>
+                            <dxl:ProjElem ColId="21" Alias="countrycode">
+                              <dxl:Ident ColId="21" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7"/>
+                            </dxl:ProjElem>
+                          </dxl:ProjList>
+                          <dxl:Filter/>
+                          <dxl:JoinFilter/>
+                          <dxl:HashCondList>
+                            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
+                              <dxl:Ident ColId="21" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7"/>
+                              <dxl:Ident ColId="20" ColName="code" TypeMdid="0.1042.1.0" TypeModifier="7"/>
+                            </dxl:Comparison>
+                            <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.1054.1.0">
+                              <dxl:Ident ColId="21" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7"/>
+                              <dxl:Ident ColId="20" ColName="code" TypeMdid="0.1042.1.0" TypeModifier="7"/>
+                            </dxl:Comparison>
+                          </dxl:HashCondList>
+                          <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
+                            <dxl:Properties>
+                              <dxl:Cost StartupCost="0" TotalCost="431.015820" Rows="1000.000000" Width="4"/>
+                            </dxl:Properties>
+                            <dxl:ProjList>
+                              <dxl:ProjElem ColId="21" Alias="countrycode">
+                                <dxl:Ident ColId="21" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7"/>
+                              </dxl:ProjElem>
+                            </dxl:ProjList>
+                            <dxl:Filter/>
+                            <dxl:SortingColumnList/>
+                            <dxl:HashExprList>
+                              <dxl:HashExpr>
+                                <dxl:Ident ColId="21" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7"/>
+                              </dxl:HashExpr>
+                            </dxl:HashExprList>
+                            <dxl:TableScan>
+                              <dxl:Properties>
+                                <dxl:Cost StartupCost="0" TotalCost="431.009167" Rows="1000.000000" Width="4"/>
+                              </dxl:Properties>
+                              <dxl:ProjList>
+                                <dxl:ProjElem ColId="21" Alias="countrycode">
+                                  <dxl:Ident ColId="21" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7"/>
+                                </dxl:ProjElem>
+                              </dxl:ProjList>
+                              <dxl:Filter/>
+                              <dxl:TableDescriptor Mdid="6.57366.1.0" TableName="countrylanguage">
+                                <dxl:Columns>
+                                  <dxl:Column ColId="21" Attno="1" ColName="countrycode" TypeMdid="0.1042.1.0" TypeModifier="7" ColWidth="4"/>
+                                  <dxl:Column ColId="30" Attno="2" ColName="language" TypeMdid="0.25.1.0" ColWidth="16"/>
+                                  <dxl:Column ColId="31" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                                  <dxl:Column ColId="32" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="33" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="34" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="35" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="36" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                                  <dxl:Column ColId="37" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                                </dxl:Columns>
+                              </dxl:TableDescriptor>
+                            </dxl:TableScan>
+                          </dxl:RedistributeMotion>
+                          <dxl:TableScan>
+                            <dxl:Properties>
+                              <dxl:Cost StartupCost="0" TotalCost="431.001672" Rows="240.000000" Width="4"/>
+                            </dxl:Properties>
+                            <dxl:ProjList>
+                              <dxl:ProjElem ColId="20" Alias="code">
+                                <dxl:Ident ColId="20" ColName="code" TypeMdid="0.1042.1.0" TypeModifier="7"/>
+                              </dxl:ProjElem>
+                            </dxl:ProjList>
+                            <dxl:Filter/>
+                            <dxl:TableDescriptor Mdid="6.57345.1.0" TableName="country">
+                              <dxl:Columns>
+                                <dxl:Column ColId="20" Attno="1" ColName="code" TypeMdid="0.1042.1.0" TypeModifier="7" ColWidth="4"/>
+                                <dxl:Column ColId="23" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                                <dxl:Column ColId="24" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                                <dxl:Column ColId="25" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                                <dxl:Column ColId="26" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                                <dxl:Column ColId="27" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                                <dxl:Column ColId="28" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                                <dxl:Column ColId="29" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                              </dxl:Columns>
+                            </dxl:TableDescriptor>
+                          </dxl:TableScan>
+                        </dxl:HashJoin>
+                      </dxl:Aggregate>
+                    </dxl:Result>
+                  </dxl:RedistributeMotion>
                 </dxl:Aggregate>
               </dxl:Result>
             </dxl:Result>

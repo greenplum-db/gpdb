@@ -51,6 +51,18 @@ CPhysicalMotion::FValidContext(CMemoryPool *, COptimizationContext *poc,
 	CEnfdDistribution *ped = poc->Prpp()->Ped();
 	if (ped->FCompatible(this->Pds()) && ped->FCompatible(pdpplanChild->Pds()))
 	{
+		if (pocChild->FHasMultiStageAggPlan() &&
+			this->Eopid() == EopPhysicalMotionHashDistribute &&
+			!this->Pds()->Matches(pdpplanChild->Pds()))
+		{
+			// We allow this motion in the specific case of a multi-stage agg.
+			// Such a plan may be more performant if there is a redistribute motion between two
+			// hash distribution specs that do NOT match. If they match, the redistribute won't cause
+			// tuples to move around at all. If they do not match, different tuples will be aggregated for each stage.
+			// Note: We do this only for redistributes, as an unnecessary gather/broadcast won't ever be more performant
+			// and we want to minimize the search space
+			return true;
+		}
 		// required distribution is compatible with the distribution delivered by Motion and its child plan,
 		// in this case, Motion is redundant since child plan delivers the required distribution
 		return false;
