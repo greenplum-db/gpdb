@@ -609,7 +609,7 @@ check_for_new_tablespace_dir(ClusterInfo *new_cluster)
 				new_cluster->tablespace_suffix);
 
 		if (stat(new_tablespace_dir, &statbuf) == 0 || errno != ENOENT)
-			pg_fatal("new cluster tablespace directory already exists: \"%s\"\n",
+			gp_fatal_log("new cluster tablespace directory already exists: \"%s\"\n",
 					 new_tablespace_dir);
 	}
 
@@ -880,13 +880,14 @@ check_proper_datallowconn(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("All non-template0 databases must allow connections, i.e. their\n"
-				 "pg_database.datallowconn must be true.  Your installation contains\n"
-				 "non-template0 databases with their pg_database.datallowconn set to\n"
-				 "false.  Consider allowing connection for all non-template0 databases\n"
-				 "or drop the databases which do not allow connections.  A list of\n"
-				 "databases with the problem is in the file:\n"
-				 "    %s\n\n", output_path);
+		pg_fatal(
+				 "| All non-template0 databases must allow connections, i.e. their\n"
+				 "| pg_database.datallowconn must be true.  Your installation contains\n"
+				 "| non-template0 databases with their pg_database.datallowconn set to\n"
+				 "| false.  Consider allowing connection for all non-template0 databases\n"
+				 "| or drop the databases which do not allow connections.  A list of\n"
+				 "| databases with the problem is in the file:\n"
+				 "|    %s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1144,12 +1145,13 @@ check_for_composite_data_type_usage(ClusterInfo *cluster)
 	if (found)
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains system-defined composite type(s) in user tables.\n"
-				 "These type OIDs are not stable across PostgreSQL versions,\n"
-				 "so this cluster cannot currently be upgraded.  You can\n"
-				 "drop the problem columns and restart the upgrade.\n"
-				 "A list of the problem columns is in the file:\n"
-				 "    %s\n\n", output_path);
+		gp_fatal_log(
+				 "| Your installation contains system-defined composite type(s) in user tables.\n"
+				 "| These type OIDs are not stable across PostgreSQL versions,\n"
+				 "| so this cluster cannot currently be upgraded.  You can\n"
+				 "| drop the problem columns and restart the upgrade.\n"
+				 "| A list of the problem columns is in the file:\n"
+				 "|    %s\n\n", output_path);
 	}
 	else
 		check_ok();
@@ -1238,12 +1240,13 @@ check_for_removed_data_type_usage(ClusterInfo *cluster, const char *version,
 	if (check_for_data_type_usage(cluster, typename, output_path))
 	{
 		pg_log(PG_REPORT, "fatal\n");
-		pg_fatal("Your installation contains the \"%s\" data type in user tables.\n"
-				 "The \"%s\" type has been removed in PostgreSQL version %s,\n"
-				 "so this cluster cannot currently be upgraded.  You can drop the\n"
-				 "problem columns, or change them to another data type, and restart\n"
-				 "the upgrade.  A list of the problem columns is in the file:\n"
-				 "    %s\n\n", datatype, datatype, version, output_path);
+		gp_fatal_log(
+				"| Your installation contains the \"%s\" data type in user tables.\n"
+				"| The \"%s\" type has been removed in PostgreSQL version %s,\n"
+				"| so this cluster cannot currently be upgraded.  You can drop the\n"
+				"| problem columns, or change them to another data type, and restart\n"
+				"| the upgrade.  A list of the problem columns is in the file:\n"
+				"|    %s\n\n", datatype, datatype, version, output_path);
 	}
 	else
 		check_ok();
@@ -1453,9 +1456,10 @@ check_for_appendonly_materialized_view_with_relfrozenxid(ClusterInfo *cluster)
 
 	if(found)
 	{
-		pg_fatal("Detected appendonly materialized view with incorrect relfrozenxid.\n"
-					"See %s for details.\n",
-					output_path);
+		gp_fatal_log(
+				"| Detected appendonly materialized view with incorrect relfrozenxid.\n"
+				"| A list of the problem materialized views are in the file:\n"
+				"| %s\n\n", output_path);
 	}
 	else
 	{
