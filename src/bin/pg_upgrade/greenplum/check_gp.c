@@ -24,8 +24,6 @@ static void check_covering_aoindex(void);
 static void check_partition_indexes(void);
 static void check_orphaned_toastrels(void);
 static void check_online_expansion(void);
-static void check_gphdfs_external_tables(void);
-static void check_gphdfs_user_roles(void);
 static void check_for_array_of_partition_table_types(ClusterInfo *cluster);
 
 
@@ -45,8 +43,6 @@ check_greenplum(void)
 	check_covering_aoindex();
 	check_partition_indexes();
 	check_orphaned_toastrels();
-	check_gphdfs_external_tables();
-	check_gphdfs_user_roles();
 	check_for_array_of_partition_table_types(&old_cluster);
 }
 
@@ -479,161 +475,6 @@ check_partition_indexes(void)
 			   "| indexes defined on them.  Indexes on partition parents,\n"
 			   "| as well as children, must be dropped before upgrade.\n"
 			   "| A list of the problem tables is in the file:\n"
-			   "| \t%s\n\n", output_path);
-	}
-	else
-		check_ok();
-}
-
-/*
- * check_gphdfs_external_tables
- *
- * Check if there are any remaining gphdfs external tables in the database.
- * We error if any gphdfs external tables remain and let the users know that,
- * any remaining gphdfs external tables have to be removed.
- */
-static void
-check_gphdfs_external_tables(void)
-{
-	char		output_path[MAXPGPATH];
-	FILE	   *script = NULL;
-	bool		found = false;
-	int			dbnum;
-
-	/* GPDB only supported gphdfs in this version range */
-	if (!(old_cluster.major_version >= 80215 && old_cluster.major_version < 80400))
-		return;
-
-	prep_status("Checking for gphdfs external tables");
-
-	snprintf(output_path, sizeof(output_path), "gphdfs_external_tables.txt");
-
-
-	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
-	{
-		PGresult   *res;
-		int			ntups;
-		int			rowno;
-		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
-		PGconn	   *conn;
-
-		conn = connectToServer(&old_cluster, active_db->db_name);
-		res = executeQueryOrDie(conn,
-			 "SELECT d.objid::regclass as tablename "
-			 "FROM pg_catalog.pg_depend d "
-			 "       JOIN pg_catalog.pg_exttable x ON ( d.objid = x.reloid ) "
-			 "       JOIN pg_catalog.pg_extprotocol p ON ( p.oid = d.refobjid ) "
-			 "       JOIN pg_catalog.pg_class c ON ( c.oid = d.objid ) "
-			 "       WHERE d.refclassid = 'pg_extprotocol'::regclass "
-			 "       AND p.ptcname = 'gphdfs';");
-
-		ntups = PQntuples(res);
-
-		if (ntups > 0)
-		{
-			found = true;
-
-			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
-				pg_log(PG_FATAL, "Could not create necessary file:  %s\n",
-					   output_path);
-
-			for (rowno = 0; rowno < ntups; rowno++)
-			{
-				fprintf(script, "gphdfs external table \"%s\" in database \"%s\"\n",
-						PQgetvalue(res, rowno, PQfnumber(res, "tablename")),
-						active_db->db_name);
-			}
-		}
-
-		PQclear(res);
-		PQfinish(conn);
-	}
-	if (found)
-	{
-		fclose(script);
-		pg_log(PG_REPORT, "fatal\n");
-		gp_fatal_log(
-			   "| Your installation contains gphdfs external tables.  These \n"
-			   "| tables need to be dropped before upgrade.  A list of\n"
-			   "| external gphdfs tables to remove is provided in the file:\n"
-			   "| \t%s\n\n", output_path);
-	}
-	else
-		check_ok();
-}
-
-/*
- * check_gphdfs_user_roles
- *
- * Check if there are any remaining users with gphdfs roles.
- * We error if this is the case and let the users know how to proceed.
- */
-static void
-check_gphdfs_user_roles(void)
-{
-	char		output_path[MAXPGPATH];
-	FILE	   *script = NULL;
-	PGresult   *res;
-	int			ntups;
-	int			rowno;
-	int			i_hdfs_read;
-	int			i_hdfs_write;
-	PGconn	   *conn;
-
-	/* GPDB only supported gphdfs in this version range */
-	if (!(old_cluster.major_version >= 80215 && old_cluster.major_version < 80400))
-		return;
-
-	prep_status("Checking for users assigned the gphdfs role");
-
-	snprintf(output_path, sizeof(output_path), "gphdfs_user_roles.txt");
-
-	conn = connectToServer(&old_cluster, "template1");
-	res = executeQueryOrDie(conn,
-							"SELECT rolname as role, "
-							"       rolcreaterexthdfs as hdfs_read, "
-							"       rolcreatewexthdfs as hdfs_write "
-							"FROM pg_catalog.pg_roles"
-							"       WHERE rolcreaterexthdfs OR rolcreatewexthdfs");
-
-	ntups = PQntuples(res);
-
-	if (ntups > 0)
-	{
-		if ((script = fopen(output_path, "w")) == NULL)
-			pg_log(PG_FATAL, "Could not create necessary file:  %s\n",
-					output_path);
-
-		i_hdfs_read = PQfnumber(res, "hdfs_read");
-		i_hdfs_write = PQfnumber(res, "hdfs_write");
-
-		for (rowno = 0; rowno < ntups; rowno++)
-		{
-			bool hasReadRole = (PQgetvalue(res, rowno, i_hdfs_read)[0] == 't');
-			bool hasWriteRole =(PQgetvalue(res, rowno, i_hdfs_write)[0] == 't');
-
-			fprintf(script, "role \"%s\" has the gphdfs privileges:",
-					PQgetvalue(res, rowno, PQfnumber(res, "role")));
-			if (hasReadRole)
-				fprintf(script, " read(rolcreaterexthdfs)");
-			if (hasWriteRole)
-				fprintf(script, " write(rolcreatewexthdfs)");
-			fprintf(script, " \n");
-		}
-	}
-
-	PQclear(res);
-	PQfinish(conn);
-
-	if (ntups > 0)
-	{
-		fclose(script);
-		pg_log(PG_REPORT, "fatal\n");
-		gp_fatal_log(
-			   "| Your installation contains roles that have gphdfs privileges.\n"
-			   "| These privileges need to be revoked before upgrade.  A list\n"
-			   "| of roles and their corresponding gphdfs privileges that\n"
-			   "| must be revoked is provided in the file:\n"
 			   "| \t%s\n\n", output_path);
 	}
 	else
