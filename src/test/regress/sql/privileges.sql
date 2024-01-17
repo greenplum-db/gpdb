@@ -1589,6 +1589,7 @@ COMMIT;
 REVOKE TRUNCATE ON lock_table FROM regress_locktable_user;
 
 -- regression test: superuser create a schema and authorize it to a non-superuser
+DROP ROLE IF EXISTS "non_superuser_schema";
 CREATE ROLE "non_superuser_schema";
 CREATE SCHEMA test_non_superuser_schema AUTHORIZATION "non_superuser_schema";
 
