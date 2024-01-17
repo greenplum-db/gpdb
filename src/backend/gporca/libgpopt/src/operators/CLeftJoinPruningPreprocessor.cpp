@@ -12,11 +12,7 @@
 #include "gpopt/operators/CLeftJoinPruningPreprocessor.h"
 
 #include "gpopt/base/CColRefSetIter.h"
-#include "gpopt/operators/CLogicalDifference.h"
-#include "gpopt/operators/CLogicalDifferenceAll.h"
-#include "gpopt/operators/CLogicalIntersect.h"
-#include "gpopt/operators/CLogicalIntersectAll.h"
-#include "gpopt/operators/CLogicalUnionAll.h"
+#include "gpopt/operators/CLogicalSetOp.h"
 #include "gpopt/operators/CPredicateUtils.h"
 #include "gpopt/operators/CScalarSubquery.h"
 #include "gpopt/operators/CScalarSubqueryQuantified.h"
@@ -409,13 +405,13 @@ CLeftJoinPruningPreprocessor::PexprJoinPruningScalarSubquery(
 void
 CLeftJoinPruningPreprocessor::ComputeOutputColumns(
 	const CExpression *pexpr, const CColRefSet *derived_output_columns,
-	CColRefSet *output_columns, CColRefSet *childs_output_columns,
+	CColRefSet *output_columns, CColRefSet *combined_output_pred_columns,
 	const CColRefSet *pcrsOutput)
 {
 	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(nullptr != derived_output_columns);
 	GPOS_ASSERT(nullptr != output_columns);
-	GPOS_ASSERT(nullptr != childs_output_columns);
+	GPOS_ASSERT(nullptr != combined_output_pred_columns);
 
 	// Computing output columns of the parent
 	CColRefSetIter iter_derived_output_columns(*derived_output_columns);
@@ -429,7 +425,7 @@ CLeftJoinPruningPreprocessor::ComputeOutputColumns(
 	}
 
 	// Computing output columns of the child tree
-	childs_output_columns->Include(output_columns);
+	combined_output_pred_columns->Include(output_columns);
 
 	// Consider the below algebrized tree
 	// CLogicalUnionAll Output: ("b" (10)), Input: [("b" (10)), ("b" (28))]
@@ -451,20 +447,19 @@ CLeftJoinPruningPreprocessor::ComputeOutputColumns(
 	// CLogicalLeftOuterJoin will be empty. So join pruning will not be possible
 	// in such cases. The Input in CLogicalUnion/CLogicalUnionAll signifies the
 	// columns from the childs. So including those columns in the
-	// childs_output_columns of CLogicalUnionAll to perform pruning of the inner
-	// child if possible. Similar is the case for Intersect/IntersectAll and
-	// Difference/DifferenceAll.
+	// combined_output_pred_columns of CLogicalUnionAll to perform pruning of
+	// the inner child if possible. Similar is the case for
+	// Intersect/IntersectAll and Difference/DifferenceAll.
 
 	if (CUtils::FLogicalSetOp(pexpr->Pop()))
 	{
 		CLogicalSetOp *pop = CLogicalSetOp::PopConvert(pexpr->Pop());
 		for (ULONG i = 0; i < pop->PdrgpdrgpcrInput()->Size(); i++)
 		{
-			ULONG size = (*pop->PdrgpdrgpcrInput())[i]->Size();
-			for (ULONG j = 0; j < size; j++)
+			CColRefArray *pdrgpcrInput = (*pop->PdrgpdrgpcrInput())[i];
+			for (ULONG j = 0; j < pdrgpcrInput->Size(); j++)
 			{
-				childs_output_columns->Include(
-					(*(*pop->PdrgpdrgpcrInput())[i])[j]);
+				combined_output_pred_columns->Include((*pdrgpcrInput)[j]);
 			}
 		}
 	}
@@ -478,7 +473,7 @@ CLeftJoinPruningPreprocessor::ComputeOutputColumns(
 		{
 			CColRefSet *derived_used_columns_scalar =
 				pexpr_child->DeriveUsedColumns();
-			childs_output_columns->Include(derived_used_columns_scalar);
+			combined_output_pred_columns->Include(derived_used_columns_scalar);
 		}
 	}
 }
@@ -486,7 +481,7 @@ CLeftJoinPruningPreprocessor::ComputeOutputColumns(
 CExpression *
 CLeftJoinPruningPreprocessor::JoinPruningTreeTraversal(
 	CMemoryPool *mp, const CExpression *pexpr, CExpressionArray *pdrgpexpr,
-	const CColRefSet *childs_output_columns)
+	const CColRefSet *combined_output_pred_columns)
 {
 	GPOS_ASSERT(nullptr != pexpr);
 	GPOS_ASSERT(nullptr != pdrgpexpr);
@@ -498,7 +493,7 @@ CLeftJoinPruningPreprocessor::JoinPruningTreeTraversal(
 		if (pexpr_child->Pop()->FLogical())
 		{
 			CExpression *pexprLogicalJoinPrunedChild =
-				PexprPreprocess(mp, pexpr_child, childs_output_columns);
+				PexprPreprocess(mp, pexpr_child, combined_output_pred_columns);
 			pdrgpexpr->Append(pexprLogicalJoinPrunedChild);
 		}
 		else if (pexpr_child->DeriveHasSubquery())
@@ -595,20 +590,20 @@ CLeftJoinPruningPreprocessor::PexprPreprocess(CMemoryPool *mp,
 	CColRefSet *output_columns = GPOS_NEW(mp) CColRefSet(mp);
 
 	// Columns which are output by the child tree of the current expression
-	CColRefSet *childs_output_columns = GPOS_NEW(mp) CColRefSet(mp);
+	CColRefSet *combined_output_pred_columns = GPOS_NEW(mp) CColRefSet(mp);
 
 	// Computing output columns of the current expression (output_columns)
-	// and the output columns of child tree (childs_output_columns)
+	// and the output columns of child tree (combined_output_pred_columns)
 	ComputeOutputColumns(pexpr, derived_output_columns, output_columns,
-						 childs_output_columns, pcrsOutput);
+						 combined_output_pred_columns, pcrsOutput);
 
 	// Array to hold the child expressions
 	CExpressionArray *pdrgpexpr = GPOS_NEW(mp) CExpressionArray(mp);
 
 	// Traversing the tree
-	CExpression *pexprNew =
-		JoinPruningTreeTraversal(mp, pexpr, pdrgpexpr, childs_output_columns);
-	childs_output_columns->Release();
+	CExpression *pexprNew = JoinPruningTreeTraversal(
+		mp, pexpr, pdrgpexpr, combined_output_pred_columns);
+	combined_output_pred_columns->Release();
 
 	// Checking if the join is a left join then pruning the join if possible
 	if (CPredicateUtils::FLeftOuterJoin(pexprNew))

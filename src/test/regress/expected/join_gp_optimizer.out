@@ -1993,259 +1993,452 @@ drop table barJoinPruning;
 --
 -- Cases where join under union
 --
-create table foo(a int primary key, b int);
-create table bar(a int primary key, b int);
-explain  select foo.a, bar.b from foo left join bar on foo.a = bar.a
- union
-   select foo.a, bar.b from foo join bar on foo.a = bar.a;
-                                               QUERY PLAN                                               
---------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..874.00 rows=1 width=8)
-   ->  GroupAggregate  (cost=0.00..874.00 rows=1 width=8)
+create table foo(a int primary key, b int,c int);
+create table bar(a int primary key, b int,c int);
+insert into foo values (1,1,10),(2,1,10),(3,2,20),(4,2,30),(5,2,30),(6,NULL,NULL),(7,NULL,3);
+insert into bar values (1,1,10),(2,2,20),(3,NULL,NULL),(4,3,NULL),(5,1,10);
+analyze foo,bar;
+explain (costs off) select foo.a, bar.b from foo left join bar on foo.a = bar.a
+union select foo.a, bar.b from foo join bar on foo.a = bar.a;
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
          Group Key: foo.a, bar.b
-         ->  Sort  (cost=0.00..874.00 rows=1 width=8)
+         ->  Sort
                Sort Key: foo.a, bar.b
-               ->  Append  (cost=0.00..874.00 rows=1 width=8)
-                     ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=8)
-                           Join Filter: true
-                           ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Index Scan using bar_pkey on bar  (cost=0.00..6.00 rows=1 width=4)
-                                 Index Cond: (a = foo.a)
-                     ->  Nested Loop  (cost=0.00..437.00 rows=1 width=8)
-                           Join Filter: true
-                           ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Index Scan using bar_pkey on bar bar_1  (cost=0.00..6.00 rows=1 width=4)
-                                 Index Cond: (a = foo_1.a)
+               ->  Append
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: foo.a, bar.b
+                           ->  Nested Loop Left Join
+                                 Join Filter: true
+                                 ->  Seq Scan on foo
+                                 ->  Index Scan using bar_pkey on bar
+                                       Index Cond: (a = foo.a)
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                           Hash Key: foo_1.a, bar_1.b
+                           ->  Nested Loop
+                                 Join Filter: true
+                                 ->  Seq Scan on bar bar_1
+                                 ->  Index Scan using foo_pkey on foo foo_1
+                                       Index Cond: (a = bar_1.a)
  Optimizer: GPORCA
-(17 rows)
+(21 rows)
 
 -- join will be pruned
-explain select foo.a,foo.b from foo left join bar on foo.a=bar.a union
-select bar.a,bar.b from bar left join foo on foo.a=bar.a;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
-   ->  GroupAggregate  (cost=0.00..862.00 rows=1 width=8)
-         Group Key: foo.a, foo.b
-         ->  Sort  (cost=0.00..862.00 rows=1 width=8)
-               Sort Key: foo.a, foo.b
-               ->  Append  (cost=0.00..862.00 rows=1 width=8)
-                     ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
-                     ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
+explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a union
+select bar.b,bar.c from bar left join foo on foo.a=bar.a;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
+         Group Key: foo.b, foo.c
+         ->  Sort
+               Sort Key: foo.b, foo.c
+               ->  Append
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: foo.b, foo.c
+                           ->  Seq Scan on foo
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                           Hash Key: bar.b, bar.c
+                           ->  Seq Scan on bar
  Optimizer: GPORCA
-(9 rows)
+(13 rows)
 
-explain select foo.a,foo.b from foo left join bar on foo.a=bar.a union all
-select bar.a,bar.b from bar left join foo on foo.a=bar.a;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
-   ->  Append  (cost=0.00..862.00 rows=1 width=8)
-         ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
-         ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
+select foo.b,foo.c from foo left join bar on foo.a=bar.a union
+select bar.b,bar.c from bar left join foo on foo.a=bar.a;
+ b | c  
+---+----
+ 2 | 30
+   |  3
+   |   
+ 1 | 10
+ 2 | 20
+ 3 |   
+(6 rows)
+
+explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a union all
+select bar.b,bar.c from bar left join foo on foo.a=bar.a;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on foo
+         ->  Seq Scan on bar
  Optimizer: GPORCA
 (5 rows)
 
-explain select foo.a,foo.b from foo left join bar on foo.a=bar.a intersect
-select bar.a,bar.b from bar left join foo on foo.a=bar.a;
+select foo.b,foo.c from foo left join bar on foo.a=bar.a union all
+select bar.b,bar.c from bar left join foo on foo.a=bar.a;
+ b | c  
+---+----
+ 1 | 10
+ 1 | 10
+ 1 | 10
+ 2 | 20
+ 2 | 30
+   |  3
+ 2 | 20
+   |   
+ 3 |   
+ 2 | 30
+   |   
+ 1 | 10
+(12 rows)
+
+explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a intersect
+select bar.b,bar.c from bar left join foo on foo.a=bar.a;
                                              QUERY PLAN                                             
 ----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
-   ->  Hash Join  (cost=0.00..862.00 rows=1 width=8)
-         Hash Cond: ((NOT (foo.a IS DISTINCT FROM bar.a)) AND (NOT (foo.b IS DISTINCT FROM bar.b)))
-         ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
-         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
-               ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: ((NOT (foo.b IS DISTINCT FROM bar.b)) AND (NOT (foo.c IS DISTINCT FROM bar.c)))
+         ->  GroupAggregate
+               Group Key: foo.b, foo.c
+               ->  Sort
+                     Sort Key: foo.b, foo.c
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: foo.b, foo.c
+                           ->  Seq Scan on foo
+         ->  Hash
+               ->  GroupAggregate
+                     Group Key: bar.b, bar.c
+                     ->  Sort
+                           Sort Key: bar.b, bar.c
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                 Hash Key: bar.b, bar.c
+                                 ->  Seq Scan on bar
  Optimizer: GPORCA
-(7 rows)
+(19 rows)
 
-explain select foo.a,foo.b from foo left join bar on foo.a=bar.a intersect all
-select bar.a,bar.b from bar left join foo on foo.a=bar.a;
+select foo.b,foo.c from foo left join bar on foo.a=bar.a intersect
+select bar.b,bar.c from bar left join foo on foo.a=bar.a;
+ b | c  
+---+----
+   |   
+ 1 | 10
+ 2 | 20
+(3 rows)
+
+explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a intersect all
+select bar.b,bar.c from bar left join foo on foo.a=bar.a;
                                                                                    QUERY PLAN                                                                                    
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
-   ->  Hash Semi Join  (cost=0.00..862.00 rows=1 width=8)
-         Hash Cond: ((NOT (foo.a IS DISTINCT FROM bar.a)) AND (NOT (foo.b IS DISTINCT FROM bar.b)) AND (NOT ((row_number() OVER (?)) IS DISTINCT FROM (row_number() OVER (?)))))
-         ->  WindowAgg  (cost=0.00..431.00 rows=1 width=16)
-               Partition By: foo.a, foo.b
-               ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-                     Sort Key: foo.a, foo.b
-                     ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
-         ->  Hash  (cost=431.00..431.00 rows=1 width=16)
-               ->  WindowAgg  (cost=0.00..431.00 rows=1 width=16)
-                     Partition By: bar.a, bar.b
-                     ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-                           Sort Key: bar.a, bar.b
-                           ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Semi Join
+         Hash Cond: ((NOT (foo.b IS DISTINCT FROM bar.b)) AND (NOT (foo.c IS DISTINCT FROM bar.c)) AND (NOT ((row_number() OVER (?)) IS DISTINCT FROM (row_number() OVER (?)))))
+         ->  WindowAgg
+               Partition By: foo.b, foo.c
+               ->  Sort
+                     Sort Key: foo.b, foo.c
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: foo.b, foo.c
+                           ->  Seq Scan on foo
+         ->  Hash
+               ->  WindowAgg
+                     Partition By: bar.b, bar.c
+                     ->  Sort
+                           Sort Key: bar.b, bar.c
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                 Hash Key: bar.b, bar.c
+                                 ->  Seq Scan on bar
+ Optimizer: GPORCA
+(19 rows)
+
+select foo.b,foo.c from foo left join bar on foo.a=bar.a intersect all
+select bar.b,bar.c from bar left join foo on foo.a=bar.a;
+ b | c  
+---+----
+   |   
+ 1 | 10
+ 1 | 10
+ 2 | 20
+(4 rows)
+
+explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a except
+select bar.b,bar.c from bar left join foo on foo.a=bar.a;
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
+         Group Key: foo.b, foo.c
+         ->  Sort
+               Sort Key: foo.b, foo.c
+               ->  Hash Anti Join
+                     Hash Cond: ((NOT (foo.b IS DISTINCT FROM bar.b)) AND (NOT (foo.c IS DISTINCT FROM bar.c)))
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: foo.b, foo.c
+                           ->  Seq Scan on foo
+                     ->  Hash
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                 Hash Key: bar.b, bar.c
+                                 ->  Seq Scan on bar
  Optimizer: GPORCA
 (15 rows)
 
-explain select foo.a,foo.b from foo left join bar on foo.a=bar.a except
-select bar.a,bar.b from bar left join foo on foo.a=bar.a;
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
-   ->  Hash Anti Join  (cost=0.00..862.00 rows=1 width=8)
-         Hash Cond: ((NOT (foo.a IS DISTINCT FROM bar.a)) AND (NOT (foo.b IS DISTINCT FROM bar.b)))
-         ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
-         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
-               ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
- Optimizer: GPORCA
-(7 rows)
+select foo.b,foo.c from foo left join bar on foo.a=bar.a except
+select bar.b,bar.c from bar left join foo on foo.a=bar.a;
+ b | c  
+---+----
+ 2 | 30
+   |  3
+(2 rows)
 
-explain select foo.a,foo.b from foo left join bar on foo.a=bar.a except all
-select bar.a,bar.b from bar left join foo on foo.a=bar.a;
+explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a except all
+select bar.b,bar.c from bar left join foo on foo.a=bar.a;
                                                                                    QUERY PLAN                                                                                    
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=8)
-   ->  Hash Anti Join  (cost=0.00..862.00 rows=1 width=8)
-         Hash Cond: ((NOT (foo.a IS DISTINCT FROM bar.a)) AND (NOT (foo.b IS DISTINCT FROM bar.b)) AND (NOT ((row_number() OVER (?)) IS DISTINCT FROM (row_number() OVER (?)))))
-         ->  WindowAgg  (cost=0.00..431.00 rows=1 width=16)
-               Partition By: foo.a, foo.b
-               ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-                     Sort Key: foo.a, foo.b
-                     ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
-         ->  Hash  (cost=431.00..431.00 rows=1 width=16)
-               ->  WindowAgg  (cost=0.00..431.00 rows=1 width=16)
-                     Partition By: bar.a, bar.b
-                     ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-                           Sort Key: bar.a, bar.b
-                           ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Anti Join
+         Hash Cond: ((NOT (foo.b IS DISTINCT FROM bar.b)) AND (NOT (foo.c IS DISTINCT FROM bar.c)) AND (NOT ((row_number() OVER (?)) IS DISTINCT FROM (row_number() OVER (?)))))
+         ->  WindowAgg
+               Partition By: foo.b, foo.c
+               ->  Sort
+                     Sort Key: foo.b, foo.c
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: foo.b, foo.c
+                           ->  Seq Scan on foo
+         ->  Hash
+               ->  WindowAgg
+                     Partition By: bar.b, bar.c
+                     ->  Sort
+                           Sort Key: bar.b, bar.c
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                 Hash Key: bar.b, bar.c
+                                 ->  Seq Scan on bar
  Optimizer: GPORCA
-(15 rows)
+(19 rows)
+
+select foo.b,foo.c from foo left join bar on foo.a=bar.a except all
+select bar.b,bar.c from bar left join foo on foo.a=bar.a;
+ b | c  
+---+----
+ 2 | 30
+ 2 | 30
+   |  3
+(3 rows)
 
 -- join will not be pruned
 -- the outer query of union/intersect/except will be pruned but the inner
 -- query will not be pruned.
-explain select foo.a,foo.b from foo left join bar on foo.a=bar.a union
-select bar.a,foo.b from bar left join foo on foo.a=bar.a;
-                                               QUERY PLAN                                               
---------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..868.00 rows=1 width=8)
-   ->  GroupAggregate  (cost=0.00..868.00 rows=1 width=8)
-         Group Key: foo.a, foo.b
-         ->  Sort  (cost=0.00..868.00 rows=1 width=8)
-               Sort Key: foo.a, foo.b
-               ->  Append  (cost=0.00..868.00 rows=1 width=8)
-                     ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
-                     ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=8)
-                           Join Filter: true
-                           ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Index Scan using foo_pkey on foo foo_1  (cost=0.00..6.00 rows=1 width=4)
-                                 Index Cond: (a = bar.a)
+explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a union
+select bar.b,foo.c from bar left join foo on foo.a=bar.a;
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
+         Group Key: foo.b, foo.c
+         ->  Sort
+               Sort Key: foo.b, foo.c
+               ->  Append
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: foo.b, foo.c
+                           ->  Seq Scan on foo
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                           Hash Key: bar.b, foo_1.c
+                           ->  Nested Loop Left Join
+                                 Join Filter: true
+                                 ->  Seq Scan on bar
+                                 ->  Index Scan using foo_pkey on foo foo_1
+                                       Index Cond: (a = bar.a)
  Optimizer: GPORCA
-(13 rows)
+(17 rows)
 
-explain select foo.a,foo.b from foo left join bar on foo.a=bar.a union all
-select bar.a,foo.b from bar left join foo on foo.a=bar.a;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..868.00 rows=1 width=8)
-   ->  Append  (cost=0.00..868.00 rows=1 width=8)
-         ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
-         ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=8)
+select foo.b,foo.c from foo left join bar on foo.a=bar.a union
+select bar.b,foo.c from bar left join foo on foo.a=bar.a;
+ b | c  
+---+----
+ 1 | 10
+ 1 | 30
+ 2 | 20
+   | 20
+ 2 | 10
+ 2 | 30
+ 3 | 30
+   |  3
+   |   
+(9 rows)
+
+explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a union all
+select bar.b,foo.c from bar left join foo on foo.a=bar.a;
+                        QUERY PLAN                        
+----------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on foo
+         ->  Nested Loop Left Join
                Join Filter: true
-               ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
-               ->  Index Scan using foo_pkey on foo foo_1  (cost=0.00..6.00 rows=1 width=4)
+               ->  Seq Scan on bar
+               ->  Index Scan using foo_pkey on foo foo_1
                      Index Cond: (a = bar.a)
  Optimizer: GPORCA
 (9 rows)
 
-explain select foo.a,foo.b from foo left join bar on foo.a=bar.a intersect
-select bar.a,foo.b from bar left join foo on foo.a=bar.a;
-                                               QUERY PLAN                                               
---------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..868.00 rows=1 width=8)
-   ->  Hash Join  (cost=0.00..868.00 rows=1 width=8)
-         Hash Cond: ((NOT (bar.a IS DISTINCT FROM foo_1.a)) AND (NOT (foo.b IS DISTINCT FROM foo_1.b)))
-         ->  GroupAggregate  (cost=0.00..437.00 rows=1 width=8)
-               Group Key: bar.a, foo.b
-               ->  Sort  (cost=0.00..437.00 rows=1 width=8)
-                     Sort Key: bar.a, foo.b
-                     ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=8)
-                           Join Filter: true
-                           ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Index Scan using foo_pkey on foo  (cost=0.00..6.00 rows=1 width=4)
-                                 Index Cond: (a = bar.a)
-         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
-               ->  Seq Scan on foo foo_1  (cost=0.00..431.00 rows=1 width=8)
- Optimizer: GPORCA
-(15 rows)
+select foo.b,foo.c from foo left join bar on foo.a=bar.a union all
+select bar.b,foo.c from bar left join foo on foo.a=bar.a;
+ b | c  
+---+----
+ 2 | 30
+   |   
+ 1 | 30
+ 1 | 10
+ 2 | 20
+ 2 | 30
+   |  3
+ 2 | 10
+   | 20
+ 3 | 30
+ 1 | 10
+ 1 | 10
+(12 rows)
 
-explain select foo.a,foo.b from foo left join bar on foo.a=bar.a intersect all
-select bar.a,foo.b from bar left join foo on foo.a=bar.a;
-                                                                                    QUERY PLAN                                                                                     
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..868.00 rows=1 width=8)
-   ->  Hash Semi Join  (cost=0.00..868.00 rows=1 width=8)
-         Hash Cond: ((NOT (foo.a IS DISTINCT FROM bar.a)) AND (NOT (foo.b IS DISTINCT FROM foo_1.b)) AND (NOT ((row_number() OVER (?)) IS DISTINCT FROM (row_number() OVER (?)))))
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-               Hash Key: (row_number() OVER (?))
-               ->  WindowAgg  (cost=0.00..431.00 rows=1 width=16)
-                     Partition By: foo.a, foo.b
-                     ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-                           Sort Key: foo.a, foo.b
-                           ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
-         ->  Hash  (cost=437.00..437.00 rows=1 width=16)
-               ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..437.00 rows=1 width=16)
-                     Hash Key: (row_number() OVER (?))
-                     ->  WindowAgg  (cost=0.00..437.00 rows=1 width=16)
-                           Partition By: bar.a, foo_1.b
-                           ->  Sort  (cost=0.00..437.00 rows=1 width=8)
-                                 Sort Key: bar.a, foo_1.b
-                                 ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=8)
-                                       Join Filter: true
-                                       ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
-                                       ->  Index Scan using foo_pkey on foo foo_1  (cost=0.00..6.00 rows=1 width=4)
-                                             Index Cond: (a = bar.a)
- Optimizer: GPORCA
-(23 rows)
-
-explain select foo.a,foo.b from foo left join bar on foo.a=bar.a except
-select bar.a,foo.b from bar left join foo on foo.a=bar.a;
+explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a intersect
+select bar.b,foo.c from bar left join foo on foo.a=bar.a;
                                               QUERY PLAN                                              
 ------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..868.00 rows=1 width=8)
-   ->  Hash Anti Join  (cost=0.00..868.00 rows=1 width=8)
-         Hash Cond: ((NOT (foo.a IS DISTINCT FROM bar.a)) AND (NOT (foo.b IS DISTINCT FROM foo_1.b)))
-         ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
-         ->  Hash  (cost=437.00..437.00 rows=1 width=8)
-               ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=8)
-                     Join Filter: true
-                     ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
-                     ->  Index Scan using foo_pkey on foo foo_1  (cost=0.00..6.00 rows=1 width=4)
-                           Index Cond: (a = bar.a)
- Optimizer: GPORCA
-(11 rows)
-
-explain select foo.a,foo.b from foo left join bar on foo.a=bar.a except all
-select bar.a,foo.b from bar left join foo on foo.a=bar.a;
-                                                                                    QUERY PLAN                                                                                     
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..868.00 rows=1 width=8)
-   ->  Hash Anti Join  (cost=0.00..868.00 rows=1 width=8)
-         Hash Cond: ((NOT (foo.a IS DISTINCT FROM bar.a)) AND (NOT (foo.b IS DISTINCT FROM foo_1.b)) AND (NOT ((row_number() OVER (?)) IS DISTINCT FROM (row_number() OVER (?)))))
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=16)
-               Hash Key: (row_number() OVER (?))
-               ->  WindowAgg  (cost=0.00..431.00 rows=1 width=16)
-                     Partition By: foo.a, foo.b
-                     ->  Sort  (cost=0.00..431.00 rows=1 width=8)
-                           Sort Key: foo.a, foo.b
-                           ->  Seq Scan on foo  (cost=0.00..431.00 rows=1 width=8)
-         ->  Hash  (cost=437.00..437.00 rows=1 width=16)
-               ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..437.00 rows=1 width=16)
-                     Hash Key: (row_number() OVER (?))
-                     ->  WindowAgg  (cost=0.00..437.00 rows=1 width=16)
-                           Partition By: bar.a, foo_1.b
-                           ->  Sort  (cost=0.00..437.00 rows=1 width=8)
-                                 Sort Key: bar.a, foo_1.b
-                                 ->  Nested Loop Left Join  (cost=0.00..437.00 rows=1 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: ((NOT (foo.b IS DISTINCT FROM bar.b)) AND (NOT (foo.c IS DISTINCT FROM foo_1.c)))
+         ->  GroupAggregate
+               Group Key: foo.b, foo.c
+               ->  Sort
+                     Sort Key: foo.b, foo.c
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: foo.b, foo.c
+                           ->  Seq Scan on foo
+         ->  Hash
+               ->  GroupAggregate
+                     Group Key: bar.b, foo_1.c
+                     ->  Sort
+                           Sort Key: bar.b, foo_1.c
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                 Hash Key: bar.b, foo_1.c
+                                 ->  Nested Loop Left Join
                                        Join Filter: true
-                                       ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=4)
-                                       ->  Index Scan using foo_pkey on foo foo_1  (cost=0.00..6.00 rows=1 width=4)
+                                       ->  Seq Scan on bar
+                                       ->  Index Scan using foo_pkey on foo foo_1
                                              Index Cond: (a = bar.a)
  Optimizer: GPORCA
 (23 rows)
+
+select foo.b,foo.c from foo left join bar on foo.a=bar.a intersect
+select bar.b,foo.c from bar left join foo on foo.a=bar.a;
+ b | c  
+---+----
+ 1 | 10
+(1 row)
+
+explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a intersect all
+select bar.b,foo.c from bar left join foo on foo.a=bar.a;
+                                                                                    QUERY PLAN                                                                                     
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Semi Join
+         Hash Cond: ((NOT (foo.b IS DISTINCT FROM bar.b)) AND (NOT (foo.c IS DISTINCT FROM foo_1.c)) AND (NOT ((row_number() OVER (?)) IS DISTINCT FROM (row_number() OVER (?)))))
+         ->  WindowAgg
+               Partition By: foo.b, foo.c
+               ->  Sort
+                     Sort Key: foo.b, foo.c
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: foo.b, foo.c
+                           ->  Seq Scan on foo
+         ->  Hash
+               ->  WindowAgg
+                     Partition By: bar.b, foo_1.c
+                     ->  Sort
+                           Sort Key: bar.b, foo_1.c
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                 Hash Key: bar.b, foo_1.c
+                                 ->  Nested Loop Left Join
+                                       Join Filter: true
+                                       ->  Seq Scan on bar
+                                       ->  Index Scan using foo_pkey on foo foo_1
+                                             Index Cond: (a = bar.a)
+ Optimizer: GPORCA
+(23 rows)
+
+select foo.b,foo.c from foo left join bar on foo.a=bar.a intersect all
+select bar.b,foo.c from bar left join foo on foo.a=bar.a;
+ b | c  
+---+----
+ 1 | 10
+(1 row)
+
+explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a except
+select bar.b,foo.c from bar left join foo on foo.a=bar.a;
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  GroupAggregate
+         Group Key: foo.b, foo.c
+         ->  Sort
+               Sort Key: foo.b, foo.c
+               ->  Hash Anti Join
+                     Hash Cond: ((NOT (foo.b IS DISTINCT FROM bar.b)) AND (NOT (foo.c IS DISTINCT FROM foo_1.c)))
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: foo.b, foo.c
+                           ->  Seq Scan on foo
+                     ->  Hash
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                 Hash Key: bar.b, foo_1.c
+                                 ->  Nested Loop Left Join
+                                       Join Filter: true
+                                       ->  Seq Scan on bar
+                                       ->  Index Scan using foo_pkey on foo foo_1
+                                             Index Cond: (a = bar.a)
+ Optimizer: GPORCA
+(19 rows)
+
+select foo.b,foo.c from foo left join bar on foo.a=bar.a except
+select bar.b,foo.c from bar left join foo on foo.a=bar.a;
+ b | c  
+---+----
+ 2 | 20
+ 2 | 30
+   |  3
+   |   
+(4 rows)
+
+explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a except all
+select bar.b,foo.c from bar left join foo on foo.a=bar.a;
+                                                                                    QUERY PLAN                                                                                     
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Anti Join
+         Hash Cond: ((NOT (foo.b IS DISTINCT FROM bar.b)) AND (NOT (foo.c IS DISTINCT FROM foo_1.c)) AND (NOT ((row_number() OVER (?)) IS DISTINCT FROM (row_number() OVER (?)))))
+         ->  WindowAgg
+               Partition By: foo.b, foo.c
+               ->  Sort
+                     Sort Key: foo.b, foo.c
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: foo.b, foo.c
+                           ->  Seq Scan on foo
+         ->  Hash
+               ->  WindowAgg
+                     Partition By: bar.b, foo_1.c
+                     ->  Sort
+                           Sort Key: bar.b, foo_1.c
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                 Hash Key: bar.b, foo_1.c
+                                 ->  Nested Loop Left Join
+                                       Join Filter: true
+                                       ->  Seq Scan on bar
+                                       ->  Index Scan using foo_pkey on foo foo_1
+                                             Index Cond: (a = bar.a)
+ Optimizer: GPORCA
+(23 rows)
+
+select foo.b,foo.c from foo left join bar on foo.a=bar.a except all
+select bar.b,foo.c from bar left join foo on foo.a=bar.a;
+ b | c  
+---+----
+ 2 | 30
+ 2 | 30
+   |  3
+   |   
+ 1 | 10
+ 2 | 20
+(6 rows)
 
 drop table foo;
 drop table bar;
