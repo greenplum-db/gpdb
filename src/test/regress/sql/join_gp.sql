@@ -1112,3 +1112,9 @@ drop table if exists repli_t1_pk;
 drop table if exists repli_t2_pk;
 drop table if exists repli_t3_pk;
 drop table if exists repli_t4_pk;
+
+-- Test that left-anti-semi-join not-in works with netowrk types
+CREATE TABLE inverse (cidr inet);
+INSERT INTO inverse values ('192.168.100.199');
+explain SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
+SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));

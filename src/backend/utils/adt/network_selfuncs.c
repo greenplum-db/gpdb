@@ -224,6 +224,7 @@ networkjoinsel(PG_FUNCTION_ARGS)
 			break;
 		case JOIN_SEMI:
 		case JOIN_ANTI:
+		case JOIN_LASJ_NOTIN:
 			/* Here, it's important that we pass the outer var on the left. */
 			if (!join_is_reversed)
 				selec = networkjoinsel_semi(operator, &vardata1, &vardata2);

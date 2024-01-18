@@ -3048,3 +3048,24 @@ drop table if exists repli_t1_pk;
 drop table if exists repli_t2_pk;
 drop table if exists repli_t3_pk;
 drop table if exists repli_t4_pk;
+-- Test that left-anti-semi-join not-in works with netowrk types
+CREATE TABLE inverse (cidr inet);
+INSERT INTO inverse values ('192.168.100.199');
+explain SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10027702610.21 rows=16 width=4)
+   ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=10000000000.00..10027702610.00 rows=5 width=4)
+         Join Filter: (inverse.cidr <<= inverse_1.cidr)
+         ->  Seq Scan on inverse  (cost=0.00..210.00 rows=17600 width=32)
+         ->  Materialize  (cost=0.00..1178.00 rows=52800 width=32)
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..914.00 rows=52800 width=32)
+                     ->  Seq Scan on inverse inverse_1  (cost=0.00..210.00 rows=17600 width=32)
+ Optimizer: Postgres-based planner
+(8 rows)
+
+SELECT 1 FROM inverse WHERE NOT (cidr <<= ANY(SELECT * FROM inverse));
+ ?column? 
+----------
+(0 rows)
+
