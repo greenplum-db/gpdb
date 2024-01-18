@@ -19,8 +19,8 @@ These server configuration parameters affect GPORCA query processing.
 
 -   `optimizer_cte_inlining_bound` controls the amount of inlining performed for common table expression \(CTE\) queries \(queries that contain a `WITH` clause\).
 -   `optimizer_force_comprehensive_join_implementation` affects GPORCA's consideration of nested loop join and hash join alternatives. When the value is `false` \(the default\), GPORCA does not consider nested loop join alternatives when a hash join is available.
--   `optimizer_force_multistage_agg` forces GPORCA to choose a multi-stage aggregate plan for a scalar distinct qualified aggregate. When the value is `off` \(the default\), GPORCA chooses between a one-stage and two-stage aggregate plan based on cost.
--   `optimizer_force_three_stage_scalar_dqa` forces GPORCA to choose a plan with multistage aggregates when such a plan alternative is generated.
+-   `optimizer_force_multistage_agg` forces GPORCA to choose a plan with multistage aggregates when such a plan alternative is generated.
+-   `optimizer_force_three_stage_scalar_dqa` forces GPORCA to choose a multi-stage aggregate plan for a scalar distinct qualified aggregate. When the value is `off`, GPORCA chooses between a one-stage and two-stage aggregate plan based on cost.
 -   `optimizer_join_order` sets the query optimization level for join ordering by specifying which types of join ordering alternatives to evaluate.
 -   `optimizer_join_order_threshold` specifies the maximum number of join children for which GPORCA uses the dynamic programming-based join ordering algorithm.
 -   `optimizer_nestloop_factor` controls nested loop join cost factor to apply to during query optimization.

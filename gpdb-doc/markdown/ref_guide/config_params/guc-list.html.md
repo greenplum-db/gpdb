@@ -2632,7 +2632,7 @@ The default value is `false`, GPORCA does not consider nested loop join alternat
 
 ## <a id="optimizer_force_multistage_agg"></a>optimizer\_force\_multistage\_agg 
 
-For the default settings, GPORCA is enabled and this parameter is `false`, GPORCA makes a cost-based choice between a one- or two-stage aggregate plan for a scalar distinct qualified aggregate. When `true`, GPORCA chooses a multi-stage aggregate plan when such a plan alternative is generated.
+For the default settings, GPORCA is enabled and this parameter is `false`, GPORCA makes a cost based choice rather than a heuristic choice. When the value is `true`, GPORCA chooses a plan with multistage aggregates when such a plan alternative is generated.
 
 The parameter can be set for a database system, an individual database, or a session or query.
 
@@ -2642,7 +2642,7 @@ The parameter can be set for a database system, an individual database, or a ses
 
 ## <a id="optimizer_force_three_stage_scalar_dqa"></a>optimizer\_force\_three\_stage\_scalar\_dqa 
 
-For the default settings, GPORCA is enabled and this parameter is `true`, GPORCA chooses a plan with multistage aggregates when such a plan alternative is generated. When the value is `false`, GPORCA makes a cost based choice rather than a heuristic choice.
+For the default settings, GPORCA is enabled and this parameter is `false`, GPORCA chooses a multi-stage aggregate plan when such a plan alternative is generated. When `false`, GPORCA makes a cost-based choice between a one- or two-stage aggregate plan for a scalar distinct qualified aggregate.
 
 The parameter can be set for a database system, an individual database, or a session, or query.
 
