@@ -22,7 +22,8 @@
  */
 typedef enum
 {
-	AVW_BRINSummarizeRange
+	AVW_BRINSummarizeRange,
+	AVW_UpdateRootPartitionStats
 } AutoVacuumWorkItemType;
 
 

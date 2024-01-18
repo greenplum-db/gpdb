@@ -1309,9 +1309,9 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 /*
  * update_root_stats -- Update root stats
  *
- * Helper function to issue analyze command on a specific relation.
+ * Helper function to request analyze command on a specific relation.
  */
-void update_root_stats(Relation rel, AlterTableCmd *cmd)
+void update_root_stats(Relation rel)
 {
 	/*
 	 * Update stats iff, all the existing
@@ -1339,34 +1339,13 @@ void update_root_stats(Relation rel, AlterTableCmd *cmd)
 		}
 	}
 
-	/*
-	 * Analyze command is issued, if leaf exist after detaching partition
-	 * or if a new partition is attached.
-	 */
-	if (leaf_parts_analyzed(root_parent_relid, InvalidOid, NIL, DEBUG2))
-	{
+	/* Pass a request to do_autovacuum() using autoVacuum worker */
+	bool	recorded;
+	recorded = AutoVacuumRequestWork(AVW_UpdateRootPartitionStats, root_parent_relid, InvalidBlockNumber);
 
-		ereport(DEBUG2,
-			(errmsg("Analyzing relation %s after partition attached or detached",
-				get_rel_name(root_parent_relid))));
-
-		VacuumStmt *analyzeStmt;
-		VacuumRelation *relation;
-		ParseState *pstate;
-
-		/*  Set up an ANALYZE command */
-		relation = makeVacuumRelation(NULL, root_parent_relid, NIL);
-		analyzeStmt = makeNode(VacuumStmt);
-		analyzeStmt->options = NIL;
-		analyzeStmt->rels = list_make1(relation);
-		analyzeStmt->is_vacuumcmd = false;
-
-		pstate = make_parsestate(NULL);
-		pstate->p_sourcetext = NULL;
-
-		ExecVacuum(pstate, analyzeStmt, false, false);
-
-		free_parsestate(pstate);
-		pfree(analyzeStmt);
-	}
+	if (!recorded)
+		ereport(LOG,
+			(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+			 errmsg(" Worker add request for  \"%s\" was not recorded",
+			 get_rel_name(root_parent_relid))));
 }

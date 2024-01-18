@@ -401,6 +401,7 @@ static void av_sighup_handler(SIGNAL_ARGS);
 static void avl_sigusr2_handler(SIGNAL_ARGS);
 static void avl_sigterm_handler(SIGNAL_ARGS);
 static void autovac_refresh_stats(void);
+static void addTablesFromAutoVacWorkers(List** table_oids);
 
 
 
@@ -2461,6 +2462,13 @@ do_autovacuum(void)
 
 	hash_destroy(top_level_partition_roots);
 	hash_destroy(sessionhash);
+
+	/*
+	 * Add tables received via auto vacuum workers to be considered
+	 * for vacuum/analyze.
+	 */
+	addTablesFromAutoVacWorkers(&table_oids);
+
 	/*
 	 * Perform operations on collected tables.
 	 */
@@ -3400,6 +3408,11 @@ autovac_report_workitem(AutoVacuumWorkItem *workitem,
 			snprintf(activity, MAX_AUTOVAC_ACTIV_LEN,
 					 "autovacuum: BRIN summarize");
 			break;
+
+		case AVW_UpdateRootPartitionStats:
+			snprintf(activity, MAX_AUTOVAC_ACTIV_LEN,
+					 "autovacuum: Update root partition stats");
+			break;
 	}
 
 	/*
@@ -3596,4 +3609,62 @@ autovac_refresh_stats(void)
 	}
 
 	pgstat_clear_snapshot();
+}
+
+/*
+ * 1. Add tables, received through auto vacuum workers
+ * to the list of table for autovacuum/analyze.
+ *
+ * 2. Only AVW_UpdateRootPartitionStats (worker type)
+ * is processed in the function. This worker type brings the OID
+ * of the root table to which a partition is attached/detached.
+ */
+static void addTablesFromAutoVacWorkers(List** table_oids)
+{
+
+	LWLockAcquire(AutovacuumLock, LW_EXCLUSIVE);
+	for (int i = 0; i < NUM_WORKITEMS; i++)
+	{
+		AutoVacuumWorkItem *workitem = &AutoVacuumShmem->av_workItems[i];
+
+		/*
+		 * Only AVW_UpdateRootPartitionStats worker type is
+		 * processed in this function.
+		 */
+		if (workitem->avw_type != AVW_UpdateRootPartitionStats)
+			continue;
+		if (!workitem->avw_used)
+			continue;
+		if (workitem->avw_active)
+			continue;
+		if (workitem->avw_database != MyDatabaseId)
+			continue;
+
+		/* claim this one, and release lock while performing it */
+		workitem->avw_active = true;
+		LWLockRelease(AutovacuumLock);
+
+		/*
+		 * Add received table oid to
+		 * the list of table for autovacuum/analyze
+		 */
+		*table_oids = lappend_oid(*table_oids, workitem->avw_relation);
+
+		/*
+		 * Check for config changes before acquiring lock for further jobs.
+		 */
+		CHECK_FOR_INTERRUPTS();
+		if (got_SIGHUP)
+		{
+			got_SIGHUP = false;
+			ProcessConfigFile(PGC_SIGHUP);
+		}
+
+		LWLockAcquire(AutovacuumLock, LW_EXCLUSIVE);
+
+		/* and mark it done */
+		workitem->avw_active = false;
+		workitem->avw_used = false;
+	}
+	LWLockRelease(AutovacuumLock);
 }

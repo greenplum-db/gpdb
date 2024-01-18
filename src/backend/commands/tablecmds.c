@@ -5861,7 +5861,7 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 					 * iff, all the existing leafs are
 					 * analyzed.
 					 */
-					update_root_stats(rel, cmd);
+					update_root_stats(rel);
 				}
 			}
 
@@ -5886,7 +5886,7 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 				 * Check and update root stats
 				 * after detaching partition.
 				 */
-				update_root_stats(rel, cmd);
+				update_root_stats(rel);
 
 			}
 			break;

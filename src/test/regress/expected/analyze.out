@@ -1350,6 +1350,15 @@ drop table multipart cascade;
 -- Reset flags to ignore any changes from tests before running these tests.
 reset optimizer_analyze_root_partition;
 reset optimizer_analyze_midlevel_partition;
+ALTER SYSTEM SET autovacuum_naptime = 4;
+ALTER SYSTEM SET autovacuum_vacuum_threshold = 10;
+ALTER SYSTEM SET autovacuum_analyze_threshold = 10;
+select * from pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
 -----------------------------------------------
 -- Case 1 - If an 'Analyzed Partition' is attached/detached to
 --     an analyzed table, merging of leaf stats is expected.
@@ -1370,15 +1379,6 @@ alter table rootTab attach partition rootTabMid1 for values from (0) to (20);
 alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
 insert into rootTab select i%10 from generate_series(0,4)i;
 analyze rootTab;
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottableaf2 |         0 |        0
- roottabmid1  |         0 |        0
-(4 rows)
-
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds 
 --------------+---------+-----------+------------------
@@ -1392,15 +1392,6 @@ insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
 -- 3. Analyze rootTabLeaf2 (new partition to be added)
 insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
 analyze rootTabLeaf2;
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottableaf2 |        10 |        3
- roottabmid1  |         0 |        0
-(4 rows)
-
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited |        histogram_bounds         
 --------------+---------+-----------+---------------------------------
@@ -1409,16 +1400,19 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
  roottableaf2 | a       | f         | {10,11,12,13,14,15,16,17,18,19}
 (3 rows)
 
--- 4. Attach new partition, and check that stats are updated.
+-- 4. Attach new partition, wait for autoanalyze to trigger and check that stats are updated.
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottableaf2 |        10 |        3
- roottabmid1  |         0 |        0
-(4 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+    20
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited |            histogram_bounds            
@@ -1428,16 +1422,19 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
  roottableaf2 | a       | f         | {10,11,12,13,14,15,16,17,18,19}
 (3 rows)
 
---5. Detach Partition (Leaf2) and check that stats are updated.
+--5. Detach Partition (Leaf2), wait for autoanalyze to trigger and check that stats are updated.
 alter table rootTabMid1 detach partition rootTabLeaf2;
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottableaf2 |        10 |        3
- roottabmid1  |         0 |        0
-(4 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+    10
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited |        histogram_bounds         
@@ -1467,15 +1464,6 @@ alter table rootTab attach partition rootTabMid1 for values from (0) to (20);
 alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
 insert into rootTab select i%10 from generate_series(0,4)i;
 analyze rootTab;
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottableaf2 |         0 |        0
- roottabmid1  |         0 |        0
-(4 rows)
-
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds 
 --------------+---------+-----------+------------------
@@ -1488,16 +1476,23 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
 -- 3.Only Insert, not analyze the new partition to be added
 insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
--- 4. Attach new partition, and check that stats are not updated.
+-- 4. Attach new partition, and check that stats are not updated as partition was not analyzed
+-- This partition was not auto analyzed as the number of rows inserted in the partition are 
+-- less than autovacuum_analyze_threshold. Note that, auto analyze did trigger for this root.
+-- It can be checked with a query on pg_stat_operations
+-- select objname, actionname, subtype from pg_stat_operations where objname like 'root%' order by statime ASC;
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottableaf2 |         0 |        0
- roottabmid1  |         0 |        0
-(4 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+    20
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds 
@@ -1508,14 +1503,17 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 
 -- 5. Detach Partition (Leaf2) and check that stats are not updated.
 alter table rootTabMid1 detach partition rootTabLeaf2;
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottableaf2 |         0 |        0
- roottabmid1  |         0 |        0
-(4 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+    10
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds 
@@ -1543,29 +1541,25 @@ alter table rootTab attach partition rootTabMid1 for values from (0) to (20);
 create table rootTabLeaf1(a int);
 insert into rootTabLeaf1 select i%10 from generate_series(0,4)i;
 analyze rootTabLeaf1;
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottabmid1  |         0 |        0
-(3 rows)
-
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds 
 --------------+---------+-----------+------------------
  roottableaf1 | a       | f         | {0,1,2,3,4}
 (1 row)
 
--- 2. Attach analyed partition(Leaf1) and check updated root stats
+-- 2. Attach analyed partition(Leaf1), wait for autoanalyze to trigger and check that root stats are updated.
 alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottabmid1  |         0 |        0
-(3 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+     5
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds 
@@ -1578,15 +1572,6 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 create table rootTabLeaf2(a int);
 insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
 analyze rootTabLeaf2;
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottableaf2 |        10 |        3
- roottabmid1  |         0 |        0
-(4 rows)
-
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited |        histogram_bounds         
 --------------+---------+-----------+---------------------------------
@@ -1598,16 +1583,19 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 -- 4. Update rootTabLeaf1 to check, if it is analyzed when a new partiton is attached.
 -- These should not be present in the root stats, after attach/detach of partition
 insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
--- 5. Attach new partition, and check that stats are updated.
+-- 5. Attach new partition, wait for autoanalyze to trigger and check that root stats are updated.
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottableaf2 |        10 |        3
- roottabmid1  |         0 |        0
-(4 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+    20
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited |            histogram_bounds            
@@ -1617,16 +1605,19 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
  roottableaf2 | a       | f         | {10,11,12,13,14,15,16,17,18,19}
 (3 rows)
 
--- 6. Detach Partition (Leaf2) and check that stats are updated.
+-- 6. Detach Partition (Leaf2) and check that root stats are updated.
 alter table rootTabMid1 detach partition rootTabLeaf2;
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottableaf2 |        10 |        3
- roottabmid1  |         0 |        0
-(4 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+    10
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited |        histogram_bounds         
@@ -1655,29 +1646,25 @@ alter table rootTab attach partition rootTabMid1 for values from (0) to (20);
 create table rootTabLeaf1(a int);
 insert into rootTabLeaf1 select i%10 from generate_series(0,4)i;
 analyze rootTabLeaf1;
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottabmid1  |         0 |        0
-(3 rows)
-
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds 
 --------------+---------+-----------+------------------
  roottableaf1 | a       | f         | {0,1,2,3,4}
 (1 row)
 
--- 2. Attach analyed partition(Leaf1) and check updated root stats
+-- 2. Attach analyed partition(Leaf1), wait for autoanalyze to trigger and check that root stats are updated.
 alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottabmid1  |         0 |        0
-(3 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+     5
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds 
@@ -1692,16 +1679,20 @@ insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
 -- 4. Update rootTabLeaf1 to check, if it is analyzed when a new partiton is attached.
 -- These should not be present in the root stats, after attach/detach of partition
 insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
--- 5. Attach new partition, and check that stats are not updated
+-- 5. Attach new partition, wait for autoanalyze to trigger and check that root stats are not updated
+-- with leaf2 data, as leaf2 was not analyzed. Note that auto analyze did trigger after attach command.
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottableaf2 |         0 |        0
- roottabmid1  |         0 |        0
-(4 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+    20
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds 
@@ -1710,17 +1701,19 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
  roottableaf1 | a       | f         | {0,1,2,3,4}
 (2 rows)
 
--- 6. Detach Partition (Leaf2) and check that stats are updated.
--- The existing stats of rootTabLeaf1 will be updated for root
+-- 6. Detach Partition (Leaf2) and check that root stats are not updated.
 alter table rootTabMid1 detach partition rootTabLeaf2;
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         5 |        2
- roottableaf2 |         0 |        0
- roottabmid1  |         0 |        0
-(4 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+    10
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds 
@@ -1754,17 +1747,19 @@ analyze rootTabLeaf2;
 -- 3. Update rootTabLeaf1 to check, if it is analyzed when a new partiton is attached.
 -- These should not be present in the root stats, after attach/detach of partition
 insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
--- 4. Attach new partition, and check that stats are not updated
--- No updation of root stats expected.
+-- 4. Attach new partition, wait for autoanalyze to trigger and check that root stats are not updated
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         0 |        0
- roottableaf2 |        10 |        3
- roottabmid1  |         0 |        0
-(4 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+    20
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited |        histogram_bounds         
@@ -1772,17 +1767,19 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
  roottableaf2 | a       | f         | {10,11,12,13,14,15,16,17,18,19}
 (1 row)
 
--- 5. Detach Partition (Leaf2) and check that stats are not updated.
--- No updation of root stats expected.
+-- 5. Detach Partition (Leaf2) and check that root stats are not updated.
 alter table rootTabMid1 detach partition rootTabLeaf2;
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         0 |        0
- roottableaf2 |        10 |        3
- roottabmid1  |         0 |        0
-(4 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+    10
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited |        histogram_bounds         
@@ -1814,33 +1811,38 @@ insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
 -- 3. Update rootTabLeaf1 to check, if it is analyzed when a new partiton is attached.
 -- These should not be present in the root stats, after attach/detach of partition
 insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
--- 4. Attach new partition, and check that stats are not updated
+-- 4. Attach new partition, wait for autoanalyze to trigger and check that root stats are not updated
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         0 |        0
- roottableaf2 |         0 |        0
- roottabmid1  |         0 |        0
-(4 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+    20
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
  tablename | attname | inherited | histogram_bounds 
 -----------+---------+-----------+------------------
 (0 rows)
 
--- 5. Detach Partition (Leaf2) and check that stats are not updated.
--- No updation of root stats expected.
+-- 5. Detach Partition (Leaf2), wait for autoanalyze to trigger and check that root stats are not updated
 alter table rootTabMid1 detach partition rootTabLeaf2;
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         0 |        0
- roottableaf2 |         0 |        0
- roottabmid1  |         0 |        0
-(4 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+    10
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
  tablename | attname | inherited | histogram_bounds 
@@ -1866,27 +1868,25 @@ analyze rootTab;
 create table rootTableaf1(a int);
 insert into rootTableaf1 select i%10 from generate_series(0,7)i;
 analyze rootTableaf1;
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         8 |        3
-(2 rows)
-
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds  
 --------------+---------+-----------+-------------------
  roottableaf1 | a       | f         | {0,1,2,3,4,5,6,7}
 (1 row)
 
---3. Attach leaf and check that the root stats are updated
+--3. Attach leaf, wait for autoanalyze to trigger and check that root stats are updated
 alter table rootTab attach partition rootTableaf1 for values from (0) to (10);
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         8 |        3
-(2 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+     8
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds  
@@ -1903,12 +1903,17 @@ select * from rootTab;
 ---
 (0 rows)
 
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         8 |        3
-(2 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+     0
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds  
@@ -1937,29 +1942,25 @@ analyze rootTab;
 create table rootTableaf1(a int);
 insert into rootTableaf1 select i%10 from generate_series(0,7)i;
 analyze rootTableaf1;
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         8 |        3
- roottabmid1  |         0 |        0
-(3 rows)
-
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds  
 --------------+---------+-----------+-------------------
  roottableaf1 | a       | f         | {0,1,2,3,4,5,6,7}
 (1 row)
 
---3. Attach leaf and check that the root stats are updated
+--3. Attach leaf, wait for autoanalyze to trigger and check that root stats are updated
 alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         8 |        3
- roottabmid1  |         0 |        0
-(3 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
+
+select count(*) from roottab;
+ count 
+-------
+     8
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds  
@@ -1971,18 +1972,17 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 --4. Detach leaf and check that root stats are not updated.
 --   After Detach, no leaf is present, so Analyze is not performed.
 alter table rootTabMid1 detach partition rootTabLeaf1;
-select * from rootTab;
- a 
----
-(0 rows)
+select pg_sleep (6);
+ pg_sleep 
+----------
+ 
+(1 row)
 
-select relname, reltuples, relpages from pg_class where relname like 'root%' order by relname;
-   relname    | reltuples | relpages 
---------------+-----------+----------
- roottab      |         0 |        0
- roottableaf1 |         8 |        3
- roottabmid1  |         0 |        0
-(3 rows)
+select count(*) from roottab;
+ count 
+-------
+     0
+(1 row)
 
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
   tablename   | attname | inherited | histogram_bounds  
@@ -1996,3 +1996,12 @@ drop table if exists rootTab;
 drop table if exists rootTabMid1;
 drop table if exists rootTabLeaf1;
 drop table if exists rootTabLeaf2;
+ALTER SYSTEM RESET autovacuum_naptime;
+ALTER SYSTEM RESET autovacuum_vacuum_threshold;
+ALTER SYSTEM RESET autovacuum_analyze_threshold;
+select * from pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t
+(1 row)
+
