@@ -676,12 +676,41 @@ doNotifyingCommitPrepared(void)
 	LWLockRelease(TwophaseCommitLock);
 }
 
+static bool 
+cdb_dispatch_retry_abort_prepared(int retry, MemoryContext oldcontext)
+{
+	bool succeeded;
+	int savedInterruptHoldoffCount = InterruptHoldoffCount;
+	PG_TRY();
+	{
+		MyTmGxactLocal->dtxSegments = cdbcomponent_getCdbComponentsList();
+		succeeded = currentDtxDispatchProtocolCommand(DTX_PROTOCOL_COMMAND_RETRY_ABORT_PREPARED, true);
+		if (!succeeded)
+			ereport(WARNING,
+					(errmsg("the distributed transaction 'Abort' broadcast "
+							"failed to one or more segments. Retrying ... try %d", retry),
+					TM_ERRDETAIL));
+	}
+	PG_CATCH();
+	{
+		/*
+		 * restore the previous value, which is reset to 0 in errfinish.
+		 */
+		MemoryContextSwitchTo(oldcontext);
+		InterruptHoldoffCount = savedInterruptHoldoffCount;
+		succeeded = false;
+		FlushErrorState();
+	}
+	PG_END_TRY();
+	return succeeded;
+}
+
+
 static void
 retryAbortPrepared(void)
 {
 	int			retry = 0;
 	bool		succeeded = false;
-	volatile int savedInterruptHoldoffCount;
 	MemoryContext oldcontext = CurrentMemoryContext;;
 
 	while (!succeeded && dtx_phase2_retry_count > retry++)
@@ -710,29 +739,8 @@ retryAbortPrepared(void)
 		 */
 		CheckForResetSession();
 
-		savedInterruptHoldoffCount = InterruptHoldoffCount;
+		succeeded = cdb_dispatch_retry_abort_prepared(retry, oldcontext);
 
-		PG_TRY();
-		{
-			MyTmGxactLocal->dtxSegments = cdbcomponent_getCdbComponentsList();
-			succeeded = currentDtxDispatchProtocolCommand(DTX_PROTOCOL_COMMAND_RETRY_ABORT_PREPARED, true);
-			if (!succeeded)
-				ereport(WARNING,
-						(errmsg("the distributed transaction 'Abort' broadcast "
-								"failed to one or more segments. Retrying ... try %d", retry),
-						TM_ERRDETAIL));
-		}
-		PG_CATCH();
-		{
-			/*
-			 * restore the previous value, which is reset to 0 in errfinish.
-			 */
-			MemoryContextSwitchTo(oldcontext);
-			InterruptHoldoffCount = savedInterruptHoldoffCount;
-			succeeded = false;
-			FlushErrorState();
-		}
-		PG_END_TRY();
 	}
 
 	if (!succeeded)
