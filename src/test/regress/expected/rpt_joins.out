@@ -2,7 +2,7 @@
 -- Tests for joins between replicated tables
 --
 create schema rpt_joins;
-set search_path to rpt_joins;
+set search_path to rpt_joins, public;
 --
 -- Test JOIN clauses, bellow tests are copy from tests for partitioned table
 --
@@ -2155,10 +2155,366 @@ select max(c1) from pg_class left join t_5628 on true;
    2
 (1 row)
 
+--
+-- Writeable CTE on replicated table join with other tables.
+-- See issue https://github.com/greenplum-db/gpdb/issues/15860
+--
+select gp_debug_set_create_table_default_numsegments(2);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 2
+(1 row)
+
+create table rpt_issue_15860_2_segments(c1 int, c2 int) distributed replicated;
+create table hash_issue_15860_2_segments(c1 int, c2 int) distributed by (c1);
+select gp_debug_reset_create_table_default_numsegments();
+ gp_debug_reset_create_table_default_numsegments 
+-------------------------------------------------
+ 
+(1 row)
+
+create table rpt_issue_15860 (c1 int, c2 int) distributed replicated;
+create table rpt2_issue_15860 (c1 int, c2 int) distributed replicated;
+create table hash_issue_15860(c1 int, c2 int) distributed by (c1);
+create table strewn_issue_15860(c1 int, c2 int) distributed randomly;
+insert into rpt2_issue_15860 values (1, 2), (2, 3);
+insert into rpt_issue_15860_2_segments values (1, 2), (2, 3);
+analyze rpt_issue_15860;
+analyze rpt2_issue_15860;
+analyze hash_issue_15860;
+analyze strewn_issue_15860;
+analyze rpt_issue_15860_2_segments;
+-- Replicated join SegmentGeneral.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join rpt2_issue_15860 using(c1);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Explicit Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (rpt2_issue_15860.c1 = rpt_issue_15860.c1)
+         ->  Seq Scan on rpt2_issue_15860
+         ->  Hash
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- Replicated join SegmentGeneral, Replicated is not ok to replicate.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 left join rpt2_issue_15860 using(c1);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Hash Right Join
+   Hash Cond: (rpt2_issue_15860.c1 = rpt_issue_15860.c1)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on rpt2_issue_15860
+   ->  Hash
+         ->  Explicit Gather Motion 3:1  (slice2; segments: 3)
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+-- Replicated join SegmentGeneral, SegmentGeneral is not ok to replicate.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 right join rpt2_issue_15860 using(c1);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Hash Left Join
+   Hash Cond: (rpt2_issue_15860.c1 = cte1.c1)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on rpt2_issue_15860
+   ->  Hash
+         ->  Explicit Gather Motion 3:1  (slice2; segments: 3)
+               ->  Subquery Scan on cte1
+                     ->  Insert on rpt_issue_15860
+                           ->  Result
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+-- Replicated join SegmentGeneral, both are not ok to replicate.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 full join rpt2_issue_15860 using(c1);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Hash Full Join
+   Hash Cond: (rpt2_issue_15860.c1 = rpt_issue_15860.c1)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on rpt2_issue_15860
+   ->  Hash
+         ->  Explicit Gather Motion 3:1  (slice2; segments: 3)
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+-- Replicated join SegmentGeneral, num segments are not matched.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join rpt_issue_15860_2_segments using(c1);
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Hash Join
+   Hash Cond: (rpt_issue_15860_2_segments.c1 = rpt_issue_15860.c1)
+   ->  Gather Motion 1:1  (slice1; segments: 1)
+         ->  Seq Scan on rpt_issue_15860_2_segments
+   ->  Hash
+         ->  Explicit Gather Motion 3:1  (slice2; segments: 3)
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+-- Replicated join General.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join generate_series(1, 5) i on i= cte1.c1 ;
+                    QUERY PLAN                     
+---------------------------------------------------
+ Explicit Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (i.i = rpt_issue_15860.c1)
+         ->  Function Scan on generate_series i
+         ->  Hash
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- Replicated join General, Replicated is not ok to replicate.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 left join generate_series(1, 5) i on i= cte1.c1 ;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Hash Right Join
+   Hash Cond: (i.i = rpt_issue_15860.c1)
+   ->  Function Scan on generate_series i
+   ->  Hash
+         ->  Explicit Gather Motion 3:1  (slice1; segments: 3)
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- Replicated join General, General is not ok to replicate.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 right join generate_series(1, 5) i on i= cte1.c1 ;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Hash Left Join
+   Hash Cond: (i.i = rpt_issue_15860.c1)
+   ->  Function Scan on generate_series i
+   ->  Hash
+         ->  Explicit Gather Motion 3:1  (slice1; segments: 3)
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- Replicated join General, both are not not ok to replicate.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 full join generate_series(1, 5) i on i= cte1.c1 ;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Hash Full Join
+   Hash Cond: (i.i = rpt_issue_15860.c1)
+   ->  Function Scan on generate_series i
+   ->  Hash
+         ->  Explicit Gather Motion 3:1  (slice1; segments: 3)
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- Replicate join SingleQE.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join (select count(*) as c from hash_issue_15860) a on a.c = cte1.c1;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Hash Join
+   Hash Cond: ((count(*)) = rpt_issue_15860.c1)
+   ->  Aggregate
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               ->  Seq Scan on hash_issue_15860
+   ->  Hash
+         ->  Explicit Gather Motion 3:1  (slice2; segments: 3)
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 left join (select count(*) as c from hash_issue_15860) a on a.c = cte1.c1;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Hash Right Join
+   Hash Cond: ((count(*)) = rpt_issue_15860.c1)
+   ->  Aggregate
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               ->  Seq Scan on hash_issue_15860
+   ->  Hash
+         ->  Explicit Gather Motion 3:1  (slice2; segments: 3)
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 right join (select count(*) as c from hash_issue_15860) a on a.c = cte1.c1;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Hash Left Join
+   Hash Cond: ((count(*)) = rpt_issue_15860.c1)
+   ->  Aggregate
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               ->  Seq Scan on hash_issue_15860
+   ->  Hash
+         ->  Explicit Gather Motion 3:1  (slice2; segments: 3)
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 full join (select count(*) as c from hash_issue_15860) a on a.c = cte1.c1;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Hash Full Join
+   Hash Cond: ((count(*)) = rpt_issue_15860.c1)
+   ->  Aggregate
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               ->  Seq Scan on hash_issue_15860
+   ->  Hash
+         ->  Explicit Gather Motion 3:1  (slice2; segments: 3)
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+-- Replicate join Entry.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join gp_segment_configuration g on g.dbid = cte1.c1;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Hash Join
+   Hash Cond: (g.dbid = rpt_issue_15860.c1)
+   ->  Seq Scan on gp_segment_configuration g
+   ->  Hash
+         ->  Explicit Gather Motion 3:1  (slice1; segments: 3)
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+--
+-- Begin of Replicated join Partitioned.
+--
+-- Replicated join Hashed.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join hash_issue_15860 using(c1);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (hash_issue_15860.c1 = rpt_issue_15860.c1)
+         ->  Seq Scan on hash_issue_15860
+         ->  Hash
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 right join hash_issue_15860 using(c1);
+                     QUERY PLAN                     
+----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Left Join
+         Hash Cond: (hash_issue_15860.c1 = cte1.c1)
+         ->  Seq Scan on hash_issue_15860
+         ->  Hash
+               ->  Subquery Scan on cte1
+                     ->  Insert on rpt_issue_15860
+                           ->  Result
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+-- Replicated join Hashed, Replicated is not ok to replicate
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 left join hash_issue_15860 using(c1);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Hash Right Join
+   Hash Cond: (hash_issue_15860.c1 = rpt_issue_15860.c1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on hash_issue_15860
+   ->  Hash
+         ->  Explicit Gather Motion 3:1  (slice2; segments: 3)
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 full join hash_issue_15860 using(c1);
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Hash Full Join
+   Hash Cond: (hash_issue_15860.c1 = rpt_issue_15860.c1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on hash_issue_15860
+   ->  Hash
+         ->  Explicit Gather Motion 3:1  (slice2; segments: 3)
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+-- Replicated join Hashed, num segments are not match.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join hash_issue_15860_2_segments  using(c1);
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (hash_issue_15860_2_segments.c1 = rpt_issue_15860.c1)
+         ->  Redistribute Motion 2:3  (slice2; segments: 2)
+               Hash Key: hash_issue_15860_2_segments.c1
+               ->  Seq Scan on hash_issue_15860_2_segments
+         ->  Hash
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+-- Replicated join Strewn = Strewn.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join strewn_issue_15860 using(c1);
+                           QUERY PLAN                            
+-----------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: (strewn_issue_15860.c1 = rpt_issue_15860.c1)
+         ->  Seq Scan on strewn_issue_15860
+         ->  Hash
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(8 rows)
+
+-- Replicated join HashedOJ = HashedOJ
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join (select * from hash_issue_15860 a full join hash_issue_15860 b using(c1)) c using(c1);
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: ((COALESCE(a.c1, b.c1)) = rpt_issue_15860.c1)
+         ->  Hash Full Join
+               Hash Cond: (a.c1 = b.c1)
+               ->  Seq Scan on hash_issue_15860 a
+               ->  Hash
+                     ->  Seq Scan on hash_issue_15860 b
+         ->  Hash
+               ->  Insert on rpt_issue_15860
+                     ->  Result
+ Optimizer: Postgres query optimizer
+(12 rows)
+
+--
+-- End of Replicated join Partitioned.
+--
+-- GPDB_FIXME: How to derive a plan?
+-- Replicates join OuterQuery
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select ( select foo.c1 from (select * from strewn_issue_15860) foo join cte1  using(c2)  where foo.c1 = hash_issue_15860.c1) from hash_issue_15860;
+ERROR:  could not devise a query plan for the given query (pathnode.c:275)
 drop schema rpt_joins cascade;
-NOTICE:  drop cascades to 5 other objects
+NOTICE:  drop cascades to 11 other objects
 DETAIL:  drop cascades to table j1_tbl
 drop cascades to table j2_tbl
 drop cascades to table rpt_joins.t1
 drop cascades to table rpt_joins.t2
 drop cascades to table rpt_joins.t3
+drop cascades to table rpt_issue_15860_2_segments
+drop cascades to table hash_issue_15860_2_segments
+drop cascades to table rpt_issue_15860
+drop cascades to table rpt2_issue_15860
+drop cascades to table hash_issue_15860
+drop cascades to table strewn_issue_15860

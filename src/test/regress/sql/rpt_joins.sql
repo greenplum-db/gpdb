@@ -1,9 +1,11 @@
 --
 -- Tests for joins between replicated tables
 --
+-- start_ignore
+create extension if not exists gp_debug_numsegments;
+-- end_ignore
 create schema rpt_joins;
-set search_path to rpt_joins;
-
+set search_path to rpt_joins, public;
 --
 -- Test JOIN clauses, bellow tests are copy from tests for partitioned table
 --
@@ -451,5 +453,79 @@ set enable_indexscan to off;
 set enable_bitmapscan to off;
 explain (costs off) select max(c1) from pg_class left join t_5628 on true;
 select max(c1) from pg_class left join t_5628 on true;
+
+
+--
+-- Writeable CTE on replicated table join with other tables.
+-- See issue https://github.com/greenplum-db/gpdb/issues/15860
+--
+select gp_debug_set_create_table_default_numsegments(2);
+create table rpt_issue_15860_2_segments(c1 int, c2 int) distributed replicated;
+create table hash_issue_15860_2_segments(c1 int, c2 int) distributed by (c1);
+select gp_debug_reset_create_table_default_numsegments();
+create table rpt_issue_15860 (c1 int, c2 int) distributed replicated;
+create table rpt2_issue_15860 (c1 int, c2 int) distributed replicated;
+create table hash_issue_15860(c1 int, c2 int) distributed by (c1);
+create table strewn_issue_15860(c1 int, c2 int) distributed randomly;
+
+insert into rpt2_issue_15860 values (1, 2), (2, 3);
+insert into rpt_issue_15860_2_segments values (1, 2), (2, 3);
+analyze rpt_issue_15860;
+analyze rpt2_issue_15860;
+analyze hash_issue_15860;
+analyze strewn_issue_15860;
+analyze rpt_issue_15860_2_segments;
+
+-- Replicated join SegmentGeneral.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join rpt2_issue_15860 using(c1);
+-- Replicated join SegmentGeneral, Replicated is not ok to replicate.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 left join rpt2_issue_15860 using(c1);
+-- Replicated join SegmentGeneral, SegmentGeneral is not ok to replicate.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 right join rpt2_issue_15860 using(c1);
+-- Replicated join SegmentGeneral, both are not ok to replicate.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 full join rpt2_issue_15860 using(c1);
+-- Replicated join SegmentGeneral, num segments are not matched.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join rpt_issue_15860_2_segments using(c1);
+
+-- Replicated join General.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join generate_series(1, 5) i on i= cte1.c1 ;
+-- Replicated join General, Replicated is not ok to replicate.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 left join generate_series(1, 5) i on i= cte1.c1 ;
+-- Replicated join General, General is not ok to replicate.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 right join generate_series(1, 5) i on i= cte1.c1 ;
+-- Replicated join General, both are not not ok to replicate.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 full join generate_series(1, 5) i on i= cte1.c1 ;
+
+-- Replicate join SingleQE.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join (select count(*) as c from hash_issue_15860) a on a.c = cte1.c1;
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 left join (select count(*) as c from hash_issue_15860) a on a.c = cte1.c1;
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 right join (select count(*) as c from hash_issue_15860) a on a.c = cte1.c1;
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 full join (select count(*) as c from hash_issue_15860) a on a.c = cte1.c1;
+
+-- Replicate join Entry.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join gp_segment_configuration g on g.dbid = cte1.c1;
+
+--
+-- Begin of Replicated join Partitioned.
+--
+-- Replicated join Hashed.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join hash_issue_15860 using(c1);
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 right join hash_issue_15860 using(c1);
+-- Replicated join Hashed, Replicated is not ok to replicate
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 left join hash_issue_15860 using(c1);
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 full join hash_issue_15860 using(c1);
+-- Replicated join Hashed, num segments are not match.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join hash_issue_15860_2_segments  using(c1);
+-- Replicated join Strewn = Strewn.
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join strewn_issue_15860 using(c1);
+-- Replicated join HashedOJ = HashedOJ
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select * from cte1 join (select * from hash_issue_15860 a full join hash_issue_15860 b using(c1)) c using(c1);
+--
+-- End of Replicated join Partitioned.
+--
+
+-- GPDB_FIXME: How to derive a plan?
+-- Replicates join OuterQuery
+explain(costs off) with cte1 as (insert into rpt_issue_15860 values (1, 2) returning *) select ( select foo.c1 from (select * from strewn_issue_15860) foo join cte1  using(c2)  where foo.c1 = hash_issue_15860.c1) from hash_issue_15860;
 
 drop schema rpt_joins cascade;
