@@ -3,3 +3,4 @@ comment = 'connect to other PostgreSQL databases from within a database'
 default_version = '1.1'
 module_pathname = '$libdir/dblink'
 relocatable = true
+trusted = true

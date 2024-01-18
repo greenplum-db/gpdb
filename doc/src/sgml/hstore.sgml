@@ -15,6 +15,12 @@
   simply text strings.
  </para>
 
+ <para>
+  This module is considered <quote>trusted</quote>, that is, it can be
+  installed by non-superusers who have <literal>CREATE</literal> privilege
+  on the current database.
+ </para>
+
  <sect2>
   <title><type>hstore</> External Representation</title>
 
@@ -630,6 +636,11 @@ ALTER TABLE tablename ALTER hstorecol TYPE hstore USING hstorecol || '';
   <para>
    Additional enhancements by Andrew Gierth <email>andrew@tao11.riddles.org.uk</email>,
    United Kingdom
+  </para>
+
+  <para>
+   Of these additional extensions, <literal>hstore_plperl</literal> is
+   considered trusted; the rest are not.
   </para>
  </sect2>
 

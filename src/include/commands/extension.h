@@ -42,6 +42,7 @@ extern Oid	ExecAlterExtensionContentsStmt(AlterExtensionContentsStmt *stmt);
 
 extern Oid	get_extension_oid(const char *extname, bool missing_ok);
 extern char *get_extension_name(Oid ext_oid);
+extern bool extension_file_exists(const char *extensionName);
 
 extern Oid	AlterExtensionNamespace(List *names, const char *newschema);
 
