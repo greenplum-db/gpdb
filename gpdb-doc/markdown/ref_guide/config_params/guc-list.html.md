@@ -1350,6 +1350,14 @@ Sets the Postgres-based planner cost estimate for a Motion operator to transfer 
 |-----------|-------|-------------------|
 |floating point|0|coordinator, session, reload|
 
+## <a id="gp_postmaster_inet_address_family"><a>gp_postmaster_inet_address_family
+
+When starting a cluster, a segment may fail when listening on an IPV4 address but succeed when listening on an IPV6 address. This server configuration parameter tells a node which type of IP address to use when initializing a cluster. When set to auto WHAT HAPPENS WHEN SET TO AUTO? FIX FIX FIX FIX
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|auto, ipv4, ipv6|auto|coordinator, session, reload, superuser|
+
 ## <a id="gp_print_create_gang_time"></a>gp\_print\_create\_gang\_time 
 
 When a user starts a session with Greenplum Database and issues a query, the system creates groups or 'gangs' of worker processes on each segment to do the work. `gp_print_create_gang_time` controls the display of additional information about gang creation, including gang reuse status and the shortest and longest connection establishment time to the segment.
