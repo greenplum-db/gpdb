@@ -18,7 +18,7 @@ typedef struct PLyExceptionEntry
 } PLyExceptionEntry;
 
 /* handling of SPI operations inside subtransactions */
-extern void PLy_spi_subtransaction_begin(MemoryContext oldcontext, ResourceOwner oldowner);
+extern bool PLy_spi_subtransaction_begin(MemoryContext oldcontext, ResourceOwner oldowner);
 extern void PLy_spi_subtransaction_commit(MemoryContext oldcontext, ResourceOwner oldowner);
 extern void PLy_spi_subtransaction_abort(MemoryContext oldcontext, ResourceOwner oldowner);
 

@@ -476,3 +476,48 @@ CONTEXT:  Traceback (most recent call last):
   PL/Python function "cursor_close_aborted_subxact", line 7, in <module>
     cur.close()
 PL/Python function "cursor_close_aborted_subxact"
+-- error report test in subtransaction begin
+-- prepare function
+CREATE OR REPLACE FUNCTION test_func() RETURNS SETOF int AS
+$$
+plpy.execute("select pg_backend_pid()")
+
+for i in range(0, 5):
+    yield (i)
+
+$$ LANGUAGE plpythonu;
+-- inject fault and wait for trigger
+select gp_inject_fault_infinite('begin_internal_sub_transaction', 'error', 1);
+ gp_inject_fault_infinite 
+--------------------------
+ Success:
+(1 row)
+
+SELECT test_func();
+ERROR:  function "test_func" error fetching next item from iterator
+DETAIL:  spiexceptions.FaultInject: fault triggered, fault name:'begin_internal_sub_transaction' fault type:'error'
+CONTEXT:  Traceback (most recent call last):
+PL/Python function "test_func"
+select gp_wait_until_triggered_fault('begin_internal_sub_transaction', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:
+(1 row)
+
+select gp_inject_fault('begin_internal_sub_transaction', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:
+(1 row)
+
+SELECT test_func();
+ test_func 
+-----------
+         0
+         1
+         2
+         3
+         4
+(5 rows)
+
+DROP FUNCTION test_func();

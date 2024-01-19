@@ -294,3 +294,24 @@ SELECT cursor_in_subxact();
 SELECT cursor_aborted_subxact();
 SELECT cursor_plan_aborted_subxact();
 SELECT cursor_close_aborted_subxact();
+
+-- error report test in subtransaction begin
+-- prepare function
+CREATE OR REPLACE FUNCTION test_func() RETURNS SETOF int AS
+$$
+plpy.execute("select pg_backend_pid()")
+
+for i in range(0, 5):
+    yield (i)
+
+$$ LANGUAGE plpythonu;
+
+-- inject fault and wait for trigger
+select gp_inject_fault_infinite('begin_internal_sub_transaction', 'error', 1);
+SELECT test_func();
+select gp_wait_until_triggered_fault('begin_internal_sub_transaction', 1, 1);
+select gp_inject_fault('begin_internal_sub_transaction', 'reset', 1);
+
+SELECT test_func();
+
+DROP FUNCTION test_func();
