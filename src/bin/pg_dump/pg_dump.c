@@ -940,6 +940,13 @@ main(int argc, char **argv)
 		if (schema_include_oids.head == NULL)
 			fatal("no matching schemas were found");
 	}
+	/*
+	 * As of GPDB7 gp_toolkit is an extension. It gets installed into template1
+	 * when the cluster is initialized by gpinitsystem. For 6 > 7 upgrade we
+	 * assume it will always be present and excluded it from being dumped.
+	 */
+	if (fout->remoteVersion < GPDB7_MAJOR_PGVERSION)
+		simple_string_list_append(&schema_exclude_patterns, "gp_toolkit");
 	expand_schema_name_patterns(fout, &schema_exclude_patterns,
 								&schema_exclude_oids,
 								false);
