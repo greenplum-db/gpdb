@@ -1024,6 +1024,11 @@ aocs_insert_values(AOCSInsertDesc idesc, Datum *d, bool *null, AOTupleId *aoTupl
 	if (idesc->numSequences > 0)
 		(idesc->numSequences)--;
 
+	if (!idesc->update_mode)
+		pgstat_count_heap_insert(rel, 1);
+	else
+		pgstat_count_heap_update(rel, false);
+
 	Assert(idesc->numSequences >= 0);
 
 	AOTupleIdInit(aoTupleId, idesc->cur_segno, idesc->lastSequence);
@@ -1761,6 +1766,8 @@ aocs_delete(AOCSDeleteDesc aoDeleteDesc,
 								   "",	/* databaseName */
 								   RelationGetRelationName(aoDeleteDesc->aod_rel)); /* tableName */
 #endif
+
+	pgstat_count_heap_delete(aoDeleteDesc->aod_rel);
 
 	return AppendOnlyVisimapDelete_Hide(&aoDeleteDesc->visiMapDelete, aoTupleId);
 }
