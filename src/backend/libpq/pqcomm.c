@@ -643,10 +643,6 @@ StreamServerPort(int family, char *hostName, unsigned short portNumber,
 
 		ListenSocket[listen_index] = fd;
 		added++;
-
-		/* Forced address family, no more tries. */
-		if (!IS_AF_UNIX(addr->ai_family) && Gp_postmaster_address_family_type)
-			break;
 	}
 
 	pg_freeaddrinfo_all(hint.ai_family, addrs);
