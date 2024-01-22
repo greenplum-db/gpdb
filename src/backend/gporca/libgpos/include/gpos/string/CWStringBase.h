@@ -98,6 +98,14 @@ public:
 
 	// count how many times the character appears in string
 	ULONG CountOccurrencesOf(const WCHAR wc) const;
+
+	static INT
+	Compare(const void *left, const void *right)
+	{
+		CWStringBase *leftstr = *(CWStringBase **) left;
+		CWStringBase *rightstr = *(CWStringBase **) right;
+		return wcscmp(leftstr->GetBuffer(), rightstr->GetBuffer());
+	}
 };
 
 }  // namespace gpos

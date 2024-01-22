@@ -97,8 +97,8 @@ CHashMapIterTest::EresUnittest_Basic()
 			pdrgpulIterValues->Append(mi.Value());
 		}
 
-		pdrgpulIterKeys->Sort();
-		pdrgpulIterValues->Sort();
+		pdrgpulIterKeys->Sort(CompareUlongPtr);
+		pdrgpulIterValues->Sort(CompareUlongPtr);
 
 		GPOS_ASSERT(pdrgpulKeys->Equals(pdrgpulIterKeys.Value()));
 		GPOS_ASSERT(pdrgpulValues->Equals(pdrgpulIterValues.Value()));

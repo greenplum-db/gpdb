@@ -57,6 +57,14 @@ CleanupRelease(T *elem)
 	(dynamic_cast<CRefCount *>(elem))->Release();
 }
 
+// Compare function used by CDynamicPtrArray::Sort
+inline INT
+CompareUlongPtr(const void *right, const void *left)
+{
+	return *((ULONG *) right) - *((ULONG *) left);
+}
+
+
 // commonly used array types
 
 // arrays of unsigned integers
@@ -102,26 +110,6 @@ private:
 
 	// actual array
 	T **m_elems;
-
-	// comparison function for pointers
-	static INT
-	PtrCmp(const void *p1, const void *p2)
-	{
-		ULONG_PTR ulp1 = *(ULONG_PTR *) p1;
-		ULONG_PTR ulp2 = *(ULONG_PTR *) p2;
-
-		if (ulp1 < ulp2)
-		{
-			return -1;
-		}
-
-		if (ulp1 > ulp2)
-		{
-			return 1;
-		}
-
-		return 0;
-	}
 
 	// resize function
 	void
@@ -241,7 +229,7 @@ public:
 
 	// sort array
 	void
-	Sort(CompareFn compare_func = PtrCmp)
+	Sort(CompareFn compare_func)
 	{
 		clib::Qsort(m_elems, m_size, sizeof(T *), compare_func);
 	}
@@ -309,7 +297,7 @@ public:
 #ifdef GPOS_DEBUG
 	// check if array is sorted
 	BOOL
-	IsSorted(CompareFn compare_func = PtrCmp) const
+	IsSorted(CompareFn compare_func) const
 	{
 		for (ULONG i = 1; i < m_size; i++)
 		{

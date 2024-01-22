@@ -71,7 +71,7 @@ CHashSetIterTest::EresUnittest_Basic()
 			pdrgpulIterValues->Append(si.Get());
 		}
 
-		pdrgpulIterValues->Sort();
+		pdrgpulIterValues->Sort(CompareUlongPtr);
 
 		GPOS_ASSERT(pdrgpulValues->Equals(pdrgpulIterValues.Value()));
 	}

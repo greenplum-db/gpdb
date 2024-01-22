@@ -71,9 +71,9 @@ CGroupExpression::CGroupExpression(CMemoryPool *mp, COperator *pop,
 	{
 		m_pdrgpgroupSorted = GPOS_NEW(mp) CGroupArray(mp, pdrgpgroup->Size());
 		m_pdrgpgroupSorted->AppendArray(pdrgpgroup);
-		m_pdrgpgroupSorted->Sort();
+		m_pdrgpgroupSorted->Sort(CGroup::Compare);
 
-		GPOS_ASSERT(m_pdrgpgroupSorted->IsSorted());
+		GPOS_ASSERT(m_pdrgpgroupSorted->IsSorted(CGroup::Compare));
 	}
 
 	m_ppartialplancostmap = GPOS_NEW(mp) PartialPlanToCostMap(mp);

@@ -407,7 +407,7 @@ CJoinStatsProcessor::SetResultingJoinStats(
 			mdid_inner->AddRef();
 			mdid_pair->Append(mdid_outer);
 			mdid_pair->Append(mdid_inner);
-			mdid_pair->Sort();
+			mdid_pair->Sort(IMDId::CompareHashVal);
 
 			if (colref_outer->IsDistCol() && colref_inner->IsDistCol())
 			{

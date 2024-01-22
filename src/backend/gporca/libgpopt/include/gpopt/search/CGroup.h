@@ -614,6 +614,24 @@ public:
 	void DbgPrintWithProperties();
 #endif
 
+	// Compare function used by CDynamicPtrArray::Sort
+	static INT
+	Compare(const void *left, const void *right)
+	{
+		if ((*((CGroup **) left))->Id() < (*((CGroup **) right))->Id())
+		{
+			return -1;
+		}
+		else if ((*((CGroup **) left))->Id() > ((*(CGroup **) right))->Id())
+		{
+			return 1;
+		}
+
+		GPOS_ASSERT((*((CGroup **) left))->Id() ==
+					((*(CGroup **) right))->Id());
+		return 0;
+	}
+
 };	// class CGroup
 
 }  // namespace gpopt

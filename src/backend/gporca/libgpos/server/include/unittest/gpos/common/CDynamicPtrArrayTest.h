@@ -34,6 +34,7 @@ public:
 	static GPOS_RESULT EresUnittest_ArrayAppendExactFit();
 	static GPOS_RESULT EresUnittest_PdrgpulSubsequenceIndexes();
 	static GPOS_RESULT EresUnittest_Equals();
+	static GPOS_RESULT EresUnittest_Sort();
 
 	// destructor function for char's
 	static void DestroyChar(char *);

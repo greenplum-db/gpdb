@@ -41,6 +41,7 @@ CDynamicPtrArrayTest::EresUnittest()
 		GPOS_UNITTEST_FUNC(
 			CDynamicPtrArrayTest::EresUnittest_PdrgpulSubsequenceIndexes),
 		GPOS_UNITTEST_FUNC(CDynamicPtrArrayTest::EresUnittest_Equals),
+		GPOS_UNITTEST_FUNC(CDynamicPtrArrayTest::EresUnittest_Sort),
 	};
 
 	return CUnittest::EresExecute(rgut, GPOS_ARRAY_SIZE(rgut));
@@ -77,6 +78,10 @@ CDynamicPtrArrayTest::EresUnittest_Basic()
 		pdrg->Append(rgsz[i]);
 		GPOS_ASSERT(i + 1 == pdrg->Size());
 		GPOS_ASSERT(rgsz[i] == (*pdrg)[i]);
+
+		// Using CompareUlongPtr as comparison function for Sort/IsSorted
+		// requires that the data fits into the size of ULONG.
+		GPOS_ASSERT((sizeof(CHAR) * strlen(rgsz[i])) <= sizeof(ULONG));
 	}
 
 	// lookup tests
@@ -98,7 +103,7 @@ CDynamicPtrArrayTest::EresUnittest_Basic()
 		pdrg->IndexOf(szMissingElem);
 	GPOS_ASSERT(gpos::ulong_max == ulPosMissing);
 	// all elements were inserted in ascending order
-	GPOS_ASSERT(pdrg->IsSorted());
+	GPOS_ASSERT(pdrg->IsSorted(CompareUlongPtr));
 
 	pdrg->Release();
 
@@ -119,10 +124,10 @@ CDynamicPtrArrayTest::EresUnittest_Basic()
 	GPOS_ASSERT(c == pdrgULONG->Size());
 
 	// all elements were inserted in descending order
-	GPOS_ASSERT(!pdrgULONG->IsSorted());
+	GPOS_ASSERT(!pdrgULONG->IsSorted(CompareUlongPtr));
 
-	pdrgULONG->Sort();
-	GPOS_ASSERT(pdrgULONG->IsSorted());
+	pdrgULONG->Sort(CompareUlongPtr);
+	GPOS_ASSERT(pdrgULONG->IsSorted(CompareUlongPtr));
 
 	// test that all positions got copied and sorted properly
 	for (ULONG_PTR ulpJ = 0; ulpJ < c; ulpJ++)
@@ -393,4 +398,43 @@ CDynamicPtrArrayTest::EresUnittest_Equals()
 
 	return GPOS_OK;
 }
+
+//---------------------------------------------------------------------------
+//     @function:
+//             CDynamicPtrArrayTest::EresUnittest_Sort
+//
+//     @doc:
+//             Testing whether an array can be sorted
+//
+//---------------------------------------------------------------------------
+GPOS_RESULT
+CDynamicPtrArrayTest::EresUnittest_Sort()
+{
+	CAutoMemoryPool amp;
+	CMemoryPool *mp = amp.Pmp();
+
+	StringPtrArray *unsortedStringArray = GPOS_NEW(mp) StringPtrArray(mp);
+	unsortedStringArray->Append(GPOS_NEW(mp) CWStringConst(mp, "c_string"));
+	unsortedStringArray->Append(GPOS_NEW(mp) CWStringConst(mp, "a_string"));
+	unsortedStringArray->Append(GPOS_NEW(mp) CWStringConst(mp, "b_string"));
+
+	unsortedStringArray->Sort(CWStringBase::Compare);
+
+	StringPtrArray *sortedStringArray = GPOS_NEW(mp) StringPtrArray(mp);
+	sortedStringArray->Append(GPOS_NEW(mp) CWStringConst(mp, "a_string"));
+	sortedStringArray->Append(GPOS_NEW(mp) CWStringConst(mp, "b_string"));
+	sortedStringArray->Append(GPOS_NEW(mp) CWStringConst(mp, "c_string"));
+
+	for (ULONG ul = 0; ul < unsortedStringArray->Size(); ul++)
+	{
+		GPOS_ASSERT(
+			(*unsortedStringArray)[ul]->Equals((*sortedStringArray)[ul]));
+	}
+
+	unsortedStringArray->Release();
+	sortedStringArray->Release();
+
+	return GPOS_OK;
+}
+
 // EOF
