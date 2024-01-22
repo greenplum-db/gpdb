@@ -130,6 +130,24 @@ public:
 
 	IOstream &OsPrint(IOstream &os) const;
 
+	BOOL
+	operator==(const CColumnDescriptor &other) const
+	{
+		if (this == &other)
+		{
+			// same object reference
+			return true;
+		}
+
+		return Name().Equals(other.Name()) &&
+			   RetrieveType()->MDId()->Equals(other.RetrieveType()->MDId()) &&
+			   TypeModifier() == other.TypeModifier() &&
+			   AttrNum() == other.AttrNum() &&
+			   IsNullable() == other.IsNullable() &&
+			   IsSystemColumn() == other.IsSystemColumn() &&
+			   Width() == other.Width() && IsDistCol() == other.IsDistCol();
+	}
+
 };	// class CColumnDescriptor
 }  // namespace gpopt
 

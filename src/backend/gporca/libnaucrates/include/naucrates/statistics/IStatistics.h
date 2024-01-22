@@ -200,6 +200,27 @@ public:
 		return (IStatistics::EsjtLeftAntiSemiJoin == join_type) ||
 			   (IStatistics::EsjtLeftSemiJoin == join_type);
 	}
+
+	BOOL
+	operator==(const IStatistics &other) const
+	{
+		if (this == &other)
+		{
+			// same object reference
+			return true;
+		}
+
+		// XXX: How are we supposed to compar statistics objects?  I suppose we
+		//      could print it out and compare, but that seems expensive.
+		//      Instead, we opt for some basic comparison, knowing that it's
+		//      nowhere near exhaustive.
+		return Rows() == other.Rows() && RelPages() == other.RelPages() &&
+			   RelAllVisible() == other.RelAllVisible() &&
+			   IsEmpty() == other.IsEmpty() &&
+			   NumRebinds() == other.NumRebinds() && Width() == other.Width() &&
+			   StatsEstimationRisk() == other.StatsEstimationRisk() &&
+			   GetNumberOfPredicates() == other.GetNumberOfPredicates();
+	}
 };	// class IStatistics
 
 // shorthand for printing

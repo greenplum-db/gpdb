@@ -33,6 +33,7 @@ public:
 	static GPOS_RESULT EresUnittest_ArrayAppend();
 	static GPOS_RESULT EresUnittest_ArrayAppendExactFit();
 	static GPOS_RESULT EresUnittest_PdrgpulSubsequenceIndexes();
+	static GPOS_RESULT EresUnittest_Equals();
 
 	// destructor function for char's
 	static void DestroyChar(char *);

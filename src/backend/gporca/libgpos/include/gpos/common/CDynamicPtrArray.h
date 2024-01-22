@@ -254,10 +254,22 @@ public:
 
 		for (ULONG i = 0; i < m_size && is_equal; i++)
 		{
-			is_equal = (m_elems[i] == arr->m_elems[i]);
+			is_equal = (*m_elems[i] == *arr->m_elems[i]);
 		}
 
 		return is_equal;
+	}
+
+	BOOL
+	operator==(const CDynamicPtrArray<T, CleanupFn> &other)
+	{
+		if (this == &other)
+		{
+			// same object reference
+			return true;
+		}
+
+		return Equals(&other);
 	}
 
 	// lookup object

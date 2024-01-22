@@ -142,6 +142,18 @@ public:
 	virtual BOOL StatsAreComparable(const IDatum *datum) const;
 
 	virtual gpos::IOstream &OsPrint(gpos::IOstream &os) const = 0;
+
+	BOOL
+	operator==(const IDatum &other) const
+	{
+		if (this == &other)
+		{
+			// same object reference
+			return true;
+		}
+
+		return Matches(&other);
+	}
 };	// class IDatum
 
 // array of idatums
