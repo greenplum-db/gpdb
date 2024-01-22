@@ -1449,6 +1449,12 @@ convert_ANY_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 	cdbsubselect_drop_distinct(subselect);
 
 	/*
+	 * The sub-select must not refer to any Vars of the parent query. (Vars of
+	 * higher levels should be okay, though.)
+	 */
+	if (contain_vars_of_level((Node *) subselect, 1))
+		return NULL;
+	/*
 	 * If there are CTEs, then the transformation does not work. Don't attempt
 	 * to pullup.
 	 */

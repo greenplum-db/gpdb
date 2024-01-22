@@ -2574,11 +2574,10 @@ where out.b in (select coalesce(tcorr2.a, 99)
                 from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
 
 -- expect 1 row
--- FIXME: A process terminates during execution, see https://github.com/greenplum-db/gpdb/issues/10791
--- select *
--- from tcorr1 out
--- where out.b in (select coalesce(tcorr2.a, 99)
---                 from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
 
 explain
 select *
@@ -2611,11 +2610,10 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
 
 -- expect 1 row
--- FIXME: A process terminates during execution, see https://github.com/greenplum-db/gpdb/issues/10791
--- select *
--- from tcorr1 out
--- where out.b in (select coalesce(tcorr2.a, 99)
---                 from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
 
 set optimizer_join_order to exhaustive2;
 
@@ -2625,11 +2623,10 @@ from tcorr1 out
 where out.b in (select coalesce(tcorr2.a, 99)
                 from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
 -- expect 1 row
--- FIXME: A process terminates during execution, see https://github.com/greenplum-db/gpdb/issues/10791
--- select *
--- from tcorr1 out
--- where out.b in (select coalesce(tcorr2.a, 99)
---                 from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
 
 explain
 select *
@@ -2662,11 +2659,10 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                              group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
 
 -- expect 1 row
--- FIXME: A process terminates during execution, see https://github.com/greenplum-db/gpdb/issues/10791
--- select *
--- from tcorr1 out
--- where out.b in (select coalesce(tcorr2.a, 99)
---                 from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
 
 reset optimizer_join_order;
 

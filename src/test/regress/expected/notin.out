@@ -948,18 +948,19 @@ select c1 from t1 where not c1 <>all (select c1n from t1n where c1n <all (select
 --q37
 --
 explain select c1 from t1 where not c1 >=all (select c2 from t2 where c2 = c1);
-                                 QUERY PLAN                                 
-----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=2.11..5.30 rows=4 width=4)
-   ->  Hash Semi Join  (cost=2.11..5.30 rows=2 width=4)
-         Hash Cond: t1.c1 = t2.c2
-         Join Filter: t1.c1 < t2.c2
-         ->  Seq Scan on t1  (cost=0.00..3.10 rows=4 width=4)
-         ->  Hash  (cost=2.05..2.05 rows=2 width=4)
-               ->  Seq Scan on t2  (cost=0.00..2.05 rows=2 width=4)
- Settings:  optimizer=off
- Optimizer status: Postgres query optimizer
-(9 rows)
+                                               QUERY PLAN                                                
+---------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..18.45 rows=5 width=4)
+   ->  Seq Scan on t1  (cost=0.00..18.45 rows=2 width=4)
+         Filter: (SubPlan 1)
+         SubPlan 1  (slice2; segments: 3)
+           ->  Result  (cost=0.00..3.07 rows=1 width=4)
+                 Filter: (t2.c2 = t1.c1)
+                 ->  Materialize  (cost=0.00..3.07 rows=1 width=4)
+                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.06 rows=1 width=4)
+                             ->  Seq Scan on t2  (cost=0.00..3.06 rows=1 width=4)
+ Optimizer: Postgres query optimizer
+(10 rows)
 
 select c1 from t1 where not c1 >=all (select c2 from t2 where c2 = c1);
  c1 

@@ -16228,35 +16228,74 @@ analyze non_part2;
 EXPLAIN (costs off) SELECT * FROM ds_main, non_part2 WHERE ds_main.c = non_part2.e AND a IN ( SELECT a FROM non_part1) order by a;
                                QUERY PLAN                               
 ------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)
+ Gather Motion 3:1  (slice8; segments: 3)
    Merge Key: ds_main_1_prt_deflt.a
    ->  Sort
          Sort Key: ds_main_1_prt_deflt.a
-         ->  Nested Loop Semi Join
-               ->  Hash Join
-                     Hash Cond: (ds_main_1_prt_deflt.c = non_part2.e)
-                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                           Hash Key: ds_main_1_prt_deflt.c
-                           ->  Append
-                                 ->  Seq Scan on ds_main_1_prt_deflt
-                                       Filter: (a = a)
-                                 ->  Seq Scan on ds_main_1_prt_3
-                                       Filter: (a = a)
-                                 ->  Seq Scan on ds_main_1_prt_4
-                                       Filter: (a = a)
-                                 ->  Seq Scan on ds_main_1_prt_5
-                                       Filter: (a = a)
-                                 ->  Seq Scan on ds_main_1_prt_6
-                                       Filter: (a = a)
-                                 ->  Seq Scan on ds_main_1_prt_2
-                                       Filter: (a = a)
-                     ->  Hash
-                           ->  Seq Scan on non_part2
-               ->  Materialize
-                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                           ->  Seq Scan on non_part1
+         ->  Hash Join
+               Hash Cond: (ds_main_1_prt_deflt.c = non_part2.e)
+               ->  Append
+                     ->  Result
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on ds_main_1_prt_deflt
+                                 Filter: (SubPlan 1)
+                                 SubPlan 1  (slice8; segments: 3)
+                                   ->  Result
+                                         ->  Materialize
+                                               ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                                     ->  Seq Scan on non_part1
+                     ->  Result
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on ds_main_1_prt_3
+                                 Filter: (SubPlan 1)
+                                 SubPlan 1  (slice8; segments: 3)
+                                   ->  Result
+                                         ->  Materialize
+                                               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                                     ->  Seq Scan on non_part1 non_part1_1
+                     ->  Result
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on ds_main_1_prt_4
+                                 Filter: (SubPlan 1)
+                                 SubPlan 1  (slice8; segments: 3)
+                                   ->  Result
+                                         ->  Materialize
+                                               ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                                     ->  Seq Scan on non_part1 non_part1_2
+                     ->  Result
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on ds_main_1_prt_5
+                                 Filter: (SubPlan 1)
+                                 SubPlan 1  (slice8; segments: 3)
+                                   ->  Result
+                                         ->  Materialize
+                                               ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                                     ->  Seq Scan on non_part1 non_part1_3
+                     ->  Result
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on ds_main_1_prt_6
+                                 Filter: (SubPlan 1)
+                                 SubPlan 1  (slice8; segments: 3)
+                                   ->  Result
+                                         ->  Materialize
+                                               ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                                                     ->  Seq Scan on non_part1 non_part1_4
+                     ->  Result
+                           One-Time Filter: PartSelected
+                           ->  Seq Scan on ds_main_1_prt_2
+                                 Filter: (SubPlan 1)
+                                 SubPlan 1  (slice8; segments: 3)
+                                   ->  Result
+                                         ->  Materialize
+                                               ->  Broadcast Motion 3:3  (slice6; segments: 3)
+                                                     ->  Seq Scan on non_part1 non_part1_5
+               ->  Hash
+                     ->  Partition Selector for ds_main (dynamic scan id: 1)
+                           Filter: non_part2.e
+                           ->  Broadcast Motion 3:3  (slice7; segments: 3)
+                                 ->  Seq Scan on non_part2
  Optimizer: Postgres query optimizer
-(28 rows)
+(67 rows)
 
 SELECT * FROM ds_main, non_part2 WHERE ds_main.c = non_part2.e AND a IN ( SELECT a FROM non_part1) order by a;
  a | b | c  | e  | f  

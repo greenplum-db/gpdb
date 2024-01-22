@@ -12690,11 +12690,15 @@ where out.b in (select coalesce(tcorr2.a, 99)
 (15 rows)
 
 -- expect 1 row
--- FIXME: A process terminates during execution, see https://github.com/greenplum-db/gpdb/issues/10791
--- select *
--- from tcorr1 out
--- where out.b in (select coalesce(tcorr2.a, 99)
---                 from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+ a | b  
+---+----
+ 1 | 99
+(1 row)
+
 explain
 select *
 from tcorr1 out
@@ -12775,11 +12779,17 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
 (1 row)
 
 -- expect 1 row
--- FIXME: A process terminates during execution, see https://github.com/greenplum-db/gpdb/issues/10791
--- select *
--- from tcorr1 out
--- where out.b in (select coalesce(tcorr2.a, 99)
---                 from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
+ a | b  
+---+----
+ 1 | 99
+(1 row)
+
 set optimizer_join_order to exhaustive2;
 explain
 select *
@@ -12806,11 +12816,15 @@ where out.b in (select coalesce(tcorr2.a, 99)
 (15 rows)
 
 -- expect 1 row
--- FIXME: A process terminates during execution, see https://github.com/greenplum-db/gpdb/issues/10791
--- select *
--- from tcorr1 out
--- where out.b in (select coalesce(tcorr2.a, 99)
---                 from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 left outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+ a | b  
+---+----
+ 1 | 99
+(1 row)
+
 explain
 select *
 from tcorr1 out
@@ -12891,11 +12905,17 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
 (1 row)
 
 -- expect 1 row
--- FIXME: A process terminates during execution, see https://github.com/greenplum-db/gpdb/issues/10791
--- select *
--- from tcorr1 out
--- where out.b in (select coalesce(tcorr2.a, 99)
---                 from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2.a, 99)
+                from tcorr1 full outer join tcorr2 on tcorr1.a=tcorr2.a+out.a);
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
+ a | b  
+---+----
+ 1 | 99
+(1 row)
+
 reset optimizer_join_order;
 -- test selecting an outer ref from a scalar subquery
 -- expect 0 rows
