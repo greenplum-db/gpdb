@@ -4949,7 +4949,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 	},
 
 	{
-		{"gp_postmaster_inet_address_family", PGC_POSTMASTER, CUSTOM_OPTIONS,
+		{"gp_postmaster_address_family", PGC_POSTMASTER, CUSTOM_OPTIONS,
 			gettext_noop("Specifies the address family used by postmaster listener sockets."),
 			gettext_noop("Valid values are auto, ipv4 and ipv6."), 
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
