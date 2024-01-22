@@ -631,11 +631,9 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 								errmsg("Invalid execution statistics "
 									   "received stats node-count mismatch: cdbexplain_recvExecStats() ctx.nStatInst %d hdr->nInst %d", ctx.nStatInst, hdr->nInst),
-								errhint("Please verify that all instances are using "
-										"the correct %s software version.",
-										PACKAGE_NAME)));
-
-			Assert(ctx.nStatInst == hdr->nInst);
+								errhint("Received invalid response from segment, "
+										"please check the logs of seg-%d to get more details.",
+										hdr->segindex)));
 		}
 
 		/* Save lowest and highest qe_identifier for which we have stats. */
