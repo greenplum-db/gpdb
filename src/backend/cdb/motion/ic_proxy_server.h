@@ -127,6 +127,7 @@ extern ICProxyPeer *ic_proxy_peer_new(uv_loop_t *loop,
 extern void ic_proxy_peer_free(ICProxyPeer *peer);
 extern void ic_proxy_peer_read_hello(ICProxyPeer *peer);
 extern void ic_proxy_peer_connect(ICProxyPeer *peer, struct sockaddr_in *dest);
+extern void ic_proxy_peer_disconnect(ICProxyPeer *peer);
 extern void ic_proxy_peer_route_data(ICProxyPeer *peer, ICProxyPkt *pkt,
 									 ic_proxy_sent_cb callback, void *opaque);
 extern ICProxyPeer *ic_proxy_peer_lookup(int16 content, uint16 dbid);

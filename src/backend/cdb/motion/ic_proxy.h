@@ -48,4 +48,37 @@ ic_proxy_build_server_sock_path(char *buf, size_t bufsize)
 			 PostPortNumber, PostmasterPid);
 }
 
+/*
+ * Free a list.
+ *
+ * The difference with list_free() is we always return NIL.
+ */
+static inline List *
+ic_proxy_list_free(List *list)
+{
+	list_free(list);
+	return NIL;
+}
+
+/*
+ * Free a list and the cells.
+ *
+ * The cells must be allocated with the ic_proxy_alloc() / ic_proxy_new()
+ * allocators.
+ *
+ * Always return NIL.
+ */
+static inline List *
+ic_proxy_list_free_deep(List *list)
+{
+	ListCell   *cell;
+
+	foreach(cell, list)
+	{
+		ic_proxy_free(lfirst(cell));
+	}
+
+	return ic_proxy_list_free(list);
+}
+
 #endif   /* IC_PROXY_H */

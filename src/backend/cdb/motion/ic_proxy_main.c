@@ -29,6 +29,8 @@
 
 #include <unistd.h>
 
+static void ic_proxy_server_peer_listener_init(uv_loop_t *loop);
+
 static uv_loop_t	ic_proxy_server_loop;
 static uv_signal_t	ic_proxy_server_signal_hup;
 static uv_signal_t	ic_proxy_server_signal_int;
@@ -40,6 +42,7 @@ static uv_tcp_t		ic_proxy_peer_listener;
 static bool			ic_proxy_peer_listening;
 /* flag (in SHM) for incidaing if peer listener bind/listen failed */
 pg_atomic_uint32 	*ic_proxy_peer_listener_failed;
+static bool			ic_proxy_peer_relistening;
 
 static uv_pipe_t	ic_proxy_client_listener;
 static bool			ic_proxy_client_listening;
@@ -60,6 +63,13 @@ ic_proxy_server_peer_listener_on_closed(uv_handle_t *handle)
 
 	/* A new peer listener will be created on the next timer callback */
 	ic_proxy_peer_listening = false;
+
+	/* If relisten is requested, do it now */
+	if (ic_proxy_peer_relistening)
+	{
+		ic_proxy_peer_relistening = false;
+		ic_proxy_server_peer_listener_init(handle->loop);
+	}
 }
 
 /*
@@ -168,7 +178,7 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 		int			family;
 		int			ret;
 
-		ret = ic_proxy_extract_addr((struct sockaddr *) &addr->addr,
+		ret = ic_proxy_extract_sockaddr((struct sockaddr *) &addr->sockaddr,
 									name, sizeof(name), &port, &family);
 		if (ret == 0)
 			elog(LOG,
@@ -188,7 +198,7 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 	uv_tcp_init(loop, listener);
 	uv_tcp_nodelay(listener, true);
 
-	ret = uv_tcp_bind(listener, (struct sockaddr *) &addr->addr, 0);
+	ret = uv_tcp_bind(listener, (struct sockaddr *) &addr->sockaddr, 0);
 	if (ret < 0)
 	{
 		elog(WARNING, "ic-proxy: tcp: fail to bind: %s",
@@ -213,6 +223,40 @@ ic_proxy_server_peer_listener_init(uv_loop_t *loop)
 
 	pg_atomic_exchange_u32(ic_proxy_peer_listener_failed, 0);
 	ic_proxy_peer_listening = true;
+}
+
+/*
+ * Reinit the peer listener.
+ */
+static void
+ic_proxy_server_peer_listener_reinit(uv_loop_t *loop)
+{
+	const ICProxyAddr *myaddr = ic_proxy_get_my_addr();
+
+	if (ic_proxy_peer_relistening)
+		return;
+
+	if (ic_proxy_peer_listening)
+	{
+		/*
+		 * We are listening already, so must first close the current one, we
+		 * keep the ic_proxy_peer_listening as true during the process to
+		 * prevent double connect.
+		 */
+		elog(LOG, "ic-proxy: closing the legacy peer listener");
+
+		/* Only recreate a new listener if an address is assigned to us */
+		ic_proxy_peer_relistening = !!myaddr;
+
+		uv_close((uv_handle_t *) &ic_proxy_peer_listener,
+				 ic_proxy_server_peer_listener_on_closed);
+	}
+	else if (myaddr)
+	{
+		/* Otherwise simply establish a new one */
+		ic_proxy_peer_relistening = false;
+		ic_proxy_server_peer_listener_init(loop);
+	}
 }
 
 /*
@@ -375,6 +419,57 @@ ic_proxy_server_ensure_peers(uv_loop_t *loop)
 }
 
 /*
+ * Drop legacy peers.
+ *
+ * The list ic_proxy_removed_addrs contains both removed and updated addresses,
+ * the corresponding peers must be disconnected before taking further actions.
+ */
+static void
+ic_proxy_server_drop_legacy_peers(uv_loop_t *loop)
+{
+	ListCell   *cell;
+	const ICProxyAddr *myaddr = ic_proxy_get_my_addr();
+
+	/*
+	 * Also take the chance to check the peer listener.
+	 *
+	 * If myaddr cannot be found at all, the address must have been removed,
+	 * close the current listener.
+	 */
+	if (!myaddr)
+		ic_proxy_server_peer_listener_reinit(loop);
+
+	foreach(cell, ic_proxy_removed_addrs)
+	{
+		ICProxyAddr *addr = lfirst(cell);
+		ICProxyPeer *peer;
+
+		/*
+		 * Also take the chance to check the peer listener.
+		 *
+		 * If myaddr appears in the removed list, then the address must have
+		 * been changed or removed, no need to compare the sockaddrs again.
+		 */
+		if (myaddr && myaddr->dbid == addr->dbid)
+			ic_proxy_server_peer_listener_reinit(loop);
+
+		/*
+		 * Refer to ic_proxy_server_ensure_peers() on why we need below checks.
+		 */
+		if (addr->content >= GpIdentity.segindex)
+			continue;
+		if (addr->dbid == GpIdentity.dbid)
+			continue; /* do not connect to my primary / mirror */
+
+		peer = ic_proxy_peer_lookup(addr->content, addr->dbid);
+		if (!peer)
+			continue;
+
+		ic_proxy_peer_disconnect(peer);
+	}
+}
+
+/*
  * Timer handler.
  *
  * This is used to maintain the proxy-proxy network, as well as the client and
@@ -405,6 +500,7 @@ ic_proxy_server_on_signal(uv_signal_t *handle, int signum)
 		ProcessConfigFile(PGC_SIGHUP);
 
 		ic_proxy_reload_addresses(handle->loop);
+		ic_proxy_server_drop_legacy_peers(handle->loop);
 
 		ic_proxy_server_peer_listener_init(handle->loop);
 		ic_proxy_server_ensure_peers(handle->loop);
@@ -457,6 +553,7 @@ ic_proxy_server_main(void)
 	ic_proxy_client_table_init();
 
 	ic_proxy_peer_listening = false;
+	ic_proxy_peer_relistening = false;
 	ic_proxy_client_listening = false;
 
 	uv_signal_init(&ic_proxy_server_loop, &ic_proxy_server_signal_hup);
@@ -536,6 +633,9 @@ ic_proxy_server_quit(uv_loop_t *loop, bool relaunch)
 	 */
 	if (ic_proxy_peer_listening)
 	{
+		/* cancel pending relistening request */
+		ic_proxy_peer_relistening = false;
+
 		uv_unref((uv_handle_t *) &ic_proxy_peer_listener);
 		uv_close((uv_handle_t *) &ic_proxy_peer_listener, NULL);
 	}
