@@ -707,6 +707,8 @@ ALTER SYSTEM SET autovacuum_naptime = 4;
 ALTER SYSTEM SET autovacuum_vacuum_threshold = 10;
 ALTER SYSTEM SET autovacuum_analyze_threshold = 10;
 select * from pg_reload_conf();
+drop extension if exists gp_inject_fault;
+create extension gp_inject_fault;
 -----------------------------------------------
 -- Case 1 - If an 'Analyzed Partition' is attached/detached to
 --     an analyzed table, merging of leaf stats is expected.
@@ -740,14 +742,18 @@ analyze rootTabLeaf2;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
 -- 4. Attach new partition, wait for autoanalyze to trigger and check that stats are updated.
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
 --5. Detach Partition (Leaf2), wait for autoanalyze to trigger and check that stats are updated.
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 detach partition rootTabLeaf2;
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
@@ -785,14 +791,18 @@ insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
 -- less than autovacuum_analyze_threshold. Note that, auto analyze did trigger for this root.
 -- It can be checked with a query on pg_stat_operations
 -- select objname, actionname, subtype from pg_stat_operations where objname like 'root%' order by statime ASC;
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
 -- 5. Detach Partition (Leaf2) and check that stats are not updated.
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 detach partition rootTabLeaf2;
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
@@ -819,8 +829,10 @@ analyze rootTabLeaf1;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
 -- 2. Attach analyed partition(Leaf1), wait for autoanalyze to trigger and check that root stats are updated.
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
@@ -835,14 +847,18 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
 
 -- 5. Attach new partition, wait for autoanalyze to trigger and check that root stats are updated.
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
 -- 6. Detach Partition (Leaf2) and check that root stats are updated.
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 detach partition rootTabLeaf2;
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
@@ -868,8 +884,10 @@ analyze rootTabLeaf1;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
 -- 2. Attach analyed partition(Leaf1), wait for autoanalyze to trigger and check that root stats are updated.
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
@@ -883,14 +901,18 @@ insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
 
 -- 5. Attach new partition, wait for autoanalyze to trigger and check that root stats are not updated
 -- with leaf2 data, as leaf2 was not analyzed. Note that auto analyze did trigger after attach command.
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
 -- 6. Detach Partition (Leaf2) and check that root stats are not updated.
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 detach partition rootTabLeaf2;
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
@@ -923,14 +945,18 @@ analyze rootTabLeaf2;
 insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
 
 -- 4. Attach new partition, wait for autoanalyze to trigger and check that root stats are not updated
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
 -- 5. Detach Partition (Leaf2) and check that root stats are not updated.
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 detach partition rootTabLeaf2;
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
@@ -963,14 +989,18 @@ insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
 insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
 
 -- 4. Attach new partition, wait for autoanalyze to trigger and check that root stats are not updated
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
 -- 5. Detach Partition (Leaf2), wait for autoanalyze to trigger and check that root stats are not updated
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 detach partition rootTabLeaf2;
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
@@ -997,16 +1027,20 @@ analyze rootTableaf1;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
 --3. Attach leaf, wait for autoanalyze to trigger and check that root stats are updated
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTab attach partition rootTableaf1 for values from (0) to (10);
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
 --4. Detach leaf and check that root stats are not updated.
 --   After Detach, only root is left, so Analyze is not performed on it.
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTab detach partition rootTabLeaf1;
 select * from rootTab;
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
@@ -1034,15 +1068,19 @@ analyze rootTableaf1;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
 --3. Attach leaf, wait for autoanalyze to trigger and check that root stats are updated
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
 --4. Detach leaf and check that root stats are not updated.
 --   After Detach, no leaf is present, so Analyze is not performed.
+select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 detach partition rootTabLeaf1;
-select pg_sleep (6);
+select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
 
@@ -1055,3 +1093,4 @@ ALTER SYSTEM RESET autovacuum_naptime;
 ALTER SYSTEM RESET autovacuum_vacuum_threshold;
 ALTER SYSTEM RESET autovacuum_analyze_threshold;
 select * from pg_reload_conf();
+drop extension gp_inject_fault;

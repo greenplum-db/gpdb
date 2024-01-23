@@ -5854,14 +5854,15 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 				if (OidIsValid(objAdd.classId))
 				{
 					/*
-					 * 1. Check and update root stats
-					 * after attachment of partition.
+					 * 1. Next, find the top level partition root
+					 * of the attached partition.
 					 *
-					 * 2. Aim is to merge root stats
-					 * iff, all the existing leafs are
-					 * analyzed.
+					 * 2. Pass the rel-id of the root for
+					 * autovacuum, so that in the next iteration of
+					 * autovacuum, statistics of root are updated
+					 * based on the attached partition.
 					 */
-					update_root_stats(rel);
+					 trigger_autoanalyze_on_root(rel);
 				}
 			}
 
@@ -5883,10 +5884,15 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			{
 
 				/*
-				 * Check and update root stats
-				 * after detaching partition.
+				 * 1. Next, find the top level partition root
+				 * of the detached partition.
+				 *
+				 * 2. Pass the rel-id of the root for
+				 * autovacuum, so that in the next iteration of
+				 * autovacuum, statistics of root are updated
+				 * based on the detached partition.
 				 */
-				update_root_stats(rel);
+				trigger_autoanalyze_on_root(rel);
 
 			}
 			break;

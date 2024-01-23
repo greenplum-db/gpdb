@@ -1307,16 +1307,12 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 }
 
 /*
- * update_root_stats -- Update root stats
+ * trigger_autoanalyze_on_root
  *
  * Helper function to request analyze command on a specific relation.
  */
-void update_root_stats(Relation rel)
+void trigger_autoanalyze_on_root(Relation rel)
 {
-	/*
-	 * Update stats iff, all the existing
-	 * leaf partitions are analyzed.
-	 */
 	Oid root_parent_relid = get_top_level_partition_root(rel->rd_id);
 	if (!OidIsValid(root_parent_relid))
 	{
@@ -1342,10 +1338,20 @@ void update_root_stats(Relation rel)
 	/* Pass a request to do_autovacuum() using autoVacuum worker */
 	bool	recorded;
 	recorded = AutoVacuumRequestWork(AVW_UpdateRootPartitionStats, root_parent_relid, InvalidBlockNumber);
+	if (recorded)
+	{
+		ereport(DEBUG2,
+			(errmsg(" An autovacuum request was created for PARENT-RELID  \"%s\" because it is the root of recently attached partition CHILD-RELID  \"%s\"",
+				get_rel_name(root_parent_relid),get_rel_name(rel->rd_id))));
 
-	if (!recorded)
+	}
+	else
+	{
 		ereport(LOG,
 			(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-			 errmsg(" Worker add request for  \"%s\" was not recorded",
-			 get_rel_name(root_parent_relid))));
+				errmsg(" Worker add request for  \"%s\" was not recorded",
+					get_rel_name(root_parent_relid))));
+	}
+
+
 }

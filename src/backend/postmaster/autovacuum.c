@@ -401,7 +401,7 @@ static void av_sighup_handler(SIGNAL_ARGS);
 static void avl_sigusr2_handler(SIGNAL_ARGS);
 static void avl_sigterm_handler(SIGNAL_ARGS);
 static void autovac_refresh_stats(void);
-static void addTablesFromAutoVacWorkers(List** table_oids);
+static void addTablesFromAutoVacWorkers(HTAB *top_level_partition_roots);
 
 
 
@@ -2452,6 +2452,12 @@ do_autovacuum(void)
 										  ALLOCSET_DEFAULT_SIZES);
 
 	/*
+	 * Add tables received via auto vacuum workers to be considered
+	 * for vacuum/analyze.
+	 */
+	addTablesFromAutoVacWorkers(top_level_partition_roots);
+
+	/*
 	 * GPDB: Analyze (merge leaf stats) all top-level partition roots at the end. This
 	 * guarantees that leaf partitions are analyzed first before merging their stats
 	 * for their top-level roots.
@@ -2462,12 +2468,6 @@ do_autovacuum(void)
 
 	hash_destroy(top_level_partition_roots);
 	hash_destroy(sessionhash);
-
-	/*
-	 * Add tables received via auto vacuum workers to be considered
-	 * for vacuum/analyze.
-	 */
-	addTablesFromAutoVacWorkers(&table_oids);
 
 	/*
 	 * Perform operations on collected tables.
@@ -3613,13 +3613,14 @@ autovac_refresh_stats(void)
 
 /*
  * 1. Add tables, received through auto vacuum workers
- * to the list of table for autovacuum/analyze.
+ * to the hash table containing OIDs of root table
+ * for autovacuum/analyze.
  *
  * 2. Only AVW_UpdateRootPartitionStats (worker type)
  * is processed in the function. This worker type brings the OID
  * of the root table to which a partition is attached/detached.
  */
-static void addTablesFromAutoVacWorkers(List** table_oids)
+static void addTablesFromAutoVacWorkers(HTAB *top_level_partition_roots)
 {
 
 	LWLockAcquire(AutovacuumLock, LW_EXCLUSIVE);
@@ -3646,19 +3647,11 @@ static void addTablesFromAutoVacWorkers(List** table_oids)
 
 		/*
 		 * Add received table oid to
-		 * the list of table for autovacuum/analyze
+		 * the hash table containing OIDs of root table
+		 * for autovacuum/analyze.
 		 */
-		*table_oids = lappend_oid(*table_oids, workitem->avw_relation);
-
-		/*
-		 * Check for config changes before acquiring lock for further jobs.
-		 */
-		CHECK_FOR_INTERRUPTS();
-		if (got_SIGHUP)
-		{
-			got_SIGHUP = false;
-			ProcessConfigFile(PGC_SIGHUP);
-		}
+		Oid root_parent_relid = workitem->avw_relation;
+		(void) hash_search(top_level_partition_roots, (void *) &root_parent_relid, HASH_ENTER, NULL);
 
 		LWLockAcquire(AutovacuumLock, LW_EXCLUSIVE);
 
