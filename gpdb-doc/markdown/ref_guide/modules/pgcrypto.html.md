@@ -33,7 +33,7 @@ When this parameter is enabled, these changes occur:
 2.  Configure the Greenplum Database server configuration parameter `shared_preload_libraries` to load the `pgcrypto` library. This example uses the `gpconfig` utility to update the parameter in the Greenplum Database `postgresql.conf` files.
 
     ```
-    gpconfig -c shared_preload_libraries -v '\$libdir/pgcrypto'
+    gpconfig -c shared_preload_libraries -v '$libdir/pgcrypto'
     ```
 
     This command displays the value of `shared_preload_libraries`.
