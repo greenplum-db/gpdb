@@ -456,12 +456,9 @@ explain (costs off)
    ->  Nested Loop
          ->  Index Scan using ec0_pkey on ec0 a
                Index Cond: (ff = '43'::int8alias1)
-         ->  Materialize
-               ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Index Scan using ec1_pkey on ec1 b
-                           Index Cond: (ff = '43'::int8alias1)
- Optimizer: Postgres query optimizer
-(9 rows)
+         ->  Index Scan using ec1_pkey on ec1 b
+               Index Cond: (ff = '43'::int8alias1)
+(7 rows)
 
 set session authorization regress_user_ectest;
 -- with RLS active, the non-leakproof a.ff = 43 clause is not treated

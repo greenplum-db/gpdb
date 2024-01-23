@@ -997,6 +997,15 @@ select * from foo_varchar inner join random_dis_char on foo_varchar.a=random_dis
 explain select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
 select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_varchar.x;
 
+-- If the distribution key and join key are equal,
+-- legacy planner should generate local join plan, 
+-- rather than MPP join plan with redistribute motion.
+-- please refer to https://github.com/greenplum-db/gpdb/issues/16315
+create table t_16315_left(a int, b int) distributed by (a, b);
+create table t_16315_right(a int, b int) distributed by (a, b);
+explain select * from t_16315_left left join t_16315_right on t_16315_left.a = t_16315_right.a and t_16315_left.b = t_16315_right.b where t_16315_left.a = 2;
+drop table t_16315_left;
+drop table t_16315_right;
 drop table foo_varchar;
 drop table bar_char;
 drop table random_dis_varchar;

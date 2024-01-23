@@ -939,6 +939,32 @@ cdbpath_match_preds_to_distkey(PlannerInfo *root,
 	return cdbpath_match_preds_to_distkey_tail(&ctx, list_head(locus.distkey));
 }
 
+/*
+ * cdb_check_ec_contain_same_const_distkey
+ * Returns true if the EC of outer_dk and inner_dk both contain the same constant.
+ */
+static bool
+cdb_check_ec_contain_same_const_distkey(List *outer_dk_eclasses, List *inner_dk_eclasses)
+{
+	ListCell   *outer_i;
+	ListCell   *inner_i;
+	foreach(outer_i, outer_dk_eclasses)
+	{
+		EquivalenceClass *outer_ec = (EquivalenceClass *) lfirst(outer_i);
+		EquivalenceMember *outer_em = get_const_from_eclass(outer_ec);
+		if (outer_em)
+		{
+			foreach(inner_i, inner_dk_eclasses)
+			{
+				EquivalenceClass *inner_ec = (EquivalenceClass *) lfirst(inner_i);
+				EquivalenceMember *inner_em = get_const_from_eclass(inner_ec);
+				if (inner_em && equal(outer_em->em_expr, inner_em->em_expr))
+					return true;
+			}
+		}
+	}
+	return false;
+}
 
 /*
  * cdbpath_match_preds_to_both_distkeys
@@ -962,8 +988,7 @@ cdbpath_match_preds_to_both_distkeys(PlannerInfo *root,
 	List	   *outer_distkey;
 	List	   *inner_distkey;
 
-	if (!mergeclause_list ||
-		CdbPathLocus_NumSegments(outer_locus) != CdbPathLocus_NumSegments(inner_locus) ||
+	if (CdbPathLocus_NumSegments(outer_locus) != CdbPathLocus_NumSegments(inner_locus) ||
 		outer_locus.distkey == NIL || inner_locus.distkey == NIL ||
 		list_length(outer_locus.distkey) != list_length(inner_locus.distkey))
 		return false;
@@ -984,6 +1009,9 @@ cdbpath_match_preds_to_both_distkeys(PlannerInfo *root,
 
 		if (outer_dk->dk_opfamily != inner_dk->dk_opfamily)
 			return false;	/* incompatible hashing scheme */
+
+		if (cdb_check_ec_contain_same_const_distkey(outer_dk->dk_eclasses, inner_dk->dk_eclasses))
+			continue;
 
 		foreach(rcell, mergeclause_list)
 		{

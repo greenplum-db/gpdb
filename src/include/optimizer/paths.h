@@ -278,5 +278,6 @@ extern PathKey *make_canonical_pathkey(PlannerInfo *root,
 									   int strategy, bool nulls_first);
 extern void add_paths_to_append_rel(PlannerInfo *root, RelOptInfo *rel,
 									List *live_childrels);
+extern EquivalenceMember *get_const_from_eclass(EquivalenceClass *ec);
 
 #endif							/* PATHS_H */

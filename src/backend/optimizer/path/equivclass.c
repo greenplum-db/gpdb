@@ -2721,3 +2721,26 @@ is_redundant_with_indexclauses(RestrictInfo *rinfo, List *indexclauses)
 
 	return false;
 }
+
+/*
+ * get_const_from_eclass
+ * Returns const EquivalenceMember if EquivalenceClass has a const.
+ * If there is no const in this EquivalenceClass, returns null.
+ */
+EquivalenceMember *
+get_const_from_eclass(EquivalenceClass *ec)
+{
+	if (ec->ec_has_const)
+	{
+		ListCell   *lc;
+		foreach(lc, ec->ec_members)
+		{
+			EquivalenceMember *em = (EquivalenceMember *) lfirst(lc);
+			if (em->em_is_const)
+			{
+				return em;
+			}
+		}
+	}
+	return NULL;
+}

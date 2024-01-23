@@ -2571,6 +2571,52 @@ select * from bar_char inner join random_dis_varchar on bar_char.p=random_dis_va
  3     | 3   
 (3 rows)
 
+-- If the distribution key and join key are equal,
+-- legacy planner should generate local join plan, 
+-- rather than MPP join plan with redistribute motion.
+-- please refer to https://github.com/greenplum-db/gpdb/issues/16315
+create table t_16315_left(a int, b int) distributed by (a, b);
+create table t_16315_right(a int, b int) distributed by (a, b);
+explain select * from t_16315_left left join t_16315_right on t_16315_left.a = t_16315_right.a and t_16315_left.b = t_16315_right.b where t_16315_left.a = 2;
+QUERY PLAN
+___________
+{
+  'child' => [
+    {
+      'child' => [
+        {
+          'id' => 3,
+          'parent' => 2,
+          'short' => 'Seq Scan on t_16315_left'
+        },
+        {
+          'child' => [
+            {
+              'id' => 5,
+              'parent' => 4,
+              'short' => 'Seq Scan on t_16315_right'
+            }
+          ],
+          'id' => 4,
+          'parent' => 2,
+          'short' => 'Materialize'
+        }
+      ],
+      'id' => 2,
+      'parent' => 1,
+      'short' => 'Nested Loop Left Join'
+    }
+  ],
+  'id' => 1,
+  'recvsize' => 1,
+  'segments' => 3,
+  'sendsize' => 3,
+  'short' => 'Gather Motion'
+}
+GP_IGNORE:(9 rows)
+
+drop table t_16315_left;
+drop table t_16315_right;
 drop table foo_varchar;
 drop table bar_char;
 drop table random_dis_varchar;
