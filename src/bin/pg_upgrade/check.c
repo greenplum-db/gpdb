@@ -169,6 +169,12 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 		old_cluster.controldata.cat_ver < JSONB_FORMAT_CHANGE_CAT_VER)
 		check_for_jsonb_9_4_usage(&old_cluster);
 
+	/* For now, the issue exists only for Greenplum 6.x/PostgreSQL 9.4 */
+	if (GET_MAJOR_VERSION(old_cluster.major_version) == 904)
+	{
+		check_for_appendonly_materialized_view_with_relfrozenxid(&old_cluster);
+	}
+
 	teardown_GPDB6_data_type_checks(&old_cluster);
 
 dump_old_cluster:
