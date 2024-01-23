@@ -1350,13 +1350,13 @@ Sets the Postgres-based planner cost estimate for a Motion operator to transfer 
 |-----------|-------|-------------------|
 |floating point|0|coordinator, session, reload|
 
-## <a id="gp_postmaster_inet_address_family"><a>gp_postmaster_inet_address_family
+## <a id="gp_postmaster_address_family"><a>gp_postmaster_inet_address_family
 
-When starting a cluster, a segment may fail when listening on an IPV4 address but succeed when listening on an IPV6 address. This server configuration parameter tells a node which type of IP address to use when initializing a cluster. When set to auto WHAT HAPPENS WHEN SET TO AUTO? FIX FIX FIX FIX
+When starting a cluster, a segment may fail when listening on an IPV4 address but succeed when listening on an IPV6 address. This server configuration parameter tells a node which type of IP address to use when initializing a cluster. When set to auto VMware Greenplum loops through all the hostnames’ ipvv4 and ipv6 addresses, trying to open a “listening” port on each one.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|auto, ipv4, ipv6|auto|coordinator, session, reload, superuser|
+|auto, ipv4, ipv6|auto|local, system, restart, superuser|
 
 ## <a id="gp_print_create_gang_time"></a>gp\_print\_create\_gang\_time 
 

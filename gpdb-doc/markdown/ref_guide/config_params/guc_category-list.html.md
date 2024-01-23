@@ -32,6 +32,7 @@ These parameters control how clients connect and authenticate to Greenplum Datab
 - [gp_dispatch_keepalives_count](guc-list.html#gp_dispatch_keepalives_count)
 - [gp_dispatch_keepalives_idle](guc-list.html#gp_dispatch_keepalives_idle)
 - [gp_dispatch_keepalives_interval](guc-list.html#gp_dispatch_keepalives_interval)
+- [gp_postmaster_address_family](guc-list.html#gp_postmaster_address_family)
 - [gp_vmem_idle_resource_timeout](guc-list.html#gp_vmem_idle_resource_timeout)
 - [listen_addresses](guc-list.html#listen_addresses)
 - [max_connections](guc-list.html#max_connections)
