@@ -147,7 +147,6 @@ my $primary_datadir = $node_primary->data_dir;
 copy("$primary_datadir/postgresql.conf",
 	 "$tmp_check/primary-postgresql.conf.tmp");
 
-local $ENV{PGOPTIONS} = '-c gp_role=utility';
 command_ok(['pg_rewind',
 			"--debug",
 			"--source-server",

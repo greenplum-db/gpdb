@@ -894,7 +894,6 @@ sub start
 	}
 
 	$self->_update_pid(1);
-	$ENV{PGOPTIONS}      = '-c gp_role=utility';
 	return 1;
 }
 
@@ -1743,8 +1742,6 @@ sub psql
 	my $replication = $params{replication};
 	my $timeout           = undef;
 	my $timeout_exception = 'psql timed out';
-
-	local $ENV{PGOPTIONS} = '-c gp_role=utility';
 
 	# Build the connection string.
 	my $psql_connstr;
