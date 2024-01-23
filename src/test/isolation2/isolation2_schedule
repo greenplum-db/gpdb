@@ -17,6 +17,9 @@ test: concurrent_partition_table_operations_should_not_deadlock
 test: select_dropped_table
 test: update_hash_col_utilitymode execute_on_utilitymode
 
+# Test to check root stats updation
+test: merge_root_stats
+
 # Tests for crash recovery
 test: uao_crash_compaction_column
 test: uao_crash_compaction_row
