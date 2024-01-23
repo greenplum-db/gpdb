@@ -98,7 +98,7 @@ BEGIN
 	delete $ENV{LANGUAGE};
 	delete $ENV{LC_ALL};
 	$ENV{LC_MESSAGES} = 'C';
-	$ENV{PGOPTIONS} = '-c gp_role=utility';
+	$ENV{PGOPTIONS} = '-c gp_session_role=utility';
 
 	# This list should be kept in sync with pg_regress.c.
 	my @envkeys = qw (
