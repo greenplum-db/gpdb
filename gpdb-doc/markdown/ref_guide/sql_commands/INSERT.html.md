@@ -107,6 +107,8 @@ conflict\_target can perform unique index inference. When performing inference, 
 
 `ON CONFLICT DO UPDATE` guarantees an atomic `INSERT` or `UPDATE` outcome; provided there is no independent error, one of those two outcomes is guaranteed, even under high concurrency. This is also known as *UPSERT* — `UPDATE` or `INSERT`.
 
+>**NOTE** `ON CONFLICT DO UPDATE` (or `UPSERT`) is available for heap tables only. 
+
 conflict\_target
 :   Specifies which conflicts `ON CONFLICT` takes the alternative action on by choosing arbiter indexes. Either performs unique index inference, or names a constraint explicitly. For `ON CONFLICT DO NOTHING`, it is optional to specify a conflict\_target; when omitted, conflicts with all usable constraints \(and unique indexes\) are handled. For `ON CONFLICT DO UPDATE`, a conflict_target must be provided.
 
