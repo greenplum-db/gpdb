@@ -5844,8 +5844,7 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		case AT_AttachPartition:
 			if (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
 			{
-				ObjectAddress objAdd = InvalidObjectAddress;
-				objAdd = ATExecAttachPartition(wqueue, rel,(PartitionCmd *)cmd->def);
+				ObjectAddress objAdd = ATExecAttachPartition(wqueue, rel,(PartitionCmd *)cmd->def);
 
 				/*
 				 * Invalid class Oid (from pg_class) means
@@ -5853,19 +5852,9 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 				 */
 				if (OidIsValid(objAdd.classId))
 				{
-					/*
-					 * 1. Next, find the top level partition root
-					 * of the attached partition.
-					 *
-					 * 2. Pass the rel-id of the root for
-					 * autovacuum, so that in the next iteration of
-					 * autovacuum, statistics of root are updated
-					 * based on the attached partition.
-					 */
-					 trigger_autoanalyze_on_root(rel);
+					add_root_to_autoanalyze_queue(rel);
 				}
 			}
-
 			else
 				ATExecAttachPartitionIdx(wqueue, rel,
 										 ((PartitionCmd *) cmd->def)->name);
@@ -5873,8 +5862,7 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 		case AT_DetachPartition:
 			/* ATPrepCmd ensures it must be a table */
 			Assert(rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE);
-			ObjectAddress objAdd = InvalidObjectAddress;
-			objAdd = ATExecDetachPartition(rel, ((PartitionCmd *) cmd->def)->name);
+			ObjectAddress objAdd = ATExecDetachPartition(rel, ((PartitionCmd *) cmd->def)->name);
 
 			/*
 			 * Invalid class Oid (from pg_class) means
@@ -5882,18 +5870,7 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			 */
 			if (OidIsValid(objAdd.classId))
 			{
-
-				/*
-				 * 1. Next, find the top level partition root
-				 * of the detached partition.
-				 *
-				 * 2. Pass the rel-id of the root for
-				 * autovacuum, so that in the next iteration of
-				 * autovacuum, statistics of root are updated
-				 * based on the detached partition.
-				 */
-				trigger_autoanalyze_on_root(rel);
-
+				add_root_to_autoanalyze_queue(rel);
 			}
 			break;
 		default:				/* oops */

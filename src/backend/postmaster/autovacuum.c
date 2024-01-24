@@ -3643,7 +3643,6 @@ static void addTablesFromAutoVacWorkers(HTAB *top_level_partition_roots)
 
 		/* claim this one, and release lock while performing it */
 		workitem->avw_active = true;
-		LWLockRelease(AutovacuumLock);
 
 		/*
 		 * Add received table oid to
@@ -3652,8 +3651,6 @@ static void addTablesFromAutoVacWorkers(HTAB *top_level_partition_roots)
 		 */
 		Oid root_parent_relid = workitem->avw_relation;
 		(void) hash_search(top_level_partition_roots, (void *) &root_parent_relid, HASH_ENTER, NULL);
-
-		LWLockAcquire(AutovacuumLock, LW_EXCLUSIVE);
 
 		/* and mark it done */
 		workitem->avw_active = false;

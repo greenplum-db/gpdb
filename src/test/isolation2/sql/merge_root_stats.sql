@@ -7,6 +7,7 @@ ALTER SYSTEM SET autovacuum_vacuum_threshold = 10;
 ALTER SYSTEM SET autovacuum_analyze_threshold = 10;
 select * from pg_reload_conf();
 create extension if not exists gp_inject_fault;
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------------------------------------
 -- Case 1 - If an 'Analyzed Partition' is attached/detached to
 --     an analyzed table, merging of leaf stats is expected.
@@ -18,6 +19,7 @@ create extension if not exists gp_inject_fault;
 
 -- 1. Prepare basic framework
 drop table if exists rootTab;
+drop table if exists rootTabMid1;
 drop table if exists rootTabLeaf1;
 drop table if exists rootTabLeaf2;
 create table rootTab(a int)  partition by range(a);

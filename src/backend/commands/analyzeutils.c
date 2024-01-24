@@ -1307,12 +1307,12 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 }
 
 /*
- * trigger_autoanalyze_on_root
- *
- * Helper function to request analyze command on a specific relation.
+ * add_root_to_autoanalyze_queue()
+ * Helper function to add a table OID to the autoanalyze queue.
  */
-void trigger_autoanalyze_on_root(Relation rel)
+void add_root_to_autoanalyze_queue(Relation rel)
 {
+	/* find the top level partition root of the given relation */
 	Oid root_parent_relid = get_top_level_partition_root(rel->rd_id);
 	if (!OidIsValid(root_parent_relid))
 	{
@@ -1335,13 +1335,19 @@ void trigger_autoanalyze_on_root(Relation rel)
 		}
 	}
 
-	/* Pass a request to do_autovacuum() using autoVacuum worker */
+	/*
+	 * Pass a request to do_autovacuum() using autoVacuum worker,
+	 * to add OID of relation in the list of tables for vacuum/analyze.
+	 *
+	 * This will ensure that in the next iteration of autovacuum,
+	 * statistics of root are updated based on the attached/detached partition.
+	 */
 	bool	recorded;
 	recorded = AutoVacuumRequestWork(AVW_UpdateRootPartitionStats, root_parent_relid, InvalidBlockNumber);
 	if (recorded)
 	{
 		ereport(DEBUG2,
-			(errmsg(" An autovacuum request was created for PARENT-RELID  \"%s\" because it is the root of recently attached partition CHILD-RELID  \"%s\"",
+			(errmsg(" An autovacuum request was created for \"%s\" because it is the root of recently attached partition \"%s\"",
 				get_rel_name(root_parent_relid),get_rel_name(rel->rd_id))));
 
 	}
@@ -1349,9 +1355,8 @@ void trigger_autoanalyze_on_root(Relation rel)
 	{
 		ereport(LOG,
 			(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-				errmsg(" Worker add request for  \"%s\" was not recorded",
+				errmsg(" Root partition was not added to the autovacuum queue. Please manually analyze root partition \"%s\" to ensure accurate statistics",
 					get_rel_name(root_parent_relid))));
 	}
-
 
 }

@@ -17,6 +17,11 @@ select * from pg_reload_conf();
 (1 row)
 create extension if not exists gp_inject_fault;
 CREATE EXTENSION
+select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
 -----------------------------------------------
 -- Case 1 - If an 'Analyzed Partition' is attached/detached to
 --     an analyzed table, merging of leaf stats is expected.
@@ -28,6 +33,8 @@ CREATE EXTENSION
 
 -- 1. Prepare basic framework
 drop table if exists rootTab;
+DROP TABLE
+drop table if exists rootTabMid1;
 DROP TABLE
 drop table if exists rootTabLeaf1;
 DROP TABLE
