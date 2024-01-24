@@ -26,6 +26,7 @@ static void check_orphaned_toastrels(void);
 static void check_online_expansion(void);
 static void check_for_array_of_partition_table_types(ClusterInfo *cluster);
 static void check_multi_column_list_partition_keys(ClusterInfo *cluster);
+static void check_for_plpython2_dependent_functions(ClusterInfo *cluster);
 
 /*
  *	check_greenplum
@@ -45,6 +46,7 @@ check_greenplum(void)
 	check_orphaned_toastrels();
 	check_for_array_of_partition_table_types(&old_cluster);
 	check_multi_column_list_partition_keys(&old_cluster);
+	check_for_plpython2_dependent_functions(&old_cluster);
 }
 
 /*
@@ -629,6 +631,80 @@ check_multi_column_list_partition_keys(ClusterInfo *cluster)
 		check_ok();
 }
 
+static void
+check_for_plpython2_dependent_functions(ClusterInfo *cluster)
+{
+
+	FILE		*script = NULL;
+	char		output_path[MAXPGPATH];
+	bool		found = false;
+
+	prep_status("Checking for functions dependent on plpython2");
+
+	snprintf(output_path, sizeof(output_path), "%s/%s",
+			 log_opts.basedir,
+			 "plpython2_dependent_functions.txt");
+
+	for (int dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		bool		db_used = false;
+		int			ntups;
+		int			rowno;
+		int			i_nspname,
+					i_proname;
+		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(cluster, active_db->db_name);
+
+		/* Find any functions dependent on $libdir/plpython2' */
+		res = executeQueryOrDie(conn,
+								"SELECT n.nspname, p.proname "
+								"FROM pg_catalog.pg_proc p "
+								"JOIN pg_namespace n on n.oid=p.pronamespace "
+								"JOIN pg_language l on l.oid=p.prolang "
+								"JOIN pg_pltemplate t on t.tmplname = l.lanname "
+								"WHERE t.tmpllibrary = '$libdir/plpython2'");
+
+		ntups = PQntuples(res);
+		i_nspname = PQfnumber(res, "nspname");
+		i_proname = PQfnumber(res, "proname");
+		for (rowno = 0; rowno < ntups; rowno++)
+		{
+			found = true;
+			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
+				pg_fatal("could not open file \"%s\": %s\n",
+						 output_path, strerror(errno));
+			if (!db_used)
+			{
+				fprintf(script, "In database: %s\n", active_db->db_name);
+				db_used = true;
+			}
+			fprintf(script, "  %s.%s\n",
+					PQgetvalue(res, rowno, i_nspname),
+					PQgetvalue(res, rowno, i_proname));
+		}
+
+		PQclear(res);
+
+		PQfinish(conn);
+	}
+
+	if (script)
+		fclose(script);
+
+	if (found)
+	{
+		pg_log(PG_REPORT, "fatal\n");
+		gp_fatal_log(
+				"| Your installation contains \"plpython\" functions which rely\n"
+				"| on Python 2. These functions must be either be updated to use\n"
+				"| Python 3 or dropped before upgrade. A list of the problem functions\n"
+				"| is in the file:\n"
+				"|     %s\n\n", output_path);
+	}
+	else
+		check_ok();
+}
 
 void
 setup_GPDB6_data_type_checks(ClusterInfo *cluster)
