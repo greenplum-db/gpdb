@@ -2862,7 +2862,7 @@ class gpload:
                 "a.attnum = any (p.attrnums) and " + \
                 "c.relnamespace = n.oid and " + \
                 "n.nspname = '%s' and c.relname = '%s' " % (quote_unident(self.schema), quote_unident(self.table)) + \
-                "order by position(a.attnum::text in array_to_string(attrnums,','));"
+                "order by position(' '||a.attnum::text||' ' in ' '||array_to_string(attrnums,' ')||' ') ;"
         else:
             sql = "select attname from pg_attribute a, gp_distribution_policy p , pg_class c, pg_namespace n "+ \
                 "where a.attrelid = c.oid and " + \
