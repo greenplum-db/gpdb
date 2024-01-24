@@ -569,6 +569,8 @@ setup_GPDB6_data_type_checks(ClusterInfo *cluster)
 		DbInfo *active_db = &cluster->dbarr.dbs[dbnum];
 		PGconn *conn = connectToServer(cluster, active_db->db_name);
 		PGresult *res = executeQueryOrDie(conn,
+										  "SET CLIENT_MIN_MESSAGES = WARNING; "
+										  "DROP SCHEMA IF EXISTS __gpupgrade_tmp CASCADE; "
 										  "CREATE SCHEMA __gpupgrade_tmp; "
 										  "CREATE FUNCTION __gpupgrade_tmp.data_type_checks(base_query TEXT) "
 										  "RETURNS TABLE ( "
@@ -630,7 +632,8 @@ setup_GPDB6_data_type_checks(ClusterInfo *cluster)
 										  "        AND n.nspname !~ '^pg_toast_temp_' "
 										  "        AND n.nspname NOT IN ('pg_catalog', 'information_schema'); "
 										  "END; "
-										  "$$ LANGUAGE plpgsql;");
+										  "$$ LANGUAGE plpgsql; "
+										  "RESET CLIENT_MIN_MESSAGES;");
 
 		PQclear(res);
 		PQfinish(conn);
@@ -650,7 +653,7 @@ teardown_GPDB6_data_type_checks(ClusterInfo *cluster)
 		PGresult *res = executeQueryOrDie(conn,
 										  "SET CLIENT_MIN_MESSAGES = WARNING; "
 										  "DROP SCHEMA __gpupgrade_tmp CASCADE; "
-										  "SET CLIENT_MIN_MESSAGES = NOTICE;");
+										  "RESET CLIENT_MIN_MESSAGES;");
 
 		PQclear(res);
 		PQfinish(conn);
