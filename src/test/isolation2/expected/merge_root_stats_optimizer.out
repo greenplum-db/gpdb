@@ -15,9 +15,7 @@ select * from pg_reload_conf();
 ----------------
  t              
 (1 row)
-drop extension if exists gp_inject_fault;
-DROP EXTENSION
-create extension gp_inject_fault;
+create extension if not exists gp_inject_fault;
 CREATE EXTENSION
 -----------------------------------------------
 -- Case 1 - If an 'Analyzed Partition' is attached/detached to
@@ -944,5 +942,3 @@ select * from pg_reload_conf();
 ----------------
  t              
 (1 row)
-drop extension gp_inject_fault;
-DROP EXTENSION

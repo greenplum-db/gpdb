@@ -6,8 +6,7 @@ ALTER SYSTEM SET autovacuum_naptime = 4;
 ALTER SYSTEM SET autovacuum_vacuum_threshold = 10;
 ALTER SYSTEM SET autovacuum_analyze_threshold = 10;
 select * from pg_reload_conf();
-drop extension if exists gp_inject_fault;
-create extension gp_inject_fault;
+create extension if not exists gp_inject_fault;
 -----------------------------------------------
 -- Case 1 - If an 'Analyzed Partition' is attached/detached to
 --     an analyzed table, merging of leaf stats is expected.
@@ -392,4 +391,3 @@ ALTER SYSTEM RESET autovacuum_naptime;
 ALTER SYSTEM RESET autovacuum_vacuum_threshold;
 ALTER SYSTEM RESET autovacuum_analyze_threshold;
 select * from pg_reload_conf();
-drop extension gp_inject_fault;
