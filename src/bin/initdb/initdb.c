@@ -181,6 +181,7 @@ static int	n_connections = 0;
 static int	n_buffers = 0;
 static const char *dynamic_shared_memory_type = NULL;
 static const char *default_timezone = NULL;
+static const char *shared_preload_libraries = NULL;
 
 /*
  * Warning messages for authentication methods
@@ -1011,10 +1012,13 @@ test_config_settings(void)
 				 "-c max_connections=%d "
 				 "-c shared_buffers=%d "
 				 "-c dynamic_shared_memory_type=%s "
+				 " %s%s "
 				 "< \"%s\" > \"%s\" 2>&1",
 				 backend_exec, boot_options,
 				 test_conns, test_buffs,
 				 dynamic_shared_memory_type,
+				 (shared_preload_libraries == NULL || shared_preload_libraries[0] == '\0') ? "" : "-c shared_preload_libraries=",
+				 (shared_preload_libraries == NULL || shared_preload_libraries[0] == '\0') ? "" : shared_preload_libraries,
 				 DEVNULL, DEVNULL);
 		status = system(cmd);
 		if (status == 0)
@@ -1050,10 +1054,13 @@ test_config_settings(void)
 				 "-c max_connections=%d "
 				 "-c shared_buffers=%d "
 				 "-c dynamic_shared_memory_type=%s "
+				 " %s%s "
 				 "< \"%s\" > \"%s\" 2>&1",
 				 backend_exec, boot_options,
 				 n_connections, test_buffs,
 				 dynamic_shared_memory_type,
+				 (shared_preload_libraries == NULL || shared_preload_libraries[0] == '\0') ? "" : "-c shared_preload_libraries=",
+				 (shared_preload_libraries == NULL || shared_preload_libraries[0] == '\0') ? "" : shared_preload_libraries,
 				 DEVNULL, DEVNULL);
 		status = system(cmd);
 		if (status == 0)
@@ -1125,6 +1132,9 @@ setup_config(void)
 		snprintf(repltok, sizeof(repltok), "shared_buffers = %dkB",
 				 n_buffers * (BLCKSZ / 1024));
 	conflines = replace_token(conflines, "#shared_buffers = 128MB", repltok);
+
+	snprintf(repltok, sizeof(repltok), "shared_preload_libraries = '%s'", shared_preload_libraries ? shared_preload_libraries : "");
+	conflines = replace_token(conflines, "#shared_preload_libraries = ''", repltok);
 
 #ifdef HAVE_UNIX_SOCKETS
 	snprintf(repltok, sizeof(repltok), "#unix_socket_directories = '%s'",
@@ -2655,6 +2665,7 @@ usage(const char *progname)
 	printf(_("\nLess commonly used options:\n"));
 	printf(_("  -d, --debug               generate lots of debugging output\n"));
 	printf(_("  -k, --data-checksums      use data page checksums\n"));
+	printf(_("  --shared-preload-libraries load libraries, same as shared_preload_libraries in postgresql.conf\n"));
 	printf(_("  -L DIRECTORY              where to find the input files\n"));
 	printf(_("  -n, --no-clean            do not clean up after errors\n"));
 	printf(_("  -N, --no-sync             do not wait for changes to be written safely to disk\n"));
@@ -3346,6 +3357,7 @@ main(int argc, char *argv[])
 		{"data-checksums", no_argument, NULL, 'k'},
 		{"max_connections", required_argument, NULL, 1001},     /*CDB*/
 		{"shared_buffers", required_argument, NULL, 1003},      /*CDB*/
+		{"shared-preload-libraries", required_argument, NULL, 1004},     /*CDB*/
 		{"allow-group-access", no_argument, NULL, 'g'},
 		{NULL, 0, NULL, 0}
 	};
@@ -3489,6 +3501,9 @@ main(int argc, char *argv[])
 				break;
 			case 1003:
 				n_buffers = parse_long(optarg, true, "shared_buffers");
+				break;
+			case 1004:
+				shared_preload_libraries = pg_strdup(optarg);
 				break;
 			case 12:
 				str_wal_segment_size_mb = pg_strdup(optarg);
