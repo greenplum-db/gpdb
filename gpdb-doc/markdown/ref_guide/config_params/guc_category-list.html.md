@@ -231,6 +231,7 @@ These parameters adjust the amount of data sampled by an `ANALYZE` operation. Ad
 Control the query plan execution.
 
 - [gp_max_slices](guc-list.html#gp_max_slices)
+- [gp_max_system_slices](guc-list.html#gp_max_system_slices)
 - [plan_cache_mode](guc-list.html#plan_cache_mode)
 
 ### <a id="topic_jit"></a>JIT Configuration Parameters
