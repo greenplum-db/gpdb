@@ -161,6 +161,7 @@ DEFAULTDB=template1
 
 DEFAULT_CHK_PT_SEG=8
 DEFAULT_QD_MAX_CONNECT=250
+DEFAULT_SHARED_PRELOAD_LIBRARIES=""
 QE_CONNECT_FACTOR=3
 # DEFAULT_BUFFERS sets the default shared_buffers unless overridden by '-b'.
 # It applies to the coordinator db and segment dbs.  Specify either the number of
