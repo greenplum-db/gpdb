@@ -267,6 +267,57 @@ probeWalRepUpdateConfig(int16 dbid, int16 segindex, char role,
 	}
 }
 
+void
+probeUpdateConfHistory(const CdbComponentDatabaseInfo *primary,
+					bool isSegmentAlive,
+					bool hasMirrors)
+{
+	Relation  histrel;
+	HeapTuple histtuple;
+	Datum     histvals[Natts_gp_configuration_history];
+	bool      histnulls[Natts_gp_configuration_history] = {false };
+	char      desc[64];
+
+	histrel   = table_open(GpConfigHistoryRelationId,
+						   RowExclusiveLock);
+
+	histvals[Anum_gp_configuration_history_time-1] =
+		TimestampTzGetDatum(GetCurrentTimestamp());
+	histvals[Anum_gp_configuration_history_dbid-1] =
+		Int16GetDatum(primary->config->dbid);
+	if (hasMirrors)
+	{
+		if (isSegmentAlive)
+			snprintf(desc, sizeof(desc),
+					 "FTS: content id %d is out of double fault, dbid %d is up",
+					 primary->config->segindex, primary->config->dbid);
+		else
+			snprintf(desc, sizeof(desc),
+					 "FTS: double fault detected for content id %d",
+					 primary->config->segindex);
+	}
+	else
+	{
+		if (isSegmentAlive)
+			snprintf(desc, sizeof(desc),
+					 "FTS: content id %d dbid %d is now up",
+					 primary->config->segindex, primary->config->dbid);
+		else
+			snprintf(desc, sizeof(desc),
+					 "FTS: content id %d dbid %d is down",
+					 primary->config->segindex, primary->config->dbid);
+	}
+	histvals[Anum_gp_configuration_history_description-1] =
+		CStringGetTextDatum(desc);
+	histtuple = heap_form_tuple(RelationGetDescr(histrel), histvals, histnulls);
+	CatalogTupleInsert(histrel, histtuple);
+	heap_freetuple(histtuple);
+
+	SIMPLE_FAULT_INJECTOR("fts_update_config_hist");
+
+	table_close(histrel, RowExclusiveLock);
+}
+
 static
 void FtsLoop()
 {
@@ -283,7 +334,6 @@ void FtsLoop()
 
 	while (true)
 	{
-		bool		has_mirrors;
 		int			rc;
 
 		if (got_SIGHUP)
@@ -308,7 +358,6 @@ void FtsLoop()
 		cdbs = readCdbComponentInfoAndUpdateStatus();
 
 		/* Check here gp_segment_configuration if has mirror's */
-		has_mirrors = gp_segment_config_has_mirrors();
 
 		/* close the transaction we started above */
 		CommitTransactionCommand();
@@ -322,12 +371,10 @@ void FtsLoop()
 			skip_fts_probe = true;
 #endif
 
-		if (skip_fts_probe || !has_mirrors)
+		if (skip_fts_probe)
 		{
 			elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
-				   "skipping FTS probes due to %s",
-				   !has_mirrors ? "no mirrors" : "fts_probe fault");
-
+				   "skipping FTS probes due to fts_probe fault");
 		}
 		else
 		{

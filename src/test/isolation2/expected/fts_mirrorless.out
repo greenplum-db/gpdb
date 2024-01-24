@@ -1,0 +1,196 @@
+-- Get an entry into gp_conf_history for any segment
+select pg_ctl((select datadir from gp_segment_configuration c where c.content=0), 'stop');
+ pg_ctl 
+--------
+ OK     
+(1 row)
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+select pg_ctl_start(datadir, port) from gp_segment_configuration where role = 'p' and content = 0;
+ pg_ctl_start                                     
+--------------------------------------------------
+ waiting for server to start done
+server started
+ 
+(1 row)
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+-- Start of test. Bring two segments down, check entries in gp_configuration_history
+-- no segment down.
+select count(*) from gp_segment_configuration where status = 'd';
+ count 
+-------
+ 0     
+(1 row)
+
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+-- note the last_timestamp in gp_configuration_history, we only need to check entries after this one
+-1U: create table last_timestamp as select time from gp_configuration_history order by time desc limit 1;
+SELECT 1
+
+-- stop segment for content 0
+select pg_ctl((select datadir from gp_segment_configuration c where c.content=0), 'stop');
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                      
+------+----------------------------------
+ 2    | FTS: content id 0 dbid 2 is down 
+(1 row)
+
+-- stop segment for content 1
+select pg_ctl((select datadir from gp_segment_configuration c where c.content=1), 'stop');
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                      
+------+----------------------------------
+ 2    | FTS: content id 0 dbid 2 is down 
+ 3    | FTS: content id 1 dbid 3 is down 
+(2 rows)
+
+select pg_ctl_start(datadir, port) from gp_segment_configuration where role = 'p' and content = 0;
+ pg_ctl_start                                     
+--------------------------------------------------
+ waiting for server to start done
+server started
+ 
+(1 row)
+
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                        
+------+------------------------------------
+ 2    | FTS: content id 0 dbid 2 is down   
+ 3    | FTS: content id 1 dbid 3 is down   
+ 2    | FTS: content id 0 dbid 2 is now up 
+(3 rows)
+
+select pg_ctl_start(datadir, port) from gp_segment_configuration where role = 'p' and content = 1;
+ pg_ctl_start                                     
+--------------------------------------------------
+ waiting for server to start done
+server started
+ 
+(1 row)
+
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                        
+------+------------------------------------
+ 2    | FTS: content id 0 dbid 2 is down   
+ 3    | FTS: content id 1 dbid 3 is down   
+ 2    | FTS: content id 0 dbid 2 is now up 
+ 3    | FTS: content id 1 dbid 3 is now up 
+(4 rows)
+
+-1U: drop table last_timestamp;
+DROP TABLE
+
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+-- note the last_timestamp in gp_configuration_history, we only need to check entries after this one
+-1U: create table last_timestamp as select time from gp_configuration_history order by time desc limit 1;
+SELECT 1
+
+-- stop primary for content 0
+select pg_ctl((select datadir from gp_segment_configuration c where c.content=0), 'stop');
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                      
+------+----------------------------------
+ 2    | FTS: content id 0 dbid 2 is down 
+(1 row)
+
+-- kill the ftsprobe process.
+!\retcode pkill -f ftsprobe;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+
+-- restarts ftsprobe, we should see another entry for content 0 doublefault into gp_configuration_history
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                      
+------+----------------------------------
+ 2    | FTS: content id 0 dbid 2 is down 
+ 2    | FTS: content id 0 dbid 2 is down 
+(2 rows)
+
+select pg_ctl_start(datadir, port) from gp_segment_configuration where role = 'p' and content = 0;
+ pg_ctl_start                                     
+--------------------------------------------------
+ waiting for server to start done
+server started
+ 
+(1 row)
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                        
+------+------------------------------------
+ 2    | FTS: content id 0 dbid 2 is down   
+ 2    | FTS: content id 0 dbid 2 is down   
+ 2    | FTS: content id 0 dbid 2 is now up 
+(3 rows)
+
+-1U: drop table last_timestamp;
+DROP TABLE
