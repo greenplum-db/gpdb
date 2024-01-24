@@ -49,6 +49,8 @@ For additional information about PgBouncer, refer to the [PgBouncer FAQ](https:/
 
 :   To restart PgBouncer as a daemon, specify the options `-Rd`.
 
+    >  **Note** This option is deprecated. Instead, use a rolling restart with multiple Pgbouncer processes listening on the same port using `so_reuseport` instead.
+
     > **Note** Restart is available only if the operating system supports Unix sockets and the PgBouncer `unix_socket_dir` configuration is not deactivated.
 
 -q \| --quiet
@@ -57,7 +59,7 @@ For additional information about PgBouncer, refer to the [PgBouncer FAQ](https:/
 -v \| --verbose
 :   Increase message verbosity. Can be specified multiple times.
 
-\{-u \| --user\}=\<username\>
+\{-u \| --user=\} \<username\>
 :   Assume the identity of username on PgBouncer process start-up.
 
 -V \| --version

@@ -18,6 +18,8 @@ Users listed in the `pgbouncer.ini` configuration parameters `admin_users` and `
 
 Additionally, the user name `pgbouncer` is allowed to log in without password when the login comes via the Unix socket and the client has same Unix user UID as the running process.
 
+The admin console currently only supports the simple query protocol. Some drivers use the extended query protocol for all commands; these drivers will not work for this console.
+
 You can control connections between PgBouncer and Greenplum Database from the console. You can also set PgBouncer configuration parameters.
 
 ## <a id="opt"></a>Options 
@@ -31,21 +33,22 @@ You can control connections between PgBouncer and Greenplum Database from the co
 pgbouncer=# SHOW help;
 NOTICE:  Console usage
 DETAIL:  
-    SHOW HELP|CONFIG|USERS|DATABASES|POOLS|CLIENTS|SERVERS|VERSION
-    SHOW FDS|SOCKETS|ACTIVE_SOCKETS|LISTS|MEM
-    SHOW DNS_HOSTS|DNS_ZONES
-    SHOW STATS|STATS_TOTALS|STATS_AVERAGES
-    SHOW TOTALS
-    SET key = arg
-    RELOAD
-    PAUSE [<db>]
-    RESUME [<db>]
-    DISABLE <db>
-    ENABLE <db>
-    RECONNECT [<db>]
-    KILL <db>
-    SUSPEND
-    SHUTDOWN
+  SHOW HELP|CONFIG|DATABASES|POOLS|CLIENTS|SERVERS|USERS|VERSION
+  SHOW PEERS|PEER_POOLS
+  SHOW FDS|SOCKETS|ACTIVE_SOCKETS|LISTS|MEM|STATE
+  SHOW DNS_HOSTS|DNS_ZONES
+  SHOW STATS|STATS_TOTALS|STATS_AVERAGES|TOTALS
+  SET key = arg
+  RELOAD
+  PAUSE [<db>]
+  RESUME [<db>]
+  DISABLE <db>
+  ENABLE <db>
+  RECONNECT [<db>]
+  KILL <db>
+  SUSPEND
+  SHUTDOWN
+  WAIT_CLOSE [<db>]
 ```
 
 ## <a id="topic_bf5_jcl_gs"></a>Administration Commands 
@@ -53,7 +56,7 @@ DETAIL:
 The following PgBouncer administration commands control the running `pgbouncer` process.
 
 PAUSE \[\<db\>\]
-:   If no database is specified, PgBouncer tries to disconnect from all servers, first waiting for all queries to complete. The command will not return before all queries are finished. This command is to be used to prepare to restart the database.
+:   If no database is specified, PgBouncer tries to disconnect from all servers, first waiting for all queries to be released according to the server pool’s pooling mode (in transaction pooling mode, the transaction must complete, in statement mode, the statement must complete, and in session pooling mode the client must disconnect). The command will not return before all queries are finished. This command is to be used to prepare to restart the database.
 
 :   If a database name is specified, PgBouncer pauses only that database.
 
@@ -114,6 +117,8 @@ The `SHOW <category>` command displays different types of PgBouncer information.
 -   [LISTS](#LISTS)
 -   [MEM](#MEM)
 -   [POOLS](#POOLS)
+-   [PEERS](#PEERS)
+-   [PEER_POOLS](#PEER_POOLS)
 -   [SERVERS](#SERVERS)
 -   [SOCKETS, ACTIVE\_SOCKETS](#SOCKETS), 
 -   [STATS](#STATS)
@@ -130,7 +135,7 @@ The `SHOW <category>` command displays different types of PgBouncer information.
 |type|C, for client.|
 |user|Client connected user.|
 |database|Database name.|
-|state|State of the client connection, one of `active` or `waiting`.|
+|state|State of the client connection, one of `active`, `waiting`, `active_cancel_req`, or `waiting_cancel_req`.|
 |addr|IP address of client.|
 |port|Port client is connected to.|
 |local\_addr|Connection end address on local machine.|
@@ -139,10 +144,13 @@ The `SHOW <category>` command displays different types of PgBouncer information.
 |request\_time|Timestamp of latest client request.|
 |wait|Current Time waiting in seconds.|
 |wait\_us|Microsecond part of the current waiting time.|
+|close_needed| Not used for clients.|
 |ptr|Address of internal object for this connection. Used as unique ID.|
 |link|Address of server connection the client is paired with.|
 |remote\_pid|Process ID, if client connects with Unix socket and the OS supports getting it.|
 |tls|A string with TLS connection information, or empty if not using TLS.|
+|application_name|A string containing the `application_name` set by the client for this connection, or empty if not set.|
+|prepared_statements|The amount of prepared statements that the client has prepared.| 
 
 ### <a id="CONFIG"></a>CONFIG 
 
@@ -233,6 +241,27 @@ Shows the following PgBouncer internal information, in columns (not rows):
 
 Shows low-level information about the current sizes of various internal memory allocations. The information presented is subject to change.
 
+### <a id="PEERS"></a>PEERS
+
+|Column|Description|
+|------|-----------|
+|peer_id|ID of the configured peer entry.|
+|host|Host PgBouncer connects to.|
+|port|Port PgBouncer connects to.|
+|pool_size|Maximum number of server connections that can be made to this peer.|
+
+### <a id="PEER_POOLS"></a>PEER_POOLS
+
+A new `peer_pool` entry is made for each configured peer.
+
+|Column|Description|
+|------|-----------|
+|Database|ID of the configured peer entry.|
+|cl_active_cancel_req|Client connections that have forwarded query cancellations to the server and are waiting for the server response.|
+|cl_waiting_cancel_req|Client connections that have not forwarded query cancellations to the server yet.|
+|sv_active_cancel|Server connections that are currently forwarding a cancel request.|
+|sv_login|Server connections currently in the process of logging in.|
+
 ### <a id="POOLS"></a>POOLS 
 
 A new pool entry is made for each pair of \(database, user\).
@@ -243,8 +272,11 @@ A new pool entry is made for each pair of \(database, user\).
 |user|User name.|
 |cl\_active|Client connections that are linked to server connection and can process queries.|
 |cl\_waiting|Client connections that have sent queries but have not yet got a server connection.|
-|cl\_cancel_req|Client connections that have not yet forwarded query cancellations to the server.|
+|cl_active_cancel_req|Client connections that have forwarded query cancellations to the server and are waiting for the server response.|
+|cl_waiting_cancel_req|Client connections that have not forwarded query cancellations to the server yet.|
 |sv\_active|Server connections that are linked to client.|
+|sv_active_cancel|Server connections that are currently forwarding a cancel request.|
+|sv_being_canceled|Servers that normally could become idle but are waiting to do so until all in-flight cancel requests have completed that were sent to cancel a query on this server.|
 |sv\_idle|Server connections that are unused and immediately usable for client queries.|
 |sv\_used|Server connections that have been idle more than `server_check_delay`. The `server_check_query` query must be run on them before they can be used again.|
 |sv\_tested|Server connections that are currently running either `server_reset_query` or `server_check_query`.|
@@ -274,6 +306,8 @@ A new pool entry is made for each pair of \(database, user\).
 |link|Address of the client connection the server is paired with.|
 |remote\_pid|Pid of backend server process. If the connection is made over Unix socket and the OS supports getting process ID info, it is the OS pid. Otherwise it is extracted from the cancel packet the server sent, which should be PID in case server is PostgreSQL, but it is a random number in case server is another PgBouncer.|
 |tls|A string with TLS connection information, or empty if not using TLS.|
+|application_name|A string containing the application_name set on the linked client connection, or empty if this is not set, or if there is no linked connection.|
+|prepared_statements|The amount of prepared statements that are prepared on the server. This number is limited by the max_prepared_statements setting.|
 
 ### <a id="SOCKETS"></a>SOCKETS, ACTIVE\_SOCKETS
 
@@ -324,7 +358,7 @@ Like `SHOW STATS` but aggregated across all databases.
 
 Display PgBouncer version information.
 
-> **Note** This reference documentation is based on the PgBouncer 1.16 documentation.
+> **Note** This reference documentation is based on the PgBouncer 1.21 documentation.
 
 ## <a id="signals"></a>Signals
 

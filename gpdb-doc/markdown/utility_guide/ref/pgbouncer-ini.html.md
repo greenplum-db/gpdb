@@ -36,6 +36,7 @@ The PgBouncer configuration file includes the following sections, described in d
 -   [\[databases\] Section](#topic_fmd_ckd_gs)
 -   [\[pgbouncer\] Section](#topic_orc_gkd_gs)
 -   [\[users\] Section](#topic_lzk_zjd_gs)
+-   [\[peers\] Section](#topic_peers)
 
 ## <a id="topic_fmd_ckd_gs"></a>\[databases\] Section 
 
@@ -60,7 +61,21 @@ dbname
 host
 :   The name or IP address of the Greenplum master host. Host names are resolved at connect time. If DNS returns several results, they are used in a round-robin manner. The DNS result is cached and the `dns_max_ttl` parameter determines when the cache entry expires.
 
+:   When a host name’s resolution changes, any existing server connections are automatically closed when they are released (according to the pooling mode).
+
 :   If the value begins with `/`, then a Unix socket in the file-system namespace is used. If the value begins with `@`, then a Unix socket in the abstract namespace is used.
+
+:   You may specify a comma-separated list of host names or addresses. In that case, connections are made in a round-robin manner. If a host list contains host names that in turn resolve via DNS to multiple addresses, the round-robin systems operate independently. Note that in a list, all hosts must be available at all times: There are no mechanisms to skip unreachable hosts or to select only available hosts from a list. Also note that this only affects how the destinations of new connections are chosen. See also the setting `server_round_robin` in the `[pgbouncer]` section for how clients are assigned to already established server connections.
+
+:   Examples:
+
+    ```
+    host=localhost
+    host=127.0.0.1
+    host=2001:0db8:85a3:0000:0000:8a2e:0370:7334
+    host=/var/run/postgresql
+    host=192.168.0.1,192.168.0.2,192.168.0.3
+    ```
 
 :   Default: not set; the connection is made through a Unix socket
 
@@ -75,7 +90,7 @@ user
 :   If the `user=` parameter is not set, PgBouncer attempts to log in to the destination database with the user name passed by the client. In this situation, there will be one pool for each user who connects to the database.
 
 password
-: If no password is specified here, the password from the `auth_file` or `auth_query` will be used.
+:   If no password is specified here, the password from the `auth_file` or `auth_query` will be used.
 
 auth\_user
 :   Override of the global `auth_user` setting, if specified.
@@ -98,6 +113,10 @@ pool\_size
 
 min\_pool\_size
 :   Set the minimum pool size for this database. If not set, the global `min_pool_size` is used.
+
+:   It is only enforced if at least one of the following is true:
+    - This entry in the `[database]` section has a value set for the `user`.
+    - There i at least one client connected to the pool.
 
 reserve\_pool
 :   Set additional connections for this database. If not set, `reserve_pool_size` is used.
@@ -128,7 +147,7 @@ pidfile
     Default: not set
 
 listen\_addr
-:   Specifies a list of interface addresses where PgBouncer listens for TCP connections. You may also use `*`, which means to listen on all interfaces. If not set, only Unix socket connections are accepted.
+:   Specifies a list of comma-separated interface addresses where PgBouncer listens for TCP connections. You may also use `*`, which means to listen on all interfaces. If not set, only Unix socket connections are accepted.
 
     Specify addresses numerically \(IPv4/IPv6\) or by name.
 
@@ -160,54 +179,6 @@ user
 :   If set, specifies the Unix user to change to after startup. This works only if PgBouncer is started as root or if it is already running as the given user.
 
     Default: not set
-
-auth\_file
-:   The name of the file containing the user names and passwords to load. The file format is the same as the Greenplum Database pg\_auth file. Refer to the [PgBouncer Authentication File Format](../../admin_guide/access_db/topics/pgbouncer.html#pgb_auth) for more information.
-
-    Default: not set
-
-auth\_hba\_file
-:   HBA configuration file to use when `auth_type` is `hba`. Refer to the [Configuring HBA-based Authentication for PgBouncer](../../admin_guide/access_db/topics/pgbouncer.html#pgb_hba) and [Configuring LDAP-based Authentication for PgBouncer](../../admin_guide/access_db/topics/pgbouncer.html#pgb_ldap) for more information.
-
-    Default: not set
-
-auth\_type
-:   How to authenticate users.
-
-    - `pam`: Use PAM to authenticate users. `auth_file` is ignored. This method is not compatible with databases using the `auth_user` option. The service name reported to PAM is `pgbouncer`. PAM is not supported in the HBA configuration file.
-    - `hba`:  The actual authentication type is loaded from the `auth_hba_file`. This setting allows different authentication methods for different access paths, for example: connections over Unix socket use the `peer` auth method, connections over TCP must use TLS.
-    - `cert`:  Clients must connect with TLS using a valid client certificate. The client's username is taken from CommonName field in the certificate.
-    - `md5`: Use MD5-based password check. `auth_file` may contain both MD5-encrypted or plain-text passwords. If `md5` is configured and a user has a SCRAM secret, then SCRAM authentication is used automatically instead. This is the default authentication method.
-    - `scram-sha-256`: Use password check with SCRAM-SHA-256. `auth_file` has to contain SCRAM secrets or plain-text passwords.
-    - `plain`:  Clear-text password is sent over wire. *Deprecated*.
-    - `trust`: No authentication is performed. The username must still exist in the `auth_file`.
-    - `any`: Like the `trust` method, but the username supplied is ignored. Requires that all databases are configured to log in with a specific user. Additionally, the console database allows any user to log in as admin.
-
-auth_key_file
-:   If you are connecting to LDAP with an encrypted password, `auth_key_file` identifies the file system location of the encryption key. Refer to [About Specifying an Encrypted LDAP Password](../../admin_guide/access_db/topics/pgbouncer.html#pgb_ldap_encrypt_passwd) for more information.
-
-    Default: not set
-
-auth_cipher
-:   If you are connecting to LDAP with an encrypted password, `auth_cipher` identifies the cipher algorithm for password authentication. PgBouncer accepts any cipher supported by OpenSSL on the system. When FIPS mode is enabled, specify only a cipher that is considered safe in FIPS mode. Refer to [About Specifying an Encrypted LDAP Password](../../admin_guide/access_db/topics/pgbouncer.html#pgb_ldap_encrypt_passwd) for more information.
-
-    Default: `aes-256-cbc`
-
-auth\_query
-:   Query to load a user's password from the database.
-
-:   Direct access to pg_shadow requires admin rights. It's preferable to use a non-superuser that calls a `SECURITY DEFINER` function instead.
-
-:   Note that the query is run inside target database, so if a function is used it needs to be installed into each database.
-
-    Default: `SELECT usename, passwd FROM pg_shadow WHERE usename=$1`
-
-auth\_user
-:   If `auth_user` is set, any user who is not specified in `auth_file` is authenticated through the `auth_query` query from the `pg_shadow` database view. PgBouncer performs this query as the `auth_user` Greenplum Database user. `auth_user`'s password must be set in the `auth_file`. (If the `auth_user` does not require a password then it does not need to be defined in `auth_file`.)
-
-:   Direct access to `pg_shadow` requires Greenplum Database administrative privileges. It is preferable to use a non-admin user that calls `SECURITY DEFINER` function instead.
-
-:    Default: not set
 
 pool\_mode
 :   Specifies when a server connection can be reused by other clients.
@@ -276,10 +247,30 @@ server\_round\_robin
 
     Default: 0
 
+track\_extra\_parameters
+:   By default, PgBouncer tracks the `client_encoding`, `datestyle`, `timezone`, `standard_conforming_strings`, and `application_name` parameters per client. To allow other parameters to be tracked, you may specify them under this parameter, so that PgBouncer knows that they should be maintained in the client variable cache and restored in the server whenever the client becomes active.
+
+:   If you need to specify multiple values, use a comma-separated list.
+
+:   Note that most parameters cannot be tracked this way. The only parameters that can be tracked are ones that Greenplum reports to the client. Greenplum has [an official list of parameters that it reports to the client](https://www.postgresql.org/docs/15/protocol-flow.html#PROTOCOL-ASYNC). Greenplum extensions can change this list though, they can add parameters themselves that they also report, and they can start reporting already existing parameters that Greenplum does not report.
+
+:   The Greenplum protocol allows specifying parameters settings, both directly as a parameter in the startup packet, or inside the options startup packet. Parameters specified using both of these methods are supported by track_extra_parameters. However, it is not possible to include options itself in `track_extra_parameters`, only the parameters contained in `options`.
+
+:   Default: IntervalStyle
+
 ignore\_startup\_parameters
 :   By default, PgBouncer allows only parameters it can keep track of in startup packets: `client_encoding`, `datestyle`, `timezone`, and `standard_conforming_strings`. All others parameters raise an error. To allow other parameters, specify them here so that PgBouncer knows that they are handled by the admin and it can ignore them.
 
+:   If you need to specify multiple values, use a comma-separated list.
+
+:   The Greenplum protocol allows specifying parameters settings, both directly as a parameter in the startup packet, or inside the `options` startup packet. Parameters specified using both of these methods are supported by `ignore_startup_parameters`. It is even possible to include `options` itself in `track_extra_parameters`, which results in any unknown parameters contained inside `options` to be ignored.
+
     Default: empty
+
+peer_id
+:   The peer id used to identify this PgBouncer process in a group of PgBouncer processes that are peered together. The `peer_id` value should be unique within a group of peered PgBouncer processes. When set to 0, PgBouncer peering is disabled. See the `[peers]` section for more information. The maximum value that can be used for the `peer_id` is 16383.
+
+:   Default: 0
 
 disable\_pqexec
 :   Deactivates Simple Query protocol \(PQexec\). Unlike Extended Query protocol, Simple Query protocol allows multiple queries in one packet, which allows some classes of SQL-injection attacks. Deactivating it can improve security. This means that only clients that exclusively use Extended Query protocol will work.
@@ -308,6 +299,99 @@ stats\_period
 :   Sets how often the averages shown in various `SHOW` commands are updated and how often aggregated statistics are written to the log (but see `log_stats`). [seconds]
 
     Default: 60
+
+max\_prepared\_statements
+
+:   When set to a non-zero value, PgBouncer tracks protocol-level named prepared statements related commands sent by the client in transaction and statement pooling mode. PgBouncer makes sure that any statement prepared by a client is available on the backing server connection, even when the statement was originally prepared on another server connection.
+
+:   PgBouncer internally examines all the queries that are sent as a prepared statement by clients and gives each unique query string an internal name with the format `PGBOUNCER_{unique_id}`. Prepared statements are only prepared using this name on the corresponding Greenplum cluster. PgBouncer keeps track of the name that the client gave to each prepared statement. It rewrites each command that uses a prepared statement to use the matching internal name (for example, `PGBOUNCER_123`) before forwarding that command to the server. More importantly, if the prepared statement that the client wants to use is not prepared on the server yet, it automatically prepares that statement before forwarding the command that the client sent.
+
+:   Note that this tracking and rewriting of prepared statement commands does not work for SQL-level prepared statement commands such as `PREPARE`, `EXECUTE`, `DEALLOCATE`, `DEALLOCATE ALL`, and `DISCARD ALL`. Running `DEALLOCATE ALL` and `DISCARD ALL` is especially problematic, since those commands appear to run successfully, but they interfere with the state of the server connection significantly without PgBouncer noticing, which in turn will very likely break the execution of any further prepared statements on that server connection.
+
+:   The actual value of this setting controls the number of prepared statements kept active on a single server connection. When the setting is set to 0, prepared statement support for transaction and statement pooling is disabled. To get the best performance, you should try to ensure that this setting is larger than the amount of commonly used prepared statements in your application. Keep in mind that the higher this value, the larger the memory footprint of each PgBouncer connection will have on your Greenplum coordinator, because it will keep more queries prepared on those connections. It also increases the memory footprint of PgBouncer itself, because it now needs to keep track of query strings.
+
+:   The impact on PgBouncer memory usage is not that big:
+    - Each unique query is stored once in a global query cache.
+    - Each client connection keeps a buffer that it uses to rewrite packets. This is at most four times the size of `pkt_buf`. This limit is often not reached though, it only happens when the queries in your prepared statements are between two and four times the size of `pkt_buf`.
+
+:   Consider the following example scenario:
+    - There are 1000 active clients.
+    - The clients prepare 200 unique queries.
+    - The average size of a query is 5 kB.
+    - `pkt_buf` is set to the default of 4096 (4kB).
+
+:   In this scenario, PgBouncer needs at most the following amount of memory to handle these prepared statements:
+
+    ```
+    200 x 5kB + 1000 x 4 x 4kB = ~17MB of memory.
+    ```
+
+:   Tracking prepared statements does not only come with a memory cost, but also with increased CPU usage, because PgBouncer needs to inspect and rewrite the queries. Multiple PgBouncer instances can listen on the same port to use more than one core for processing, see the `so_reuseport` option for details.
+
+:   There are also performance benefits to prepared statements. Just as when connecting to Greenplum directly, by preparing a query that is executed many times, it reduces the total amount of parsing and planning that needs to be done. The way that PgBouncer tracks prepared statements is especially beneficial to performance when multiple clients prepare the same queries. Because client connections automatically reuse a prepared statement on a server connection even if it was prepared by another client. As an example, if you have a `pool_size` of 20 and you have 100 clients that all prepare the exact same query, then the query is prepared (and thus parsed) only 20 times on the Greenplum coordinator.
+
+:   The reuse of prepared statements has one downside. If the return or argument types of a prepared statement changes across executions, Greenplum throws an error such as:
+
+    ```
+    ERROR:  cached plan must not change result type
+    ```
+
+:   You can avoid such errors by not having multiple clients that use the exact same query string in a prepared statement, but expecting different argument or result types. One of the most common ways of running into this issue is during a DDL migration where you add a new column or change a column type on an existing table. In those cases you can run `RECONNECT` on the PgBouncer admin console after doing the migration to force a re-prepare of the query and make the error goes away.
+
+:   Default: 0
+
+### <a id="authset"></a>Authentication Settings
+
+auth\_file
+:   The name of the file containing the user names and passwords to load. The file format is the same as the Greenplum Database pg\_auth file. Refer to the [PgBouncer Authentication File Format](../../admin_guide/access_db/topics/pgbouncer.html#pgb_auth) for more information.
+
+    Default: not set
+
+auth\_hba\_file
+:   HBA configuration file to use when `auth_type` is `hba`. Refer to the [Configuring HBA-based Authentication for PgBouncer](../../admin_guide/access_db/topics/pgbouncer.html#pgb_hba) and [Configuring LDAP-based Authentication for PgBouncer](../../admin_guide/access_db/topics/pgbouncer.html#pgb_ldap) for more information.
+
+    Default: not set
+
+auth\_type
+:   How to authenticate users.
+
+    - `pam`: Use PAM to authenticate users. `auth_file` is ignored. This method is not compatible with databases using the `auth_user` option. The service name reported to PAM is `pgbouncer`. PAM is not supported in the HBA configuration file.
+    - `hba`:  The actual authentication type is loaded from the `auth_hba_file`. This setting allows different authentication methods for different access paths, for example: connections over Unix socket use the `peer` auth method, connections over TCP must use TLS.
+    - `cert`:  Clients must connect with TLS using a valid client certificate. The client's username is taken from CommonName field in the certificate.
+    - `md5`: Use MD5-based password check. `auth_file` may contain both MD5-encrypted or plain-text passwords. If `md5` is configured and a user has a SCRAM secret, then SCRAM authentication is used automatically instead. This is the default authentication method.
+    - `scram-sha-256`: Use password check with SCRAM-SHA-256. `auth_file` has to contain SCRAM secrets or plain-text passwords.
+    - `plain`:  Clear-text password is sent over wire. *Deprecated*.
+    - `trust`: No authentication is performed. The username must still exist in the `auth_file`.
+    - `any`: Like the `trust` method, but the username supplied is ignored. Requires that all databases are configured to log in with a specific user. Additionally, the console database allows any user to log in as admin.
+
+auth_key_file
+:   If you are connecting to LDAP with an encrypted password, `auth_key_file` identifies the file system location of the encryption key. Refer to [About Specifying an Encrypted LDAP Password](../../admin_guide/access_db/topics/pgbouncer.html#pgb_ldap_encrypt_passwd) for more information.
+
+    Default: not set
+
+auth_cipher
+:   If you are connecting to LDAP with an encrypted password, `auth_cipher` identifies the cipher algorithm for password authentication. PgBouncer accepts any cipher supported by OpenSSL on the system. When FIPS mode is enabled, specify only a cipher that is considered safe in FIPS mode. Refer to [About Specifying an Encrypted LDAP Password](../../admin_guide/access_db/topics/pgbouncer.html#pgb_ldap_encrypt_passwd) for more information.
+
+    Default: `aes-256-cbc`
+
+auth\_query
+:   Query to load a user's password from the database.
+
+:   Direct access to pg_shadow requires admin rights. It's preferable to use a non-superuser that calls a `SECURITY DEFINER` function instead.
+
+:   Note that the query is run inside target database, so if a function is used it needs to be installed into each database.
+
+    Default: `SELECT usename, passwd FROM pg_shadow WHERE usename=$1`
+
+auth\_user
+:   If `auth_user` is set, any user who is not specified in `auth_file` is authenticated through the `auth_query` query from the `pg_shadow` database view. PgBouncer performs this query as the `auth_user` Greenplum Database user. `auth_user`'s password must be set in the `auth_file`. (If the `auth_user` does not require a password then it does not need to be defined in `auth_file`.)
+
+:   Direct access to `pg_shadow` requires Greenplum Database administrative privileges. It is preferable to use a non-admin user that calls `SECURITY DEFINER` function instead.
+
+:    Default: not set
+
+auth\_dbname
+:   Database name in the `[database]` section to be used for authentication purposes. This option can be either global or overridden in the connection string if this parameter is specified.
 
 ### <a id="logset"></a>Log Settings 
 
@@ -571,6 +655,13 @@ query\_wait\_timeout
 
     Default: 120
 
+cancel\_wait\_timeout
+:   The maximum time, in seconds, cancellation requests are allowed to spend waiting for execution. If the cancel request is not assigned to a server during that time, the client is disconnected. A value of 0 disables the timeout. If it is disabled, cancel requests will be queued indefinitely.
+
+:   This setting is used to prevent a client locking up when a cancel cannot be forwarded due to the server being down.
+
+:   Default: 10.0
+
 client\_idle\_timeout
 :   Client connections idling longer than this many seconds are closed. This should be larger than the client-side connection lifetime settings, and only used for network problems. \[seconds\]
 
@@ -647,7 +738,7 @@ tcp\_keepintvl
 tcp\_user\_timeout
 :   Sets the `TCP_USER_TIMEOUT` socket option. This specifies the maximum amount of time in milliseconds that transmitted data may remain unacknowledged before the TCP connection is forcibly closed. If set to `0`, then the operating system’s default is used.
 
-    Default: 0
+:    Default: 0
 
 ## <a id="topic_lzk_zjd_gs"></a>\[users\] Section 
 
@@ -666,6 +757,52 @@ For example:
 
 user1 = pool_mode=transaction max_user_connections=10
 ```
+
+## <a id="topic_peers"></a>\[peers\] Section
+
+This section defines the peers that PgBouncer can forward cancellation requests to and where those cancellation requests will be routed.
+
+PgBouncer processes can be peered together in a group by defining a `peer_id` value and a `[peers]` section in the configurations of all the PgBouncer processes. These PgBouncer processes can then forward cancellations requests to the process that it originated from. This is needed to make cancellations work when multiple PgBouncer processes, possibly on different servers, are behind the same TCP load balancer. Cancellation requests are sent over different TCP connections than the query they are cancelling, so a TCP load balancer might send the cancellation request connection to a different process than the one that it was meant for. By peering them these cancellation requests eventually end up at the right process.
+
+The section contains key=value lines like
+
+```
+peer_id = connection string
+```
+
+Where the key will be taken as a `peer_id` and the value as a connection string, consisting of key=value pairs of connection parameters, described below (similar to `libpq`, but the actual `libpq` is not used and the set of available features is different). For example:
+
+```
+1 = host=host1.example.com
+2 = host=/tmp/pgbouncer-2  port=5555
+```
+
+Note that for peering to work, the `peer_id` of each PgBouncer process in the group must be unique within the peered group. And the `[peers]` section should contain entries for each of those peer ids. It is allowed, but not necessary, for the i`[peers]` section to contain the `peer_id` of the PgBouncer that the configuration is for. Such an entry will be ignored, but it is allowed to make configuration management easy, because it allows using the exact same `[peers]` section for multiple configurations.
+
+Note that cross-version peering is supported as long as all peers are on running 1.21.0 version or higher. In 1.21.0 some breaking changes were made in how we encode the cancellation tokens that made them incompatible with the ones created by earlier versions.
+
+host
+:   Host name or IP address to connect to. Host names are resolved at connection time, the result is cached per the `dns_max_ttl` parameter. If DNS returns several results, they are used in a round-robin manner. But in general it is not recommended to use a hostname that resolves to multiple IPs, because then the cancel request might still be forwarded to the wrong node and it would need to be forwarded again (which is only allowed up to three times).
+
+:   If the value begins with `/`, a Unix socket in the file-system namespace is used. If the value begins with `@`, a Unix socket in the abstract namespace is used.
+
+:   Examples:
+
+    ```
+    host=localhost
+    host=127.0.0.1
+    host=2001:0db8:85a3:0000:0000:8a2e:0370:7334
+    host=/var/run/pgbouncer-1
+    ```
+
+port
+:   The port to connect to.
+:   Default: 6432
+
+pool_size
+:   Set the maximum number of cancel requests that can be in flight to the peer at the same time. It is quite normal for cancel requests to arrive in bursts, for example, when the backing Postgres server slows down. So it is important for `pool_size` to not be so low that it cannot handle these bursts.
+
+:   If not set, the `default_pool_size` is used.
 
 ## <a id="topic_xw4_dtc_gs"></a>Example Configuration Files 
 
@@ -720,7 +857,7 @@ forcedb = host=127.0.0.1 port=300 user=baz password=foo client_encoding=UNICODE 
 
 ```
 
-Example of a secure function for auth_query:
+Example of a secure function for `auth_query`:
 
 ``` sql
 CREATE OR REPLACE FUNCTION pgbouncer.user_lookup(in i_username text, out uname text, out phash text)
@@ -733,6 +870,43 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 REVOKE ALL ON FUNCTION pgbouncer.user_lookup(text) FROM public, pgbouncer;
 GRANT EXECUTE ON FUNCTION pgbouncer.user_lookup(text) TO pgbouncer;
+```
+
+Example configuration for two peered PgBouncer processes to create a multi-core PgBouncer setup using `so_reuseport`. The configuration for the first process is:
+
+```
+[databases]
+postgres = host=localhost dbname=postgres
+
+[peers]
+1 = host=/tmp/pgbouncer1
+2 = host=/tmp/pgbouncer2
+
+[pgbouncer]
+listen_addr=127.0.0.1
+auth_file=auth_file.conf
+so_reuseport=1
+unix_socket_dir=/tmp/pgbouncer1
+peer_id=1
+```
+
+The configuration for the second process is:
+
+```
+[databases]
+postgres = host=localhost dbname=postgres
+
+[peers]
+1 = host=/tmp/pgbouncer1
+2 = host=/tmp/pgbouncer2
+
+[pgbouncer]
+listen_addr=127.0.0.1
+auth_file=auth_file.conf
+so_reuseport=1
+; only unix_socket_dir and peer_id are different
+unix_socket_dir=/tmp/pgbouncer2
+peer_id=2
 ```
 
 ## <a id="seealso"></a>See Also 
