@@ -25,7 +25,7 @@ static void check_partition_indexes(void);
 static void check_orphaned_toastrels(void);
 static void check_online_expansion(void);
 static void check_for_array_of_partition_table_types(ClusterInfo *cluster);
-
+static void check_multi_column_list_partition_keys(ClusterInfo *cluster);
 
 /*
  *	check_greenplum
@@ -44,6 +44,7 @@ check_greenplum(void)
 	check_partition_indexes();
 	check_orphaned_toastrels();
 	check_for_array_of_partition_table_types(&old_cluster);
+	check_multi_column_list_partition_keys(&old_cluster);
 }
 
 /*
@@ -557,6 +558,77 @@ check_for_array_of_partition_table_types(ClusterInfo *cluster)
 
 	check_ok();
 }
+
+static void
+check_multi_column_list_partition_keys(ClusterInfo *cluster)
+{
+	char			output_path[MAXPGPATH];
+	FILE		   *script = NULL;
+	bool			found = false;
+	int				dbnum;
+
+	prep_status("Checking for multi-column LIST partition keys");
+
+	snprintf(output_path, sizeof(output_path), "%s/%s",
+			 log_opts.basedir, "multi_column_list_partitions.txt");
+
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		bool		db_used = false;
+		int			ntups;
+		int			rowno;
+		int			i_nspname,
+					i_relname;
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(&old_cluster, active_db->db_name);
+
+		res = executeQueryOrDie(conn,
+			 "SELECT n.nspname, c.relname "
+			 "FROM pg_class c "
+			 "JOIN pg_namespace n on n.oid=c.relnamespace "
+			 "JOIN pg_partition p on p.parrelid=c.oid "
+			 "WHERE parkind = 'l' and parnatts > 1");
+
+		ntups = PQntuples(res);
+		i_nspname = PQfnumber(res, "nspname");
+		i_relname = PQfnumber(res, "relname");
+		for (rowno = 0; rowno < ntups; rowno++)
+		{
+			found = true;
+			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
+				pg_fatal("could not open file \"%s\": %s\n",
+						 output_path, strerror(errno));
+			if (!db_used)
+			{
+				fprintf(script, "In database: %s\n", active_db->db_name);
+				db_used = true;
+			}
+			fprintf(script, "  %s.%s\n",
+					PQgetvalue(res, rowno, i_nspname),
+					PQgetvalue(res, rowno, i_relname));
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+
+	if (found)
+	{
+		fclose(script);
+		pg_log(PG_REPORT, "fatal\n");
+		gp_fatal_log(
+			   "| Your installation contains partitioned tables\n"
+			   "| with a LIST partition key containing multiple\n"
+			   "| columns, which is not supported anymore. Consider\n"
+			   "| modifying the partition key to use a single column\n"
+			   "| or dropping the tables. A list of the problem tables\n"
+			   "| is in the file:\n\t%s\n\n", output_path);
+	}
+	else
+		check_ok();
+}
+
 
 void
 setup_GPDB6_data_type_checks(ClusterInfo *cluster)
