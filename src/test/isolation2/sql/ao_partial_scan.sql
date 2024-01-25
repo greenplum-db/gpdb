@@ -267,10 +267,6 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 ----                          ao_column tables
 --------------------------------------------------------------------------------
 
--- Note: for AOCO tables, there is 1 additional varblock read reported by the
--- fault point per column (the initial open_scan_seg() results in the additional
--- read being counted)
-
 CREATE TABLE aoco_partial_scan1(i int, j int2, k int) USING ao_column;
 
 --------------------------------------------------------------------------------
