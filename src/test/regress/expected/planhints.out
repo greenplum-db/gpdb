@@ -10,38 +10,56 @@ SET search_path=planhints;
 SET optimizer_trace_fallback=on;
 -- Setup tables
 CREATE TABLE my_table(a int, b int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 CREATE INDEX my_awesome_index ON my_table(a);
 CREATE INDEX my_amazing_index ON my_table(a);
 CREATE INDEX my_incredible_index ON my_table(a);
 CREATE INDEX my_bitmap_index ON my_table USING bitmap (a);
 CREATE TABLE your_table(a int, b int) WITH (appendonly=true);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 CREATE INDEX your_awesome_index ON your_table(a);
 CREATE INDEX your_amazing_index ON your_table(a);
 CREATE INDEX your_incredible_index ON your_table(a);
 CREATE INDEX your_bitmap_index ON your_table USING bitmap (a);
 CREATE TABLE our_table(a int, b int) PARTITION BY RANGE (a) (PARTITION p1 START(0) END(10) EVERY(3));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 CREATE INDEX our_awesome_index ON our_table(a);
 CREATE INDEX our_amazing_index ON our_table(a);
 CREATE INDEX our_incredible_index ON our_table(a);
 CREATE INDEX our_bitmap_index ON our_table USING bitmap (a);
+ANALYZE my_table;
+ANALYZE your_table;
+ANALYZE our_table;
 EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a WHERE t1.a<42;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                          QUERY PLAN                           
+---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
-                     Index Cond: (a < 42)
-               ->  Index Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Seq Scan on our_table_1_prt_p1_1 t3
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_2 t3_1
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_3 t3_2
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_4 t3_3
+                           Filter: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Seq Scan on my_table t1
+                                 Filter: (a < 42)
          ->  Hash
-               ->  Dynamic Index Scan on our_awesome_index on our_table
-                     Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(14 rows)
+               ->  Seq Scan on your_table t2
+                     Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 --------------------------------------------------------------------
 --
@@ -54,24 +72,32 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
     SeqScan(t3)
  */
 EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a WHERE t1.a<42;
-                              QUERY PLAN                              
-----------------------------------------------------------------------
+                          QUERY PLAN                           
+---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
+         Hash Cond: (t1.a = t2.a)
          ->  Hash Join
-               Hash Cond: (my_table.a = our_table.a)
-               ->  Seq Scan on my_table
-                     Filter: (a < 42)
-               ->  Hash
-                     ->  Dynamic Seq Scan on our_table
-                           Number of partitions to scan: 4 (out of 4)
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Seq Scan on our_table_1_prt_p1_1 t3
                            Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_2 t3_1
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_3 t3_2
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_4 t3_3
+                           Filter: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Seq Scan on my_table t1
+                                 Filter: (a < 42)
          ->  Hash
-               ->  Seq Scan on your_table
+               ->  Seq Scan on your_table t2
                      Filter: (a < 42)
- Optimizer: GPORCA
-(15 rows)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 -- NB: IndexScan on AO table is invalid because AO tables do not support index
 --     scan
@@ -80,23 +106,32 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
     IndexScan(t3 our_amazing_index)
  */
 EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a WHERE t1.a<42;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
-                     Index Cond: (a < 42)
-               ->  Index Scan using my_incredible_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Index Scan using our_table_1_prt_p1_1_a_idx2 on our_table_1_prt_p1_1 t3
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_2_a_idx2 on our_table_1_prt_p1_2 t3_1
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_3_a_idx2 on our_table_1_prt_p1_3 t3_2
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_4_a_idx2 on our_table_1_prt_p1_4 t3_3
+                           Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Index Scan using my_incredible_index on my_table t1
+                                 Index Cond: (a < 42)
          ->  Hash
-               ->  Dynamic Index Scan on our_amazing_index on our_table
-                     Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(14 rows)
+               ->  Seq Scan on your_table t2
+                     Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 -- NB: IndexScan on AO table is invalid because AO tables do not support index
 --     scan (e.g. t2)
@@ -105,23 +140,32 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
     IndexScan(t3)
  */
 EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a WHERE t1.a<42;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
-                     Index Cond: (a < 42)
-               ->  Index Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Index Scan using our_table_1_prt_p1_1_a_idx3 on our_table_1_prt_p1_1 t3
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_2_a_idx3 on our_table_1_prt_p1_2 t3_1
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_3_a_idx3 on our_table_1_prt_p1_3 t3_2
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_4_a_idx3 on our_table_1_prt_p1_4 t3_3
+                           Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Index Scan using my_bitmap_index on my_table t1
+                                 Index Cond: (a < 42)
          ->  Hash
-               ->  Dynamic Index Scan on our_awesome_index on our_table
-                     Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(14 rows)
+               ->  Seq Scan on your_table t2
+                     Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 /*+
     IndexOnlyScan(t1 my_incredible_index)
@@ -129,23 +173,32 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
     IndexOnlyScan(t3 our_amazing_index)
  */
 EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a WHERE t1.a<42;
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Index Only Scan using your_amazing_index on your_table
-                     Index Cond: (a < 42)
-               ->  Index Only Scan using my_incredible_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Index Only Scan using our_table_1_prt_p1_1_a_idx2 on our_table_1_prt_p1_1 t3
+                           Index Cond: (a < 42)
+                     ->  Index Only Scan using our_table_1_prt_p1_2_a_idx2 on our_table_1_prt_p1_2 t3_1
+                           Index Cond: (a < 42)
+                     ->  Index Only Scan using our_table_1_prt_p1_3_a_idx2 on our_table_1_prt_p1_3 t3_2
+                           Index Cond: (a < 42)
+                     ->  Index Only Scan using our_table_1_prt_p1_4_a_idx2 on our_table_1_prt_p1_4 t3_3
+                           Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Index Only Scan using my_incredible_index on my_table t1
+                                 Index Cond: (a < 42)
          ->  Hash
-               ->  Dynamic Index Only Scan on our_amazing_index on our_table
+               ->  Index Only Scan using your_amazing_index on your_table t2
                      Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(14 rows)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 /*+
     IndexOnlyScan(t1)
@@ -153,23 +206,32 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
     IndexOnlyScan(t3)
  */
 EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a WHERE t1.a<42;
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
-                     Index Cond: (a < 42)
-               ->  Index Only Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Index Scan using our_table_1_prt_p1_1_a_idx3 on our_table_1_prt_p1_1 t3
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_2_a_idx3 on our_table_1_prt_p1_2 t3_1
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_3_a_idx3 on our_table_1_prt_p1_3 t3_2
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_4_a_idx3 on our_table_1_prt_p1_4 t3_3
+                           Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Index Scan using my_bitmap_index on my_table t1
+                                 Index Cond: (a < 42)
          ->  Hash
-               ->  Dynamic Index Only Scan on our_awesome_index on our_table
+               ->  Index Scan using your_bitmap_index on your_table t2
                      Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(14 rows)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 /*+
     BitmapScan(t1 my_bitmap_index)
@@ -177,30 +239,44 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
     BitmapScan(t3 our_bitmap_index)
  */
 EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a WHERE t1.a<42;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Dynamic Bitmap Heap Scan on our_table
-                     Number of partitions to scan: 4 (out of 4)
-                     Recheck Cond: (a < 42)
-                     Filter: (a < 42)
-                     ->  Dynamic Bitmap Index Scan on our_bitmap_index
-                           Index Cond: (a < 42)
-               ->  Bitmap Heap Scan on my_table
-                     Recheck Cond: ((a = our_table.a) AND (a < 42))
-                     ->  Bitmap Index Scan on my_bitmap_index
-                           Index Cond: ((a = our_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_1 t3
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_1_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_2 t3_1
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_2_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_3 t3_2
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_3_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_4 t3_3
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_4_a_idx3
+                                 Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Bitmap Heap Scan on my_table t1
+                                 Recheck Cond: (a < 42)
+                                 ->  Bitmap Index Scan on my_bitmap_index
+                                       Index Cond: (a < 42)
          ->  Hash
-               ->  Bitmap Heap Scan on your_table
+               ->  Bitmap Heap Scan on your_table t2
                      Recheck Cond: (a < 42)
                      ->  Bitmap Index Scan on your_bitmap_index
                            Index Cond: (a < 42)
- Optimizer: GPORCA
-(21 rows)
+ Optimizer: Postgres-based planner
+(35 rows)
 
 /*+
     BitmapScan(t1)
@@ -208,30 +284,44 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
     BitmapScan(t3)
  */
 EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a WHERE t1.a<42;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Dynamic Bitmap Heap Scan on our_table
-                     Number of partitions to scan: 4 (out of 4)
-                     Recheck Cond: (a < 42)
-                     Filter: (a < 42)
-                     ->  Dynamic Bitmap Index Scan on our_bitmap_index
-                           Index Cond: (a < 42)
-               ->  Bitmap Heap Scan on my_table
-                     Recheck Cond: ((a = our_table.a) AND (a < 42))
-                     ->  Bitmap Index Scan on my_bitmap_index
-                           Index Cond: ((a = our_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_1 t3
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_1_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_2 t3_1
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_2_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_3 t3_2
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_3_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_4 t3_3
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_4_a_idx3
+                                 Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Bitmap Heap Scan on my_table t1
+                                 Recheck Cond: (a < 42)
+                                 ->  Bitmap Index Scan on my_bitmap_index
+                                       Index Cond: (a < 42)
          ->  Hash
-               ->  Bitmap Heap Scan on your_table
+               ->  Bitmap Heap Scan on your_table t2
                      Recheck Cond: (a < 42)
                      ->  Bitmap Index Scan on your_bitmap_index
                            Index Cond: (a < 42)
- Optimizer: GPORCA
-(21 rows)
+ Optimizer: Postgres-based planner
+(35 rows)
 
 --------------------------------------------------------------------
 --
@@ -241,62 +331,68 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
 /*+
     SeqScan(t1)
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-   ->  Seq Scan on my_table  (cost=0.00..431.00 rows=1 width=4)
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on my_table t1
          Filter: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (4 rows)
 
 /*+
     SeqScan(t2)
  */
-EXPLAIN SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-   ->  Seq Scan on your_table  (cost=0.00..431.00 rows=1 width=4)
+EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on your_table t2
          Filter: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (4 rows)
 
 /*+
     SeqScan(t3)
  */
-EXPLAIN SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-   ->  Dynamic Seq Scan on our_table  (cost=0.00..431.00 rows=1 width=4)
-         Number of partitions to scan: 4 (out of 4)
-         Filter: (a < 42)
- Optimizer: GPORCA
-(5 rows)
+EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
+                    QUERY PLAN                     
+---------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on our_table_1_prt_p1_1 t3
+               Filter: (a < 42)
+         ->  Seq Scan on our_table_1_prt_p1_2 t3_1
+               Filter: (a < 42)
+         ->  Seq Scan on our_table_1_prt_p1_3 t3_2
+               Filter: (a < 42)
+         ->  Seq Scan on our_table_1_prt_p1_4 t3_3
+               Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(11 rows)
 
 /*+
     IndexScan(t1 my_incredible_index)
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
-                                        QUERY PLAN                                        
-------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
-   ->  Index Scan using my_incredible_index on my_table  (cost=0.00..6.00 rows=1 width=4)
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+                        QUERY PLAN                         
+-----------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Scan using my_incredible_index on my_table t1
          Index Cond: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (4 rows)
 
 /*+
     IndexScan(t1)
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
-   ->  Index Scan using my_awesome_index on my_table  (cost=0.00..6.00 rows=1 width=4)
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+                      QUERY PLAN                       
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Scan using my_bitmap_index on my_table t1
          Index Cond: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (4 rows)
 
 -- NB: IndexScan on AO table is invalid because AO tables do not support index
@@ -304,200 +400,246 @@ EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
 --/*+
 --    IndexScan(t2 your_amazing_index)
 -- */
---EXPLAIN SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
+--EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
 -- NB: IndexScan on AO table is invalid because AO tables do not support index
 --     scan (e.g. t2)
 --/*+
 --    IndexScan(t2)
 -- */
---EXPLAIN SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
+--EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
 /*+
     IndexScan(t3 our_amazing_index)
  */
-EXPLAIN SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
-                                          QUERY PLAN                                          
-----------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
-   ->  Dynamic Index Scan on our_amazing_index on our_table  (cost=0.00..6.00 rows=1 width=4)
-         Index Cond: (a < 42)
-         Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(5 rows)
+EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Index Scan using our_table_1_prt_p1_1_a_idx2 on our_table_1_prt_p1_1 t3
+               Index Cond: (a < 42)
+         ->  Index Scan using our_table_1_prt_p1_2_a_idx2 on our_table_1_prt_p1_2 t3_1
+               Index Cond: (a < 42)
+         ->  Index Scan using our_table_1_prt_p1_3_a_idx2 on our_table_1_prt_p1_3 t3_2
+               Index Cond: (a < 42)
+         ->  Index Scan using our_table_1_prt_p1_4_a_idx2 on our_table_1_prt_p1_4 t3_3
+               Index Cond: (a < 42)
+ Optimizer: Postgres-based planner
+(11 rows)
 
 /*+
     IndexScan(t3)
  */
-EXPLAIN SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
-                                          QUERY PLAN                                          
-----------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
-   ->  Dynamic Index Scan on our_awesome_index on our_table  (cost=0.00..6.00 rows=1 width=4)
-         Index Cond: (a < 42)
-         Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(5 rows)
+EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Index Scan using our_table_1_prt_p1_1_a_idx3 on our_table_1_prt_p1_1 t3
+               Index Cond: (a < 42)
+         ->  Index Scan using our_table_1_prt_p1_2_a_idx3 on our_table_1_prt_p1_2 t3_1
+               Index Cond: (a < 42)
+         ->  Index Scan using our_table_1_prt_p1_3_a_idx3 on our_table_1_prt_p1_3 t3_2
+               Index Cond: (a < 42)
+         ->  Index Scan using our_table_1_prt_p1_4_a_idx3 on our_table_1_prt_p1_4 t3_3
+               Index Cond: (a < 42)
+ Optimizer: Postgres-based planner
+(11 rows)
 
 /*+
     IndexOnlyScan(t1 my_incredible_index)
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
-                                          QUERY PLAN                                           
------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
-   ->  Index Only Scan using my_incredible_index on my_table  (cost=0.00..6.00 rows=1 width=4)
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Only Scan using my_incredible_index on my_table t1
          Index Cond: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (4 rows)
 
 /*+
     IndexOnlyScan(t1)
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
-   ->  Index Only Scan using my_awesome_index on my_table  (cost=0.00..6.00 rows=1 width=4)
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+                      QUERY PLAN                       
+-------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Scan using my_bitmap_index on my_table t1
          Index Cond: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (4 rows)
 
 /*+
     IndexOnlyScan(t2 your_amazing_index)
  */
-EXPLAIN SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
-                                           QUERY PLAN                                           
-------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.01 rows=1 width=4)
-   ->  Index Only Scan using your_amazing_index on your_table  (cost=0.00..6.01 rows=1 width=4)
+EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
+                           QUERY PLAN                            
+-----------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Only Scan using your_amazing_index on your_table t2
          Index Cond: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (4 rows)
 
 /*+
     IndexOnlyScan(t2)
  */
-EXPLAIN SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
-                                           QUERY PLAN                                           
-------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.01 rows=1 width=4)
-   ->  Index Only Scan using your_awesome_index on your_table  (cost=0.00..6.01 rows=1 width=4)
+EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
+                        QUERY PLAN                         
+-----------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Index Scan using your_bitmap_index on your_table t2
          Index Cond: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (4 rows)
 
 /*+
     IndexOnlyScan(t3 our_amazing_index)
  */
-EXPLAIN SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
-                                            QUERY PLAN                                             
----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
-   ->  Dynamic Index Only Scan on our_amazing_index on our_table  (cost=0.00..6.00 rows=1 width=4)
-         Index Cond: (a < 42)
-         Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(5 rows)
+EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Index Only Scan using our_table_1_prt_p1_1_a_idx2 on our_table_1_prt_p1_1 t3
+               Index Cond: (a < 42)
+         ->  Index Only Scan using our_table_1_prt_p1_2_a_idx2 on our_table_1_prt_p1_2 t3_1
+               Index Cond: (a < 42)
+         ->  Index Only Scan using our_table_1_prt_p1_3_a_idx2 on our_table_1_prt_p1_3 t3_2
+               Index Cond: (a < 42)
+         ->  Index Only Scan using our_table_1_prt_p1_4_a_idx2 on our_table_1_prt_p1_4 t3_3
+               Index Cond: (a < 42)
+ Optimizer: Postgres-based planner
+(11 rows)
 
 /*+
     IndexOnlyScan(t3)
  */
-EXPLAIN SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
-                                            QUERY PLAN                                             
----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
-   ->  Dynamic Index Only Scan on our_awesome_index on our_table  (cost=0.00..6.00 rows=1 width=4)
-         Index Cond: (a < 42)
-         Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(5 rows)
+EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Index Scan using our_table_1_prt_p1_1_a_idx3 on our_table_1_prt_p1_1 t3
+               Index Cond: (a < 42)
+         ->  Index Scan using our_table_1_prt_p1_2_a_idx3 on our_table_1_prt_p1_2 t3_1
+               Index Cond: (a < 42)
+         ->  Index Scan using our_table_1_prt_p1_3_a_idx3 on our_table_1_prt_p1_3 t3_2
+               Index Cond: (a < 42)
+         ->  Index Scan using our_table_1_prt_p1_4_a_idx3 on our_table_1_prt_p1_4 t3_3
+               Index Cond: (a < 42)
+ Optimizer: Postgres-based planner
+(11 rows)
 
 /*+
     BitmapScan(t1 my_bitmap_index)
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..391.30 rows=1 width=4)
-   ->  Bitmap Heap Scan on my_table  (cost=0.00..391.30 rows=1 width=4)
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+                    QUERY PLAN                    
+--------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Bitmap Heap Scan on my_table t1
          Recheck Cond: (a < 42)
-         ->  Bitmap Index Scan on my_bitmap_index  (cost=0.00..0.00 rows=0 width=0)
+         ->  Bitmap Index Scan on my_bitmap_index
                Index Cond: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (6 rows)
 
 /*+
     BitmapScan(t1)
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..391.30 rows=1 width=4)
-   ->  Bitmap Heap Scan on my_table  (cost=0.00..391.30 rows=1 width=4)
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+                    QUERY PLAN                    
+--------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Bitmap Heap Scan on my_table t1
          Recheck Cond: (a < 42)
-         ->  Bitmap Index Scan on my_bitmap_index  (cost=0.00..0.00 rows=0 width=0)
+         ->  Bitmap Index Scan on my_bitmap_index
                Index Cond: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (6 rows)
 
 /*+
     BitmapScan(t2 your_bitmap_index)
  */
-EXPLAIN SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
-                                      QUERY PLAN                                      
---------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..391.30 rows=1 width=4)
-   ->  Bitmap Heap Scan on your_table  (cost=0.00..391.30 rows=1 width=4)
+EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
+                     QUERY PLAN                     
+----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Bitmap Heap Scan on your_table t2
          Recheck Cond: (a < 42)
-         ->  Bitmap Index Scan on your_bitmap_index  (cost=0.00..0.00 rows=0 width=0)
+         ->  Bitmap Index Scan on your_bitmap_index
                Index Cond: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (6 rows)
 
 /*+
     BitmapScan(t2)
  */
-EXPLAIN SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
-                                      QUERY PLAN                                      
---------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..391.30 rows=1 width=4)
-   ->  Bitmap Heap Scan on your_table  (cost=0.00..391.30 rows=1 width=4)
+EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
+                     QUERY PLAN                     
+----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Bitmap Heap Scan on your_table t2
          Recheck Cond: (a < 42)
-         ->  Bitmap Index Scan on your_bitmap_index  (cost=0.00..0.00 rows=0 width=0)
+         ->  Bitmap Index Scan on your_bitmap_index
                Index Cond: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (6 rows)
 
 /*+
     BitmapScan(t3 our_bitmap_index)
  */
-EXPLAIN SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
-                                         QUERY PLAN                                          
----------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..387.97 rows=1 width=4)
-   ->  Dynamic Bitmap Heap Scan on our_table  (cost=0.00..387.97 rows=1 width=4)
-         Number of partitions to scan: 4 (out of 4)
-         Recheck Cond: (a < 42)
-         Filter: (a < 42)
-         ->  Dynamic Bitmap Index Scan on our_bitmap_index  (cost=0.00..0.00 rows=0 width=0)
-               Index Cond: (a < 42)
- Optimizer: GPORCA
-(8 rows)
+EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
+                             QUERY PLAN                             
+--------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Bitmap Heap Scan on our_table_1_prt_p1_1 t3
+               Recheck Cond: (a < 42)
+               ->  Bitmap Index Scan on our_table_1_prt_p1_1_a_idx3
+                     Index Cond: (a < 42)
+         ->  Bitmap Heap Scan on our_table_1_prt_p1_2 t3_1
+               Recheck Cond: (a < 42)
+               ->  Bitmap Index Scan on our_table_1_prt_p1_2_a_idx3
+                     Index Cond: (a < 42)
+         ->  Bitmap Heap Scan on our_table_1_prt_p1_3 t3_2
+               Recheck Cond: (a < 42)
+               ->  Bitmap Index Scan on our_table_1_prt_p1_3_a_idx3
+                     Index Cond: (a < 42)
+         ->  Bitmap Heap Scan on our_table_1_prt_p1_4 t3_3
+               Recheck Cond: (a < 42)
+               ->  Bitmap Index Scan on our_table_1_prt_p1_4_a_idx3
+                     Index Cond: (a < 42)
+ Optimizer: Postgres-based planner
+(19 rows)
 
 /*+
     BitmapScan(t3)
  */
-EXPLAIN SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
-                                         QUERY PLAN                                          
----------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..387.97 rows=1 width=4)
-   ->  Dynamic Bitmap Heap Scan on our_table  (cost=0.00..387.97 rows=1 width=4)
-         Number of partitions to scan: 4 (out of 4)
-         Recheck Cond: (a < 42)
-         Filter: (a < 42)
-         ->  Dynamic Bitmap Index Scan on our_bitmap_index  (cost=0.00..0.00 rows=0 width=0)
-               Index Cond: (a < 42)
- Optimizer: GPORCA
-(8 rows)
+EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
+                             QUERY PLAN                             
+--------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Bitmap Heap Scan on our_table_1_prt_p1_1 t3
+               Recheck Cond: (a < 42)
+               ->  Bitmap Index Scan on our_table_1_prt_p1_1_a_idx3
+                     Index Cond: (a < 42)
+         ->  Bitmap Heap Scan on our_table_1_prt_p1_2 t3_1
+               Recheck Cond: (a < 42)
+               ->  Bitmap Index Scan on our_table_1_prt_p1_2_a_idx3
+                     Index Cond: (a < 42)
+         ->  Bitmap Heap Scan on our_table_1_prt_p1_3 t3_2
+               Recheck Cond: (a < 42)
+               ->  Bitmap Index Scan on our_table_1_prt_p1_3_a_idx3
+                     Index Cond: (a < 42)
+         ->  Bitmap Heap Scan on our_table_1_prt_p1_4 t3_3
+               Recheck Cond: (a < 42)
+               ->  Bitmap Index Scan on our_table_1_prt_p1_4_a_idx3
+                     Index Cond: (a < 42)
+ Optimizer: Postgres-based planner
+(19 rows)
 
 --------------------------------------------------------------------
 --
@@ -510,23 +652,32 @@ EXPLAIN SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
     NoSeqScan(t3)
  */
 EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a WHERE t1.a<42;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
-                     Index Cond: (a < 42)
-               ->  Index Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Index Scan using our_table_1_prt_p1_1_a_idx3 on our_table_1_prt_p1_1 t3
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_2_a_idx3 on our_table_1_prt_p1_2 t3_1
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_3_a_idx3 on our_table_1_prt_p1_3 t3_2
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_4_a_idx3 on our_table_1_prt_p1_4 t3_3
+                           Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Index Scan using my_bitmap_index on my_table t1
+                                 Index Cond: (a < 42)
          ->  Hash
-               ->  Dynamic Index Scan on our_awesome_index on our_table
+               ->  Index Scan using your_bitmap_index on your_table t2
                      Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(14 rows)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 /*+
     NoIndexScan(t1)
@@ -534,23 +685,32 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
     NoIndexScan(t3)
  */
 EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a WHERE t1.a<42;
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
+                          QUERY PLAN                           
+---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
-                     Index Cond: (a < 42)
-               ->  Index Only Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Seq Scan on our_table_1_prt_p1_1 t3
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_2 t3_1
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_3 t3_2
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_4 t3_3
+                           Filter: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Seq Scan on my_table t1
+                                 Filter: (a < 42)
          ->  Hash
-               ->  Dynamic Index Only Scan on our_awesome_index on our_table
-                     Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(14 rows)
+               ->  Seq Scan on your_table t2
+                     Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 /*+
     NoIndexOnlyScan(t1)
@@ -558,25 +718,32 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
     NoIndexOnlyScan(t3)
  */
 EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a WHERE t1.a<42;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
+                          QUERY PLAN                           
+---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Dynamic Index Scan on our_awesome_index on our_table
-                     Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
-               ->  Index Scan using my_awesome_index on my_table
-                     Index Cond: ((a = our_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Seq Scan on our_table_1_prt_p1_1 t3
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_2 t3_1
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_3 t3_2
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_4 t3_3
+                           Filter: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Seq Scan on my_table t1
+                                 Filter: (a < 42)
          ->  Hash
-               ->  Bitmap Heap Scan on your_table
-                     Recheck Cond: (a < 42)
-                     ->  Bitmap Index Scan on your_bitmap_index
-                           Index Cond: (a < 42)
- Optimizer: GPORCA
-(16 rows)
+               ->  Seq Scan on your_table t2
+                     Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 /*+
     NoBitmapScan(t1)
@@ -584,23 +751,32 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
     NoBitmapScan(t3)
  */
 EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a WHERE t1.a<42;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                          QUERY PLAN                           
+---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
-                     Index Cond: (a < 42)
-               ->  Index Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Seq Scan on our_table_1_prt_p1_1 t3
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_2 t3_1
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_3 t3_2
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_4 t3_3
+                           Filter: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Seq Scan on my_table t1
+                                 Filter: (a < 42)
          ->  Hash
-               ->  Dynamic Index Scan on our_awesome_index on our_table
-                     Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(14 rows)
+               ->  Seq Scan on your_table t2
+                     Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 --------------------------------------------------------------------
 --
@@ -618,7 +794,7 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
     NoIndexOnlyScan(t1)
     NoBitmapScan(t1)
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
 INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t1)
     NoIndexOnlyScan(t1)
     NoBitmapScan(t1)
@@ -628,21 +804,12 @@ INFO:  pg_hint_plan: hint syntax error at or near "NoIndexOnlyScan(t1)
     NoBitmapScan(t1)
  "
 DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t1)
-    NoIndexOnlyScan(t1)
-    NoBitmapScan(t1)
- "
-DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexOnlyScan(t1)
-    NoBitmapScan(t1)
- "
-DETAIL:  Conflict scan method hint.
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-   ->  Seq Scan on my_table  (cost=0.00..431.00 rows=1 width=4)
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on my_table t1
          Filter: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (4 rows)
 
 /*+
@@ -650,7 +817,7 @@ DETAIL:  Conflict scan method hint.
     NoIndexOnlyScan(t2)
     NoBitmapScan(t2)
  */
-EXPLAIN SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
+EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
 INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t2)
     NoIndexOnlyScan(t2)
     NoBitmapScan(t2)
@@ -660,21 +827,12 @@ INFO:  pg_hint_plan: hint syntax error at or near "NoIndexOnlyScan(t2)
     NoBitmapScan(t2)
  "
 DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t2)
-    NoIndexOnlyScan(t2)
-    NoBitmapScan(t2)
- "
-DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexOnlyScan(t2)
-    NoBitmapScan(t2)
- "
-DETAIL:  Conflict scan method hint.
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-   ->  Seq Scan on your_table  (cost=0.00..431.00 rows=1 width=4)
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on your_table t2
          Filter: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (4 rows)
 
 /*+
@@ -682,7 +840,7 @@ DETAIL:  Conflict scan method hint.
     NoIndexOnlyScan(t3)
     NoBitmapScan(t3)
  */
-EXPLAIN SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
+EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
 INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t3)
     NoIndexOnlyScan(t3)
     NoBitmapScan(t3)
@@ -692,23 +850,20 @@ INFO:  pg_hint_plan: hint syntax error at or near "NoIndexOnlyScan(t3)
     NoBitmapScan(t3)
  "
 DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t3)
-    NoIndexOnlyScan(t3)
-    NoBitmapScan(t3)
- "
-DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexOnlyScan(t3)
-    NoBitmapScan(t3)
- "
-DETAIL:  Conflict scan method hint.
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-   ->  Dynamic Seq Scan on our_table  (cost=0.00..431.00 rows=1 width=4)
-         Number of partitions to scan: 4 (out of 4)
-         Filter: (a < 42)
- Optimizer: GPORCA
-(5 rows)
+                    QUERY PLAN                     
+---------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on our_table_1_prt_p1_1 t3
+               Filter: (a < 42)
+         ->  Seq Scan on our_table_1_prt_p1_2 t3_1
+               Filter: (a < 42)
+         ->  Seq Scan on our_table_1_prt_p1_3 t3_2
+               Filter: (a < 42)
+         ->  Seq Scan on our_table_1_prt_p1_4 t3_3
+               Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(11 rows)
 
 --
 -- Make IndexScan is only valid plan
@@ -718,7 +873,7 @@ DETAIL:  Conflict scan method hint.
     NoIndexOnlyScan(t1)
     NoBitmapScan(t1)
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
 INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t1)
     NoIndexOnlyScan(t1)
     NoBitmapScan(t1)
@@ -728,21 +883,12 @@ INFO:  pg_hint_plan: hint syntax error at or near "NoIndexOnlyScan(t1)
     NoBitmapScan(t1)
  "
 DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t1)
-    NoIndexOnlyScan(t1)
-    NoBitmapScan(t1)
- "
-DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexOnlyScan(t1)
-    NoBitmapScan(t1)
- "
-DETAIL:  Conflict scan method hint.
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
-   ->  Index Scan using my_awesome_index on my_table  (cost=0.00..6.00 rows=1 width=4)
-         Index Cond: (a < 42)
- Optimizer: GPORCA
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on my_table t1
+         Filter: (a < 42)
+ Optimizer: Postgres-based planner
 (4 rows)
 
 /*+
@@ -750,7 +896,7 @@ DETAIL:  Conflict scan method hint.
     NoIndexOnlyScan(t2)
     NoBitmapScan(t2)
  */
-EXPLAIN SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
+EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
 INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t2)
     NoIndexOnlyScan(t2)
     NoBitmapScan(t2)
@@ -760,21 +906,10 @@ INFO:  pg_hint_plan: hint syntax error at or near "NoIndexOnlyScan(t2)
     NoBitmapScan(t2)
  "
 DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t2)
-    NoIndexOnlyScan(t2)
-    NoBitmapScan(t2)
- "
-DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexOnlyScan(t2)
-    NoBitmapScan(t2)
- "
-DETAIL:  Conflict scan method hint.
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
-                                    QUERY PLAN                                    
-----------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..775.42 rows=28700 width=4)
-   ->  Seq Scan on your_table t2  (cost=0.00..392.75 rows=9567 width=4)
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on your_table t2
          Filter: (a < 42)
  Optimizer: Postgres-based planner
 (4 rows)
@@ -784,7 +919,7 @@ DETAIL:  Falling back to Postgres-based planner because no plan has been compute
     NoIndexOnlyScan(t3)
     NoBitmapScan(t3)
  */
-EXPLAIN SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
+EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
 INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t3)
     NoIndexOnlyScan(t3)
     NoBitmapScan(t3)
@@ -794,23 +929,20 @@ INFO:  pg_hint_plan: hint syntax error at or near "NoIndexOnlyScan(t3)
     NoBitmapScan(t3)
  "
 DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t3)
-    NoIndexOnlyScan(t3)
-    NoBitmapScan(t3)
- "
-DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexOnlyScan(t3)
-    NoBitmapScan(t3)
- "
-DETAIL:  Conflict scan method hint.
-                                          QUERY PLAN                                          
-----------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
-   ->  Dynamic Index Scan on our_awesome_index on our_table  (cost=0.00..6.00 rows=1 width=4)
-         Index Cond: (a < 42)
-         Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(5 rows)
+                    QUERY PLAN                     
+---------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on our_table_1_prt_p1_1 t3
+               Filter: (a < 42)
+         ->  Seq Scan on our_table_1_prt_p1_2 t3_1
+               Filter: (a < 42)
+         ->  Seq Scan on our_table_1_prt_p1_3 t3_2
+               Filter: (a < 42)
+         ->  Seq Scan on our_table_1_prt_p1_4 t3_3
+               Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(11 rows)
 
 --
 -- Make IndexOnlyScan is only valid plan
@@ -820,7 +952,7 @@ DETAIL:  Conflict scan method hint.
     NoIndexScan(t1)
     NoBitmapScan(t1)
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
 INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t1)
     NoIndexScan(t1)
     NoBitmapScan(t1)
@@ -830,21 +962,12 @@ INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t1)
     NoBitmapScan(t1)
  "
 DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t1)
-    NoIndexScan(t1)
-    NoBitmapScan(t1)
- "
-DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t1)
-    NoBitmapScan(t1)
- "
-DETAIL:  Conflict scan method hint.
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
-   ->  Index Only Scan using my_awesome_index on my_table  (cost=0.00..6.00 rows=1 width=4)
-         Index Cond: (a < 42)
- Optimizer: GPORCA
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on my_table t1
+         Filter: (a < 42)
+ Optimizer: Postgres-based planner
 (4 rows)
 
 /*+
@@ -852,7 +975,7 @@ DETAIL:  Conflict scan method hint.
     NoIndexScan(t2)
     NoBitmapScan(t2)
  */
-EXPLAIN SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
+EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
 INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t2)
     NoIndexScan(t2)
     NoBitmapScan(t2)
@@ -862,21 +985,12 @@ INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t2)
     NoBitmapScan(t2)
  "
 DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t2)
-    NoIndexScan(t2)
-    NoBitmapScan(t2)
- "
-DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t2)
-    NoBitmapScan(t2)
- "
-DETAIL:  Conflict scan method hint.
-                                           QUERY PLAN                                           
-------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.01 rows=1 width=4)
-   ->  Index Only Scan using your_awesome_index on your_table  (cost=0.00..6.01 rows=1 width=4)
-         Index Cond: (a < 42)
- Optimizer: GPORCA
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on your_table t2
+         Filter: (a < 42)
+ Optimizer: Postgres-based planner
 (4 rows)
 
 /*+
@@ -884,7 +998,7 @@ DETAIL:  Conflict scan method hint.
     NoIndexScan(t3)
     NoBitmapScan(t3)
  */
-EXPLAIN SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
+EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
 INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t3)
     NoIndexScan(t3)
     NoBitmapScan(t3)
@@ -894,23 +1008,20 @@ INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t3)
     NoBitmapScan(t3)
  "
 DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t3)
-    NoIndexScan(t3)
-    NoBitmapScan(t3)
- "
-DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t3)
-    NoBitmapScan(t3)
- "
-DETAIL:  Conflict scan method hint.
-                                            QUERY PLAN                                             
----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
-   ->  Dynamic Index Only Scan on our_awesome_index on our_table  (cost=0.00..6.00 rows=1 width=4)
-         Index Cond: (a < 42)
-         Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(5 rows)
+                    QUERY PLAN                     
+---------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on our_table_1_prt_p1_1 t3
+               Filter: (a < 42)
+         ->  Seq Scan on our_table_1_prt_p1_2 t3_1
+               Filter: (a < 42)
+         ->  Seq Scan on our_table_1_prt_p1_3 t3_2
+               Filter: (a < 42)
+         ->  Seq Scan on our_table_1_prt_p1_4 t3_3
+               Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(11 rows)
 
 --
 -- Make BitmapScan is only valid plan
@@ -920,7 +1031,7 @@ DETAIL:  Conflict scan method hint.
     NoIndexScan(t1)
     NoIndexOnlyScan(t1)
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
 INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t1)
     NoIndexScan(t1)
     NoIndexOnlyScan(t1)
@@ -930,31 +1041,20 @@ INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t1)
     NoIndexOnlyScan(t1)
  "
 DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t1)
-    NoIndexScan(t1)
-    NoIndexOnlyScan(t1)
- "
-DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t1)
-    NoIndexOnlyScan(t1)
- "
-DETAIL:  Conflict scan method hint.
-                                     QUERY PLAN                                     
-------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..391.30 rows=1 width=4)
-   ->  Bitmap Heap Scan on my_table  (cost=0.00..391.30 rows=1 width=4)
-         Recheck Cond: (a < 42)
-         ->  Bitmap Index Scan on my_bitmap_index  (cost=0.00..0.00 rows=0 width=0)
-               Index Cond: (a < 42)
- Optimizer: GPORCA
-(6 rows)
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on my_table t1
+         Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(4 rows)
 
 /*+
     NoSeqScan(t2)
     NoIndexScan(t2)
     NoIndexOnlyScan(t2)
  */
-EXPLAIN SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
+EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
 INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t2)
     NoIndexScan(t2)
     NoIndexOnlyScan(t2)
@@ -964,31 +1064,20 @@ INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t2)
     NoIndexOnlyScan(t2)
  "
 DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t2)
-    NoIndexScan(t2)
-    NoIndexOnlyScan(t2)
- "
-DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t2)
-    NoIndexOnlyScan(t2)
- "
-DETAIL:  Conflict scan method hint.
-                                      QUERY PLAN                                      
---------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..391.30 rows=1 width=4)
-   ->  Bitmap Heap Scan on your_table  (cost=0.00..391.30 rows=1 width=4)
-         Recheck Cond: (a < 42)
-         ->  Bitmap Index Scan on your_bitmap_index  (cost=0.00..0.00 rows=0 width=0)
-               Index Cond: (a < 42)
- Optimizer: GPORCA
-(6 rows)
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on your_table t2
+         Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(4 rows)
 
 /*+
     NoSeqScan(t3)
     NoIndexScan(t3)
     NoIndexOnlyScan(t3)
  */
-EXPLAIN SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
+EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
 INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t3)
     NoIndexScan(t3)
     NoIndexOnlyScan(t3)
@@ -998,26 +1087,20 @@ INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t3)
     NoIndexOnlyScan(t3)
  "
 DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoSeqScan(t3)
-    NoIndexScan(t3)
-    NoIndexOnlyScan(t3)
- "
-DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t3)
-    NoIndexOnlyScan(t3)
- "
-DETAIL:  Conflict scan method hint.
-                                         QUERY PLAN                                          
----------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..387.97 rows=1 width=4)
-   ->  Dynamic Bitmap Heap Scan on our_table  (cost=0.00..387.97 rows=1 width=4)
-         Number of partitions to scan: 4 (out of 4)
-         Recheck Cond: (a < 42)
-         Filter: (a < 42)
-         ->  Dynamic Bitmap Index Scan on our_bitmap_index  (cost=0.00..0.00 rows=0 width=0)
-               Index Cond: (a < 42)
- Optimizer: GPORCA
-(8 rows)
+                    QUERY PLAN                     
+---------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on our_table_1_prt_p1_1 t3
+               Filter: (a < 42)
+         ->  Seq Scan on our_table_1_prt_p1_2 t3_1
+               Filter: (a < 42)
+         ->  Seq Scan on our_table_1_prt_p1_3 t3_2
+               Filter: (a < 42)
+         ->  Seq Scan on our_table_1_prt_p1_4 t3_3
+               Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(11 rows)
 
 --------------------------------------------------------------------
 --
@@ -1031,24 +1114,32 @@ CREATE VIEW everybody_view AS SELECT t1.a AS a1, t2.a AS a2, t3.a AS a3 FROM my_
     SeqScan(t3)
  */
 EXPLAIN (costs off) SELECT * FROM everybody_view;
-                              QUERY PLAN                              
-----------------------------------------------------------------------
+                          QUERY PLAN                           
+---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
+         Hash Cond: (t1.a = t2.a)
          ->  Hash Join
-               Hash Cond: (my_table.a = our_table.a)
-               ->  Seq Scan on my_table
-                     Filter: (a < 42)
-               ->  Hash
-                     ->  Dynamic Seq Scan on our_table
-                           Number of partitions to scan: 4 (out of 4)
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Seq Scan on our_table_1_prt_p1_1 t3
                            Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_2 t3_1
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_3 t3_2
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_4 t3_3
+                           Filter: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Seq Scan on my_table t1
+                                 Filter: (a < 42)
          ->  Hash
-               ->  Seq Scan on your_table
+               ->  Seq Scan on your_table t2
                      Filter: (a < 42)
- Optimizer: GPORCA
-(15 rows)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 -- NB: IndexScan on AO table is invalid because AO tables do not support index
 --     scan (e.g. t2)
@@ -1057,23 +1148,32 @@ EXPLAIN (costs off) SELECT * FROM everybody_view;
     IndexScan(t3 our_amazing_index)
  */
 EXPLAIN (costs off) SELECT * FROM everybody_view;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
-                     Index Cond: (a < 42)
-               ->  Index Scan using my_incredible_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Index Scan using our_table_1_prt_p1_1_a_idx2 on our_table_1_prt_p1_1 t3
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_2_a_idx2 on our_table_1_prt_p1_2 t3_1
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_3_a_idx2 on our_table_1_prt_p1_3 t3_2
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_4_a_idx2 on our_table_1_prt_p1_4 t3_3
+                           Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Index Scan using my_incredible_index on my_table t1
+                                 Index Cond: (a < 42)
          ->  Hash
-               ->  Dynamic Index Scan on our_amazing_index on our_table
-                     Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(14 rows)
+               ->  Seq Scan on your_table t2
+                     Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 -- NB: IndexScan on AO table is invalid because AO tables do not support index
 --     scan (e.g. t2)
@@ -1082,23 +1182,32 @@ EXPLAIN (costs off) SELECT * FROM everybody_view;
     IndexScan(t3)
  */
 EXPLAIN (costs off) SELECT * FROM everybody_view;
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
-                     Index Cond: (a < 42)
-               ->  Index Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Index Scan using our_table_1_prt_p1_1_a_idx3 on our_table_1_prt_p1_1 t3
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_2_a_idx3 on our_table_1_prt_p1_2 t3_1
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_3_a_idx3 on our_table_1_prt_p1_3 t3_2
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_4_a_idx3 on our_table_1_prt_p1_4 t3_3
+                           Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Index Scan using my_bitmap_index on my_table t1
+                                 Index Cond: (a < 42)
          ->  Hash
-               ->  Dynamic Index Scan on our_awesome_index on our_table
-                     Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(14 rows)
+               ->  Seq Scan on your_table t2
+                     Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 /*+
     IndexOnlyScan(t1 my_incredible_index)
@@ -1106,23 +1215,32 @@ EXPLAIN (costs off) SELECT * FROM everybody_view;
     IndexOnlyScan(t3 our_amazing_index)
  */
 EXPLAIN (costs off) SELECT * FROM everybody_view;
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Index Only Scan using your_amazing_index on your_table
-                     Index Cond: (a < 42)
-               ->  Index Only Scan using my_incredible_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Index Only Scan using our_table_1_prt_p1_1_a_idx2 on our_table_1_prt_p1_1 t3
+                           Index Cond: (a < 42)
+                     ->  Index Only Scan using our_table_1_prt_p1_2_a_idx2 on our_table_1_prt_p1_2 t3_1
+                           Index Cond: (a < 42)
+                     ->  Index Only Scan using our_table_1_prt_p1_3_a_idx2 on our_table_1_prt_p1_3 t3_2
+                           Index Cond: (a < 42)
+                     ->  Index Only Scan using our_table_1_prt_p1_4_a_idx2 on our_table_1_prt_p1_4 t3_3
+                           Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Index Only Scan using my_incredible_index on my_table t1
+                                 Index Cond: (a < 42)
          ->  Hash
-               ->  Dynamic Index Only Scan on our_amazing_index on our_table
+               ->  Index Only Scan using your_amazing_index on your_table t2
                      Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(14 rows)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 /*+
     IndexOnlyScan(t1)
@@ -1130,23 +1248,32 @@ EXPLAIN (costs off) SELECT * FROM everybody_view;
     IndexOnlyScan(t3)
  */
 EXPLAIN (costs off) SELECT * FROM everybody_view;
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
-                     Index Cond: (a < 42)
-               ->  Index Only Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Index Scan using our_table_1_prt_p1_1_a_idx3 on our_table_1_prt_p1_1 t3
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_2_a_idx3 on our_table_1_prt_p1_2 t3_1
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_3_a_idx3 on our_table_1_prt_p1_3 t3_2
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_4_a_idx3 on our_table_1_prt_p1_4 t3_3
+                           Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Index Scan using my_bitmap_index on my_table t1
+                                 Index Cond: (a < 42)
          ->  Hash
-               ->  Dynamic Index Only Scan on our_awesome_index on our_table
+               ->  Index Scan using your_bitmap_index on your_table t2
                      Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
- Optimizer: GPORCA
-(14 rows)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 /*+
     BitmapScan(t1 my_bitmap_index)
@@ -1154,30 +1281,44 @@ EXPLAIN (costs off) SELECT * FROM everybody_view;
     BitmapScan(t3 our_bitmap_index)
  */
 EXPLAIN (costs off) SELECT * FROM everybody_view;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Dynamic Bitmap Heap Scan on our_table
-                     Number of partitions to scan: 4 (out of 4)
-                     Recheck Cond: (a < 42)
-                     Filter: (a < 42)
-                     ->  Dynamic Bitmap Index Scan on our_bitmap_index
-                           Index Cond: (a < 42)
-               ->  Bitmap Heap Scan on my_table
-                     Recheck Cond: ((a = our_table.a) AND (a < 42))
-                     ->  Bitmap Index Scan on my_bitmap_index
-                           Index Cond: ((a = our_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_1 t3
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_1_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_2 t3_1
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_2_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_3 t3_2
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_3_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_4 t3_3
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_4_a_idx3
+                                 Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Bitmap Heap Scan on my_table t1
+                                 Recheck Cond: (a < 42)
+                                 ->  Bitmap Index Scan on my_bitmap_index
+                                       Index Cond: (a < 42)
          ->  Hash
-               ->  Bitmap Heap Scan on your_table
+               ->  Bitmap Heap Scan on your_table t2
                      Recheck Cond: (a < 42)
                      ->  Bitmap Index Scan on your_bitmap_index
                            Index Cond: (a < 42)
- Optimizer: GPORCA
-(21 rows)
+ Optimizer: Postgres-based planner
+(35 rows)
 
 /*+
     BitmapScan(t1)
@@ -1185,30 +1326,44 @@ EXPLAIN (costs off) SELECT * FROM everybody_view;
     BitmapScan(t3)
  */
 EXPLAIN (costs off) SELECT * FROM everybody_view;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Dynamic Bitmap Heap Scan on our_table
-                     Number of partitions to scan: 4 (out of 4)
-                     Recheck Cond: (a < 42)
-                     Filter: (a < 42)
-                     ->  Dynamic Bitmap Index Scan on our_bitmap_index
-                           Index Cond: (a < 42)
-               ->  Bitmap Heap Scan on my_table
-                     Recheck Cond: ((a = our_table.a) AND (a < 42))
-                     ->  Bitmap Index Scan on my_bitmap_index
-                           Index Cond: ((a = our_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_1 t3
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_1_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_2 t3_1
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_2_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_3 t3_2
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_3_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_4 t3_3
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_4_a_idx3
+                                 Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Bitmap Heap Scan on my_table t1
+                                 Recheck Cond: (a < 42)
+                                 ->  Bitmap Index Scan on my_bitmap_index
+                                       Index Cond: (a < 42)
          ->  Hash
-               ->  Bitmap Heap Scan on your_table
+               ->  Bitmap Heap Scan on your_table t2
                      Recheck Cond: (a < 42)
                      ->  Bitmap Index Scan on your_bitmap_index
                            Index Cond: (a < 42)
- Optimizer: GPORCA
-(21 rows)
+ Optimizer: Postgres-based planner
+(35 rows)
 
 --------------------------------------------------------------------
 --
@@ -1225,24 +1380,32 @@ EXPLAIN (costs off) WITH cte AS
     SELECT t1.a AS a1, t2.a AS a2, t3.a AS a3 FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a
 )
 SELECT a1, a2, a3 FROM cte WHERE a1<42;
-                              QUERY PLAN                              
-----------------------------------------------------------------------
+                          QUERY PLAN                           
+---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
+         Hash Cond: (t1.a = t2.a)
          ->  Hash Join
-               Hash Cond: (my_table.a = our_table.a)
-               ->  Seq Scan on my_table
-                     Filter: (a < 42)
-               ->  Hash
-                     ->  Dynamic Seq Scan on our_table
-                           Number of partitions to scan: 4 (out of 4)
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Seq Scan on our_table_1_prt_p1_1 t3
                            Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_2 t3_1
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_3 t3_2
+                           Filter: (a < 42)
+                     ->  Seq Scan on our_table_1_prt_p1_4 t3_3
+                           Filter: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Seq Scan on my_table t1
+                                 Filter: (a < 42)
          ->  Hash
-               ->  Seq Scan on your_table
+               ->  Seq Scan on your_table t2
                      Filter: (a < 42)
- Optimizer: GPORCA
-(15 rows)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 -- NB: IndexScan on AO table is invalid because AO tables do not support index
 --     scan (e.g. t2)
@@ -1255,22 +1418,32 @@ EXPLAIN (costs off) WITH cte AS
     SELECT t1.a AS a1, t2.a AS a2, t3.a AS a3 FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a
 )
 SELECT a1, a2, a3 FROM cte WHERE a1<42;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Nested Loop
-         Join Filter: true
-         ->  Nested Loop
-               Join Filter: true
-               ->  Dynamic Index Scan on our_amazing_index on our_table
-                     Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
-               ->  Index Scan using my_incredible_index on my_table
-                     Index Cond: ((a = our_table.a) AND (a < 42))
-         ->  Index Only Scan using your_incredible_index on your_table
-               Index Cond: ((a = my_table.a) AND (a < 42))
- Optimizer: GPORCA
-(13 rows)
+   ->  Hash Join
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Index Scan using our_table_1_prt_p1_1_a_idx2 on our_table_1_prt_p1_1 t3
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_2_a_idx2 on our_table_1_prt_p1_2 t3_1
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_3_a_idx2 on our_table_1_prt_p1_3 t3_2
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_4_a_idx2 on our_table_1_prt_p1_4 t3_3
+                           Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Index Scan using my_incredible_index on my_table t1
+                                 Index Cond: (a < 42)
+         ->  Hash
+               ->  Seq Scan on your_table t2
+                     Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 -- NB: IndexScan on AO table is invalid because AO tables do not support index
 --     scan (e.g. t2)
@@ -1283,22 +1456,32 @@ EXPLAIN (costs off) WITH cte AS
     SELECT t1.a AS a1, t2.a AS a2, t3.a AS a3 FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a
 )
 SELECT a1, a2, a3 FROM cte WHERE a1<42;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Nested Loop
-         Join Filter: true
-         ->  Nested Loop
-               Join Filter: true
-               ->  Dynamic Index Scan on our_awesome_index on our_table
-                     Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
-               ->  Index Scan using my_awesome_index on my_table
-                     Index Cond: ((a = our_table.a) AND (a < 42))
-         ->  Index Only Scan using your_incredible_index on your_table
-               Index Cond: ((a = my_table.a) AND (a < 42))
- Optimizer: GPORCA
-(13 rows)
+   ->  Hash Join
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Index Scan using our_table_1_prt_p1_1_a_idx3 on our_table_1_prt_p1_1 t3
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_2_a_idx3 on our_table_1_prt_p1_2 t3_1
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_3_a_idx3 on our_table_1_prt_p1_3 t3_2
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_4_a_idx3 on our_table_1_prt_p1_4 t3_3
+                           Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Index Scan using my_bitmap_index on my_table t1
+                                 Index Cond: (a < 42)
+         ->  Hash
+               ->  Seq Scan on your_table t2
+                     Filter: (a < 42)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 /*+
     IndexOnlyScan(t1 my_incredible_index)
@@ -1310,22 +1493,32 @@ EXPLAIN (costs off) WITH cte AS
     SELECT t1.a AS a1, t2.a AS a2, t3.a AS a3 FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a
 )
 SELECT a1, a2, a3 FROM cte WHERE a1<42;
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
+                                               QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Nested Loop
-         Join Filter: true
-         ->  Nested Loop
-               Join Filter: true
-               ->  Dynamic Index Only Scan on our_amazing_index on our_table
+   ->  Hash Join
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Index Only Scan using our_table_1_prt_p1_1_a_idx2 on our_table_1_prt_p1_1 t3
+                           Index Cond: (a < 42)
+                     ->  Index Only Scan using our_table_1_prt_p1_2_a_idx2 on our_table_1_prt_p1_2 t3_1
+                           Index Cond: (a < 42)
+                     ->  Index Only Scan using our_table_1_prt_p1_3_a_idx2 on our_table_1_prt_p1_3 t3_2
+                           Index Cond: (a < 42)
+                     ->  Index Only Scan using our_table_1_prt_p1_4_a_idx2 on our_table_1_prt_p1_4 t3_3
+                           Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Index Only Scan using my_incredible_index on my_table t1
+                                 Index Cond: (a < 42)
+         ->  Hash
+               ->  Index Only Scan using your_amazing_index on your_table t2
                      Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
-               ->  Index Only Scan using my_incredible_index on my_table
-                     Index Cond: ((a = our_table.a) AND (a < 42))
-         ->  Index Only Scan using your_amazing_index on your_table
-               Index Cond: ((a = my_table.a) AND (a < 42))
- Optimizer: GPORCA
-(13 rows)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 /*+
     IndexOnlyScan(t1)
@@ -1337,22 +1530,32 @@ EXPLAIN (costs off) WITH cte AS
     SELECT t1.a AS a1, t2.a AS a2, t3.a AS a3 FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a
 )
 SELECT a1, a2, a3 FROM cte WHERE a1<42;
-                                 QUERY PLAN                                  
------------------------------------------------------------------------------
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Nested Loop
-         Join Filter: true
-         ->  Nested Loop
-               Join Filter: true
-               ->  Dynamic Index Only Scan on our_awesome_index on our_table
+   ->  Hash Join
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Index Scan using our_table_1_prt_p1_1_a_idx3 on our_table_1_prt_p1_1 t3
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_2_a_idx3 on our_table_1_prt_p1_2 t3_1
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_3_a_idx3 on our_table_1_prt_p1_3 t3_2
+                           Index Cond: (a < 42)
+                     ->  Index Scan using our_table_1_prt_p1_4_a_idx3 on our_table_1_prt_p1_4 t3_3
+                           Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Index Scan using my_bitmap_index on my_table t1
+                                 Index Cond: (a < 42)
+         ->  Hash
+               ->  Index Scan using your_bitmap_index on your_table t2
                      Index Cond: (a < 42)
-                     Number of partitions to scan: 4 (out of 4)
-               ->  Index Only Scan using my_awesome_index on my_table
-                     Index Cond: ((a = our_table.a) AND (a < 42))
-         ->  Index Only Scan using your_incredible_index on your_table
-               Index Cond: ((a = my_table.a) AND (a < 42))
- Optimizer: GPORCA
-(13 rows)
+ Optimizer: Postgres-based planner
+(23 rows)
 
 /*+
     BitmapScan(t1 my_bitmap_index)
@@ -1364,30 +1567,44 @@ EXPLAIN (costs off) WITH cte AS
     SELECT t1.a AS a1, t2.a AS a2, t3.a AS a3 FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a
 )
 SELECT a1, a2, a3 FROM cte WHERE a1<42;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Dynamic Bitmap Heap Scan on our_table
-                     Number of partitions to scan: 4 (out of 4)
-                     Recheck Cond: (a < 42)
-                     Filter: (a < 42)
-                     ->  Dynamic Bitmap Index Scan on our_bitmap_index
-                           Index Cond: (a < 42)
-               ->  Bitmap Heap Scan on my_table
-                     Recheck Cond: ((a = our_table.a) AND (a < 42))
-                     ->  Bitmap Index Scan on my_bitmap_index
-                           Index Cond: ((a = our_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_1 t3
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_1_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_2 t3_1
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_2_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_3 t3_2
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_3_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_4 t3_3
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_4_a_idx3
+                                 Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Bitmap Heap Scan on my_table t1
+                                 Recheck Cond: (a < 42)
+                                 ->  Bitmap Index Scan on my_bitmap_index
+                                       Index Cond: (a < 42)
          ->  Hash
-               ->  Bitmap Heap Scan on your_table
+               ->  Bitmap Heap Scan on your_table t2
                      Recheck Cond: (a < 42)
                      ->  Bitmap Index Scan on your_bitmap_index
                            Index Cond: (a < 42)
- Optimizer: GPORCA
-(21 rows)
+ Optimizer: Postgres-based planner
+(35 rows)
 
 /*+
     BitmapScan(t1)
@@ -1399,30 +1616,44 @@ EXPLAIN (costs off) WITH cte AS
     SELECT t1.a AS a1, t2.a AS a2, t3.a AS a3 FROM my_table AS t1 JOIN your_table AS t2 ON t1.a=t2.a JOIN our_table AS t3 ON t3.a=t2.a
 )
 SELECT a1, a2, a3 FROM cte WHERE a1<42;
-                               QUERY PLAN                               
-------------------------------------------------------------------------
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
-         ->  Nested Loop
-               Join Filter: true
-               ->  Dynamic Bitmap Heap Scan on our_table
-                     Number of partitions to scan: 4 (out of 4)
-                     Recheck Cond: (a < 42)
-                     Filter: (a < 42)
-                     ->  Dynamic Bitmap Index Scan on our_bitmap_index
-                           Index Cond: (a < 42)
-               ->  Bitmap Heap Scan on my_table
-                     Recheck Cond: ((a = our_table.a) AND (a < 42))
-                     ->  Bitmap Index Scan on my_bitmap_index
-                           Index Cond: ((a = our_table.a) AND (a < 42))
+         Hash Cond: (t1.a = t2.a)
+         ->  Hash Join
+               Hash Cond: (t3.a = t1.a)
+               ->  Append
+                     Partition Selectors: $0
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_1 t3
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_1_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_2 t3_1
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_2_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_3 t3_2
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_3_a_idx3
+                                 Index Cond: (a < 42)
+                     ->  Bitmap Heap Scan on our_table_1_prt_p1_4 t3_3
+                           Recheck Cond: (a < 42)
+                           ->  Bitmap Index Scan on our_table_1_prt_p1_4_a_idx3
+                                 Index Cond: (a < 42)
+               ->  Hash
+                     ->  Partition Selector (selector id: $0)
+                           ->  Bitmap Heap Scan on my_table t1
+                                 Recheck Cond: (a < 42)
+                                 ->  Bitmap Index Scan on my_bitmap_index
+                                       Index Cond: (a < 42)
          ->  Hash
-               ->  Bitmap Heap Scan on your_table
+               ->  Bitmap Heap Scan on your_table t2
                      Recheck Cond: (a < 42)
                      ->  Bitmap Index Scan on your_bitmap_index
                            Index Cond: (a < 42)
- Optimizer: GPORCA
-(21 rows)
+ Optimizer: Postgres-based planner
+(35 rows)
 
 --------------------------------------------------------------------
 --
@@ -1432,43 +1663,39 @@ SELECT a1, a2, a3 FROM cte WHERE a1<42;
 /*+
     TidScan(t1)
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Operator Unsupported plan hint: TidScan not supported
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000775.42 rows=28700 width=4)
-   ->  Seq Scan on my_table t1  (cost=10000000000.00..10000000392.75 rows=9567 width=4)
-         Filter: (a < 42)
+EXPLAIN (costs off) SELECT t1.ctid FROM my_table AS t1 WHERE ctid = '(0,1)';
+NOTICE:  SELECT uses system-defined column "t1.ctid" without the necessary companion column "t1.gp_segment_id"
+HINT:  To uniquely identify a row within a distributed table, use the "gp_segment_id" column together with the "ctid" column.
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Tid Scan on my_table t1
+         TID Cond: (ctid = '(0,1)'::tid)
  Optimizer: Postgres-based planner
 (4 rows)
 
 /*+
     NoTidScan(t1)
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Operator Unsupported plan hint: NoTidScan not supported
-                                       QUERY PLAN                                        
------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=225.64..761.89 rows=28700 width=4)
-   ->  Bitmap Heap Scan on my_table t1  (cost=225.64..379.23 rows=9567 width=4)
-         Recheck Cond: (a < 42)
-         ->  Bitmap Index Scan on my_bitmap_index  (cost=0.00..223.25 rows=9567 width=0)
-               Index Cond: (a < 42)
+EXPLAIN (costs off) SELECT t1.ctid FROM my_table AS t1 WHERE  ctid >= '(0,1)';
+NOTICE:  SELECT uses system-defined column "t1.ctid" without the necessary companion column "t1.gp_segment_id"
+HINT:  To uniquely identify a row within a distributed table, use the "gp_segment_id" column together with the "ctid" column.
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on my_table t1
+         Filter: (ctid >= '(0,1)'::tid)
  Optimizer: Postgres-based planner
-(6 rows)
+(4 rows)
 
 /*+
     IndexScanRegexp(t1 '*awesome*')
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Operator Unsupported plan hint: IndexScanRegexp not supported
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000775.42 rows=28700 width=4)
-   ->  Seq Scan on my_table t1  (cost=10000000000.00..10000000392.75 rows=9567 width=4)
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on my_table t1
          Filter: (a < 42)
  Optimizer: Postgres-based planner
 (4 rows)
@@ -1476,13 +1703,11 @@ DETAIL:  Operator Unsupported plan hint: IndexScanRegexp not supported
 /*+
     IndexOnlyScanRegexp(t1 '*awesome*')
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Operator Unsupported plan hint: IndexOnlyScanRegexp not supported
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000775.42 rows=28700 width=4)
-   ->  Seq Scan on my_table t1  (cost=10000000000.00..10000000392.75 rows=9567 width=4)
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on my_table t1
          Filter: (a < 42)
  Optimizer: Postgres-based planner
 (4 rows)
@@ -1490,13 +1715,11 @@ DETAIL:  Operator Unsupported plan hint: IndexOnlyScanRegexp not supported
 /*+
     BitmapScanRegexp(t1 '*awesome*')
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Operator Unsupported plan hint: BitmapScanRegexp not supported
-                                             QUERY PLAN                                             
-----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000775.42 rows=28700 width=4)
-   ->  Seq Scan on my_table t1  (cost=10000000000.00..10000000392.75 rows=9567 width=4)
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on my_table t1
          Filter: (a < 42)
  Optimizer: Postgres-based planner
 (4 rows)
@@ -1510,55 +1733,46 @@ DETAIL:  Operator Unsupported plan hint: BitmapScanRegexp not supported
 /*+
     SeqScan()
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
 INFO:  pg_hint_plan: hint syntax error at or near "
  "
 DETAIL:  SeqScan hint requires a relation.
-INFO:  pg_hint_plan: hint syntax error at or near "
- "
-DETAIL:  SeqScan hint requires a relation.
-                                      QUERY PLAN                                       
----------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=4)
-   ->  Index Scan using my_awesome_index on my_table  (cost=0.00..6.00 rows=1 width=4)
-         Index Cond: (a < 42)
- Optimizer: GPORCA
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on my_table t1
+         Filter: (a < 42)
+ Optimizer: Postgres-based planner
 (4 rows)
 
 -- Mixing NoIndexScan and SeqScan hints
 /*+
     SeqScan(t1) NoIndexScan(t1)
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
 INFO:  pg_hint_plan: hint syntax error at or near "SeqScan(t1) NoIndexScan(t1)
  "
 DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "SeqScan(t1) NoIndexScan(t1)
- "
-DETAIL:  Conflict scan method hint.
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-   ->  Seq Scan on my_table  (cost=0.00..431.00 rows=1 width=4)
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on my_table t1
          Filter: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (4 rows)
 
 /*+
     NoIndexScan(t1) SeqScan(t1)
  */
-EXPLAIN SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
 INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t1) SeqScan(t1)
  "
 DETAIL:  Conflict scan method hint.
-INFO:  pg_hint_plan: hint syntax error at or near "NoIndexScan(t1) SeqScan(t1)
- "
-DETAIL:  Conflict scan method hint.
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-   ->  Seq Scan on my_table  (cost=0.00..431.00 rows=1 width=4)
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on my_table t1
          Filter: (a < 42)
- Optimizer: GPORCA
+ Optimizer: Postgres-based planner
 (4 rows)
 
