@@ -39,7 +39,8 @@ check_hash_partition_usage(void)
 
 	prep_status("Checking for hash partitioned tables");
 
-	snprintf(output_path, sizeof(output_path), "hash_partitioned_tables.txt");
+	snprintf(output_path, sizeof(output_path), "%s/%s",
+			 log_opts.basedir, "hash_partitioned_tables.txt");
 
 	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
@@ -113,7 +114,8 @@ old_GPDB6_check_for_unsupported_sha256_password_hashes(void)
 
 	prep_status("Checking for SHA-256 hashed passwords");
 
-	snprintf(output_path, sizeof(output_path), "roles_using_sha256_passwords.txt");
+	snprintf(output_path, sizeof(output_path), "%s/%s",
+			 log_opts.basedir, "roles_using_sha256_passwords.txt");
 
 	/* It's enough to check this in one database, pg_authid is a shared catalog. */
 	{

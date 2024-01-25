@@ -144,7 +144,9 @@ check_external_partition(void)
 
 	prep_status("Checking for external tables used in partitioning");
 
-	snprintf(output_path, sizeof(output_path), "external_partitions.txt");
+	snprintf(output_path, sizeof(output_path), "%s/%s",
+			 log_opts.basedir, "external_partitions.txt");
+
 	/*
 	 * We need to query the inheritance catalog rather than the partitioning
 	 * catalogs since they are not available on the segments.
@@ -251,7 +253,8 @@ check_covering_aoindex(void)
 
 	prep_status("Checking for non-covering indexes on partitioned AO tables");
 
-	snprintf(output_path, sizeof(output_path), "mismatched_aopartition_indexes.txt");
+	snprintf(output_path, sizeof(output_path), "%s/%s",
+			 log_opts.basedir, "mismatched_aopartition_indexes.txt");
 
 	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
@@ -322,7 +325,8 @@ check_orphaned_toastrels(void)
 
 	prep_status("Checking for orphaned TOAST relations");
 
-	snprintf(output_path, sizeof(output_path), "orphaned_toast_tables.txt");
+	snprintf(output_path, sizeof(output_path), "%s/%s",
+			 log_opts.basedir, "orphaned_toast_tables.txt");
 
 	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{
@@ -405,7 +409,8 @@ check_partition_indexes(void)
 
 	prep_status("Checking for indexes on partitioned tables");
 
-	snprintf(output_path, sizeof(output_path), "partitioned_tables_indexes.txt");
+	snprintf(output_path, sizeof(output_path), "%s/%s",
+			 log_opts.basedir, "partitioned_tables_indexes.txt");
 
 	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
 	{

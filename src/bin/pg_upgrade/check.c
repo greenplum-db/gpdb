@@ -232,7 +232,7 @@ report_clusters_compatible(void)
 				pg_fatal("could not determine current directory: %m\n");
 			canonicalize_path(cwd);
 
-			pg_log(PG_REPORT, "\n*Some cluster objects are not compatible*\n\npg_upgrade check output files are located:\n%s\n\n", cwd);
+			pg_log(PG_REPORT, "\n*Some cluster objects are not compatible*\n\npg_upgrade check output files are located in:\n%s\n\n", log_opts.basedir);
 		} else
 			pg_log(PG_REPORT, "\n*Clusters are compatible*\n");
 
@@ -1126,8 +1126,9 @@ check_for_composite_data_type_usage(ClusterInfo *cluster)
 
 	prep_status("Checking for system-defined composite types in user tables");
 
-	snprintf(output_path, sizeof(output_path), "tables_using_composite.txt");
-
+	snprintf(output_path, sizeof(output_path), "%s/%s",
+			 log_opts.basedir,
+			 "tables_using_composite.txt");
 	/*
 	 * Look for composite types that were made during initdb *or* belong to
 	 * information_schema; that's important in case information_schema was
@@ -1184,7 +1185,9 @@ check_for_reg_data_type_usage(ClusterInfo *cluster)
 
 	prep_status("Checking for reg* data types in user tables");
 
-	snprintf(output_path, sizeof(output_path), "tables_using_reg.txt");
+	snprintf(output_path, sizeof(output_path), "%s/%s",
+			 log_opts.basedir,
+			 "tables_using_reg.txt");
 
 	/*
 	 * Note: older servers will not have all of these reg* types, so we have
@@ -1241,7 +1244,8 @@ check_for_removed_data_type_usage(ClusterInfo *cluster, const char *version,
 	prep_status("Checking for removed \"%s\" data type in user tables",
 				datatype);
 
-	snprintf(output_path, sizeof(output_path), "tables_using_%s.txt",
+	snprintf(output_path, sizeof(output_path), "%s/tables_using_%s.txt",
+			 log_opts.basedir,
 			 datatype);
 	snprintf(typename, sizeof(typename), "pg_catalog.%s", datatype);
 
@@ -1273,7 +1277,9 @@ check_for_jsonb_9_4_usage(ClusterInfo *cluster)
 
 	prep_status("Checking for incompatible \"jsonb\" data type");
 
-	snprintf(output_path, sizeof(output_path), "tables_using_jsonb.txt");
+	snprintf(output_path, sizeof(output_path), "%s/%s",
+			 log_opts.basedir,
+			 "tables_using_jsonb.txt");
 
 	if (check_for_data_type_usage(cluster, "pg_catalog.jsonb", output_path))
 	{
