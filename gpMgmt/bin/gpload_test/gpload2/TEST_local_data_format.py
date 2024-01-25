@@ -481,6 +481,7 @@ def test_263_gpload_tabel_distributed_key():
     f.close()
 
 
+# For more info, please refer to https://github.com/greenplum-db/gpdb/issues/16959
 @pytest.mark.order(264)
 @prepare_before_test(num=264)
 def test_264_gpload_tabel_distributed_key():
