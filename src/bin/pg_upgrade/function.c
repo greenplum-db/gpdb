@@ -56,7 +56,6 @@ get_loadable_libraries(void)
 	PGresult  **ress;
 	int			totaltups;
 	int			dbnum;
-	bool		found_public_plpython_handler = false;
 
 	ress = (PGresult **) pg_malloc(old_cluster.dbarr.ndbs * sizeof(PGresult *));
 	totaltups = 0;
@@ -82,9 +81,6 @@ get_loadable_libraries(void)
 
 		PQfinish(conn);
 	}
-
-	if (found_public_plpython_handler)
-		pg_fatal("Remove the problem functions from the old cluster to continue.\n");
 
 	os_info.libraries = (LibraryInfo *) pg_malloc(totaltups * sizeof(LibraryInfo));
 	totaltups = 0;
