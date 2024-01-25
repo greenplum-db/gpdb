@@ -662,6 +662,10 @@ ResetWaitEventSet(WaitEventSet **pset, MemoryContext context, int nevents)
 		}
 	}
 
+	/* reuse the epoll object and free the old memory */
+	int     old_epoll_fd = set->epoll_fd;
+	pfree(set);
+
 	/* the same alloc logic as CreateWaitEventSet() */
 	char	   *data;
 	Size		sz = 0;
@@ -669,10 +673,6 @@ ResetWaitEventSet(WaitEventSet **pset, MemoryContext context, int nevents)
 	sz += MAXALIGN(sizeof(WaitEvent) * nevents);
 	sz += MAXALIGN(sizeof(struct epoll_event) * nevents);
 	data = (char *) MemoryContextAllocZero(context, sz);
-
-	/* reuse the epoll object and free the old memory */
-	int	old_epoll_fd = set->epoll_fd;
-	pfree(set);
 
 	set = (WaitEventSet *) data;
 	data += MAXALIGN(sizeof(WaitEventSet));
