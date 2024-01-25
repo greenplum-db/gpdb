@@ -3103,7 +3103,7 @@ CXformUtils::PexprBitmapSelectBestIndex(
 		{
 			pop->Release();
 			pexprIndexFinal->Release();
-			(*ppexprResidual) = pexprPred;
+			(*ppexprRecheck)->Release();
 			return nullptr;
 		}
 		return GPOS_NEW(mp) CExpression(mp, pop, pexprIndexFinal);

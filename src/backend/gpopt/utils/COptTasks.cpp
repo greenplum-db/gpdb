@@ -486,7 +486,6 @@ COptTasks::GetPlanHints(CMemoryPool *mp, Query *query)
 			continue;
 		}
 
-		StringPtrArray *indexnames = GPOS_NEW(mp) StringPtrArray(mp);
 		CScanHint::EType type = CScanHint::Sentinal;
 		switch (scan_hint->base.hint_keyword)
 		{
@@ -543,16 +542,18 @@ COptTasks::GetPlanHints(CMemoryPool *mp, Query *query)
 			}
 		}
 
-		ListCell *l;
-		foreach (l, scan_hint->indexnames)
-		{
-			char *indexname = (char *) lfirst(l);
-			indexnames->Append(GPOS_NEW(mp) CWStringConst(mp, indexname));
-		}
-
 		CScanHint *hint = plan_hints->GetScanHint(scan_hint->relname);
 		if (nullptr == hint)
 		{
+			StringPtrArray *indexnames = GPOS_NEW(mp) StringPtrArray(mp);
+
+			ListCell *l;
+			foreach (l, scan_hint->indexnames)
+			{
+				char *indexname = (char *) lfirst(l);
+				indexnames->Append(GPOS_NEW(mp) CWStringConst(mp, indexname));
+			}
+
 			hint = GPOS_NEW(mp) CScanHint(
 				mp, GPOS_NEW(mp) CWStringConst(mp, scan_hint->relname),
 				indexnames);
