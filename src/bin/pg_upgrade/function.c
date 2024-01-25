@@ -68,13 +68,17 @@ get_loadable_libraries(void)
 
 		/*
 		 * Fetch all libraries containing non-built-in C functions in this DB.
+		 * GPDB: $libdir/plpython2 was removed with GP7, which only supports
+		 * plpython3. The target GP7 cluster is not expected to have the
+		 * library, so it's excluded from the check.
 		 */
 		ress[dbnum] = executeQueryOrDie(conn,
 										"SELECT DISTINCT probin "
 										"FROM pg_catalog.pg_proc "
 										"WHERE prolang = %u AND "
 										"probin IS NOT NULL AND "
-										"oid >= %u;",
+										"probin != '$libdir/plpython2' "
+										"AND oid >= %u;",
 										ClanguageId,
 										FirstNormalObjectId);
 		totaltups += PQntuples(ress[dbnum]);
