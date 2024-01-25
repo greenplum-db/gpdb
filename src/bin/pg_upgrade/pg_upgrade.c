@@ -98,6 +98,7 @@ main(int argc, char **argv)
 	char       *sequence_script_file_name = NULL;
 	char	   *analyze_script_file_name = NULL;
 	char	   *deletion_script_file_name = NULL;
+	char	   *output_dir = NULL;
 	bool		live_check = false;
 
 	pg_logging_init(argv[0]);
@@ -128,8 +129,13 @@ main(int argc, char **argv)
 	/*
 	 * This needs to happen after adjusting the data directory of the new
 	 * cluster in adjust_data_dir().
+	 *
+	 * GPDB allows for relocateable output with the --output-dir flag
 	 */
-	make_outputdirs(new_cluster.pgdata);
+	if ((output_dir = get_output_dir()) != NULL)
+		make_outputdirs(output_dir);
+	else
+		make_outputdirs(new_cluster.pgdata);
 
 	setup(argv[0], &live_check);
 

@@ -1,3 +1,5 @@
+#include "postgres_fe.h"
+
 #include "pg_upgrade_greenplum.h"
 
 typedef enum
@@ -12,6 +14,7 @@ typedef struct {
 	bool continue_check_on_fatal;
 	bool skip_target_check;
 	bool skip_checks;
+	char *output_dir;
 } GreenplumUserOpts;
 
 static GreenplumUserOpts greenplum_user_opts;
@@ -24,6 +27,7 @@ initialize_greenplum_user_options(void)
 	greenplum_user_opts.continue_check_on_fatal = false;
 	greenplum_user_opts.skip_target_check = false;
 	greenplum_user_opts.skip_checks = false;
+	greenplum_user_opts.output_dir = NULL;
 }
 
 bool
@@ -76,6 +80,10 @@ process_greenplum_option(greenplumOption option)
 			greenplum_user_opts.skip_checks = true;
 			break;
 
+		case GREENPLUM_OUTPUT_DIR:
+			greenplum_user_opts.output_dir = pg_strdup(optarg);
+			break;
+
 		default:
 			return false;
 	}
@@ -123,4 +131,10 @@ bool
 skip_checks(void)
 {
 	return greenplum_user_opts.skip_checks;
+}
+
+char*
+get_output_dir(void)
+{
+	return greenplum_user_opts.output_dir;
 }
