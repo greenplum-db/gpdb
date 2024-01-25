@@ -23,7 +23,12 @@
 #include "optimizer/appendinfo.h"
 #include "optimizer/clauses.h"
 #include "optimizer/cost.h"
+/*
+ * GPDB does not support geqo planner
+ */
+#if 0
 #include "optimizer/geqo.h"
+#endif
 #include "optimizer/joininfo.h"
 #include "optimizer/optimizer.h"
 #include "optimizer/pathnode.h"
@@ -4626,18 +4631,22 @@ pg_hint_plan_join_search(PlannerInfo *root, int levels_needed,
 	{
 		if (prev_join_search)
 			return (*prev_join_search) (root, levels_needed, initial_rels);
+#if 0
 		else if (enable_geqo && levels_needed >= geqo_threshold)
 			return geqo(root, levels_needed, initial_rels);
+#endif
 		else
 			return standard_join_search(root, levels_needed, initial_rels);
 	}
 
+#if 0
 	/*
 	 * In the case using GEQO, only scan method hints and Set hints have
 	 * effect.  Join method and join order is not controllable by hints.
 	 */
 	if (enable_geqo && levels_needed >= geqo_threshold)
 		return geqo(root, levels_needed, initial_rels);
+#endif
 
 	nbaserel = get_num_baserels(initial_rels);
 	current_hint_state->join_hint_level =

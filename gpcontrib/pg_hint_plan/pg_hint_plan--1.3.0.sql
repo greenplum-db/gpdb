@@ -11,6 +11,7 @@ CREATE TABLE hint_plan.hints (
 	PRIMARY KEY (id)
 );
 CREATE UNIQUE INDEX hints_norm_and_app ON hint_plan.hints (
+	id, -- GPDB: unique indexes must contain distribution keys
 	norm_query_string,
 	application_name
 );

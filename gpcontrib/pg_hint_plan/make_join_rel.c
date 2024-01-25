@@ -20,6 +20,11 @@
  */
 
 /*
+ * GPDB: API differs here...
+ */
+#define mark_dummy_rel(joinrel) mark_dummy_rel(root, joinrel)
+
+/*
  * adjust_rows: tweak estimated row numbers according to the hint.
  */
 static double
