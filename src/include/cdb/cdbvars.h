@@ -679,6 +679,9 @@ extern int gp_workfile_bytes_to_checksum;
 
 extern bool coredump_on_memerror;
 
+/* Greenplum MK Sort */
+extern bool gp_enable_mk_sort;
+
 /*
  * Autostats feature, whether or not to to automatically run ANALYZE after 
  * insert/delete/update/ctas or after ctas/copy/insert in case the target

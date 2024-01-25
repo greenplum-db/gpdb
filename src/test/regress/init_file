@@ -212,4 +212,11 @@ s/^------------+\s*$/------------\n/
 # ignore resource queue ids
 m/resource queue id: \d+/
 s/resource queue id: \d+/resource queue id: XXXX/
+
+# ignore concrete column/key info for checking index duplication
+m/Key (.*)+ is duplicated/
+s/Key (.*)+ is duplicated/Key \(xxx\)=\(xxx\) is duplicated/
+m/Key (.*)+ already exists/
+s/Key (.*)+ already exists/Key \(xxx\)=\(xxx\) already exists/
+
 -- end_matchsubs

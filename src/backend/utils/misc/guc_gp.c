@@ -450,6 +450,9 @@ double		optimizer_jit_optimize_above_cost;
 /* Switch to toggle block-directory based sampling for AO/CO tables */
 bool		gp_enable_blkdir_sampling;
 
+/* Executor */
+bool		gp_enable_mk_sort = true;
+
 static const struct config_enum_entry gp_log_format_options[] = {
 	{"text", 0},
 	{"csv", 1},
@@ -812,6 +815,20 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_enable_motion_deadlock_sanity,
 		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_enable_mk_sort", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Enable multi-key sort, which has better performance "
+						 "than standard qsort for data set with multiple keys "
+						 "to be sorted."),
+			gettext_noop("A faster sort."),
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+
+		},
+		&gp_enable_mk_sort,
+		true,
 		NULL, NULL, NULL
 	},
 

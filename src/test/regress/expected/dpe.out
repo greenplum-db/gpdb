@@ -455,7 +455,7 @@ explain (costs off, timing off, summary off, analyze) select *, rank() over (ord
          Merge Key: pt_1_prt_2.ptid, pt_1_prt_2.pt1
          ->  Sort (actual rows=8 loops=1)
                Sort Key: pt_1_prt_2.ptid, pt_1_prt_2.pt1
-               Sort Method:  quicksort  Memory: 76kB
+               Sort Method:  multi-key sort  Memory: 76kB
                Executor Memory: 85kB  Segments: 3  Max: 29kB (segment 1)
                ->  Hash Join (actual rows=8 loops=1)
                      Hash Cond: (pt_1_prt_2.ptid = t.tid)

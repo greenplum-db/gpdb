@@ -257,7 +257,7 @@ SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554435);
 1U: SELECT * FROM brin_revmap_data(get_raw_page('brin_ao_specific_@amname@_i_idx', 1))
   WHERE pages != '(0,0)' order by 1;
 1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_specific_@amname@_i_idx', 2),
-  'brin_ao_specific_@amname@_i_idx') ORDER BY blknum, attnum;
+  'brin_ao_specific_@amname@_i_idx') ORDER BY blknum, attnum, itemoffset;
 
 -- Now desummarize the last remaining range in the data page (from aoseg2).
 SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 67108864);
