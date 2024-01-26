@@ -3082,13 +3082,6 @@ getPolicyForDistributedBy(DistributedBy *distributedBy, TupleDesc tupdesc)
 					if (strcmp(colname, NameStr(attr->attname)) == 0)
 					{
 						Oid			opclass;
-						Oid			typid;
-
-						typid = getBaseType(attr->atttypid);
-						if (type_is_enum(typid))
-							ereport(ERROR,
-									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-									 errmsg("cannot use ENUM column \"%s\" in DISTRIBUTED BY statement", colname)));
 
 						opclass = cdb_get_opclass_for_column_def(dkelem->opclass, attr->atttypid);
 
