@@ -4106,6 +4106,8 @@ freePGconn(PGconn *conn)
 		free(conn->krbsrvname);
 	if (conn->gsslib)
 		free(conn->gsslib);
+	if (conn->gpconntype)
+		free(conn->gpconntype);
 	if (conn->gpqeid)			/* CDB */
 		free(conn->gpqeid);
 	if (conn->connip)
