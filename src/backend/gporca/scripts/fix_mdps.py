@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 #
 # updates plan and plan size in mdp files. Run ./fix_mdps.py --help for detailed description
 # Should be run from within <orca_src>/build directory
@@ -72,7 +72,7 @@ def processLogFile(logFileLines):
             current_file = line.split()[-1]
             current_file = current_file.split('\"')[0]
             if read_plan > 0:
-                print "Log file contains partial plans for %s, please update this file by hand" % (current_file)
+                print("Log file contains partial plans for %s, please update this file by hand" % (current_file))
                 read_plan = 0
         elif actualPlanMatch:
             read_plan = 1
@@ -85,14 +85,14 @@ def processLogFile(logFileLines):
             actual_plan = actual_plan + "    " + line
             if not dryrun:
                 replacePlanInFile(current_file, actual_plan )
-                print "Changed query plan in %s \n" % (current_file)
+                print("Changed query plan in %s \n" % (current_file))
             else:
-                print "Query plan is different in %s \n" % (current_file)
+                print("Query plan is different in %s \n" % (current_file))
         elif read_plan > 1:
             actual_plan = actual_plan + "    " + line
             if re.search(r',TRACE,', line):
                 # we reached the end of the plan section without finding the end plan tag
-                print "Log file contains partial plans for %s, please update this file by hand" % (current_file)
+                print("Log file contains partial plans for %s, please update this file by hand" % (current_file))
                 read_plan = 0
         elif actualSizeMatch:
             actualSize = re.search('Actual size: (\d+)', line).group(1)
@@ -100,23 +100,23 @@ def processLogFile(logFileLines):
             expectedSize = re.search('Expected size: (\d+)', line).group(1)
             if not dryrun:
                 replacePlanSize(current_file, actualSize, expectedSize)
-                print "Changed plan size in %s \n" % (current_file)
+                print("Changed plan size in %s \n" % (current_file))
             else:
-                print "Plan size is different in %s \n" % (current_file)
+                print("Plan size is different in %s \n" % (current_file))
             failureMatch = 0
         elif errorLogMatch:
-            print "Error in file %s: %s" % (current_file, line)
+            print("Error in file %s: %s" % (current_file, line))
         elif failureMatch:
             if not re.search(r'Plan [a-z ]*comparison', line) and not re.search(r'Unittest', line):
                 if errorfile != current_file:
-                    print "File %s failed for some other reason\n" % (current_file)
+                    print("File %s failed for some other reason\n" % (current_file))
                     errorfile = current_file
 
 def runTests(testFileNames):
     tests_to_fix = parseInputFile(testFileNames)
     for test in tests_to_fix:
         command = "./server/gporca_test -U " + test
-        print "Running test: " + test
+        print("Running test: " + test)
         command = command.split()
         all_lines = run_command(command)
         processLogFile(all_lines)
@@ -140,13 +140,13 @@ def main():
     logfile = args.logFile
 
     if inputfile is None and logfile is None:
-        print "Either a file with failed tests or a log file needs to be specified\n"
+        print("Either a file with failed tests or a log file needs to be specified\n")
         exit(1)
     elif inputfile is not None and logfile is not None:
-        print "If a file with failed tests is specified, the --logFile is not allowed\n"
+        print("If a file with failed tests is specified, the --logFile is not allowed\n")
         exit(1)
 
-    print "File: %s, dryrun %s, logfile %s\n" % (inputfile, dryrun, logfile)
+    print("File: %s, dryrun %s, logfile %s\n" % (inputfile, dryrun, logfile))
 
     if inputfile is not None:
         runTests(inputfile)
