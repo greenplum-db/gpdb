@@ -574,6 +574,9 @@ check_multi_column_list_partition_keys(ClusterInfo *cluster)
 	bool			found = false;
 	int				dbnum;
 
+	if (GET_MAJOR_VERSION(cluster->major_version) > 904)
+		return;
+
 	prep_status("Checking for multi-column LIST partition keys");
 
 	snprintf(output_path, sizeof(output_path), "%s/%s",
