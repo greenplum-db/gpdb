@@ -689,7 +689,7 @@ Feature: gprecoverseg tests
       Then gprecoverseg should return a return code of 0
       And gprecoverseg should print "One or more hosts are not reachable via SSH." to stdout
       And gprecoverseg should print "Host invalid_host is unreachable" to stdout
-      And the created config file /tmp/output_config contains the row for unreachable failed segment
+      And the created config file /tmp/output_config contains the commented row for unreachable failed segment
       And the cluster is returned to a good state
 
     @demo_cluster
