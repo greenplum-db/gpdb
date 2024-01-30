@@ -8187,7 +8187,7 @@ getTriggers(Archive *fout, TableInfo tblinfo[], int numTables)
 						  "SELECT t.tgrelid, t.tgname, "
 						  "t.tgfoid::pg_catalog.regproc AS tgfname, "
 						  "pg_catalog.pg_get_triggerdef(t.oid, false) AS tgdef, "
-						  "t.tgenabled, t.tableoid, t.oid "
+						  "t.tgenabled, t.tableoid, t.oid, false as tgisinternal "
 						  "FROM unnest('%s'::pg_catalog.oid[]) AS src(tbloid)\n"
 						  "JOIN pg_catalog.pg_trigger t ON (src.tbloid = t.tgrelid) "
 						  "WHERE NOT t.tgisinternal "
