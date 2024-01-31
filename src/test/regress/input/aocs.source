@@ -649,3 +649,17 @@ truncate table fix_aoco_truncate_last_sequence;
 insert into fix_aoco_truncate_last_sequence select 1, 1 from generate_series(1, 5); 
 select count(*) from fix_aoco_truncate_last_sequence;
 abort;
+
+-- Types by reference but the storage is plain
+CREATE TABLE test_ao_tsquery(c1 TSVECTOR, c2 TSQUERY, c3 INT) USING ao_column DISTRIBUTED BY (c3);
+INSERT INTO test_ao_tsquery(c1, c2, c3) VALUES('a fat cat sat on a mat and ate a fat rat'::TSVECTOR, 'fat & rat'::TSQUERY, 1);
+ANALYZE test_ao_tsquery;
+SELECT * FROM test_ao_tsquery;
+DROP TABLE test_ao_tsquery;
+
+-- Test user defined types working with the convert-to-short-varlena
+-- optimization
+CREATE TYPE type_to_shorten AS (f1 int, f2 text);
+CREATE TABLE shorten_udt(c1 type_to_shorten) USING ao_column;
+INSERT INTO shorten_udt SELECT '(1,foo)';
+SELECT * FROM shorten_udt;

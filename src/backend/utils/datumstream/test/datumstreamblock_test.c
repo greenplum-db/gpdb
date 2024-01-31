@@ -45,6 +45,7 @@ test__DeltaCompression__Core(void **state)
 	/* For unit testing using this type object */
 	typeInfo.datumlen = 4;
 	typeInfo.typid = INT4OID;
+	typeInfo.typstorage = 'p';
 	typeInfo.byval = true;
 
 	/* 
