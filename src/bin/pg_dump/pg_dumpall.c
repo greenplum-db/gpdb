@@ -865,7 +865,7 @@ dumpResGroups(PGconn *conn)
 			else
 			{
 				printfPQExpBuffer(buf, "CREATE RESOURCE GROUP %s WITH ("
-									   "concurrency=%s, cpu_set=%s);\n",
+									   "concurrency=%s, cpuset=%s);\n",
 								  fmtId(groupname), concurrency, cpuset);
 			}
 
