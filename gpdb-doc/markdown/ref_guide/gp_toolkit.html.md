@@ -1036,7 +1036,7 @@ If your database employs partitions you will need to perform certain tasks regul
 
 ### The gp_partitions View
 
-The `gp_partitions` view shows the structure of partitioned tables in a database.
+The `gp_partitions` view shows all leaf partitions in a database.
 
 This view provides backwards compatibility with the legacy `pg_partitions` view (available in earlier major versions of VMware Greenplum). 
 
@@ -1044,7 +1044,7 @@ This view provides backwards compatibility with the legacy `pg_partitions` view 
 |------|------|---------|
 |schemaname|name|The name of the schema the partitioned table is in.|
 |tablename|name|The name of the top-level parent table.|
-|partitionschemaname|name|The namespace of the partition table.|
+|partitionschemaname|name|The schema of the partition table.|
 |partitiontablename|name|The relation name of the partitioned table (this is the table name to use if accessing the partition directly).|
 |parentpartitiontablename|regclass|The relation name of the parent table one level up from this partition.|
 |partitiontype|text|The type of partition (range or list).|
