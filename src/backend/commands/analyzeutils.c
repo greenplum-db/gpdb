@@ -29,7 +29,6 @@
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 #include "utils/hsearch.h"
-#include "nodes/makefuncs.h"
 #include "catalog/partition.h"
 
 

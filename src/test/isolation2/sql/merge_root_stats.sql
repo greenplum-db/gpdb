@@ -1,13 +1,13 @@
 -----------------------------------------------
 -- Reset flags to ignore any changes from tests before running these tests.
-SET optimizer_trace_fallback=on;
+set optimizer_trace_fallback=on;
 reset optimizer_analyze_root_partition;
 reset optimizer_analyze_midlevel_partition;
--- To control running of autovacuum, set naptime to high value
+-- To control running of autovacuum, set naptime to high value (5 days in seconds)
 -- it is changed to low value when autovacuum is required to trigger
-ALTER SYSTEM SET autovacuum_naptime = 900;
-ALTER SYSTEM SET autovacuum_vacuum_threshold = 10;
-ALTER SYSTEM SET autovacuum_analyze_threshold = 10;
+alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_vacuum_threshold = 10;
+alter system set autovacuum_analyze_threshold = 10;
 select * from pg_reload_conf();
 create extension if not exists gp_inject_fault;
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
@@ -47,11 +47,11 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 -- 4. Attach new partition, wait for autoanalyze to trigger and check that stats are updated.
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -59,11 +59,11 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 --5. Detach Partition (Leaf2), wait for autoanalyze to trigger and check that stats are updated.
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 detach partition rootTabLeaf2;
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -105,11 +105,11 @@ insert into rootTabLeaf2 select i%20 from generate_series(10,19)i;
 -- select objname, actionname, subtype from pg_stat_operations where objname like 'root%' order by statime ASC;
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -117,11 +117,11 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 -- 5. Detach Partition (Leaf2) and check that stats are not updated.
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 detach partition rootTabLeaf2;
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -151,11 +151,11 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 -- 2. Attach analyed partition(Leaf1), wait for autoanalyze to trigger and check that root stats are updated.
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -173,11 +173,11 @@ insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
 -- 5. Attach new partition, wait for autoanalyze to trigger and check that root stats are updated.
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -185,11 +185,11 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 -- 6. Detach Partition (Leaf2) and check that root stats are updated.
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 detach partition rootTabLeaf2;
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -219,11 +219,11 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 -- 2. Attach analyed partition(Leaf1), wait for autoanalyze to trigger and check that root stats are updated.
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -240,11 +240,11 @@ insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
 -- with leaf2 data, as leaf2 was not analyzed. Note that auto analyze did trigger after attach command.
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -252,11 +252,11 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 -- 6. Detach Partition (Leaf2) and check that root stats are not updated.
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 detach partition rootTabLeaf2;
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -292,11 +292,11 @@ insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
 -- 4. Attach new partition, wait for autoanalyze to trigger and check that root stats are not updated
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -304,11 +304,11 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 -- 5. Detach Partition (Leaf2) and check that root stats are not updated.
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 detach partition rootTabLeaf2;
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -345,11 +345,11 @@ insert into rootTabLeaf1 select i%10 from generate_series(5,9)i;
 -- 4. Attach new partition, wait for autoanalyze to trigger and check that root stats are not updated
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -357,11 +357,11 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 -- 5. Detach Partition (Leaf2), wait for autoanalyze to trigger and check that root stats are not updated
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 detach partition rootTabLeaf2;
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -391,11 +391,11 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 --3. Attach leaf, wait for autoanalyze to trigger and check that root stats are updated
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTab attach partition rootTableaf1 for values from (0) to (10);
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -405,11 +405,11 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTab detach partition rootTabLeaf1;
 select * from rootTab;
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -440,11 +440,11 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 --3. Attach leaf, wait for autoanalyze to trigger and check that root stats are updated
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;
@@ -453,11 +453,11 @@ select tablename, attname,inherited,histogram_bounds from pg_stats where tablena
 --   After Detach, no leaf is present, so Analyze is not performed.
 select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab', 1, -1, 0, 1);
 alter table rootTabMid1 detach partition rootTabLeaf1;
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 select * from pg_reload_conf();
 select gp_wait_until_triggered_fault('analyze_finished_one_relation', 1, 1);
 select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 select * from pg_reload_conf();
 select count(*) from roottab;
 select tablename, attname,inherited,histogram_bounds from pg_stats where tablename like 'root%' order by tablename;

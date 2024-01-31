@@ -401,7 +401,7 @@ static void av_sighup_handler(SIGNAL_ARGS);
 static void avl_sigusr2_handler(SIGNAL_ARGS);
 static void avl_sigterm_handler(SIGNAL_ARGS);
 static void autovac_refresh_stats(void);
-static void addTablesFromAutoVacWorkers(HTAB *top_level_partition_roots);
+static void add_tables_from_autovac_workers(HTAB *top_level_partition_roots);
 
 
 
@@ -2455,7 +2455,7 @@ do_autovacuum(void)
 	 * Add tables received via auto vacuum workers to be considered
 	 * for vacuum/analyze.
 	 */
-	addTablesFromAutoVacWorkers(top_level_partition_roots);
+	add_tables_from_autovac_workers(top_level_partition_roots);
 
 	/*
 	 * GPDB: Analyze (merge leaf stats) all top-level partition roots at the end. This
@@ -2468,7 +2468,6 @@ do_autovacuum(void)
 
 	hash_destroy(top_level_partition_roots);
 	hash_destroy(sessionhash);
-
 	/*
 	 * Perform operations on collected tables.
 	 */
@@ -3620,7 +3619,7 @@ autovac_refresh_stats(void)
  * is processed in the function. This worker type brings the OID
  * of the root table to which a partition is attached/detached.
  */
-static void addTablesFromAutoVacWorkers(HTAB *top_level_partition_roots)
+static void add_tables_from_autovac_workers(HTAB *top_level_partition_roots)
 {
 
 	LWLockAcquire(AutovacuumLock, LW_EXCLUSIVE);
@@ -3641,7 +3640,7 @@ static void addTablesFromAutoVacWorkers(HTAB *top_level_partition_roots)
 		if (workitem->avw_database != MyDatabaseId)
 			continue;
 
-		/* claim this one, and release lock while performing it */
+		/* claim this worker */
 		workitem->avw_active = true;
 
 		/*

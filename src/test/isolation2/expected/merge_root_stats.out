@@ -1,18 +1,18 @@
 -----------------------------------------------
 -- Reset flags to ignore any changes from tests before running these tests.
-SET optimizer_trace_fallback=on;
+set optimizer_trace_fallback=on;
 SET
 reset optimizer_analyze_root_partition;
 RESET
 reset optimizer_analyze_midlevel_partition;
 RESET
--- To control running of autovacuum, set naptime to high value
+-- To control running of autovacuum, set naptime to high value (5 days in seconds)
 -- it is changed to low value when autovacuum is required to trigger
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
-ALTER SYSTEM SET autovacuum_vacuum_threshold = 10;
+alter system set autovacuum_vacuum_threshold = 10;
 ALTER SYSTEM
-ALTER SYSTEM SET autovacuum_analyze_threshold = 10;
+alter system set autovacuum_analyze_threshold = 10;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -93,7 +93,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -110,7 +110,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -138,7 +138,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 detach partition rootTabLeaf2;
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -155,7 +155,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -235,7 +235,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -252,7 +252,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -279,7 +279,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 detach partition rootTabLeaf2;
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -296,7 +296,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -358,7 +358,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -375,7 +375,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -422,7 +422,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -439,7 +439,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -467,7 +467,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 detach partition rootTabLeaf2;
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -484,7 +484,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -547,7 +547,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -564,7 +564,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -603,7 +603,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -620,7 +620,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -647,7 +647,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 detach partition rootTabLeaf2;
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -664,7 +664,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -732,7 +732,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -749,7 +749,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -775,7 +775,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 detach partition rootTabLeaf2;
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -792,7 +792,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -859,7 +859,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 attach partition rootTabLeaf2 for values from (10) to (20);
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -876,7 +876,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -901,7 +901,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 detach partition rootTabLeaf2;
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -918,7 +918,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -977,7 +977,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTab attach partition rootTableaf1 for values from (0) to (10);
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -994,7 +994,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -1026,7 +1026,7 @@ select * from rootTab;
  a 
 ---
 (0 rows)
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -1043,7 +1043,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -1107,7 +1107,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 attach partition rootTabLeaf1 for values from (0) to (10);
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -1124,7 +1124,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -1152,7 +1152,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'skip', '', '', 'roottab
 (1 row)
 alter table rootTabMid1 detach partition rootTabLeaf1;
 ALTER TABLE
-ALTER SYSTEM SET autovacuum_naptime = 2;
+alter system set autovacuum_naptime = 2;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -1169,7 +1169,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-ALTER SYSTEM SET autovacuum_naptime = 900;
+alter system set autovacuum_naptime = 432000;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
