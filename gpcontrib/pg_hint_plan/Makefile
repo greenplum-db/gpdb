@@ -47,10 +47,6 @@ TARSOURCES = Makefile *.c  *.h COPYRIGHT* \
 	doc/* expected/*.out sql/*.sql sql/maskout.sh \
 	data/data.csv input/*.source output/*.source SPECS/*.spec
 
-ifneq ($(shell uname), SunOS)
-LDFLAGS+=-Wl,--build-id
-endif
-
 rpms: rpm12
 
 # pg_hint_plan.c includes core.c and make_join_rel.c
