@@ -345,6 +345,9 @@ select count(*) from gp_dist_random('t_rep4');
 select count(distinct nextval) from gp_dist_random('t_rep4');
 drop table rep_tbl, t_rep4;
 
+create table t_random(id int) distributed randomly;
+create table t_replicated as select random() from t_random distributed replicated;
+
 --
 -- Test append different numsegments tables work well
 -- See Github issue: https://github.com/greenplum-db/gpdb/issues/12146
