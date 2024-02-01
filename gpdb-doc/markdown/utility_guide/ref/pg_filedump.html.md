@@ -7,7 +7,7 @@ Formats VMware Greenplum data files into human-readable form.
 ```
 pg_filedump [<option> ...] <filename>
 
-pg_filedump -? | --help
+pg_filedump -? | -h | --help
 
 pg_filedump -V | --version
 ```
@@ -38,14 +38,12 @@ To use `pg_filedump`, you must have:
 :   Optional. Display formatted block content dump (This option disables all formatting options.)
 
 -D 
-: Optional. Decode tuples using given comma separated list of types. Supported types include bigint bigserial bool char charN date float float4 float8 int json macaddr name oid real serial smallint smallserial text time timestamp timetz uuid varchar varcharN xid xml
-    ?????????~ ignores all attributes left in a tuple ???????
+: Optional. Decode tuples using given comma separated list of types. Supported types include `bigint`, `bigserial`, `bool`, `char`, `charN`, `date`, `float`, `float4`, `float8`, `int`, `json`, `macaddr`, `name`, `oid`, `real`, `serial`, `smallint`, `smallserial`, `text`, `time`, `timestamp`, `timetz`, `uuid`, `varchar`, `varcharN`, `xid`, `xml`.
+
+Any attributes in the tuple not specified by `D` arguments will not be printed.
 
 -f   
 :   Optional. Display formatted block content dump along with interpretation.
-
--h  
-:   Optional. Display this information. ?????????????
 
 -i  
 :   Optional. Display interpreted item details.
@@ -62,7 +60,7 @@ To use `pg_filedump`, you must have:
 where <startblock> is the block to start at and <endblock> is the block to end at.
 
 >**NOTE**
->A startblock without an endblock will format the single block.
+>If you pass <startblock> without also passing <endblock>, the `-R` option will from the starting block until the end of the file.
 
 -s  <segsize>
 :   Optional. Force segment size to <segsize>.
@@ -102,10 +100,10 @@ where <startblock> is the block to start at and <endblock> is the block to end a
 
 
 
-### <a id="options_aoco"></a>Options for Append-Only Column-Oriented Table Files
+### <a id="options_aoco"></a>Options for Append-Optimized Column-Oriented Table Files
 
   -z  
-  :   Optional. Interpret the file listed as an append-only file.
+  :   Optional. Interpret the file listed as an append-optimized file.
 
   -T  
   :   Optional. Specify the compression type (`zlib`, `zstd`, `quicklz` or 
@@ -115,11 +113,11 @@ where <startblock> is the block to start at and <endblock> is the block to end a
   :   Optional. Specify the compression level (`1`, `2`, `3`, or `4`). If not 
       specified, defaults to `0`.
 
-  -M  Checksum option for AppendOnly files, by default tool considers
-      checksums not present
-  -O  Orientation of AppendOnly table (row or column),
-      default=row if not not specified.
+  -M  
+  :   Optional. Checksum option for append-optimized files; by default, the utility  considers checksums not present
 
+  -O  
+  :   Optional. Specifies orientation of the append-optimized table (either `row` or `column`); if not specified, defaults to `row`.
 
 ## <a id="examples"></a>Examples 
 
