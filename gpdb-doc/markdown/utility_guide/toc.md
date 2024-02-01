@@ -42,6 +42,7 @@
         - [pg\_config](./ref/pg_config.md)
         - [pg\_dump](./ref/pg_dump.md)
         - [pg\_dumpall](./ref/pg_dumpall.md)
+        - [pg_filedump](./ref/pg_filedump.md)
         - [pg\_restore](./ref/pg_restore.md)
         - [plcontainer](./ref/plcontainer.md)
         - [plcontainer Configuration File](./ref/plcontainer-configuration.md)
