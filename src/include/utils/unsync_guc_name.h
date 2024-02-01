@@ -393,6 +393,7 @@
 		"optimizer_enable_tablescan",
 		"optimizer_enable_foreign_table",
 		"optimizer_enable_right_outer_join",
+		"optimizer_enable_query_parameter",
 		"optimizer_enforce_subplans",
 		"optimizer_enumerate_plans",
 		"optimizer_expand_fulljoin",

@@ -56,6 +56,7 @@ enum Edxlopid
 	EdxlopScalarCmp,
 	EdxlopScalarDistinct,
 	EdxlopScalarIdent,
+	EdxlopScalarParam,
 	EdxlopScalarProjectList,
 	EdxlopScalarProjectElem,
 	EdxlopScalarConstTuple,

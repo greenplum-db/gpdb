@@ -21,6 +21,7 @@ extern "C" {
 #include "nodes/primnodes.h"
 #include "utils/date.h"
 #include "utils/datum.h"
+#include "utils/guc.h"
 #include "utils/uuid.h"
 }
 
@@ -66,6 +67,7 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLScalarNullTest.h"
 #include "naucrates/dxl/operators/CDXLScalarOneTimeFilter.h"
 #include "naucrates/dxl/operators/CDXLScalarOpExpr.h"
+#include "naucrates/dxl/operators/CDXLScalarParam.h"
 #include "naucrates/dxl/operators/CDXLScalarProjElem.h"
 #include "naucrates/dxl/operators/CDXLScalarSortGroupClause.h"
 #include "naucrates/dxl/operators/CDXLScalarSubquery.h"
@@ -266,6 +268,32 @@ CTranslatorScalarToDXL::TranslateVarToDXL(
 
 //---------------------------------------------------------------------------
 //	@function:
+//		CTranslatorScalarToDXL::TranslateParamToDXL
+//
+//	@doc:
+//		Create a DXL node for a scalar param expression from a GPDB Param
+//---------------------------------------------------------------------------
+CDXLNode *
+CTranslatorScalarToDXL::TranslateParamToDXL(
+	const Expr *expr, const CMappingVarColId *var_colid_mapping)
+{
+	GPOS_ASSERT(IsA(expr, Param));
+	const Param *param = (Param *) expr;
+
+	CDXLScalarParam *scalar_param = GPOS_NEW(m_mp) CDXLScalarParam(
+		m_mp, param->paramid,
+		GPOS_NEW(m_mp) CMDIdGPDB(IMDId::EmdidGeneral, param->paramtype),
+		param->paramtypmod);
+
+	// create the DXL node holding the scalar param operator
+	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, scalar_param);
+
+	return dxlnode;
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CTranslatorScalarToDXL::TranslateScalarToDXL
 //
 //	@doc:
@@ -297,8 +325,15 @@ CTranslatorScalarToDXL::TranslateScalarToDXL(
 			// Note: The choose_custom_plan() function in plancache.c
 			// knows that GPORCA doesn't support Params. If you lift this
 			// limitation, adjust choose_custom_plan() accordingly!
-			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-					   GPOS_WSZ_LIT("Query Parameter"));
+			if (!optimizer_enable_query_parameter)
+			{
+				GPOS_RAISE(
+					gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+					GPOS_WSZ_LIT(
+						"Use optimizer_enable_query_parameter to enable Orca with query parameters"));
+			}
+			return CTranslatorScalarToDXL::TranslateParamToDXL(
+				expr, var_colid_mapping);
 		}
 		case T_Var:
 		{

@@ -66,6 +66,7 @@
 #include "gpopt/operators/CScalarNullIf.h"
 #include "gpopt/operators/CScalarNullTest.h"
 #include "gpopt/operators/CScalarOp.h"
+#include "gpopt/operators/CScalarParam.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarProjectList.h"
 #include "gpopt/operators/CScalarSortGroupClause.h"
@@ -114,6 +115,7 @@
 #include "naucrates/dxl/operators/CDXLScalarNullIf.h"
 #include "naucrates/dxl/operators/CDXLScalarNullTest.h"
 #include "naucrates/dxl/operators/CDXLScalarOpExpr.h"
+#include "naucrates/dxl/operators/CDXLScalarParam.h"
 #include "naucrates/dxl/operators/CDXLScalarProjElem.h"
 #include "naucrates/dxl/operators/CDXLScalarSortCol.h"
 #include "naucrates/dxl/operators/CDXLScalarSortGroupClause.h"
@@ -2667,6 +2669,8 @@ CTranslatorDXLToExpr::PexprScalar(const CDXLNode *dxlnode)
 			return CTranslatorDXLToExpr::PexprSortGroupClause(dxlnode);
 		case EdxlopScalarFieldSelect:
 			return CTranslatorDXLToExpr::PexprFieldSelect(dxlnode);
+		case EdxlopScalarParam:
+			return CTranslatorDXLToExpr::PexprScalarParam(dxlnode);
 		default:
 			GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
 					   dxl_op->GetOpNameStr()->GetBuffer());
@@ -3476,6 +3480,31 @@ CTranslatorDXLToExpr::PexprScalarIdent(const CDXLNode *pdxlnIdent)
 	const CColRef *colref = LookupColRef(m_phmulcr, colid);
 	CExpression *pexpr = GPOS_NEW(m_mp)
 		CExpression(m_mp, GPOS_NEW(m_mp) CScalarIdent(m_mp, colref));
+
+	return pexpr;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToExpr::PexprScalarParam
+//
+//	@doc:
+// 		Create a scalar param expr from a DXL scalar param
+//
+//---------------------------------------------------------------------------
+CExpression *
+CTranslatorDXLToExpr::PexprScalarParam(const CDXLNode *pdxlnParam)
+{
+	// get dxl scalar param
+	CDXLScalarParam *dxl_op = CDXLScalarParam::Cast(pdxlnParam->GetOperator());
+
+	dxl_op->GetMDIdType()->AddRef();
+
+	CScalarParam *scalar_param = GPOS_NEW(m_mp)
+		CScalarParam(m_mp, dxl_op->GetId(), dxl_op->GetMDIdType(),
+					 dxl_op->GetTypeModifier());
+
+	CExpression *pexpr = GPOS_NEW(m_mp) CExpression(m_mp, scalar_param);
 
 	return pexpr;
 }

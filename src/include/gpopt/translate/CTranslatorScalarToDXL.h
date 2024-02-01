@@ -200,6 +200,9 @@ private:
 	CDXLNode *TranslateVarToDXL(const Expr *expr,
 								const CMappingVarColId *var_colid_mapping);
 
+	CDXLNode *TranslateParamToDXL(const Expr *expr,
+								  const CMappingVarColId *var_colid_mapping);
+
 	CDXLNode *CreateInitPlanFromParam(const Param *param) const;
 
 	// create a DXL SubPlan node for a from a GPDB SubPlan

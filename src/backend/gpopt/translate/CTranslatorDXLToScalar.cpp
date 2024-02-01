@@ -62,6 +62,7 @@ extern "C" {
 #include "naucrates/dxl/operators/CDXLScalarNullIf.h"
 #include "naucrates/dxl/operators/CDXLScalarNullTest.h"
 #include "naucrates/dxl/operators/CDXLScalarOpExpr.h"
+#include "naucrates/dxl/operators/CDXLScalarParam.h"
 #include "naucrates/dxl/operators/CDXLScalarSortGroupClause.h"
 #include "naucrates/dxl/operators/CDXLScalarSwitch.h"
 #include "naucrates/dxl/operators/CDXLScalarValuesList.h"
@@ -130,6 +131,10 @@ CTranslatorDXLToScalar::TranslateDXLToScalar(const CDXLNode *dxlnode,
 		case EdxlopScalarOpExpr:
 		{
 			return TranslateDXLScalarOpExprToScalar(dxlnode, colid_var);
+		}
+		case EdxlopScalarParam:
+		{
+			return TranslateDXLScalarParamToScalar(dxlnode, colid_var);
 		}
 		case EdxlopScalarArrayComp:
 		{
@@ -423,6 +428,34 @@ CTranslatorDXLToScalar::TranslateDXLScalarOpExprToScalar(
 	op_expr->opcollid = gpdb::TypeCollation(op_expr->opresulttype);
 
 	return (Expr *) op_expr;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorDXLToScalar::TranslateDXLScalarParamToScalar
+//
+//	@doc:
+//		Translates a DXL scalar param into a GPDB Param node
+//---------------------------------------------------------------------------
+Expr *
+CTranslatorDXLToScalar::TranslateDXLScalarParamToScalar(
+	const CDXLNode *scalar_param_node, CMappingColIdVar *colid_var)
+{
+	GPOS_ASSERT(nullptr != scalar_param_node);
+	CDXLScalarParam *scalar_param_dxl =
+		CDXLScalarParam::Cast(scalar_param_node->GetOperator());
+
+	Param *param = MakeNode(Param);
+	// Hardcoded to PARAM_EXTERN, as PARAM_EXEC are created by other operators (joins, subqueries, etc.)
+	param->paramkind = PARAM_EXTERN;
+	param->paramid = scalar_param_dxl->GetId();
+	param->paramtype =
+		CMDIdGPDB::CastMdid(scalar_param_dxl->GetMDIdType())->Oid();
+	param->paramtypmod = scalar_param_dxl->GetTypeModifier();
+	// GPDB_91_MERGE_FIXME: collation
+	param->paramcollid = gpdb::TypeCollation(param->paramtype);
+
+	return (Expr *) param;
 }
 
 //---------------------------------------------------------------------------

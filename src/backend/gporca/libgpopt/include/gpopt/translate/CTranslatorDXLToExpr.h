@@ -290,6 +290,9 @@ private:
 	// translate a DXL scalar ident into an expr scalar ident
 	CExpression *PexprScalarIdent(const CDXLNode *pdxlnIdent);
 
+	// translate a DXL scalar param into an expr scalar param
+	CExpression *PexprScalarParam(const CDXLNode *pdxlnParam);
+
 	// translate a DXL scalar nullif into a scalar nullif expression
 	CExpression *PexprScalarNullIf(const CDXLNode *pdxlnNullIf);
 

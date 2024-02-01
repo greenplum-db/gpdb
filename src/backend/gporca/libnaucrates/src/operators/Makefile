@@ -130,6 +130,7 @@ OBJS        = CDXLColDescr.o \
               CDXLScalarOneTimeFilter.o \
               CDXLScalarOpExpr.o \
               CDXLScalarOpList.o \
+              CDXLScalarParam.o \
               CDXLScalarProjElem.o \
               CDXLScalarProjList.o \
               CDXLScalarRecheckCondFilter.o \
