@@ -51,6 +51,8 @@ extern "C" {
 #include "naucrates/md/IMDTypeInt4.h"
 #include "naucrates/traceflags/traceflags.h"
 
+#include "nodes/nodeFuncs.h"
+
 using namespace gpdxl;
 using namespace gpos;
 using namespace gpopt;
@@ -3937,6 +3939,14 @@ CTranslatorDXLToPlStmt::TranslateDXLDynTblScan(
 	CDXLPhysicalDynamicTableScan *dyn_tbl_scan_dxlop =
 		CDXLPhysicalDynamicTableScan::Cast(dyn_tbl_scan_dxlnode->GetOperator());
 
+	const CDXLTableDescr *dxl_table_descr =
+		dyn_tbl_scan_dxlop->GetDXLTableDescr();
+
+	const IMDRelation *md_rel =
+		m_md_accessor->RetrieveRel(dxl_table_descr->MDId());
+
+	OID oidRel = CMDIdGPDB::CastMdid(md_rel->MDId())->Oid();
+
 	// translation context for column mappings in the base relation
 	CDXLTranslateContextBaseTable base_table_context(m_mp);
 
@@ -3950,6 +3960,15 @@ CTranslatorDXLToPlStmt::TranslateDXLDynTblScan(
 	rte->requiredPerms |= ACL_SELECT;
 
 	m_dxl_to_plstmt_context->AddRTE(rte);
+
+	// If gp_keep_partition_children_locks is on, and we have an AO child,
+	// then we take locks on the child partitions similar to planner. This is
+	// the preferred behavior for strict correctness for concurrent AO vacuums.
+	if (GPOS_FTRACE(EopttraceKeepPartitionChildrenLocks))
+	{
+		AcquireLocksOnChildAORelations(
+			(Query *) m_dxl_to_plstmt_context->GetQuery(), oidRel);
+	}
 
 	// create dynamic scan node
 	DynamicSeqScan *dyn_seq_scan = MakeNode(DynamicSeqScan);
@@ -3986,6 +4005,153 @@ CTranslatorDXLToPlStmt::TranslateDXLDynTblScan(
 	SetParamIds(plan);
 
 	return (Plan *) dyn_seq_scan;
+}
+
+// This method is used to acquire locks on AO child partitions of a relation
+// given the parent oid.
+BOOL
+CTranslatorDXLToPlStmt::AcquireLocksOnChildAORelations(Query *parsetree,
+													   OID oidParentRel)
+{
+	ListCell *lc;
+	int rt_index;
+
+	// First, process RTEs of the current query level.
+	rt_index = 0;
+	foreach (lc, parsetree->rtable)
+	{
+		RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
+		LOCKMODE lockmode;
+
+		rt_index++;
+		switch (rte->rtekind)
+		{
+			case RTE_RELATION:
+				//  The locks acquired in this method is based on function
+				//  expand_inherited_rtentry.
+				// If the parent relation is the query's result relation, then we need
+				// RowExclusiveLock. Otherwise, if it's accessed FOR UPDATE/SHARE, we need
+				// RowShareLock; otherwise AccessShareLock. We can't just grab AccessShareLock
+				// because then the executor would be trying to upgrade the lock, leading to
+				// possible deadlocks.
+				if (rte->relid == oidParentRel)
+				{
+					if (rt_index == parsetree->resultRelation)
+					{
+						lockmode = RowExclusiveLock;
+					}
+					else if (gpdb::GetParseRowmark(parsetree, rt_index) != NULL)
+					{
+						lockmode = RowShareLock;
+					}
+					else
+					{
+						lockmode = AccessShareLock;
+					}
+
+					// FindAllInheritors returns a list of relation OIDs
+					// including the given rel plus all relations that inherit
+					// from it, directly or indirectly. The specified lock type
+					// is acquired on all child relations (but not on the given
+					// rel)
+					List *inhOIDs =
+						gpdb::FindAllInheritors(oidParentRel, NoLock, NULL);
+
+					// Check that there's at least one descendant, else treat as
+					// no-child case.
+					if (gpdb::ListLength(inhOIDs) < 2)
+					{
+						return true;
+					}
+
+					ListCell *lcOID;
+					ForEach(lcOID, inhOIDs)
+					{
+						OID oidRel = lfirst_oid(lcOID);
+
+						// If we have an AO partition, we lock the AO child
+						// partition. This is the preferred behavior for strict
+						// correctness for concurrent AO vacuums.
+						if (oidParentRel != oidRel)
+						{
+							Relation rel = gpdb::GetRelation(oidRel);
+							if (RelationIsAppendOptimized(rel))
+							{
+								gpdb::GPDBLockRelationOid(oidRel, lockmode);
+							}
+							gpdb::CloseRelation(rel);
+						}
+					}
+
+					return true;
+				}
+				break;
+
+			case RTE_SUBQUERY:
+				// Recurse into subquery-in-FROM
+				if (AcquireLocksOnChildAORelations(rte->subquery, oidParentRel))
+				{
+					return true;
+				}
+				break;
+
+			default:
+				break;
+		}
+	}
+
+	// Recurse into CTE list
+	foreach (lc, parsetree->cteList)
+	{
+		CommonTableExpr *cte = (CommonTableExpr *) lfirst(lc);
+
+		if (AcquireLocksOnChildAORelations((Query *) cte->ctequery,
+										   oidParentRel))
+		{
+			return true;
+		}
+	}
+
+	// Recurse into sublink subqueries, too.  But we already did the ones in
+	// the rtable and cteList.
+	if (parsetree->hasSubLinks)
+	{
+		return gpdb::WalkQueryTree(
+			parsetree,
+			(BOOL(*)())
+				CTranslatorDXLToPlStmt::AcquireLocksOnChildAORelationsWalker,
+			(void *) &oidParentRel, QTW_IGNORE_RC_SUBQUERIES);
+	}
+
+	return false;
+}
+
+BOOL
+CTranslatorDXLToPlStmt::AcquireLocksOnChildAORelationsWalker(Node *node,
+															 OID *oidRel)
+{
+	if (NULL == node)
+	{
+		return false;
+	}
+
+	if (IsA(node, SubLink))
+	{
+		SubLink *sub = (SubLink *) node;
+
+		if (AcquireLocksOnChildAORelations((Query *) sub->subselect, *oidRel))
+		{
+			return true;
+		}
+	}
+
+	// No need to recurse into Query nodes, because AcquireLocksOnChildAORelations already
+	// processed subselects of subselects.
+	return gpdb::WalkExpressionTree(
+		node,
+		(BOOL(*)())
+			CTranslatorDXLToPlStmt::AcquireLocksOnChildAORelationsWalker,
+		(void *) oidRel);
 }
 
 //---------------------------------------------------------------------------
@@ -5751,6 +5917,8 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 
 	const IMDRelation *md_rel = m_md_accessor->RetrieveRel(table_descr->MDId());
 
+	OID oidRel = CMDIdGPDB::CastMdid(md_rel->MDId())->Oid();
+
 	RangeTblEntry *rte = TranslateDXLTblDescrToRangeTblEntry(
 		table_descr, index, &base_table_context);
 	GPOS_ASSERT(NULL != rte);
@@ -5763,6 +5931,15 @@ CTranslatorDXLToPlStmt::TranslateDXLBitmapTblScan(
 	if (is_dynamic)
 	{
 		DynamicBitmapHeapScan *dscan = MakeNode(DynamicBitmapHeapScan);
+
+		// If gp_keep_partition_children_locks is on, and we have an AO child,
+		// then we take locks on the child partitions similar to planner. This is
+		// the preferred behavior for strict correctness for concurrent AO vacuums.
+		if (GPOS_FTRACE(EopttraceKeepPartitionChildrenLocks))
+		{
+			AcquireLocksOnChildAORelations(
+				(Query *) m_dxl_to_plstmt_context->GetQuery(), oidRel);
+		}
 
 		dscan->partIndex = part_index_id;
 		dscan->partIndexPrintable = part_idx_printable_id;

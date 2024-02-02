@@ -308,6 +308,9 @@ test: standby_replay_dtx_info
 # Test for concurrent vacuum with delete
 test: concurrent_vacuum_with_delete
 
+# Test for concurrent vacuum with select
+test: concurrent_select_vacuum_ao_partitioned_table
+
 # test if GUC is synchronized from the QD to QEs.
 test: sync_guc
 

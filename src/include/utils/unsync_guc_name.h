@@ -211,6 +211,7 @@
 		"gp_interconnect_cache_future_packets",
 		"gp_is_writer",
 		"gp_keep_all_xlog",
+		"gp_keep_partition_children_locks",
 		"gp_local_distributed_cache_stats",
 		"gp_log_dynamic_partition_pruning",
 		"gp_log_format",

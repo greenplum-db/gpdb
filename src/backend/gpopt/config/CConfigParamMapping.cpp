@@ -301,6 +301,9 @@ CConfigParamMapping::SConfigMappingElem CConfigParamMapping::m_elements[] = {
 	 false,	 // m_negate_param
 	 GPOS_WSZ_LIT(
 		 "Explore a nested loop join even if a hash join is possible")},
+	{EopttraceKeepPartitionChildrenLocks, &gp_keep_partition_children_locks,
+	 false,	 // m_negate_param
+	 GPOS_WSZ_LIT("Keep locks on partition children during planning")},
 
 };
 

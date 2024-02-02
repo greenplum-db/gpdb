@@ -21,6 +21,7 @@ extern "C" {
 #include "access/attnum.h"
 #include "nodes/plannodes.h"
 #include "parser/parse_coerce.h"
+#include "storage/lmgr.h"
 #include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 }
@@ -709,6 +710,15 @@ MemoryContext GPDBAllocSetContextCreate();
 void GPDBMemoryContextDelete(MemoryContext context);
 
 bool IsTypeRange(Oid typid);
+
+RowMarkClause *GetParseRowmark(Query *query, Index rtindex);
+
+List *FindAllInheritors(Oid parentrelId, LOCKMODE lockmode, List **numparents);
+
+gpos::BOOL WalkQueryTree(Query *query, bool (*walker)(), void *context,
+						 int flags);
+
+void GPDBLockRelationOid(Oid reloid, LOCKMODE lockmode);
 
 }  //namespace gpdb
 

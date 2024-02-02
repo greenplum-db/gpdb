@@ -354,6 +354,7 @@ extern int gp_max_partition_level;
 extern bool gp_perfmon_print_packet_info;
 
 extern bool gp_enable_relsize_collection;
+extern bool gp_keep_partition_children_locks;
 
 /* Debug DTM Action */
 typedef enum

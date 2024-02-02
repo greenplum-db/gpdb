@@ -160,6 +160,10 @@ private:
 	static BOOL SetIndexVarAttnoWalker(
 		Node *node, SContextIndexVarAttno *ctxt_index_var_attno_walker);
 
+	static BOOL AcquireLocksOnChildAORelations(Query *parsetree, OID oidRel);
+
+	static BOOL AcquireLocksOnChildAORelationsWalker(Node *node, OID *oidRel);
+
 public:
 	// ctor
 	CTranslatorDXLToPlStmt(CMemoryPool *mp, CMDAccessor *md_accessor,
