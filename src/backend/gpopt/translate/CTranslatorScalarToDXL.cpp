@@ -322,9 +322,6 @@ CTranslatorScalarToDXL::TranslateScalarToDXL(
 		}
 		case T_Param:
 		{
-			// Note: The choose_custom_plan() function in plancache.c
-			// knows that GPORCA doesn't support Params. If you lift this
-			// limitation, adjust choose_custom_plan() accordingly!
 			if (!optimizer_enable_query_parameter)
 			{
 				GPOS_RAISE(
