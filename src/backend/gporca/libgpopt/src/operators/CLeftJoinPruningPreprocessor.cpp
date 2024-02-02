@@ -454,7 +454,9 @@ CLeftJoinPruningPreprocessor::ComputeOutputColumns(
 	if (CUtils::FLogicalSetOp(pexpr->Pop()))
 	{
 		CLogicalSetOp *pop = CLogicalSetOp::PopConvert(pexpr->Pop());
-		for (ULONG i = 0; i < pop->PdrgpdrgpcrInput()->Size(); i++)
+		// Starting from index 1, since the 0th input column array is the same
+		// as the output column array
+		for (ULONG i = 1; i < pop->PdrgpdrgpcrInput()->Size(); i++)
 		{
 			CColRefArray *pdrgpcrInput = (*pop->PdrgpdrgpcrInput())[i];
 			for (ULONG j = 0; j < pdrgpcrInput->Size(); j++)

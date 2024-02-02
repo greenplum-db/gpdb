@@ -2030,7 +2030,14 @@ union select foo.a, bar.b from foo join bar on foo.a = bar.a;
  Optimizer: Postgres-based planner
 (17 rows)
 
--- join will be pruned
+-------------------------------------
+-- CASES WHERE JOIN WILL BE PRUNED --
+-------------------------------------
+--------------------------------------------------------------------------------
+-- join under UNION
+-- For the below query the output columns of both the CLogicalLeftOuterJoin
+-- are from the outer relation, so we can prune both the joins
+--------------------------------------------------------------------------------
 explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a union
 select bar.b,bar.c from bar left join foo on foo.a=bar.a;
                          QUERY PLAN                         
@@ -2058,6 +2065,11 @@ select bar.b,bar.c from bar left join foo on foo.a=bar.a;
  1 | 10
 (6 rows)
 
+--------------------------------------------------------------------------------
+-- join under UNION ALL
+-- For the below query the output columns of both the CLogicalLeftOuterJoin
+-- are from the outer relation, so we can prune both the joins
+--------------------------------------------------------------------------------
 explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a union all
 select bar.b,bar.c from bar left join foo on foo.a=bar.a;
                 QUERY PLAN                
@@ -2087,6 +2099,11 @@ select bar.b,bar.c from bar left join foo on foo.a=bar.a;
  3 |   
 (12 rows)
 
+--------------------------------------------------------------------------------
+-- join under INTERSECT
+-- For the below query the output columns of both the CLogicalLeftOuterJoin
+-- are from the outer relation, so we can prune both the joins
+--------------------------------------------------------------------------------
 explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a intersect
 select bar.b,bar.c from bar left join foo on foo.a=bar.a;
                             QUERY PLAN                            
@@ -2114,6 +2131,11 @@ select bar.b,bar.c from bar left join foo on foo.a=bar.a;
  2 | 20
 (3 rows)
 
+--------------------------------------------------------------------------------
+-- join under INTERSECT ALL
+-- For the below query the output columns of both the CLogicalLeftOuterJoin
+-- are from the outer relation, so we can prune both the joins
+--------------------------------------------------------------------------------
 explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a intersect all
 select bar.b,bar.c from bar left join foo on foo.a=bar.a;
                             QUERY PLAN                            
@@ -2142,6 +2164,11 @@ select bar.b,bar.c from bar left join foo on foo.a=bar.a;
  2 | 20
 (4 rows)
 
+--------------------------------------------------------------------------------
+-- join under EXCEPT
+-- For the below query the output columns of both the CLogicalLeftOuterJoin
+-- are from the outer relation, so we can prune both the joins
+--------------------------------------------------------------------------------
 explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a except
 select bar.b,bar.c from bar left join foo on foo.a=bar.a;
                             QUERY PLAN                            
@@ -2168,6 +2195,11 @@ select bar.b,bar.c from bar left join foo on foo.a=bar.a;
  2 | 30
 (2 rows)
 
+--------------------------------------------------------------------------------
+-- join under EXCEPT ALL
+-- For the below query the output columns of both the CLogicalLeftOuterJoin
+-- are from the outer relation, so we can prune both the joins
+--------------------------------------------------------------------------------
 explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a except all
 select bar.b,bar.c from bar left join foo on foo.a=bar.a;
                             QUERY PLAN                            
@@ -2195,9 +2227,16 @@ select bar.b,bar.c from bar left join foo on foo.a=bar.a;
  2 | 30
 (3 rows)
 
--- join will not be pruned
--- the outer query of union/intersect/except will be pruned but the inner
--- query will not be pruned.
+------------------------------------------
+-- CASES WHERE JOIN WILL NOT BE PRUNED --
+------------------------------------------
+--------------------------------------------------------------------------------
+-- join under UNION
+-- For the below query since for the outer CLogicalLeftOuterJoin, all the output
+-- columns are from the outer relation, the outer join can be pruned but for the
+-- inner CLogicalLeftOuterJoin the output column contains columns from
+-- inner relation.So the inner join can't be pruned.
+--------------------------------------------------------------------------------
 explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a union
 select bar.b,foo.c from bar left join foo on foo.a=bar.a;
                          QUERY PLAN                         
@@ -2232,6 +2271,13 @@ select bar.b,foo.c from bar left join foo on foo.a=bar.a;
    | 20
 (9 rows)
 
+--------------------------------------------------------------------------------
+-- join under UNION ALL
+-- For the below query since for the outer CLogicalLeftOuterJoin, all the output
+-- columns are from the outer relation, the outer join can be pruned but for the
+-- inner CLogicalLeftOuterJoin the output column contains columns from
+-- inner relation.So the inner join can't be pruned.
+--------------------------------------------------------------------------------
 explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a union all
 select bar.b,foo.c from bar left join foo on foo.a=bar.a;
                  QUERY PLAN                 
@@ -2265,6 +2311,13 @@ select bar.b,foo.c from bar left join foo on foo.a=bar.a;
  1 | 10
 (12 rows)
 
+--------------------------------------------------------------------------------
+-- join under INTERSECT
+-- For the below query since for the outer CLogicalLeftOuterJoin, all the output
+-- columns are from the outer relation, the outer join can be pruned but for the
+-- inner CLogicalLeftOuterJoin the output column contains columns from
+-- inner relation.So the inner join can't be pruned.
+--------------------------------------------------------------------------------
 explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a intersect
 select bar.b,foo.c from bar left join foo on foo.a=bar.a;
                             QUERY PLAN                            
@@ -2294,6 +2347,13 @@ select bar.b,foo.c from bar left join foo on foo.a=bar.a;
  1 | 10
 (1 row)
 
+--------------------------------------------------------------------------------
+-- join under INTERSECT ALL
+-- For the below query since for the outer CLogicalLeftOuterJoin, all the output
+-- columns are from the outer relation, the outer join can be pruned but for the
+-- inner CLogicalLeftOuterJoin the output column contains columns from
+-- inner relation.So the inner join can't be pruned.
+--------------------------------------------------------------------------------
 explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a intersect all
 select bar.b,foo.c from bar left join foo on foo.a=bar.a;
                             QUERY PLAN                            
@@ -2323,6 +2383,13 @@ select bar.b,foo.c from bar left join foo on foo.a=bar.a;
  1 | 10
 (1 row)
 
+--------------------------------------------------------------------------------
+-- join under EXCEPT
+-- For the below query since for the outer CLogicalLeftOuterJoin, all the output
+-- columns are from the outer relation, the outer join can be pruned but for the
+-- inner CLogicalLeftOuterJoin the output column contains columns from
+-- inner relation.So the inner join can't be pruned.
+--------------------------------------------------------------------------------
 explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a except
 select bar.b,foo.c from bar left join foo on foo.a=bar.a;
                             QUERY PLAN                            
@@ -2355,6 +2422,13 @@ select bar.b,foo.c from bar left join foo on foo.a=bar.a;
  2 | 20
 (4 rows)
 
+--------------------------------------------------------------------------------
+-- join under EXCEPT ALL
+-- For the below query since for the outer CLogicalLeftOuterJoin, all the output
+-- columns are from the outer relation, the outer join can be pruned but for the
+-- inner CLogicalLeftOuterJoin the output column contains columns from
+-- inner relation.So the inner join can't be pruned.
+--------------------------------------------------------------------------------
 explain (costs off) select foo.b,foo.c from foo left join bar on foo.a=bar.a except all
 select bar.b,foo.c from bar left join foo on foo.a=bar.a;
                             QUERY PLAN                            
