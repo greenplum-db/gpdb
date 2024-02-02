@@ -2109,8 +2109,6 @@ insert into nonullstab select 1, 1 from generate_series(1, 100);
 select countall(distinct a), count(distinct b) from nonullstab;
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Multiple Distinct Qualified Aggregates are disabled in the optimizer
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
  countall | count 
 ----------+-------
         1 |     1

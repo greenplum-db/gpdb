@@ -3421,20 +3421,20 @@ create index on ma_test (b);
 analyze ma_test;
 prepare mt_q1 (int) as select a from ma_test where a >= $1 and a % 10 = 5 order by b;
 explain (analyze, costs off, summary off, timing off) execute mt_q1(15);
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3) (actual rows=2 loops=1)
-   Merge Key: ma_test_p2.b
-   ->  Merge Append (actual rows=1 loops=1)
-         Sort Key: ma_test_p2.b
-         Subplans Removed: 1
-         ->  Index Scan using ma_test_p2_b_idx on ma_test_p2 (actual rows=1 loops=1)
-               Filter: ((a >= $1) AND ((a % 10) = 5))
-               Rows Removed by Filter: 1
-         ->  Index Scan using ma_test_p3_b_idx on ma_test_p3 (actual rows=1 loops=1)
-               Filter: ((a >= $1) AND ((a % 10) = 5))
-               Rows Removed by Filter: 2
- Optimizer: Postgres query optimizer
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Result (actual rows=2 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3) (actual rows=2 loops=1)
+         Merge Key: b
+         ->  Sort (actual rows=1 loops=1)
+               Sort Key: b
+               Sort Method:  quicksort  Memory: 75kB
+               Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 1)
+               ->  Dynamic Seq Scan on ma_test (actual rows=1 loops=1)
+                     Number of partitions to scan: 3 (out of 3)
+                     Filter: ((a >= $1) AND ((a % 10) = 5))
+                     Partitions scanned:  Avg 3.0 x 3 workers.  Max 3 parts (seg0).
+ Optimizer: GPORCA
 (12 rows)
 
 execute mt_q1(15);
@@ -3445,18 +3445,21 @@ execute mt_q1(15);
 (2 rows)
 
 explain (analyze, costs off, summary off, timing off) execute mt_q1(25);
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3) (actual rows=1 loops=1)
-   Merge Key: ma_test_p3.b
-   ->  Merge Append (actual rows=1 loops=1)
-         Sort Key: ma_test_p3.b
-         Subplans Removed: 2
-         ->  Index Scan using ma_test_p3_b_idx on ma_test_p3 (actual rows=1 loops=1)
-               Filter: ((a >= $1) AND ((a % 10) = 5))
-               Rows Removed by Filter: 2
- Optimizer: Postgres query optimizer
-(9 rows)
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Result (actual rows=1 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3) (actual rows=1 loops=1)
+         Merge Key: b
+         ->  Sort (actual rows=1 loops=1)
+               Sort Key: b
+               Sort Method:  quicksort  Memory: 75kB
+               Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 2)
+               ->  Dynamic Seq Scan on ma_test (actual rows=1 loops=1)
+                     Number of partitions to scan: 3 (out of 3)
+                     Filter: ((a >= $1) AND ((a % 10) = 5))
+                     Partitions scanned:  Avg 3.0 x 3 workers.  Max 3 parts (seg0).
+ Optimizer: GPORCA
+(12 rows)
 
 execute mt_q1(25);
  a  
@@ -3466,17 +3469,21 @@ execute mt_q1(25);
 
 -- Ensure MergeAppend behaves correctly when no subplans match
 explain (analyze, costs off, summary off, timing off) execute mt_q1(35);
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
-   Merge Key: ma_test_p1.b
-   ->  Merge Append (actual rows=0 loops=1)
-         Sort Key: ma_test_p1.b
-         Subplans Removed: 2
-         ->  Index Scan using ma_test_p1_b_idx on ma_test_p1 (never executed)
-               Filter: ((a >= $1) AND ((a % 10) = 5))
- Optimizer: Postgres query optimizer
-(8 rows)
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Result (actual rows=0 loops=1)
+   ->  Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
+         Merge Key: b
+         ->  Sort (actual rows=0 loops=1)
+               Sort Key: b
+               Sort Method:  quicksort  Memory: 75kB
+               Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 0)
+               ->  Dynamic Seq Scan on ma_test (actual rows=0 loops=1)
+                     Number of partitions to scan: 3 (out of 3)
+                     Filter: ((a >= $1) AND ((a % 10) = 5))
+                     Partitions scanned:  Avg 3.0 x 3 workers.  Max 3 parts (seg0).
+ Optimizer: GPORCA
+(12 rows)
 
 execute mt_q1(35);
  a 

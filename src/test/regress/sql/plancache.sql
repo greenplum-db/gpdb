@@ -1,6 +1,7 @@
 --
 -- Tests to exercise the plan caching/invalidation mechanism
 --
+SET optimizer_trace_fallback to on;
 
 CREATE TEMP TABLE pcachetest AS SELECT * FROM int8_tbl;
 

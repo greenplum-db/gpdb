@@ -1728,8 +1728,8 @@ select * from tt;
 select * from tt_log;
  f1 |  data   
 ----+---------
- 84 | barlog
- 83 | foollog
+ 121 | barlog
+ 101 | foollog
 (2 rows)
 
 -- test case for a whole-row-variable bug
