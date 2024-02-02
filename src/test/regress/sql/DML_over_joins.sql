@@ -1440,6 +1440,26 @@ EXECUTE plan5;
 select * from sales_par where region='asia' and id in (select b from m where a = 2);
 
 
+------------------------------------------------------------
+-- Inserts with motion:
+------------------------------------------------------------
+CREATE OR REPLACE FUNCTION nvl(p1 in text, p2 in text) RETURNS text AS $$
+DECLARE
+BEGIN
+	return COALESCE(p1, p2);
+END;
+$$ LANGUAGE plpgsql;
+
+drop table if exists t1;
+drop table if exists t2;
+drop table if exists tr;
+
+create table t1(a varchar(2), b varchar(2)) distributed by (a);
+create table t2(a varchar(2), b varchar(2)) distributed by (a);
+create table tr(a varchar(2), b varchar(2)) distributed by (a);
+
+explain (costs off) insert into tr select t1.a, nvl(t1.b, '') from t1 full join t2 on t1.a = t2.a;
+
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------

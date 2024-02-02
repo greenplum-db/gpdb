@@ -320,6 +320,7 @@ cdbpathlocus_from_subquery(struct PlannerInfo *root,
 				List	   *distkeys = NIL;
 				ListCell   *expr_cell;
 				ListCell   *opf_cell;
+				bool		succeeded = false;
 
 				forboth(expr_cell, flow->hashExprs, opf_cell, flow->hashOpfamilies)
 				{
@@ -348,7 +349,12 @@ cdbpathlocus_from_subquery(struct PlannerInfo *root,
 					distkeys = lappend(distkeys, distkey);
 				}
 				if (distkeys && !expr_cell)
+					succeeded = true;
+
+				if (succeeded && flow->locustype == CdbLocusType_Hashed)
 					CdbPathLocus_MakeHashed(&locus, distkeys, numsegments);
+				else if (succeeded && flow->locustype == CdbLocusType_HashedOJ)
+					CdbPathLocus_MakeHashedOJ(&locus, distkeys, numsegments);
 				else
 					CdbPathLocus_MakeStrewn(&locus, numsegments);
 				break;
