@@ -1309,7 +1309,8 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
  * add_root_to_autoanalyze_queue()
  * Helper function to add a table OID to the autoanalyze queue.
  */
-void add_root_to_autoanalyze_queue(Relation rel)
+void
+add_root_to_autoanalyze_queue(Relation rel)
 {
 	Oid root_parent_relid;
 	if (rel->rd_rel->relispartition)
@@ -1324,11 +1325,11 @@ void add_root_to_autoanalyze_queue(Relation rel)
 	}
 
 	/*
-	 * Pass a request to do_autovacuum() using autoVacuum worker,
-	 * to add OID of relation in the list of tables for vacuum/analyze.
+	 * Pass a request to do_autovacuum() using autovacuum worker, to add OID of
+	 * relation in the list of tables for vacuum/analyze.
 	 *
-	 * This will ensure that in the next iteration of autovacuum,
-	 * statistics of root are updated based on the attached/detached partition.
+	 * This will ensure that in the next iteration of autovacuum, statistics of
+	 * root are updated based on the attached/detached partition.
 	 */
 	if (AutoVacuumingActive())
 	{
@@ -1337,23 +1338,23 @@ void add_root_to_autoanalyze_queue(Relation rel)
 		if (recorded)
 		{
 			ereport(DEBUG2,
-				(errmsg(" An autovacuum request was created for \"%s\" because it is the root of recently attached partition \"%s\"",
-					get_rel_name(root_parent_relid),get_rel_name(rel->rd_id))));
+					(errmsg(" An autovacuum request was created for \"%s\" because it is the root of recently attached partition \"%s\"",
+							get_rel_name(root_parent_relid),get_rel_name(rel->rd_id))));
 
 		}
 		else
 		{
 			ereport(LOG,
-				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-					errmsg(" Root partition was not added to the autovacuum queue. Please manually analyze root partition \"%s\" to ensure accurate statistics",
-						get_rel_name(root_parent_relid))));
+					(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+					 errmsg(" Root partition was not added to the autovacuum queue. Please manually analyze root partition \"%s\" to ensure accurate statistics",
+							get_rel_name(root_parent_relid))));
 		}
 	}
 	else
 	{
 			ereport(DEBUG2,
-				(errmsg(" Root partition was not added to the autovacuum queue as autovacumm is disabled. Please manually analyze root partition \"%s\" to ensure accurate statistics",
-					get_rel_name(root_parent_relid))));
+					(errmsg(" Root partition was not added to the autovacuum queue as autovacuum is disabled. Please manually analyze root partition \"%s\" to ensure accurate statistics",
+							get_rel_name(root_parent_relid))));
 
 	}
 

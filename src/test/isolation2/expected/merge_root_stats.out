@@ -6,9 +6,10 @@ reset optimizer_analyze_root_partition;
 RESET
 reset optimizer_analyze_midlevel_partition;
 RESET
--- To control running of autovacuum, set naptime to high value (5 days in seconds)
--- it is changed to low value when autovacuum is required to trigger
-alter system set autovacuum_naptime = 432000;
+-- To control running of autovacuum, naptime is set to high value
+-- (2147483 = INT_MAX/1000), it is changed to low value when autovacuum
+-- is required to trigger.
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 alter system set autovacuum_vacuum_threshold = 10;
 ALTER SYSTEM
@@ -110,7 +111,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -155,7 +156,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -252,7 +253,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -296,7 +297,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -375,7 +376,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -439,7 +440,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -484,7 +485,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -564,7 +565,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -620,7 +621,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -664,7 +665,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -749,7 +750,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -792,7 +793,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -876,7 +877,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -918,7 +919,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -994,7 +995,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -1043,7 +1044,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -1124,7 +1125,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 
@@ -1169,7 +1170,7 @@ select gp_inject_fault('analyze_finished_one_relation', 'reset', 1);
 -----------------
  Success:        
 (1 row)
-alter system set autovacuum_naptime = 432000;
+alter system set autovacuum_naptime = 2147483;
 ALTER SYSTEM
 select * from pg_reload_conf();
  pg_reload_conf 

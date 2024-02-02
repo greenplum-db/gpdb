@@ -5847,8 +5847,8 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 				ObjectAddress objAdd = ATExecAttachPartition(wqueue, rel,(PartitionCmd *)cmd->def);
 
 				/*
-				 * Invalid class Oid (from pg_class) means
-				 * partition not attached successfully
+				 * Invalid class Oid (from pg_class) means partition not
+				 * attached successfully
 				 */
 				if (OidIsValid(objAdd.classId))
 				{
@@ -5865,8 +5865,8 @@ ATExecCmd(List **wqueue, AlteredTableInfo *tab, Relation rel,
 			ObjectAddress objAdd = ATExecDetachPartition(rel, ((PartitionCmd *) cmd->def)->name);
 
 			/*
-			 * Invalid class Oid (from pg_class) means
-			 * partition not detached successfully
+			 * Invalid class Oid (from pg_class) means partition not
+			 * detached successfully
 			 */
 			if (OidIsValid(objAdd.classId))
 			{

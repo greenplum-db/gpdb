@@ -3611,15 +3611,15 @@ autovac_refresh_stats(void)
 }
 
 /*
- * 1. Add tables, received through auto vacuum workers
- * to the hash table containing OIDs of root table
- * for autovacuum/analyze.
+ * 1. Add tables, received through auto vacuum workers to the hash table
+ * containing OIDs of root table for autovacuum/analyze.
  *
- * 2. Only AVW_UpdateRootPartitionStats (worker type)
- * is processed in the function. This worker type brings the OID
- * of the root table to which a partition is attached/detached.
+ * 2. Only AVW_UpdateRootPartitionStats (worker type) is processed in the
+ * function. This worker type brings the OID of the root table to which a
+ * partition is attached/detached.
  */
-static void add_tables_from_autovac_workers(HTAB *top_level_partition_roots)
+static void
+add_tables_from_autovac_workers(HTAB *top_level_partition_roots)
 {
 
 	LWLockAcquire(AutovacuumLock, LW_EXCLUSIVE);
@@ -3628,8 +3628,8 @@ static void add_tables_from_autovac_workers(HTAB *top_level_partition_roots)
 		AutoVacuumWorkItem *workitem = &AutoVacuumShmem->av_workItems[i];
 
 		/*
-		 * Only AVW_UpdateRootPartitionStats worker type is
-		 * processed in this function.
+		 * Only AVW_UpdateRootPartitionStats worker type is processed in this
+		 * function.
 		 */
 		if (workitem->avw_type != AVW_UpdateRootPartitionStats)
 			continue;
@@ -3640,13 +3640,9 @@ static void add_tables_from_autovac_workers(HTAB *top_level_partition_roots)
 		if (workitem->avw_database != MyDatabaseId)
 			continue;
 
-		/* claim this worker */
-		workitem->avw_active = true;
-
 		/*
-		 * Add received table oid to
-		 * the hash table containing OIDs of root table
-		 * for autovacuum/analyze.
+		 * Add received table oid to the hash table containing OIDs of root
+		 * table for autovacuum/analyze.
 		 */
 		Oid root_parent_relid = workitem->avw_relation;
 		(void) hash_search(top_level_partition_roots, (void *) &root_parent_relid, HASH_ENTER, NULL);
