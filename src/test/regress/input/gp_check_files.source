@@ -67,6 +67,7 @@ select oid from pg_database where datname = current_database() \gset
 -- create some orphaned files
 \! touch 987654
 \! touch 987654.3
+\! touch t_98666
 
 -- check orphaned files, note that this forces a checkpoint internally.
 set client_min_messages = ERROR;

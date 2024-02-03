@@ -60,6 +60,7 @@ select oid from pg_database where datname = current_database() \gset
 -- create some orphaned files
 \! touch 987654
 \! touch 987654.3
+\! touch t_98666
 -- check orphaned files, note that this forces a checkpoint internally.
 set client_min_messages = ERROR;
 select gp_segment_id, filename from run_orphaned_files_view();
@@ -67,7 +68,8 @@ select gp_segment_id, filename from run_orphaned_files_view();
 ---------------+----------
              1 | 987654
              1 | 987654.3
-(2 rows)
+             1 | t_98666
+(3 rows)
 
 -- test moving the orphaned files
 -- firstly, should not move anything if the target directory doesn't exist
@@ -78,7 +80,8 @@ select gp_segment_id, filename from run_orphaned_files_view();
 ---------------+----------
              1 | 987654.3
              1 | 987654
-(2 rows)
+             1 | t_98666
+(3 rows)
 
 -- should also fail to move if no proper permission to the target directory
 \! mkdir @testtablespace@/moving_orphaned_file_test
@@ -91,7 +94,8 @@ select gp_segment_id, filename from run_orphaned_files_view();
 ---------------+----------
              1 | 987654.3
              1 | 987654
-(2 rows)
+             1 | t_98666
+(3 rows)
 
 -- should not allow non-superuser to run,
 -- though it would complain as soon as non-superuser tries to lock pg_class in gp_toolkit.gp_move_orphaned_files
@@ -112,7 +116,8 @@ from gp_toolkit.gp_move_orphaned_files('@testtablespace@/moving_orphaned_file_te
 gp_segment_id|move_success|oldpath|newpath
 1|t|987654|seg1_pg_tblspc_17816_GPDB_7_302307241_17470_987654
 1|t|987654.3|seg1_pg_tblspc_17816_GPDB_7_302307241_17470_987654.3
-(2 rows)
+1|t|t_98666|seg1_pg_tblspc_17816_GPDB_7_302307241_17470_t_98666
+(3 rows)
 \a
 -- The moved orphaned files are in the target directory tree with a name that indicates its original location in data directory
 \cd @testtablespace@/moving_orphaned_file_test/
@@ -120,6 +125,7 @@ gp_segment_id|move_success|oldpath|newpath
 \! ls
 seg1_pg_tblspc_37385_GPDB_7_302307241_37039_987654
 seg1_pg_tblspc_37385_GPDB_7_302307241_37039_987654.3
+seg1_pg_tblspc_37385_GPDB_7_302307241_37039_t_98666
 -- no orphaned files can be found now
 select gp_segment_id, filename from run_orphaned_files_view();
  gp_segment_id | filename 
