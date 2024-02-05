@@ -522,15 +522,18 @@ analyze no_eqop(c);
 analyze verbose rootpartition no_eqop(c);
 select * from pg_stats where tablename = 'no_eqop';
 -- Issue 14644 keep catalog inconsistency of relhassubclass after analyze
+-- test catalog inconsistency of relhasindex after analyze
 CREATE TYPE test_type_14644 AS (a int, b text);
 CREATE TABLE test_tb_14644 OF test_type_14644;
 CREATE TABLE test_tb_14644_subclass () INHERITS (test_tb_14644);
+CREATE INDEX test_tb_14644_index ON test_tb_14644 USING btree(a);
 DROP TABLE test_tb_14644_subclass;
-select relhassubclass from pg_class where relname = 'test_tb_14644';
-select relhassubclass from gp_dist_random('pg_class') where relname = 'test_tb_14644';
+DROP INDEX test_tb_14644_index;
+select relhassubclass, relhasindex from pg_class where relname = 'test_tb_14644';
+select relhassubclass, relhasindex from gp_dist_random('pg_class') where relname = 'test_tb_14644';
 ANALYZE;
-select relhassubclass from pg_class where relname = 'test_tb_14644';
-select relhassubclass from gp_dist_random('pg_class') where relname = 'test_tb_14644';
+select relhassubclass, relhasindex from pg_class where relname = 'test_tb_14644';
+select relhassubclass, relhasindex from gp_dist_random('pg_class') where relname = 'test_tb_14644';
 
 -- test correlation of the table
 -- test1: there is no data

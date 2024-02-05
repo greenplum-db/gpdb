@@ -1041,37 +1041,40 @@ select * from pg_stats where tablename = 'no_eqop';
 (1 row)
 
 -- Issue 14644 keep catalog inconsistency of relhassubclass after analyze
+-- test catalog inconsistency of relhasindex after analyze
 CREATE TYPE test_type_14644 AS (a int, b text);
 CREATE TABLE test_tb_14644 OF test_type_14644;
 CREATE TABLE test_tb_14644_subclass () INHERITS (test_tb_14644);
+CREATE INDEX test_tb_14644_index ON test_tb_14644 USING btree(a);
 DROP TABLE test_tb_14644_subclass;
-select relhassubclass from pg_class where relname = 'test_tb_14644';
- relhassubclass 
-------------
- t
+DROP INDEX test_tb_14644_index;
+select relhassubclass, relhasindex from pg_class where relname = 'test_tb_14644';
+ relhassubclass | relhasindex 
+----------------+-------------
+ t              | t
 (1 row)
 
-select relhassubclass from gp_dist_random('pg_class') where relname = 'test_tb_14644';
- relhassubclass 
-------------
- t
- t
- t
+select relhassubclass, relhasindex from gp_dist_random('pg_class') where relname = 'test_tb_14644';
+ relhassubclass | relhasindex 
+----------------+-------------
+ t              | t
+ t              | t
+ t              | t
 (3 rows)
 
 ANALYZE;
-select relhassubclass from pg_class where relname = 'test_tb_14644';
- relhassubclass 
-------------
- f
+select relhassubclass, relhasindex from pg_class where relname = 'test_tb_14644';
+ relhassubclass | relhasindex 
+----------------+-------------
+ f              | f
 (1 row)
 
-select relhassubclass from gp_dist_random('pg_class') where relname = 'test_tb_14644';
- relhassubclass 
-------------
- f
- f
- f
+select relhassubclass, relhasindex from gp_dist_random('pg_class') where relname = 'test_tb_14644';
+ relhassubclass | relhasindex 
+----------------+-------------
+ f              | f
+ f              | f
+ f              | f
 (3 rows)
 
 -- test correlation of the table

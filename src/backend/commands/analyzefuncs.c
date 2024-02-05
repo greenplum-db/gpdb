@@ -3,6 +3,7 @@
 #include "access/aocssegfiles.h"
 #include "access/table.h"
 #include "access/tuptoaster.h"
+#include "access/xact.h"
 #include "catalog/pg_appendonly.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbappendonlyam.h"
@@ -79,6 +80,11 @@ bool			gp_statistics_use_fkeys = false;
  * The first four rows form the actual sample. One of the columns contained
  * an oversized array datum. The function is marked as EXECUTE ON SEGMENTS in
  * the catalog so you get one summary row *for each segment*.
+ *
+ * Also, the function is mainly used to do analyze, and it can do some updates
+ * on system table on segments. If we directly select the function as above,
+ * it can cause catalog inconsistency issue between master and segments, but
+ * next analyze will fix the issue.
  */
 Datum
 gp_acquire_sample_rows(PG_FUNCTION_ARGS)
@@ -101,6 +107,7 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 		Relation	onerel;
 		int			attno;
 		int			outattno;
+		bool			in_outer_xact = IsInTransactionBlock(true);
 		VacuumParams	params;
 		RangeVar	   *this_rangevar;
 
@@ -139,7 +146,7 @@ gp_acquire_sample_rows(PG_FUNCTION_ARGS)
 									 pstrdup(RelationGetRelationName(onerel)),
 									 -1);
 		analyze_rel(relOid, this_rangevar, &params, NULL,
-					true, GetAccessStrategy(BAS_VACUUM), ctx);
+					in_outer_xact, GetAccessStrategy(BAS_VACUUM), ctx);
 
 		/* Count the number of non-dropped cols */
 		live_natts = 0;
