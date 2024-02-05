@@ -1208,6 +1208,7 @@ aocs_getnext(AOCSScanDesc scan, ScanDirection direction, TupleTableSlot *slot)
 
 	AOTupleId	aoTupleId;
 	int64		rowNum = INT64CONST(-1);
+	int64		nthInBlock;
 	int			err = 0;
 	bool		isSnapshotAny = (scan->rs_base.rs_snapshot == SnapshotAny);
 	AttrNumber	natts;
@@ -1284,13 +1285,25 @@ ReadNext:
 			 */
 			datumstreamread_get(scan->columnScanInfo.ds[attno], &d[attno], &null[attno]);
 
+			nthInBlock = datumstreamread_nth(scan->columnScanInfo.ds[attno]);
 			if (rowNum == INT64CONST(-1) &&
 				scan->columnScanInfo.ds[attno]->blockFirstRowNum != INT64CONST(-1))
 			{
-				Assert(scan->columnScanInfo.ds[attno]->blockFirstRowNum > 0);
-				rowNum = scan->columnScanInfo.ds[attno]->blockFirstRowNum +
-					datumstreamread_nth(scan->columnScanInfo.ds[attno]);
+				Assert(scan->columnScanInfo.ds[attno]->blockFirstRowNum > 0 && nthInBlock >= 0);
+				rowNum = scan->columnScanInfo.ds[attno]->blockFirstRowNum + nthInBlock;
 			}
+#ifdef USE_ASSERT_CHECKING
+			/*
+			 * the row number from every column should match
+			 * XXX: the first assert is repeated code, we should move it outside of
+			 * the if/else block if we can be sure blockFirstRowNum cannot be -1 here.
+			 */
+			else if (scan->columnScanInfo.ds[attno]->blockFirstRowNum != INT64CONST(-1))
+			{
+				Assert(scan->columnScanInfo.ds[attno]->blockFirstRowNum > 0 && nthInBlock >= 0);
+				Assert(rowNum == scan->columnScanInfo.ds[attno]->blockFirstRowNum + nthInBlock);
+			}
+#endif
 		}
 
 		scan->segrowsprocessed++;
