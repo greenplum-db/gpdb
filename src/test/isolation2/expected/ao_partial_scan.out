@@ -1031,7 +1031,7 @@ SELECT brin_summarize_range('aoco_partial_scan1_i_j_idx', 33554438);
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault                                                                                                                                                                                                                                    
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Success: fault name:'AppendOnlyStorageRead_ReadNextBlock_success' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'21' 
+ Success: fault name:'AppendOnlyStorageRead_ReadNextBlock_success' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'20' 
  
 (1 row)
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -1115,7 +1115,7 @@ SELECT brin_summarize_range('aoco_partial_scan1_i_j_idx', 33554471);
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault                                                                                                                                                                                                                                    
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Success: fault name:'AppendOnlyStorageRead_ReadNextBlock_success' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'13' 
+ Success: fault name:'AppendOnlyStorageRead_ReadNextBlock_success' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'11' 
  
 (1 row)
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -1203,7 +1203,7 @@ SELECT brin_summarize_range('aoco_partial_scan1_i_j_idx', 67108867);
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault                                                                                                                                                                                                                                    
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Success: fault name:'AppendOnlyStorageRead_ReadNextBlock_success' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'21' 
+ Success: fault name:'AppendOnlyStorageRead_ReadNextBlock_success' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'20' 
  
 (1 row)
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -1389,7 +1389,7 @@ SELECT brin_summarize_range('aoco_partial_scan2_i_j_idx', 33554433);
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault                                                                                                                                                                                                                                   
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Success: fault name:'AppendOnlyStorageRead_ReadNextBlock_success' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'4' 
+ Success: fault name:'AppendOnlyStorageRead_ReadNextBlock_success' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'2' 
  
 (1 row)
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -1634,7 +1634,7 @@ SELECT brin_summarize_range('aoco_partial_scan4_i_idx', 33554433);
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
  gp_inject_fault                                                                                                                                                                                                                                   
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Success: fault name:'AppendOnlyStorageRead_ReadNextBlock_success' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'2' 
+ Success: fault name:'AppendOnlyStorageRead_ReadNextBlock_success' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'1' 
  
 (1 row)
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';

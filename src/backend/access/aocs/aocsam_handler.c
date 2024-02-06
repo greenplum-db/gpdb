@@ -1925,6 +1925,8 @@ aoco_index_build_range_scan(Relation heapRelation,
 
 	aocoscan = (AOCSScanDesc) scan;
 
+	aocoscan->partialScan = true;
+
 	/*
 	 * Note that block directory is created during creation of the first
 	 * index.  If it is found empty, it means the block directory was created

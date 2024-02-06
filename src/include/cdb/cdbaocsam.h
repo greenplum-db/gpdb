@@ -273,6 +273,9 @@ typedef struct AOCSScanDescData
 	 * to comply with the TSM API).
 	 */
 	int64 		sampleTargetBlk;
+
+	/* Is this for partial scan? */
+	bool 		partialScan;
 } AOCSScanDescData;
 
 typedef AOCSScanDescData *AOCSScanDesc;
