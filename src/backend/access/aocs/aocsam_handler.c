@@ -1805,6 +1805,7 @@ aoco_index_build_range_scan(Relation heapRelation,
 	AppendOnlyBlockDirectory existingBlkdir;
 	bool        partialScanWithBlkdir = false;
 	int64 		previous_blkno = -1;
+	AppendOnlyBlockDirectoryEntry *dirEntries = NULL;
 
 	/*
 	 * sanity checks
@@ -1953,7 +1954,8 @@ aoco_index_build_range_scan(Relation heapRelation,
 		 */
 		bool	*proj;
 		int		relnatts = RelationGetNumberOfAttributes(heapRelation);
-		AppendOnlyBlockDirectoryEntry dirEntry = {{0}};
+		bool 		needs_second_phase_positioning = true;
+		int64 		common_start_rownum = 0;
 
 		/* The range is contained within one seg. */
 		Assert(AOSegmentGet_segno(start_blockno) ==
@@ -1977,6 +1979,15 @@ aoco_index_build_range_scan(Relation heapRelation,
 												true,
 												proj);
 
+		/*
+		 * The first phase positioning.
+		 *
+		 * position to the start of a desired block, or just the start of
+		 * a segment. We keep the directory entry returned to calculate
+		 * a common starting rownum among those blocks which we will use
+		 * to do the second phase positioning to later.
+		 */
+		dirEntries = palloc0(sizeof(AppendOnlyBlockDirectoryEntry) * aocoscan->columnScanInfo.num_proj_atts);
 		for (int colIdx = 0; colIdx < aocoscan->columnScanInfo.num_proj_atts; colIdx++)
 		{
 			int		fsInfoIdx;
@@ -1985,14 +1996,14 @@ aoco_index_build_range_scan(Relation heapRelation,
 			if (AppendOnlyBlockDirectory_GetEntryForPartialScan(&existingBlkdir,
 																start_blockno,
 																columnGroupNo,
-																&dirEntry,
+																&dirEntries[colIdx],
 																&fsInfoIdx))
 			{
 				/*
 				 * Since we found a block directory entry near start_blockno, we
 				 * can use it to position our scan.
 				 */
-				if (!aocs_positionscan(aocoscan, &dirEntry, colIdx, fsInfoIdx))
+				if (!aocs_positionscan(aocoscan, &dirEntries[colIdx], colIdx, fsInfoIdx))
 				{
 					/*
 					 * If we have failed to position our scan, that can mean that
@@ -2012,6 +2023,12 @@ aoco_index_build_range_scan(Relation heapRelation,
 			else
 			{
 				/*
+				 * So far we shouldn't have a case where some column has block
+				 * directory entry but others don't.
+				 */
+				Assert(colIdx == 0);
+
+				/*
 				 * We were unable to find a block directory row
 				 * encompassing/preceding the start block. This represents an
 				 * edge case where the start block of the range maps to a hole
@@ -2025,7 +2042,74 @@ aoco_index_build_range_scan(Relation heapRelation,
 				 * This will ensure that we don't skip the other possibly extant
 				 * blocks in the range.
 				 */
+				needs_second_phase_positioning = false;
 				break;
+			}
+		}
+
+		/*
+		 * The second phase positioning.
+		 *
+		 * Position to a common start rownum for every column.
+		 *
+		 * The common start rownum is just the max first rownum of all the
+		 * selected varblocks. It should be within the range of all the
+		 * varblocks in any possible cases:
+		 * 
+		 *   - Case 1: the target rownum does not fall into a hole.
+		 *       In this case, we return varblocks which contain the target row
+		 *       (see AppendOnlyBlockDirectory_GetEntryForPartialScan) and so 
+		 *       the first row num of each varblock will be lesser or equal to
+		 *       the target row num we are seeking. By extension, so will the
+		 *       max of all of those first row nums.
+		 *
+		 *   - Case 2a: the target row falls into a hole and we return varblocks
+		 *       immediately *succeeding* the hole (see 
+		 *       AppendOnlyBlockDirectory_GetEntryForPartialScan). By property 
+		 *       of the gp_fastsequence holes, all varblocks immediately
+		 *       succeeding the hole will have the same *first* row number.
+		 *
+		 *   - Case 2b: the target row falls into a hole and we return varblocks
+		 *       immediately *preceding* the hole (see 
+		 *       AppendOnlyBlockDirectory_GetEntryForPartialScan). By property 
+		 *       of the gp_fastsequence holes, all varblocks immediately
+		 *       preceding the hole will have the same *last* row number.
+		 *       So in this case the max first row number of all these varblocks
+		 *       should be smaller than the last row number.
+		 */
+		if (needs_second_phase_positioning)
+		{
+			/* find the common start rownum */
+			for (int colIdx = 0; colIdx < aocoscan->columnScanInfo.num_proj_atts; colIdx++)
+				common_start_rownum = Max(common_start_rownum, dirEntries[colIdx].range.firstRowNum);
+
+			/* position every column to that rownum */
+			for (int colIdx = 0; colIdx < aocoscan->columnScanInfo.num_proj_atts; colIdx++)
+			{
+				int 			err;
+				AttrNumber		attno = aocoscan->columnScanInfo.proj_atts[colIdx];
+				int32 			rowNumInBlock;
+
+				/* We must've found a valid block directory entry for every column */
+				Assert(dirEntries[colIdx].range.firstRowNum >= 1);
+
+				/* The common start rownum has to fall in the range of every block directory entry */
+				Assert(common_start_rownum >= dirEntries[colIdx].range.firstRowNum
+								&& common_start_rownum <= dirEntries[colIdx].range.lastRowNum);
+
+				/* read the varblock we've just positioned to */
+				err = datumstreamread_block(aocoscan->columnScanInfo.ds[colIdx], NULL, attno);
+				Assert(err >= 0); /* since it's a valid block, we must be able to read it */
+
+				rowNumInBlock = common_start_rownum - dirEntries[colIdx].range.firstRowNum;
+				Assert(rowNumInBlock >= 0);
+				/*
+				 * Position each column to point to the target row *minus one*. Reason for
+				 * the minus one is that, we are not going to read that row immediately.
+				 * What happens next is to call aocs_getnext which will advance to the target
+				 * row and then read from it. So we need to arrive to the *previous* row here.
+				 */
+				datumstreamread_find(aocoscan->columnScanInfo.ds[colIdx], rowNumInBlock - 1);
 			}
 		}
 	}
@@ -2172,6 +2256,9 @@ aoco_index_build_range_scan(Relation heapRelation,
 	}
 
 cleanup:
+	if (dirEntries)
+		pfree(dirEntries);
+
 	table_endscan(scan);
 
 	if (partialScanWithBlkdir)

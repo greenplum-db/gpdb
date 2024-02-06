@@ -267,7 +267,24 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 ----                          ao_column tables
 --------------------------------------------------------------------------------
 
-CREATE TABLE aoco_partial_scan1(i int, j int2, k int) USING ao_column;
+-- In the test below we will make the first column contain values that are equal
+-- to their respective row numbers. Therefore, we can check if the BRIN
+-- range start row matches the corresponding block start row of column 'i'.
+CREATE OR REPLACE FUNCTION verify_firstcol_rownum(indexname text)
+RETURNS TABLE(blknum bigint, match boolean) AS
+$$
+BEGIN /* in func */
+    RETURN QUERY EXECUTE format( /* in func */
+           'SELECT p.blknum, (string_to_array(trim(both ''{}'' from p.value), '' ''))[1] = t.min::text' /* in func */
+        || ' FROM brin_page_items(get_raw_page(%L, 2), %L) p' /* in func */
+        || ' JOIN (SELECT right(split_part(ctid::text, '','', 1), -1) AS blknum,min(i)' /* in func */
+        || '       FROM aoco_partial_scan1 GROUP BY 1) t ON t.blknum = p.blknum::text' /* in func */
+        || '       WHERE p.attnum = 1', indexname, indexname); /* in func */
+END; /* in func */
+$$
+LANGUAGE plpgsql;
+
+CREATE TABLE aoco_partial_scan1(i int, j int2, d int) USING ao_column DISTRIBUTED BY (d);
 
 --------------------------------------------------------------------------------
 -- Scenario 1: Starting block number of scans map to block directory entries,
@@ -275,10 +292,12 @@ CREATE TABLE aoco_partial_scan1(i int, j int2, k int) USING ao_column;
 --------------------------------------------------------------------------------
 
 -- Create a couple of seg files, spanning a couple of minipages each.
+-- We would want vary the values for each columns and then verify the summarization later.
+-- Note that column j is int2 so we just vary within the same block.
 1: BEGIN;
 2: BEGIN;
-1: INSERT INTO aoco_partial_scan1 SELECT 1,100,k FROM generate_series(1, 1320000) k;
-2: INSERT INTO aoco_partial_scan1 SELECT 20,200,k FROM generate_series(1, 1320000) k;
+1: INSERT INTO aoco_partial_scan1 SELECT k,k/32768,1 FROM generate_series(1, 1320000) k;
+2: INSERT INTO aoco_partial_scan1 SELECT k,k/32768,20 FROM generate_series(1, 1320000) k;
 1: COMMIT;
 2: COMMIT;
 
@@ -298,6 +317,7 @@ ORDER BY 1,2,3;
 
 -- Show the composition of the single data page in the BRIN index.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan1_i_j_idx', 2), 'aoco_partial_scan1_i_j_idx');
+1U: SELECT * FROM verify_firstcol_rownum('aoco_partial_scan1_i_j_idx');
 
 -- Now desummarize a few ranges.
 1U: SELECT brin_desummarize_range('aoco_partial_scan1_i_j_idx', 33554432);
@@ -323,6 +343,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan1_i_j_idx', 2), 'aoco_partial_scan1_i_j_idx');
+1U: SELECT * FROM verify_firstcol_rownum('aoco_partial_scan1_i_j_idx');
 
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid)
   FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -334,6 +355,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan1_i_j_idx', 2), 'aoco_partial_scan1_i_j_idx');
+1U: SELECT * FROM verify_firstcol_rownum('aoco_partial_scan1_i_j_idx');
 
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid)
   FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
@@ -345,6 +367,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan1_i_j_idx', 2), 'aoco_partial_scan1_i_j_idx');
+1U: SELECT * FROM verify_firstcol_rownum('aoco_partial_scan1_i_j_idx');
 
 -- A similar result is expected from scanning the first range in seg2, as for
 -- the first range in seg1.
@@ -358,18 +381,19 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan1_i_j_idx', 2), 'aoco_partial_scan1_i_j_idx');
+1U: SELECT * FROM verify_firstcol_rownum('aoco_partial_scan1_i_j_idx');
 
 --------------------------------------------------------------------------------
 -- Scenario 2: Starting block number of scan maps to hole at the end of the
 -- minipage (after the last entry).
 --------------------------------------------------------------------------------
-CREATE TABLE aoco_partial_scan2(i int, j int, k int) USING ao_column;
+CREATE TABLE aoco_partial_scan2(i int, j int, k int) USING ao_column DISTRIBUTED BY (k);
 -- Fill 1 logical heap block with committed rows.
-INSERT INTO aoco_partial_scan2 SELECT 1, 100, k FROM generate_series(1, 32767) k;
+INSERT INTO aoco_partial_scan2 SELECT k, k, 1 FROM generate_series(1, 32767) k;
 -- Now add some aborted rows at the end of the segfile, resulting in a hole at
 -- the end of the minipage.
 BEGIN;
-INSERT INTO aoco_partial_scan2 SELECT 20, 200, k FROM generate_series(1, 32768) k;
+INSERT INTO aoco_partial_scan2 SELECT k, 200, 20 FROM generate_series(1, 32768) k;
 ABORT;
 
 -- Doing an index build will result in scanning the committed rows only.
@@ -388,6 +412,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Show the composition of the single data page in the BRIN index.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan2_i_j_idx', 2), 'aoco_partial_scan2_i_j_idx');
+1U: SELECT * FROM verify_firstcol_rownum('aoco_partial_scan2_i_j_idx');
 
 -- Now desummarize the first range of committed rows.
 1U: SELECT brin_desummarize_range('aoco_partial_scan2_i_j_idx', 33554432);
@@ -417,18 +442,19 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Sanity: the summary info is reflected in the data page.
 1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan2_i_j_idx', 2), 'aoco_partial_scan2_i_j_idx');
+1U: SELECT * FROM verify_firstcol_rownum('aoco_partial_scan2_i_j_idx');
 
 --------------------------------------------------------------------------------
 -- Scenario 3: Starting block number of scan maps to hole at the start of the
 -- segfile (and before the first entry of the first minipage).
 --------------------------------------------------------------------------------
-CREATE TABLE aoco_partial_scan3(i int, j int, k int) USING ao_column;
+CREATE TABLE aoco_partial_scan3(i int, j int, k int) USING ao_column DISTRIBUTED BY (k);
 -- Create a hole with 1 logical heap block worth of aborted rows.
 BEGIN;
-INSERT INTO aoco_partial_scan3 SELECT 1, 100, k FROM generate_series(1, 32767) k;
+INSERT INTO aoco_partial_scan3 SELECT k, k, 1 FROM generate_series(1, 32767) k;
 ABORT;
 -- Fill the next 3 logical heap blocks with committed rows.
-INSERT INTO aoco_partial_scan3 SELECT 20, 100, k FROM generate_series(1, 32768 * 3) k;
+INSERT INTO aoco_partial_scan3 SELECT k, k/32768, 20 FROM generate_series(1, 32768 * 3) k;
 
 -- Doing an index build will result in scanning the committed rows only.
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid)
