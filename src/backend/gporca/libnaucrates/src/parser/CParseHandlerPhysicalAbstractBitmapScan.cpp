@@ -180,7 +180,7 @@ CParseHandlerPhysicalAbstractBitmapScan::EndElementHelper(
 	}
 	m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_op);
 
-	// set statictics and physical properties
+	// set statistics and physical properties
 	CParseHandlerUtils::SetProperties(m_dxl_node, prop_parse_handler);
 
 	// add constructed children

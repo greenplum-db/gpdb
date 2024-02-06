@@ -169,7 +169,7 @@ CParseHandlerRedistributeMotion::EndElement(
 		dynamic_cast<CParseHandlerPhysicalOp *>((*this)[5]);
 
 	m_dxl_node = GPOS_NEW(m_mp) CDXLNode(m_mp, m_dxl_op);
-	// set statictics and physical properties
+	// set statistics and physical properties
 	CParseHandlerUtils::SetProperties(m_dxl_node, prop_parse_handler);
 
 	// add children
