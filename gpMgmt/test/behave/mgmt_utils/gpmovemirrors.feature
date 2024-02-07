@@ -328,12 +328,17 @@ Feature: Tests for gpmovemirrors
     And the segments are synchronized
     And all files in gpAdminLogs directory are deleted on all hosts in the cluster
     And the information of contents 0,1,2 is saved
+    And a gprecoverseg directory under '/tmp' with mode '0700' is created
+    And a gprecoverseg input file is created
+    And edit the input file to recover mirror with content 0 to a new directory on remote host with mode 0700
+    And edit the input file to recover mirror with content 1 to a new directory on remote host with mode 0700
+    And edit the input file to recover mirror with content 2 to a new directory on remote host with mode 0700
     And user immediately stops all mirror processes for content 0,1,2
     And user can start transactions
     And the user suspend the walsender on the primary on content 0
     And the user suspend the walsender on the primary on content 1
     And the user suspend the walsender on the primary on content 2
-    And the user asynchronously runs "gprecoverseg -aF" and the process is saved
+    When the user asynchronously runs gprecoverseg with input file and additional args "-a" and the process is saved
     And the user just waits until recovery_progress.file is created in gpAdminLogs
     And verify that mirror on content 0,1,2 is down
     And the gprecoverseg lock directory is removed
@@ -341,10 +346,9 @@ Feature: Tests for gpmovemirrors
     And a gpmovemirrors input file is created
     And edit the input file to recover mirror with content 0,1,2 to a new directory with mode 0700
     When the user runs gpmovemirrors with input file and additional args "-v"
-    Then gprecoverseg should print "Found pg_basebackup running for segments with contentIds [0, 1, 2], skipping recovery of these segments" to logfile
     And gprecoverseg should return a return code of 0
     And gpmovemirrors should return a return code of 0
-    And check if mirrors on content 0,1,2 are in their original configuration
+    Then gprecoverseg should print "Found pg_basebackup running for segments with contentIds [0, 1, 2], skipping recovery of these segments" to logfile
     And the user reset the walsender on the primary on content 0
     And the user reset the walsender on the primary on content 1
     And the user reset the walsender on the primary on content 2
