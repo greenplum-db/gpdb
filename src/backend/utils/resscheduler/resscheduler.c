@@ -851,8 +851,13 @@ ResUnLockPortal(Portal portal)
 
 		ResLockRelease(&tag, portal->portalId);
 
-		/* Count holdable cursors.*/
-		if (portal->cursorOptions & CURSOR_OPT_HOLD)
+		/*
+		 * Count holdable cursors.
+		 * Note: there is an edge case when we are unlocking a portal with a
+		 * dangling increment set. Such a portal was not counted as a holdable
+		 * portal, so don't un-count it.
+		 */
+		if ((portal->cursorOptions & CURSOR_OPT_HOLD) && portal->hasResQueueLock)
 		{
 			Assert(numHoldPortals > 0);
 			numHoldPortals--;

@@ -2058,6 +2058,8 @@ ResLockWaitCancel(void)
 		else
 			disable_timeout(DEADLOCK_TIMEOUT, false);
 
+		SIMPLE_FAULT_INJECTOR("res_lock_wait_cancel_before_partition_lock");
+
 		/* Unlink myself from the wait queue, if on it  */
 		partitionLock = LockHashPartitionLock(lockAwaited->hashcode);
 		LWLockAcquire(partitionLock, LW_EXCLUSIVE);

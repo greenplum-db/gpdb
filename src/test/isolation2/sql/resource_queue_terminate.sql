@@ -65,6 +65,79 @@
 -- Sanity check: Ensure that the resource queue is now empty.
 0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_terminate';
 
+--
+-- Scenario 5: Race during termination of session having a waiting portal with
+-- another session waking up the same one. This can happen if the waiter during
+-- termination, hasn't yet removed itself from the wait queue in
+-- AbortOutOfAnyTransaction() -> .. -> ResLockWaitCancel(), and another session
+-- sees it on the wait queue, does an external grant and wakeup. This causes a
+-- leak, as the external grant is never cleaned up. In an asserts build we see:
+-- FailedAssertion(""!(SHMQueueEmpty(&(MyProc->myProcLocks[i])))"", File: ""proc.c", Line: 1031
+--
+7:SET ROLE role_terminate;
+7:BEGIN;
+7:DECLARE cs6 CURSOR FOR SELECT 0;
+8:SET ROLE role_terminate;
+8&:SELECT 331765;
+
+0:SELECT gp_inject_fault('res_lock_wait_cancel_before_partition_lock', 'suspend', dbid) FROM
+    gp_segment_configuration WHERE content = -1 AND role = 'p';
+
+-- Fire the termination first and it will be stuck in the middle of aborting.
+0:SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+  WHERE query='SELECT 331765;';
+0:SELECT gp_wait_until_triggered_fault('res_lock_wait_cancel_before_partition_lock', 1, dbid) FROM
+    gp_segment_configuration WHERE content = -1 AND role = 'p';
+
+-- Now perform the external grant (as a part of relinquishing a spot in the queue)
+7:CLOSE cs6;
+
+-- Sanity check: Ensure that the resource queue now has 1 active statement (from
+-- the external grant).
+0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_terminate';
+
+0:SELECT gp_inject_fault('res_lock_wait_cancel_before_partition_lock', 'reset', dbid) FROM
+    gp_segment_configuration WHERE content = -1 AND role = 'p';
+
+8<:
+7:END;
+
+-- Sanity check: Ensure that the resource queue is now empty.
+0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_terminate';
+
+--
+-- Scenario 6: Same as 5, except the statement being terminated is a holdable cursor.
+--
+9:SET ROLE role_terminate;
+9:BEGIN;
+9:DECLARE cs7 CURSOR FOR SELECT 0;
+10:SET ROLE role_terminate;
+10&:DECLARE cs8 CURSOR WITH HOLD FOR SELECT 0;
+
+0:SELECT gp_inject_fault('res_lock_wait_cancel_before_partition_lock', 'suspend', dbid) FROM
+    gp_segment_configuration WHERE content = -1 AND role = 'p';
+
+-- Fire the termination first and it will be stuck in the middle of aborting.
+0:SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+  WHERE query='DECLARE cs8 CURSOR WITH HOLD FOR SELECT 0;';
+0:SELECT gp_wait_until_triggered_fault('res_lock_wait_cancel_before_partition_lock', 1, dbid) FROM
+    gp_segment_configuration WHERE content = -1 AND role = 'p';
+
+-- Now perform the external grant (as a part of relinquishing a spot in the queue)
+9:CLOSE cs6;
+
+-- Sanity check: Ensure that the resource queue now has 1 active statement (from
+-- the external grant).
+0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_terminate';
+
+0:SELECT gp_inject_fault('res_lock_wait_cancel_before_partition_lock', 'reset', dbid) FROM
+    gp_segment_configuration WHERE content = -1 AND role = 'p';
+
+10<:
+9:END;
+
+-- Sanity check: Ensure that the resource queue is now empty.
+0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_terminate';
 
 -- Cleanup
 0:DROP ROLE role_terminate;

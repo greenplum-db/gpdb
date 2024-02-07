@@ -1422,6 +1422,45 @@ ResProcLockRemoveSelfAndWakeup(LOCK *lock)
 	return;
 }
 
+/*
+ * Does this portal have an increment set that hasn't been cleaned up yet as
+ * part of ResLockRelease()?
+ *
+ * One known reason for this to happen is when an external session grants this
+ * portal the resource queue lock, but the current session hasn't had a chance
+ * to become aware of it (for e.g. if it is too far along during termination).
+ */
+bool
+ResPortalHasDanglingIncrement(Portal portal)
+{
+	Assert(!portal->hasResQueueLock);
+
+	if (IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH && OidIsValid(portal->queueId))
+	{
+		ResPortalTag 		portalTag;
+		ResPortalIncrement	*resPortalIncrement;
+
+		portalTag.portalId = portal->portalId;
+		portalTag.pid = MyProcPid;
+
+		LWLockAcquire(ResQueueLock, LW_SHARED);
+		resPortalIncrement = ResIncrementFind(&portalTag);
+		LWLockRelease(ResQueueLock);
+
+		if (resPortalIncrement)
+		{
+			ereport(LOG,
+					(errmsg("dangling increment found for resource queue id: %u, portal id: %u\"",
+							portal->queueId, portal->portalId),
+					 errdetail("portal name: %s, portal statement: %s",
+							   portal->name, portal->sourceText),
+					 errprintstack(true)));
+			return true;
+		}
+	}
+
+	return false;
+}
 
 /*
  * ResProcWakeup -- wake a sleeping process.
@@ -1767,7 +1806,7 @@ ResIncrementFind(ResPortalTag *portaltag)
 	ResPortalIncrement *incrementSet;
 	bool		found;
 
-	Assert(LWLockHeldExclusiveByMe(ResQueueLock));
+	Assert(LWLockHeldByMe(ResQueueLock));
 
 	incrementSet = (ResPortalIncrement *)
 		hash_search(ResPortalIncrementHash, (void *) portaltag, HASH_FIND, &found);

@@ -549,7 +549,10 @@ PortalDrop(Portal portal, bool isTopCommit)
 	 */
 	PortalHashTableDelete(portal);
 
-	if (IsResQueueLockedForPortal(portal))
+	/*
+	 * GPDB: Cleanup for resource queue associated with the portal (if any).
+	 */
+	if (IsResQueueLockedForPortal(portal) || ResPortalHasDanglingIncrement(portal))
 	{
 		ResUnLockPortal(portal);
 	}
@@ -1114,7 +1117,14 @@ AtExitCleanup_ResPortals(void)
 	{
 		Portal		portal = hentry->portal;
 
-		if (IsResQueueLockedForPortal(portal))
+		/*
+		 * Note: There is no real need to call ResPortalHasDanglingIncrement()
+		 * here. Only persisted holdable portals are cleaned up here and they
+		 * should already have hasResQueueLock=true.
+		 *
+		 * But we still do so out of paranoia/future-proofing.
+		 */
+		if (IsResQueueLockedForPortal(portal) || ResPortalHasDanglingIncrement(portal))
 			ResUnLockPortal(portal);
 
 	}
