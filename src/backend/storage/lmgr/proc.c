@@ -2116,8 +2116,6 @@ ResProcSleep(LOCKMODE lockmode, LOCALLOCK *locallock, void *incrementSet)
 	uint32		hashcode = locallock->hashcode;
 	LWLockId	partitionLock = LockHashPartitionLock(hashcode);
 
-	bool		selflock = true;		/* initialize result for error. */
-
 	/*
 	 * Don't check my held locks, as we just add at the end of the queue.
 	 */
@@ -2135,16 +2133,6 @@ ResProcSleep(LOCKMODE lockmode, LOCALLOCK *locallock, void *incrementSet)
 	MyProc->waitLockMode = lockmode;
 
 	MyProc->waitStatus = STATUS_WAITING;	/* initialize result for error */
-
-	/* Now check the status of the self lock footgun. */
-	selflock = ResCheckSelfDeadLock(lock, proclock, incrementSet);
-	if (selflock)
-	{
-		LWLockRelease(partitionLock);
-		ereport(ERROR,
-				(errcode(ERRCODE_T_R_DEADLOCK_DETECTED),
-				 errmsg("deadlock detected, locking against self")));
-	}
 
 	/* Mark that we are waiting for a lock */
 	lockAwaited = locallock;
