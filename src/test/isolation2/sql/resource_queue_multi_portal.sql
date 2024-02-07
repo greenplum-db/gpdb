@@ -88,12 +88,12 @@
 
 -- There should now only be one active statement, following the abort of session
 -- 1's transaction. The active statement is contributed by session 2.
+1<:
 0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
 0:SELECT query, state from pg_stat_activity
   WHERE query = 'DECLARE c2 CURSOR FOR SELECT 1;';
 
 -- After ending the transactions, there should be 0 active statements.
-1<:
 1:END;
 2:END;
 0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';

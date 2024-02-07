@@ -149,6 +149,8 @@ DECLARE CURSOR
 
 -- There should now only be one active statement, following the abort of session
 -- 1's transaction. The active statement is contributed by session 2.
+1<:  <... completed>
+ERROR:  canceling statement due to user request
 0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';
  rsqcountlimit | rsqcountvalue 
 ---------------+---------------
@@ -161,8 +163,6 @@ DECLARE CURSOR
 (1 row)
 
 -- After ending the transactions, there should be 0 active statements.
-1<:  <... completed>
-ERROR:  canceling statement due to user request
 1:END;
 ROLLBACK
 2:END;
