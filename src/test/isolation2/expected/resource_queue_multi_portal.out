@@ -135,6 +135,7 @@ DECLARE
 -- its transaction.
 1:DECLARE c3 CURSOR FOR SELECT 1;
 ERROR:  deadlock detected, locking against self
+DETAIL:  resource queue id: 585193, portal id: 3
 
 -- There should be 0 active statements following the transaction abort.
 0:SELECT rsqcountlimit, rsqcountvalue FROM pg_resqueue_status WHERE rsqname = 'rq_multi_portal';

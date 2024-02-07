@@ -149,4 +149,7 @@ s/ The shortest establish conn time: \d+\.\d+ ms, segindex: \d+,/ The shortest e
 m/ The longest  establish conn time: \d+\.\d+ ms, segindex: \d+/
 s/ The longest  establish conn time: \d+\.\d+ ms, segindex: \d+/ The longest  establish conn time: xx\.xx ms, segindex: xx/
 
+# ignore resource queue ids
+m/resource queue id: \d+/
+s/resource queue id: \d+/resource queue id: XXXX/
 -- end_matchsubs

@@ -178,9 +178,10 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 	{
 		elog(LOG,
 			 "Resource queue %d: previous ResLockAcquire() interrupted, "
-			 " status = %d",
+			 " status = %d, portal id = %u",
 			 locktag->locktag_field1,
-			 resLockAcquireStatus);
+			 resLockAcquireStatus,
+			 incrementSet->portalId);
 	}
 
 	resLockAcquireStatus = RQA_STARTED;
@@ -249,6 +250,9 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 		ereport(ERROR,
 				(errcode(ERRCODE_OUT_OF_MEMORY),
 				 errmsg("out of shared memory"),
+				 errdetail("resource queue id: %u, portal id: %u",
+						   locktag->locktag_field1,
+						   incrementSet->portalId),
 				 errhint("You may need to increase max_resource_queues.")));
 	}
 
@@ -310,12 +314,19 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 											 hashcode,
 											 HASH_REMOVE,
 											 NULL))
-				elog(PANIC, "lock table corrupted");
+				ereport(PANIC,
+						(errmsg("lock table corrupted"),
+						 errdetail("resource queue id: %u, portal id: %u",
+								   locktag->locktag_field1,
+								   incrementSet->portalId)));
 		}
 		LWLockRelease(partitionLock);
 		ereport(ERROR,
 				(errcode(ERRCODE_OUT_OF_MEMORY),
 				 errmsg("out of shared memory"),
+				 errdetail("resource queue id: %u, portal id: %u",
+						   locktag->locktag_field1,
+						   incrementSet->portalId),
 				 errhint("You may need to increase max_resource_queues.")));
 	}
 
@@ -428,7 +439,10 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 			ereport(ERROR,
 					(errcode(ERRCODE_INTERNAL_ERROR),
 						errmsg("duplicate portal id %u for proc %d",
-							   incrementSet->portalId, incrementSet->pid)));
+							   incrementSet->portalId, incrementSet->pid),
+						errdetail("resource queue id: %u, portal id: %u",
+								  locktag->locktag_field1,
+								  incrementSet->portalId)));
 	}
 
 	/*
@@ -471,7 +485,10 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 		LWLockRelease(partitionLock);
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
-				 errmsg("statement requires more resources than resource queue allows")));
+				 errmsg("statement requires more resources than resource queue allows"),
+				 errdetail("resource queue id: %u, portal id: %u",
+						   locktag->locktag_field1,
+						   incrementSet->portalId)));
 	}
 	else if (status == STATUS_OK)
 	{
@@ -512,7 +529,10 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 
 			ereport(ERROR,
 					(errcode(ERRCODE_T_R_DEADLOCK_DETECTED),
-						errmsg("deadlock detected, locking against self")));
+					 errmsg("deadlock detected, locking against self"),
+					 errdetail("resource queue id: %u, portal id: %u",
+							   locktag->locktag_field1,
+							   incrementSet->portalId)));
 		}
 
 		/*
@@ -558,7 +578,11 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 		if (!(proclock->holdMask & LOCKBIT_ON(lockmode)))
 		{
 			LWLockRelease(partitionLock);
-			elog(ERROR, "ResLockAcquire failed");
+			ereport(ERROR,
+					(errmsg("ResLockAcquire failed"),
+					 errdetail("resource queue id: %u, portal id: %u",
+							   locktag->locktag_field1,
+							   incrementSet->portalId)));
 		}
 
 		/* Reset the portal id. */
@@ -611,9 +635,10 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	{
 		elog(LOG,
 			 "Resource queue %d: previous ResLockAcquire() interrupted, "
-			 " status = %d",
+			 " status = %d, portal id = %u",
 			 locktag->locktag_field1,
-			 resLockAcquireStatus);
+			 resLockAcquireStatus,
+			 resPortalId);
 		resLockAcquireOrReleaseInterrupted = true;
 	}
 
@@ -625,9 +650,10 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	{
 		elog(LOG,
 			 "Resource queue %d: previous ResLockRelease() interrupted, "
-			 " status = %d",
+			 " status = %d, portal id = %u",
 			 locktag->locktag_field1,
-			 resLockReleaseStatus);
+			 resLockReleaseStatus,
+			 resPortalId);
 		resLockAcquireOrReleaseInterrupted = true;
 	}
 	resLockReleaseStatus = RQR_STARTED;
@@ -661,7 +687,9 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 		!locallock->lock ||
 		!locallock->proclock)
 	{
-		elog(LOG, "Resource queue %d: no lock to release", locktag->locktag_field1);
+		elog(LOG, "Resource queue %d: no lock to release for portal id = %u",
+			 locktag->locktag_field1,
+			 resPortalId);
 
 		if (locallock)
 		{
@@ -697,8 +725,9 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	{
 		LWLockRelease(partitionLock);
 		elog(LOG,
-			 "Resource queue %d: lock already gone",
-			 locktag->locktag_field1);
+			 "Resource queue %d: lock already gone for portal id = %u",
+			 locktag->locktag_field1,
+			 resPortalId);
 		RemoveLocalLock(locallock);
 
 		resLockReleaseStatus = RQR_NOT_STARTED_OR_DONE;
@@ -714,7 +743,9 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	 */
 	if (!(proclock->holdMask & LOCKBIT_ON(lockmode)) || proclock->nLocks <= 0)
 	{
-		elog(LOG, "ResLockRelease: Resource queue %d: proclock not held", locktag->locktag_field1);
+		elog(LOG, "Resource queue %d: proclock not held for portal id = %u",
+			 locktag->locktag_field1,
+			 resPortalId);
 		RemoveLocalLock(locallock);
 
 		ResCleanUpLock(lock, proclock, hashcode, false);
@@ -737,8 +768,9 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	if (!incrementSet)
 	{
 		elog(LOG,
-			 "Resource queue %d: increment not found on unlock",
-			 locktag->locktag_field1);
+			 "Resource queue %d: increment not found on unlock for portal id = %u",
+			 locktag->locktag_field1,
+			 resPortalId);
 
 		/*
 		 * Clean up the locallock. Since a single locallock can represent
@@ -1002,9 +1034,10 @@ ResLockUpdateLimit(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increment
 	{
 		Assert(limits[0].type == RES_COUNT_LIMIT);
 		elog(LOG,
-			 "Resource queue id: %d, count limit: %f\n",
+			 "Resource queue id: %d, count limit: %f, portal id: %u\n",
 			 queue->queueid,
-			 limits[0].current_value);
+			 limits[0].current_value,
+			 incrementSet->portalId);
 		ereport(LOG,
 				(errmsg("ResLockUpdateLimit()"),
 				errprintstack(true)));
