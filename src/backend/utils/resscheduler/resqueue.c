@@ -1611,6 +1611,12 @@ ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increme
 					if (incrementTotals[i] > limits[i].threshold_value)
 					{
 						countThesholdOvercommitted = true;
+						ereport(LOG,
+								(errmsg("count threshold overcommitted"),
+									errdetail("total count %lf exceeds limit %f for resource queue id: %u",
+											  incrementTotals[i],
+											  limits[i].threshold_value,
+											  queue->queueid)));
 					}
 				}
 				break;
@@ -1620,6 +1626,12 @@ ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increme
 					if (incrementTotals[i] > limits[i].threshold_value)
 					{
 						costThesholdOvercommitted = true;
+						ereport(LOG,
+								(errmsg("cost threshold overcommitted"),
+									errdetail("total cost %lf exceeds limit %f for resource queue id: %u",
+											  incrementTotals[i],
+											  limits[i].threshold_value,
+											  queue->queueid)));
 					}
 				}
 				break;
@@ -1629,6 +1641,12 @@ ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increme
 					if (incrementTotals[i] > limits[i].threshold_value)
 					{
 						memoryThesholdOvercommitted = true;
+						ereport(LOG,
+								(errmsg("memory threshold overcommitted"),
+									errdetail("total memory %lf exceeds limit %f for resource queue id: %u",
+											  incrementTotals[i],
+											  limits[i].threshold_value,
+											  queue->queueid)));
 					}
 				}
 				break;
@@ -1664,6 +1682,10 @@ ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increme
 		{
 			/* we're no longer waiting. */
 			gpstat_report_waiting(PGBE_WAITING_NONE);
+			ereport(LOG,
+					(errmsg("granting ourselves the resource queue lock in the self-deadlock check"),
+						errdetail("resource queue id: %u, portal id: %u",
+								  queue->queueid, incrementSet->portalId)));
 			ResGrantLock(lock, proclock);
 			ResLockUpdateLimit(lock, proclock, incrementSet, true, true);
 		}
