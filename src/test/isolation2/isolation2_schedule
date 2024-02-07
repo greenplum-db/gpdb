@@ -72,6 +72,8 @@ test: resource_queue_cancel resource_queue_multi_portal
 
 test: resource_queue_role resource_queue_alter
 
+test: resource_queue_self_deadlock
+
 # below test(s) inject faults so each of them need to be in a separate group
 test: pg_terminate_backend
 
