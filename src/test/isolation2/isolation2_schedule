@@ -70,6 +70,8 @@ test: vacuum_drop_phase_ao
 # sessions with multiple portals.
 test: resource_queue_cancel resource_queue_multi_portal
 
+test: resource_queue_role
+
 # below test(s) inject faults so each of them need to be in a separate group
 test: pg_terminate_backend
 

@@ -1,0 +1,136 @@
+-- Behavioral tests to showcase that we always use the current_user to determine
+-- which resource queue that the statement should belong to. Also, even though
+-- we may use the current_user to route the statement, we may still use the
+-- session_user in resource queue views.
+
+0:CREATE RESOURCE QUEUE rq_role_test1 WITH (active_statements = 2);
+CREATE
+0:CREATE RESOURCE QUEUE rq_role_test2 WITH (active_statements = 2);
+CREATE
+0:CREATE ROLE rq_role_test_role1 RESOURCE QUEUE rq_role_test1;
+CREATE
+0:CREATE ROLE rq_role_test_role2 RESOURCE QUEUE rq_role_test2;
+CREATE
+
+--
+-- SET ROLE
+--
+
+1:SET ROLE rq_role_test_role1;
+SET
+1:BEGIN;
+BEGIN
+1:DECLARE c1 CURSOR FOR SELECT 1;
+DECLARE
+1:SET ROLE rq_role_test_role2;
+SET
+1:DECLARE c2 CURSOR FOR SELECT 1;
+DECLARE
+
+-- We should see 1 lock each on each queue, with 1 holder, with 1 active
+-- statement in queue. The lorusename in gp_locks_on_resqueue will be the session_user
+-- as opposed to the current_user 'rq_role_test_role1' or 'rq_role_test_role2' (which we
+-- use to find the destination queue)
+0:SELECT lorusename=session_user, lorrsqname, lorlocktype, lormode, lorgranted FROM gp_toolkit.gp_locks_on_resqueue WHERE lorrsqname IN ('rq_role_test1', 'rq_role_test2');
+ ?column? | lorrsqname    | lorlocktype    | lormode       | lorgranted 
+----------+---------------+----------------+---------------+------------
+ t        | rq_role_test2 | resource queue | ExclusiveLock | t          
+ t        | rq_role_test1 | resource queue | ExclusiveLock | t          
+(2 rows)
+0:SELECT rsqname, rsqcountlimit, rsqcountvalue, rsqwaiters, rsqholders FROM gp_toolkit.gp_resqueue_status WHERE rsqname IN ('rq_role_test1', 'rq_role_test2');
+ rsqname       | rsqcountlimit | rsqcountvalue | rsqwaiters | rsqholders 
+---------------+---------------+---------------+------------+------------
+ rq_role_test1 | 2             | 1             | 0          | 1          
+ rq_role_test2 | 2             | 1             | 0          | 1          
+(2 rows)
+
+1:END;
+END
+1q: ... <quitting>
+
+--
+-- SET SESSION AUTHORIZATION
+--
+
+1:SET SESSION AUTHORIZATION rq_role_test_role1;
+SET
+1:BEGIN;
+BEGIN
+1:DECLARE c1 CURSOR FOR SELECT 1;
+DECLARE
+1:SET SESSION AUTHORIZATION  rq_role_test_role2;
+SET
+1:DECLARE c2 CURSOR FOR SELECT 1;
+DECLARE
+
+-- We should see 1 lock each on each queue, with 1 holder, with 1 active
+-- statement in queue. The lorusename in gp_locks_on_resqueue will be the session_user
+-- as opposed to the current_user 'rq_role_test_role1' or 'rq_role_test_role2' (which we
+-- use to find the destination queue)
+0:SELECT lorusename=session_user, lorrsqname, lorlocktype, lormode, lorgranted FROM gp_toolkit.gp_locks_on_resqueue WHERE lorrsqname IN ('rq_role_test1', 'rq_role_test2');
+ ?column? | lorrsqname    | lorlocktype    | lormode       | lorgranted 
+----------+---------------+----------------+---------------+------------
+ t        | rq_role_test2 | resource queue | ExclusiveLock | t          
+ t        | rq_role_test1 | resource queue | ExclusiveLock | t          
+(2 rows)
+0:SELECT rsqname, rsqcountlimit, rsqcountvalue, rsqwaiters, rsqholders FROM gp_toolkit.gp_resqueue_status WHERE rsqname IN ('rq_role_test1', 'rq_role_test2');
+ rsqname       | rsqcountlimit | rsqcountvalue | rsqwaiters | rsqholders 
+---------------+---------------+---------------+------------+------------
+ rq_role_test1 | 2             | 1             | 0          | 1          
+ rq_role_test2 | 2             | 1             | 0          | 1          
+(2 rows)
+
+1:END;
+END
+1q: ... <quitting>
+
+--
+-- Executing a SECURITY DEFINER function
+--
+
+1:SET ROLE rq_role_test_role2;
+SET
+1:CREATE FUNCTION rq_run_as_secd() RETURNS VOID AS 'SELECT pg_sleep(10000000);' LANGUAGE SQL SECURITY DEFINER;
+CREATE
+1:SET ROLE rq_role_test_role1;
+SET
+1&:SELECT rq_run_as_secd();  <waiting ...>
+
+-- It may seem that because rq_run_as_secd() is to be executed as
+-- rq_role_test_role2, the owner of rq_run_as_secd(), that it will be allocated
+-- to rq_role_test1. However, since the portal is created prior to the
+-- current_user switch for SECURITY DEFINER in the function manager, we end up
+-- allocating the statement to rq_role_test1, according to the "current" current_user.
+0:SELECT lorusename=session_user, lorrsqname, lorlocktype, lormode, lorgranted FROM gp_toolkit.gp_locks_on_resqueue WHERE lorrsqname IN ('rq_role_test1', 'rq_role_test2');
+ ?column? | lorrsqname    | lorlocktype    | lormode       | lorgranted 
+----------+---------------+----------------+---------------+------------
+ t        | rq_role_test1 | resource queue | ExclusiveLock | t          
+(1 row)
+0:SELECT rsqname, rsqcountlimit, rsqcountvalue, rsqwaiters, rsqholders FROM gp_toolkit.gp_resqueue_status WHERE rsqname IN ('rq_role_test1', 'rq_role_test2');
+ rsqname       | rsqcountlimit | rsqcountvalue | rsqwaiters | rsqholders 
+---------------+---------------+---------------+------------+------------
+ rq_role_test2 | 2             | 0             | 0          | 0          
+ rq_role_test1 | 2             | 1             | 0          | 1          
+(2 rows)
+
+-- Terminate the function
+0:SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE query = 'SELECT rq_run_as_secd();';
+ pg_cancel_backend 
+-------------------
+ t                 
+(1 row)
+1<:  <... completed>
+ERROR:  canceling statement due to user request
+CONTEXT:  SQL function "rq_run_as_secd" statement 1
+
+-- Cleanup
+0:DROP FUNCTION rq_run_as_secd();
+DROP
+0:DROP ROLE rq_role_test_role1;
+DROP
+0:DROP RESOURCE QUEUE rq_role_test1;
+DROP
+0:DROP ROLE rq_role_test_role2;
+DROP
+0:DROP RESOURCE QUEUE rq_role_test2;
+DROP
