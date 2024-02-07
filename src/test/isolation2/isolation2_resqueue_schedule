@@ -6,4 +6,5 @@ test: resource_queue_multi_portal
 test: resource_queue_role
 test: resource_queue_alter
 test: resource_queue_self_deadlock
+test: resource_queue_terminate
 test: resource_manager_restore_to_none
