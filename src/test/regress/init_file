@@ -204,4 +204,8 @@ s/^------------+\s*$/------------\n/
 -- s/Heap Blocks: exact=\d+/Heap Blocks: exact=###/
 -- m/Heap Blocks: lossy=\d+/
 -- s/Heap Blocks: lossy=\d+/Heap Blocks: lossy=###/
+
+# ignore resource queue ids
+m/resource queue id: \d+/
+s/resource queue id: \d+/resource queue id: XXXX/
 -- end_matchsubs

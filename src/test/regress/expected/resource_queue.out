@@ -272,6 +272,7 @@ DECLARE c1 CURSOR FOR SELECT 1 FROM tenk1;
 DECLARE c2 CURSOR FOR SELECT 2 FROM tenk1;
 DECLARE c3 CURSOR FOR SELECT 3 FROM tenk1; -- should detect deadlock
 ERROR:  deadlock detected, locking against self
+DETAIL:  resource queue id: 576196, portal id: 3
 END;
 -- track cursor open/close count (should not deadlock)
 BEGIN;
@@ -338,6 +339,7 @@ SELECT rsqname, rsqcostlimit, rsqwaiters, rsqholders FROM pg_resqueue_status WHE
 
 DECLARE c3 CURSOR FOR SELECT * FROM tenk1 a, tenk1 b;
 ERROR:  statement requires more resources than resource queue allows
+DETAIL:  resource queue id: 625696, portal id: 3
 SELECT rsqname, rsqcostlimit, rsqwaiters, rsqholders FROM pg_resqueue_status WHERE rsqcostvalue > 0;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 DECLARE c4 CURSOR FOR SELECT * FROM tenk1 a, tenk1 b, tenk1 c;
@@ -448,6 +450,7 @@ fetch c0;
 
 select * from rq_product;
 ERROR:  deadlock detected, locking against self
+DETAIL:  resource queue id: 576200, portal id: 0
 fetch c0;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 abort;
@@ -479,6 +482,7 @@ fetch c0;
 
 select * from rq_product;
 ERROR:  deadlock detected, locking against self
+DETAIL:  resource queue id: 576200, portal id: 0
 fetch c0;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 abort;
@@ -529,6 +533,7 @@ fetch c0;
 
 select * from rq_product;
 ERROR:  deadlock detected, locking against self
+DETAIL:  resource queue id: 576200, portal id: 0
 fetch c0;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 abort;
@@ -580,6 +585,7 @@ fetch c0;
 
 select * from rq_product;
 ERROR:  deadlock detected, locking against self
+DETAIL:  resource queue id: 576200, portal id: 0
 fetch c0;
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 abort;
