@@ -62,9 +62,11 @@ PG_FUNCTION_INFO_V1(set_next_preassigned_tablespace_oid);
 
 PG_FUNCTION_INFO_V1(view_has_anyarray_casts);
 PG_FUNCTION_INFO_V1(view_has_unknown_casts);
+PG_FUNCTION_INFO_V1(view_has_removed_operators);
 
 static bool check_node_anyarray_walker(Node *node, void *context);
 static bool check_node_unknown_walker(Node *node, void *context);
+static bool check_node_removed_operators_walker(Node *node, void *context);
 
 Datum
 set_next_pg_type_oid(PG_FUNCTION_ARGS)
@@ -407,3 +409,54 @@ check_node_unknown_walker(Node *node, void *context)
 
 	return expression_tree_walker(node, check_node_unknown_walker, context);
 }
+
+Datum
+view_has_removed_operators(PG_FUNCTION_ARGS)
+{
+	Oid		  view_oid = PG_GETARG_OID(0);
+	Relation  rel = try_relation_open(view_oid, AccessShareLock, false);
+	Query	 *viewquery;
+	bool	  found;
+
+	if (rel == NULL)
+		elog(ERROR, "Could not open relation file for relation oid %u", view_oid);
+
+	if(rel->rd_rel->relkind == RELKIND_VIEW)
+	{
+		viewquery = get_view_query(rel);
+		found = query_tree_walker(viewquery, check_node_removed_operators_walker, NULL, 0);
+	}
+	else
+		found = false;
+
+	relation_close(rel, AccessShareLock);
+
+	PG_RETURN_BOOL(found);
+}
+
+static bool
+check_node_removed_operators_walker(Node *node, void *context)
+{
+	Assert(context == NULL);
+
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, OpExpr))
+	{
+		Oid op_oid = ((OpExpr *)node)->opno;
+		if (op_oid == 386) // int2vectoreq
+			return true;
+
+		return false;
+	}
+	else if (IsA(node, Query))
+	{
+		/* recurse into subselects and ctes */
+		Query *query = (Query *) node;
+		return query_tree_walker(query, check_node_removed_operators_walker, context, 0);
+	}
+
+	return expression_tree_walker(node, check_node_removed_operators_walker, context);
+}
+
