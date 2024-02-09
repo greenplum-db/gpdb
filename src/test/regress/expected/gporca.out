@@ -9931,7 +9931,7 @@ alter table orca.bm_dyn_test drop column to_be_dropped;
 alter table orca.bm_dyn_test add partition part5 values(5);
 NOTICE:  CREATE TABLE will create partition "bm_dyn_test_1_prt_part5" for table "bm_dyn_test"
 insert into orca.bm_dyn_test values(2, 5, '2');
-set optimizer_enable_bitmapscan=on;
+set optimizer_enable_dynamicbitmapscan=on;
 -- gather on 1 segment because of direct dispatch
 explain select * from orca.bm_dyn_test where i=2 and t='2';
                                      QUERY PLAN                                     
@@ -12248,7 +12248,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
                      ->  Result  (cost=0.00..0.01 rows=1 width=0)
                            Output: '2020-01-01', '99'
  Optimizer: Postgres query optimizer
- Settings: optimizer=off, optimizer_join_order=query
+ Settings: optimizer=off, optimizer_enable_dynamicbitmapscan=on, optimizer_join_order=query
 (16 rows)
 
 CREATE TABLE TP AS

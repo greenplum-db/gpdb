@@ -377,6 +377,13 @@ CConfigParamMapping::PackConfigParamInBitset(
 		bitmap_index_bitset->Release();
 	}
 
+	// disable dynamic bitmap scan if the corresponding GUC is turned off
+	if (!optimizer_enable_dynamicbitmapscan)
+	{
+		traceflag_bitset->ExchangeSet(
+			GPOPT_DISABLE_XFORM_TF(CXform::ExfSelect2DynamicBitmapBoolOp));
+	}
+
 	// disable outerjoin to unionall transformation if GUC is turned off
 	if (!optimizer_enable_outerjoin_to_unionall_rewrite)
 	{
@@ -433,6 +440,13 @@ CConfigParamMapping::PackConfigParamInBitset(
 		// disable index only scan if the corresponding GUC is turned off
 		traceflag_bitset->ExchangeSet(
 			GPOPT_DISABLE_XFORM_TF(CXform::ExfIndexGet2IndexOnlyScan));
+	}
+
+	if (!optimizer_enable_dynamicindexscan)
+	{
+		// disable dynamic index scan if the corresponding GUC is turned off
+		traceflag_bitset->ExchangeSet(GPOPT_DISABLE_XFORM_TF(
+			CXform::ExfDynamicIndexGet2DynamicIndexScan));
 	}
 
 	if (!optimizer_enable_hashagg)
