@@ -3353,6 +3353,35 @@ EXPLAIN (VERBOSE, COSTS OFF)
   SELECT * FROM t_outer_srf WHERE t_outer_srf.b IN (SELECT generate_series(1, t_outer_srf.b)  FROM t_inner_srf);
 DROP TABLE t_outer_srf, t_inner_srf;
 
+-- Test cases to check if a stable function is folded when the query has no RTEs
+-- but has Sub Links.
+CREATE OR REPLACE FUNCTION test_func_im(a int, b int)
+      RETURNS int
+      LANGUAGE sql
+      IMMUTABLE
+AS $$
+select a + b + 10;
+$$;
+
+CREATE OR REPLACE FUNCTION test_func_stable(a int)
+      RETURNS int
+      LANGUAGE sql
+      STABLE
+AS $$
+select (ceil (a + 10 + random())::int) ;
+$$;
+
+drop table if exists bar_pt;
+create table bar_pt (a int, b int) distributed by (a) partition by range(a) (start (1) inclusive end (12) every (2), default partition other);
+insert into bar_pt select i,i from generate_series(1,11)i;
+analyze bar_pt;
+
+-- Without the fix, the following query crashes, but with the fix, the function
+-- call is folded to a constant.
+explain select test_func_im(10, (select min(a) from bar_pt where a < test_func_stable(6)));
+select test_func_im(10, (select min(a) from bar_pt where a < test_func_stable(6)));
+drop table if exists bar_pt;
+
 -- Testcases to validate the behavior of the GUC gp_max_system_slices
 
 -- start_ignore

@@ -14647,6 +14647,69 @@ EXPLAIN (VERBOSE, COSTS OFF)
 (14 rows)
 
 DROP TABLE t_outer_srf, t_inner_srf;
+-- Test cases to check if a stable function is folded when the query has no RTEs
+-- but has Sub Links.
+CREATE OR REPLACE FUNCTION test_func_im(a int, b int)
+      RETURNS int
+      LANGUAGE sql
+      IMMUTABLE
+AS $$
+select a + b + 10;
+$$;
+CREATE OR REPLACE FUNCTION test_func_stable(a int)
+      RETURNS int
+      LANGUAGE sql
+      STABLE
+AS $$
+select (ceil (a + 10 + random())::int) ;
+$$;
+drop table if exists bar_pt;
+NOTICE:  table "bar_pt" does not exist, skipping
+create table bar_pt (a int, b int) distributed by (a) partition by range(a) (start (1) inclusive end (12) every (2), default partition other);
+NOTICE:  CREATE TABLE will create partition "bar_pt_1_prt_other" for table "bar_pt"
+NOTICE:  CREATE TABLE will create partition "bar_pt_1_prt_2" for table "bar_pt"
+NOTICE:  CREATE TABLE will create partition "bar_pt_1_prt_3" for table "bar_pt"
+NOTICE:  CREATE TABLE will create partition "bar_pt_1_prt_4" for table "bar_pt"
+NOTICE:  CREATE TABLE will create partition "bar_pt_1_prt_5" for table "bar_pt"
+NOTICE:  CREATE TABLE will create partition "bar_pt_1_prt_6" for table "bar_pt"
+NOTICE:  CREATE TABLE will create partition "bar_pt_1_prt_7" for table "bar_pt"
+insert into bar_pt select i,i from generate_series(1,11)i;
+analyze bar_pt;
+-- Without the fix, the following query crashes, but with the fix, the function
+-- call is folded to a constant.
+explain select test_func_im(10, (select min(a) from bar_pt where a < test_func_stable(6)));
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Result  (cost=8.24..8.25 rows=1 width=0)
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Aggregate  (cost=8.23..8.24 rows=1 width=4)
+           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=8.17..8.22 rows=1 width=4)
+                 ->  Aggregate  (cost=8.17..8.18 rows=1 width=4)
+                       ->  Append  (cost=0.00..8.14 rows=4 width=4)
+                             ->  Seq Scan on bar_pt_1_prt_other  (cost=0.00..1.00 rows=1 width=4)
+                                   Filter: (a < 17)
+                             ->  Seq Scan on bar_pt_1_prt_2  (cost=0.00..2.02 rows=1 width=4)
+                                   Filter: (a < 17)
+                             ->  Seq Scan on bar_pt_1_prt_3  (cost=0.00..1.02 rows=1 width=4)
+                                   Filter: (a < 17)
+                             ->  Seq Scan on bar_pt_1_prt_4  (cost=0.00..1.02 rows=1 width=4)
+                                   Filter: (a < 17)
+                             ->  Seq Scan on bar_pt_1_prt_5  (cost=0.00..1.02 rows=1 width=4)
+                                   Filter: (a < 17)
+                             ->  Seq Scan on bar_pt_1_prt_6  (cost=0.00..1.02 rows=1 width=4)
+                                   Filter: (a < 17)
+                             ->  Seq Scan on bar_pt_1_prt_7  (cost=0.00..1.01 rows=1 width=4)
+                                   Filter: (a < 17)
+ Optimizer: Postgres query optimizer
+(21 rows)
+
+select test_func_im(10, (select min(a) from bar_pt where a < test_func_stable(6)));
+ test_func_im 
+--------------
+           21
+(1 row)
+
+drop table if exists bar_pt;
 -- Testcases to validate the behavior of the GUC gp_max_system_slices
 -- start_ignore
 drop table if exists foo;

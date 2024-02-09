@@ -5876,13 +5876,17 @@ should_eval_stable_functions(PlannerInfo *root)
 	 * Without PlannerGlobal, we cannot mark the plan as a `oneoffPlan`
 	 */
 	if (root == NULL) return false;
-	if (root->glob == NULL) return false;
+	if (root->glob == NULL || root->parse == NULL) return false;
 
 	/*
 	 * If the query has no range table, then there is no reason to need to
 	 * pre-evaluate stable functions, as the output cannot be used as part
 	 * of static partition elimination, unless the query is part of a
 	 * subquery.
+	 *
+	 * Return true, if the query has Sublink, as RTE can be present in the
+	 * Sublink and pre-evaluation of stable function, can help in static
+	 * partition elimination.
 	 */
-	return root->parse->rtable || root->query_level > 1;
+	return root->parse->rtable || root->query_level > 1 || root->parse->hasSubLinks;
 }
