@@ -686,3 +686,67 @@ select stxname, stxdndistinct, stxddependencies, stxdmcv from pg_statistic_ext p
 -- Cleanup
 drop table minirepro_foo;
 drop table minirepro_bar;
+--------------------------------------------------------------------------------
+-- Scenario: Test if minirepro captures non-default planner settings
+--------------------------------------------------------------------------------
+create table minirepro_foo(a int, b int);
+alter database regression set enable_indexscan to off;
+alter database regression set optimizer_join_order to greedy;
+-- start_ignore
+\! echo "select * from minirepro_foo" > ./data/minirepro_q.sql
+\! minirepro regression -q data/minirepro_q.sql -f data/minirepro.sql
+Connecting to database: host=testhost, port=7000, user=sanathv, db=regression ...
+Extracting metadata from query file data/minirepro_q.sql ...
+psql regression --pset footer --no-psqlrc -v ON_ERROR_STOP=1 -Atq -h testhost -p 7000 -U sanathv -f /tmp/20240209191217/toolkit.sql
+Invoking pg_dump to dump DDL ...
+pg_dump -h testhost -p 7000 -U sanathv -sxO regression --relation-oids 28826 --function-oids 0 -f /tmp/20240209191217/pg_dump_out.sql
+Writing schema DDLs ...
+Writing relation and function DDLs ...
+Writing table statistics ...
+Writing column statistics ...
+Writing correlated statistics ...
+Attaching raw query text ...
+Writing non-default guc settings ...
+--- MiniRepro completed! ---
+WARNING: This tool collects statistics about your data, including most common values, which requires some data elements to be included in the output file.
+Please review output file to ensure it is within corporate policy to transport the output file.
+-- end_ignore
+-- Validate if above set gucs are captured in Non-default gucs section
+\! grep -E 'Non-default planner guc settings|enable_indexscan|optimizer_join_order' data/minirepro.sql
+-- Non-default planner guc settings
+-- set enable_indexscan = off;
+-- set optimizer_join_order = greedy;
+alter database regression reset enable_indexscan;
+alter database regression reset optimizer_join_order;
+-- Cleanup
+drop table minirepro_foo;
+--------------------------------------------------------------------------------
+-- Scenario: Test if minirepro reports appropriate message if no default
+--           planner settings are altered
+--------------------------------------------------------------------------------
+create table minirepro_foo(a int, b int);
+-- start_ignore
+\! echo "select * from minirepro_foo" > ./data/minirepro_q.sql
+\! minirepro regression -q data/minirepro_q.sql -f data/minirepro.sql
+Connecting to database: host=testhost, port=7000, user=sanathv, db=regression ...
+Extracting metadata from query file data/minirepro_q.sql ...
+psql regression --pset footer --no-psqlrc -v ON_ERROR_STOP=1 -Atq -h testhost -p 7000 -U sanathv -f /tmp/20240209191217/toolkit.sql
+Invoking pg_dump to dump DDL ...
+pg_dump -h testhost -p 7000 -U sanathv -sxO regression --relation-oids 28829 --function-oids 0 -f /tmp/20240209191217/pg_dump_out.sql
+Writing schema DDLs ...
+Writing relation and function DDLs ...
+Writing table statistics ...
+Writing column statistics ...
+Writing correlated statistics ...
+Attaching raw query text ...
+Writing non-default guc settings ...
+--- MiniRepro completed! ---
+WARNING: This tool collects statistics about your data, including most common values, which requires some data elements to be included in the output file.
+Please review output file to ensure it is within corporate policy to transport the output file.
+-- end_ignore
+-- Validate if appropriate message is reported in Non-default gucs section
+\! grep -E 'Non-default planner guc settings|None Available' data/minirepro.sql
+-- Non-default planner guc settings
+-- None Available
+-- Cleanup
+drop table minirepro_foo;

@@ -296,3 +296,40 @@ select stxname, stxdndistinct, stxddependencies, stxdmcv from pg_statistic_ext p
 -- Cleanup
 drop table minirepro_foo;
 drop table minirepro_bar;
+
+--------------------------------------------------------------------------------
+-- Scenario: Test if minirepro captures non-default planner settings
+--------------------------------------------------------------------------------
+create table minirepro_foo(a int, b int);
+alter database regression set enable_indexscan to off;
+alter database regression set optimizer_join_order to greedy;
+
+-- start_ignore
+\! echo "select * from minirepro_foo" > ./data/minirepro_q.sql
+\! minirepro regression -q data/minirepro_q.sql -f data/minirepro.sql
+-- end_ignore
+
+-- Validate if above set gucs are captured in Non-default gucs section
+\! grep -E 'Non-default planner guc settings|enable_indexscan|optimizer_join_order' data/minirepro.sql
+
+alter database regression reset enable_indexscan;
+alter database regression reset optimizer_join_order;
+-- Cleanup
+drop table minirepro_foo;
+
+--------------------------------------------------------------------------------
+-- Scenario: Test if minirepro reports appropriate message if no default
+--           planner settings are altered
+--------------------------------------------------------------------------------
+create table minirepro_foo(a int, b int);
+
+-- start_ignore
+\! echo "select * from minirepro_foo" > ./data/minirepro_q.sql
+\! minirepro regression -q data/minirepro_q.sql -f data/minirepro.sql
+-- end_ignore
+
+-- Validate if appropriate message is reported in Non-default gucs section
+\! grep -E 'Non-default planner guc settings|None Available' data/minirepro.sql
+
+-- Cleanup
+drop table minirepro_foo;
