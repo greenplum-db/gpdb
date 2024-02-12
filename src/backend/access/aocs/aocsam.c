@@ -825,7 +825,7 @@ static bool
 aocs_blkdirscan_get_target_tuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
 {
 	int segno, segidx;
-	int64 rownum = -1;
+	int64 rownum = InvalidAORowNum;
 	int64 rowsprocessed;
 	AOTupleId aotid;
 	int ncols = scan->columnScanInfo.relationTupleDesc->natts;
@@ -1049,7 +1049,7 @@ static bool
 aocs_gettuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
 {
 	bool ret = true;
-	int64 rowcount = -1;
+	int64 rowcount = InvalidAORowNum;
 	int64 rowstoprocess;
 	bool chkvisimap = true;
 
@@ -1198,7 +1198,7 @@ aocs_getnext(AOCSScanDesc scan, ScanDirection direction, TupleTableSlot *slot)
 	bool	   *null = slot->tts_isnull;
 
 	AOTupleId	aoTupleId;
-	int64		rowNum = INT64CONST(-1);
+	int64		rowNum = InvalidAORowNum;
 	int64		nthInBlock;
 	int			err = 0;
 	bool		isSnapshotAny = (scan->rs_base.rs_snapshot == SnapshotAny);
@@ -1277,8 +1277,8 @@ ReadNext:
 			datumstreamread_get(scan->columnScanInfo.ds[attno], &d[attno], &null[attno]);
 
 			nthInBlock = datumstreamread_nth(scan->columnScanInfo.ds[attno]);
-			if (rowNum == INT64CONST(-1) &&
-				scan->columnScanInfo.ds[attno]->blockFirstRowNum != INT64CONST(-1))
+			if (rowNum == InvalidAORowNum &&
+				scan->columnScanInfo.ds[attno]->blockFirstRowNum != InvalidAORowNum)
 			{
 				Assert(scan->columnScanInfo.ds[attno]->blockFirstRowNum > 0 && nthInBlock >= 0);
 				rowNum = scan->columnScanInfo.ds[attno]->blockFirstRowNum + nthInBlock;
@@ -1289,7 +1289,7 @@ ReadNext:
 			 * XXX: the first assert is repeated code, we should move it outside of
 			 * the if/else block if we can be sure blockFirstRowNum cannot be -1 here.
 			 */
-			else if (scan->columnScanInfo.ds[attno]->blockFirstRowNum != INT64CONST(-1))
+			else if (scan->columnScanInfo.ds[attno]->blockFirstRowNum != InvalidAORowNum)
 			{
 				Assert(scan->columnScanInfo.ds[attno]->blockFirstRowNum > 0 && nthInBlock >= 0);
 				Assert(rowNum == scan->columnScanInfo.ds[attno]->blockFirstRowNum + nthInBlock);
@@ -1298,7 +1298,7 @@ ReadNext:
 		}
 
 		scan->segrowsprocessed++;
-		if (rowNum == INT64CONST(-1))
+		if (rowNum == InvalidAORowNum)
 		{
 			AOTupleIdInit(&aoTupleId, curseginfo->segno, scan->segrowsprocessed);
 		}
@@ -1310,7 +1310,7 @@ ReadNext:
 		if (!isSnapshotAny && !AppendOnlyVisimap_IsVisible(&scan->visibilityMap, &aoTupleId))
 		{
 			/* The tuple is invisible */
-			rowNum = INT64CONST(-1);
+			rowNum = InvalidAORowNum;
 			goto ReadNext;
 		}
 		scan->cdb_fake_ctid = *((ItemPointer) &aoTupleId);

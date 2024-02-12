@@ -1257,7 +1257,7 @@ static void
 appendonly_getblock(AppendOnlyScanDesc scan, int64 targrow, int64 *startrow)
 {
 	AppendOnlyExecutorReadBlock *varblock = &scan->executorReadBlock;
-	int64 rowcount = -1;
+	int64 rowcount = InvalidAORowNum;
 
 	if (!scan->needNextBuffer)
 	{

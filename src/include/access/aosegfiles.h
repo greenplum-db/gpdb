@@ -32,7 +32,7 @@
 
 #define InvalidFileSegNumber			-1
 #define InvalidUncompressedEof			-1
-#define InvalidAORowNum					-1
+#define InvalidAORowNum					INT64CONST(-1)
 
 #define AO_FILESEGINFO_ARRAY_SIZE		8
 
