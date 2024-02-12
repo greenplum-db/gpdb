@@ -14886,6 +14886,81 @@ EXPLAIN (VERBOSE, COSTS OFF)
 DROP TABLE t_outer_srf, t_inner_srf;
 -- Test cases to check if a stable function is folded when the query has no RTEs
 -- but has Sub Links.
+------------------------------------------------
+-- TEST CASE-1
+------------------------------------------------
+CREATE OR REPLACE FUNCTION any_func(p_dt date)
+    RETURNS date
+    LANGUAGE sql
+    IMMUTABLE
+AS $$
+    select (date_trunc('month', p_dt) + interval '1 month')::date;
+$$
+EXECUTE ON ANY;
+create TABLE test_partitioned_2024 ( nagreementid int4 NULL, dtrepdate date NULL) DISTRIBUTED BY (nagreementid)
+PARTITION BY RANGE(dtrepdate) ( START ('2024-01-01'::date) END ('2024-12-31'::date) EVERY ('1 mon'::interval));
+NOTICE:  CREATE TABLE will create partition "test_partitioned_2024_1_prt_1" for table "test_partitioned_2024"
+NOTICE:  CREATE TABLE will create partition "test_partitioned_2024_1_prt_2" for table "test_partitioned_2024"
+NOTICE:  CREATE TABLE will create partition "test_partitioned_2024_1_prt_3" for table "test_partitioned_2024"
+NOTICE:  CREATE TABLE will create partition "test_partitioned_2024_1_prt_4" for table "test_partitioned_2024"
+NOTICE:  CREATE TABLE will create partition "test_partitioned_2024_1_prt_5" for table "test_partitioned_2024"
+NOTICE:  CREATE TABLE will create partition "test_partitioned_2024_1_prt_6" for table "test_partitioned_2024"
+NOTICE:  CREATE TABLE will create partition "test_partitioned_2024_1_prt_7" for table "test_partitioned_2024"
+NOTICE:  CREATE TABLE will create partition "test_partitioned_2024_1_prt_8" for table "test_partitioned_2024"
+NOTICE:  CREATE TABLE will create partition "test_partitioned_2024_1_prt_9" for table "test_partitioned_2024"
+NOTICE:  CREATE TABLE will create partition "test_partitioned_2024_1_prt_10" for table "test_partitioned_2024"
+NOTICE:  CREATE TABLE will create partition "test_partitioned_2024_1_prt_11" for table "test_partitioned_2024"
+NOTICE:  CREATE TABLE will create partition "test_partitioned_2024_1_prt_12" for table "test_partitioned_2024"
+CREATE OR REPLACE FUNCTION ret_date()
+RETURNS DATE AS
+$$
+DECLARE
+    fix_date DATE := '2024-02-10';
+BEGIN
+    RETURN fix_date;
+END;
+$$
+LANGUAGE plpgsql
+STABLE;
+explain select coalesce((select max(dtRepDate) from test_partitioned_2024
+                 where dtRepDate between date_trunc('month',current_date)::date  and any_func((ret_date()))),
+                (select max(dtRepDate) from test_partitioned_2024));
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Query Parameter
+CONTEXT:  SQL statement "SELECT fix_date"
+PL/pgSQL function ret_date() line 5 at RETURN
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Query Parameter
+CONTEXT:  SQL function "any_func" during startup
+                                                                              QUERY PLAN                                                                              
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.00..904755290.84 rows=1 width=4)
+   ->  Nested Loop Left Join  (cost=0.00..904755290.84 rows=2 width=8)
+         Join Filter: true
+         ->  Nested Loop Left Join  (cost=0.00..882688.09 rows=1 width=4)
+               Join Filter: true
+               ->  Result  (cost=0.00..0.00 rows=1 width=1)
+               ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
+                                       ->  Partition Selector for test_partitioned_2024 (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                             Partitions selected: 2 (out of 12)
+                                       ->  Dynamic Seq Scan on test_partitioned_2024 test_partitioned_2024_1 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=4)
+                                             Filter: ((dtrepdate >= '02-01-2024'::date) AND (dtrepdate <= '03-01-2024'::date))
+         ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+               ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
+                                 ->  Partition Selector for test_partitioned_2024 (dynamic scan id: 2)  (cost=10.00..100.00 rows=34 width=4)
+                                       Partitions selected: 12 (out of 12)
+                                 ->  Dynamic Seq Scan on test_partitioned_2024 (dynamic scan id: 2)  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(22 rows)
+
+------------------------------------------------
+-- TEST CASE-2
+------------------------------------------------
 CREATE OR REPLACE FUNCTION test_func_im(a int, b int)
       RETURNS int
       LANGUAGE sql

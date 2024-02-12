@@ -173,18 +173,6 @@ gpos_exec(gpos_exec_params *params)
 			return 1;
 		}
 
-		if (pwpm->Self())
-		{
-			// Raise an exception, if a worker already exists in the Worker Pool
-			// Manager. Since, only one worker is supported, if a new worker is
-			// registered then the address of old worker will be lost and would
-			// lead to an undefined behaviour.
-			GPOS_ASSERT(
-				false &&
-				"New worker cannot be created, as a worker already exists. ORCA supports only one worker.");
-			GPOS_RAISE(CException::ExmaUnhandled, CException::ExmiUnhandled);
-		}
-
 		// if no stack start address is passed, use address in current stack frame
 		void *pvStackStart = params->stack_start;
 		if (NULL == pvStackStart)
