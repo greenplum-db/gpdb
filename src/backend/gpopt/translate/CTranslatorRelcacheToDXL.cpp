@@ -3557,7 +3557,8 @@ BOOL
 CTranslatorRelcacheToDXL::RelHasSystemColumns(char rel_kind)
 {
 	return RELKIND_RELATION == rel_kind || RELKIND_SEQUENCE == rel_kind ||
-		   RELKIND_AOSEGMENTS == rel_kind || RELKIND_TOASTVALUE == rel_kind;
+		   RELKIND_AOSEGMENTS == rel_kind || RELKIND_TOASTVALUE == rel_kind ||
+		   RELKIND_MATVIEW == rel_kind;
 }
 
 //---------------------------------------------------------------------------
