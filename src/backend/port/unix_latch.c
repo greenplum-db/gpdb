@@ -155,7 +155,7 @@ OwnLatch(volatile Latch *latch)
 
 	/* sanity check */
 	if (latch->owner_pid != 0)
-		elog(ERROR, "latch already owned by pid %d (is_set: %d)",
+		elog(PANIC, "latch already owned by pid %d (is_set: %d)",
 			 latch->owner_pid, (int) latch->is_set);
 
 	latch->owner_pid = MyProcPid;
