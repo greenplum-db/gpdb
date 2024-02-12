@@ -55,6 +55,7 @@
 #include "storage/pmsignal.h"
 #include "storage/shmem.h"
 #include "utils/guc.h"
+#include "port/atomics.h"
 
 /* Are we currently in WaitLatch? The signal handler would like to know. */
 static volatile sig_atomic_t waiting = false;
@@ -148,6 +149,12 @@ InitSharedLatch(volatile Latch *latch)
 void
 OwnLatch(volatile Latch *latch)
 {
+	/*
+	 * Not strictly necessary, but added out of paranoia, to ensure that we have
+	 * flushed the store to latch struct members.
+	 */
+	pg_memory_barrier();
+
 	/* Assert InitializeLatchSupport has been called in this process */
 	Assert(selfpipe_readfd >= 0);
 
@@ -171,6 +178,17 @@ DisownLatch(volatile Latch *latch)
 	Assert(latch->owner_pid == MyProcPid);
 
 	latch->owner_pid = 0;
+
+	/*
+	 * Add a memory barrier here to ensure that the subsequent instructions in
+	 * the callers (which return the PGPROC to the freelist) aren't reordered
+	 * before the above store to owner_pid
+	 *
+	 * Otherwise, another backend grabbing this PGPROC during startup can
+	 * grab the same PGPROC, and can blow up in the sanity check in OwnLatch()
+	 * before the above store can manifest.
+	 */
+	pg_memory_barrier();
 }
 
 /*
