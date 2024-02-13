@@ -3387,6 +3387,18 @@ reset session authorization;
 drop user ruser;
 drop table foo, bar;
 
+-- Ensure subplans only generate necessary number of slices
+set gp_max_slices=3;
+create table subplan_test_1(a int, b int);
+create table subplan_test_2(a int, b int);
+insert into subplan_test_1 values (1,1);
+insert into subplan_test_2 select i,i from generate_series(1,5)i;
+analyze subplan_test_1;
+analyze subplan_test_2;
+explain (costs off) select (select b from subplan_test_1 where subplan_test_1.b=subplan_test_2.b) from subplan_test_2;
+select (select b from subplan_test_1 where subplan_test_1.b=subplan_test_2.b) from subplan_test_2;
+reset gp_max_slices;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

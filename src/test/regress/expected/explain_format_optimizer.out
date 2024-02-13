@@ -71,8 +71,6 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
    (slice1)    Executor memory: 60K bytes avg x 3 workers, 60K bytes max (seg0).
    (slice2)    Executor memory: 96K bytes avg x 3 workers, 96K bytes max (seg0).
    (slice3)    Executor memory: 96K bytes avg x 3 workers, 96K bytes max (seg0).
-   (slice4)    
-   (slice5)    
  Memory used:  128000kB
  Optimizer: Pivotal Optimizer (GPORCA)
  Execution time: 23.433 ms
@@ -383,8 +381,6 @@ QUERY PLAN
         Average: 97448
         Workers: 3
         Maximum Memory Used: 97448
-    - Slice: 4
-    - Slice: 5
   Statement statistics: 
     Memory used: 128000
   Settings: 
