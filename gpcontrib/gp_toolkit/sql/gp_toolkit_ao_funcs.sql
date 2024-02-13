@@ -50,3 +50,13 @@ SELECT (t).* FROM (
 SELECT (t).* FROM (
   SELECT gp_toolkit.__gp_aoblkdir('toolkit_aocs_test') AS t FROM gp_dist_random('gp_id')
 ) AS x;
+
+-- Check that __gp_aoblkdir correctly frees resources when used with LIMIT
+-- start_ignore
+drop table if exists ao1;
+-- end_ignore
+
+create table ao1 (a int primary key) with (appendonly=true);
+insert into ao1 values (1);
+select (gp_toolkit.__gp_aoblkdir('ao1'::regclass)).* from gp_dist_random('gp_id') limit 1;
+drop table ao1;
