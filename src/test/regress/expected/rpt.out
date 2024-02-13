@@ -752,9 +752,10 @@ explain (costs off) select * from t_hashdist where a > All (select random() from
          ->  Materialize
                ->  Broadcast Motion 1:3  (slice1; segments: 1)
                      ->  Subquery Scan on "NotIn_SUBQUERY"
-                           ->  Seq Scan on t_replicate_volatile
+                           ->  Result
+                                 ->  Seq Scan on t_replicate_volatile
  Optimizer: Postgres query optimizer
-(9 rows)
+(10 rows)
 
 explain (costs off) select * from t_hashdist where a in (select random()::int from t_replicate_volatile);
                             QUERY PLAN                            
@@ -766,9 +767,10 @@ explain (costs off) select * from t_hashdist where a in (select random()::int fr
          ->  Hash
                ->  Redistribute Motion 1:3  (slice1; segments: 1)
                      Hash Key: ((random())::integer)
-                     ->  Seq Scan on t_replicate_volatile
+                     ->  Result
+                           ->  Seq Scan on t_replicate_volatile
  Optimizer: Postgres query optimizer
-(9 rows)
+(10 rows)
 
 -- subplan
 explain (costs off, verbose) select * from t_hashdist left join t_replicate_volatile on t_hashdist.a > any (select random() from t_replicate_volatile);
@@ -790,11 +792,12 @@ explain (costs off, verbose) select * from t_hashdist left join t_replicate_vola
                  Output: random()
                  ->  Broadcast Motion 1:3  (slice1; segments: 1)
                        Output: (random())
-                       ->  Seq Scan on rpt.t_replicate_volatile t_replicate_volatile_1
+                       ->  Result
                              Output: random()
+                             ->  Seq Scan on rpt.t_replicate_volatile t_replicate_volatile_1
  Optimizer: Postgres query optimizer
  Settings: enable_seqscan=off, optimizer=off
-(20 rows)
+(21 rows)
 
 -- targetlist
 explain (costs off) select * from t_hashdist cross join (select random () from t_replicate_volatile)x;
@@ -805,9 +808,10 @@ explain (costs off) select * from t_hashdist cross join (select random () from t
          ->  Seq Scan on t_hashdist
          ->  Materialize
                ->  Broadcast Motion 1:3  (slice1; segments: 1)
-                     ->  Seq Scan on t_replicate_volatile
+                     ->  Result
+                           ->  Seq Scan on t_replicate_volatile
  Optimizer: Postgres query optimizer
-(7 rows)
+(8 rows)
 
 explain (costs off) select * from t_hashdist cross join (select a, sum(random()) from t_replicate_volatile group by a) x;
                            QUERY PLAN                           
@@ -819,9 +823,10 @@ explain (costs off) select * from t_hashdist cross join (select a, sum(random())
                ->  Broadcast Motion 1:3  (slice1; segments: 1)
                      ->  HashAggregate
                            Group Key: t_replicate_volatile.a
-                           ->  Seq Scan on t_replicate_volatile
+                           ->  Result
+                                 ->  Seq Scan on t_replicate_volatile
  Optimizer: Postgres query optimizer
-(9 rows)
+(10 rows)
 
 explain (costs off) select * from t_hashdist cross join (select random() as k, sum(a) from t_replicate_volatile group by k) x;
                         QUERY PLAN                        
@@ -830,12 +835,13 @@ explain (costs off) select * from t_hashdist cross join (select random() as k, s
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Seq Scan on t_hashdist
    ->  Materialize
-         ->  Gather Motion 1:1  (slice2; segments: 1)
-               ->  HashAggregate
-                     Group Key: random()
-                     ->  Seq Scan on t_replicate_volatile
+         ->  HashAggregate
+               Group Key: random()
+               ->  Result
+                     ->  Gather Motion 1:1  (slice2; segments: 1)
+                           ->  Seq Scan on t_replicate_volatile
  Optimizer: Postgres query optimizer
-(9 rows)
+(10 rows)
 
 explain (costs off) select * from t_hashdist cross join (select a, sum(b) as s from t_replicate_volatile group by a having sum(b) > random() order by a) x ;
                                               QUERY PLAN                                              
@@ -861,9 +867,10 @@ explain (costs off) insert into t_replicate_volatile select random() from t_repl
  Insert on t_replicate_volatile
    ->  Broadcast Motion 1:3  (slice1; segments: 1)
          ->  Subquery Scan on "*SELECT*"
-               ->  Seq Scan on t_replicate_volatile t_replicate_volatile_1
+               ->  Result
+                     ->  Seq Scan on t_replicate_volatile t_replicate_volatile_1
  Optimizer: Postgres query optimizer
-(5 rows)
+(6 rows)
 
 explain (costs off) insert into t_replicate_volatile select random(), a, a from generate_series(1, 10) a;
                       QUERY PLAN                      
@@ -906,9 +913,10 @@ explain (costs off) insert into t_replicate_dst (i) select i from t_replicate_sr
 ---------------------------------------------------
  Insert on t_replicate_dst
    ->  Broadcast Motion 1:3  (slice1; segments: 1)
-         ->  Seq Scan on t_replicate_src
+         ->  Result
+               ->  Seq Scan on t_replicate_src
  Optimizer: Postgres query optimizer
-(4 rows)
+(5 rows)
 
 insert into t_replicate_dst (i) select i from t_replicate_src;
 select distinct id from gp_dist_random('t_replicate_dst') order by id;

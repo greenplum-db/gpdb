@@ -645,9 +645,10 @@ explain (costs off) create table t_rep as select nextval('test_seq') from rep_tb
                  QUERY PLAN                  
 ---------------------------------------------
  Broadcast Motion 1:3  (slice1; segments: 1)
-   ->  Seq Scan on rep_tbl
+   ->  Result
+         ->  Seq Scan on rep_tbl
  Optimizer: Postgres query optimizer
-(3 rows)
+(4 rows)
 
 create table t_rep4 as select nextval('test_seq') from rep_tbl distributed replicated;
 select count(*) from gp_dist_random('t_rep4');
