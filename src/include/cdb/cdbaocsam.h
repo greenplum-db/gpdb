@@ -107,9 +107,10 @@ enum AOCSScanDescIdentifier
 /* The type of AOCS column projection in scan/fetch */
 typedef enum AOCSProjectionKind
 {
+	AOCS_PROJ_ANY, 		/* any one column can be used, we'll pick the smallest complete one */
 	AOCS_PROJ_SOME, 		/* some of the columns, could be all as well */
 	AOCS_PROJ_ALL 		/* all of the columns */
-};
+} AOCSProjectionKind;
 
 /*
  * Used for fetch individual tuples from specified by TID of append only relations
@@ -413,7 +414,7 @@ get_anchor_col(AOCSFileSegInfo **segInfos, int nseg, int natts, Relation aocsrel
  */
 
 extern AOCSScanDesc aocs_beginscan(Relation relation, Snapshot snapshot,
-								   bool *proj, uint32 flags);
+								   bool *proj, AOCSProjectionKind projKind, uint32 flags);
 extern AOCSScanDesc
 aocs_beginrangescan(Relation relation,
 					Snapshot snapshot,

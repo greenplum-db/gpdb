@@ -61,6 +61,7 @@ static AOCSScanDesc aocs_beginscan_internal(Relation relation,
 						Snapshot snapshot,
 						Snapshot appendOnlyMetaDataSnapshot,
 						bool *proj,
+						AOCSProjectionKind projKind,
 						uint32 flags);
 /*
  * Open the segment file for a specified column associated with the datum
@@ -381,15 +382,27 @@ initscan_with_colinfo(AOCSScanDesc scan)
 	/* the anchor column should be a valid column in the table */
 	Assert(anchor_colno >= 0 && anchor_colno < natts);
 
-	if (scan->columnScanInfo.projKind == AOCS_PROJ_ALL)
+	/* based on the column projection kind, initialize the projection array */
+	switch(scan->columnScanInfo.projKind)
 	{
-		scan->columnScanInfo.num_proj_atts = natts;
-
-		for (AttrNumber attno = 0; attno < natts; attno++)
-			scan->columnScanInfo.proj_atts[attno] = attno;
+		case AOCS_PROJ_ANY:
+			/* we are told to pick any one column, pick the anchor */
+			scan->columnScanInfo.num_proj_atts = 1;
+			scan->columnScanInfo.proj_atts[0] = anchor_colno;
+			break;
+		case AOCS_PROJ_SOME:
+			/* we are told to pick some columns which has already been initialized */
+			break;
+		case AOCS_PROJ_ALL:
+			/* we are told to project all columns */
+			scan->columnScanInfo.num_proj_atts = natts;
+			for (AttrNumber attno = 0; attno < natts; attno++)
+				scan->columnScanInfo.proj_atts[attno] = attno;
+			break;
+		default:
+			ereport(ERROR, "Unrecognized AOCS projection kind: %d",
+				 scan->columnScanInfo.projKind);
 	}
-	else
-		Assert(scan->columnScanInfo.projKind == AOCS_PROJ_SOME);
 
 	scan->columnScanInfo.num_proj_atts = aoco_proj_move_anchor_first(scan->columnScanInfo.proj_atts,
 												scan->columnScanInfo.num_proj_atts,
@@ -573,6 +586,7 @@ aocs_beginrangescan(Relation relation,
 {
 	AOCSFileSegInfo **seginfo;
 	int			i;
+	AOCSProjectionKind 	projKind = proj ? AOCS_PROJ_SOME : AOCS_PROJ_ALL;
 
 	RelationIncrementReferenceCount(relation);
 
@@ -589,6 +603,7 @@ aocs_beginrangescan(Relation relation,
 								   snapshot,
 								   appendOnlyMetaDataSnapshot,
 								   proj,
+								   projKind,
 								   0);
 }
 
@@ -596,6 +611,7 @@ AOCSScanDesc
 aocs_beginscan(Relation relation,
 			   Snapshot snapshot,
 			   bool *proj,
+			   AOCSProjectionKind projKind,
 			   uint32 flags)
 {
 	AOCSFileSegInfo	  **seginfo;
@@ -622,6 +638,7 @@ aocs_beginscan(Relation relation,
 								   snapshot,
 								   aocsMetaDataSnapshot,
 								   proj,
+								   projKind,
 								   flags);
 }
 
@@ -635,6 +652,7 @@ aocs_beginscan_internal(Relation relation,
 						Snapshot snapshot,
 						Snapshot appendOnlyMetaDataSnapshot,
 						bool *proj,
+						AOCSProjectionKind projKind,
 						uint32 flags)
 {
 	AOCSScanDesc	scan;
@@ -664,6 +682,8 @@ aocs_beginscan_internal(Relation relation,
 	scan->columnScanInfo.proj_atts = (AttrNumber *)
 									 palloc0(natts * sizeof(AttrNumber));
 
+	scan->columnScanInfo.projKind = projKind;
+
 	/*
 	 * We get an array of booleans to indicate which columns are needed. But
 	 * if you have a very wide table, and you only select a few columns from
@@ -671,11 +691,12 @@ aocs_beginscan_internal(Relation relation,
 	 * needed can incur a noticeable overhead in aocs_getnext. So convert it
 	 * into an array of the attribute numbers of the required columns.
 	 *
-	 * If no array is given, we need to scan all columns.
+	 * In other cases, we either need to scan all columns, or we just
+	 * want to project only one of the columns which we will select later. 
 	 */
-	if (proj)
+	if (projKind == AOCS_PROJ_SOME)
 	{
-		scan->columnScanInfo.projKind = AOCS_PROJ_SOME;
+		Assert(proj); /* caller should indicate which columns to project */
 		scan->columnScanInfo.num_proj_atts = 0;
 
 		for (AttrNumber i = 0; i < natts; i++)
@@ -684,8 +705,10 @@ aocs_beginscan_internal(Relation relation,
 				scan->columnScanInfo.proj_atts[scan->columnScanInfo.num_proj_atts++] = i;
 		}
 	}
+#ifdef USE_ASSERT_CHECKING
 	else
-		scan->columnScanInfo.projKind = AOCS_PROJ_ALL;
+		Assert(!proj); /* caller should not indicate anything otherwise */
+#endif
 
 	scan->columnScanInfo.ds = NULL;
 

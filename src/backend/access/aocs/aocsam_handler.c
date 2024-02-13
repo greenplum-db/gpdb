@@ -544,6 +544,7 @@ aoco_beginscan_extractcolumns(Relation rel, Snapshot snapshot,
 							  List* constraintList, uint32 flags)
 {
 	bool needFree = false;
+	AOCSProjectionKind projKind = AOCS_PROJ_SOME;
 	AOCSScanDesc	aoscan;
 
 	AssertImply(list_length(targetlist) || list_length(qual) || list_length(constraintList), !proj);
@@ -559,15 +560,22 @@ aoco_beginscan_extractcolumns(Relation rel, Snapshot snapshot,
 		/*
 		* In some cases (for example, count(*)), targetlist and qual may be null,
 		* extractcolumns_walker will return immediately, so no columns are specified.
-		* We always scan the first column.
+		* We will pass no proj and defer the choice of the column later.
 		*/
-		if (!found && natts > 0)
-			proj[0] = true;
-		needFree = true;
+		if (!found)
+		{
+			projKind = AOCS_PROJ_ANY;
+			pfree(proj);
+			proj = NULL;
+			needFree = false;
+		}
+		else
+			needFree = true;
 	}
 	aoscan = aocs_beginscan(rel,
 							snapshot,
 							proj,
+							projKind,
 							flags);
 
 	if (needFree)
@@ -645,7 +653,8 @@ aoco_beginscan(Relation relation,
 
 	aoscan = aocs_beginscan(relation,
 							snapshot,
-							NULL,
+							NULL, /* proj */
+							AOCS_PROJ_ALL,
 							flags);
 
 	return (TableScanDesc) aoscan;
@@ -1505,6 +1514,7 @@ aoco_relation_cluster_internals(Relation OldHeap, Relation NewHeap, TupleDesc ol
 
 	scan = aocs_beginscan(OldHeap, GetActiveSnapshot(),
 						  NULL /* proj */,
+						  AOCS_PROJ_ALL,
 						  0 /* flags */);
 
 	/* Report cluster progress */
