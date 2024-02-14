@@ -295,13 +295,13 @@ def dump_extstats(cur, oid_str, f_out):
         f_out.writelines(setStmt.format(vals[0], vals[2], ',\n'.join(['\t%s = %s::%s' %
                                                                       t for t in zip(columns[3:], ['NULL' if x is None else "'" + x + "'" for x in vals[3:]], types)]),  vals[0]))
 
-def get_non_default_planner_gucs(cursor):
+def get_non_default_optimization_gucs(cursor):
     # Ignore 'optimizer' guc as it is turned off by minirepro while creating connection object
     query = "select name, setting from pg_settings where category like 'Query Tuning%' and setting!=boot_val and name!='optimizer';"
     try:
         cursor.execute(query)
     except psycopg2.DatabaseError as e:
-        sys.stderr.write('\nError while trying to retrieve non default planner gucs.\n\n' + str(e) + '\n\n')
+        sys.stderr.write('\nError while trying to retrieve non default optimization gucs.\n\n' + str(e) + '\n\n')
         sys.exit(1)
     vals = cursor.fetchall()
     return vals
@@ -363,8 +363,8 @@ def main():
 
     num_segments = get_num_segments(cursor)
 
-    # fetch non-default planner gucs
-    non_default_planner_gucs = get_non_default_planner_gucs(cursor)
+    # fetch non-default optimization gucs
+    non_default_optimization_gucs = get_non_default_optimization_gucs(cursor)
 
     """
     invoke gp_toolkit UDF, dump object oids as json text
@@ -441,15 +441,15 @@ def main():
     line = 'set optimizer_segments = ' + str(num_segments) + ';'
     f_out.writelines('\n-- ' + line + '\n')
 
-    # write non-default planner guc settings
-    print("Writing non-default planner guc settings ...")
+    # write non-default optimization gucs
+    print("Writing non-default optimization guc settings ...")
     f_out.writelines(['-- ',
-                      '\n-- Non-default planner guc settings',
+                      '\n-- Non-default optimization guc settings',
                       '\n--'])
-    if len(non_default_planner_gucs) == 0:
-        f_out.writelines('\n-- None Available')
+    if len(non_default_optimization_gucs) == 0:
+        f_out.writelines('\n-- Using all default guc settings')
     else:
-        for setting in non_default_planner_gucs:
+        for setting in non_default_optimization_gucs:
             f_out.writelines('\n-- set {0} = {1};'.format(setting[0], setting[1]))
     f_out.writelines('\n-- \n\n')
     with open(query_file, 'r') as query_f:

@@ -687,7 +687,7 @@ select stxname, stxdndistinct, stxddependencies, stxdmcv from pg_statistic_ext p
 drop table minirepro_foo;
 drop table minirepro_bar;
 --------------------------------------------------------------------------------
--- Scenario: Test if minirepro captures non-default planner settings
+-- Scenario: Test if minirepro captures non-default optimization settings
 --------------------------------------------------------------------------------
 create table minirepro_foo(a int, b int);
 alter database regression set enable_indexscan to off;
@@ -706,14 +706,14 @@ Writing table statistics ...
 Writing column statistics ...
 Writing correlated statistics ...
 Attaching raw query text ...
-Writing non-default guc settings ...
+Writing non-default optimization guc settings ...
 --- MiniRepro completed! ---
 WARNING: This tool collects statistics about your data, including most common values, which requires some data elements to be included in the output file.
 Please review output file to ensure it is within corporate policy to transport the output file.
 -- end_ignore
 -- Validate if above set gucs are captured in Non-default gucs section
-\! grep -E 'Non-default planner guc settings|enable_indexscan|optimizer_join_order' data/minirepro.sql
--- Non-default planner guc settings
+\! grep -E 'Non-default optimization guc settings|enable_indexscan|optimizer_join_order' data/minirepro.sql
+-- Non-default optimization guc settings
 -- set enable_indexscan = off;
 -- set optimizer_join_order = greedy;
 alter database regression reset enable_indexscan;
@@ -739,14 +739,14 @@ Writing table statistics ...
 Writing column statistics ...
 Writing correlated statistics ...
 Attaching raw query text ...
-Writing non-default guc settings ...
+Writing non-default optimization guc settings ...
 --- MiniRepro completed! ---
 WARNING: This tool collects statistics about your data, including most common values, which requires some data elements to be included in the output file.
 Please review output file to ensure it is within corporate policy to transport the output file.
 -- end_ignore
 -- Validate if appropriate message is reported in Non-default gucs section
-\! grep -E 'Non-default planner guc settings|None Available' data/minirepro.sql
--- Non-default planner guc settings
--- None Available
+\! grep -E 'Non-default optimization guc settings|Using all default guc settings' data/minirepro.sql
+-- Non-default optimization guc settings
+-- Using all default guc settings
 -- Cleanup
 drop table minirepro_foo;
