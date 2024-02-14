@@ -14685,40 +14685,20 @@ END;
 $$
 LANGUAGE plpgsql
 STABLE;
-explain select coalesce((select max(dtRepDate) from test_partitioned_2024
-                 where dtRepDate between date_trunc('month',current_date)::date  and any_func((ret_date()))),
-                (select max(dtRepDate) from test_partitioned_2024));
-                                                                    QUERY PLAN                                                                     
----------------------------------------------------------------------------------------------------------------------------------------------------
- Result  (cost=16902.45..16902.46 rows=1 width=0)
-   InitPlan 1 (returns $0)  (slice3)
-     ->  Aggregate  (cost=2787.37..2787.38 rows=1 width=4)
-           ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=2787.30..2787.36 rows=1 width=4)
-                 ->  Aggregate  (cost=2787.30..2787.32 rows=1 width=4)
-                       ->  Append  (cost=0.00..2783.00 rows=574 width=4)
-                             ->  Seq Scan on test_partitioned_2024_1_prt_2  (cost=0.00..1391.50 rows=287 width=4)
-                                   Filter: ((dtrepdate >= '02-01-2024'::date) AND (dtrepdate <= '03-01-2024'::date))
-                             ->  Seq Scan on test_partitioned_2024_1_prt_3  (cost=0.00..1391.50 rows=287 width=4)
-                                   Filter: ((dtrepdate >= '02-01-2024'::date) AND (dtrepdate <= '03-01-2024'::date))
-   InitPlan 2 (returns $1)  (slice4)
-     ->  Aggregate  (cost=14115.06..14115.07 rows=1 width=4)
-           ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=14115.00..14115.05 rows=1 width=4)
-                 ->  Aggregate  (cost=14115.00..14115.01 rows=1 width=4)
-                       ->  Append  (cost=0.00..11532.00 rows=344400 width=4)
-                             ->  Seq Scan on test_partitioned_2024_1_prt_1  (cost=0.00..961.00 rows=28700 width=4)
-                             ->  Seq Scan on test_partitioned_2024_1_prt_2 test_partitioned_2024_1_prt_2_1  (cost=0.00..961.00 rows=28700 width=4)
-                             ->  Seq Scan on test_partitioned_2024_1_prt_3 test_partitioned_2024_1_prt_3_1  (cost=0.00..961.00 rows=28700 width=4)
-                             ->  Seq Scan on test_partitioned_2024_1_prt_4  (cost=0.00..961.00 rows=28700 width=4)
-                             ->  Seq Scan on test_partitioned_2024_1_prt_5  (cost=0.00..961.00 rows=28700 width=4)
-                             ->  Seq Scan on test_partitioned_2024_1_prt_6  (cost=0.00..961.00 rows=28700 width=4)
-                             ->  Seq Scan on test_partitioned_2024_1_prt_7  (cost=0.00..961.00 rows=28700 width=4)
-                             ->  Seq Scan on test_partitioned_2024_1_prt_8  (cost=0.00..961.00 rows=28700 width=4)
-                             ->  Seq Scan on test_partitioned_2024_1_prt_9  (cost=0.00..961.00 rows=28700 width=4)
-                             ->  Seq Scan on test_partitioned_2024_1_prt_10  (cost=0.00..961.00 rows=28700 width=4)
-                             ->  Seq Scan on test_partitioned_2024_1_prt_11  (cost=0.00..961.00 rows=28700 width=4)
-                             ->  Seq Scan on test_partitioned_2024_1_prt_12  (cost=0.00..961.00 rows=28700 width=4)
+explain select (select min(dtRepDate) from test_partitioned_2024 where dtRepDate = any_func(ret_date()));
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Result  (cost=0.01..0.02 rows=1 width=0)
+   InitPlan 2 (returns $1)  (slice3)
+     ->  Result  (cost=0.00..0.01 rows=1 width=0)
+           InitPlan 1 (returns $0)  (slice2)
+             ->  Limit  (cost=0.00..13.67 rows=1 width=4)
+                   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1176.25 rows=87 width=4)
+                         ->  Append  (cost=0.00..1176.25 rows=29 width=4)
+                               ->  Seq Scan on test_partitioned_2024_1_prt_3  (cost=0.00..1176.25 rows=29 width=4)
+                                     Filter: ((dtrepdate IS NOT NULL) AND (dtrepdate = '03-01-2024'::date))
  Optimizer: Postgres query optimizer
-(28 rows)
+(10 rows)
 
 ------------------------------------------------
 -- TEST CASE-2

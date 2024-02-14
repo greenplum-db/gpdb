@@ -24,6 +24,9 @@
 #include "gpos/string/CWStringStatic.h"
 #include "gpos/task/CAutoTaskProxy.h"
 #include "gpos/task/CWorkerPoolManager.h"
+extern "C" {
+#include "utils/elog.h"
+}
 
 #include "gpopt/exception.h"
 #include "naucrates/exception.h"
@@ -182,10 +185,8 @@ gpos_exec(gpos_exec_params *params)
 			GPOS_ASSERT(
 				false &&
 				"New worker cannot be created, as a worker already exists. ORCA supports only one worker.");
-			GPOS_RAISE(
-				CException::ExmaInvalid, CException::ExmiInvalid,
-				GPOS_WSZ_LIT(
-					"This is an invalid state, please report this error."));
+			GPOS_RAISE(CException::ExmaInvalid,
+					   CException::ExmiORCAInvalidState);
 		}
 
 		// if no stack start address is passed, use address in current stack frame
@@ -251,7 +252,17 @@ gpos_exec(gpos_exec_params *params)
 	}
 	catch (CException ex)
 	{
-		throw ex;
+		if (GPOS_MATCH_EX(ex, CException::ExmaInvalid,
+						  CException::ExmiORCAInvalidState))
+		{
+			errstart(INFO, ex.Filename(), ex.Line(), NULL, TEXTDOMAIN);
+			errfinish(
+				errcode(ERRCODE_INTERNAL_ERROR),
+				errmsg(
+					"Worker is already registered! This is an invalid state, please report this error. "));
+		}
+		else
+			throw ex;
 	}
 	catch (...)
 	{

@@ -3383,10 +3383,7 @@ $$
 LANGUAGE plpgsql
 STABLE;
 
-explain select coalesce((select max(dtRepDate) from test_partitioned_2024
-                 where dtRepDate between date_trunc('month',current_date)::date  and any_func((ret_date()))),
-                (select max(dtRepDate) from test_partitioned_2024));
-
+explain select (select min(dtRepDate) from test_partitioned_2024 where dtRepDate = any_func(ret_date()));
 ------------------------------------------------
 -- TEST CASE-2
 ------------------------------------------------
