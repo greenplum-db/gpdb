@@ -774,13 +774,13 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 ----                          ao_column tables
 --------------------------------------------------------------------------------
 
--- In the test below we will make the first column contain values that are equal
--- to their respective row numbers. Therefore, we can check if the BRIN
--- range start row matches the corresponding block start row of column 'i'.
-CREATE OR REPLACE FUNCTION verify_firstcol_rownum(indexname text) RETURNS TABLE(blknum bigint, match boolean) AS $$ BEGIN /* in func */ RETURN QUERY EXECUTE format( /* in func */ 'SELECT p.blknum, (string_to_array(trim(both ''{}'' from p.value), '' ''))[1] = t.min::text' /* in func */ || ' FROM brin_page_items(get_raw_page(%L, 2), %L) p' /* in func */ || ' JOIN (SELECT right(split_part(ctid::text, '','', 1), -1) AS blknum,min(i)' /* in func */ || '       FROM aoco_partial_scan1 GROUP BY 1) t ON t.blknum = p.blknum::text' /* in func */ || '       WHERE p.attnum = 1', indexname, indexname); /* in func */ END; /* in func */ $$ LANGUAGE plpgsql;
+-- In the test below we will make a column in the brin index contain values
+-- that are equal to their respective row numbers. With that setup, we can check
+-- if the brin range start row matches the block start row of the given column.
+CREATE OR REPLACE FUNCTION verify_rownum_vs_values(indexname text, colno int) RETURNS TABLE(blknum bigint, match boolean) AS $$ BEGIN /* in func */ RETURN QUERY EXECUTE format( /* in func */ 'SELECT p.blknum, (string_to_array(trim(both ''{}'' from p.value), '' ''))[1] = t.min::text' /* in func */ || ' FROM brin_page_items(get_raw_page(%L, 2), %L) p' /* in func */ || ' JOIN (SELECT right(split_part(ctid::text, '','', 1), -1) AS blknum,min(i)' /* in func */ || '       FROM aoco_partial_scan1 GROUP BY 1) t ON t.blknum = p.blknum::text' /* in func */ || '       WHERE p.attnum = %s', indexname, indexname, colno); /* in func */ END; /* in func */ $$ LANGUAGE plpgsql;
 CREATE FUNCTION
 
-CREATE TABLE aoco_partial_scan1(i int, j int2, d int) USING ao_column DISTRIBUTED BY (d);
+CREATE TABLE aoco_partial_scan1(d int, i int, j int2) USING ao_column DISTRIBUTED BY (d);
 CREATE TABLE
 
 --------------------------------------------------------------------------------
@@ -795,9 +795,9 @@ CREATE TABLE
 BEGIN
 2: BEGIN;
 BEGIN
-1: INSERT INTO aoco_partial_scan1 SELECT k,k/32768,1 FROM generate_series(1, 1320000) k;
+1: INSERT INTO aoco_partial_scan1 SELECT 1,k,k/32768 FROM generate_series(1, 1320000) k;
 INSERT 0 1320000
-2: INSERT INTO aoco_partial_scan1 SELECT k,k/32768,20 FROM generate_series(1, 1320000) k;
+2: INSERT INTO aoco_partial_scan1 SELECT 20,k,k/32768 FROM generate_series(1, 1320000) k;
 INSERT 0 1320000
 1: COMMIT;
 COMMIT
@@ -824,15 +824,15 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
  Success:        
 (1 row)
 
-1U: SELECT tupleid, columngroup_no, segno, count(entry_no) AS num_entries, sum(row_count) AS total_rowcount FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan1') WHERE columngroup_no IN (0, 1) GROUP BY tupleid, columngroup_no, segno ORDER BY 1,2,3;
+1U: SELECT tupleid, columngroup_no, segno, count(entry_no) AS num_entries, sum(row_count) AS total_rowcount FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan1') WHERE columngroup_no IN (1, 2) GROUP BY tupleid, columngroup_no, segno ORDER BY 1,2,3;
  tupleid | columngroup_no | segno | num_entries | total_rowcount 
 ---------+----------------+-------+-------------+----------------
- (0,1)   | 0              | 1     | 161         | 1317141        
- (0,3)   | 0              | 1     | 1           | 2859           
- (0,4)   | 1              | 1     | 81          | 1320000        
- (0,6)   | 0              | 2     | 161         | 1317141        
- (0,8)   | 0              | 2     | 1           | 2859           
- (0,9)   | 1              | 2     | 81          | 1320000        
+ (0,2)   | 1              | 1     | 161         | 1317141        
+ (0,4)   | 1              | 1     | 1           | 2859           
+ (0,5)   | 2              | 1     | 81          | 1320000        
+ (0,7)   | 1              | 2     | 161         | 1317141        
+ (0,9)   | 1              | 2     | 1           | 2859           
+ (0,10)  | 2              | 2     | 81          | 1320000        
 (6 rows)
 
 -- Show the composition of the single data page in the BRIN index.
@@ -896,7 +896,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
  28         | 67108903 | 1      | f        | f        | f           | f     | {1277952 .. 1320000} 
  28         | 67108903 | 2      | f        | f        | f           | f     | {39 .. 40}           
 (56 rows)
-1U: SELECT * FROM verify_firstcol_rownum('aoco_partial_scan1_i_j_idx');
+1U: SELECT * FROM verify_rownum_vs_values('aoco_partial_scan1_i_j_idx', 1);
  blknum   | match 
 ----------+-------
  67108891 | t     
@@ -949,29 +949,29 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Range scans beginning at 33554432 and 33554438 will span 13 block directory
 -- entries (13 varblocks) for col i and 7 entries (7 varblocks) for col j.
-1U: SELECT * FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan1') WHERE first_row_no < ((33554435 - 33554432) * 32768) AND columngroup_no IN (0, 1) AND segno = 1 ORDER BY 1,2,3,4,5;
+1U: SELECT * FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan1') WHERE first_row_no < ((33554435 - 33554432) * 32768) AND columngroup_no IN (1, 2) AND segno = 1 ORDER BY 1,2,3,4,5;
  tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
 ---------+-------+----------------+----------+--------------+-------------+-----------
- (0,1)   | 1     | 0              | 0        | 1            | 0           | 8181      
- (0,1)   | 1     | 0              | 1        | 8182         | 32768       | 8181      
- (0,1)   | 1     | 0              | 2        | 16363        | 65536       | 8181      
- (0,1)   | 1     | 0              | 3        | 24544        | 98304       | 8181      
- (0,1)   | 1     | 0              | 4        | 32725        | 131072      | 8181      
- (0,1)   | 1     | 0              | 5        | 40906        | 163840      | 8181      
- (0,1)   | 1     | 0              | 6        | 49087        | 196608      | 8181      
- (0,1)   | 1     | 0              | 7        | 57268        | 229376      | 8181      
- (0,1)   | 1     | 0              | 8        | 65449        | 262144      | 8181      
- (0,1)   | 1     | 0              | 9        | 73630        | 294912      | 8181      
- (0,1)   | 1     | 0              | 10       | 81811        | 327680      | 8181      
- (0,1)   | 1     | 0              | 11       | 89992        | 360448      | 8181      
- (0,1)   | 1     | 0              | 12       | 98173        | 393216      | 8181      
- (0,4)   | 1     | 1              | 0        | 1            | 0           | 16363     
- (0,4)   | 1     | 1              | 1        | 16364        | 32768       | 16363     
- (0,4)   | 1     | 1              | 2        | 32727        | 65536       | 16363     
- (0,4)   | 1     | 1              | 3        | 49090        | 98304       | 16363     
- (0,4)   | 1     | 1              | 4        | 65453        | 131072      | 16363     
- (0,4)   | 1     | 1              | 5        | 81816        | 163840      | 16363     
- (0,4)   | 1     | 1              | 6        | 98179        | 196608      | 16363     
+ (0,2)   | 1     | 1              | 0        | 1            | 0           | 8181      
+ (0,2)   | 1     | 1              | 1        | 8182         | 32768       | 8181      
+ (0,2)   | 1     | 1              | 2        | 16363        | 65536       | 8181      
+ (0,2)   | 1     | 1              | 3        | 24544        | 98304       | 8181      
+ (0,2)   | 1     | 1              | 4        | 32725        | 131072      | 8181      
+ (0,2)   | 1     | 1              | 5        | 40906        | 163840      | 8181      
+ (0,2)   | 1     | 1              | 6        | 49087        | 196608      | 8181      
+ (0,2)   | 1     | 1              | 7        | 57268        | 229376      | 8181      
+ (0,2)   | 1     | 1              | 8        | 65449        | 262144      | 8181      
+ (0,2)   | 1     | 1              | 9        | 73630        | 294912      | 8181      
+ (0,2)   | 1     | 1              | 10       | 81811        | 327680      | 8181      
+ (0,2)   | 1     | 1              | 11       | 89992        | 360448      | 8181      
+ (0,2)   | 1     | 1              | 12       | 98173        | 393216      | 8181      
+ (0,5)   | 1     | 2              | 0        | 1            | 0           | 16363     
+ (0,5)   | 1     | 2              | 1        | 16364        | 32768       | 16363     
+ (0,5)   | 1     | 2              | 2        | 32727        | 65536       | 16363     
+ (0,5)   | 1     | 2              | 3        | 49090        | 98304       | 16363     
+ (0,5)   | 1     | 2              | 4        | 65453        | 131072      | 16363     
+ (0,5)   | 1     | 2              | 5        | 81816        | 163840      | 16363     
+ (0,5)   | 1     | 2              | 6        | 98179        | 196608      | 16363     
 (20 rows)
 
 -- Now summarize these desummarized ranges piecemeal and check that we scan only
@@ -1057,7 +1057,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
  29         | 33554432 | 1      | f        | f        | f           | f     | {1 .. 98303}         
  29         | 33554432 | 2      | f        | f        | f           | f     | {0 .. 2}             
 (54 rows)
-1U: SELECT * FROM verify_firstcol_rownum('aoco_partial_scan1_i_j_idx');
+1U: SELECT * FROM verify_rownum_vs_values('aoco_partial_scan1_i_j_idx', 1);
  blknum   | match 
 ----------+-------
  67108891 | t     
@@ -1170,7 +1170,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
  30         | 33554438 | 1      | f        | f        | f           | f     | {196608 .. 294911}   
  30         | 33554438 | 2      | f        | f        | f           | f     | {6 .. 8}             
 (56 rows)
-1U: SELECT * FROM verify_firstcol_rownum('aoco_partial_scan1_i_j_idx');
+1U: SELECT * FROM verify_rownum_vs_values('aoco_partial_scan1_i_j_idx', 1);
  blknum   | match 
 ----------+-------
  67108891 | t     
@@ -1286,7 +1286,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
  31         | 33554471 | 1      | f        | f        | f           | f     | {1277952 .. 1320000} 
  31         | 33554471 | 2      | f        | f        | f           | f     | {39 .. 40}           
 (58 rows)
-1U: SELECT * FROM verify_firstcol_rownum('aoco_partial_scan1_i_j_idx');
+1U: SELECT * FROM verify_rownum_vs_values('aoco_partial_scan1_i_j_idx', 1);
  blknum   | match 
 ----------+-------
  67108891 | t     
@@ -1407,7 +1407,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
  32         | 67108867 | 1      | f        | f        | f           | f     | {98304 .. 196607}    
  32         | 67108867 | 2      | f        | f        | f           | f     | {3 .. 5}             
 (60 rows)
-1U: SELECT * FROM verify_firstcol_rownum('aoco_partial_scan1_i_j_idx');
+1U: SELECT * FROM verify_rownum_vs_values('aoco_partial_scan1_i_j_idx', 1);
  blknum   | match 
 ----------+-------
  67108891 | t     
@@ -1444,16 +1444,16 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 -- Scenario 2: Starting block number of scan maps to hole at the end of the
 -- minipage (after the last entry).
 --------------------------------------------------------------------------------
-CREATE TABLE aoco_partial_scan2(i int, j int, k int) USING ao_column DISTRIBUTED BY (k);
+CREATE TABLE aoco_partial_scan2(d int, i int, j int) USING ao_column DISTRIBUTED BY (d);
 CREATE TABLE
 -- Fill 1 logical heap block with committed rows.
-INSERT INTO aoco_partial_scan2 SELECT k, k, 1 FROM generate_series(1, 32767) k;
+INSERT INTO aoco_partial_scan2 SELECT 1, k, k FROM generate_series(1, 32767) k;
 INSERT 0 32767
 -- Now add some aborted rows at the end of the segfile, resulting in a hole at
 -- the end of the minipage.
 BEGIN;
 BEGIN
-INSERT INTO aoco_partial_scan2 SELECT k, 200, 20 FROM generate_series(1, 32768) k;
+INSERT INTO aoco_partial_scan2 SELECT 20, k, 200 FROM generate_series(1, 32768) k;
 INSERT 0 32768
 ABORT;
 ROLLBACK
@@ -1480,19 +1480,19 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 
 -- Per colgroup, we have 1 minipage with 5 entries, meaning that there have 10
 -- varblocks for colno=0,1.
-1U: SELECT * FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan2') WHERE columngroup_no IN (0, 1) ORDER BY 1,2,3,4,5;
+1U: SELECT * FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan2') WHERE columngroup_no IN (1, 2) ORDER BY 1,2,3,4,5;
  tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
 ---------+-------+----------------+----------+--------------+-------------+-----------
- (0,1)   | 1     | 0              | 0        | 1            | 0           | 8181      
- (0,1)   | 1     | 0              | 1        | 8182         | 32768       | 8181      
- (0,1)   | 1     | 0              | 2        | 16363        | 65536       | 8181      
- (0,1)   | 1     | 0              | 3        | 24544        | 98304       | 8181      
- (0,1)   | 1     | 0              | 4        | 32725        | 131072      | 43        
  (0,2)   | 1     | 1              | 0        | 1            | 0           | 8181      
  (0,2)   | 1     | 1              | 1        | 8182         | 32768       | 8181      
  (0,2)   | 1     | 1              | 2        | 16363        | 65536       | 8181      
  (0,2)   | 1     | 1              | 3        | 24544        | 98304       | 8181      
  (0,2)   | 1     | 1              | 4        | 32725        | 131072      | 43        
+ (0,3)   | 1     | 2              | 0        | 1            | 0           | 8181      
+ (0,3)   | 1     | 2              | 1        | 8182         | 32768       | 8181      
+ (0,3)   | 1     | 2              | 2        | 16363        | 65536       | 8181      
+ (0,3)   | 1     | 2              | 3        | 24544        | 98304       | 8181      
+ (0,3)   | 1     | 2              | 4        | 32725        | 131072      | 43        
 (10 rows)
 
 -- Show the composition of the single data page in the BRIN index.
@@ -1502,7 +1502,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
  1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 32767} 
  1          | 33554432 | 2      | f        | f        | f           | f     | {1 .. 32767} 
 (2 rows)
-1U: SELECT * FROM verify_firstcol_rownum('aoco_partial_scan2_i_j_idx');
+1U: SELECT * FROM verify_rownum_vs_values('aoco_partial_scan2_i_j_idx', 1);
  blknum   | match 
 ----------+-------
  33554432 | t     
@@ -1574,7 +1574,7 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
  2          | 33554433 | 1      | t        | f        | f           | t     |              
  2          | 33554433 | 2      | t        | f        | f           | t     |              
 (4 rows)
-1U: SELECT * FROM verify_firstcol_rownum('aoco_partial_scan2_i_j_idx');
+1U: SELECT * FROM verify_rownum_vs_values('aoco_partial_scan2_i_j_idx', 1);
  blknum   | match 
 ----------+-------
  33554432 | t     
@@ -1585,17 +1585,17 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 -- Scenario 3: Starting block number of scan maps to hole at the start of the
 -- segfile (and before the first entry of the first minipage).
 --------------------------------------------------------------------------------
-CREATE TABLE aoco_partial_scan3(i int, j int, k int) USING ao_column DISTRIBUTED BY (k);
+CREATE TABLE aoco_partial_scan3(d int, i int, j int) USING ao_column DISTRIBUTED BY (d);
 CREATE TABLE
 -- Create a hole with 1 logical heap block worth of aborted rows.
 BEGIN;
 BEGIN
-INSERT INTO aoco_partial_scan3 SELECT k, k, 1 FROM generate_series(1, 32767) k;
+INSERT INTO aoco_partial_scan3 SELECT 1, k, k FROM generate_series(1, 32767) k;
 INSERT 0 32767
 ABORT;
 ROLLBACK
 -- Fill the next 3 logical heap blocks with committed rows.
-INSERT INTO aoco_partial_scan3 SELECT k, k/32768, 20 FROM generate_series(1, 32768 * 3) k;
+INSERT INTO aoco_partial_scan3 SELECT 20, k, k/32768 FROM generate_series(1, 32768 * 3) k;
 INSERT 0 98304
 
 -- Doing an index build will result in scanning the committed rows only.
@@ -1621,22 +1621,9 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 -- We have 1 minipage with 13 entries, meaning that there are 13 varblocks worth
 -- of committed rows, for each col. The first entry's firstRowNum reveals the
 -- hole at the beginning.
-1U: SELECT * FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan3') WHERE columngroup_no IN (0, 1) ORDER BY 1,2,3,4,5;
+1U: SELECT * FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan3') WHERE columngroup_no IN (1, 2) ORDER BY 1,2,3,4,5;
  tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
 ---------+-------+----------------+----------+--------------+-------------+-----------
- (0,1)   | 1     | 0              | 0        | 32801        | 0           | 8181      
- (0,1)   | 1     | 0              | 1        | 40982        | 32768       | 8181      
- (0,1)   | 1     | 0              | 2        | 49163        | 65536       | 8181      
- (0,1)   | 1     | 0              | 3        | 57344        | 98304       | 8181      
- (0,1)   | 1     | 0              | 4        | 65525        | 131072      | 8181      
- (0,1)   | 1     | 0              | 5        | 73706        | 163840      | 8181      
- (0,1)   | 1     | 0              | 6        | 81887        | 196608      | 8181      
- (0,1)   | 1     | 0              | 7        | 90068        | 229376      | 8181      
- (0,1)   | 1     | 0              | 8        | 98249        | 262144      | 8181      
- (0,1)   | 1     | 0              | 9        | 106430       | 294912      | 8181      
- (0,1)   | 1     | 0              | 10       | 114611       | 327680      | 8181      
- (0,1)   | 1     | 0              | 11       | 122792       | 360448      | 8181      
- (0,1)   | 1     | 0              | 12       | 130973       | 393216      | 132       
  (0,2)   | 1     | 1              | 0        | 32801        | 0           | 8181      
  (0,2)   | 1     | 1              | 1        | 40982        | 32768       | 8181      
  (0,2)   | 1     | 1              | 2        | 49163        | 65536       | 8181      
@@ -1650,6 +1637,19 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
  (0,2)   | 1     | 1              | 10       | 114611       | 327680      | 8181      
  (0,2)   | 1     | 1              | 11       | 122792       | 360448      | 8181      
  (0,2)   | 1     | 1              | 12       | 130973       | 393216      | 132       
+ (0,3)   | 1     | 2              | 0        | 32801        | 0           | 8181      
+ (0,3)   | 1     | 2              | 1        | 40982        | 32768       | 8181      
+ (0,3)   | 1     | 2              | 2        | 49163        | 65536       | 8181      
+ (0,3)   | 1     | 2              | 3        | 57344        | 98304       | 8181      
+ (0,3)   | 1     | 2              | 4        | 65525        | 131072      | 8181      
+ (0,3)   | 1     | 2              | 5        | 73706        | 163840      | 8181      
+ (0,3)   | 1     | 2              | 6        | 81887        | 196608      | 8181      
+ (0,3)   | 1     | 2              | 7        | 90068        | 229376      | 8181      
+ (0,3)   | 1     | 2              | 8        | 98249        | 262144      | 8181      
+ (0,3)   | 1     | 2              | 9        | 106430       | 294912      | 8181      
+ (0,3)   | 1     | 2              | 10       | 114611       | 327680      | 8181      
+ (0,3)   | 1     | 2              | 11       | 122792       | 360448      | 8181      
+ (0,3)   | 1     | 2              | 12       | 130973       | 393216      | 132       
 (26 rows)
 
 -- Show the composition of the single data page in the BRIN index.
@@ -1672,18 +1672,9 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 -- Summarizing this range should scan blocks corresponding to the 2 final logical
 -- heap blocks in the range only. This means that we will restrict our scan to
 -- the varblocks specified by the varblock entries:
-1U: SELECT * FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan3') WHERE columngroup_no IN (0, 1) AND first_row_no < ((33554435 - 33554432) * 32768) ORDER BY 1,2,3,4,5;
+1U: SELECT * FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan3') WHERE columngroup_no IN (1, 2) AND first_row_no < ((33554435 - 33554432) * 32768) ORDER BY 1,2,3,4,5;
  tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
 ---------+-------+----------------+----------+--------------+-------------+-----------
- (0,1)   | 1     | 0              | 0        | 32801        | 0           | 8181      
- (0,1)   | 1     | 0              | 1        | 40982        | 32768       | 8181      
- (0,1)   | 1     | 0              | 2        | 49163        | 65536       | 8181      
- (0,1)   | 1     | 0              | 3        | 57344        | 98304       | 8181      
- (0,1)   | 1     | 0              | 4        | 65525        | 131072      | 8181      
- (0,1)   | 1     | 0              | 5        | 73706        | 163840      | 8181      
- (0,1)   | 1     | 0              | 6        | 81887        | 196608      | 8181      
- (0,1)   | 1     | 0              | 7        | 90068        | 229376      | 8181      
- (0,1)   | 1     | 0              | 8        | 98249        | 262144      | 8181      
  (0,2)   | 1     | 1              | 0        | 32801        | 0           | 8181      
  (0,2)   | 1     | 1              | 1        | 40982        | 32768       | 8181      
  (0,2)   | 1     | 1              | 2        | 49163        | 65536       | 8181      
@@ -1693,6 +1684,15 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
  (0,2)   | 1     | 1              | 6        | 81887        | 196608      | 8181      
  (0,2)   | 1     | 1              | 7        | 90068        | 229376      | 8181      
  (0,2)   | 1     | 1              | 8        | 98249        | 262144      | 8181      
+ (0,3)   | 1     | 2              | 0        | 32801        | 0           | 8181      
+ (0,3)   | 1     | 2              | 1        | 40982        | 32768       | 8181      
+ (0,3)   | 1     | 2              | 2        | 49163        | 65536       | 8181      
+ (0,3)   | 1     | 2              | 3        | 57344        | 98304       | 8181      
+ (0,3)   | 1     | 2              | 4        | 65525        | 131072      | 8181      
+ (0,3)   | 1     | 2              | 5        | 73706        | 163840      | 8181      
+ (0,3)   | 1     | 2              | 6        | 81887        | 196608      | 8181      
+ (0,3)   | 1     | 2              | 7        | 90068        | 229376      | 8181      
+ (0,3)   | 1     | 2              | 8        | 98249        | 262144      | 8181      
 (18 rows)
 
 SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';

@@ -2098,7 +2098,7 @@ aoco_index_build_range_scan(Relation heapRelation,
 								&& common_start_rownum <= dirEntries[colIdx].range.lastRowNum);
 
 				/* read the varblock we've just positioned to */
-				err = datumstreamread_block(aocoscan->columnScanInfo.ds[colIdx], NULL, attno);
+				err = datumstreamread_block(aocoscan->columnScanInfo.ds[attno], NULL, attno);
 				Assert(err >= 0); /* since it's a valid block, we must be able to read it */
 
 				rowNumInBlock = common_start_rownum - dirEntries[colIdx].range.firstRowNum;
@@ -2109,7 +2109,7 @@ aoco_index_build_range_scan(Relation heapRelation,
 				 * What happens next is to call aocs_getnext which will advance to the target
 				 * row and then read from it. So we need to arrive to the *previous* row here.
 				 */
-				datumstreamread_find(aocoscan->columnScanInfo.ds[colIdx], rowNumInBlock - 1);
+				datumstreamread_find(aocoscan->columnScanInfo.ds[attno], rowNumInBlock - 1);
 			}
 		}
 	}
