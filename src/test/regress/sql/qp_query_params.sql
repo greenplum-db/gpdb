@@ -10,6 +10,10 @@ create table t1 (a int, b int);
 insert into t1 select i, i from generate_series(1,4)i;
 analyze t1;
 
+create table t2(a int, b int);
+insert into t2 values (1,1);
+analyze t2;
+
 CREATE TABLE part (
     a int ,
     b int,
@@ -87,5 +91,27 @@ drop index idx;
 -- Test limit with parameter
 PREPARE q1 as select * from t1 order by a limit $1;
 explain (costs off) execute q1(4);
+execute q1(4);
+deallocate q1;
+
+-- Test normalization with params
+PREPARE q1 as select count(*)+$1+$2 from t1 group by t1.a;
+explain (verbose, costs off) execute q1(4,1);
+execute q1(4,1);
+deallocate q1;
+
+PREPARE q1 as select count(*)+$1+$2 from t1 group by t1.a+$2;
+explain (verbose, costs off) execute q1(3,2);
+execute q1(3,2);
+deallocate q1;
+
+PREPARE q1 as select sum(b)+$1 from t1 group by(b) having count(*) > $2;
+explain (verbose, costs off) execute q1(4,0);
+execute q1(4,0);
+deallocate q1;
+
+-- Test subplans with params
+PREPARE q1 as  select $1::int, (select b from t2 where b=t1.a and b!=$1) from t1;
+explain (verbose, costs off) execute q1(4);
 execute q1(4);
 deallocate q1;
