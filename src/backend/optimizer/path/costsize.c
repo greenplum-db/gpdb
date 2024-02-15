@@ -6519,7 +6519,8 @@ ao_estimate_num_varblocks(RelOptInfoPerSegment *baserel, PlannerInfo *root)
 
 	Assert(IsAccessMethodAO(baserel->orig->relam));
 
-	tuple_width = get_relation_data_width(baserel_oid, NULL);
+	tuple_width = get_relation_data_width(baserel_oid,
+										  baserel->orig->attr_widths - baserel->orig->min_attr);
 	tuple_width += per_tuple_meta_overhead;
 
 	return (tuple_width * baserel->tuples / DEFAULT_APPENDONLY_BLOCK_SIZE);
