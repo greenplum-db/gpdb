@@ -1683,6 +1683,7 @@ CTranslatorDXLToPlStmt::TranslateDXLTvf(
 	rtfunc->funccoltypes = NIL;
 	rtfunc->funccoltypmods = NIL;
 	rtfunc->funccolcollations = NIL;
+	rtfunc->funccolcount = gpdb::ListLength(target_list);
 	ForEach(lc_target_entry, target_list)
 	{
 		TargetEntry *target_entry = (TargetEntry *) lfirst(lc_target_entry);
@@ -1785,7 +1786,6 @@ CTranslatorDXLToPlStmt::TranslateDXLTvfToRangeTblEntry(
 		const_expr->constvalue = gpdb::DatumFromPointer(str);
 
 		rtfunc->funcexpr = (Node *) const_expr;
-		rtfunc->funccolcount = (int) num_of_cols;
 	}
 	else
 	{
@@ -1832,6 +1832,7 @@ CTranslatorDXLToPlStmt::TranslateDXLTvfToRangeTblEntry(
 		rtfunc->funcexpr = (Node *) func_expr;
 	}
 
+	rtfunc->funccolcount = (int) num_of_cols;
 	rtfunc->funcparams = funcparams;
 	// GPDB_91_MERGE_FIXME: collation
 	// set rtfunc->funccoltypemods & rtfunc->funccolcollations?

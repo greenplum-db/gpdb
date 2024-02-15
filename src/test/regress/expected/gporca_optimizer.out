@@ -15016,5 +15016,45 @@ set session authorization ruser;
 set gp_max_system_slices=10;
 ERROR:  permission denied to set parameter "gp_max_system_slices"
 reset session authorization;
+-- Test that set returning function with multiple columns works with explain
+CREATE FUNCTION srf_attnum() RETURNS TABLE(v1 int, v2 int)
+    LANGUAGE plpgsql NO SQL
+    AS $_$
+BEGIN
+    DROP TABLE IF EXISTS tbl_2_cols;
+    CREATE TEMP TABLE tbl_2_cols (col1 int, col2 int) DISTRIBUTED RANDOMLY;
+    RETURN QUERY SELECT * from tbl_2_cols;
+END;
+$_$;
+NOTICE:  specifying "NO SQL" acts as no operation.
+explain select distinct v1 from srf_attnum();
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ HashAggregate  (cost=0.00..0.13 rows=1000 width=4)
+   Group Key: v1
+   ->  Function Scan on srf_attnum  (cost=0.00..0.00 rows=1000 width=4)
+ Optimizer: GPORCA
+(4 rows)
+
+select distinct v1 from srf_attnum();
+NOTICE:  table "tbl_2_cols" does not exist, skipping
+ v1 
+----
+(0 rows)
+
+explain select distinct v2 from srf_attnum();
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ HashAggregate  (cost=0.00..0.13 rows=1000 width=4)
+   Group Key: v2
+   ->  Function Scan on srf_attnum  (cost=0.00..0.00 rows=1000 width=4)
+ Optimizer: GPORCA
+(4 rows)
+
+select distinct v2 from srf_attnum();
+ v2 
+----
+(0 rows)
+
 drop user ruser;
 drop table foo, bar;
