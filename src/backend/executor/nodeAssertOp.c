@@ -121,7 +121,7 @@ ExecInitAssertOp(AssertOp *node, EState *estate, int eflags)
 	assertOpState->ps.qual =
 		ExecInitQual(node->plan.qual, (PlanState *) assertOpState);
 
-	if (estate->es_instrument && (estate->es_instrument & INSTRUMENT_CDB))
+	if (estate->es_instrument & INSTRUMENT_CDB)
 	{
 		assertOpState->ps.cdbexplainbuf = makeStringInfo();
 	}
