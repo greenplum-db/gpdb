@@ -6,7 +6,7 @@
 //		CScalarParam.h
 //
 //	@doc:
-//		Scalar external paramater
+//		Scalar paramater
 //---------------------------------------------------------------------------
 #ifndef GPOPT_CScalarParam_H
 #define GPOPT_CScalarParam_H
@@ -90,13 +90,24 @@ public:
 	// match function
 	BOOL Matches(COperator *pop) const override;
 
-	// sensitivity to order of inputs
-	BOOL FInputOrderSensitive() const override;
+
+	BOOL
+	FInputOrderSensitive() const override
+	{
+		GPOS_ASSERT(!"Unexpected call of function FInputOrderSensitive");
+		return false;
+	}
 
 	// return a copy of the operator with remapped columns
-	COperator *PopCopyWithRemappedColumns(CMemoryPool *mp,
-										  UlongToColRefMap *colref_mapping,
-										  BOOL must_exist) override;
+	COperator *
+	PopCopyWithRemappedColumns(CMemoryPool *,		//mp,
+							   UlongToColRefMap *,	//colref_mapping,
+							   BOOL					//must_exist
+							   ) override
+	{
+		return PopCopyDefault();
+	}
+
 
 	static BOOL
 	Equals(const CScalarParam *left, const CScalarParam *right)

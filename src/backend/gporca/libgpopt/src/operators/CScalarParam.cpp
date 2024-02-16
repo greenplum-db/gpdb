@@ -49,23 +49,6 @@ CScalarParam::Matches(COperator *pop) const
 	return false;
 }
 
-BOOL
-CScalarParam::FInputOrderSensitive() const
-{
-	GPOS_ASSERT(!"Unexpected call of function FInputOrderSensitive");
-	return false;
-}
-
-// return a copy of the operator with remapped columns
-COperator *
-CScalarParam::PopCopyWithRemappedColumns(CMemoryPool *,		  //mp,
-										 UlongToColRefMap *,  //colref_mapping,
-										 BOOL				  //must_exist
-)
-{
-	return PopCopyDefault();
-}
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CScalarConst::OsPrint

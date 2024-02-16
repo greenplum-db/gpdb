@@ -26,7 +26,7 @@ partition by range(a) (
 insert into part select i,i,'abc',i*1.01 from generate_series(1,10)i;
 analyze part;
 
--- Should simplify to false, Orca does not does not
+-- Should simplify to false, Orca does not
 PREPARE q1 as SELECT * from t1 where a=$1 and a!=$1;
 explain (costs off) execute q1(3);
 execute q1(3);
@@ -38,7 +38,7 @@ explain (costs off) execute q1(4);
 execute q1(4);
 deallocate q1;
 
--- Should perform static partition elimination, Orca does not
+-- Should perform runtime static partition elimination, Orca does not do this currently
 PREPARE q1 as SELECT * from part where a=$1;
 explain (costs off) EXECUTE q1(2);
 execute q1(2);

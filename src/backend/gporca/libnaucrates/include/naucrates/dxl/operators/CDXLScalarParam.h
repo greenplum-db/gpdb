@@ -26,7 +26,7 @@ using namespace gpmd;
 //		CDXLScalarParam
 //
 //	@doc:
-//		Class for representing DXL scalar external parameters
+//		Class for representing DXL scalar parameters
 //
 //---------------------------------------------------------------------------
 class CDXLScalarParam : public CDXLScalar
