@@ -69,6 +69,15 @@ SELECT groupid, groupname, cpuset FROM gp_toolkit.gp_resgroup_config WHERE group
 
 SELECT gp_inject_fault('create_resource_group_fail', 'reset', 1);
 
+-- clear limitations
+CREATE RESOURCE GROUP rg_test_group7 WITH (concurrency=10, cpu_max_percent=10, io_limit='rg_io_limit_ts_1:rbps=1000,wbps=1000');
+
+SELECT check_cgroup_io_max('rg_test_group7', 'rg_io_limit_ts_1', 'rbps=1048576000 wbps=1048576000 riops=max wiops=max');
+
+ALTER RESOURCE GROUP rg_test_group7 SET IO_LIMIT '-1';
+
+SELECT check_io_max_empty('rg_test_group7');
+
 -- view
 -- start_ignore
 SELECT * from gp_toolkit.gp_resgroup_iostats_per_host;
@@ -82,6 +91,7 @@ DROP RESOURCE GROUP rg_test_group2;
 DROP RESOURCE GROUP rg_test_group3;
 DROP RESOURCE GROUP rg_test_group4;
 DROP RESOURCE GROUP rg_test_group5;
+DROP RESOURCE GROUP rg_test_group7;
 
 DROP TABLESPACE rg_io_limit_ts_1;
 

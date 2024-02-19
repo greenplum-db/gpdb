@@ -519,21 +519,8 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 										  0, cgroupOpsRoutine->dumpio(caps.io_limit));
 		else
 		{
-			ListCell *tblspc_cell;
-
 			/* remove limitations */
-			if (oldCaps.io_limit != NIL)
-			{
-				foreach (tblspc_cell, oldCaps.io_limit)
-				{
-					TblSpcIOLimit *limit = (TblSpcIOLimit *)lfirst(tblspc_cell);
-					limit->ioconfig->rbps = IO_LIMIT_EMPTY;
-					limit->ioconfig->wbps = IO_LIMIT_EMPTY;
-					limit->ioconfig->riops = IO_LIMIT_EMPTY;
-					limit->ioconfig->wiops = IO_LIMIT_EMPTY;
-				}
-				cgroupOpsRoutine->setio(groupid, oldCaps.io_limit);
-			}
+			cgroupOpsRoutine->cleario(groupid);
 
 			updateResgroupCapabilityEntry(pg_resgroupcapability_rel,
 										  groupid, RESGROUP_LIMIT_TYPE_IO_LIMIT,
