@@ -272,7 +272,15 @@ CMessage::GetMessage(ULONG index)
 			CException(CException::ExmaUnhandled, CException::ExmiUnhandled),
 			CException::ExsevError, GPOS_WSZ_WSZLEN("Unhandled exception"), 0,
 			GPOS_WSZ_WSZLEN("Unhandled exception")),
-	};
+
+		CMessage(CException(CException::ExmaInvalid,
+							CException::ExmiORCAInvalidState),
+				 CException::ExsevError,
+				 GPOS_WSZ_WSZLEN(
+					 "This is an invalid state, please report this error"),
+				 0,
+				 GPOS_WSZ_WSZLEN(
+					 "This is an invalid state, please report this error."))};
 
 	return &msg[index];
 }
