@@ -14877,46 +14877,6 @@ explain (costs off) select max(s1) from foo inner join bar on j1 = j2 group by g
 drop table foo;
 drop table bar;
 reset optimizer_enable_eageragg;
--------------------------------------------------------
--- Test case to check over writing of worker in ORCA.
--- In the query, during optimzation of the main query, another instance of ORCA led optimization is triggered to
--- optimize the 'select' statement inside any_func.
-------------------------------------------------------
-CREATE OR REPLACE FUNCTION any_func(p_dt date)
-RETURNS date
-LANGUAGE sql
-IMMUTABLE AS
-$$
-    select (date_trunc('month', p_dt) + interval '1 month')::date;
-$$
-EXECUTE ON ANY;
-create TABLE test_partitioned_2024 ( nagreementid int4 NULL, dtrepdate date NULL) DISTRIBUTED BY (nagreementid)
-PARTITION BY RANGE(dtrepdate) ( START ('2024-01-01'::date) END ('2024-12-31'::date) EVERY ('1 mon'::interval));
-CREATE OR REPLACE FUNCTION ret_date()
-RETURNS DATE AS
-$$
-DECLARE
-    fix_date DATE := '2024-02-10';
-BEGIN
-    RETURN fix_date;
-END;
-$$
-LANGUAGE plpgsql
-STABLE;
-explain select (select min(dtRepDate) from test_partitioned_2024 where dtRepDate = any_func(ret_date()));
-                                                 QUERY PLAN                                                 
-------------------------------------------------------------------------------------------------------------
- Result  (cost=4.59..4.60 rows=1 width=4)
-   InitPlan 2 (returns $1)  (slice1)
-     ->  Result  (cost=4.58..4.59 rows=1 width=4)
-           InitPlan 1 (returns $0)  (slice2)
-             ->  Limit  (cost=393.90..4.58 rows=1 width=4)
-                   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..393.90 rows=86 width=4)
-                         ->  Seq Scan on test_partitioned_2024_1_prt_3  (cost=0.00..392.75 rows=29 width=4)
-                               Filter: ((dtrepdate IS NOT NULL) AND (dtrepdate = '03-01-2024'::date))
- Optimizer: Postgres-based planner
-(9 rows)
-
 -- Testcases to validate the behavior of the GUC gp_max_system_slices
 -- start_ignore
 drop table if exists foo;

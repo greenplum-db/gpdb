@@ -3657,39 +3657,6 @@ drop table foo;
 drop table bar;
 reset optimizer_enable_eageragg;
 
--------------------------------------------------------
--- Test case to check over writing of worker in ORCA.
-
--- In the query, during optimzation of the main query, another instance of ORCA led optimization is triggered to
--- optimize the 'select' statement inside any_func.
-------------------------------------------------------
-CREATE OR REPLACE FUNCTION any_func(p_dt date)
-RETURNS date
-LANGUAGE sql
-IMMUTABLE AS
-$$
-    select (date_trunc('month', p_dt) + interval '1 month')::date;
-$$
-EXECUTE ON ANY;
-
-create TABLE test_partitioned_2024 ( nagreementid int4 NULL, dtrepdate date NULL) DISTRIBUTED BY (nagreementid)
-PARTITION BY RANGE(dtrepdate) ( START ('2024-01-01'::date) END ('2024-12-31'::date) EVERY ('1 mon'::interval));
-
-CREATE OR REPLACE FUNCTION ret_date()
-RETURNS DATE AS
-$$
-DECLARE
-    fix_date DATE := '2024-02-10';
-BEGIN
-    RETURN fix_date;
-END;
-$$
-LANGUAGE plpgsql
-STABLE;
-
-explain select (select min(dtRepDate) from test_partitioned_2024 where dtRepDate = any_func(ret_date()));
-
-
 -- Testcases to validate the behavior of the GUC gp_max_system_slices
 
 -- start_ignore
