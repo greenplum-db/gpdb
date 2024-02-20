@@ -131,6 +131,9 @@ public:
 		// unknown exception
 		ExmiUnhandled,
 
+		// ORCA in an invalid state
+		ExmiORCAInvalidState,
+
 		ExmiSentinel
 	};
 
