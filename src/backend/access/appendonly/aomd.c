@@ -426,6 +426,7 @@ copy_file(char *srcsegpath, char *dstsegpath,
 	while(left > 0)
 	{
 		int			len;
+		char*		bytestowrite = buffer;
 
 		CHECK_FOR_INTERRUPTS();
 
@@ -436,7 +437,15 @@ copy_file(char *srcsegpath, char *dstsegpath,
 					 errmsg("could not read %d bytes from file \"%s\": %m",
 							len, srcsegpath)));
 
-		if (FileWrite(dstFile, buffer, len, offset, WAIT_EVENT_DATA_FILE_WRITE) != len)
+		/* post-read process the buffer by extension */
+		if (ao_file_read_buffer_modify_hook)
+			ao_file_read_buffer_modify_hook(srcFile, buffer, len, offset);
+
+		/* pre-write process the buffer by extension */
+		if (ao_file_write_buffer_modify_hook)
+			bytestowrite = ao_file_write_buffer_modify_hook(dstFile, buffer, len, offset);
+
+		if (FileWrite(dstFile, bytestowrite, len, offset, WAIT_EVENT_DATA_FILE_WRITE) != len)
 			ereport(ERROR,
 					(errcode_for_file_access(),
 					 errmsg("could not write %d bytes to file \"%s\": %m",
