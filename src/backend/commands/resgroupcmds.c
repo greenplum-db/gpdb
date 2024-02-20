@@ -517,14 +517,9 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 										  groupid, RESGROUP_LIMIT_TYPE_IO_LIMIT,
 										  0, cgroupOpsRoutine->dumpio(caps.io_limit));
 		else
-		{
-			/* remove limitations */
-			cgroupOpsRoutine->cleario(groupid);
-
 			updateResgroupCapabilityEntry(pg_resgroupcapability_rel,
 										  groupid, RESGROUP_LIMIT_TYPE_IO_LIMIT,
 										  0, DefaultIOLimit);
-		}
 	}
 	else
 	{

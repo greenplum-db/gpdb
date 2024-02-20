@@ -807,11 +807,8 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		}
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_IO_LIMIT)
 		{
-			if (callbackCtx->caps.io_limit != NIL)
-			{
-				cgroupOpsRoutine->cleario(callbackCtx->groupid);
-				cgroupOpsRoutine->setio(callbackCtx->groupid, callbackCtx->caps.io_limit);
-			}
+			cgroupOpsRoutine->cleario(callbackCtx->groupid);
+			cgroupOpsRoutine->setio(callbackCtx->groupid, callbackCtx->caps.io_limit);
 		}
 
 		/* reset default group if cpuset has changed */
