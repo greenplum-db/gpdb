@@ -75,6 +75,18 @@ CGPOptimizer::GPOPTOptimizedPlan(
 		{
 			PG_RE_THROW();
 		}
+		else if (GPOS_MATCH_EX(ex, CException::ExmaInvalid,
+							   CException::ExmiORCAInvalidState))
+		{
+			if (errstart(INFO, TEXTDOMAIN))
+			{
+				errcode(ERRCODE_INTERNAL_ERROR);
+				errmsg(
+					"Worker is already registered! This is an invalid state, please report this error. ");
+				errfinish(ex.Filename(), ex.Line(), nullptr);
+			}
+			GPOS_RESET_EX;
+		}
 
 		// Failed to produce a plan, but it wasn't an error that should
 		// be propagated to the user. Log the failure if needed, and
