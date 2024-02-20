@@ -68,4 +68,11 @@ extern void ao_foreach_extent_file(ao_extent_callback callback, void *ctx);
 extern void register_dirty_segment_ao(RelFileNode rnode, int segno, File vfd);
 
 extern uint64 ao_rel_get_physical_size(Relation aorel);
+
+typedef void (*ao_file_read_buffer_modify_hook_type)(File file, char *buffer, int actualLen, off_t offset);
+extern PGDLLIMPORT ao_file_read_buffer_modify_hook_type ao_file_read_buffer_modify_hook;  // in cdbbufferedread.c
+
+typedef char* (*ao_file_write_buffer_modify_hook_type)(File file, char *buffer, int amount, off_t offset);
+extern PGDLLIMPORT ao_file_write_buffer_modify_hook_type ao_file_write_buffer_modify_hook; // in cdbbufferedappend.c
+
 #endif							/* AOMD_H */
