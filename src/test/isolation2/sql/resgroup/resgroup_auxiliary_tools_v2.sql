@@ -375,7 +375,6 @@ $$ LANGUAGE plpython3u;
 $$ LANGUAGE plpython3u;
 
 0: CREATE OR REPLACE FUNCTION check_io_max_empty(groupname text) RETURNS BOOL AS $$
-    import ctypes
     import os
 
     # get group oid
