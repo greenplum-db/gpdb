@@ -40,7 +40,6 @@
 #include "utils/palloc.h"
 #include "utils/resgroup.h"
 #include "utils/cgroup.h"
-#include "utils/cgroup_io_limit.h"
 #include "utils/resource_manager.h"
 #include "utils/resowner.h"
 #include "utils/syscache.h"
