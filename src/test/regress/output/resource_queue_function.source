@@ -21,7 +21,7 @@ SET ROLE test_role;
 -- query should be assigned 125MB, but queue only allows 10MB 
 SELECT count(*) FROM test_table; 
 ERROR:  deadlock detected, locking against self
-HINT:  It is likely that a query is waiting on itself for resources. Check resource queue limits.
+DETAIL:  resource queue id: 581950, portal id: 0
 RESET ROLE;
 -- should return true
 select checkResourceQueueMemoryLimits('test_q'); 

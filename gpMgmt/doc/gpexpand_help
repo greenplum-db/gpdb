@@ -139,7 +139,7 @@ OPTIONS
 
 -n <parallel_processes>
  The number of tables to redistribute simultaneously. Valid values 
- are 1 - 16. Each table redistribution process requires two database 
+ are 1 - 96. Each table redistribution process requires two database
  connections: one to alter the table, and another to update the table's 
  status in the expansion schema. Before increasing -n, check the current 
  value of the server configuration parameter max_connections and make 

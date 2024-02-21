@@ -145,6 +145,7 @@ MultiExecBitmapOr(BitmapOrState *node)
 			else
 			{
 				tbm_union(hbm, (TIDBitmap *)subresult);
+				tbm_generic_free(subresult);
 			}
 		}
 		else
@@ -154,7 +155,9 @@ MultiExecBitmapOr(BitmapOrState *node)
 				if(node->bitmap != subresult)
 				{
 					StreamBitmap *s = (StreamBitmap *)subresult;
-					stream_move_node((StreamBitmap *)node->bitmap, s, BMS_OR);				}
+					stream_move_node((StreamBitmap *)node->bitmap, s, BMS_OR);
+					tbm_generic_free(subresult);
+				}
 			}
 			else
 				node->bitmap = subresult;

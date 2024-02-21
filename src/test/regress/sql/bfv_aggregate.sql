@@ -1441,6 +1441,13 @@ select count(distinct(b)), gp_segment_id from t group by gp_segment_id;
 set optimizer_force_multistage_agg to off;
 drop table t;
 
+-- test Github Issue 17028
+create table t_17028(a int, b int);
+insert into t_17028 values (1, 1), (1, null), (null, 1);
+set gp_enable_sort_distinct to on;
+select string_agg(a::text, ',' order by b), string_agg(distinct b::text, ',') from t_17028;
+reset gp_enable_sort_distinct;
+
 -- CLEANUP
 set client_min_messages='warning';
 drop schema bfv_aggregate cascade;

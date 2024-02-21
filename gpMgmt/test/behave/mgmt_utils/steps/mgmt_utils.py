@@ -34,6 +34,7 @@ from gppylib.commands.pg import PgBaseBackup
 from gppylib.commands.unix import findCmdInPath, Scp
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.buildMirrorSegments import get_recovery_progress_pattern
+from gppylib.operations.detect_unreachable_hosts import get_unreachable_segment_hosts
 from gppylib.operations.unix import ListRemoteFilesByPattern, CheckRemoteFile
 from test.behave_utils.gpfdist_utils.gpfdist_mgmt import Gpfdist
 from test.behave_utils.utils import *
@@ -42,6 +43,7 @@ from test.behave_utils.cluster_expand import Gpexpand
 from test.behave_utils.gpexpand_dml import TestDML
 from gppylib.commands.base import Command, REMOTE
 from gppylib import pgconf
+from gppylib.parseutils import canonicalize_address
 
 
 master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
@@ -4338,7 +4340,41 @@ def impl(context, dbname):
         context.db_name = datname
         context.db_oid = oid
 
+@then('the created config file {output_config_file} contains the commented row for unreachable failed segment')
+def impl(context, output_config_file):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    cluster_hosts = gparray.get_hostlist()
+    all_segments = gparray.getDbList()
+    failed_segments = filter(lambda seg: seg.getSegmentStatus() == 'd', all_segments)
 
+    expected_seg_rows = []
+    expected_seg_rows.append(
+        "# If any entry is commented, please know that it belongs to failed segment which is unreachable.")
+    expected_seg_rows.append("# If you need to recover them, please modify the segment entry and add failover details")
+    expected_seg_rows.append(
+        "# (failed_addresss|failed_port|failed_dataDirectory<space>failover_addresss|failover_port|failover_dataDirectory) "
+        "to recover it to another host.")
+    expected_seg_rows.append("")
+    actual_seg_rows = []
+    unreachable_hosts = get_unreachable_segment_hosts(cluster_hosts, 1)
+    for seg in failed_segments:
+        addr = canonicalize_address(seg.getSegmentAddress())
+        if seg.getSegmentHostName() in unreachable_hosts:
+            expected_seg_rows.append('#{}|{}|{}'.format(addr, seg.getSegmentPort(), seg.getSegmentDataDirectory()))
+        else:
+            expected_seg_rows.append('{}|{}|{}'.format(addr, seg.getSegmentPort(), seg.getSegmentDataDirectory()))
+
+    if os.path.exists(output_config_file):
+        with open(output_config_file, 'r') as fp:
+            config_lines = fp.readlines()
+
+        for line in config_lines:
+            actual_seg_rows.append(line.strip())
+    else:
+        raise Exception("{} file does not exist".format(output_config_file))
+
+    if set(expected_seg_rows) != set(actual_seg_rows):
+        raise Exception("created config file {} does not contain all of the expected rows".format(output_config_file))
 
 
 @then('the user waits until recovery_progress.file is created in {logdir} and verifies that all dbids progress with {stage} are present')

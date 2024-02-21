@@ -111,9 +111,6 @@ MultiExecBitmapIndexScan(BitmapIndexScanState *node)
 		if (node->ss.ps.instrument && (node->ss.ps.instrument)->need_cdb)
 			tbm_generic_set_instrument(bitmap, node->ss.ps.instrument);
 
-		if (node->biss_result == NULL)
-			node->biss_result = (Node *) bitmap;
-
 		doscan = ExecIndexAdvanceArrayKeys(node->biss_ArrayKeys,
 										   node->biss_NumArrayKeys);
 		if (doscan)				/* reset index scan */
@@ -178,21 +175,6 @@ ExecReScanBitmapIndexScan(BitmapIndexScanState *node)
 		index_rescan(node->biss_ScanDesc,
 					 node->biss_ScanKeys, node->biss_NumScanKeys,
 					 NULL, 0);
-
-	/* Sanity check */
-	if (node->biss_result &&
-		(!IsA(node->biss_result, TIDBitmap) && !IsA(node->biss_result, StreamBitmap)))
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("the returning bitmap in nodeBitmapIndexScan is invalid")));
-	}
-
-	if (NULL != node->biss_result)
-	{
-		tbm_generic_free(node->biss_result);
-		node->biss_result = NULL;
-	}
 }
 
 /* ----------------------------------------------------------------
@@ -229,9 +211,6 @@ ExecEndBitmapIndexScan(BitmapIndexScanState *node)
 		index_endscan(indexScanDesc);
 	if (indexRelationDesc)
 		index_close(indexRelationDesc, NoLock);
-
-	tbm_generic_free(node->biss_result);
-	node->biss_result = NULL;
 
 	EndPlanStateGpmonPkt(&node->ss.ps);
 }

@@ -479,3 +479,24 @@ def test_263_gpload_tabel_distributed_key():
     f = open(mkpath('query263.sql'),'a')
     f.write("""\\! psql -d reuse_gptest -c '\d staging_gpload_*'""")
     f.close()
+
+
+# For more info, please refer to https://github.com/greenplum-db/gpdb/issues/16959
+@pytest.mark.order(264)
+@prepare_before_test(num=264)
+def test_264_gpload_tabel_distributed_key():
+    "264 test gpload create staging table distributed by target table columns special order"
+    file = mkpath('setup.sql')
+    runfile(file)
+    copy_data('external_file_262.txt','data_file.txt')
+    match_col = ["c1"]
+    update_col = ["'\"C#3\"'"]
+    write_config_file(mode='merge', 
+                      match_columns=match_col, 
+                      update_columns=update_col, 
+                      file='data_file.txt', 
+                      table='testdk3')
+    f = open(mkpath('query264.sql'),'a')
+    f.write("""\\! psql -d reuse_gptest -c '\d staging_gpload_*'""")
+    f.close()
+

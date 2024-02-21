@@ -36,9 +36,6 @@ private:
 	// should Replicated distribution satisfy current distribution
 	BOOL m_fAllowReplicated;
 
-	// should allow this non-singleton spec to be enforced?
-	BOOL m_fAllowEnforced;
-
 	// private copy ctor
 	CDistributionSpecNonSingleton(const CDistributionSpecNonSingleton &);
 
@@ -47,21 +44,13 @@ public:
 	CDistributionSpecNonSingleton();
 
 	//ctor
-	explicit CDistributionSpecNonSingleton(BOOL fAllowReplicated,
-										   BOOL fAllowEnforced);
+	explicit CDistributionSpecNonSingleton(BOOL fAllowReplicated);
 
 	// should Replicated distribution satisfy current distribution
 	BOOL
 	FAllowReplicated() const
 	{
 		return m_fAllowReplicated;
-	}
-
-	// should allow this non-singleton spec to be enforced?
-	BOOL
-	FAllowEnforced() const
-	{
-		return m_fAllowEnforced;
 	}
 
 	// accessor

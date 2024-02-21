@@ -30,14 +30,14 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
         with tempfile.NamedTemporaryFile() as f:
             f.write(test["config"].encode("utf-8"))
             f.flush()
-            return self._run_single_FromGpArray_test(test["gparray"], f.name, None, test.get("unreachable_hosts"),
+            return self._run_single_FromGpArray_test(test["gparray"], f.name, test.get("output_config_file", None), None, test.get("unreachable_hosts"),
                                                      test.get("is_pgrewind_running", itertools.repeat(False)),
                                                      test.get("is_seg_in_backup_mode", itertools.repeat(False)),
                                                      test.get("segments_with_running_basebackup", set()),
                                                      test.get("unreachable_existing_hosts"))
 
     def run_single_GpArray_test(self, test):
-        return self._run_single_FromGpArray_test(test["gparray"], None, test["new_hosts"],
+        return self._run_single_FromGpArray_test(test["gparray"], None, test.get("output_config_file", None), test["new_hosts"],
                                                  test.get("unreachable_hosts"),
                                                  test.get("is_pgrewind_running", itertools.repeat(False)),
                                                  test.get("is_seg_in_backup_mode", itertools.repeat(False)),
@@ -117,7 +117,9 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
                 "gparray": self.all_up_gparray_str,
                 "config": "sdw2|21000|/mirror/gpseg0",
                 "unreachable_existing_hosts": ['sdw2'],
-                "expected": []
+                "expected": [self._triplet('10|0|m|m|s|u|sdw2|sdw2|21000|/mirror/gpseg0',
+                                           '2|0|p|p|s|u|sdw1|sdw1|20000|/primary/gpseg0',
+                                           None, True)]
             },
             {
                 "name": "one_mirror_inconfig_has_running_basebackup",
@@ -354,6 +356,55 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
                 "expected": [self._triplet('4|2|m|p|s|d|sdw2|sdw2|20000|/primary/gpseg2',
                                            '8|2|p|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2',
                                            None)]
+            },
+            {
+                "name": "output_config_file_when_one_existing_host_down",
+                "gparray": self.three_failedover_segs_gparray_str,
+                "output_config_file": "recovery_sample_config.out",
+                "new_hosts": [],
+                "unreachable_existing_hosts": ['sdw1'],
+                "expected": [self._triplet('2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0',
+                                           '6|0|p|m|s|u|sdw2|sdw2|21000|/mirror/gpseg0',
+                                           None, True),
+                             self._triplet('3|1|m|p|s|d|sdw1|sdw1|20001|/primary/gpseg1',
+                                           '7|1|p|m|s|u|sdw2|sdw2|21001|/mirror/gpseg1',
+                                           None, True),
+                             self._triplet('4|2|m|p|s|d|sdw2|sdw2|20000|/primary/gpseg2',
+                                           '8|2|p|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2',
+                                           None)]
+            },
+            {
+                "name": "output_config_file_when_one_existing_host_down_and_new_hosts",
+                "gparray": self.three_failedover_segs_gparray_str,
+                "output_config_file": "recovery_sample_config.out",
+                "new_hosts": ['new_1', 'new_2'],
+                "unreachable_existing_hosts": ['sdw1'],
+                "expected": [self._triplet('2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0',
+                                           '6|0|p|m|s|u|sdw2|sdw2|21000|/mirror/gpseg0',
+                                           '2|0|m|p|s|d|new_1|new_1|20000|/primary/gpseg0',
+                                           True),
+                             self._triplet('3|1|m|p|s|d|sdw1|sdw1|20001|/primary/gpseg1',
+                                           '7|1|p|m|s|u|sdw2|sdw2|21001|/mirror/gpseg1',
+                                           '3|1|m|p|s|d|new_1|new_1|20001|/primary/gpseg1',
+                                           True),
+                             self._triplet('4|2|m|p|s|d|sdw2|sdw2|20000|/primary/gpseg2',
+                                           '8|2|p|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2',
+                                           '4|2|m|p|s|d|new_2|new_2|20000|/primary/gpseg2')]
+            },
+            {
+                "name": "output_config_file_when_new_hosts",
+                "gparray": self.three_failedover_segs_gparray_str,
+                "output_config_file": "recovery_sample_config.out",
+                "new_hosts": ['new_1', 'new_2'],
+                "expected": [self._triplet('2|0|m|p|s|d|sdw1|sdw1|20000|/primary/gpseg0',
+                                           '6|0|p|m|s|u|sdw2|sdw2|21000|/mirror/gpseg0',
+                                           '2|0|m|p|s|d|new_1|new_1|20000|/primary/gpseg0'),
+                             self._triplet('3|1|m|p|s|d|sdw1|sdw1|20001|/primary/gpseg1',
+                                           '7|1|p|m|s|u|sdw2|sdw2|21001|/mirror/gpseg1',
+                                           '3|1|m|p|s|d|new_1|new_1|20001|/primary/gpseg1'),
+                             self._triplet('4|2|m|p|s|d|sdw2|sdw2|20000|/primary/gpseg2',
+                                           '8|2|p|m|s|u|sdw3|sdw3|21000|/mirror/gpseg2',
+                                           '4|2|m|p|s|d|new_2|new_2|20000|/primary/gpseg2')]
             },
             {
                 "name": "all_relevant_existing_hosts_down",
@@ -789,7 +840,7 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
                                   4|2|p|p|s|u|sdw2|sdw2|20000|/primary/gpseg2
                                   5|3|p|p|s|u|sdw2|sdw2|20001|/primary/gpseg3'''
 
-    def _run_single_FromGpArray_test(self, gparray_str, config_file, new_hosts, unreachable_hosts, is_pgrewind_running,
+    def _run_single_FromGpArray_test(self, gparray_str, config_file, output_config_file, new_hosts, unreachable_hosts, is_pgrewind_running,
                                      is_seg_in_backup_mode, segments_with_running_basebackup, unreachable_existing_hosts=None):
         unreachable_hosts = unreachable_hosts if unreachable_hosts else []
         gppylib.programs.clsRecoverSegment_triples.get_unreachable_segment_hosts = Mock(return_value=unreachable_hosts)
@@ -800,7 +851,8 @@ class RecoveryTripletsFactoryTestCase(GpTestCase):
 
         initial_gparray = self.get_gp_array(gparray_str, unreachable_existing_hosts)
         mutated_gparray = self.get_gp_array(gparray_str, unreachable_existing_hosts)
-        i = RecoveryTripletsFactory.instance(mutated_gparray, config_file=config_file, new_hosts=new_hosts)
+        i = RecoveryTripletsFactory.instance(mutated_gparray, config_file=config_file,
+                                             outputConfigFile=output_config_file, new_hosts=new_hosts)
         triples = i.getTriplets()
 
         warnings = i.getInterfaceHostnameWarnings()

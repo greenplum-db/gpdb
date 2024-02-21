@@ -58,3 +58,90 @@ VACUUM
 SELECT
 3: INSERT INTO ao VALUES (0);
 INSERT 1
+
+-- Ensure that a SELECT tx on a partition hierarchy comprised of AO tables, that
+-- predates a concurrent vacuum doesn't error out, because the tuples have moved
+-- to a new segfile and it doesn't know about it.
+
+CREATE TABLE ao_vacuum_drop_@orientation@ (a int, b int) WITH (appendonly=true, orientation=@orientation@) PARTITION BY range(a) (start (1) inclusive end (2) inclusive every (1));
+CREATE
+
+-- Insert 2 rows into the 1st partition on a single QE.
+INSERT INTO ao_vacuum_drop_@orientation@ SELECT 1, 1;
+INSERT 1
+INSERT INTO ao_vacuum_drop_@orientation@ SELECT 1, 2;
+INSERT 1
+-- Delete 1 row from the first partition on a single QE.
+DELETE FROM ao_vacuum_drop_@orientation@ WHERE b = 1;
+DELETE 1
+
+1U: SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_drop_@orientation@_1_prt_1');
+ segno | tupcount | state 
+-------+----------+-------
+ 1     | 2        | 1     
+(1 row)
+
+1: SET gp_keep_partition_children_locks TO on;
+SET
+SELECT gp_inject_fault('locks_check_at_select_portal_create', 'suspend', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: SELECT * FROM ao_vacuum_drop_@orientation@;  <waiting ...>
+SELECT gp_wait_until_triggered_fault('locks_check_at_select_portal_create', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- VACUUM shouldn't drop the files and SELECT should complete fine
+VACUUM ANALYZE ao_vacuum_drop_@orientation@_1_prt_1;
+VACUUM
+
+1U: SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_drop_@orientation@_1_prt_1');
+ segno | tupcount | state 
+-------+----------+-------
+ 1     | 2        | 2     
+ 2     | 1        | 1     
+(2 rows)
+
+SELECT gp_inject_fault('locks_check_at_select_portal_create', 'reset', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1<:  <... completed>
+ a | b 
+---+---
+ 1 | 2 
+(1 row)
+
+-- Smoke test: check to see if insert still works.
+INSERT INTO ao_vacuum_drop_@orientation@ SELECT 1, 3;
+INSERT 1
+SELECT * FROM ao_vacuum_drop_@orientation@;
+ a | b 
+---+---
+ 1 | 2 
+ 1 | 3 
+(2 rows)
+
+1U: SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_drop_@orientation@_1_prt_1');
+ segno | tupcount | state 
+-------+----------+-------
+ 1     | 2        | 2     
+ 2     | 2        | 1     
+(2 rows)
+
+-- VACUUM now should be able to drop the sefile pending drop.
+VACUUM ao_vacuum_drop_@orientation@_1_prt_1;
+VACUUM
+1U: SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('ao_vacuum_drop_@orientation@_1_prt_1');
+ segno | tupcount | state 
+-------+----------+-------
+ 1     | 0        | 1     
+ 2     | 2        | 1     
+ 3     | 0        | 1     
+(3 rows)

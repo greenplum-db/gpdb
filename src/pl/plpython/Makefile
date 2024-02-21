@@ -93,6 +93,8 @@ ifeq ($(python_majorversion),2)
 REGRESS_OPTS += --load-extension=plpythonu
 endif
 
+REGRESS_OPTS += --load-extension=gp_inject_fault
+
 REGRESS = \
 	plpython_schema \
 	plpython_populate \

@@ -57,7 +57,7 @@ class GpBuild:
 
         source_env_cmd = ''
         if dbexists:
-            source_env_cmd='source {0}/greenplum_path.sh && source ~/.bash_profile '.format(INSTALL_DIR)
+            source_env_cmd='source {0}/greenplum_path.sh && source ~/.bash_profile && source gpdb_src/gpAux/gpdemo/gpdemo-env.sh'.format(INSTALL_DIR)
         else:
             source_env_cmd = "source {0}/greenplum_path.sh && source gpdb_src/gpAux/gpdemo/gpdemo-env.sh".format(INSTALL_DIR)
             status = self.create_demo_cluster(INSTALL_DIR, True)

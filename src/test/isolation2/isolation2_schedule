@@ -70,6 +70,11 @@ test: vacuum_drop_phase_ao
 # sessions with multiple portals.
 test: resource_queue_cancel resource_queue_multi_portal
 
+test: resource_queue_role resource_queue_alter
+
+test: resource_queue_self_deadlock
+test: resource_queue_terminate
+
 # below test(s) inject faults so each of them need to be in a separate group
 test: pg_terminate_backend
 
@@ -307,6 +312,9 @@ test: standby_replay_dtx_info
 
 # Test for concurrent vacuum with delete
 test: concurrent_vacuum_with_delete
+
+# Test for concurrent vacuum with select
+test: concurrent_select_vacuum_ao_partitioned_table
 
 # test if GUC is synchronized from the QD to QEs.
 test: sync_guc

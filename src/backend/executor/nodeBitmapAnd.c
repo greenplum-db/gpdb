@@ -148,6 +148,7 @@ MultiExecBitmapAnd(BitmapAndState *node)
 			else
 			{
 				tbm_intersect(hbm, (TIDBitmap *)subresult);
+				tbm_generic_free(subresult);
 			}
 
 			/*
@@ -159,13 +160,6 @@ MultiExecBitmapAnd(BitmapAndState *node)
 			 */
 			if (tbm_is_empty(hbm))
 			{
-				/*
-				 * GPDB_84_MERGE_FIXME: If we saw any StreamBitmap inputs, we
-				 * will create an OpStream to AND the empty result with the
-				 * StreamBitmaps we saw already. We could just close them now,
-				 * and return an empty hash bitmap here, but I'm not sure how
-				 * to close the already-opened stream bitmaps correctly.
-				 */
 				empty = true;
 				break;
 			}
@@ -182,6 +176,7 @@ MultiExecBitmapAnd(BitmapAndState *node)
    				{
 	   				StreamBitmap *s = (StreamBitmap *)subresult;
 	   				stream_move_node((StreamBitmap *)node->bitmap, s, BMS_AND);
+					tbm_generic_free(subresult);
 			   	}
 			}
    			else

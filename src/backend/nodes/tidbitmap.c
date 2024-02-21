@@ -1453,11 +1453,9 @@ tbm_stream_block(StreamBMIterator *iterator, PagetableEntry *e)
 static void
 tbm_stream_free(StreamNode *self)
 {
-	/*
-	 * self->opaque is actually a reference to node->bitmap from BitmapIndexScanState
-	 * BitmapIndexScanState would have freed the self->opaque already so we shouldn't
-	 * access now.
-	 */
+	TIDBitmap *tbm = self->opaque;
+	Assert(self->type == BMS_INDEX);
+	tbm_free(tbm);
 	pfree(self);
 }
 

@@ -51,6 +51,7 @@
 #include "utils/memutils.h"
 #include "parser/parsetree.h"
 #include "nodes/tidbitmap.h"
+#include "utils/faultinjector.h"
 #include "utils/rel.h"
 #include "utils/snapmgr.h"
 #include "utils/tqual.h"
@@ -225,17 +226,19 @@ freeFetchDesc(BitmapHeapScanState *scanstate)
 static void
 freeBitmapState(BitmapHeapScanState *scanstate)
 {
-	/* BitmapIndexScan is the owner of the bitmap memory. Don't free it here */
-	scanstate->tbm = NULL;
-	/* Likewise, the tbmres member is owned by the iterator. It'll be freed
-	 * during end_iterate. */
-	scanstate->tbmres = NULL;
 	if (scanstate->tbmiterator)
 		tbm_generic_end_iterate(scanstate->tbmiterator);
 	scanstate->tbmiterator = NULL;
 	if (scanstate->prefetch_iterator)
 		tbm_generic_end_iterate(scanstate->prefetch_iterator);
 	scanstate->prefetch_iterator = NULL;
+
+	if (scanstate->tbm)
+		tbm_generic_free(scanstate->tbm);
+	scanstate->tbm = NULL;
+	/* The tbmres member is owned by the iterator. It'll be freed
+	 * during end_iterate. */
+	scanstate->tbmres = NULL;
 }
 
 /* ----------------------------------------------------------------
@@ -308,6 +311,8 @@ BitmapHeapNext(BitmapHeapScanState *node)
 		}
 #endif   /* USE_PREFETCH */
 	}
+
+	SIMPLE_FAULT_INJECTOR("before_retrieve_from_bitmap");
 
 	for (;;)
 	{
@@ -668,6 +673,7 @@ BitmapAppendOnlyNext(BitmapHeapScanState *node)
 			return ExecClearTuple(slot);
 		}
 
+		node->tbm = tbm;
 		node->tbmiterator = tbmiterator = tbm_generic_begin_iterate(tbm);
 	}
 

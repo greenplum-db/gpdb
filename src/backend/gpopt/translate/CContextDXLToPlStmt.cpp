@@ -44,7 +44,7 @@ CContextDXLToPlStmt::CContextDXLToPlStmt(
 	CMemoryPool *mp, CIdGenerator *plan_id_counter,
 	CIdGenerator *motion_id_counter, CIdGenerator *param_id_counter,
 	DistributionHashOpsKind distribution_hashops, List **rtable_entries_list,
-	List **subplan_entries_list)
+	List **subplan_entries_list, const Query *orig_query)
 	: m_mp(mp),
 	  m_plan_id_counter(plan_id_counter),
 	  m_motion_id_counter(motion_id_counter),
@@ -56,7 +56,8 @@ CContextDXLToPlStmt::CContextDXLToPlStmt(
 	  m_subplan_entries_list(subplan_entries_list),
 	  m_result_relation_index(0),
 	  m_into_clause(NULL),
-	  m_distribution_policy(NULL)
+	  m_distribution_policy(NULL),
+	  m_orig_query(orig_query)
 {
 	m_cte_consumer_info = GPOS_NEW(m_mp) HMUlCTEConsumerInfo(m_mp);
 	m_num_partition_selectors_array = GPOS_NEW(m_mp) ULongPtrArray(m_mp);

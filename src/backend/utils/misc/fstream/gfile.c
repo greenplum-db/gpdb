@@ -1297,7 +1297,7 @@ gfile_close(gfile_t*fd)
 			* for the compressed data implementation we need to call the "close" callback. Other implementations
 			* didn't use to call this callback here and it will remain so.
 			*/
-			if (fd->compression == GZ_COMPRESSION || fd->compression == ZSTD_COMPRESSION)
+			if (fd->compression == GZ_COMPRESSION || fd->compression == ZSTD_COMPRESSION || fd->compression == BZ_COMPRESSION)
 			{
 				fd->close(fd);
 			}

@@ -82,6 +82,7 @@ CPhysicalMotion::PdsRequired(CMemoryPool *mp,
 {
 	GPOS_ASSERT(0 == child_index);
 
+	// scenario 1:
 	// if the required distribution is EdtStrictRandom, it indicates
 	// that this motion operator was enforced into the same
 	// group as that of CPhysicalComputeScalar just below CPhysicalDML(Insert)
@@ -130,10 +131,11 @@ CPhysicalMotion::PdsRequired(CMemoryPool *mp,
 	//	      +--CScalarProjectList
 	//	         +--CScalarProjectElement "ColRef_0008"
 	//	            +--CScalarConst (1)
+	// scenario 2:
+	// CTE consumer's derived property is EdtStrictRandom. It's
+	// sent back to the physical sequence.
 	if (CDistributionSpec::EdtStrictRandom == pdsRequired->Edt())
 	{
-		GPOS_ASSERT(COperator::EopPhysicalMotionRandom == Eopid());
-		GPOS_ASSERT(CDistributionSpec::EdtStrictRandom == Pds()->Edt());
 		return GPOS_NEW(mp) CDistributionSpecRandom();
 	}
 

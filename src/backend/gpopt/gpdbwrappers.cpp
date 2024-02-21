@@ -30,6 +30,7 @@
 #include "naucrates/exception.h"
 extern "C" {
 #include "catalog/pg_collation.h"
+#include "catalog/pg_inherits_fn.h"
 #include "utils/memutils.h"
 }
 #define GP_WRAP_START                                            \
@@ -2733,6 +2734,49 @@ gpdb::IsTypeRange(Oid typid)
 	}
 	GP_WRAP_END;
 	return false;
+}
+
+RowMarkClause *
+gpdb::GetParseRowmark(Query *query, Index rtindex)
+{
+	GP_WRAP_START;
+	{
+		get_parse_rowmark(query, rtindex);
+	}
+	GP_WRAP_END;
+	return nullptr;
+}
+
+List *
+gpdb::FindAllInheritors(Oid parentrelId, LOCKMODE lockmode, List **numparents)
+{
+	GP_WRAP_START;
+	{
+		return find_all_inheritors(parentrelId, lockmode, numparents);
+	}
+	GP_WRAP_END;
+	return nullptr;
+}
+
+gpos::BOOL
+gpdb::WalkQueryTree(Query *query, bool (*walker)(), void *context, int flags)
+{
+	GP_WRAP_START;
+	{
+		return query_tree_walker(query, walker, context, flags);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+void
+gpdb::GPDBLockRelationOid(Oid reloid, LOCKMODE lockmode)
+{
+	GP_WRAP_START;
+	{
+		LockRelationOid(reloid, lockmode);
+	}
+	GP_WRAP_END;
 }
 
 // EOF

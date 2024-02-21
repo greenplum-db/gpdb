@@ -48,3 +48,4 @@ INSERT INTO testtruncate VALUES('ttt','ttgt','shpits', '2011-06-01 12:30:30',16,
 CREATE TABLE prices (itemnumber integer, price decimal ) DISTRIBUTED BY (itemnumber);
 CREATE TABLE testdk1 (c1 int, "C#2" text, "C#3" text) DISTRIBUTED BY ("C#2");
 CREATE TABLE testdk2 (c1 int, "C#2" text, "C#3" text) DISTRIBUTED REPLICATED;
+CREATE TABLE testdk3 (c1 int, "C#2" text, "C#3" text) DISTRIBUTED BY ("C#2", "c1");

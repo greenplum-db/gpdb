@@ -310,3 +310,173 @@ GROUP BY cup.e;
  2
 (1 row)
 
+-- The following tests ensures queries involving CTE don't hang in ORCA or fall back.
+-- Query hang is caused by a mismatch between the number of CTE producers and
+-- consumers. Either there are more producers than consumers, or more consumers than
+-- producers, the unconsumed producers or the starved consumers would cause the query
+-- to hang. Query fall back, on the other hand, is due to a missing plan that satisfies
+-- all the required plan properties. The issues stated above are fixed by sending
+-- appropriate distribution requests based on how data is distributed to begin with,
+-- to ensure the number of CTE producers and consumers match. For each of the tests,
+-- we use explain to verify the plan and the actual query to verify the query doesn't
+-- hang.
+-- This test involves a tainted-replicated CTE and two consumer 
+-- To ensure there's no duplicate hazard, the cost model chooses a plan that gathers
+-- the CTE onto the coordinator. Both the producer and the consumer executes on the
+-- coordiator. There's 1 producer matching 1 consumer.
+drop table if exists rep;
+NOTICE:  table "rep" does not exist, skipping
+create table rep (i character varying(10)) distributed replicated;
+explain (analyze off, costs off, verbose off)
+with cte1 as ( select *,row_number() over ( partition by i) as rank_desc from rep),
+cte2 as ( select 'col1' tblnm,count(*) diffcnt from ( select * from cte1) x)
+select * from ( select 'col1' tblnm from cte1) a left join cte2 c on a.tblnm=c.tblnm;
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice5; segments: 3)
+   ->  Hash Left Join
+         Hash Cond: (('col1'::text) = (('col1'))::text)
+         ->  Subquery Scan on cte1
+               ->  WindowAgg
+                     Partition By: rep.i
+                     ->  Sort
+                           Sort Key: rep.i
+                           ->  Redistribute Motion 1:3  (slice1; segments: 1)
+                                 Hash Key: rep.i
+                                 ->  Seq Scan on rep
+         ->  Hash
+               ->  Broadcast Motion 1:3  (slice4; segments: 1)
+                     ->  Aggregate
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 ->  Aggregate
+                                       ->  Subquery Scan on cte1_1
+                                             ->  WindowAgg
+                                                   Partition By: rep_1.i
+                                                   ->  Sort
+                                                         Sort Key: rep_1.i
+                                                         ->  Redistribute Motion 1:3  (slice2; segments: 1)
+                                                               Hash Key: rep_1.i
+                                                               ->  Seq Scan on rep rep_1
+ Optimizer: Postgres query optimizer
+(25 rows)
+
+with cte1 as ( select *,row_number() over ( partition by i) as rank_desc from rep),
+     cte2 as ( select 'col1' tblnm,count(*) diffcnt from ( select * from cte1) x)
+select * from ( select 'col1' tblnm from cte1) a left join cte2 c on a.tblnm=c.tblnm;
+ tblnm | tblnm | diffcnt 
+-------+-------+---------
+(0 rows)
+
+drop table rep;
+-- This test involves a tainted-replicated CTE and two consumers
+-- To ensure there's no duplicate hazard, the cost model chooses a plan that executes
+-- the producer and both consumers on one segment, before gathering the data onto
+-- the coordinator and return. There's 1 producer matching 1 consumer for each consumer.
+drop table if exists rep1, rep2;
+NOTICE:  table "rep1" does not exist, skipping
+NOTICE:  table "rep2" does not exist, skipping
+create table rep1 (id bigserial not null, isc varchar(15) not null,iscd varchar(15) null) distributed replicated;
+create table rep2 (id numeric null, rc varchar(255) null,ri numeric null) distributed replicated;
+insert into rep1 (isc,iscd) values ('cmn_bin_yes', 'cmn_bin_yes');
+insert into rep2 (id,rc,ri) values (113551,'cmn_bin_yes',101991), (113552,'cmn_bin_no',101991), (113553,'cmn_bin_err',101991), (113554,'cmn_bin_null',101991);
+explain (analyze off, costs off, verbose off)
+with
+    t1 as (select * from rep1),
+    t2 as (select id, rc from rep2 where ri = 101991)
+select p.*from t1 p join t2 r on p.isc = r.rc join t2 r1 on p.iscd = r1.rc;
+                                       QUERY PLAN                                        
+------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Hash Join
+         Hash Cond: ((rep1.iscd)::text = (r1.rc)::text)
+         ->  Hash Join
+               Hash Cond: ((r.rc)::text = (rep1.isc)::text)
+               ->  Subquery Scan on r
+                     ->  Seq Scan on rep2
+                           Filter: (ri = '101991'::numeric)
+               ->  Hash
+                     ->  Seq Scan on rep1
+         ->  Hash
+               ->  Subquery Scan on r1
+                     ->  Seq Scan on rep2 rep2_1
+                           Filter: (ri = '101991'::numeric)
+ Optimizer: Postgres query optimizer
+(15 rows)
+
+with
+    t1 as (select * from rep1),
+    t2 as (select id, rc from rep2 where ri = 101991)
+select p.*from t1 p join t2 r on p.isc = r.rc join t2 r1 on p.iscd = r1.rc limit 1;
+ id |     isc     |    iscd     
+----+-------------+-------------
+  1 | cmn_bin_yes | cmn_bin_yes
+(1 row)
+
+drop table rep1, rep2;
+-- This test involves a strictly replicated CTE and two consumers
+-- To ensure there's no duplicate hazard, the cost model chooses a plan that executes
+-- the producer and both consumers on one segment by placing a one-time segment filter
+-- on the producer side. The coordinator gathers data from all three segments, even 
+-- though only one segment has the tuples from the join due to the one-time filter. 
+-- There's 1 producer matching 1 consumer for each consumer.
+drop table if exists dist1, dist2, rep;
+NOTICE:  table "dist1" does not exist, skipping
+NOTICE:  table "dist2" does not exist, skipping
+NOTICE:  table "rep" does not exist, skipping
+create table dist1 (a int, b int);
+create table dist2 (a int, b int);
+create table rep (a int, b int) distributed replicated;
+insert into dist1 select 1, generate_series(1,10);
+insert into dist2 select 1, generate_series(1,20);
+insert into rep select 1, 1;
+explain (analyze off, costs off, verbose off)
+with t1_cte as (select b from dist1),
+rep_cte as (select a from rep)
+select
+case when (dist2.b in (1,2)) then (select rep_cte.a from rep_cte)
+when (dist2.b in (1,2)) then (select rep_cte.a from rep_cte)
+end as rep_cte_a
+from t1_cte join dist2 on t1_cte.b = dist2.b;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice5; segments: 3)
+   ->  Hash Join
+         Hash Cond: (dist2.b = dist1.b)
+         InitPlan 1 (returns $0)  (slice6)
+           ->  Gather Motion 1:1  (slice3; segments: 1)
+                 ->  Seq Scan on rep
+         InitPlan 2 (returns $1)  (slice7)
+           ->  Gather Motion 1:1  (slice4; segments: 1)
+                 ->  Seq Scan on rep rep_1
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Hash Key: dist2.b
+               ->  Seq Scan on dist2
+         ->  Hash
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: dist1.b
+                     ->  Seq Scan on dist1
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+with t1_cte as (select b from dist1),
+rep_cte as (select a from rep)
+select
+case when (dist2.b in (1,2)) then (select rep_cte.a from rep_cte)
+when (dist2.b in (1,2)) then (select rep_cte.a from rep_cte)
+end as rep_cte_a
+from t1_cte join dist2 on t1_cte.b = dist2.b;
+ rep_cte_a 
+-----------
+         1
+          
+          
+          
+          
+         1
+          
+          
+          
+          
+(10 rows)
+
+drop table dist1, dist2, rep;

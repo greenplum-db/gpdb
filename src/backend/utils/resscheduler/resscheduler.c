@@ -698,7 +698,16 @@ ResLockPortal(Portal portal, QueryDesc *qDesc)
 				gpstat_report_waiting(PGBE_WAITING_NONE);
 
 				/* If we had acquired the resource queue lock, release it and clean up */	
-				ResLockRelease(&tag, portal->portalId);
+				if (!ResLockRelease(&tag, portal->portalId))
+				{
+					ereport(LOG,
+							(errmsg("could not find resource queue lock to release"),
+							 errhint("it may already have been released"),
+							 errdetail("resource queue id: %u, portal id: %u, "
+									   "portal name: %s, portal statement: %s",
+									   tag.locktag_field1, portal->portalId,
+									   portal->name, portal->sourceText)));
+				}
 			
 				/* GPDB hook for collecting query info */
 				if (query_info_collect_hook)
@@ -809,7 +818,16 @@ ResLockUtilityPortal(Portal portal, float4 ignoreCostLimit)
 			gpstat_report_waiting(PGBE_WAITING_NONE);
 
 			/* If we had acquired the resource queue lock, release it and clean up */
-			ResLockRelease(&tag, portal->portalId);
+			if (!ResLockRelease(&tag, portal->portalId))
+			{
+				ereport(LOG,
+						(errmsg("could not find resource queue lock to release"),
+						 errhint("it may already have been released"),
+						 errdetail("resource queue id: %u, portal id: %u, "
+								   "portal name: %s, portal statement: %s",
+								   tag.locktag_field1, portal->portalId,
+								   portal->name, portal->sourceText)));
+			}
 
 			/*
 			 * Perfmon related stuff: clean up if we got cancelled
@@ -849,10 +867,24 @@ ResUnLockPortal(Portal portal)
 #endif
 		SET_LOCKTAG_RESOURCE_QUEUE(tag, queueid);
 
-		ResLockRelease(&tag, portal->portalId);
+		if (!ResLockRelease(&tag, portal->portalId))
+		{
+			ereport(LOG,
+					(errmsg("could not find resource queue lock to release"),
+					 errhint("it may already have been released"),
+					 errdetail("resource queue id: %u, portal id: %u, "
+							   "portal name: %s, portal statement: %s",
+							   tag.locktag_field1, portal->portalId,
+							   portal->name, portal->sourceText)));
+		}
 
-		/* Count holdable cursors.*/
-		if (portal->cursorOptions & CURSOR_OPT_HOLD)
+		/*
+		 * Count holdable cursors.
+		 * Note: there is an edge case when we are unlocking a portal with a
+		 * dangling increment set. Such a portal was not counted as a holdable
+		 * portal, so don't un-count it.
+		 */
+		if ((portal->cursorOptions & CURSOR_OPT_HOLD) && portal->hasResQueueLock)
 		{
 			Assert(numHoldPortals > 0);
 			numHoldPortals--;

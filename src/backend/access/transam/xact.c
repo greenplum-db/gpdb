@@ -5043,6 +5043,7 @@ void
 BeginInternalSubTransaction(char *name)
 {
 	TransactionState s = CurrentTransactionState;
+	SIMPLE_FAULT_INJECTOR("begin_internal_sub_transaction");
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{

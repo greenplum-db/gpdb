@@ -73,3 +73,5 @@ CREATE TABLE testdk1 (c1 int, "C#2" text, "C#3" text) DISTRIBUTED BY ("C#2");
 CREATE TABLE
 CREATE TABLE testdk2 (c1 int, "C#2" text, "C#3" text) DISTRIBUTED REPLICATED;
 CREATE TABLE
+CREATE TABLE testdk3 (c1 int, "C#2" text, "C#3" text) DISTRIBUTED BY ("C#2", "c1");
+CREATE TABLE

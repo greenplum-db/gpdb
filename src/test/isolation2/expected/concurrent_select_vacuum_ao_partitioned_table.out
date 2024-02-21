@@ -1,0 +1,235 @@
+-- Ensure that a SELECT tx on a partition hierarchy comprised of AO tables, that
+-- predates a concurrent vacuum doesn't error out, because the tuples have moved
+-- to a new segfile and it doesn't know about it.
+
+CREATE TABLE foo_part (a int, b int) WITH (appendonly=true) PARTITION BY range(a) (start (1) inclusive end (2) inclusive every (1));
+CREATE
+
+-- Insert 2 rows into the 1st partition on a single QE.
+INSERT INTO foo_part SELECT 1, 1;
+INSERT 1
+INSERT INTO foo_part SELECT 1, 2;
+INSERT 1
+-- Delete 1 row from the first partition on a single QE.
+DELETE FROM foo_part WHERE b = 1;
+DELETE 1
+
+1: SET gp_keep_partition_children_locks TO on;
+SET
+2: SELECT gp_inject_fault('locks_check_at_select_portal_create', 'suspend', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: SELECT * FROM foo_part;  <waiting ...>
+2: SELECT gp_wait_until_triggered_fault('locks_check_at_select_portal_create', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- VACUUM shouldn't drop the files and SELECT should complete fine
+VACUUM ANALYZE foo_part_1_prt_1;
+VACUUM
+
+2: SELECT gp_inject_fault('locks_check_at_select_portal_create', 'reset', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1<:  <... completed>
+ a | b 
+---+---
+ 1 | 2 
+(1 row)
+DROP TABLE foo_part;
+DROP
+
+-- Test for Dynamic Bitmap Heap Scan
+CREATE TABLE foo_part (a int, b int) WITH (appendonly=true) PARTITION BY range(a) (start (1) inclusive end (2) inclusive every (1));
+CREATE
+
+-- Insert 2 rows into the 1st partition on a single QE.
+INSERT INTO foo_part SELECT 1, 1;
+INSERT 1
+INSERT INTO foo_part SELECT 1, 2;
+INSERT 1
+create index ind1 on foo_part using btree(a);
+CREATE
+-- Delete 1 row from the first partition on a single QE.
+DELETE FROM foo_part WHERE b = 1;
+DELETE 1
+
+
+1: SET gp_keep_partition_children_locks TO on;
+SET
+1: SET enable_seqscan to off;
+SET
+2: SELECT gp_inject_fault('locks_check_at_select_portal_create', 'suspend', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: SELECT * FROM foo_part where a>=1;  <waiting ...>
+2: SELECT gp_wait_until_triggered_fault('locks_check_at_select_portal_create', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- VACUUM shouldn't drop the files and SELECT should complete fine
+VACUUM ANALYZE foo_part_1_prt_1;
+VACUUM
+
+2: SELECT gp_inject_fault('locks_check_at_select_portal_create', 'reset', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1<:  <... completed>
+ a | b 
+---+---
+ 1 | 2 
+(1 row)
+DROP TABLE foo_part;
+DROP
+
+-- RTE inside CTE
+CREATE TABLE foo_part (a int, b int) WITH (appendonly=true) PARTITION BY range(a) (start (1) inclusive end (2) inclusive every (1));
+CREATE
+
+-- Insert 2 rows into the 1st partition on a single QE.
+INSERT INTO foo_part SELECT 1, 1;
+INSERT 1
+INSERT INTO foo_part SELECT 1, 2;
+INSERT 1
+-- Delete 1 row from the first partition on a single QE.
+DELETE FROM foo_part WHERE b = 1;
+DELETE 1
+
+1: SET gp_keep_partition_children_locks TO on;
+SET
+2: SELECT gp_inject_fault('locks_check_at_select_portal_create', 'suspend', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: WITH cte AS (SELECT * FROM foo_part) SELECT * FROM cte;  <waiting ...>
+2: SELECT gp_wait_until_triggered_fault('locks_check_at_select_portal_create', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- VACUUM shouldn't drop the files and SELECT should complete fine
+VACUUM ANALYZE foo_part_1_prt_1;
+VACUUM
+
+2: SELECT gp_inject_fault('locks_check_at_select_portal_create', 'reset', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1<:  <... completed>
+ a | b 
+---+---
+ 1 | 2 
+(1 row)
+DROP TABLE foo_part;
+DROP
+
+-- RTE inside SUBLINK
+CREATE TABLE bar ( p int);
+CREATE
+CREATE TABLE foo_part (a int, b int) WITH (appendonly=true) PARTITION BY range(a) (start (1) inclusive end (2) inclusive every (1));
+CREATE
+INSERT INTO bar SELECT 1;
+INSERT 1
+
+-- Insert 2 rows into the 1st partition on a single QE.
+INSERT INTO foo_part SELECT 1, 1;
+INSERT 1
+INSERT INTO foo_part SELECT 1, 2;
+INSERT 1
+-- Delete 1 row from the first partition on a single QE.
+DELETE FROM foo_part WHERE b = 1;
+DELETE 1
+
+1: SET gp_keep_partition_children_locks TO on;
+SET
+2: SELECT gp_inject_fault('locks_check_at_select_portal_create', 'suspend', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: SELECT bar.p FROM bar WHERE bar.p IN (SELECT a FROM foo_part);  <waiting ...>
+2: SELECT gp_wait_until_triggered_fault('locks_check_at_select_portal_create', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- VACUUM shouldn't drop the files and SELECT should complete fine
+VACUUM ANALYZE foo_part_1_prt_1;
+VACUUM
+
+2: SELECT gp_inject_fault('locks_check_at_select_portal_create', 'reset', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1<:  <... completed>
+ p 
+---
+ 1 
+(1 row)
+DROP TABLE foo_part;
+DROP
+DROP TABLE bar;
+DROP
+
+-- Testing multilevel partitions
+CREATE TABLE foo_part(a int, b int, c int) WITH (APPENDONLY = true) DISTRIBUTED BY (a) PARTITION BY RANGE (b) SUBPARTITION BY RANGE (c) SUBPARTITION TEMPLATE ( start (1) inclusive end (2) inclusive every (1)) ( start (1) inclusive end (2) inclusive every (1));
+CREATE
+
+INSERT INTO foo_part SELECT 1, 1, 1;
+INSERT 1
+INSERT INTO foo_part SELECT 1, 1, 2;
+INSERT 1
+DELETE FROM foo_part WHERE c = 1;
+DELETE 1
+
+1: SET gp_keep_partition_children_locks TO on;
+SET
+2: SELECT gp_inject_fault('locks_check_at_select_portal_create', 'suspend', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: SELECT * from foo_part_1_prt_1;  <waiting ...>
+2: SELECT gp_wait_until_triggered_fault('locks_check_at_select_portal_create', 1, dbid) FROM gp_segment_configuration WHERE role='p' AND content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+
+-- VACUUM shouldn't drop the files and SELECT should complete fine
+VACUUM ANALYZE foo_part_1_prt_1_2_prt_1;
+VACUUM
+
+2: SELECT gp_inject_fault('locks_check_at_select_portal_create', 'reset', c.dbid) FROM gp_segment_configuration c WHERE role='p' and content=-1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+1<:  <... completed>
+ a | b | c 
+---+---+---
+ 1 | 1 | 2 
+(1 row)
+DROP TABLE foo_part;

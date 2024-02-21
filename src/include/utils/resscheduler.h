@@ -147,6 +147,7 @@ extern void				ResRemoveFromWaitQueue(PGPROC *proc, uint32 hashcode);
 extern bool				ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *incSet);
 
 extern ResPortalIncrement	*ResIncrementFind(ResPortalTag *portaltag);
+extern bool 				ResPortalHasDanglingIncrement(Portal portal);
 
 extern bool					ResPortalIncrementHashTableInit(void);
 

@@ -245,7 +245,7 @@ where x1.b = x2.b;
         </dxl:LogicalJoin>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="20">
+    <dxl:Plan Id="0" SpaceSize="28">
       <dxl:Sequence>
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="1293.001043" Rows="1.000000" Width="24"/>

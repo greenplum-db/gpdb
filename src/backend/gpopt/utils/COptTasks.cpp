@@ -301,7 +301,7 @@ COptTasks::ConvertToPlanStmtFromDXL(
 
 	CContextDXLToPlStmt dxl_to_plan_stmt_ctxt(
 		mp, &plan_id_generator, &motion_id_generator, &param_id_generator,
-		distribution_hashops, &table_list, &subplans_list);
+		distribution_hashops, &table_list, &subplans_list, orig_query);
 
 	// translate DXL -> PlannedStmt
 	CTranslatorDXLToPlStmt dxl_to_plan_stmt_translator(

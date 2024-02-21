@@ -9,7 +9,7 @@ SYNOPSIS
 
 gpfdist [-d <directory>] [-p <http_port>] [-l <log_file>] [-t <timeout>] 
 [-S] [-w <time>] [-v | -V] [-m <max_length>] [--ssl <certificate_path>]
-[-k <seconds>]
+[-k <seconds>] [--compress] [--multi_thread <number_of_threads>]
 
 gpfdist [-? | --help] | --version
 
@@ -145,6 +145,29 @@ OPTIONS
  * The trusted certificate authorities, root.crt 
 
  The root directory (/) cannot be specified as certificate_path. 
+
+
+--compress
+
+ Utilizes the Zstandard (zstd) compression method for data transfer via 
+ gpfdist. Zstd is an effective compression algorithm designed to enable
+ gpfdist to transmit larger amounts of data while maintaining low network 
+ usage. However, it is important to note that compression can be a 
+ time-intensive process, which may potentially result in reduced 
+ transmission speeds.
+
+
+--multi_thread <number_of_threads>
+
+ Configures the maximum number of threads for compressing and transmitting 
+ data. As compression is a computationally intensive process, utilizing 
+ multi-threaded execution can help decrease the overall time required for 
+ compression. Consequently, multi-threaded compression facilitates faster 
+ data transmission while maintaining low network occupancy and high speed.
+
+ Note: The flag '--multi_thread' signifies enabling compression. It is permitted 
+ to use this flag in conjunction with '--compress'. However, when used 
+ together, the effect is equivalent to using '--multi_thread' by itself.
 
 
 -v (verbose) 

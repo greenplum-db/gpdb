@@ -134,8 +134,8 @@ CPhysicalSerialUnionAll::PdsRequired(
 	// we need to the inner child to be distributed across segments that does
 	// not generate duplicate results. That is, inner child should not be replicated.
 
-	return GPOS_NEW(mp) CDistributionSpecNonSingleton(
-		false /*fAllowReplicated*/, true /*fAllowEnforced*/);
+	return GPOS_NEW(mp)
+		CDistributionSpecNonSingleton(false /*fAllowReplicated*/);
 }
 
 // EOF

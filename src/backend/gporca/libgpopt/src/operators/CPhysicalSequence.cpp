@@ -16,6 +16,7 @@
 #include "gpopt/base/CCTEReq.h"
 #include "gpopt/base/CDistributionSpecAny.h"
 #include "gpopt/base/CDistributionSpecNonSingleton.h"
+#include "gpopt/base/CDistributionSpecReplicated.h"
 #include "gpopt/base/CDistributionSpecSingleton.h"
 #include "gpopt/base/COptCtxt.h"
 #include "gpopt/operators/CExpressionHandle.h"
@@ -35,15 +36,18 @@ CPhysicalSequence::CPhysicalSequence(CMemoryPool *mp)
 {
 	// Sequence generates two distribution requests for its children:
 	// (1) If incoming distribution from above is Singleton, pass it through
-	//		to all children, otherwise request Non-Singleton on all children
+	//		to all children, otherwise request Non-Singleton (Non-Replicated)
+	//		on all children
 	//
 	// (2)	Optimize first child with Any distribution requirement, and compute
 	//		distribution request on other children based on derived distribution
 	//		of first child:
 	//			* If distribution of first child is a Singleton, request Singleton
-	//				on all children
-	//			* If distribution of first child is a Non-Singleton, request
-	//				Non-Singleton on all children
+	//				on the second child
+	//			* If distribution of first child is Replicated, request Replicated
+	//				on the second child
+	//			* Otherwise, request Non-Singleton (Non-Replicated) on the second
+	//				child
 
 	SetDistrRequests(2);
 
@@ -210,96 +214,100 @@ CPhysicalSequence::PdsRequired(CMemoryPool *mp,
 	GPOS_ASSERT(child_index < exprhdl.Arity());
 	GPOS_ASSERT(ulOptReq < UlDistrRequests());
 
+	// The following distribution requests ensure matching number of
+	// producers and consumers. Any mismatch, either more producers
+	// than consumers, or more consumers than producers, will cause
+	// the query to hang
+
+	// 1st request
 	if (0 == ulOptReq)
 	{
-		if (CDistributionSpec::EdtSingleton == pdsRequired->Edt() ||
-			CDistributionSpec::EdtStrictSingleton == pdsRequired->Edt())
+		// If the incoming request is a singleton, request singleton
+		// on ALL the children. No need to check strict singleton,
+		// cause strict singleton is a derived only spec.
+		if (CDistributionSpec::EdtSingleton == pdsRequired->Edt())
 		{
-			// incoming request is a singleton, request singleton on all children
 			CDistributionSpecSingleton *pdss =
 				CDistributionSpecSingleton::PdssConvert(pdsRequired);
 			return GPOS_NEW(mp) CDistributionSpecSingleton(pdss->Est());
 		}
 
-		// incoming request is a non-singleton, request non-singleton on all children
-		return GPOS_NEW(mp) CDistributionSpecNonSingleton();
+		// Otherwise, request non-singleton (excluding replicated)
+		// on ALL the children.
+
+		// If the input is hashed or randomly distributed, no motion
+		// will be enforced. Both the producer and the consumer are
+		// executed on all the segments. That is, no mismatch between
+		// the number of producers and consumers.
+
+		// If the input is replicated, a hash filter will be applied
+		// to the input. The hash filter resolves the duplicate hazard,
+		// and now the producer is randomly distributed. The consumer
+		// will continue to be executed on all the segments. Again, no
+		// mismatch between the number of producers and consumers.
+		return GPOS_NEW(mp)
+			CDistributionSpecNonSingleton(false /* fAllowReplicated */);
 	}
+
+	// 2nd request
 	GPOS_ASSERT(1 == ulOptReq);
 
 	if (0 == child_index)
 	{
-		// no distribution requirement on first child
+		// Request Any on the first child
 		return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
 	}
 
-	// get derived plan properties of first child
+	// Get derived plan properties of first child
 	CDrvdPropPlan *pdpplan = CDrvdPropPlan::Pdpplan((*pdrgpdpCtxt)[0]);
+	// Because we request Any on the first child, no motion could
+	// have been enforced. The derived spec of the first child is
+	// what it delivers in the first place.
 	CDistributionSpec *pds = pdpplan->Pds();
 
+	// If the first child is singleton, request singleton on the
+	// second child. This request is identical to the 1st request
+	// (ulOptReq = 0), where we request singleton on ALL the
+	// children, and would eventually be deduplicated.
 	if (pds->FSingletonOrStrictSingleton())
 	{
-		// first child is singleton, request singleton distribution on second child
 		CDistributionSpecSingleton *pdss =
 			CDistributionSpecSingleton::PdssConvert(pds);
 		return GPOS_NEW(mp) CDistributionSpecSingleton(pdss->Est());
 	}
 
+	// If the first child is universal, request Any on the second
+	// child. This is because if the producer is universally
+	// available, no matter what the locality of the consumer
+	// is, the consumer would be able to access the shared data
 	if (CDistributionSpec::EdtUniversal == pds->Edt())
 	{
-		// first child is universal, impose no requirements on second child
 		return GPOS_NEW(mp) CDistributionSpecAny(this->Eopid());
 	}
 
-	//	When the producer is not a singleton/Universal, we do request a non-singleton
-	//	on all the children. But when the producer is replicated still we were requesting
-	//	non-singleton which will possibly generate a risky plan and could cause a possible
-	//	hang too.For example in the following plan the slice 1 and slice 2 are executed on
-	//	a single segment but the producer is executed on all the segments. So in this case the
-	//	producer on the other two segments undergoes starvation which causes the query to hang.
-	//
-	//	Gather Motion 3:1 (slice4; segments: 3)
-	//	  -> Sequence
-	//	    -> Shared Scan (share slice:id 4:0)
-	//		   ...
-	//		-> Random Redistribute Motion 1:3 (slice3)
-	//		  -> Hash Join
-	//		    -> Gather Motion 1:1 (slice1; segments: 1)
-	//			  -> Shared Scan (share slice:id 1:0)
-	//			-> Hash
-	//			  -> Aggregate
-	//			    -> Gather Motion 1:1 (slice2; segments: 1)
-	//				  -> Shared Scan (share slice:id 2:0)
-	//
-	//
-	// So adding a check if the producer is replicated, request a non-singleton spec that is not
-	// allowed to be enforced, to avoid potential hang issues.
-
-	if (CDistributionSpec::EdtTaintedReplicated == pds->Edt() ||
-		CDistributionSpec::EdtStrictReplicated == pds->Edt())
+	// If the first child is replicated, request replicated on the
+	// second child. This way, the producer is only executed on one
+	// segment, and so is the consumer. The plan would look like:
+	// Gather Motion 1:1  (slice1; segments: 1)
+	//   ->  Sequence
+	//         ->  Shared Scan (share slice:id 1:1)
+	//               ->  Seq Scan on rep
+	//         ->  Broadcast Motion 3:1  (slice2; segments: 3)
+	//             ...
+	//             ...
+	//             ->  Gather Motion 1:1  (sliceN; segments: 1)
+	//                   ->  Shared Scan (share slice:id N:1)
+	if (CDistributionSpec::EdtStrictReplicated == pds->Edt() ||
+		CDistributionSpec::EdtTaintedReplicated == pds->Edt())
 	{
-		return GPOS_NEW(mp) CDistributionSpecNonSingleton(
-			true /* fAllowReplicated */, false /* fAllowEnforced */);
+		return GPOS_NEW(mp)
+			CDistributionSpecReplicated(CDistributionSpec::EdtReplicated);
 	}
 
-	// If required distribution is singleton on master (sequence is top operation) or
-	// non-singleton with not allowed replicated (there is another top-sequence under this sequence)
-	// then we should not allow replicated distribution, to avoid potential hang issues,
-	// which may accured when ORCA is translating expression to DXL and sets
-	// one segment for input array if strict or tainted replicated distribution detected,
-	// and Redistribute from all segments to one segments appears.
-
-	if ((CDistributionSpec::EdtSingleton == pdsRequired->Edt() &&
-		 CDistributionSpecSingleton::PdssConvert(pdsRequired)->FOnMaster()) ||
-		(CDistributionSpec::EdtNonSingleton == pdsRequired->Edt() &&
-		 !CDistributionSpecNonSingleton::PdsConvert(pdsRequired)
-			  ->FAllowReplicated()))
-	{
-		return GPOS_NEW(mp) CDistributionSpecNonSingleton(
-			false /* fAllowReplicated */, true /* fAllowEnforced */);
-	}
-
-	// first child is non-singleton, request a non-singleton distribution on second child
-	return GPOS_NEW(mp) CDistributionSpecNonSingleton();
+	// Request non-singleton (excluding replicated) on the second
+	// child
+	return GPOS_NEW(mp)
+		CDistributionSpecNonSingleton(false /* fAllowReplicated */);
 }
 
 

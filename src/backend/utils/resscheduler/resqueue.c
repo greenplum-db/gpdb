@@ -178,9 +178,10 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 	{
 		elog(LOG,
 			 "Resource queue %d: previous ResLockAcquire() interrupted, "
-			 " status = %d",
+			 " status = %d, portal id = %u",
 			 locktag->locktag_field1,
-			 resLockAcquireStatus);
+			 resLockAcquireStatus,
+			 incrementSet->portalId);
 	}
 
 	resLockAcquireStatus = RQA_STARTED;
@@ -249,6 +250,9 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 		ereport(ERROR,
 				(errcode(ERRCODE_OUT_OF_MEMORY),
 				 errmsg("out of shared memory"),
+				 errdetail("resource queue id: %u, portal id: %u",
+						   locktag->locktag_field1,
+						   incrementSet->portalId),
 				 errhint("You may need to increase max_resource_queues.")));
 	}
 
@@ -310,12 +314,19 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 											 hashcode,
 											 HASH_REMOVE,
 											 NULL))
-				elog(PANIC, "lock table corrupted");
+				ereport(PANIC,
+						(errmsg("lock table corrupted"),
+						 errdetail("resource queue id: %u, portal id: %u",
+								   locktag->locktag_field1,
+								   incrementSet->portalId)));
 		}
 		LWLockRelease(partitionLock);
 		ereport(ERROR,
 				(errcode(ERRCODE_OUT_OF_MEMORY),
 				 errmsg("out of shared memory"),
+				 errdetail("resource queue id: %u, portal id: %u",
+						   locktag->locktag_field1,
+						   incrementSet->portalId),
 				 errhint("You may need to increase max_resource_queues.")));
 	}
 
@@ -428,7 +439,10 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 			ereport(ERROR,
 					(errcode(ERRCODE_INTERNAL_ERROR),
 						errmsg("duplicate portal id %u for proc %d",
-							   incrementSet->portalId, incrementSet->pid)));
+							   incrementSet->portalId, incrementSet->pid),
+						errdetail("resource queue id: %u, portal id: %u",
+								  locktag->locktag_field1,
+								  incrementSet->portalId)));
 	}
 
 	/*
@@ -471,7 +485,10 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 		LWLockRelease(partitionLock);
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
-				 errmsg("statement requires more resources than resource queue allows")));
+				 errmsg("statement requires more resources than resource queue allows"),
+				 errdetail("resource queue id: %u, portal id: %u",
+						   locktag->locktag_field1,
+						   incrementSet->portalId)));
 	}
 	else if (status == STATUS_OK)
 	{
@@ -499,6 +516,25 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 		Assert(status == STATUS_FOUND);
 
 		resLockAcquireStatus = RQA_WAIT_ON_LOCK;
+		/*
+		 * First check if there would be any self-deadlock, before we start
+		 * waiting on the lock.
+		 */
+		if (ResCheckSelfDeadLock(lock, proclock, incrementSet))
+		{
+			LWLockRelease(ResQueueLock);
+			LWLockRelease(partitionLock);
+
+			SIMPLE_FAULT_INJECTOR("res_lock_acquire_self_deadlock_error");
+
+			ereport(ERROR,
+					(errcode(ERRCODE_T_R_DEADLOCK_DETECTED),
+					 errmsg("deadlock detected, locking against self"),
+					 errdetail("resource queue id: %u, portal id: %u",
+							   locktag->locktag_field1,
+							   incrementSet->portalId)));
+		}
+
 		/*
 		 * The requested lock will exhaust the limit for this resource queue,
 		 * so must wait.
@@ -542,7 +578,11 @@ ResLockAcquire(LOCKTAG *locktag, ResPortalIncrement *incrementSet)
 		if (!(proclock->holdMask & LOCKBIT_ON(lockmode)))
 		{
 			LWLockRelease(partitionLock);
-			elog(ERROR, "ResLockAcquire failed");
+			ereport(ERROR,
+					(errmsg("ResLockAcquire failed"),
+					 errdetail("resource queue id: %u, portal id: %u",
+							   locktag->locktag_field1,
+							   incrementSet->portalId)));
 		}
 
 		/* Reset the portal id. */
@@ -595,9 +635,10 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	{
 		elog(LOG,
 			 "Resource queue %d: previous ResLockAcquire() interrupted, "
-			 " status = %d",
+			 " status = %d, portal id = %u",
 			 locktag->locktag_field1,
-			 resLockAcquireStatus);
+			 resLockAcquireStatus,
+			 resPortalId);
 		resLockAcquireOrReleaseInterrupted = true;
 	}
 
@@ -609,9 +650,10 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	{
 		elog(LOG,
 			 "Resource queue %d: previous ResLockRelease() interrupted, "
-			 " status = %d",
+			 " status = %d, portal id = %u",
 			 locktag->locktag_field1,
-			 resLockReleaseStatus);
+			 resLockReleaseStatus,
+			 resPortalId);
 		resLockAcquireOrReleaseInterrupted = true;
 	}
 	resLockReleaseStatus = RQR_STARTED;
@@ -645,7 +687,9 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 		!locallock->lock ||
 		!locallock->proclock)
 	{
-		elog(LOG, "Resource queue %d: no lock to release", locktag->locktag_field1);
+		elog(LOG, "Resource queue %d: no lock to release for portal id = %u",
+			 locktag->locktag_field1,
+			 resPortalId);
 
 		if (locallock)
 		{
@@ -681,8 +725,9 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	{
 		LWLockRelease(partitionLock);
 		elog(LOG,
-			 "Resource queue %d: lock already gone",
-			 locktag->locktag_field1);
+			 "Resource queue %d: lock already gone for portal id = %u",
+			 locktag->locktag_field1,
+			 resPortalId);
 		RemoveLocalLock(locallock);
 
 		resLockReleaseStatus = RQR_NOT_STARTED_OR_DONE;
@@ -698,7 +743,9 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	 */
 	if (!(proclock->holdMask & LOCKBIT_ON(lockmode)) || proclock->nLocks <= 0)
 	{
-		elog(LOG, "ResLockRelease: Resource queue %d: proclock not held", locktag->locktag_field1);
+		elog(LOG, "Resource queue %d: proclock not held for portal id = %u",
+			 locktag->locktag_field1,
+			 resPortalId);
 		RemoveLocalLock(locallock);
 
 		ResCleanUpLock(lock, proclock, hashcode, false);
@@ -721,8 +768,9 @@ ResLockRelease(LOCKTAG *locktag, uint32 resPortalId)
 	if (!incrementSet)
 	{
 		elog(LOG,
-			 "Resource queue %d: increment not found on unlock",
-			 locktag->locktag_field1);
+			 "Resource queue %d: increment not found on unlock for portal id = %u",
+			 locktag->locktag_field1,
+			 resPortalId);
 
 		/*
 		 * Clean up the locallock. Since a single locallock can represent
@@ -986,9 +1034,10 @@ ResLockUpdateLimit(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increment
 	{
 		Assert(limits[0].type == RES_COUNT_LIMIT);
 		elog(LOG,
-			 "Resource queue id: %d, count limit: %f\n",
+			 "Resource queue id: %u, count limit: %f, portal id: %u\n",
 			 queue->queueid,
-			 limits[0].current_value);
+			 limits[0].current_value,
+			 incrementSet->portalId);
 		ereport(LOG,
 				(errmsg("ResLockUpdateLimit()"),
 				errprintstack(true)));
@@ -1047,7 +1096,7 @@ ResLockUpdateLimit(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increment
 ResQueue
 GetResQueueFromLock(LOCK *lock)
 {
-	Assert(LWLockHeldExclusiveByMe(ResQueueLock));
+	Assert(LWLockHeldByMe(ResQueueLock));
 
 	ResQueue	queue = ResQueueHashFind(GET_RESOURCE_QUEUEID_FOR_LOCK(lock));
 
@@ -1253,8 +1302,6 @@ ResWaitOnLock(LOCALLOCK *locallock, ResourceOwner owner, ResPortalIncrement *inc
 
 	/*
 	 * Now sleep.
-	 *
-	 * NOTE: self-deadlocks will throw (do a non-local return).
 	 */
 	if (ResProcSleep(ExclusiveLock, locallock, incrementSet) != STATUS_OK)
 	{
@@ -1375,6 +1422,45 @@ ResProcLockRemoveSelfAndWakeup(LOCK *lock)
 	return;
 }
 
+/*
+ * Does this portal have an increment set that hasn't been cleaned up yet as
+ * part of ResLockRelease()?
+ *
+ * One known reason for this to happen is when an external session grants this
+ * portal the resource queue lock, but the current session hasn't had a chance
+ * to become aware of it (for e.g. if it is too far along during termination).
+ */
+bool
+ResPortalHasDanglingIncrement(Portal portal)
+{
+	Assert(!portal->hasResQueueLock);
+
+	if (IsResQueueEnabled() && Gp_role == GP_ROLE_DISPATCH && OidIsValid(portal->queueId))
+	{
+		ResPortalTag 		portalTag;
+		ResPortalIncrement	*resPortalIncrement;
+
+		portalTag.portalId = portal->portalId;
+		portalTag.pid = MyProcPid;
+
+		LWLockAcquire(ResQueueLock, LW_SHARED);
+		resPortalIncrement = ResIncrementFind(&portalTag);
+		LWLockRelease(ResQueueLock);
+
+		if (resPortalIncrement)
+		{
+			ereport(LOG,
+					(errmsg("dangling increment found for resource queue id: %u, portal id: %u\"",
+							portal->queueId, portal->portalId),
+					 errdetail("portal name: %s, portal statement: %s",
+							   portal->name, portal->sourceText),
+					 errprintstack(true)));
+			return true;
+		}
+	}
+
+	return false;
+}
 
 /*
  * ResProcWakeup -- wake a sleeping process.
@@ -1483,6 +1569,8 @@ ResRemoveFromWaitQueue(PGPROC *proc, uint32 hashcode)
  * increments. If this exceeds any of the thresholds for the queue then
  * we need to signal that a self deadlock is about to occurr - modulo some
  * footwork for overcommit-able queues.
+ *
+ * Note: ResQueueLock must already be held in Exclusive mode.
  */
 bool
 ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *incrementSet)
@@ -1496,9 +1584,6 @@ ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increme
 	bool		costThesholdOvercommitted = false;
 	bool		memoryThesholdOvercommitted = false;
 	bool		result = false;
-
-	/* Get the resource queue lock before checking the increments. */
-	LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
 
 	/* Get the queue for this lock. */
 	queue = GetResQueueFromLock(lock);
@@ -1526,6 +1611,12 @@ ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increme
 					if (incrementTotals[i] > limits[i].threshold_value)
 					{
 						countThesholdOvercommitted = true;
+						ereport(LOG,
+								(errmsg("count threshold overcommitted"),
+									errdetail("total count %lf exceeds limit %f for resource queue id: %u",
+											  incrementTotals[i],
+											  limits[i].threshold_value,
+											  queue->queueid)));
 					}
 				}
 				break;
@@ -1535,6 +1626,12 @@ ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increme
 					if (incrementTotals[i] > limits[i].threshold_value)
 					{
 						costThesholdOvercommitted = true;
+						ereport(LOG,
+								(errmsg("cost threshold overcommitted"),
+									errdetail("total cost %lf exceeds limit %f for resource queue id: %u",
+											  incrementTotals[i],
+											  limits[i].threshold_value,
+											  queue->queueid)));
 					}
 				}
 				break;
@@ -1544,6 +1641,12 @@ ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increme
 					if (incrementTotals[i] > limits[i].threshold_value)
 					{
 						memoryThesholdOvercommitted = true;
+						ereport(LOG,
+								(errmsg("memory threshold overcommitted"),
+									errdetail("total memory %lf exceeds limit %f for resource queue id: %u",
+											  incrementTotals[i],
+											  limits[i].threshold_value,
+											  queue->queueid)));
 					}
 				}
 				break;
@@ -1579,13 +1682,15 @@ ResCheckSelfDeadLock(LOCK *lock, PROCLOCK *proclock, ResPortalIncrement *increme
 		{
 			/* we're no longer waiting. */
 			gpstat_report_waiting(PGBE_WAITING_NONE);
+			ereport(LOG,
+					(errmsg("granting ourselves the resource queue lock in the self-deadlock check"),
+						errdetail("resource queue id: %u, portal id: %u",
+								  queue->queueid, incrementSet->portalId)));
 			ResGrantLock(lock, proclock);
 			ResLockUpdateLimit(lock, proclock, incrementSet, true, true);
 		}
 		/* our caller will throw an ERROR. */
 	}
-
-	LWLockRelease(ResQueueLock);
 
 	return result;
 }
@@ -1723,7 +1828,7 @@ ResIncrementFind(ResPortalTag *portaltag)
 	ResPortalIncrement *incrementSet;
 	bool		found;
 
-	Assert(LWLockHeldExclusiveByMe(ResQueueLock));
+	Assert(LWLockHeldByMe(ResQueueLock));
 
 	incrementSet = (ResPortalIncrement *)
 		hash_search(ResPortalIncrementHash, (void *) portaltag, HASH_FIND, &found);
@@ -1841,7 +1946,7 @@ ResQueueHashFind(Oid queueid)
 	bool		found;
 	ResQueueData *queue;
 
-	Assert(LWLockHeldExclusiveByMe(ResQueueLock));
+	Assert(LWLockHeldByMe(ResQueueLock));
 
 	queue = (ResQueueData *)
 		hash_search(ResQueueHash, (void *) &queueid, HASH_FIND, &found);
@@ -2585,7 +2690,7 @@ void DumpResQueueLockInfo(LOCALLOCK *locallock)
 		LOCK	 *lock = locallock->lock;
 		ResQueue  queue;
 
-		LWLockAcquire(ResQueueLock, LW_EXCLUSIVE);
+		LWLockAcquire(ResQueueLock, LW_SHARED);
 		/* Get the queue for this lock. */
 		queue = GetResQueueFromLock(lock);
 		if (queue != NULL)
@@ -2593,7 +2698,7 @@ void DumpResQueueLockInfo(LOCALLOCK *locallock)
 			ResLimit limits  = queue->limits;
 			Assert(limits[0].type == RES_COUNT_LIMIT);
 			elog(LOG,
-				 "Resource queue id: %d, count limit: %f\n",
+				 "Resource queue id: %u, count limit: %f\n",
 				 queue->queueid,
 			limits[0].current_value);
 		}

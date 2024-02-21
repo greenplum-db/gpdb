@@ -61,6 +61,7 @@ select * from cte c1, cte c2 limit 2;
 select gp_inject_fault('execshare_input_next', 'status', 2);
 
 reset gp_enable_mk_sort;
+reset optimizer;
 -- Disable faultinjectors
 select gp_inject_fault('execsort_mksort_mergeruns', 'reset', 2);
 select gp_inject_fault('execshare_input_next', 'reset', 2);
@@ -99,3 +100,33 @@ select b, mode() within group(order by a) from _tmp_table3 group by b order by b
 select gp_inject_fault('before_tuplesort_getdatum_in_mode_final', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content <> -1;
 
 drop table _tmp_table3;
+
+-- test if a query with dynamic bitmapscan plan does not crash when QueryFinishPending set to true
+-- Planner doesn't generate dynamic bitmap heap scan plan for below query.
+create table t1_bm(a int, b int, c text, d int)
+distributed randomly
+partition by range(a)
+(
+   start (1) end (10) every (1),
+   default partition extra
+);
+
+create table t2_bm(b int, c text);
+
+create index idx1_bm ON t1_bm USING bitmap (b);
+
+set optimizer_enable_hashjoin = off;
+set optimizer_enable_materialize = off;
+
+-- set QueryFinishPending to true befor bitmap heap scan retrieve results from bitmap
+select gp_inject_fault('before_retrieve_from_bitmap', 'finish_pending', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
+
+select count(distinct a.d) from t1_bm a, t2_bm b
+where a.c = b.c and a.b < 10 and b.b < 10;
+
+select gp_inject_fault('before_retrieve_from_bitmap', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content = 0;
+
+reset optimizer_enable_hashjoin;
+reset optimizer_enable_materialize;
+drop table t1_bm;
+drop table t2_bm;

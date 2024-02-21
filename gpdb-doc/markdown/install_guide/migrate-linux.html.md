@@ -214,6 +214,60 @@ python el8_migrate_locale.py precheck-table --pre_upgrade --out table.out
 
 The subcommand `precheck-index` checks each database for indexes involving columns of type `text`, `varchar`, `char`, and `citext`, and the subcommand `precheck-table` checks each database for range-partitioned tables using these types in the partition key. The option `--pre_upgrade` lists the partition tables with the partition key using built-in collatable types.
 
+These two script commands will effectively execute the following queries on each database within the cluster:
+
+```
+-- precheck-index
+
+SELECT
+  indexrelid :: regclass :: text,
+  indrelid :: regclass :: text,
+  coll,
+  collname,
+  pg_get_indexdef(indexrelid)
+FROM
+  (
+    SELECT
+      indexrelid,
+      indrelid,
+      indcollation[i] coll
+    FROM
+      pg_index,
+      generate_subscripts(indcollation, 1) g(i)
+  ) s
+  JOIN pg_collation c ON coll = c.oid
+WHERE
+  collname != 'C'
+  and collname != 'POSIX';
+
+
+-- precheck-table
+
+SELECT
+  poid, -- oid in pg_partition
+  attrelid :: regclass :: text as partitionname,
+  attcollation, -- the defined collation of the column, or zero if the is not of a collatable data type
+  attname,
+  attnum
+FROM
+  (
+    select
+      p.oid as poid,
+      t.attcollation,
+      t.attrelid,
+      t.attname,
+      t.attnum
+    from
+      pg_partition p
+      join pg_attribute t on p.parrelid = t.attrelid
+      and t.attnum = ANY(p.paratts :: smallint[])
+      and p.parkind = 'r' -- filter out the range-partition tables
+      ) s
+  JOIN pg_collation c ON attcollation = c.oid
+WHERE
+  collname NOT IN ('C', 'POSIX');
+```
+
 Examine the output files to identify which indexes and range-partitioned tables are affected by the `glibc` GNU C library changes. The provided information will help you estimate the amount of work required during the upgrade process.
 
 In order to address the issues caused to the range-partitioned tables, the utility rebuilds the affected tables at a later step. This can result in additional space requirements for your database, so you must account for additional database space.
