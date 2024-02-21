@@ -1,3 +1,10 @@
+-- start_matchsubs
+--
+-- m/ERROR:  Too much references to non-SELECT CTE \(allpaths\.c:\d+\)/
+-- s/\d+/XXX/g
+--
+-- end_matchsubs
+
 drop table if exists with_test1 cascade;
 create table with_test1 (i int, t text, value int) distributed by (i);
 insert into with_test1 select i%10, 'text' || i%20, i%30 from generate_series(0, 99) i;
@@ -461,3 +468,26 @@ UNION ALL
   SELECT 'sleep', 1 where pg_sleep(1) is not null
 UNION ALL
   SELECT 'c', j FROM cte;
+
+-- Test one cannot use DML CTE if multiple CTE references found.
+-- Otherwise it will cause duplicated DML operations.
+--start_ignore
+drop table if exists with_dml;
+--end_ignore
+create table with_dml (i int, j int) distributed by (i);
+explain (costs off)
+with cte as (
+    insert into with_dml select i, i * 100 from generate_series(1,5) i
+    returning i
+) select count(*) from cte where i < (select avg(i) from cte);
+explain (costs off)
+with cte as (
+    update with_dml set j = j + 1
+    returning i
+) select count(*) from cte where i < (select avg(i) from cte);
+explain (costs off)
+with cte as (
+    delete from with_dml where i > 0
+    returning i
+) select count(*) from cte where i < (select avg(i) from cte);
+drop table with_dml;

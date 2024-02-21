@@ -1,3 +1,9 @@
+-- start_matchsubs
+--
+-- m/ERROR:  Too much references to non-SELECT CTE \(allpaths\.c:\d+\)/
+-- s/\d+/XXX/g
+--
+-- end_matchsubs
 drop table if exists with_test1 cascade;
 NOTICE:  table "with_test1" does not exist, skipping
 create table with_test1 (i int, t text, value int) distributed by (i);
@@ -2364,3 +2370,29 @@ UNION ALL
  c      | 1
 (7 rows)
 
+-- Test one cannot use DML CTE if multiple CTE references found.
+-- Otherwise it will cause duplicated DML operations.
+--start_ignore
+drop table if exists with_dml;
+NOTICE:  table "with_dml" does not exist, skipping
+--end_ignore
+create table with_dml (i int, j int) distributed by (i);
+explain (costs off)
+with cte as (
+    insert into with_dml select i, i * 100 from generate_series(1,5) i
+    returning i
+) select count(*) from cte where i < (select avg(i) from cte);
+ERROR:  Too much references to non-SELECT CTE (allpaths.c:2971)
+explain (costs off)
+with cte as (
+    update with_dml set j = j + 1
+    returning i
+) select count(*) from cte where i < (select avg(i) from cte);
+ERROR:  Too much references to non-SELECT CTE (allpaths.c:2971)
+explain (costs off)
+with cte as (
+    delete from with_dml where i > 0
+    returning i
+) select count(*) from cte where i < (select avg(i) from cte);
+ERROR:  Too much references to non-SELECT CTE (allpaths.c:2971)
+drop table with_dml;
