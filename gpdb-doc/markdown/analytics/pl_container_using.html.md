@@ -552,6 +552,7 @@ This command provides the PL/Container configuration XML file. Add the backend s
 		<command>/clientdir/py3client.sh</command> 
 		<shared_directory access="ro" container="/clientdir" host="/home/sa/GPDB/install/bin/plcontainer_clients"/> 
 		<backend name="calculate_cluster" /> 
+		<setting enable_network="yes" roles="gpadmin" /> 
 	</runtime> 
 </configuration> 
 ```
