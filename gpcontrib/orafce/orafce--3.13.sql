@@ -1,249 +1,248 @@
-/* orafce--3.25.sql */
+/* orafce--3.12.sql */
 
 -- complain if script is sourced in psql, rather than via CREATE EXTENSION
 \echo Use "CREATE EXTENSION orafce" to load this file. \quit
 
-CREATE SCHEMA oracle;
-
-CREATE FUNCTION oracle.trunc(value date, fmt text)
+CREATE FUNCTION pg_catalog.trunc(value date, fmt text)
 RETURNS date
 AS 'MODULE_PATHNAME','ora_date_trunc'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.trunc(date,text) IS 'truncate date according to the specified format';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.trunc(date,text) IS 'truncate date according to the specified format';
 
-CREATE FUNCTION oracle.round(value date, fmt text)
+CREATE FUNCTION pg_catalog.round(value date, fmt text)
 RETURNS date
 AS 'MODULE_PATHNAME','ora_date_round'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.round(date, text) IS 'round dates according to the specified format';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.round(date, text) IS 'round dates according to the specified format';
 
-CREATE FUNCTION oracle.next_day(value date, weekday text)
+CREATE FUNCTION pg_catalog.next_day(value date, weekday text)
 RETURNS date
 AS 'MODULE_PATHNAME'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.next_day (date, text) IS 'returns the first weekday that is greater than a date value';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.next_day (date, text) IS 'returns the first weekday that is greater than a date value';
 
-CREATE FUNCTION oracle.next_day(value date, weekday integer)
+CREATE FUNCTION pg_catalog.next_day(value date, weekday integer)
 RETURNS date
 AS 'MODULE_PATHNAME', 'next_day_by_index'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.next_day (date, integer) IS 'returns the first weekday that is greater than a date value';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.next_day (date, integer) IS 'returns the first weekday that is greater than a date value';
 
-CREATE FUNCTION oracle.last_day(value date)
+CREATE FUNCTION pg_catalog.last_day(value date)
 RETURNS date
 AS 'MODULE_PATHNAME'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.last_day(date) IS 'returns last day of the month based on a date value';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.last_day(date) IS 'returns last day of the month based on a date value';
 
-CREATE FUNCTION oracle.months_between(date1 date, date2 date)
+CREATE FUNCTION pg_catalog.months_between(date1 date, date2 date)
 RETURNS numeric
 AS 'MODULE_PATHNAME'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.months_between(date, date) IS 'returns the number of months between date1 and date2';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.months_between(date, date) IS 'returns the number of months between date1 and date2';
 
-CREATE FUNCTION oracle.add_months(day date, value int)
+CREATE FUNCTION pg_catalog.add_months(day date, value int)
 RETURNS date
 AS 'MODULE_PATHNAME'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.add_months(date, int) IS 'returns date plus n months';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.add_months(date, int) IS 'returns date plus n months';
 
-CREATE FUNCTION oracle.trunc(value timestamp with time zone, fmt text)
+CREATE FUNCTION pg_catalog.trunc(value timestamp with time zone, fmt text)
 RETURNS timestamp with time zone
 AS 'MODULE_PATHNAME', 'ora_timestamptz_trunc'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.trunc(timestamp with time zone, text) IS 'truncate date according to the specified format';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.trunc(timestamp with time zone, text) IS 'truncate date according to the specified format';
 
-CREATE FUNCTION oracle.round(value timestamp with time zone, fmt text)
+CREATE FUNCTION pg_catalog.round(value timestamp with time zone, fmt text)
 RETURNS timestamp with time zone
 AS 'MODULE_PATHNAME','ora_timestamptz_round'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.round(timestamp with time zone, text) IS 'round dates according to the specified format';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.round(timestamp with time zone, text) IS 'round dates according to the specified format';
 
-CREATE FUNCTION oracle.round(value timestamp with time zone)
+CREATE FUNCTION pg_catalog.round(value timestamp with time zone)
 RETURNS timestamp with time zone
-AS $$ SELECT oracle.round($1, 'DDD'); $$
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.round(timestamp with time zone) IS 'will round dates according to the specified format';
+AS $$ SELECT pg_catalog.round($1, 'DDD'); $$
+LANGUAGE SQL IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.round(timestamp with time zone) IS 'will round dates according to the specified format';
 
-CREATE FUNCTION oracle.round(value date)
+CREATE FUNCTION pg_catalog.round(value date)
 RETURNS date
 AS $$ SELECT $1; $$
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.round(value date)IS 'will round dates according to the specified format';
+LANGUAGE SQL IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.round(value date)IS 'will round dates according to the specified format';
 
-CREATE FUNCTION oracle.trunc(value timestamp with time zone)
+CREATE FUNCTION pg_catalog.trunc(value timestamp with time zone)
 RETURNS timestamp with time zone
-AS $$ SELECT oracle.trunc($1, 'DDD'); $$
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.trunc(timestamp with time zone) IS 'truncate date according to the specified format';
+AS $$ SELECT pg_catalog.trunc($1, 'DDD'); $$
+LANGUAGE SQL IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.trunc(timestamp with time zone) IS 'truncate date according to the specified format';
 
-CREATE FUNCTION oracle.trunc(value date)
+CREATE FUNCTION pg_catalog.trunc(value date)
 RETURNS date
 AS $$ SELECT $1; $$
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.trunc(date) IS 'truncate date according to the specified format';
+LANGUAGE SQL IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.trunc(date) IS 'truncate date according to the specified format';
 
-CREATE FUNCTION oracle.nlssort(text, text)
+CREATE FUNCTION pg_catalog.nlssort(text, text)
 RETURNS bytea
 AS 'MODULE_PATHNAME', 'ora_nlssort'
 LANGUAGE C IMMUTABLE;
-COMMENT ON FUNCTION oracle.nlssort(text, text) IS '';
+COMMENT ON FUNCTION pg_catalog.nlssort(text, text) IS '';
 
-CREATE FUNCTION oracle.nlssort(text)
+CREATE FUNCTION pg_catalog.nlssort(text)
 RETURNS bytea
-AS $$ SELECT oracle.nlssort($1, null); $$
+AS $$ SELECT pg_catalog.nlssort($1, null); $$
 LANGUAGE SQL IMMUTABLE STRICT;
-COMMENT ON FUNCTION oracle.nlssort(text)IS '';
+COMMENT ON FUNCTION pg_catalog.nlssort(text)IS '';
 
-CREATE FUNCTION oracle.set_nls_sort(text)
+CREATE FUNCTION pg_catalog.set_nls_sort(text)
 RETURNS void
 AS 'MODULE_PATHNAME', 'ora_set_nls_sort'
 LANGUAGE C IMMUTABLE STRICT;
-COMMENT ON FUNCTION oracle.set_nls_sort(text) IS '';
+COMMENT ON FUNCTION pg_catalog.set_nls_sort(text) IS '';
 
-CREATE FUNCTION oracle.instr(str text, patt text, start int, nth int)
+CREATE FUNCTION pg_catalog.instr(str text, patt text, start int, nth int)
 RETURNS int
 AS 'MODULE_PATHNAME','plvstr_instr4'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.instr(text, text, int, int) IS 'Search pattern in string';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.instr(text, text, int, int) IS 'Search pattern in string';
 
-CREATE FUNCTION oracle.instr(str text, patt text, start int)
+CREATE FUNCTION pg_catalog.instr(str text, patt text, start int)
 RETURNS int
 AS 'MODULE_PATHNAME','plvstr_instr3'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.instr(text, text, int) IS 'Search pattern in string';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.instr(text, text, int) IS 'Search pattern in string';
 
-CREATE FUNCTION oracle.instr(str text, patt text)
+CREATE FUNCTION pg_catalog.instr(str text, patt text)
 RETURNS int
 AS 'MODULE_PATHNAME','plvstr_instr2'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.instr(text, text) IS 'Search pattern in string';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.instr(text, text) IS 'Search pattern in string';
 
-CREATE FUNCTION oracle.to_char(num smallint)
+CREATE FUNCTION pg_catalog.to_char(num smallint)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_to_char_int4'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.to_char(smallint) IS 'Convert number to string';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.to_char(smallint) IS 'Convert number to string';
 
-CREATE FUNCTION oracle.to_char(num int)
+CREATE FUNCTION pg_catalog.to_char(num int)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_to_char_int4'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.to_char(int) IS 'Convert number to string';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.to_char(int) IS 'Convert number to string';
 
-CREATE FUNCTION oracle.to_char(num bigint)
+CREATE FUNCTION pg_catalog.to_char(num bigint)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_to_char_int8'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.to_char(bigint) IS 'Convert number to string';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.to_char(bigint) IS 'Convert number to string';
 
-CREATE FUNCTION oracle.to_char(num real)
+CREATE FUNCTION pg_catalog.to_char(num real)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_to_char_float4'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.to_char(real) IS 'Convert number to string';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.to_char(real) IS 'Convert number to string';
 
-CREATE FUNCTION oracle.to_char(num double precision)
+CREATE FUNCTION pg_catalog.to_char(num double precision)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_to_char_float8'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.to_char(double precision) IS 'Convert number to string';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.to_char(double precision) IS 'Convert number to string';
 
-CREATE FUNCTION oracle.to_char(num numeric)
+CREATE FUNCTION pg_catalog.to_char(num numeric)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_to_char_numeric'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.to_char(numeric) IS 'Convert number to string';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.to_char(numeric) IS 'Convert number to string';
 
-CREATE FUNCTION oracle.to_number(str text)
+CREATE FUNCTION pg_catalog.to_number(str text)
 RETURNS numeric
 AS 'MODULE_PATHNAME','orafce_to_number'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.to_number(text) IS 'Convert string to number';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.to_number(text) IS 'Convert string to number';
 
-CREATE OR REPLACE FUNCTION oracle.to_number(numeric)
+CREATE OR REPLACE FUNCTION pg_catalog.to_number(numeric)
 RETURNS numeric AS $$
-SELECT oracle.to_number($1::text);
-$$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
+SELECT pg_catalog.to_number($1::text);
+$$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION oracle.to_number(numeric,numeric)
+CREATE OR REPLACE FUNCTION pg_catalog.to_number(numeric,numeric)
 RETURNS numeric AS $$
 SELECT pg_catalog.to_number($1::text,$2::text);
-$$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE SQL IMMUTABLE;
 
-CREATE FUNCTION oracle.orafce__obsolete_to_date(str text)
+CREATE FUNCTION pg_catalog.to_date(str text)
 RETURNS timestamp
 AS 'MODULE_PATHNAME','ora_to_date'
-LANGUAGE C STABLE STRICT PARALLEL SAFE;
+LANGUAGE C STABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.to_date(text) IS 'Convert string to timestamp';
 
-CREATE FUNCTION oracle.to_multi_byte(str text)
+CREATE FUNCTION to_multi_byte(str text)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_to_multi_byte'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.to_multi_byte(text) IS 'Convert all single-byte characters to their corresponding multibyte characters';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION to_multi_byte(text) IS 'Convert all single-byte characters to their corresponding multibyte characters';
 
-CREATE FUNCTION oracle.to_single_byte(str text)
+CREATE FUNCTION to_single_byte(str text)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_to_single_byte'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.to_single_byte(text) IS 'Convert characters to their corresponding single-byte characters if possible';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION to_single_byte(text) IS 'Convert characters to their corresponding single-byte characters if possible';
 
-CREATE FUNCTION oracle.bitand(bigint, bigint)
+CREATE FUNCTION bitand(bigint, bigint)
 RETURNS bigint
 AS $$ SELECT $1 & $2; $$
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE sql IMMUTABLE STRICT;
 
-CREATE FUNCTION oracle.sinh(float8)
+CREATE FUNCTION sinh(float8)
 RETURNS float8 AS
 $$ SELECT (exp($1) - exp(-$1)) / 2; $$
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE sql IMMUTABLE STRICT;
 
-CREATE FUNCTION oracle.cosh(float8)
+CREATE FUNCTION cosh(float8)
 RETURNS float8 AS
 $$ SELECT (exp($1) + exp(-$1)) / 2; $$
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE sql IMMUTABLE STRICT;
 
-CREATE FUNCTION oracle.tanh(float8)
+CREATE FUNCTION tanh(float8)
 RETURNS float8 AS
-$$ SELECT oracle.sinh($1) / oracle.cosh($1); $$
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+$$ SELECT sinh($1) / cosh($1); $$
+LANGUAGE sql IMMUTABLE STRICT;
 
-CREATE FUNCTION oracle.nanvl(float4, float4)
+CREATE FUNCTION nanvl(float4, float4)
 RETURNS float4 AS
 $$ SELECT CASE WHEN $1 = 'NaN' THEN $2 ELSE $1 END; $$
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE sql IMMUTABLE STRICT;
 
-CREATE FUNCTION oracle.nanvl(float8, float8)
+CREATE FUNCTION nanvl(float8, float8)
 RETURNS float8 AS
 $$ SELECT CASE WHEN $1 = 'NaN' THEN $2 ELSE $1 END; $$
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE sql IMMUTABLE STRICT;
 
-CREATE FUNCTION oracle.nanvl(numeric, numeric)
+CREATE FUNCTION nanvl(numeric, numeric)
 RETURNS numeric AS
 $$ SELECT CASE WHEN $1 = 'NaN' THEN $2 ELSE $1 END; $$
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE sql IMMUTABLE STRICT;
 
-CREATE FUNCTION oracle.nanvl(float4, varchar)
+CREATE FUNCTION nanvl(float4, varchar)
 RETURNS float4 AS
 $$ SELECT CASE WHEN $1 = 'NaN' THEN $2::float4 ELSE $1 END; $$
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE sql IMMUTABLE STRICT;
 
-CREATE FUNCTION oracle.nanvl(float8, varchar)
+CREATE FUNCTION nanvl(float8, varchar)
 RETURNS float8 AS
 $$ SELECT CASE WHEN $1 = 'NaN' THEN $2::float8 ELSE $1 END; $$
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE sql IMMUTABLE STRICT;
 
-CREATE FUNCTION oracle.nanvl(numeric, varchar)
+CREATE FUNCTION nanvl(numeric, varchar)
 RETURNS numeric AS
 $$ SELECT CASE WHEN $1 = 'NaN' THEN $2::numeric ELSE $1 END; $$
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE sql IMMUTABLE STRICT;
 
-CREATE FUNCTION oracle.dump("any")
+CREATE FUNCTION dump("any")
 RETURNS varchar
 AS 'MODULE_PATHNAME', 'orafce_dump'
 LANGUAGE C;
 
-CREATE FUNCTION oracle.dump("any", integer)
+CREATE FUNCTION dump("any", integer)
 RETURNS varchar
 AS 'MODULE_PATHNAME', 'orafce_dump'
 LANGUAGE C;
@@ -268,90 +267,47 @@ AS $$ SELECT plvstr.rvrs($1,1,NULL);$$
 LANGUAGE SQL IMMUTABLE STRICT;
 COMMENT ON FUNCTION plvstr.rvrs(text) IS 'Reverse string or part of string';
 
-CREATE FUNCTION oracle.lnnvl(bool)
+CREATE FUNCTION pg_catalog.lnnvl(bool)
 RETURNS bool
 AS 'MODULE_PATHNAME','ora_lnnvl'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.lnnvl(bool) IS '';
+LANGUAGE C IMMUTABLE;
+COMMENT ON FUNCTION pg_catalog.lnnvl(bool) IS '';
 
 -- can't overwrite PostgreSQL functions!!!!
+
+CREATE SCHEMA oracle;
+
 CREATE FUNCTION oracle.substr(str text, start int)
 RETURNS text
 AS 'MODULE_PATHNAME','oracle_substr2'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE C IMMUTABLE STRICT;
 COMMENT ON FUNCTION oracle.substr(text, int) IS 'Returns substring started on start_in to end';
 
 CREATE FUNCTION oracle.substr(str text, start int, len int)
 RETURNS text
 AS 'MODULE_PATHNAME','oracle_substr3'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE C IMMUTABLE STRICT;
 COMMENT ON FUNCTION oracle.substr(text, int, int) IS 'Returns substring started on start_in len chars';
 
 CREATE OR REPLACE FUNCTION oracle.substr(numeric,numeric)
 RETURNS text AS $$
 SELECT oracle.substr($1::text,trunc($2)::int);
-$$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION oracle.substr(numeric,numeric,numeric)
 RETURNS text AS $$
 SELECT oracle.substr($1::text,trunc($2)::int,trunc($3)::int);
-$$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION oracle.substr(varchar,numeric)
 RETURNS text AS $$
 SELECT oracle.substr($1,trunc($2)::int);
-$$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION oracle.substr(varchar,numeric,numeric)
 RETURNS text AS $$
 SELECT oracle.substr($1,trunc($2)::int,trunc($3)::int);
-$$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
-
-CREATE OR REPLACE FUNCTION oracle.mod(smallint, smallint)
-RETURNS SMALLINT AS $$
-SELECT CASE $2 WHEN 0 THEN $1 ELSE pg_catalog.MOD($1, $2) END;
 $$ LANGUAGE SQL IMMUTABLE;
-
-CREATE OR REPLACE FUNCTION oracle.mod(int, int)
-RETURNS INT AS $$
-   SELECT CASE $2 WHEN 0 THEN $1 ELSE pg_catalog.MOD($1, $2) END;
-$$ LANGUAGE SQL  IMMUTABLE;
-
-CREATE OR REPLACE FUNCTION oracle.mod(bigint, bigint)
-RETURNS BIGINT AS $$
-SELECT CASE $2 WHEN 0 THEN $1 ELSE pg_catalog.MOD($1, $2) END;
-$$ LANGUAGE sql IMMUTABLE;
-
-CREATE OR REPLACE FUNCTION oracle.mod(numeric, numeric)
-RETURNS NUMERIC AS $$
-SELECT CASE $2 WHEN 0 THEN $1 ELSE pg_catalog.MOD($1, $2) END;
-$$ LANGUAGE sql IMMUTABLE;
-
-CREATE OR REPLACE FUNCTION oracle.remainder(smallint, smallint)
-RETURNS smallint AS 'MODULE_PATHNAME','orafce_reminder_smallint'
-LANGUAGE C IMMUTABLE STRICT;
-
-CREATE OR REPLACE FUNCTION oracle.remainder(int, int)
-RETURNS int AS 'MODULE_PATHNAME','orafce_reminder_int'
-LANGUAGE C IMMUTABLE STRICT;
-
-CREATE OR REPLACE FUNCTION oracle.remainder(bigint, bigint)
-RETURNS bigint AS 'MODULE_PATHNAME','orafce_reminder_bigint'
-LANGUAGE C IMMUTABLE STRICT;
-
-CREATE OR REPLACE FUNCTION oracle.remainder(numeric, numeric)
-RETURNS numeric AS 'MODULE_PATHNAME','orafce_reminder_numeric'
-LANGUAGE C IMMUTABLE STRICT;
-
-ALTER FUNCTION oracle.mod(smallint, smallint) PARALLEL SAFE;
-ALTER FUNCTION oracle.mod(int, int) PARALLEL SAFE;
-ALTER FUNCTION oracle.mod(bigint, bigint) PARALLEL SAFE;
-ALTER FUNCTION oracle.mod(numeric, numeric) PARALLEL SAFE;
-
-ALTER FUNCTION oracle.remainder(smallint, smallint) PARALLEL SAFE;
-ALTER FUNCTION oracle.remainder(int, int) PARALLEL SAFE;
-ALTER FUNCTION oracle.remainder(bigint, bigint) PARALLEL SAFE;
-ALTER FUNCTION oracle.remainder(numeric, numeric) PARALLEL SAFE;
 
 --can't overwrite PostgreSQL DATE data type!!!
 
@@ -360,47 +316,47 @@ CREATE DOMAIN oracle.date AS timestamp(0);
 CREATE OR REPLACE FUNCTION oracle.add_days_to_timestamp(oracle.date,integer)
 RETURNS timestamp AS $$
 SELECT $1 + interval '1 day' * $2;
-$$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION oracle.subtract(oracle.date, integer)
+CREATE OR REPLACE FUNCTION oracle.subtract (oracle.date, integer)
 RETURNS timestamp AS $$
 SELECT $1 - interval '1 day' * $2;
-$$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION oracle.add_days_to_timestamp(oracle.date,bigint)
 RETURNS timestamp AS $$
 SELECT $1 + interval '1 day' * $2;
-$$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION oracle.subtract(oracle.date, bigint)
+CREATE OR REPLACE FUNCTION oracle.subtract (oracle.date, bigint)
 RETURNS timestamp AS $$
 SELECT $1 - interval '1 day' * $2;
-$$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION oracle.add_days_to_timestamp(oracle.date,smallint)
 RETURNS timestamp AS $$
 SELECT $1 + interval '1 day' * $2;
-$$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION oracle.subtract(oracle.date, smallint)
+CREATE OR REPLACE FUNCTION oracle.subtract (oracle.date, smallint)
 RETURNS timestamp AS $$
 SELECT $1 - interval '1 day' * $2;
-$$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION oracle.add_days_to_timestamp(oracle.date,numeric)
 RETURNS timestamp AS $$
 SELECT $1 + interval '1 day' * $2;
-$$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE SQL IMMUTABLE;
 
-CREATE OR REPLACE FUNCTION oracle.subtract(oracle.date, numeric)
+CREATE OR REPLACE FUNCTION oracle.subtract (oracle.date, numeric)
 RETURNS timestamp AS $$
 SELECT $1 - interval '1 day' * $2;
-$$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION oracle.subtract(oracle.date,oracle.date)
 RETURNS double precision AS $$
 SELECT date_part('epoch', ($1::timestamp - $2::timestamp)/3600/24);
-$$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE SQL IMMUTABLE;
 
 CREATE OPERATOR oracle.+ (
   LEFTARG   = oracle.date,
@@ -458,67 +414,67 @@ CREATE OPERATOR oracle.- (
 
 CREATE FUNCTION oracle.add_months(TIMESTAMP WITH TIME ZONE,INTEGER)
 RETURNS TIMESTAMP
-AS $$ SELECT (oracle.add_months($1::pg_catalog.date, $2) + $1::time)::oracle.date; $$
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE;
+AS $$ SELECT (pg_catalog.add_months($1::pg_catalog.date, $2) + $1::time)::oracle.date; $$
+LANGUAGE SQL IMMUTABLE STRICT;
 
 CREATE OR REPLACE FUNCTION oracle.last_day(TIMESTAMPTZ)
 RETURNS TIMESTAMP
 AS $$ SELECT (date_trunc('MONTH', $1) + INTERVAL '1 MONTH - 1 day' + $1::time)::oracle.date; $$
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE SQL IMMUTABLE STRICT;
 
 CREATE FUNCTION oracle.months_between(TIMESTAMP WITH TIME ZONE,TIMESTAMP WITH TIME ZONE)
 RETURNS NUMERIC
-AS $$ SELECT oracle.months_between($1::pg_catalog.date,$2::pg_catalog.date); $$
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE;
+AS $$ SELECT pg_catalog.months_between($1::pg_catalog.date,$2::pg_catalog.date); $$
+LANGUAGE SQL IMMUTABLE STRICT;
 
 CREATE FUNCTION oracle.next_day(TIMESTAMP WITH TIME ZONE,INTEGER)
 RETURNS TIMESTAMP
-AS $$ SELECT (oracle.next_day($1::pg_catalog.date,$2) + $1::time)::oracle.date; $$
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE;
+AS $$ SELECT (pg_catalog.next_day($1::pg_catalog.date,$2) + $1::time)::oracle.date; $$
+LANGUAGE SQL IMMUTABLE STRICT;
 
 CREATE FUNCTION oracle.next_day(TIMESTAMP WITH TIME ZONE,TEXT)
 RETURNS TIMESTAMP
-AS $$ SELECT (oracle.next_day($1::pg_catalog.date,$2) + $1::time)::oracle.date; $$
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE;
+AS $$ SELECT (pg_catalog.next_day($1::pg_catalog.date,$2) + $1::time)::oracle.date; $$
+LANGUAGE SQL IMMUTABLE STRICT;
 
 CREATE FUNCTION oracle.to_date(TEXT)
 RETURNS oracle.date
-AS $$ SELECT oracle.orafce__obsolete_to_date($1)::oracle.date; $$
-LANGUAGE SQL STABLE STRICT PARALLEL SAFE;
+AS $$ SELECT pg_catalog.to_date($1)::oracle.date; $$
+LANGUAGE SQL STABLE STRICT;
 
 CREATE OR REPLACE FUNCTION oracle.to_date(TEXT,TEXT)
 RETURNS oracle.date
 AS $$ SELECT TO_TIMESTAMP($1,$2)::oracle.date; $$
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE SQL IMMUTABLE STRICT;
 
 CREATE FUNCTION oracle.to_char(timestamp)
 RETURNS TEXT
 AS 'MODULE_PATHNAME','orafce_to_char_timestamp'
-LANGUAGE C STABLE STRICT PARALLEL SAFE;
+LANGUAGE C STABLE STRICT;
 COMMENT ON FUNCTION oracle.to_char(timestamp) IS 'Convert timestamp to string';
 
 CREATE FUNCTION oracle.sysdate()
 RETURNS oracle.date
 AS 'MODULE_PATHNAME','orafce_sysdate'
-LANGUAGE C STABLE STRICT PARALLEL SAFE;
+LANGUAGE C STABLE STRICT;
 COMMENT ON FUNCTION oracle.sysdate() IS 'Ruturns statement timestamp at server time zone';
 
 CREATE FUNCTION oracle.sessiontimezone()
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_sessiontimezone'
-LANGUAGE C STABLE STRICT PARALLEL SAFE;
+LANGUAGE C STABLE STRICT;
 COMMENT ON FUNCTION oracle.sessiontimezone() IS 'Ruturns session time zone';
 
 CREATE FUNCTION oracle.dbtimezone()
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_dbtimezone'
-LANGUAGE C STABLE STRICT PARALLEL SAFE;
+LANGUAGE C STABLE STRICT;
 COMMENT ON FUNCTION oracle.dbtimezone() IS 'Ruturns server time zone (orafce.timezone)';
 
 -- emulation of dual table
-CREATE VIEW oracle.dual AS SELECT 'X'::varchar AS dummy;
-REVOKE ALL ON oracle.dual FROM PUBLIC;
-GRANT SELECT, REFERENCES ON oracle.dual TO PUBLIC;
+CREATE VIEW public.dual AS SELECT 'X'::varchar AS dummy;
+REVOKE ALL ON public.dual FROM PUBLIC;
+GRANT SELECT, REFERENCES ON public.dual TO PUBLIC;
 
 -- this packege is emulation of dbms_output Oracle packege
 --
@@ -581,295 +537,290 @@ COMMENT ON FUNCTION dbms_output.get_lines(OUT text[], INOUT int4) IS 'Get lines 
 
 -- others functions
 
-CREATE FUNCTION oracle.nvl(anyelement, anyelement)
+CREATE FUNCTION nvl(anyelement, anyelement)
 RETURNS anyelement
 AS 'MODULE_PATHNAME','ora_nvl'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.nvl2("any", anyelement, anyelement)
+CREATE FUNCTION nvl2(anyelement, anyelement, anyelement)
 RETURNS anyelement
 AS 'MODULE_PATHNAME','ora_nvl2'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.nvl2("any", text, text)
-RETURNS text
-AS 'MODULE_PATHNAME','ora_nvl2'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
+COMMENT ON FUNCTION nvl2(anyelement, anyelement, anyelement) IS '';
 
 -- decode functions are left out in GPDB, because GPDB has a built-in parser
 -- hack to transform DECODE() into CASE-WHEN.
 /*
-CREATE FUNCTION oracle.decode(anyelement, anyelement, text)
+CREATE FUNCTION public.decode(anyelement, anyelement, text)
 RETURNS text
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, text, text)
+CREATE FUNCTION public.decode(anyelement, anyelement, text, text)
 RETURNS text
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, text, anyelement, text)
+CREATE FUNCTION public.decode(anyelement, anyelement, text, anyelement, text)
 RETURNS text
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, text, anyelement, text, text)
+CREATE FUNCTION public.decode(anyelement, anyelement, text, anyelement, text, text)
 RETURNS text
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, text, anyelement, text, anyelement, text)
+CREATE FUNCTION public.decode(anyelement, anyelement, text, anyelement, text, anyelement, text)
 RETURNS text
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, text, anyelement, text, anyelement, text, text)
+CREATE FUNCTION public.decode(anyelement, anyelement, text, anyelement, text, anyelement, text, text)
 RETURNS text
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, bpchar)
+CREATE FUNCTION public.decode(anyelement, anyelement, bpchar)
 RETURNS bpchar
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, bpchar, bpchar)
+CREATE FUNCTION public.decode(anyelement, anyelement, bpchar, bpchar)
 RETURNS bpchar
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, bpchar, anyelement, bpchar)
+CREATE FUNCTION public.decode(anyelement, anyelement, bpchar, anyelement, bpchar)
 RETURNS bpchar
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, bpchar, anyelement, bpchar, bpchar)
+CREATE FUNCTION public.decode(anyelement, anyelement, bpchar, anyelement, bpchar, bpchar)
 RETURNS bpchar
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, bpchar, anyelement, bpchar, anyelement, bpchar)
+CREATE FUNCTION public.decode(anyelement, anyelement, bpchar, anyelement, bpchar, anyelement, bpchar)
 RETURNS bpchar
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, bpchar, anyelement, bpchar, anyelement, bpchar, bpchar)
+CREATE FUNCTION public.decode(anyelement, anyelement, bpchar, anyelement, bpchar, anyelement, bpchar, bpchar)
 RETURNS bpchar
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, integer)
+CREATE FUNCTION public.decode(anyelement, anyelement, integer)
 RETURNS integer
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, integer, integer)
+CREATE FUNCTION public.decode(anyelement, anyelement, integer, integer)
 RETURNS integer
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, integer, anyelement, integer)
+CREATE FUNCTION public.decode(anyelement, anyelement, integer, anyelement, integer)
 RETURNS integer
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, integer, anyelement, integer, integer)
+CREATE FUNCTION public.decode(anyelement, anyelement, integer, anyelement, integer, integer)
 RETURNS integer
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, integer, anyelement, integer, anyelement, integer)
+CREATE FUNCTION public.decode(anyelement, anyelement, integer, anyelement, integer, anyelement, integer)
 RETURNS integer
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, integer, anyelement, integer, anyelement, integer, integer)
+CREATE FUNCTION public.decode(anyelement, anyelement, integer, anyelement, integer, anyelement, integer, integer)
 RETURNS integer
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, bigint)
+CREATE FUNCTION public.decode(anyelement, anyelement, bigint)
 RETURNS bigint
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, bigint, bigint)
+CREATE FUNCTION public.decode(anyelement, anyelement, bigint, bigint)
 RETURNS bigint
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, bigint, anyelement, bigint)
+CREATE FUNCTION public.decode(anyelement, anyelement, bigint, anyelement, bigint)
 RETURNS bigint
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, bigint, anyelement, bigint, bigint)
+CREATE FUNCTION public.decode(anyelement, anyelement, bigint, anyelement, bigint, bigint)
 RETURNS bigint
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, bigint, anyelement, bigint, anyelement, bigint)
+CREATE FUNCTION public.decode(anyelement, anyelement, bigint, anyelement, bigint, anyelement, bigint)
 RETURNS bigint
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, bigint, anyelement, bigint, anyelement, bigint, bigint)
+CREATE FUNCTION public.decode(anyelement, anyelement, bigint, anyelement, bigint, anyelement, bigint, bigint)
 RETURNS bigint
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, numeric)
+CREATE FUNCTION public.decode(anyelement, anyelement, numeric)
 RETURNS numeric
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, numeric, numeric)
+CREATE FUNCTION public.decode(anyelement, anyelement, numeric, numeric)
 RETURNS numeric
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, numeric, anyelement, numeric)
+CREATE FUNCTION public.decode(anyelement, anyelement, numeric, anyelement, numeric)
 RETURNS numeric
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, numeric, anyelement, numeric, numeric)
+CREATE FUNCTION public.decode(anyelement, anyelement, numeric, anyelement, numeric, numeric)
 RETURNS numeric
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, numeric, anyelement, numeric, anyelement, numeric)
+CREATE FUNCTION public.decode(anyelement, anyelement, numeric, anyelement, numeric, anyelement, numeric)
 RETURNS numeric
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, numeric, anyelement, numeric, anyelement, numeric, numeric)
+CREATE FUNCTION public.decode(anyelement, anyelement, numeric, anyelement, numeric, anyelement, numeric, numeric)
 RETURNS numeric
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, date)
+CREATE FUNCTION public.decode(anyelement, anyelement, date)
 RETURNS date
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, date, date)
+CREATE FUNCTION public.decode(anyelement, anyelement, date, date)
 RETURNS date
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, date, anyelement, date)
+CREATE FUNCTION public.decode(anyelement, anyelement, date, anyelement, date)
 RETURNS date
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, date, anyelement, date, date)
+CREATE FUNCTION public.decode(anyelement, anyelement, date, anyelement, date, date)
 RETURNS date
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, date, anyelement, date, anyelement, date)
+CREATE FUNCTION public.decode(anyelement, anyelement, date, anyelement, date, anyelement, date)
 RETURNS date
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, date, anyelement, date, anyelement, date, date)
+CREATE FUNCTION public.decode(anyelement, anyelement, date, anyelement, date, anyelement, date, date)
 RETURNS date
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, time)
+CREATE FUNCTION public.decode(anyelement, anyelement, time)
 RETURNS time
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, time, time)
+CREATE FUNCTION public.decode(anyelement, anyelement, time, time)
 RETURNS time
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, time, anyelement, time)
+CREATE FUNCTION public.decode(anyelement, anyelement, time, anyelement, time)
 RETURNS time
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, time, anyelement, time, time)
+CREATE FUNCTION public.decode(anyelement, anyelement, time, anyelement, time, time)
 RETURNS time
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, time, anyelement, time, anyelement, time)
+CREATE FUNCTION public.decode(anyelement, anyelement, time, anyelement, time, anyelement, time)
 RETURNS time
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, time, anyelement, time, anyelement, time, time)
+CREATE FUNCTION public.decode(anyelement, anyelement, time, anyelement, time, anyelement, time, time)
 RETURNS time
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, timestamp)
+CREATE FUNCTION public.decode(anyelement, anyelement, timestamp)
 RETURNS timestamp
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, timestamp, timestamp)
+CREATE FUNCTION public.decode(anyelement, anyelement, timestamp, timestamp)
 RETURNS timestamp
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, timestamp, anyelement, timestamp)
+CREATE FUNCTION public.decode(anyelement, anyelement, timestamp, anyelement, timestamp)
 RETURNS timestamp
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, timestamp, anyelement, timestamp, timestamp)
+CREATE FUNCTION public.decode(anyelement, anyelement, timestamp, anyelement, timestamp, timestamp)
 RETURNS timestamp
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, timestamp, anyelement, timestamp, anyelement, timestamp)
+CREATE FUNCTION public.decode(anyelement, anyelement, timestamp, anyelement, timestamp, anyelement, timestamp)
 RETURNS timestamp
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, timestamp, anyelement, timestamp, anyelement, timestamp, timestamp)
+CREATE FUNCTION public.decode(anyelement, anyelement, timestamp, anyelement, timestamp, anyelement, timestamp, timestamp)
 RETURNS timestamp
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, timestamptz)
+CREATE FUNCTION public.decode(anyelement, anyelement, timestamptz)
 RETURNS timestamptz
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, timestamptz, timestamptz)
+CREATE FUNCTION public.decode(anyelement, anyelement, timestamptz, timestamptz)
 RETURNS timestamptz
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, timestamptz, anyelement, timestamptz)
+CREATE FUNCTION public.decode(anyelement, anyelement, timestamptz, anyelement, timestamptz)
 RETURNS timestamptz
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, timestamptz, anyelement, timestamptz, timestamptz)
+CREATE FUNCTION public.decode(anyelement, anyelement, timestamptz, anyelement, timestamptz, timestamptz)
 RETURNS timestamptz
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, timestamptz, anyelement, timestamptz, anyelement, timestamptz)
+CREATE FUNCTION public.decode(anyelement, anyelement, timestamptz, anyelement, timestamptz, anyelement, timestamptz)
 RETURNS timestamptz
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.decode(anyelement, anyelement, timestamptz, anyelement, timestamptz, anyelement, timestamptz, timestamptz)
+CREATE FUNCTION public.decode(anyelement, anyelement, timestamptz, anyelement, timestamptz, anyelement, timestamptz, timestamptz)
 RETURNS timestamptz
 AS 'MODULE_PATHNAME', 'ora_decode'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 */
-
 
 CREATE SCHEMA dbms_pipe;
 
@@ -1255,31 +1206,31 @@ COMMENT ON FUNCTION plvstr.is_prefix(bigint, bigint) IS 'Returns true, if prefix
 CREATE FUNCTION plvstr.substr(str text, start int, len int)
 RETURNS varchar
 AS 'MODULE_PATHNAME','plvstr_substr3'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE C IMMUTABLE STRICT;
 COMMENT ON FUNCTION plvstr.substr(text, int, int) IS 'Returns substring started on start_in to end';
 
 CREATE FUNCTION plvstr.substr(str text, start int)
 RETURNS varchar
 AS 'MODULE_PATHNAME','plvstr_substr2'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE C IMMUTABLE STRICT;
 COMMENT ON FUNCTION plvstr.substr(text, int) IS 'Returns substring started on start_in to end';
 
 CREATE FUNCTION plvstr.instr(str text, patt text, start int, nth int)
 RETURNS int
 AS 'MODULE_PATHNAME','plvstr_instr4'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE C IMMUTABLE STRICT;
 COMMENT ON FUNCTION plvstr.instr(text, text, int, int) IS 'Search pattern in string';
 
 CREATE FUNCTION plvstr.instr(str text, patt text, start int)
 RETURNS int
 AS 'MODULE_PATHNAME','plvstr_instr3'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE C IMMUTABLE STRICT;
 COMMENT ON FUNCTION plvstr.instr(text, text, int) IS 'Search pattern in string';
 
 CREATE FUNCTION plvstr.instr(str text, patt text)
 RETURNS int
 AS 'MODULE_PATHNAME','plvstr_instr2'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE C IMMUTABLE STRICT;
 COMMENT ON FUNCTION plvstr.instr(text, text) IS 'Search pattern in string';
 
 CREATE FUNCTION plvstr.lpart(str text, div text, start int, nth int, all_if_notfound bool)
@@ -1526,11 +1477,9 @@ AS $$ SELECT TRANSLATE($1, 'A'||$2, 'A'); $$
 LANGUAGE SQL IMMUTABLE STRICT;
 COMMENT ON FUNCTION plvchr.stripped(text, text) IS 'Strips a string of all instances of the specified characters';
 
--- dbms_alert
 -- dbms_alert is removed in GPDB because it is not possible to run it in MPP
 -- environments as implemented in postgres.
 /*
-
 CREATE SCHEMA dbms_alert;
 
 CREATE FUNCTION dbms_alert.register(name text)
@@ -1569,23 +1518,17 @@ AS 'MODULE_PATHNAME','dbms_alert_waitone'
 LANGUAGE C VOLATILE;
 COMMENT ON FUNCTION dbms_alert.waitone(text, OUT text, OUT integer, float8) IS 'Wait for specific signal';
 
-CREATE FUNCTION dbms_alert.waitany(OUT name text, OUT message text, OUT status integer)
-RETURNS record
-AS 'MODULE_PATHNAME','dbms_alert_waitany_maxwait'
-LANGUAGE C VOLATILE;
-COMMENT ON FUNCTION dbms_alert.waitany(OUT text, OUT text, OUT integer) IS 'Wait for any signal';
-
-CREATE FUNCTION dbms_alert.waitone(name text, OUT message text, OUT status integer)
-RETURNS record
-AS 'MODULE_PATHNAME','dbms_alert_waitone_maxwait'
-LANGUAGE C VOLATILE;
-COMMENT ON FUNCTION dbms_alert.waitone(text, OUT text, OUT integer) IS 'Wait for specific signal';
-
 CREATE FUNCTION dbms_alert.set_defaults(sensitivity float8)
 RETURNS void
 AS 'MODULE_PATHNAME','dbms_alert_set_defaults'
 LANGUAGE C VOLATILE;
 COMMENT ON FUNCTION dbms_alert.set_defaults(float8) IS '';
+
+CREATE FUNCTION dbms_alert.defered_signal()
+RETURNS trigger
+AS 'MODULE_PATHNAME','dbms_alert_defered_signal'
+LANGUAGE C SECURITY DEFINER;
+REVOKE ALL ON FUNCTION dbms_alert.defered_signal() FROM PUBLIC;
 
 CREATE FUNCTION dbms_alert.signal(_event text, _message text)
 RETURNS void
@@ -1657,12 +1600,6 @@ RETURNS text
 AS 'MODULE_PATHNAME','dbms_utility_format_call_stack0'
 LANGUAGE C VOLATILE;
 COMMENT ON FUNCTION dbms_utility.format_call_stack() IS 'Return formated call stack';
-
-CREATE FUNCTION dbms_utility.get_time()
-RETURNS int
-AS 'MODULE_PATHNAME','dbms_utility_get_time'
-LANGUAGE C VOLATILE;
-COMMENT ON FUNCTION dbms_utility.get_time() IS 'Returns the number of hundredths of seconds that have elapsed since point in time';
 
 CREATE SCHEMA plvlex;
 
@@ -1903,13 +1840,13 @@ CREATE FUNCTION dbms_assert.simple_sql_name(str varchar)
 RETURNS varchar
 AS 'MODULE_PATHNAME','dbms_assert_simple_sql_name'
 LANGUAGE C IMMUTABLE;
-COMMENT ON FUNCTION dbms_assert.object_name(varchar) IS 'Verify input string is a sql name.';
+COMMENT ON FUNCTION dbms_assert.object_name(varchar) IS 'Verify input string is an sql name.';
 
 CREATE FUNCTION dbms_assert.qualified_sql_name(str varchar)
 RETURNS varchar
 AS 'MODULE_PATHNAME','dbms_assert_qualified_sql_name'
 LANGUAGE C IMMUTABLE;
-COMMENT ON FUNCTION dbms_assert.object_name(varchar) IS 'Verify input string is a qualified sql name.';
+COMMENT ON FUNCTION dbms_assert.object_name(varchar) IS 'Verify input string is an qualified sql name.';
 
 CREATE SCHEMA plunit;
 
@@ -2057,7 +1994,7 @@ COMMENT ON FUNCTION dbms_random.seed(text) IS 'Reset the seed value';
 CREATE FUNCTION dbms_random.string(opt text, len int)
 RETURNS text
 AS 'MODULE_PATHNAME','dbms_random_string'
-LANGUAGE C VOLATILE;
+LANGUAGE C IMMUTABLE;
 COMMENT ON FUNCTION dbms_random.string(text,int) IS 'Create Random Strings';
 
 CREATE FUNCTION dbms_random.terminate()
@@ -2078,12 +2015,12 @@ AS 'MODULE_PATHNAME','dbms_random_value'
 LANGUAGE C VOLATILE;
 COMMENT ON FUNCTION dbms_random.value() IS 'Generate Random number x, where x is greater or equal to 0 and less then 1';
 
-CREATE FUNCTION oracle.dump(text)
+CREATE FUNCTION dump(text)
 RETURNS varchar
 AS 'MODULE_PATHNAME', 'orafce_dump'
 LANGUAGE C;
 
-CREATE FUNCTION oracle.dump(text, integer)
+CREATE FUNCTION dump(text, integer)
 RETURNS varchar
 AS 'MODULE_PATHNAME', 'orafce_dump'
 LANGUAGE C;
@@ -2100,257 +2037,274 @@ AS $$SELECT utl_file.put_line($1, $2::text, true); $$
 LANGUAGE SQL VOLATILE;
 COMMENT ON FUNCTION utl_file.put_line(utl_file.file_type, anyelement, bool) IS 'Puts data to specified file and append newline character';
 
-CREATE FUNCTION oracle.listagg1_transfn(internal, text)
+CREATE FUNCTION pg_catalog.listagg1_transfn(internal, text)
 RETURNS internal
 AS 'MODULE_PATHNAME','orafce_listagg1_transfn'
 LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.wm_concat_transfn(internal, text)
+CREATE FUNCTION pg_catalog.wm_concat_transfn(internal, text)
 RETURNS internal
 AS 'MODULE_PATHNAME','orafce_wm_concat_transfn'
 LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.listagg2_transfn(internal, text, text)
+CREATE FUNCTION pg_catalog.listagg2_transfn(internal, text, text)
 RETURNS internal
 AS 'MODULE_PATHNAME','orafce_listagg2_transfn'
 LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.listagg_finalfn(internal)
+CREATE FUNCTION pg_catalog.listagg_finalfn(internal)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_listagg_finalfn'
 LANGUAGE C IMMUTABLE;
 
-CREATE AGGREGATE oracle.listagg(text) (
-  SFUNC=oracle.listagg1_transfn,
+CREATE AGGREGATE pg_catalog.listagg(text) (
+  SFUNC=pg_catalog.listagg1_transfn,
   STYPE=internal,
-  FINALFUNC=oracle.listagg_finalfn
+  FINALFUNC=pg_catalog.listagg_finalfn
 );
 
 /*
  * Undocumented function wm_concat - removed from
  * Oracle 12c.
  */
-CREATE AGGREGATE oracle.wm_concat(text) (
-  SFUNC=oracle.wm_concat_transfn,
+CREATE AGGREGATE pg_catalog.wm_concat(text) (
+  SFUNC=pg_catalog.wm_concat_transfn,
   STYPE=internal,
-  FINALFUNC=oracle.listagg_finalfn
+  FINALFUNC=pg_catalog.listagg_finalfn
 );
 
-CREATE AGGREGATE oracle.listagg(text, text) (
-  SFUNC=oracle.listagg2_transfn,
+CREATE AGGREGATE pg_catalog.listagg(text, text) (
+  SFUNC=pg_catalog.listagg2_transfn,
   STYPE=internal,
-  FINALFUNC=oracle.listagg_finalfn
+  FINALFUNC=pg_catalog.listagg_finalfn
 );
 
-CREATE FUNCTION oracle.median4_transfn(internal, real)
+CREATE FUNCTION pg_catalog.median4_transfn(internal, real)
 RETURNS internal
 AS 'MODULE_PATHNAME','orafce_median4_transfn'
 LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.median4_finalfn(internal)
+CREATE FUNCTION pg_catalog.median4_finalfn(internal)
 RETURNS real
 AS 'MODULE_PATHNAME','orafce_median4_finalfn'
 LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.median8_transfn(internal, double precision)
+CREATE FUNCTION pg_catalog.median8_transfn(internal, double precision)
 RETURNS internal
 AS 'MODULE_PATHNAME','orafce_median8_transfn'
 LANGUAGE C IMMUTABLE;
 
-CREATE FUNCTION oracle.median8_finalfn(internal)
+CREATE FUNCTION pg_catalog.median8_finalfn(internal)
 RETURNS double precision
 AS 'MODULE_PATHNAME','orafce_median8_finalfn'
 LANGUAGE C IMMUTABLE;
 
-CREATE AGGREGATE oracle.median(real) (
-  SFUNC=oracle.median4_transfn,
+CREATE AGGREGATE pg_catalog.median(real) (
+  SFUNC=pg_catalog.median4_transfn,
   STYPE=internal,
-  FINALFUNC=oracle.median4_finalfn
+  FINALFUNC=pg_catalog.median4_finalfn
 );
 
-CREATE AGGREGATE oracle.median(double precision) (
-  SFUNC=oracle.median8_transfn,
+CREATE AGGREGATE pg_catalog.median(double precision) (
+  SFUNC=pg_catalog.median8_transfn,
   STYPE=internal,
-  FINALFUNC=oracle.median8_finalfn
+  FINALFUNC=pg_catalog.median8_finalfn
 );
 
 -- oracle.varchar2 type support
 
-CREATE FUNCTION oracle.varchar2in(cstring,oid,integer)
-RETURNS oracle.varchar2
+CREATE FUNCTION varchar2in(cstring,oid,integer)
+RETURNS varchar2
 AS 'MODULE_PATHNAME','varchar2in'
 LANGUAGE C
 STRICT
-IMMUTABLE PARALLEL SAFE;
+IMMUTABLE;
 
-CREATE FUNCTION oracle.varchar2out(oracle.varchar2)
+CREATE FUNCTION varchar2out(varchar2)
 RETURNS CSTRING
 AS 'MODULE_PATHNAME','varchar2out'
 LANGUAGE C
 STRICT
-IMMUTABLE PARALLEL SAFE;
+IMMUTABLE;
 
-CREATE FUNCTION oracle.varchar2_transform(internal)
+CREATE FUNCTION varchar2_transform(internal)
 RETURNS internal
 AS 'MODULE_PATHNAME','orafce_varchar_transform'
 LANGUAGE C
 STRICT
-IMMUTABLE PARALLEL SAFE;
+IMMUTABLE;
 
-CREATE FUNCTION oracle.varchar2recv(internal,oid,integer)
-RETURNS oracle.varchar2
+CREATE FUNCTION varchar2recv(internal,oid,integer)
+RETURNS varchar2
 AS 'MODULE_PATHNAME','varchar2recv'
 LANGUAGE C
 STRICT
-STABLE PARALLEL SAFE;
+STABLE;
 
-CREATE FUNCTION oracle.varchar2send(oracle.varchar2)
+CREATE FUNCTION varchar2send(varchar2)
 RETURNS bytea
 AS 'varcharsend'
 LANGUAGE internal
 STRICT
-STABLE PARALLEL SAFE;
+STABLE;
 
-CREATE FUNCTION oracle.varchar2typmodin(cstring[])
+CREATE FUNCTION varchar2typmodin(cstring[])
 RETURNS integer
 AS 'varchartypmodin'
 LANGUAGE internal
 STRICT
-IMMUTABLE PARALLEL SAFE;
+IMMUTABLE;
 
-CREATE FUNCTION oracle.varchar2typmodout(integer)
+CREATE FUNCTION varchar2typmodout(integer)
 RETURNS CSTRING
 AS 'varchartypmodout'
 LANGUAGE internal
 STRICT
-IMMUTABLE PARALLEL SAFE;
+IMMUTABLE;
 
-CREATE FUNCTION oracle.varchar2(oracle.varchar2,integer,boolean)
-RETURNS oracle.varchar2
+CREATE FUNCTION varchar2(varchar2,integer,boolean)
+RETURNS varchar2
 AS 'MODULE_PATHNAME','varchar2'
 LANGUAGE C
 STRICT
-IMMUTABLE PARALLEL SAFE;
+IMMUTABLE;
 
 /* CREATE TYPE */
-CREATE TYPE oracle.varchar2 (
+CREATE TYPE varchar2 (
 internallength = VARIABLE,
-input = oracle.varchar2in,
-output = oracle.varchar2out,
-receive = oracle.varchar2recv,
-send = oracle.varchar2send,
+input = varchar2in,
+output = varchar2out,
+receive = varchar2recv,
+send = varchar2send,
 category = 'S',
-typmod_in = oracle.varchar2typmodin,
-typmod_out = oracle.varchar2typmodout,
-collatable = true,
-storage = extended
+typmod_in = varchar2typmodin,
+typmod_out = varchar2typmodout,
+collatable = true
 );
 
-CREATE FUNCTION oracle.orafce_concat2(oracle.varchar2, oracle.varchar2)
-RETURNS oracle.varchar2
+CREATE FUNCTION oracle.orafce_concat2(varchar2, varchar2)
+RETURNS varchar2
 AS 'MODULE_PATHNAME','orafce_concat2'
-LANGUAGE C STABLE PARALLEL SAFE;
+LANGUAGE C STABLE;
 
 /* CREATE CAST */
-CREATE CAST (oracle.varchar2 AS text)
+CREATE CAST (varchar2 AS text)
 WITHOUT FUNCTION
 AS IMPLICIT;
 
-CREATE CAST (text AS oracle.varchar2)
+CREATE CAST (text AS varchar2)
 WITHOUT FUNCTION
 AS IMPLICIT;
 
-CREATE CAST (oracle.varchar2 AS char)
+CREATE CAST (varchar2 AS char)
 WITHOUT FUNCTION
 AS IMPLICIT;
 
-CREATE CAST (char AS oracle.varchar2)
+CREATE CAST (char AS varchar2)
 WITHOUT FUNCTION
 AS IMPLICIT;
 
-CREATE CAST (oracle.varchar2 AS varchar)
+CREATE CAST (varchar2 AS varchar)
 WITHOUT FUNCTION
 AS IMPLICIT;
 
-CREATE CAST (varchar AS oracle.varchar2)
+CREATE CAST (varchar AS varchar2)
 WITHOUT FUNCTION
 AS IMPLICIT;
 
-CREATE CAST (oracle.varchar2 AS oracle.varchar2)
-WITH FUNCTION oracle.varchar2(oracle.varchar2,integer,boolean)
+CREATE CAST (varchar2 AS varchar2)
+WITH FUNCTION varchar2(varchar2,integer,boolean)
 AS IMPLICIT;
 
-CREATE CAST (oracle.varchar2 AS real)
+CREATE CAST (varchar2 AS real)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (real AS oracle.varchar2)
+CREATE CAST (real AS varchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.varchar2 AS double precision)
+CREATE CAST (varchar2 AS double precision)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (double precision AS oracle.varchar2)
+CREATE CAST (double precision AS varchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.varchar2 AS integer)
+CREATE CAST (varchar2 AS integer)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (integer AS oracle.varchar2)
+CREATE CAST (integer AS varchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.varchar2 AS smallint)
+CREATE CAST (varchar2 AS smallint)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (smallint AS oracle.varchar2)
+CREATE CAST (smallint AS varchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.varchar2 AS bigint)
+CREATE CAST (varchar2 AS bigint)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (bigint AS oracle.varchar2)
+CREATE CAST (bigint AS varchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.varchar2 AS numeric)
+CREATE CAST (varchar2 AS numeric)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (numeric AS oracle.varchar2)
+CREATE CAST (numeric AS varchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.varchar2 AS date)
+CREATE CAST (varchar2 AS date)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (date AS oracle.varchar2)
+CREATE CAST (date AS varchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.varchar2 AS timestamp)
+CREATE CAST (varchar2 AS timestamp)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (timestamp AS oracle.varchar2)
+CREATE CAST (timestamp AS varchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.varchar2 AS interval)
+CREATE CAST (varchar2 AS interval)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (interval AS oracle.varchar2)
+CREATE CAST (interval AS varchar2)
 WITH INOUT
 AS IMPLICIT;
+
+-- XXX: This is disabled in gpdb because we have no way of dispatching this
+-- change to the segments. There is no DDL to support setting a protransform
+-- function in upstream, because of security concerns. We need to understand
+-- exactly what these security concerns are, and have a strategy to deal with
+-- the (probably rare) cases where a user might want to use this feature in
+-- GPDB.
+--SET allow_system_table_mods=true;
+/*
+do $$
+BEGIN
+  IF EXISTS(SELECT * FROM pg_settings WHERE name = 'server_version_num' AND setting::int >= 120000) THEN
+    UPDATE pg_proc SET prosupport= 'varchar2_transform'::regproc::oid WHERE proname='varchar2';
+  ELSE
+    UPDATE pg_proc SET protransform= 'varchar2_transform'::regproc::oid WHERE proname='varchar2';
+  END IF;
+END
+$$;
 
 do $$
 BEGIN
@@ -2366,234 +2320,233 @@ BEGIN
   END IF;
 END
 $$;
+*/
+--RESET allow_system_table_mods;
 
 -- string functions for varchar2 type
 -- these are 'byte' versions of corresponsing text/varchar functions
 
-CREATE OR REPLACE FUNCTION oracle.substrb(oracle.varchar2, integer, integer) RETURNS oracle.varchar2
-AS 'MODULE_PATHNAME','oracle_substrb3'
-LANGUAGE C
-STRICT IMMUTABLE PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.substrb(oracle.varchar2, integer, integer) IS 'extracts specified number of bytes from the input varchar2 string starting at the specified byte position (1-based) and returns as a varchar2 string';
+CREATE OR REPLACE FUNCTION pg_catalog.substrb(varchar2, integer, integer) RETURNS varchar2
+AS 'bytea_substr'
+LANGUAGE internal
+STRICT IMMUTABLE;
+COMMENT ON FUNCTION pg_catalog.substrb(varchar2, integer, integer) IS 'extracts specified number of bytes from the input varchar2 string starting at the specified byte position (1-based) and returns as a varchar2 string';
 
-CREATE OR REPLACE FUNCTION oracle.substrb(oracle.varchar2, integer) RETURNS oracle.varchar2
-AS 'MODULE_PATHNAME','oracle_substrb2'
-LANGUAGE C
-STRICT IMMUTABLE PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.substrb(oracle.varchar2, integer) IS 'extracts specified number of bytes from the input varchar2 string starting at the specified byte position (1-based) and returns as a varchar2 string';
+CREATE OR REPLACE FUNCTION pg_catalog.substrb(varchar2, integer) RETURNS varchar2
+AS 'bytea_substr_no_len'
+LANGUAGE internal
+STRICT IMMUTABLE;
+COMMENT ON FUNCTION pg_catalog.substrb(varchar2, integer) IS 'extracts specified number of bytes from the input varchar2 string starting at the specified byte position (1-based) and returns as a varchar2 string';
 
-CREATE OR REPLACE FUNCTION oracle.lengthb(oracle.varchar2) RETURNS integer
+CREATE OR REPLACE FUNCTION pg_catalog.lengthb(varchar2) RETURNS integer
 AS 'byteaoctetlen'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.lengthb(oracle.varchar2) IS 'returns byte length of the input varchar2 string';
+STRICT IMMUTABLE;
+COMMENT ON FUNCTION pg_catalog.lengthb(varchar2) IS 'returns byte length of the input varchar2 string';
 
-CREATE OR REPLACE FUNCTION oracle.strposb(oracle.varchar2, oracle.varchar2) RETURNS integer
+CREATE OR REPLACE FUNCTION pg_catalog.strposb(varchar2, varchar2) RETURNS integer
 AS 'byteapos'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.strposb(oracle.varchar2, oracle.varchar2) IS 'returns the byte position of a specified string in the input varchar2 string';
+STRICT IMMUTABLE;
+COMMENT ON FUNCTION pg_catalog.strposb(varchar2, varchar2) IS 'returns the byte position of a specified string in the input varchar2 string';
 
 -- oracle.nvarchar2 type support
 
-CREATE FUNCTION oracle.nvarchar2in(cstring,oid,integer)
-RETURNS oracle.nvarchar2
+CREATE FUNCTION nvarchar2in(cstring,oid,integer)
+RETURNS nvarchar2
 AS 'MODULE_PATHNAME','nvarchar2in'
 LANGUAGE C
 STRICT
-IMMUTABLE PARALLEL SAFE;
+IMMUTABLE;
 
-CREATE FUNCTION oracle.nvarchar2out(oracle.nvarchar2)
+CREATE FUNCTION nvarchar2out(nvarchar2)
 RETURNS CSTRING
 AS 'MODULE_PATHNAME','nvarchar2out'
 LANGUAGE C
 STRICT
-IMMUTABLE PARALLEL SAFE;
+IMMUTABLE;
 
-CREATE FUNCTION oracle.nvarchar2_transform(internal)
+CREATE FUNCTION nvarchar2_transform(internal)
 RETURNS internal
 AS 'MODULE_PATHNAME','orafce_varchar_transform'
 LANGUAGE C
 STRICT
-IMMUTABLE PARALLEL SAFE;
+IMMUTABLE;
 
-CREATE FUNCTION oracle.nvarchar2recv(internal,oid,integer)
-RETURNS oracle.nvarchar2
+CREATE FUNCTION nvarchar2recv(internal,oid,integer)
+RETURNS nvarchar2
 AS 'MODULE_PATHNAME','nvarchar2recv'
 LANGUAGE C
 STRICT
-STABLE PARALLEL SAFE;
+STABLE;
 
-CREATE FUNCTION oracle.nvarchar2send(oracle.nvarchar2)
+CREATE FUNCTION nvarchar2send(nvarchar2)
 RETURNS bytea
 AS 'varcharsend'
 LANGUAGE internal
 STRICT
-STABLE PARALLEL SAFE;
+STABLE;
 
-CREATE FUNCTION oracle.nvarchar2typmodin(cstring[])
+CREATE FUNCTION nvarchar2typmodin(cstring[])
 RETURNS integer
 AS 'varchartypmodin'
 LANGUAGE internal
 STRICT
-IMMUTABLE PARALLEL SAFE;
+IMMUTABLE;
 
-CREATE FUNCTION oracle.nvarchar2typmodout(integer)
+CREATE FUNCTION nvarchar2typmodout(integer)
 RETURNS CSTRING
 AS 'varchartypmodout'
 LANGUAGE internal
 STRICT
-IMMUTABLE PARALLEL SAFE;
+IMMUTABLE;
 
-CREATE FUNCTION oracle.nvarchar2(oracle.nvarchar2,integer,boolean)
-RETURNS oracle.nvarchar2
+CREATE FUNCTION nvarchar2(nvarchar2,integer,boolean)
+RETURNS nvarchar2
 AS 'MODULE_PATHNAME','nvarchar2'
 LANGUAGE C
 STRICT
-IMMUTABLE PARALLEL SAFE;
+IMMUTABLE;
 
 /* CREATE TYPE */
-CREATE TYPE oracle.nvarchar2 (
+CREATE TYPE nvarchar2 (
 internallength = VARIABLE,
-input = oracle.nvarchar2in,
-output = oracle.nvarchar2out,
-receive = oracle.nvarchar2recv,
-send = oracle.nvarchar2send,
+input = nvarchar2in,
+output = nvarchar2out,
+receive = nvarchar2recv,
+send = nvarchar2send,
 category = 'S',
-typmod_in = oracle.nvarchar2typmodin,
-typmod_out = oracle.nvarchar2typmodout,
-collatable = true,
-storage = extended
+typmod_in = nvarchar2typmodin,
+typmod_out = nvarchar2typmodout,
+collatable = true
 );
 
-CREATE FUNCTION oracle.orafce_concat2(oracle.nvarchar2, oracle.nvarchar2)
-RETURNS oracle.nvarchar2
+CREATE FUNCTION oracle.orafce_concat2(nvarchar2, nvarchar2)
+RETURNS nvarchar2
 AS 'MODULE_PATHNAME','orafce_concat2'
-LANGUAGE C IMMUTABLE PARALLEL SAFE;
+LANGUAGE C IMMUTABLE;
 
 /* CREATE CAST */
-CREATE CAST (oracle.nvarchar2 AS text)
+CREATE CAST (nvarchar2 AS text)
 WITHOUT FUNCTION
 AS IMPLICIT;
 
-CREATE CAST (text AS oracle.nvarchar2)
+CREATE CAST (text AS nvarchar2)
 WITHOUT FUNCTION
 AS IMPLICIT;
 
-CREATE CAST (oracle.nvarchar2 AS char)
+CREATE CAST (nvarchar2 AS char)
 WITHOUT FUNCTION
 AS IMPLICIT;
 
-CREATE CAST (char AS oracle.nvarchar2)
+CREATE CAST (char AS nvarchar2)
 WITHOUT FUNCTION
 AS IMPLICIT;
 
-CREATE CAST (oracle.nvarchar2 AS varchar)
+CREATE CAST (nvarchar2 AS varchar)
 WITHOUT FUNCTION
 AS IMPLICIT;
 
-CREATE CAST (varchar AS oracle.nvarchar2)
+CREATE CAST (varchar AS nvarchar2)
 WITHOUT FUNCTION
 AS IMPLICIT;
 
-CREATE CAST (oracle.nvarchar2 AS oracle.nvarchar2)
-WITH FUNCTION oracle.nvarchar2(oracle.nvarchar2, integer, boolean)
+CREATE CAST (nvarchar2 AS nvarchar2)
+WITH FUNCTION nvarchar2(nvarchar2, integer, boolean)
 AS IMPLICIT;
 
-CREATE CAST (oracle.nvarchar2 AS real)
+CREATE CAST (nvarchar2 AS real)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (real AS oracle.nvarchar2)
+CREATE CAST (real AS nvarchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.nvarchar2 AS double precision)
+CREATE CAST (nvarchar2 AS double precision)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (double precision AS oracle.nvarchar2)
+CREATE CAST (double precision AS nvarchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.nvarchar2 AS integer)
+CREATE CAST (nvarchar2 AS integer)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (integer AS oracle.nvarchar2)
+CREATE CAST (integer AS nvarchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.nvarchar2 AS smallint)
+CREATE CAST (nvarchar2 AS smallint)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (smallint AS oracle.nvarchar2)
+CREATE CAST (smallint AS nvarchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.nvarchar2 AS bigint)
+CREATE CAST (nvarchar2 AS bigint)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (bigint AS oracle.nvarchar2)
+CREATE CAST (bigint AS nvarchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.nvarchar2 AS numeric)
+CREATE CAST (nvarchar2 AS numeric)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (numeric AS oracle.nvarchar2)
+CREATE CAST (numeric AS nvarchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.nvarchar2 AS date)
+CREATE CAST (nvarchar2 AS date)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (date AS oracle.nvarchar2)
+CREATE CAST (date AS nvarchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.nvarchar2 AS timestamp)
+CREATE CAST (nvarchar2 AS timestamp)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (timestamp AS oracle.nvarchar2)
+CREATE CAST (timestamp AS nvarchar2)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (oracle.nvarchar2 AS interval)
+CREATE CAST (nvarchar2 AS interval)
 WITH INOUT
 AS IMPLICIT;
 
-CREATE CAST (interval AS oracle.nvarchar2)
+CREATE CAST (interval AS nvarchar2)
 WITH INOUT
 AS IMPLICIT;
 
+-- disabled in GPDB; see similar chunk on varchar2_transform above
+/*
 do $$
 BEGIN
   IF EXISTS(SELECT * FROM pg_settings WHERE name = 'server_version_num' AND setting::int >= 120000) THEN
-    EXECUTE $_$ALTER FUNCTION oracle.nvarchar2(oracle.nvarchar2, integer, boolean) SUPPORT oracle.nvarchar2_transform$_$;
+    UPDATE pg_proc SET prosupport='nvarchar2_transform'::regproc::oid WHERE proname='nvarchar2';
   ELSE
-    UPDATE pg_proc SET protransform= 'oracle.nvarchar2_transform'::regproc::oid WHERE proname='nvarchar2';
-
-    INSERT INTO pg_depend (classid, objid, objsubid,
-                           refclassid, refobjid, refobjsubid, deptype)
-       VALUES('pg_proc'::regclass::oid, 'oracle.nvarchar2'::regproc::oid, 0,
-              'pg_proc'::regclass::oid, 'oracle.nvarchar2_transform'::regproc::oid, 0, 'n');
+    UPDATE pg_proc SET protransform='nvarchar2_transform'::regproc::oid WHERE proname='nvarchar2';
   END IF;
 END
 $$;
+*/
 
 /*
  * Note - a procedure keyword is depraceted from PostgreSQL 11, but it used
  * because older release doesn't know function.
  *
  */
-CREATE OPERATOR oracle.|| (procedure = oracle.orafce_concat2, leftarg = oracle.varchar2, rightarg = oracle.varchar2);
-CREATE OPERATOR oracle.|| (procedure = oracle.orafce_concat2, leftarg = oracle.nvarchar2, rightarg = oracle.nvarchar2);
+CREATE OPERATOR || (procedure = oracle.orafce_concat2, leftarg = varchar2, rightarg = varchar2);
+CREATE OPERATOR || (procedure = oracle.orafce_concat2, leftarg = nvarchar2, rightarg = nvarchar2);
 
 /* PAD */
 
@@ -2612,140 +2565,140 @@ CREATE FUNCTION oracle.lpad(char, integer, char)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.lpad(char, integer, text)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT  IMMUTABLE PARALLEL SAFE
+STRICT  IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.lpad(char, integer, oracle.varchar2)
+CREATE FUNCTION oracle.lpad(char, integer, varchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.lpad(char, integer, oracle.nvarchar2)
+CREATE FUNCTION oracle.lpad(char, integer, nvarchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.lpad(char, integer)
 RETURNS text
 AS $$ SELECT oracle.lpad($1, $2, ' '::text); $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.lpad(text, integer, char)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.lpad(oracle.varchar2, integer, char)
+CREATE FUNCTION oracle.lpad(varchar2, integer, char)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.lpad(oracle.nvarchar2, integer, char)
+CREATE FUNCTION oracle.lpad(nvarchar2, integer, char)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.lpad(text, integer, text)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.lpad(text, integer, oracle.varchar2)
+CREATE FUNCTION oracle.lpad(text, integer, varchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.lpad(text, integer, oracle.nvarchar2)
+CREATE FUNCTION oracle.lpad(text, integer, nvarchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.lpad(text, integer)
 RETURNS text
 AS $$ SELECT oracle.lpad($1, $2, ' '::text); $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.lpad(oracle.varchar2, integer, text)
+CREATE FUNCTION oracle.lpad(varchar2, integer, text)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.lpad(oracle.varchar2, integer, oracle.varchar2)
+CREATE FUNCTION oracle.lpad(varchar2, integer, varchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.lpad(oracle.varchar2, integer, oracle.nvarchar2)
+CREATE FUNCTION oracle.lpad(varchar2, integer, nvarchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.lpad(oracle.varchar2, integer)
+CREATE FUNCTION oracle.lpad(varchar2, integer)
 RETURNS text
 AS $$ SELECT oracle.lpad($1, $2, ' '::text); $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.lpad(oracle.nvarchar2, integer, text)
+CREATE FUNCTION oracle.lpad(nvarchar2, integer, text)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.lpad(oracle.nvarchar2, integer, oracle.varchar2)
+CREATE FUNCTION oracle.lpad(nvarchar2, integer, varchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.lpad(oracle.nvarchar2, integer, oracle.nvarchar2)
+CREATE FUNCTION oracle.lpad(nvarchar2, integer, nvarchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_lpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.lpad(oracle.nvarchar2, integer)
+CREATE FUNCTION oracle.lpad(nvarchar2, integer)
 RETURNS text
 AS $$ SELECT oracle.lpad($1, $2, ' '::text); $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 /* RPAD family */
@@ -2763,140 +2716,140 @@ CREATE FUNCTION oracle.rpad(char, integer, char)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.rpad(char, integer, text)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rpad(char, integer, oracle.varchar2)
+CREATE FUNCTION oracle.rpad(char, integer, varchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rpad(char, integer, oracle.nvarchar2)
+CREATE FUNCTION oracle.rpad(char, integer, nvarchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.rpad(char, integer)
 RETURNS text
 AS $$ SELECT oracle.rpad($1, $2, ' '::text); $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.rpad(text, integer, char)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rpad(oracle.varchar2, integer, char)
+CREATE FUNCTION oracle.rpad(varchar2, integer, char)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rpad(oracle.nvarchar2, integer, char)
+CREATE FUNCTION oracle.rpad(nvarchar2, integer, char)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.rpad(text, integer, text)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rpad(text, integer, oracle.varchar2)
+CREATE FUNCTION oracle.rpad(text, integer, varchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rpad(text, integer, oracle.nvarchar2)
+CREATE FUNCTION oracle.rpad(text, integer, nvarchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.rpad(text, integer)
 RETURNS text
 AS $$ SELECT oracle.rpad($1, $2, ' '::text); $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rpad(oracle.varchar2, integer, text)
+CREATE FUNCTION oracle.rpad(varchar2, integer, text)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rpad(oracle.varchar2, integer, oracle.varchar2)
+CREATE FUNCTION oracle.rpad(varchar2, integer, varchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rpad(oracle.varchar2, integer, oracle.nvarchar2)
+CREATE FUNCTION oracle.rpad(varchar2, integer, nvarchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rpad(oracle.varchar2, integer)
+CREATE FUNCTION oracle.rpad(varchar2, integer)
 RETURNS text
 AS $$ SELECT oracle.rpad($1, $2, ' '::text); $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rpad(oracle.nvarchar2, integer, text)
+CREATE FUNCTION oracle.rpad(nvarchar2, integer, text)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rpad(oracle.nvarchar2, integer, oracle.varchar2)
+CREATE FUNCTION oracle.rpad(nvarchar2, integer, varchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rpad(oracle.nvarchar2, integer, oracle.nvarchar2)
+CREATE FUNCTION oracle.rpad(nvarchar2, integer, nvarchar2)
 RETURNS text
 AS 'MODULE_PATHNAME','orafce_rpad'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rpad(oracle.nvarchar2, integer)
+CREATE FUNCTION oracle.rpad(nvarchar2, integer)
 RETURNS text
 AS $$ SELECT oracle.rpad($1, $2, ' '::text); $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 /* TRIM */
@@ -2916,140 +2869,140 @@ CREATE FUNCTION oracle.ltrim(char, char)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.ltrim(char, text)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.ltrim(char, oracle.varchar2)
+CREATE FUNCTION oracle.ltrim(char, varchar2)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.ltrim(char, oracle.nvarchar2)
+CREATE FUNCTION oracle.ltrim(char, nvarchar2)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.ltrim(char)
 RETURNS text
 AS $$ SELECT oracle.ltrim($1, ' '::text) $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.ltrim(text, char)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.ltrim(text, text)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.ltrim(text, oracle.varchar2)
+CREATE FUNCTION oracle.ltrim(text, varchar2)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.ltrim(text, oracle.nvarchar2)
+CREATE FUNCTION oracle.ltrim(text, nvarchar2)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.ltrim(text)
 RETURNS text
 AS $$ SELECT oracle.ltrim($1, ' '::text) $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.ltrim(oracle.varchar2, char)
+CREATE FUNCTION oracle.ltrim(varchar2, char)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.ltrim(oracle.varchar2, text)
+CREATE FUNCTION oracle.ltrim(varchar2, text)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.ltrim(oracle.varchar2, oracle.varchar2)
+CREATE FUNCTION oracle.ltrim(varchar2, varchar2)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.ltrim(oracle.varchar2, oracle.nvarchar2)
+CREATE FUNCTION oracle.ltrim(varchar2, nvarchar2)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.ltrim(oracle.varchar2)
+CREATE FUNCTION oracle.ltrim(varchar2)
 RETURNS text
 AS $$ SELECT oracle.ltrim($1, ' '::text) $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.ltrim(oracle.nvarchar2, char)
+CREATE FUNCTION oracle.ltrim(nvarchar2, char)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.ltrim(oracle.nvarchar2, text)
+CREATE FUNCTION oracle.ltrim(nvarchar2, text)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.ltrim(oracle.nvarchar2, oracle.varchar2)
+CREATE FUNCTION oracle.ltrim(nvarchar2, varchar2)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.ltrim(oracle.nvarchar2, oracle.nvarchar2)
+CREATE FUNCTION oracle.ltrim(nvarchar2, nvarchar2)
 RETURNS text
 AS 'ltrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.ltrim(oracle.nvarchar2)
+CREATE FUNCTION oracle.ltrim(nvarchar2)
 RETURNS text
 AS $$ SELECT oracle.ltrim($1, ' '::text) $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 /* RTRIM family */
@@ -3057,140 +3010,140 @@ CREATE FUNCTION oracle.rtrim(char, char)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.rtrim(char, text)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rtrim(char, oracle.varchar2)
+CREATE FUNCTION oracle.rtrim(char, varchar2)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rtrim(char, oracle.nvarchar2)
+CREATE FUNCTION oracle.rtrim(char, nvarchar2)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.rtrim(char)
 RETURNS text
 AS $$ SELECT oracle.rtrim($1, ' '::text) $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.rtrim(text, char)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.rtrim(text, text)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rtrim(text, oracle.varchar2)
+CREATE FUNCTION oracle.rtrim(text, varchar2)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rtrim(text, oracle.nvarchar2)
+CREATE FUNCTION oracle.rtrim(text, nvarchar2)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.rtrim(text)
 RETURNS text
 AS $$ SELECT oracle.rtrim($1, ' '::text) $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rtrim(oracle.varchar2, char)
+CREATE FUNCTION oracle.rtrim(varchar2, char)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rtrim(oracle.varchar2, text)
+CREATE FUNCTION oracle.rtrim(varchar2, text)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rtrim(oracle.varchar2, oracle.varchar2)
+CREATE FUNCTION oracle.rtrim(varchar2, varchar2)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rtrim(oracle.varchar2, oracle.nvarchar2)
+CREATE FUNCTION oracle.rtrim(varchar2, nvarchar2)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rtrim(oracle.varchar2)
+CREATE FUNCTION oracle.rtrim(varchar2)
 RETURNS text
 AS $$ SELECT oracle.rtrim($1, ' '::text) $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rtrim(oracle.nvarchar2, char)
+CREATE FUNCTION oracle.rtrim(nvarchar2, char)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rtrim(oracle.nvarchar2, text)
+CREATE FUNCTION oracle.rtrim(nvarchar2, text)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rtrim(oracle.nvarchar2, oracle.varchar2)
+CREATE FUNCTION oracle.rtrim(nvarchar2, varchar2)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rtrim(oracle.nvarchar2, oracle.nvarchar2)
+CREATE FUNCTION oracle.rtrim(nvarchar2, nvarchar2)
 RETURNS text
 AS 'rtrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.rtrim(oracle.nvarchar2)
+CREATE FUNCTION oracle.rtrim(nvarchar2)
 RETURNS text
 AS $$ SELECT oracle.rtrim($1, ' '::text) $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 /* BTRIM family */
@@ -3198,140 +3151,140 @@ CREATE FUNCTION oracle.btrim(char, char)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.btrim(char, text)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.btrim(char, oracle.varchar2)
+CREATE FUNCTION oracle.btrim(char, varchar2)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.btrim(char, oracle.nvarchar2)
+CREATE FUNCTION oracle.btrim(char, nvarchar2)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.btrim(char)
 RETURNS text
 AS $$ SELECT oracle.btrim($1, ' '::text) $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.btrim(text, char)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.btrim(text, text)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.btrim(text, oracle.varchar2)
+CREATE FUNCTION oracle.btrim(text, varchar2)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.btrim(text, oracle.nvarchar2)
+CREATE FUNCTION oracle.btrim(text, nvarchar2)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 CREATE FUNCTION oracle.btrim(text)
 RETURNS text
 AS $$ SELECT oracle.btrim($1, ' '::text) $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.btrim(oracle.varchar2, char)
+CREATE FUNCTION oracle.btrim(varchar2, char)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.btrim(oracle.varchar2, text)
+CREATE FUNCTION oracle.btrim(varchar2, text)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.btrim(oracle.varchar2, oracle.varchar2)
+CREATE FUNCTION oracle.btrim(varchar2, varchar2)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.btrim(oracle.varchar2, oracle.nvarchar2)
+CREATE FUNCTION oracle.btrim(varchar2, nvarchar2)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.btrim(oracle.varchar2)
+CREATE FUNCTION oracle.btrim(varchar2)
 RETURNS text
 AS $$ SELECT oracle.btrim($1, ' '::text) $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.btrim(oracle.nvarchar2, char)
+CREATE FUNCTION oracle.btrim(nvarchar2, char)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.btrim(oracle.nvarchar2, text)
+CREATE FUNCTION oracle.btrim(nvarchar2, text)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.btrim(oracle.nvarchar2, oracle.varchar2)
+CREATE FUNCTION oracle.btrim(nvarchar2, varchar2)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.btrim(oracle.nvarchar2, oracle.nvarchar2)
+CREATE FUNCTION oracle.btrim(nvarchar2, nvarchar2)
 RETURNS text
 AS 'btrim'
 LANGUAGE internal
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
-CREATE FUNCTION oracle.btrim(oracle.nvarchar2)
+CREATE FUNCTION oracle.btrim(nvarchar2)
 RETURNS text
 AS $$ SELECT oracle.btrim($1, ' '::text) $$
 LANGUAGE SQL
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 /* LENGTH */
@@ -3339,11 +3292,11 @@ CREATE FUNCTION oracle.length(char)
 RETURNS integer
 AS 'MODULE_PATHNAME','orafce_bpcharlen'
 LANGUAGE 'c'
-STRICT IMMUTABLE PARALLEL SAFE
+STRICT IMMUTABLE
 ;
 
 GRANT USAGE ON SCHEMA dbms_pipe TO PUBLIC;
--- GRANT USAGE ON SCHEMA dbms_alert TO PUBLIC;
+--GRANT USAGE ON SCHEMA dbms_alert TO PUBLIC;
 GRANT USAGE ON SCHEMA plvdate TO PUBLIC;
 GRANT USAGE ON SCHEMA plvstr TO PUBLIC;
 GRANT USAGE ON SCHEMA plvchr TO PUBLIC;
@@ -3363,49 +3316,49 @@ ALTER FUNCTION dbms_assert.enquote_name ( character varying ) STRICT;
 ALTER FUNCTION dbms_assert.enquote_name ( character varying, boolean ) STRICT;
 ALTER FUNCTION dbms_assert.noop ( character varying ) STRICT;
 
-CREATE FUNCTION oracle.trunc(value timestamp without time zone, fmt text)
+CREATE FUNCTION pg_catalog.trunc(value timestamp without time zone, fmt text)
 RETURNS timestamp without time zone
 AS 'MODULE_PATHNAME', 'ora_timestamp_trunc'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.trunc(timestamp without time zone, text) IS 'truncate date according to the specified format';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.trunc(timestamp without time zone, text) IS 'truncate date according to the specified format';
 
-CREATE FUNCTION oracle.round(value timestamp without time zone, fmt text)
+CREATE FUNCTION pg_catalog.round(value timestamp without time zone, fmt text)
 RETURNS timestamp without time zone
 AS 'MODULE_PATHNAME','ora_timestamp_round'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.round(timestamp with time zone, text) IS 'round dates according to the specified format';
+LANGUAGE C IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.round(timestamp with time zone, text) IS 'round dates according to the specified format';
 
-CREATE FUNCTION oracle.round(value timestamp without time zone)
+CREATE FUNCTION pg_catalog.round(value timestamp without time zone)
 RETURNS timestamp without time zone
-AS $$ SELECT oracle.round($1, 'DDD'); $$
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.round(timestamp without time zone) IS 'will round dates according to the specified format';
+AS $$ SELECT pg_catalog.round($1, 'DDD'); $$
+LANGUAGE SQL IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.round(timestamp without time zone) IS 'will round dates according to the specified format';
 
-CREATE FUNCTION oracle.trunc(value timestamp without time zone)
+CREATE FUNCTION pg_catalog.trunc(value timestamp without time zone)
 RETURNS timestamp without time zone
-AS $$ SELECT oracle.trunc($1, 'DDD'); $$
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.trunc(timestamp without time zone) IS 'truncate date according to the specified format';
+AS $$ SELECT pg_catalog.trunc($1, 'DDD'); $$
+LANGUAGE SQL IMMUTABLE STRICT;
+COMMENT ON FUNCTION pg_catalog.trunc(timestamp without time zone) IS 'truncate date according to the specified format';
 
 CREATE OR REPLACE FUNCTION oracle.round(double precision, int)
 RETURNS numeric
 AS $$SELECT pg_catalog.round($1::numeric, $2)$$
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE sql IMMUTABLE STRICT;
 
 CREATE OR REPLACE FUNCTION oracle.trunc(double precision, int)
 RETURNS numeric
 AS $$SELECT pg_catalog.trunc($1::numeric, $2)$$
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE sql IMMUTABLE STRICT;
 
 CREATE OR REPLACE FUNCTION oracle.round(float4, int)
 RETURNS numeric
 AS $$SELECT pg_catalog.round($1::numeric, $2)$$
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE sql IMMUTABLE STRICT;
 
 CREATE OR REPLACE FUNCTION oracle.trunc(float4, int)
 RETURNS numeric
 AS $$SELECT pg_catalog.trunc($1::numeric, $2)$$
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+LANGUAGE sql IMMUTABLE STRICT;
 
 
 CREATE FUNCTION oracle.get_major_version()
@@ -3570,42 +3523,42 @@ WHERE
 CREATE OR REPLACE FUNCTION oracle.lpad(int, int, int)
 RETURNS text AS $$
 SELECT pg_catalog.lpad($1::text,$2,$3::text)
-$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+$$ LANGUAGE sql IMMUTABLE STRICT;
 
 CREATE OR REPLACE FUNCTION oracle.lpad(bigint, int, int)
 RETURNS text AS $$
 SELECT pg_catalog.lpad($1::text,$2,$3::text)
-$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+$$ LANGUAGE sql IMMUTABLE STRICT;
 
 CREATE OR REPLACE FUNCTION oracle.lpad(smallint, int, int)
 RETURNS text AS $$
 SELECT pg_catalog.lpad($1::text,$2,$3::text)
-$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+$$ LANGUAGE sql IMMUTABLE STRICT;
 
 CREATE OR REPLACE FUNCTION oracle.lpad(numeric, int, int)
 RETURNS text AS $$
 SELECT pg_catalog.lpad($1::text,$2,$3::text)
-$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+$$ LANGUAGE sql IMMUTABLE STRICT;
 
 CREATE OR REPLACE FUNCTION oracle.nvl(bigint, int)
 RETURNS bigint AS $$
 SELECT coalesce($1, $2)
-$$ LANGUAGE sql IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE sql IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION oracle.nvl(numeric, int)
 RETURNS numeric AS $$
 SELECT coalesce($1, $2)
-$$ LANGUAGE sql IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE sql IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION oracle.nvl(int, int)
 RETURNS int AS $$
 SELECT coalesce($1, $2)
-$$ LANGUAGE sql IMMUTABLE PARALLEL SAFE;
+$$ LANGUAGE sql IMMUTABLE;
 
 CREATE OR REPLACE FUNCTION oracle.numtodsinterval(double precision, text)
 RETURNS interval AS $$
   SELECT $1 * ('1' || $2)::interval
-$$ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE;
+$$ LANGUAGE sql IMMUTABLE STRICT;
 
 CREATE OR REPLACE FUNCTION oracle.replace_empty_strings()
 RETURNS TRIGGER
@@ -3616,709 +3569,3 @@ CREATE OR REPLACE FUNCTION oracle.replace_null_strings()
 RETURNS TRIGGER
 AS 'MODULE_PATHNAME','orafce_replace_null_strings'
 LANGUAGE 'c';
-
-CREATE OR REPLACE FUNCTION oracle.unistr(text)
-RETURNS text
-AS 'MODULE_PATHNAME','orafce_unistr'
-LANGUAGE 'c' PARALLEL SAFE;
-
--- Translate Oracle regexp modifier into PostgreSQl ones
--- Append the global modifier if $2 is true. Used internally
--- by regexp_*() functions bellow.
-CREATE OR REPLACE FUNCTION oracle.translate_oracle_modifiers(text, bool)
-RETURNS text
-AS $$
-DECLARE
-  modifiers text := '';
-BEGIN
-  IF $1 IS NOT NULL THEN
-    -- Check that we don't have modifier not supported by Oracle
-    IF $1 ~ '[^icnsmx]' THEN
-      -- Modifier 's' is not supported by Oracle but it is a synonym
-      -- of 'n', we translate 'n' into 's' bellow. It is safe to allow it.
-      RAISE EXCEPTION 'argument ''flags'' has unsupported modifier(s).';
-    END IF;
-    -- Oracle 'n' modifier correspond to 's' POSIX modifier
-    -- Oracle 'm' modifier correspond to 'n' POSIX modifier
-    modifiers := translate($1, 'nm', 'sn');
-  END IF;
-  IF $2 THEN
-    modifiers := modifiers || 'g';
-  END IF;
-  RETURN modifiers;
-END;
-$$
-LANGUAGE plpgsql;
-
--- REGEXP_LIKE( string text, pattern text) -> boolean
--- If one of the param is NULL returns NULL, declared STRICT
-CREATE OR REPLACE FUNCTION oracle.regexp_like(text, text)
-RETURNS boolean
-AS $$
-  -- Oracle default behavior is newline-sensitive,
-  -- PostgreSQL not, so force 'p' modifier to affect
-  -- newline-sensitivity but not ^ and $ search.
-  SELECT CASE WHEN (count(*) > 0) THEN true ELSE false END FROM regexp_matches($1, $2, 'p');
-$$
-LANGUAGE 'sql' STRICT IMMUTABLE PARALLEL SAFE;
-
--- REGEXP_LIKE( string text, pattern text, flags text ) -> boolean
-CREATE OR REPLACE FUNCTION oracle.regexp_like(text, text, text)
-RETURNS boolean
-AS $$
-DECLARE
-  modifiers text;
-BEGIN
-  -- Only modifier can be NULL
-  IF $1 IS NULL OR $2 IS NULL THEN
-    RETURN NULL;
-  END IF;
-  modifiers := oracle.translate_oracle_modifiers($3, false);
-  IF (regexp_matches($1, $2, modifiers))[1] IS NOT NULL THEN
-    RETURN true;
-  END IF;
-  RETURN false;
-END;
-$$
-LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE;
-
--- regexp_count_pattern_fix: replace any occurence of a dot into a [^\n] pattern.
-CREATE OR REPLACE FUNCTION oracle.regexp_count_pattern_fix(text)
-RETURNS text
-AS $$
-DECLARE
-  v_pattern text;
-BEGIN
-  -- Replace any occurences of a dot by [^\n]
-  -- to have the same behavior as Oracle
-  v_pattern := regexp_replace($1, '\\\.', '#ESCDOT#', 'g');
-  v_pattern := regexp_replace(v_pattern, '\.', '[^\n]', 'g');
-  v_pattern := regexp_replace(v_pattern, '#ESCDOT#', '\.', 'g');
-
-  RETURN v_pattern;
-END;
-$$
-LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE;
-
--- REGEXP_COUNT( string text, pattern text ) -> integer
-CREATE OR REPLACE FUNCTION oracle.regexp_count(text, text)
-RETURNS integer
-AS $$
-  -- Oracle default behavior is newline-sensitive,
-  -- PostgreSQL not, so force 'p' modifier to affect
-  -- newline-sensitivity but not ^ and $ search.
-  SELECT count(*)::integer FROM regexp_matches($1, oracle.regexp_count_pattern_fix($2), 'sg');
-$$
-LANGUAGE 'sql' STRICT IMMUTABLE PARALLEL SAFE;
-
--- REGEXP_COUNT( string text, pattern text, position int ) -> integer
-CREATE OR REPLACE FUNCTION oracle.regexp_count(text, text, integer)
-RETURNS integer
-AS $$
-DECLARE
-  v_cnt integer;
-  v_pattern text;
-BEGIN
-  -- Check numeric arguments
-  IF $3 < 1 THEN
-    RAISE EXCEPTION 'argument ''position'' must be a number greater than 0';
-  END IF;
-
-  v_pattern := '(' || oracle.regexp_count_pattern_fix($2) || ')';
-
-  -- Oracle default behavior is newline-sensitive,
-  -- PostgreSQL not, so force 's' modifier to affect
-  -- newline-sensitivity but not ^ and $ search.
-  v_cnt :=  (SELECT count(*)::integer FROM regexp_matches(substr($1, $3), v_pattern, 'sg'));
-  RETURN v_cnt;
-END;
-$$
-LANGUAGE plpgsql STRICT IMMUTABLE PARALLEL SAFE;
-
--- REGEXP_COUNT( string text, pattern text, position int ) -> integer
-CREATE OR REPLACE FUNCTION oracle.regexp_count(text, text, integer)
-RETURNS integer
-AS $$
-DECLARE
-  v_cnt integer;
-BEGIN
-  -- Check numeric arguments
-  IF $3 < 1 THEN
-    RAISE EXCEPTION 'argument ''position'' must be a number greater than 0';
-  END IF;
-
-  -- Oracle default behavior is newline-sensitive,
-  -- PostgreSQL not, so force 'p' modifier to affect
-  -- newline-sensitivity but not ^ and $ search.
-  v_cnt :=  (SELECT count(*)::integer FROM regexp_matches(substr($1, $3), oracle.regexp_count_pattern_fix($2), 'sg'));
-  RETURN v_cnt;
-END;
-$$
-LANGUAGE plpgsql STRICT IMMUTABLE PARALLEL SAFE;
-
--- REGEXP_COUNT( string text, pattern text, position int, flags text ) -> integer
-CREATE OR REPLACE FUNCTION oracle.regexp_count(text, text, integer, text)
-RETURNS integer
-AS $$
-DECLARE
-  modifiers text;
-  v_cnt   integer;
-BEGIN
-  -- Only modifier can be NULL
-  IF $1 IS NULL OR $2 IS NULL OR $3 IS NULL THEN
-    RETURN NULL;
-  END IF;
-  -- Check numeric arguments
-  IF $3 < 1 THEN
-    RAISE EXCEPTION 'argument ''position'' must be a number greater than 0';
-  END IF;
-
-  modifiers := oracle.translate_oracle_modifiers($4, true);
-  v_cnt := (SELECT count(*)::integer FROM regexp_matches(substr($1, $3), $2, modifiers));
-  RETURN v_cnt;
-END;
-$$
-LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE;
-
---  REGEXP_INSTR( string text, pattern text ) -> integer
-CREATE OR REPLACE FUNCTION oracle.regexp_instr(text, text)
-RETURNS integer
-AS 'MODULE_PATHNAME','orafce_regexp_instr_no_start'
-LANGUAGE 'c' IMMUTABLE PARALLEL SAFE;
-
---  REGEXP_INSTR( string text, pattern text, position int ) -> integer
-CREATE OR REPLACE FUNCTION oracle.regexp_instr(text, text, integer)
-RETURNS integer
-AS 'MODULE_PATHNAME','orafce_regexp_instr_no_n'
-LANGUAGE 'c' IMMUTABLE PARALLEL SAFE;
-
---  REGEXP_INSTR( string text, pattern text, position int, occurence int ) -> integer
-CREATE OR REPLACE FUNCTION oracle.regexp_instr(text, text, integer, integer)
-RETURNS integer
-AS 'MODULE_PATHNAME','orafce_regexp_instr_no_endoption'
-LANGUAGE 'c' IMMUTABLE PARALLEL SAFE;
-
---  REGEXP_INSTR( string text, pattern text, position int, occurence int, return_opt int ) -> integer
-CREATE OR REPLACE FUNCTION oracle.regexp_instr(text, text, integer, integer, integer)
-RETURNS integer
-AS 'MODULE_PATHNAME','orafce_regexp_instr_no_flags'
-LANGUAGE 'c' IMMUTABLE PARALLEL SAFE;
-
---  REGEXP_INSTR( string text, pattern text, position int, occurence int, return_opt int, flags text ) -> integer
-CREATE OR REPLACE FUNCTION oracle.regexp_instr(text, text, integer, integer, integer, text)
-RETURNS integer
-AS 'MODULE_PATHNAME','orafce_regexp_instr_no_subexpr'
-LANGUAGE 'c' IMMUTABLE PARALLEL SAFE;
-
---  REGEXP_INSTR( string text, pattern text, position int, occurence int, return_opt int, flags text, group int ) -> integer
-CREATE OR REPLACE FUNCTION oracle.regexp_instr(text, text, integer, integer, integer, text, integer)
-RETURNS integer
-AS 'MODULE_PATHNAME','orafce_regexp_instr'
-LANGUAGE 'c' IMMUTABLE PARALLEL SAFE;
-
--- REGEXP_SUBSTR( string text, pattern text ) -> text
-CREATE OR REPLACE FUNCTION oracle.regexp_substr(text, text)
-RETURNS text
-AS $$
-DECLARE
-  v_substr text;
-  v_pattern text;
-BEGIN
-  -- Without subexpression specified, assume 0 which mean that the first
-  -- position for the substring matching the whole pattern is returned.
-  -- We need to enclose the pattern between parentheses.
-  v_pattern := '(' || oracle.regexp_count_pattern_fix($2) || ')';
-
-  -- Oracle default behavior is newline-sensitive,
-  -- PostgreSQL not, so force 'p' modifier to affect
-  -- newline-sensitivity but not ^ and $ search.
-  v_substr := (SELECT (regexp_matches($1, v_pattern, 'sg'))[1] OFFSET 0 LIMIT 1);
-  RETURN v_substr;
-END;
-$$
-LANGUAGE plpgsql STRICT IMMUTABLE PARALLEL SAFE;
-
--- REGEXP_SUBSTR( string text, pattern text, position int ) -> text
-CREATE OR REPLACE FUNCTION oracle.regexp_substr(text, text, int)
-RETURNS text
-AS $$
-DECLARE
-  v_substr text;
-  v_pattern text;
-BEGIN
-  -- Check numeric arguments
-  IF $3 < 1 THEN
-    RAISE EXCEPTION 'argument ''position'' must be a number greater than 0';
-  END IF;
-
-  -- Without subexpression specified, assume 0 which mean that the first
-  -- position for the substring matching the whole pattern is returned.
-  -- We need to enclose the pattern between parentheses.
-  v_pattern := '(' || oracle.regexp_count_pattern_fix($2) || ')';
-
-  -- Oracle default behavior is newline-sensitive,
-  -- PostgreSQL not, so force 'p' modifier to affect
-  -- newline-sensitivity but not ^ and $ search.
-  v_substr := (SELECT (regexp_matches(substr($1, $3), v_pattern, 'sg'))[1] OFFSET 0 LIMIT 1);
-  RETURN v_substr;
-END;
-$$
-LANGUAGE plpgsql STRICT IMMUTABLE PARALLEL SAFE;
-
--- REGEXP_SUBSTR( string text, pattern text, position int, occurence int ) -> text
-CREATE OR REPLACE FUNCTION oracle.regexp_substr(text, text, integer, integer)
-RETURNS text
-AS $$
-DECLARE
-  v_substr text;
-  v_pattern text;
-BEGIN
-  -- Check numeric arguments
-  IF $3 < 1 THEN
-    RAISE EXCEPTION 'argument ''position'' must be a number greater than 0';
-  END IF;
-  IF $4 < 1 THEN
-    RAISE EXCEPTION 'argument ''occurence'' must be a number greater than 0';
-  END IF;
-
-  -- Without subexpression specified, assume 0 which mean that the first
-  -- position for the substring matching the whole pattern is returned.
-  -- We need to enclose the pattern between parentheses.
-  v_pattern := '(' || oracle.regexp_count_pattern_fix($2) || ')';
-
-  -- Oracle default behavior is newline-sensitive,
-  -- PostgreSQL not, so force 'p' modifier to affect
-  -- newline-sensitivity but not ^ and $ search.
-  v_substr := (SELECT (regexp_matches(substr($1, $3), v_pattern, 'sg'))[1] OFFSET $4 - 1 LIMIT 1);
-  RETURN v_substr;
-END;
-$$
-LANGUAGE plpgsql STRICT IMMUTABLE PARALLEL SAFE;
-
--- REGEXP_SUBSTR( string text, pattern text, position int, occurence int, flags text ) -> text
-CREATE OR REPLACE FUNCTION oracle.regexp_substr(text, text, integer, integer, text)
-RETURNS text
-AS $$
-DECLARE
-  v_substr text;
-  v_pattern text;
-  modifiers text;
-BEGIN
-  -- Only modifier can be NULL
-  IF $1 IS NULL OR $2 IS NULL OR $3 IS NULL OR $4 IS NULL THEN
-    RETURN NULL;
-  END IF;
-  -- Check numeric arguments
-  IF $3 < 1 THEN
-    RAISE EXCEPTION 'argument ''position'' must be a number greater than 0';
-  END IF;
-  IF $4 < 1 THEN
-    RAISE EXCEPTION 'argument ''occurence'' must be a number greater than 0';
-  END IF;
-
-  modifiers := oracle.translate_oracle_modifiers($5, true);
-
-  -- Without subexpression specified, assume 0 which mean that the first
-  -- position for the substring matching the whole pattern is returned.
-  -- We need to enclose the pattern between parentheses.
-  v_pattern := '(' || $2 || ')';
-
-  -- Oracle default behavior is newline-sensitive,
-  -- PostgreSQL not, so force 'p' modifier to affect
-  -- newline-sensitivity but not ^ and $ search.
-  v_substr := (SELECT (regexp_matches(substr($1, $3), v_pattern, modifiers))[1] OFFSET $4 - 1 LIMIT 1);
-  RETURN v_substr;
-END;
-$$
-LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE;
-
--- REGEXP_SUBSTR( string text, pattern text, position int, occurence int, flags text, group int ) -> text
-CREATE OR REPLACE FUNCTION oracle.regexp_substr(text, text, integer, integer, text, int)
-RETURNS text
-AS $$
-DECLARE
-  v_substr text;
-  v_pattern text;
-  modifiers text;
-  v_subexpr integer := $6;
-  has_group integer;
-BEGIN
-  -- Only modifier can be NULL
-  IF $1 IS NULL OR $2 IS NULL OR $3 IS NULL OR $4 IS NULL OR $6 IS NULL THEN
-    RETURN NULL;
-  END IF;
-  -- Check numeric arguments
-  IF $3 < 1 THEN
-    RAISE EXCEPTION 'argument ''position'' must be a number greater than 0';
-  END IF;
-  IF $4 < 1 THEN
-    RAISE EXCEPTION 'argument ''occurence'' must be a number greater than 0';
-  END IF;
-  IF v_subexpr < 0 THEN
-    RAISE EXCEPTION 'argument ''group'' must be a positive number';
-  END IF;
-
-  -- Check that with v_subexpr = 1 we have a capture group otherwise return NULL
-  has_group := (SELECT count(*) FROM regexp_matches($2, '(?:[^\\]|^)\(', 'g'));
-  IF $6 = 1 AND has_group = 0 THEN
-    RETURN NULL;
-  END IF;
-
-  modifiers := oracle.translate_oracle_modifiers($5, true);
-
-  -- If subexpression value is 0 we need to enclose the pattern between parentheses.
-  IF v_subexpr = 0 THEN
-    v_pattern := '(' || $2 || ')';
-    v_subexpr := 1;
-  ELSE
-    v_pattern := $2;
-  END IF;
-
-  -- Oracle default behavior is newline-sensitive,
-  -- PostgreSQL not, so force 'p' modifier to affect
-  -- newline-sensitivity but not ^ and $ search.
-  v_substr := (SELECT (regexp_matches(substr($1, $3), v_pattern, modifiers))[v_subexpr] OFFSET $4 - 1 LIMIT 1);
-  RETURN v_substr;
-END;
-$$
-LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE;
-
--- REGEXP_REPLACE( string text, pattern text, replace_string text ) -> text
-CREATE OR REPLACE FUNCTION oracle.regexp_replace(text, text, text)
-RETURNS text
-AS 'MODULE_PATHNAME','orafce_textregexreplace_noopt'
-LANGUAGE 'c' IMMUTABLE PARALLEL SAFE;
-
--- REGEXP_REPLACE( string text, pattern text, replace_string text, position int ) -> text
-CREATE OR REPLACE FUNCTION oracle.regexp_replace(text, text, text, integer)
-RETURNS text
-AS 'MODULE_PATHNAME','orafce_textregexreplace_extended_no_n'
-LANGUAGE 'c' IMMUTABLE PARALLEL SAFE;
-
--- REGEXP_REPLACE( string text, pattern text, replace_string text, position int, occurence int ) -> text
-CREATE OR REPLACE FUNCTION oracle.regexp_replace(text, text, text, integer, integer)
-RETURNS text
-AS 'MODULE_PATHNAME','orafce_textregexreplace_extended_no_flags'
-LANGUAGE 'c' IMMUTABLE PARALLEL SAFE;
-
--- REGEXP_REPLACE( string text, pattern text, replace_string text, position int, occurence int, flags text ) -> text
-CREATE OR REPLACE FUNCTION oracle.regexp_replace(text, text, text, integer, integer, text)
-RETURNS text
-AS 'MODULE_PATHNAME','orafce_textregexreplace_extended'
-LANGUAGE 'c' IMMUTABLE PARALLEL SAFE;
-
-CREATE OR REPLACE FUNCTION oracle.regexp_replace(text, text, text, text)
-RETURNS text
-AS 'MODULE_PATHNAME','orafce_textregexreplace'
-LANGUAGE 'c' IMMUTABLE PARALLEL SAFE;
-
-----
--- Add LEAST/GREATEST declaration to return NULL on NULL input.
--- PostgreSQL only returns NULL when all the parameters are NULL.
-----
-
--- GREATEST
-CREATE FUNCTION oracle.greatest(integer, integer)
-RETURNS integer
-AS
-'SELECT greatest($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(integer, integer, integer)
-RETURNS integer
-AS
-'SELECT greatest($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(smallint, smallint)
-RETURNS smallint
-AS
-'SELECT greatest($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(smallint, smallint, smallint)
-RETURNS smallint
-AS
-'SELECT greatest($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(numeric, numeric)
-RETURNS numeric
-AS
-'SELECT greatest($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(numeric, numeric, numeric)
-RETURNS numeric
-AS
-'SELECT greatest($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(bigint, bigint)
-RETURNS bigint
-AS
-'SELECT greatest($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(bigint, bigint, bigint)
-RETURNS bigint
-AS
-'SELECT greatest($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(bpchar, bpchar)
-RETURNS bpchar
-AS
-'SELECT greatest($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(bpchar, bpchar, bpchar)
-RETURNS bpchar
-AS
-'SELECT greatest($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(text, text)
-RETURNS text
-AS
-'SELECT greatest($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(text, text, text)
-RETURNS text
-AS
-'SELECT greatest($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(date, date)
-RETURNS date
-AS
-'SELECT greatest($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(date, date, date)
-RETURNS date
-AS
-'SELECT greatest($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(time, time)
-RETURNS time
-AS
-'SELECT greatest($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(time, time, time)
-RETURNS time
-AS
-'SELECT greatest($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(timestamp, timestamp)
-RETURNS timestamp
-AS
-'SELECT greatest($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(timestamp, timestamp, timestamp)
-RETURNS timestamp
-AS
-'SELECT greatest($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(timestamptz, timestamptz)
-RETURNS timestamptz
-AS
-'SELECT greatest($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(timestamptz, timestamptz, timestamptz)
-RETURNS timestamptz
-AS
-'SELECT greatest($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.greatest(anynonarray, VARIADIC anyarray)
-RETURNS anynonarray
-AS 'MODULE_PATHNAME', 'ora_greatest'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
--- LEAST
-CREATE FUNCTION oracle.least(integer, integer)
-RETURNS integer
-AS
-'SELECT least($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(integer, integer, integer)
-RETURNS integer
-AS
-'SELECT least($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(smallint, smallint)
-RETURNS smallint
-AS
-'SELECT least($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(smallint, smallint, smallint)
-RETURNS smallint
-AS
-'SELECT least($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(numeric, numeric)
-RETURNS numeric
-AS
-'SELECT least($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(numeric, numeric, numeric)
-RETURNS numeric
-AS
-'SELECT least($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(bigint, bigint)
-RETURNS bigint
-AS
-'SELECT least($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(bigint, bigint, bigint)
-RETURNS bigint
-AS
-'SELECT least($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(bpchar, bpchar)
-RETURNS bpchar
-AS
-'SELECT least($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(bpchar, bpchar, bpchar)
-RETURNS bpchar
-AS
-'SELECT least($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(text, text)
-RETURNS text
-AS
-'SELECT least($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(text, text, text)
-RETURNS text
-AS
-'SELECT least($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(date, date)
-RETURNS date
-AS
-'SELECT least($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(date, date, date)
-RETURNS date
-AS
-'SELECT least($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(time, time)
-RETURNS time
-AS
-'SELECT least($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(time, time, time)
-RETURNS time
-AS
-'SELECT least($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(timestamp, timestamp)
-RETURNS timestamp
-AS
-'SELECT least($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(timestamp, timestamp, timestamp)
-RETURNS timestamp
-AS
-'SELECT least($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(timestamptz, timestamptz)
-RETURNS timestamptz
-AS
-'SELECT least($1, $2)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(timestamptz, timestamptz, timestamptz)
-RETURNS timestamptz
-AS
-'SELECT least($1, $2, $3)'
-LANGUAGE SQL STRICT IMMUTABLE PARALLEL SAFE;
-
-CREATE FUNCTION oracle.least(anynonarray, VARIADIC anyarray)
-RETURNS anynonarray
-AS 'MODULE_PATHNAME', 'ora_least'
-LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
-
-CREATE SCHEMA dbms_sql;
-GRANT USAGE ON SCHEMA dbms_sql TO PUBLIC;
-
-CREATE FUNCTION dbms_sql.is_open(c int) RETURNS bool AS 'MODULE_PATHNAME', 'dbms_sql_is_open' LANGUAGE c;
-CREATE FUNCTION dbms_sql.open_cursor() RETURNS int AS 'MODULE_PATHNAME', 'dbms_sql_open_cursor' LANGUAGE c;
-CREATE PROCEDURE dbms_sql.close_cursor(c int) AS 'MODULE_PATHNAME', 'dbms_sql_close_cursor' LANGUAGE c;
-CREATE PROCEDURE dbms_sql.debug_cursor(c int) AS 'MODULE_PATHNAME', 'dbms_sql_debug_cursor' LANGUAGE c;
-CREATE PROCEDURE dbms_sql.parse(c int, stmt oracle.varchar2) AS 'MODULE_PATHNAME', 'dbms_sql_parse' LANGUAGE c;
-CREATE PROCEDURE dbms_sql.bind_variable(c int, name oracle.varchar2, value "any") AS 'MODULE_PATHNAME', 'dbms_sql_bind_variable' LANGUAGE c;
-CREATE FUNCTION dbms_sql.bind_variable_f(c int, name oracle.varchar2, value "any") RETURNS void AS 'MODULE_PATHNAME', 'dbms_sql_bind_variable_f' LANGUAGE c;
-CREATE PROCEDURE dbms_sql.bind_array(c int, name oracle.varchar2, value anyarray) AS 'MODULE_PATHNAME', 'dbms_sql_bind_array_3' LANGUAGE c;
-CREATE PROCEDURE dbms_sql.bind_array(c int, name oracle.varchar2, value anyarray, index1 int, index2 int) AS 'MODULE_PATHNAME', 'dbms_sql_bind_array_5' LANGUAGE c;
-CREATE PROCEDURE dbms_sql.define_column(c int, col int, value "any", column_size int DEFAULT -1) AS 'MODULE_PATHNAME', 'dbms_sql_define_column' LANGUAGE c;
-CREATE PROCEDURE dbms_sql.define_array(c int, col int, value "anyarray", cnt int, lower_bnd int) AS 'MODULE_PATHNAME', 'dbms_sql_define_array' LANGUAGE c;
-CREATE FUNCTION dbms_sql.execute(c int) RETURNS bigint AS 'MODULE_PATHNAME', 'dbms_sql_execute' LANGUAGE c;
-CREATE FUNCTION dbms_sql.fetch_rows(c int) RETURNS int AS 'MODULE_PATHNAME', 'dbms_sql_fetch_rows' LANGUAGE c;
-CREATE FUNCTION dbms_sql.execute_and_fetch(c int, exact bool DEFAULT false) RETURNS int AS 'MODULE_PATHNAME', 'dbms_sql_execute_and_fetch' LANGUAGE c;
-CREATE FUNCTION dbms_sql.last_row_count() RETURNS int AS 'MODULE_PATHNAME', 'dbms_sql_last_row_count' LANGUAGE c;
-CREATE PROCEDURE dbms_sql.column_value(c int, pos int, INOUT value anyelement) AS 'MODULE_PATHNAME', 'dbms_sql_column_value' LANGUAGE c;
-CREATE FUNCTION dbms_sql.column_value_f(c int, pos int, value anyelement) RETURNS anyelement AS 'MODULE_PATHNAME', 'dbms_sql_column_value_f' LANGUAGE c;
-
-CREATE TYPE dbms_sql.desc_rec AS (
-    col_type int,
-    col_max_len int,
-    col_name text,
-    col_name_len int,
-    col_schema text,
-    col_schema_len int,
-    col_precision int,
-    col_scale int,
-    col_charsetid int,
-    col_charsetform int,
-    col_null_ok boolean,
-    col_type_name text,
-    col_type_name_len int);
-
-CREATE FUNCTION dbms_sql.describe_columns_f(c int, OUT col_cnt int, OUT desc_t dbms_sql.desc_rec[]) AS 'MODULE_PATHNAME', 'dbms_sql_describe_columns_f' LANGUAGE c;
-CREATE PROCEDURE dbms_sql.describe_columns(c int, INOUT col_cnt int, INOUT desc_t dbms_sql.desc_rec[]) AS 'MODULE_PATHNAME', 'dbms_sql_describe_columns_f' LANGUAGE c;
-
-SELECT pg_extension_config_dump('utl_file.utl_file_dir', '');
-
-CREATE OR REPLACE FUNCTION oracle.sys_guid()
-RETURNS bytea
-AS 'MODULE_PATHNAME','orafce_sys_guid'
-LANGUAGE C VOLATILE;
-
-CREATE FUNCTION oracle.to_char(str text)
-RETURNS text
-AS $$
-select str;
-$$ LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE;
-COMMENT ON FUNCTION oracle.to_char(text) IS 'Convert string to string';
-

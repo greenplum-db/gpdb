@@ -33,8 +33,15 @@ CREATE OR REPLACE FUNCTION receiveFrom(pipename text) RETURNS void AS $$
 DECLARE
         typ INTEGER;
 BEGIN
+        WHILE true LOOP
+            SELECT dbms_pipe.receive_message(pipename, 0) INTO typ;
+            -- 0 means data is available
+            IF typ = 0 THEN
+                EXIT;
+            END IF;
+            PERFORM pg_sleep(0.5);
+        END LOOP;
          WHILE true LOOP
-                PERFORM dbms_pipe.receive_message(pipename,2);
                 SELECT dbms_pipe.next_item_type() INTO typ;
                 IF typ = 0 THEN EXIT;
                 ELSIF typ=9 THEN RAISE NOTICE 'RECEIVE %: %', typ, dbms_pipe.unpack_message_number();
@@ -44,6 +51,7 @@ BEGIN
                 ELSIF typ=23 THEN RAISE NOTICE 'RECEIVE %: %', typ, encode(dbms_pipe.unpack_message_bytea(),'escape');
                 ELSIF typ=24 THEN RAISE NOTICE 'RECEIVE %: %', typ, dbms_pipe.unpack_message_record();
                 END IF;
+                PERFORM dbms_pipe.receive_message(pipename, 2);
         END LOOP;
         PERFORM dbms_pipe.purge(pipename);
 END;

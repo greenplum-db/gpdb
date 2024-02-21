@@ -194,6 +194,9 @@ ALTER FUNCTION oracle.to_date(TEXT) PARALLEL SAFE;
 ALTER FUNCTION oracle.to_date(TEXT,TEXT) PARALLEL SAFE;
 ALTER FUNCTION oracle.orafce__obsolete_to_date(str text) PARALLEL SAFE;
 
+-- decode functions are left out in GPDB, because GPDB has a built-in parser
+-- hack to transform DECODE() into CASE-WHEN.
+/*
 ALTER FUNCTION oracle.decode(anyelement, anyelement, bigint) PARALLEL SAFE;
 ALTER FUNCTION oracle.decode(anyelement, anyelement, bigint, anyelement, bigint) PARALLEL SAFE;
 ALTER FUNCTION oracle.decode(anyelement, anyelement, bigint, anyelement, bigint, anyelement, bigint) PARALLEL SAFE;
@@ -248,6 +251,7 @@ ALTER FUNCTION oracle.decode(anyelement, anyelement, timestamp without time zone
 ALTER FUNCTION oracle.decode(anyelement, anyelement, timestamp without time zone, anyelement, timestamp without time zone, anyelement, timestamp without time zone, timestamp without time zone) PARALLEL SAFE;
 ALTER FUNCTION oracle.decode(anyelement, anyelement, timestamp without time zone, anyelement, timestamp without time zone, timestamp without time zone) PARALLEL SAFE;
 ALTER FUNCTION oracle.decode(anyelement, anyelement, timestamp without time zone, timestamp without time zone) PARALLEL SAFE;
+*/
 
 ALTER FUNCTION oracle.nvl(anyelement, anyelement) PARALLEL SAFE;
 ALTER FUNCTION oracle.nvl(bigint, integer) PARALLEL SAFE;

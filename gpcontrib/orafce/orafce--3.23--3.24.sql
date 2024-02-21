@@ -1,3 +1,5 @@
+-- we cannot change typstorage in GP7
+SET allow_system_table_mods=true;
 DO $$
 BEGIN
   IF EXISTS(SELECT * FROM pg_settings WHERE name = 'server_version_num' AND setting::int >= 130000) THEN
@@ -9,3 +11,4 @@ BEGIN
   END IF;
 END;
 $$;
+RESET allow_system_table_mods;

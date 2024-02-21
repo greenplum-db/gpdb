@@ -102,6 +102,10 @@ ALTER FUNCTION public.dump("any",integer) SET SCHEMA oracle;
 ALTER FUNCTION public.nvl(anyelement,anyelement) SET SCHEMA oracle;
 ALTER FUNCTION public.nvl2("any",anyelement,anyelement) SET SCHEMA oracle;
 ALTER FUNCTION public.nvl2("any",text,text) SET SCHEMA oracle;
+
+-- decode functions are left out in GPDB, because GPDB has a built-in parser
+-- hack to transform DECODE() into CASE-WHEN.
+/*
 ALTER FUNCTION public.decode(anyelement,anyelement,text) SET SCHEMA oracle;
 ALTER FUNCTION public.decode(anyelement,anyelement,text,text) SET SCHEMA oracle;
 ALTER FUNCTION public.decode(anyelement,anyelement,text,anyelement,text) SET SCHEMA oracle;
@@ -156,6 +160,8 @@ ALTER FUNCTION public.decode(anyelement,anyelement,timestamp with time zone,anye
 ALTER FUNCTION public.decode(anyelement,anyelement,timestamp with time zone,anyelement,timestamp with time zone,timestamp with time zone) SET SCHEMA oracle;
 ALTER FUNCTION public.decode(anyelement,anyelement,timestamp with time zone,anyelement,timestamp with time zone,anyelement,timestamp with time zone) SET SCHEMA oracle;
 ALTER FUNCTION public.decode(anyelement,anyelement,timestamp with time zone,anyelement,timestamp with time zone,anyelement,timestamp with time zone,timestamp with time zone) SET SCHEMA oracle;
+*/
+
 ALTER FUNCTION public.dump(text) SET SCHEMA oracle;
 ALTER FUNCTION public.dump(text,integer) SET SCHEMA oracle;
 ALTER FUNCTION public.varchar2in(cstring,oid,integer) SET SCHEMA oracle;

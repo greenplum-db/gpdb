@@ -22,9 +22,9 @@ SELECT current_setting('server_version_num')::integer >= 150000
        AS set_libc_locale_provider \gset
 
 \if :set_libc_locale_provider
-CREATE DATABASE regression_sort WITH TEMPLATE = template0 ENCODING='SQL_ASCII' LC_COLLATE='C' LC_CTYPE='C' LOCALE_PROVIDER='libc';
+CREATE DATABASE regression_sort WITH TEMPLATE = template0 ENCODING='UTF-8' LC_COLLATE='C' LC_CTYPE='C' LOCALE_PROVIDER='libc';
 \else
-CREATE DATABASE regression_sort WITH TEMPLATE = template0 ENCODING='SQL_ASCII' LC_COLLATE='C' LC_CTYPE='C';
+CREATE DATABASE regression_sort WITH TEMPLATE = template0 ENCODING='UTF-8' LC_COLLATE='C' LC_CTYPE='C';
 \endif
 
 \c regression_sort

@@ -1,3 +1,6 @@
+-- dbms_alert is removed in GPDB because it is not possible to run it in MPP
+-- environments as implemented in postgres.
+/*
 CREATE FUNCTION dbms_alert.waitany(OUT name text, OUT message text, OUT status integer)
 RETURNS record
 AS 'MODULE_PATHNAME','dbms_alert_waitany_maxwait'
@@ -9,3 +12,4 @@ RETURNS record
 AS 'MODULE_PATHNAME','dbms_alert_waitone_maxwait'
 LANGUAGE C VOLATILE;
 COMMENT ON FUNCTION dbms_alert.waitone(text, OUT text, OUT integer) IS 'Wait for specific signal';
+*/

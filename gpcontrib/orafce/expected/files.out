@@ -172,7 +172,7 @@ NOTICE:  [11] >>[1=1, 2=2, 3=3, 4=4, 5=5]<<
 NOTICE:  >>1234<<
 NOTICE:  >>5678<<
 NOTICE:  >>90<<
-NOTICE:  finish no data found 
+NOTICE:  finish no data found
 NOTICE:  is_open = t
 NOTICE:  is_open = f
  read_file 
@@ -237,7 +237,7 @@ NOTICE:  [11] >>[1=1, 2=2, 3=3, 4=4, 5=5]<<
 NOTICE:  >>1234<<
 NOTICE:  >>5678<<
 NOTICE:  >>90<<
-NOTICE:  finish no data found 
+NOTICE:  finish no data found
 NOTICE:  is_open = t
 NOTICE:  is_open = f
  read_file 

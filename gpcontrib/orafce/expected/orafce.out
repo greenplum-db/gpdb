@@ -1546,738 +1546,713 @@ select lnnvl(NULL);
 (1 row)
 
 select decode(1, 1, 100, 2, 200);
- decode 
---------
-    100
+ case 
+------
+  100
 (1 row)
 
 select decode(2, 1, 100, 2, 200);
- decode 
---------
-    200
+ case 
+------
+  200
 (1 row)
 
 select decode(3, 1, 100, 2, 200);
- decode 
---------
-       
+ case 
+------
+     
 (1 row)
 
 select decode(3, 1, 100, 2, 200, 300);
- decode 
---------
-    300
+ case 
+------
+  300
 (1 row)
 
 select decode(NULL, 1, 100, NULL, 200, 300);
- decode 
---------
-    200
-(1 row)
-
+ERROR:  operator does not exist: text = integer
+LINE 1: select decode(NULL, 1, 100, NULL, 200, 300);
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode('1'::text, '1', 100, '2', 200);
- decode 
---------
-    100
+ case 
+------
+  100
 (1 row)
 
 select decode(2, 1, 'ABC', 2, 'DEF');
- decode 
---------
+ case 
+------
  DEF
 (1 row)
 
 select decode('2009-02-05'::date, '2009-02-05', 'ok');
- decode 
---------
+ case 
+------
  ok
 (1 row)
 
 select decode('2009-02-05 01:02:03'::timestamp, '2009-02-05 01:02:03', 'ok');
- decode 
---------
+ case 
+------
  ok
 (1 row)
 
 -- For type 'bpchar'
 select decode('a'::bpchar, 'a'::bpchar,'postgres'::bpchar);
-  decode  
+   case   
 ----------
  postgres
 (1 row)
 
 select decode('c'::bpchar, 'a'::bpchar,'postgres'::bpchar);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode('a'::bpchar, 'a'::bpchar,'postgres'::bpchar,'default value'::bpchar);
-  decode  
+   case   
 ----------
  postgres
 (1 row)
 
 select decode('c', 'a'::bpchar,'postgres'::bpchar,'default value'::bpchar);
-    decode     
+     case      
 ---------------
  default value
 (1 row)
 
 select decode('a'::bpchar, 'a'::bpchar,'postgres'::bpchar,'b'::bpchar,'database'::bpchar);
-  decode  
+   case   
 ----------
  postgres
 (1 row)
 
 select decode('d'::bpchar, 'a'::bpchar,'postgres'::bpchar,'b'::bpchar,'database'::bpchar);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode('a'::bpchar, 'a'::bpchar,'postgres'::bpchar,'b'::bpchar,'database'::bpchar,'default value'::bpchar);
-  decode  
+   case   
 ----------
  postgres
 (1 row)
 
 select decode('d'::bpchar, 'a'::bpchar,'postgres'::bpchar,'b'::bpchar,'database'::bpchar,'default value'::bpchar);
-    decode     
+     case      
 ---------------
  default value
 (1 row)
 
 select decode('a'::bpchar, 'a'::bpchar,'postgres'::bpchar,'b'::bpchar,'database'::bpchar, 'c'::bpchar, 'system'::bpchar);
-  decode  
+   case   
 ----------
  postgres
 (1 row)
 
 select decode('d'::bpchar, 'a'::bpchar,'postgres'::bpchar,'b'::bpchar,'database'::bpchar, 'c'::bpchar, 'system'::bpchar);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode('a'::bpchar, 'a'::bpchar,'postgres'::bpchar,'b'::bpchar,'database'::bpchar, 'c'::bpchar, 'system'::bpchar,'default value'::bpchar);
-  decode  
+   case   
 ----------
  postgres
 (1 row)
 
 select decode('d'::bpchar, 'a'::bpchar,'postgres'::bpchar,'b'::bpchar,'database'::bpchar, 'c'::bpchar, 'system'::bpchar,'default value'::bpchar);
-    decode     
+     case      
 ---------------
  default value
 (1 row)
 
 select decode(NULL, 'a'::bpchar, 'postgres'::bpchar, NULL,'database'::bpchar);
-  decode  
+   case   
 ----------
  database
 (1 row)
 
 select decode(NULL, 'a'::bpchar, 'postgres'::bpchar, 'b'::bpchar,'database'::bpchar);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode(NULL, 'a'::bpchar, 'postgres'::bpchar, NULL,'database'::bpchar,'default value'::bpchar);
-  decode  
+   case   
 ----------
  database
 (1 row)
 
 select decode(NULL, 'a'::bpchar, 'postgres'::bpchar, 'b'::bpchar,'database'::bpchar,'default value'::bpchar);
-    decode     
+     case      
 ---------------
  default value
 (1 row)
 
 -- For type 'bigint'
 select decode(2147483651::bigint, 2147483650::bigint,2147483650::bigint);
- decode 
---------
-       
+ case 
+------
+     
 (1 row)
 
 select decode(2147483653::bigint, 2147483651::bigint,2147483650::bigint);
- decode 
---------
-       
+ case 
+------
+     
 (1 row)
 
 select decode(2147483653::bigint, 2147483651::bigint,2147483650::bigint,9999999999::bigint);
-   decode   
+    case    
 ------------
  9999999999
 (1 row)
 
 select decode(2147483653::bigint, 2147483651::bigint,2147483650::bigint,9999999999::bigint);
-   decode   
+    case    
 ------------
  9999999999
 (1 row)
 
 select decode(2147483651::bigint, 2147483651::bigint,2147483650::bigint,2147483652::bigint,2147483651::bigint);
-   decode   
+    case    
 ------------
  2147483650
 (1 row)
 
 select decode(2147483654::bigint, 2147483651::bigint,2147483650::bigint,2147483652::bigint,2147483651::bigint);
- decode 
---------
-       
+ case 
+------
+     
 (1 row)
 
 select decode(2147483651::bigint, 2147483651::bigint,2147483650::bigint,2147483652::bigint,2147483651::bigint,9999999999::bigint);
-   decode   
+    case    
 ------------
  2147483650
 (1 row)
 
 select decode(2147483654::bigint, 2147483651::bigint,2147483650::bigint,2147483652::bigint,2147483651::bigint,9999999999::bigint);
-   decode   
+    case    
 ------------
  9999999999
 (1 row)
 
 select decode(2147483651::bigint, 2147483651::bigint,2147483650::bigint, 2147483652::bigint,2147483651::bigint, 2147483653::bigint, 2147483652::bigint);
-   decode   
+    case    
 ------------
  2147483650
 (1 row)
 
 select decode(2147483654::bigint, 2147483651::bigint,2147483650::bigint, 2147483652::bigint,2147483651::bigint, 2147483653::bigint, 2147483652::bigint);
- decode 
---------
-       
+ case 
+------
+     
 (1 row)
 
 select decode(2147483651::bigint, 2147483651::bigint,2147483650::bigint, 2147483652::bigint,2147483651::bigint, 2147483653::bigint, 2147483652::bigint,9999999999::bigint);
-   decode   
+    case    
 ------------
  2147483650
 (1 row)
 
 select decode(2147483654::bigint, 2147483651::bigint,2147483650::bigint, 2147483652::bigint,2147483651::bigint, 2147483653::bigint, 2147483652::bigint,9999999999::bigint);
-   decode   
+    case    
 ------------
  9999999999
 (1 row)
 
 select decode(NULL, 2147483651::bigint, 2147483650::bigint, NULL,2147483651::bigint);
-   decode   
-------------
- 2147483651
-(1 row)
-
+ERROR:  operator does not exist: text = bigint
+LINE 1: select decode(NULL, 2147483651::bigint, 2147483650::bigint, ...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, 2147483651::bigint, 2147483650::bigint, 2147483652::bigint,2147483651::bigint);
- decode 
---------
-       
-(1 row)
-
+ERROR:  operator does not exist: text = bigint
+LINE 1: select decode(NULL, 2147483651::bigint, 2147483650::bigint, ...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, 2147483651::bigint, 2147483650::bigint, NULL,2147483651::bigint,9999999999::bigint);
-   decode   
-------------
- 2147483651
-(1 row)
-
+ERROR:  operator does not exist: text = bigint
+LINE 1: select decode(NULL, 2147483651::bigint, 2147483650::bigint, ...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, 2147483651::bigint, 2147483650::bigint, 2147483652::bigint,2147483651::bigint,9999999999::bigint);
-   decode   
-------------
- 9999999999
-(1 row)
-
+ERROR:  operator does not exist: text = bigint
+LINE 1: select decode(NULL, 2147483651::bigint, 2147483650::bigint, ...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 -- For type 'numeric'
 select decode(12.001::numeric(5,3), 12.001::numeric(5,3),214748.3650::numeric(10,4));
-   decode    
+    case     
 -------------
  214748.3650
 (1 row)
 
 select decode(12.003::numeric(5,3), 12.001::numeric(5,3),214748.3650::numeric(10,4));
- decode 
---------
-       
+ case 
+------
+     
 (1 row)
 
 select decode(12.001::numeric(5,3), 12.001::numeric(5,3),214748.3650::numeric(10,4),999999.9999::numeric(10,4));
-   decode    
+    case     
 -------------
  214748.3650
 (1 row)
 
 select decode(12.003::numeric(5,3), 12.001::numeric(5,3),214748.3650::numeric(10,4),999999.9999::numeric(10,4));
-   decode    
+    case     
 -------------
  999999.9999
 (1 row)
 
 select decode(12.001::numeric(5,3), 12.001::numeric(5,3),214748.3650::numeric(10,4),12.002::numeric(5,3),214748.3651::numeric(10,4));
-   decode    
+    case     
 -------------
  214748.3650
 (1 row)
 
 select decode(12.004::numeric(5,3), 12.001::numeric(5,3),214748.3650::numeric(10,4),12.002::numeric(5,3),214748.3651::numeric(10,4));
- decode 
---------
-       
+ case 
+------
+     
 (1 row)
 
 select decode(12.001::numeric(5,3), 12.001::numeric(5,3),214748.3650::numeric(10,4),12.002::numeric(5,3),214748.3651::numeric(10,4),999999.9999::numeric(10,4));
-   decode    
+    case     
 -------------
  214748.3650
 (1 row)
 
 select decode(12.004::numeric(5,3), 12.001::numeric(5,3),214748.3650::numeric(10,4),12.002::numeric(5,3),214748.3651::numeric(10,4),999999.9999::numeric(10,4));
-   decode    
+    case     
 -------------
  999999.9999
 (1 row)
 
 select decode(12.001::numeric(5,3), 12.001::numeric(5,3),214748.3650::numeric(10,4),12.002::numeric(5,3),214748.3651::numeric(10,4), 12.003::numeric(5,3), 214748.3652::numeric(10,4));
-   decode    
+    case     
 -------------
  214748.3650
 (1 row)
 
 select decode(12.004::numeric(5,3), 12.001::numeric(5,3),214748.3650::numeric(10,4),12.002::numeric(5,3),214748.3651::numeric(10,4), 12.003::numeric(5,3), 214748.3652::numeric(10,4));
- decode 
---------
-       
+ case 
+------
+     
 (1 row)
 
 select decode(12.001::numeric(5,3), 12.001::numeric(5,3),214748.3650::numeric(10,4),12.002::numeric(5,3),214748.3651::numeric(10,4), 12.003::numeric(5,3), 214748.3652::numeric(10,4),999999.9999::numeric(10,4));
-   decode    
+    case     
 -------------
  214748.3650
 (1 row)
 
 select decode(12.004::numeric(5,3), 12.001::numeric(5,3),214748.3650::numeric(10,4),12.002::numeric(5,3),214748.3651::numeric(10,4), 12.003::numeric(5,3), 214748.3652::numeric(10,4),999999.9999::numeric(10,4));
-   decode    
+    case     
 -------------
  999999.9999
 (1 row)
 
 select decode(NULL, 12.001::numeric(5,3), 214748.3650::numeric(10,4), NULL,214748.3651::numeric(10,4));
-   decode    
--------------
- 214748.3651
-(1 row)
-
+ERROR:  operator does not exist: text = numeric
+LINE 1: select decode(NULL, 12.001::numeric(5,3), 214748.3650::numer...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, 12.001::numeric(5,3), 214748.3650::numeric(10,4), 12.002::numeric(5,3),214748.3651::numeric(10,4));
- decode 
---------
-       
-(1 row)
-
+ERROR:  operator does not exist: text = numeric
+LINE 1: select decode(NULL, 12.001::numeric(5,3), 214748.3650::numer...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, 12.001::numeric(5,3), 214748.3650::numeric(10,4), NULL,214748.3651::numeric(10,4),999999.9999::numeric(10,4));
-   decode    
--------------
- 214748.3651
-(1 row)
-
+ERROR:  operator does not exist: text = numeric
+LINE 1: select decode(NULL, 12.001::numeric(5,3), 214748.3650::numer...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, 12.001::numeric(5,3), 214748.3650::numeric(10,4), 12.002::numeric(5,3),214748.3651::numeric(10,4),999999.9999::numeric(10,4));
-   decode    
--------------
- 999999.9999
-(1 row)
-
+ERROR:  operator does not exist: text = numeric
+LINE 1: select decode(NULL, 12.001::numeric(5,3), 214748.3650::numer...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 --For type 'date'
 select decode('2020-01-01'::date, '2020-01-01'::date,'2012-12-20'::date);
-   decode   
+    case    
 ------------
  2012-12-20
 (1 row)
 
 select decode('2020-01-03'::date, '2020-01-01'::date,'2012-12-20'::date);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode('2020-01-01'::date, '2020-01-01'::date,'2012-12-20'::date,'2012-12-21'::date);
-   decode   
+    case    
 ------------
  2012-12-20
 (1 row)
 
 select decode('2020-01-03'::date, '2020-01-01'::date,'2012-12-20'::date,'2012-12-21'::date);
-   decode   
+    case    
 ------------
  2012-12-21
 (1 row)
 
 select decode('2020-01-01'::date, '2020-01-01'::date,'2012-12-20'::date,'2020-01-02'::date,'2012-12-21'::date);
-   decode   
+    case    
 ------------
  2012-12-20
 (1 row)
 
 select decode('2020-01-04'::date, '2020-01-01'::date,'2012-12-20'::date,'2020-01-02'::date,'2012-12-21'::date);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode('2020-01-01'::date, '2020-01-01'::date,'2012-12-20'::date,'2020-01-02'::date,'2012-12-21'::date,'2012-12-31'::date);
-   decode   
+    case    
 ------------
  2012-12-20
 (1 row)
 
 select decode('2020-01-04'::date, '2020-01-01'::date,'2012-12-20'::date,'2020-01-02'::date,'2012-12-21'::date,'2012-12-31'::date);
-   decode   
+    case    
 ------------
  2012-12-31
 (1 row)
 
 select decode('2020-01-01'::date, '2020-01-01'::date,'2012-12-20'::date,'2020-01-02'::date,'2012-12-21'::date, '2020-01-03'::date, '2012-12-31'::date);
-   decode   
+    case    
 ------------
  2012-12-20
 (1 row)
 
 select decode('2020-01-04'::date, '2020-01-01'::date,'2012-12-20'::date,'2020-01-02'::date,'2012-12-21'::date, '2020-01-03'::date, '2012-12-31'::date);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode('2020-01-01'::date, '2020-01-01'::date,'2012-12-20'::date,'2020-01-02'::date,'2012-12-21'::date, '2020-01-03'::date, '2012-12-31'::date,'2013-01-01'::date);
-   decode   
+    case    
 ------------
  2012-12-20
 (1 row)
 
 select decode('2020-01-04'::date, '2020-01-01'::date,'2012-12-20'::date,'2020-01-02'::date,'2012-12-21'::date, '2020-01-03'::date, '2012-12-31'::date,'2013-01-01'::date);
-   decode   
+    case    
 ------------
  2013-01-01
 (1 row)
 
 select decode(NULL, '2020-01-01'::date, '2012-12-20'::date, NULL,'2012-12-21'::date);
-   decode   
-------------
- 2012-12-21
-(1 row)
-
+ERROR:  operator does not exist: text = date
+LINE 1: select decode(NULL, '2020-01-01'::date, '2012-12-20'::date, ...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, '2020-01-01'::date, '2012-12-20'::date, '2020-01-02'::date,'2012-12-21'::date);
- decode 
---------
- 
-(1 row)
-
+ERROR:  operator does not exist: text = date
+LINE 1: select decode(NULL, '2020-01-01'::date, '2012-12-20'::date, ...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, '2020-01-01'::date, '2012-12-20'::date, NULL,'2012-12-21'::date,'2012-12-31'::date);
-   decode   
-------------
- 2012-12-21
-(1 row)
-
+ERROR:  operator does not exist: text = date
+LINE 1: select decode(NULL, '2020-01-01'::date, '2012-12-20'::date, ...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, '2020-01-01'::date, '2012-12-20'::date, '2020-01-02'::date,'2012-12-21'::date,'2012-12-31'::date);
-   decode   
-------------
- 2012-12-31
-(1 row)
-
+ERROR:  operator does not exist: text = date
+LINE 1: select decode(NULL, '2020-01-01'::date, '2012-12-20'::date, ...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 -- For type 'time'
 select decode('01:00:01'::time, '01:00:01'::time,'09:00:00'::time);
-  decode  
+   case   
 ----------
  09:00:00
 (1 row)
 
 select decode('01:00:03'::time, '01:00:01'::time,'09:00:00'::time);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode('01:00:01'::time, '01:00:01'::time,'09:00:00'::time,'00:00:00'::time);
-  decode  
+   case   
 ----------
  09:00:00
 (1 row)
 
 select decode('01:00:03'::time, '01:00:01'::time,'09:00:00'::time,'00:00:00'::time);
-  decode  
+   case   
 ----------
  00:00:00
 (1 row)
 
 select decode('01:00:01'::time, '01:00:01'::time,'09:00:00'::time,'01:00:02'::time,'12:00:00'::time);
-  decode  
+   case   
 ----------
  09:00:00
 (1 row)
 
 select decode('01:00:04'::time, '01:00:01'::time,'09:00:00'::time,'01:00:02'::time,'12:00:00'::time);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode('01:00:01'::time, '01:00:01'::time,'09:00:00'::time,'01:00:02'::time,'12:00:00'::time,'00:00:00'::time);
-  decode  
+   case   
 ----------
  09:00:00
 (1 row)
 
 select decode('01:00:04'::time, '01:00:01'::time,'09:00:00'::time,'01:00:01'::time,'12:00:00'::time,'00:00:00'::time);
-  decode  
+   case   
 ----------
  00:00:00
 (1 row)
 
 select decode('01:00:01'::time, '01:00:01'::time,'09:00:00'::time,'01:00:02'::time,'12:00:00'::time, '01:00:03'::time, '15:00:00'::time);
-  decode  
+   case   
 ----------
  09:00:00
 (1 row)
 
 select decode('01:00:04'::time, '01:00:01'::time,'09:00:00'::time,'01:00:02'::time,'12:00:00'::time, '01:00:03'::time, '15:00:00'::time);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode('01:00:01'::time, '01:00:01'::time,'09:00:00'::time,'01:00:02'::time,'12:00:00'::time, '01:00:03'::time, '15:00:00'::time,'00:00:00'::time);
-  decode  
+   case   
 ----------
  09:00:00
 (1 row)
 
 select decode('01:00:04'::time, '01:00:01'::time,'09:00:00'::time,'01:00:02'::time,'12:00:00'::time, '01:00:03'::time, '15:00:00'::time,'00:00:00'::time);
-  decode  
+   case   
 ----------
  00:00:00
 (1 row)
 
 select decode(NULL, '01:00:01'::time, '09:00:00'::time, NULL,'12:00:00'::time);
-  decode  
-----------
- 12:00:00
-(1 row)
-
+ERROR:  operator does not exist: text = time without time zone
+LINE 1: select decode(NULL, '01:00:01'::time, '09:00:00'::time, NULL...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, '01:00:01'::time, '09:00:00'::time, '01:00:02'::time,'12:00:00'::time);
- decode 
---------
- 
-(1 row)
-
+ERROR:  operator does not exist: text = time without time zone
+LINE 1: select decode(NULL, '01:00:01'::time, '09:00:00'::time, '01:...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, '01:00:01'::time, '09:00:00'::time, NULL,'12:00:00'::time,'00:00:00'::time);
-  decode  
-----------
- 12:00:00
-(1 row)
-
+ERROR:  operator does not exist: text = time without time zone
+LINE 1: select decode(NULL, '01:00:01'::time, '09:00:00'::time, NULL...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, '01:00:01'::time, '09:00:00'::time, '01:00:02'::time,'12:00:00'::time,'00:00:00'::time);
-  decode  
-----------
- 00:00:00
-(1 row)
-
+ERROR:  operator does not exist: text = time without time zone
+LINE 1: select decode(NULL, '01:00:01'::time, '09:00:00'::time, '01:...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 -- For type 'timestamp'
 select decode('2020-01-01 01:00:01'::timestamp, '2020-01-01 01:00:01'::timestamp,'2012-12-20 09:00:00'::timestamp);
-       decode        
+        case         
 ---------------------
  2012-12-20 09:00:00
 (1 row)
 
 select decode('2020-01-03 01:00:01'::timestamp, '2020-01-01 01:00:01'::timestamp,'2012-12-20 09:00:00'::timestamp);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode('2020-01-01 01:00:01'::timestamp, '2020-01-01 01:00:01'::timestamp,'2012-12-20 09:00:00'::timestamp,'2012-12-20 00:00:00'::timestamp);
-       decode        
+        case         
 ---------------------
  2012-12-20 09:00:00
 (1 row)
 
 select decode('2020-01-03 01:00:01'::timestamp, '2020-01-01 01:00:01'::timestamp,'2012-12-20 09:00:00'::timestamp,'2012-12-20 00:00:00'::timestamp);
-       decode        
+        case         
 ---------------------
  2012-12-20 00:00:00
 (1 row)
 
 select decode('2020-01-01 01:00:01'::timestamp, '2020-01-01 01:00:01'::timestamp,'2012-12-20 09:00:00'::timestamp,'2020-01-02 01:00:01'::timestamp,'2012-12-20 12:00:00'::timestamp);
-       decode        
+        case         
 ---------------------
  2012-12-20 09:00:00
 (1 row)
 
 select decode('2020-01-04 01:00:01'::timestamp, '2020-01-01 01:00:01'::timestamp,'2012-12-20 09:00:00'::timestamp,'2020-01-02 01:00:01'::timestamp,'2012-12-20 12:00:00'::timestamp);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode('2020-01-01 01:00:01'::timestamp, '2020-01-01 01:00:01'::timestamp,'2012-12-20 09:00:00'::timestamp,'2020-01-02 01:00:01'::timestamp,'2012-12-20 12:00:00'::timestamp,'2012-12-20 00:00:00'::timestamp);
-       decode        
+        case         
 ---------------------
  2012-12-20 09:00:00
 (1 row)
 
 select decode('2020-01-04 01:00:01'::timestamp, '2020-01-01 01:00:01'::timestamp,'2012-12-20 09:00:00'::timestamp,'2020-01-02 01:00:01'::timestamp,'2012-12-20 12:00:00'::timestamp,'2012-12-20 00:00:00'::timestamp);
-       decode        
+        case         
 ---------------------
  2012-12-20 00:00:00
 (1 row)
 
 select decode('2020-01-01 01:00:01'::timestamp, '2020-01-01 01:00:01'::timestamp,'2012-12-20 09:00:00'::timestamp,'2020-01-02 01:00:01'::timestamp,'2012-12-20 12:00:00'::timestamp, '2020-01-03 01:00:01'::timestamp, '2012-12-20 15:00:00'::timestamp);
-       decode        
+        case         
 ---------------------
  2012-12-20 09:00:00
 (1 row)
 
 select decode('2020-01-04 01:00:01'::timestamp, '2020-01-01 01:00:01'::timestamp,'2012-12-20 09:00:00'::timestamp,'2020-01-02 01:00:01'::timestamp,'2012-12-20 12:00:00'::timestamp, '2020-01-03 01:00:01'::timestamp, '2012-12-20 15:00:00'::timestamp);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode('2020-01-01 01:00:01'::timestamp, '2020-01-01 01:00:01'::timestamp,'2012-12-20 09:00:00'::timestamp,'2020-01-02 01:00:01'::timestamp,'2012-12-20 12:00:00'::timestamp, '2020-01-03 01:00:01'::timestamp, '2012-12-20 15:00:00'::timestamp,'2012-12-20 00:00:00'::timestamp);
-       decode        
+        case         
 ---------------------
  2012-12-20 09:00:00
 (1 row)
 
 select decode('2020-01-04 01:00:01'::timestamp, '2020-01-01 01:00:01'::timestamp,'2012-12-20 09:00:00'::timestamp,'2020-01-02 01:00:01'::timestamp,'2012-12-20 12:00:00'::timestamp, '2020-01-03 01:00:01'::timestamp, '2012-12-20 15:00:00'::timestamp,'2012-12-20 00:00:00'::timestamp);
-       decode        
+        case         
 ---------------------
  2012-12-20 00:00:00
 (1 row)
 
 select decode(NULL, '2020-01-01 01:00:01'::timestamp, '2012-12-20 09:00:00'::timestamp, NULL,'2012-12-20 12:00:00'::timestamp);
-       decode        
----------------------
- 2012-12-20 12:00:00
-(1 row)
-
+ERROR:  operator does not exist: text = timestamp without time zone
+LINE 1: select decode(NULL, '2020-01-01 01:00:01'::timestamp, '2012-...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, '2020-01-01 01:00:01'::timestamp, '2012-12-20 09:00:00'::timestamp, '2020-01-02 01:00:01'::timestamp,'2012-12-20 12:00:00'::timestamp);
- decode 
---------
- 
-(1 row)
-
+ERROR:  operator does not exist: text = timestamp without time zone
+LINE 1: select decode(NULL, '2020-01-01 01:00:01'::timestamp, '2012-...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, '2020-01-01 01:00:01'::timestamp, '2012-12-20 09:00:00'::timestamp, NULL,'2012-12-20 12:00:00'::timestamp,'2012-12-20 00:00:00'::timestamp);
-       decode        
----------------------
- 2012-12-20 12:00:00
-(1 row)
-
+ERROR:  operator does not exist: text = timestamp without time zone
+LINE 1: select decode(NULL, '2020-01-01 01:00:01'::timestamp, '2012-...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, '2020-01-01 01:00:01'::timestamp, '2012-12-20 09:00:00'::timestamp, '2020-01-02 01:00:01'::timestamp,'2012-12-20 12:00:00'::timestamp,'2012-12-20 00:00:00'::timestamp);
-       decode        
----------------------
- 2012-12-20 00:00:00
-(1 row)
-
+ERROR:  operator does not exist: text = timestamp without time zone
+LINE 1: select decode(NULL, '2020-01-01 01:00:01'::timestamp, '2012-...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 -- For type 'timestamptz'
 select decode('2020-01-01 01:00:01-08'::timestamptz, '2020-01-01 01:00:01-08'::timestamptz,'2012-12-20 09:00:00-08'::timestamptz);
-         decode         
+          case          
 ------------------------
  2012-12-20 09:00:00-08
 (1 row)
 
 select decode('2020-01-03 01:00:01-08'::timestamptz, '2020-01-01 01:00:01-08'::timestamptz,'2012-12-20 09:00:00-08'::timestamptz);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode('2020-01-01 01:00:01-08'::timestamptz, '2020-01-01 01:00:01-08'::timestamptz,'2012-12-20 09:00:00-08'::timestamptz,'2012-12-20 00:00:00-08'::timestamptz);
-         decode         
+          case          
 ------------------------
  2012-12-20 09:00:00-08
 (1 row)
 
 select decode('2020-01-03 01:00:01-08'::timestamptz, '2020-01-01 01:00:01-08'::timestamptz,'2012-12-20 09:00:00-08'::timestamptz,'2012-12-20 00:00:00-08'::timestamptz);
-         decode         
+          case          
 ------------------------
  2012-12-20 00:00:00-08
 (1 row)
 
 select decode('2020-01-01 01:00:01-08'::timestamptz, '2020-01-01 01:00:01-08'::timestamptz,'2012-12-20 09:00:00-08'::timestamptz,'2020-01-02 01:00:01-08'::timestamptz,'2012-12-20 12:00:00-08'::timestamptz);
-         decode         
+          case          
 ------------------------
  2012-12-20 09:00:00-08
 (1 row)
 
 select decode('2020-01-04 01:00:01-08'::timestamptz, '2020-01-01 01:00:01-08'::timestamptz,'2012-12-20 09:00:00-08'::timestamptz,'2020-01-02 01:00:01-08'::timestamptz,'2012-12-20 12:00:00-08'::timestamptz);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode('2020-01-01 01:00:01-08'::timestamptz, '2020-01-01 01:00:01-08'::timestamptz,'2012-12-20 09:00:00-08'::timestamptz,'2020-01-02 01:00:01-08'::timestamptz,'2012-12-20 12:00:00-08'::timestamptz,'2012-12-20 00:00:00-08'::timestamptz);
-         decode         
+          case          
 ------------------------
  2012-12-20 09:00:00-08
 (1 row)
 
 select decode('2020-01-04 01:00:01-08'::timestamptz, '2020-01-01 01:00:01-08'::timestamptz,'2012-12-20 09:00:00-08'::timestamptz,'2020-01-02 01:00:01-08'::timestamptz,'2012-12-20 12:00:00-08'::timestamptz,'2012-12-20 00:00:00-08'::timestamptz);
-         decode         
+          case          
 ------------------------
  2012-12-20 00:00:00-08
 (1 row)
 
 select decode('2020-01-01 01:00:01-08'::timestamptz, '2020-01-01 01:00:01-08'::timestamptz,'2012-12-20 09:00:00-08'::timestamptz,'2020-01-02 01:00:01-08'::timestamptz,'2012-12-20 12:00:00-08'::timestamptz, '2020-01-03 01:00:01-08'::timestamptz, '2012-12-20 15:00:00-08'::timestamptz);
-         decode         
+          case          
 ------------------------
  2012-12-20 09:00:00-08
 (1 row)
 
 select decode('2020-01-04 01:00:01-08'::timestamptz, '2020-01-01 01:00:01-08'::timestamptz,'2012-12-20 09:00:00-08'::timestamptz,'2020-01-02 01:00:01-08'::timestamptz,'2012-12-20 12:00:00-08'::timestamptz, '2020-01-03 01:00:01-08'::timestamptz, '2012-12-20 15:00:00-08'::timestamptz);
- decode 
---------
+ case 
+------
  
 (1 row)
 
 select decode('2020-01-01 01:00:01-08'::timestamptz, '2020-01-01 01:00:01-08'::timestamptz,'2012-12-20 09:00:00-08'::timestamptz,'2020-01-02 01:00:01-08'::timestamptz,'2012-12-20 12:00:00-08'::timestamptz, '2020-01-03 01:00:01-08'::timestamptz, '2012-12-20 15:00:00-08'::timestamptz,'2012-12-20 00:00:00-08'::timestamptz);
-         decode         
+          case          
 ------------------------
  2012-12-20 09:00:00-08
 (1 row)
 
 select decode(4, 1,'2012-12-20 09:00:00-08'::timestamptz,2,'2012-12-20 12:00:00-08'::timestamptz, 3, '2012-12-20 15:00:00-08'::timestamptz,'2012-12-20 00:00:00-08'::timestamptz);
-         decode         
+          case          
 ------------------------
  2012-12-20 00:00:00-08
 (1 row)
 
 select decode(NULL, '2020-01-01 01:00:01-08'::timestamptz, '2012-12-20 09:00:00-08'::timestamptz, NULL,'2012-12-20 12:00:00-08'::timestamptz);
-         decode         
-------------------------
- 2012-12-20 12:00:00-08
-(1 row)
-
+ERROR:  operator does not exist: text = timestamp with time zone
+LINE 1: select decode(NULL, '2020-01-01 01:00:01-08'::timestamptz, '...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, '2020-01-01 01:00:01-08'::timestamptz, '2012-12-20 09:00:00-08'::timestamptz, '2020-01-02 01:00:01-08'::timestamptz,'2012-12-20 12:00:00-08'::timestamptz);
- decode 
---------
- 
-(1 row)
-
+ERROR:  operator does not exist: text = timestamp with time zone
+LINE 1: select decode(NULL, '2020-01-01 01:00:01-08'::timestamptz, '...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, '2020-01-01 01:00:01-08'::timestamptz, '2012-12-20 09:00:00-08'::timestamptz, NULL,'2012-12-20 12:00:00-08'::timestamptz,'2012-12-20 00:00:00-08'::timestamptz);
-         decode         
-------------------------
- 2012-12-20 12:00:00-08
-(1 row)
-
+ERROR:  operator does not exist: text = timestamp with time zone
+LINE 1: select decode(NULL, '2020-01-01 01:00:01-08'::timestamptz, '...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode(NULL, '2020-01-01 01:00:01-08'::timestamptz, '2012-12-20 09:00:00-08'::timestamptz, '2020-01-02 01:00:01-08'::timestamptz,'2012-12-20 12:00:00-08'::timestamptz,'2012-12-20 00:00:00-08'::timestamptz);
-         decode         
-------------------------
- 2012-12-20 00:00:00-08
-(1 row)
-
+ERROR:  operator does not exist: text = timestamp with time zone
+LINE 1: select decode(NULL, '2020-01-01 01:00:01-08'::timestamptz, '...
+                            ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 --Test case to check if decode accepts other expressions as a key
 CREATE OR REPLACE FUNCTION five() RETURNS integer AS $$
 BEGIN
@@ -2285,8 +2260,8 @@ BEGIN
 END; 
 $$ LANGUAGE plpgsql;
 select decode(five(), 1, 'one', 2, 'two', 5, 'five');
- decode 
---------
+ case 
+------
  five
 (1 row)
 
@@ -2303,17 +2278,15 @@ select decode(1, 1, 'one', 2, 'two', 1, 'one-again') = 'one';
  */
 -- 1) succeed and return 'result-1'
 select decode('2012-01-01', '2012-01-01'::date,'result-1','2012-01-02', 'result-2');
-  decode  
-----------
- result-1
-(1 row)
-
+ERROR:  operator does not exist: text = date
+LINE 5: select decode('2012-01-01', '2012-01-01'::date,'result-1','2...
+                                    ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select decode('2012-01-01', '2012-01-01', 'result-1', '2012-02-01'::date, 'result-2');
-  decode  
-----------
- result-1
-(1 row)
-
+ERROR:  operator does not exist: text = date
+LINE 1: ...ct decode('2012-01-01', '2012-01-01', 'result-1', '2012-02-0...
+                                                             ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
 select PLVstr.rvrs ('Jumping Jack Flash') ='hsalF kcaJ gnipmuJ';
  ?column? 
 ----------
@@ -4428,14 +4401,14 @@ CREATE TRIGGER trg_test_xx BEFORE INSERT OR UPDATE
   ON trg_test FOR EACH ROW EXECUTE PROCEDURE oracle.replace_empty_strings(true);
 \pset null ***
 INSERT INTO trg_test VALUES('',10, 'AHOJ', NULL, NULL);
-WARNING:  Field "a" of table "trg_test" is empty string (replaced by NULL).
+WARNING:  Field "a" of table "trg_test" is empty string (replaced by NULL).  (seg2 127.0.0.1:7004 pid=154920)
 INSERT INTO trg_test VALUES('AHOJ', NULL, '', '2020-01-01', 100);
-WARNING:  Field "c" of table "trg_test" is empty string (replaced by NULL).
+WARNING:  Field "c" of table "trg_test" is empty string (replaced by NULL).  (seg0 127.0.0.1:7002 pid=154918)
 SELECT * FROM trg_test;
   a   |  b  |  c   |     d      |  e  
 ------+-----+------+------------+-----
- ***  |  10 | AHOJ | ***        | ***
  AHOJ | *** | ***  | 2020-01-01 | 100
+ ***  |  10 | AHOJ | ***        | ***
 (2 rows)
 
 DELETE FROM trg_test;
@@ -4673,13 +4646,13 @@ SELECT v1, v2, oracle.remainder(v1::smallint, v2::smallint) FROM testorafce_rema
   24 |   6 |         0
   24 |   5 |        -1
  -58 | -10 |         2
-  58 |  10 |        -2
-  58 | -10 |        -2
-  58 |  10 |        -2
  -44 | -10 |        -4
   44 |  10 |         4
   44 | -10 |         4
   44 |  10 |         4
+  58 |  10 |        -2
+  58 | -10 |        -2
+  58 |  10 |        -2
 (11 rows)
 
 SELECT v1, v2, oracle.remainder(v1::bigint, v2::bigint) FROM testorafce_remainder;
@@ -4689,13 +4662,13 @@ SELECT v1, v2, oracle.remainder(v1::bigint, v2::bigint) FROM testorafce_remainde
   24 |   6 |         0
   24 |   5 |        -1
  -58 | -10 |         2
-  58 |  10 |        -2
-  58 | -10 |        -2
-  58 |  10 |        -2
  -44 | -10 |        -4
   44 |  10 |         4
   44 | -10 |         4
   44 |  10 |         4
+  58 |  10 |        -2
+  58 | -10 |        -2
+  58 |  10 |        -2
 (11 rows)
 
 SELECT v1, v2, oracle.remainder(v1::numeric, v2::numeric) FROM testorafce_remainder;
@@ -4705,13 +4678,13 @@ SELECT v1, v2, oracle.remainder(v1::numeric, v2::numeric) FROM testorafce_remain
   24 |   6 |         0
   24 |   5 |        -1
  -58 | -10 |         2
-  58 |  10 |        -2
-  58 | -10 |        -2
-  58 |  10 |        -2
  -44 | -10 |        -4
   44 |  10 |         4
   44 | -10 |         4
   44 |  10 |         4
+  58 |  10 |        -2
+  58 | -10 |        -2
+  58 |  10 |        -2
 (11 rows)
 
 DROP TABLE testorafce_remainder;
