@@ -22,7 +22,6 @@ namespace gpopt
 class CTableDescriptor;
 class CIndexDescriptor;
 class CName;
-class CPartConstraint;
 
 //---------------------------------------------------------------------------
 //	@class:

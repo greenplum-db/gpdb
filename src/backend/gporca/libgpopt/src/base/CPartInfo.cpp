@@ -15,7 +15,6 @@
 #include "gpos/error/CAutoTrace.h"
 
 #include "gpopt/base/CUtils.h"
-#include "gpopt/metadata/CPartConstraint.h"
 
 using namespace gpopt;
 

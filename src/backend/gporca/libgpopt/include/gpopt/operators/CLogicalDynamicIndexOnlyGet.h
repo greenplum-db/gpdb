@@ -23,7 +23,6 @@ namespace gpopt
 // fwd declarations
 class CName;
 class CColRefSet;
-class CPartConstraint;
 
 //---------------------------------------------------------------------------
 //	@class:

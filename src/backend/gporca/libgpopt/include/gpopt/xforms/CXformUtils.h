@@ -39,7 +39,6 @@ class CColRefSet;
 class CExpression;
 class CLogical;
 class CLogicalDynamicGet;
-class CPartConstraint;
 class CTableDescriptor;
 
 // map of expression to array of expressions

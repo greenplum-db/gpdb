@@ -68,7 +68,6 @@
 #include "unittest/gpopt/metadata/CColumnDescriptorTest.h"
 #include "unittest/gpopt/metadata/CIndexDescriptorTest.h"
 #include "unittest/gpopt/metadata/CNameTest.h"
-#include "unittest/gpopt/metadata/CPartConstraintTest.h"
 #include "unittest/gpopt/metadata/CTableDescriptorTest.h"
 #include "unittest/gpopt/minidump/CAggTest.h"
 #include "unittest/gpopt/minidump/CArrayExpansionTest.h"
@@ -174,7 +173,6 @@ static gpos::CUnittest rgut[] = {
 	GPOS_UNITTEST_STD(COrderSpecTest), GPOS_UNITTEST_STD(CRangeTest),
 	GPOS_UNITTEST_STD(CPredicateUtilsTest),
 	GPOS_UNITTEST_STD(CScalarIsDistinctFromTest),
-	GPOS_UNITTEST_STD(CPartConstraintTest),
 	GPOS_UNITTEST_STD(CSearchStrategyTest),
 	GPOS_UNITTEST_STD(COptimizationJobsTest),
 	GPOS_UNITTEST_STD(CStateMachineTest),

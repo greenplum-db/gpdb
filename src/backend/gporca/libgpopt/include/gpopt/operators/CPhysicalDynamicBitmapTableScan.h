@@ -27,7 +27,6 @@ namespace gpopt
 // fwd declarations
 class CTableDescriptor;
 class CName;
-class CPartConstraint;
 
 //---------------------------------------------------------------------------
 //	@class:
