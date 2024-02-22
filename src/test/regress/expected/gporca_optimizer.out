@@ -14922,22 +14922,6 @@ $$
 LANGUAGE plpgsql
 STABLE;
 explain select (select min(dtRepDate) from test_partitioned_2024 where dtRepDate = any_func(ret_date()));
-INFO:  Worker is already registered! This is an invalid state, please report this error. (_api.cpp:184)
-CONTEXT:  SQL statement "SELECT '2024-02-10'"
-PL/pgSQL function ret_date() line 4 during statement block local variable initialization
-INFO:  GPORCA failed to produce a plan, falling back to planner
-CONTEXT:  SQL statement "SELECT '2024-02-10'"
-PL/pgSQL function ret_date() line 4 during statement block local variable initialization
-INFO:  Worker is already registered! This is an invalid state, please report this error. (_api.cpp:184)
-CONTEXT:  SQL statement "SELECT fix_date"
-PL/pgSQL function ret_date() line 5 at RETURN
-INFO:  GPORCA failed to produce a plan, falling back to planner
-CONTEXT:  SQL statement "SELECT fix_date"
-PL/pgSQL function ret_date() line 5 at RETURN
-INFO:  Worker is already registered! This is an invalid state, please report this error. (_api.cpp:184)
-CONTEXT:  SQL function "any_func" during startup
-INFO:  GPORCA failed to produce a plan, falling back to planner
-CONTEXT:  SQL function "any_func" during startup
                                                                  QUERY PLAN                                                                  
 ---------------------------------------------------------------------------------------------------------------------------------------------
  Result  (cost=0.00..882688.09 rows=1 width=4)

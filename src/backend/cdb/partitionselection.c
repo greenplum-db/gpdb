@@ -489,6 +489,21 @@ static_part_selection(PartitionSelector *ps)
 	MemoryContext oldcxt;
 	SelectedParts *selparts;
 
+	/*
+	 * Disable ORCA while performing Static Partition Elimination (SPE).
+	 * In some cases during SPE, another instance of ORCA led optimization
+	 * is started, which is not supported as ORCA supports only one worker.
+	 * To avoid such situations, any requirement for new optimization (starting
+	 * from a running ORCA optimization) will be handled by Planner.
+	 * Eg- If a function call is present in the Quals and it is not folded
+	 * before start of optimization, then in that case, the evaluation of
+	 * function call happens during translation of DXL partition selector into
+	 * a GPDB partition selector node.
+	 */
+	extern bool optimizer;
+	bool optimizerBackup = optimizer;
+	optimizer = false;
+
 	estate = CreateExecutorState();
 
 	oldcxt = MemoryContextSwitchTo(estate->es_query_cxt);
@@ -511,6 +526,8 @@ static_part_selection(PartitionSelector *ps)
 
 	/* cleanup */
 	FreeExecutorState(estate);
+
+	optimizer = optimizerBackup;
 
 	return selparts;
 }
