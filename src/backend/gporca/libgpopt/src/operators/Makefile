@@ -185,7 +185,6 @@ OBJS        = CExpression.o \
               CScalarSwitchCase.o \
               CScalarWindowFunc.o \
               CStrictHashedDistributions.o \
-              CWindowPreprocessor.o \
               COrderedAggPreprocessor.o \
               CLeftJoinPruningPreprocessor.o
 

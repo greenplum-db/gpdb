@@ -54,7 +54,6 @@
 #include "gpopt/operators/CScalarSubqueryAny.h"
 #include "gpopt/operators/CScalarSubqueryExists.h"
 #include "gpopt/operators/CScalarSubqueryQuantified.h"
-#include "gpopt/operators/CWindowPreprocessor.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/translate/CTranslatorDXLToExpr.h"
 #include "gpopt/xforms/CXform.h"
@@ -3439,17 +3438,11 @@ CExpressionPreprocessor::PexprPreprocess(
 	GPOS_CHECK_ABORT;
 	pexprPrefiltersExtracted->Release();
 
-	// (17) pre-process window functions
-	CExpression *pexprWindowPreprocessed =
-		CWindowPreprocessor::PexprPreprocess(mp, pexprOrderedAggPreprocessed);
-	GPOS_CHECK_ABORT;
-	pexprOrderedAggPreprocessed->Release();
-
 	// (18) eliminate unused computed columns
 	CExpression *pexprNoUnusedPrEl = PexprPruneUnusedComputedCols(
-		mp, pexprWindowPreprocessed, pcrsOutputAndOrderCols);
+		mp, pexprOrderedAggPreprocessed, pcrsOutputAndOrderCols);
 	GPOS_CHECK_ABORT;
-	pexprWindowPreprocessed->Release();
+	pexprOrderedAggPreprocessed->Release();
 
 	// (19) normalize expression
 	CExpression *pexprNormalized1 =
