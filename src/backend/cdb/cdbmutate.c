@@ -1415,7 +1415,8 @@ remove_unused_initplans(Plan *top_plan, PlannerInfo *root)
 	rte_param_walker(root->glob->finalrtable, &context);
 
 	/* workhorse to remove unused initplans */
-	initplan_walker((Node *) top_plan, &context);
+	if (!root->parse->hasModifyingCTE)
+		initplan_walker((Node *) top_plan, &context);
 
 	bms_free(context.paramids);
 	bms_free(context.scanrelids);

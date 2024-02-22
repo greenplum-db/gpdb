@@ -880,10 +880,8 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	 * will generate unused initplans. Commenting out the following two
 	 * lines.
 	 */
-#if 0
-	if (parse->cteList)
+	if (parse->hasModifyingCTE && parse->cteList)
 		SS_process_ctes(root);
-#endif
 
 	/*
 	 * If the FROM clause is empty, replace it with a dummy RTE_RESULT RTE, so

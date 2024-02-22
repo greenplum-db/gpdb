@@ -1187,3 +1187,14 @@ create temp table with_test (i int);
 with with_test as (select 42) insert into with_test select * from with_test;
 select * from with_test;
 drop table with_test;
+
+-- check Modifying CTE without refs in RTEs
+create table with_dml (i int, j int) distributed by (i);
+create table t (a int) DISTRIBUTED BY (a);
+explain (costs off)
+with cte as (
+update with_dml set j = j + 1
+returning i
+) select a from t;
+drop table with_dml;
+drop table t;

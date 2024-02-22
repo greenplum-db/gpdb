@@ -2455,3 +2455,23 @@ select * from with_test;
 (1 row)
 
 drop table with_test;
+-- check Modifying CTE without refs in RTEs
+create table with_dml (i int, j int) distributed by (i);
+create table t (a int) DISTRIBUTED BY (a);
+explain (costs off)
+with cte as (
+update with_dml set j = j + 1
+returning i
+) select a from t;
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   CTE cte  (slice2)
+     ->  Update on with_dml
+           ->  Seq Scan on with_dml
+   ->  Seq Scan on t
+ Optimizer: Postgres-based planner
+(6 rows)
+
+drop table with_dml;
+drop table t;
