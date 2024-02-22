@@ -51,7 +51,6 @@
 #include "gpopt/operators/CScalarSubqueryAny.h"
 #include "gpopt/operators/CScalarSubqueryExists.h"
 #include "gpopt/operators/CScalarSubqueryQuantified.h"
-#include "gpopt/operators/CWindowPreprocessor.h"
 #include "gpopt/optimizer/COptimizerConfig.h"
 #include "gpopt/xforms/CXform.h"
 #include "naucrates/md/IMDScalarOp.h"
@@ -3071,48 +3070,48 @@ CExpressionPreprocessor::PexprPreprocess(
 	CAutoTimer at("\n[OPT]: Expression Preprocessing Time",
 				  GPOS_FTRACE(EopttracePrintOptimizationStatistics));
 
-	// (1) remove unused CTE anchors
+	// remove unused CTE anchors
 	CExpression *pexprNoUnusedCTEs = PexprRemoveUnusedCTEs(mp, pexpr);
 	GPOS_CHECK_ABORT;
 
-	// (2.a) remove intermediate superfluous limit
+	// remove intermediate superfluous limit
 	CExpression *pexprSimplifiedLimit =
 		PexprRemoveSuperfluousLimit(mp, pexprNoUnusedCTEs);
 	GPOS_CHECK_ABORT;
 	pexprNoUnusedCTEs->Release();
 
-	// (2.b) remove intermediate superfluous distinct
+	// remove intermediate superfluous distinct
 	CExpression *pexprSimplifiedDistinct =
 		PexprRemoveSuperfluousDistinctInDQA(mp, pexprSimplifiedLimit);
 	GPOS_CHECK_ABORT;
 	pexprSimplifiedLimit->Release();
 
-	// (3) trim unnecessary existential subqueries
+	// trim unnecessary existential subqueries
 	CExpression *pexprTrimmed =
 		PexprTrimExistentialSubqueries(mp, pexprSimplifiedDistinct);
 	GPOS_CHECK_ABORT;
 	pexprSimplifiedDistinct->Release();
 
-	// (4) collapse cascaded union / union all
+	// collapse cascaded union / union all
 	CExpression *pexprNaryUnionUnionAll =
 		PexprCollapseUnionUnionAll(mp, pexprTrimmed);
 	GPOS_CHECK_ABORT;
 	pexprTrimmed->Release();
 
-	// (5) remove superfluous outer references from the order spec in limits, grouping columns in GbAgg, and
+	// remove superfluous outer references from the order spec in limits, grouping columns in GbAgg, and
 	// Partition/Order columns in window operators
 	CExpression *pexprOuterRefsEleminated =
 		PexprRemoveSuperfluousOuterRefs(mp, pexprNaryUnionUnionAll);
 	GPOS_CHECK_ABORT;
 	pexprNaryUnionUnionAll->Release();
 
-	// (6) remove superfluous equality
+	// remove superfluous equality
 	CExpression *pexprTrimmed2 =
 		PexprPruneSuperfluousEquality(mp, pexprOuterRefsEleminated);
 	GPOS_CHECK_ABORT;
 	pexprOuterRefsEleminated->Release();
 
-	// (7.a) substitute constant predicates
+	// substitute constant predicates
 	ExprToConstantMap *phmExprToConst = GPOS_NEW(mp) ExprToConstantMap(mp);
 	CExpression *pexprPredWithConstReplaced =
 		PexprReplaceColWithConst(mp, pexprTrimmed2, phmExprToConst, true);
@@ -3120,10 +3119,10 @@ CExpressionPreprocessor::PexprPreprocess(
 	phmExprToConst->Release();
 	pexprTrimmed2->Release();
 
-	// (7.b) reorder the children of scalar cmp operator to ensure that left
+	//  reorder the children of scalar cmp operator to ensure that left
 	// child is scalar ident and right child is scalar const
 	//
-	// Must happen after 7.a which can insert scalar cmp children with inversed
+	// Must happen after "substitute constant predicates" step which can insert scalar cmp children with inversed
 	// format (CONST op IDENT) *and* before any step that relies on reorder
 	// format (e.g. "infer predicate form constraints")
 	CExpression *pexprReorderedScalarCmpChildren =
@@ -3131,19 +3130,19 @@ CExpressionPreprocessor::PexprPreprocess(
 	GPOS_CHECK_ABORT;
 	pexprPredWithConstReplaced->Release();
 
-	// (8) simplify quantified subqueries
+	// simplify quantified subqueries
 	CExpression *pexprSubqSimplified =
 		PexprSimplifyQuantifiedSubqueries(mp, pexprReorderedScalarCmpChildren);
 	GPOS_CHECK_ABORT;
 	pexprReorderedScalarCmpChildren->Release();
 
-	// (9) do preliminary unnesting of scalar subqueries
+	// do preliminary unnesting of scalar subqueries
 	CExpression *pexprSubqUnnested =
 		PexprUnnestScalarSubqueries(mp, pexprSubqSimplified);
 	GPOS_CHECK_ABORT;
 	pexprSubqSimplified->Release();
 
-	// (10) unnest AND/OR/NOT predicates
+	// unnest AND/OR/NOT predicates
 	CExpression *pexprUnnested =
 		CExpressionUtils::PexprUnnest(mp, pexprSubqUnnested);
 	GPOS_CHECK_ABORT;
@@ -3153,111 +3152,104 @@ CExpressionPreprocessor::PexprPreprocess(
 
 	if (GPOS_FTRACE(EopttraceArrayConstraints))
 	{
-		// (10.5) ensure predicates are array IN or NOT IN where applicable
+		// ensure predicates are array IN or NOT IN where applicable
 		pexprConvert2In = PexprConvert2In(mp, pexprUnnested);
 		GPOS_CHECK_ABORT;
 		pexprUnnested->Release();
 	}
 
-	// (11) infer predicates from constraints
+	// infer predicates from constraints
 	CExpression *pexprInferredPreds = PexprInferPredicates(mp, pexprConvert2In);
 	GPOS_CHECK_ABORT;
 	pexprConvert2In->Release();
 
-	// (12) eliminate self comparisons
+	// eliminate self comparisons
 	CExpression *pexprSelfCompEliminated = PexprEliminateSelfComparison(
 		mp, pexprInferredPreds, pexprInferredPreds->DeriveNotNullColumns());
 	GPOS_CHECK_ABORT;
 	pexprInferredPreds->Release();
 
-	// (13) remove duplicate AND/OR children
+	// remove duplicate AND/OR children
 	CExpression *pexprDeduped =
 		CExpressionUtils::PexprDedupChildren(mp, pexprSelfCompEliminated);
 	GPOS_CHECK_ABORT;
 	pexprSelfCompEliminated->Release();
 
-	// (14) factorize common expressions
+	// factorize common expressions
 	CExpression *pexprFactorized =
 		CExpressionFactorizer::PexprFactorize(mp, pexprDeduped);
 	GPOS_CHECK_ABORT;
 	pexprDeduped->Release();
 
-	// (15) infer filters out of components of disjunctive filters
+	// infer filters out of components of disjunctive filters
 	CExpression *pexprPrefiltersExtracted =
 		CExpressionFactorizer::PexprExtractInferredFilters(mp, pexprFactorized);
 	GPOS_CHECK_ABORT;
 	pexprFactorized->Release();
 
-	// (16) pre-process ordered agg functions
+	// pre-process ordered agg functions
 	CExpression *pexprOrderedAggPreprocessed =
 		COrderedAggPreprocessor::PexprPreprocess(mp, pexprPrefiltersExtracted);
 	GPOS_CHECK_ABORT;
 	pexprPrefiltersExtracted->Release();
 
-	// (17) pre-process window functions
-	CExpression *pexprWindowPreprocessed =
-		CWindowPreprocessor::PexprPreprocess(mp, pexprOrderedAggPreprocessed);
+	// eliminate unused computed columns
+	CExpression *pexprNoUnusedPrEl = PexprPruneUnusedComputedCols(
+		mp, pexprOrderedAggPreprocessed, pcrsOutputAndOrderCols);
 	GPOS_CHECK_ABORT;
 	pexprOrderedAggPreprocessed->Release();
 
-	// (18) eliminate unused computed columns
-	CExpression *pexprNoUnusedPrEl = PexprPruneUnusedComputedCols(
-		mp, pexprWindowPreprocessed, pcrsOutputAndOrderCols);
-	GPOS_CHECK_ABORT;
-	pexprWindowPreprocessed->Release();
-
-	// (19) normalize expression
+	// normalize expression
 	CExpression *pexprNormalized1 =
 		CNormalizer::PexprNormalize(mp, pexprNoUnusedPrEl);
 	GPOS_CHECK_ABORT;
 	pexprNoUnusedPrEl->Release();
 
-	// (20) transform outer join into inner join whenever possible
+	// transform outer join into inner join whenever possible
 	CExpression *pexprLOJToIJ = PexprOuterJoinToInnerJoin(mp, pexprNormalized1);
 	GPOS_CHECK_ABORT;
 	pexprNormalized1->Release();
 
-	// (21) collapse cascaded inner and left outer joins
+	// collapse cascaded inner and left outer joins
 	CExpression *pexprCollapsed = PexprCollapseJoins(mp, pexprLOJToIJ);
 	GPOS_CHECK_ABORT;
 	pexprLOJToIJ->Release();
 
-	// (22) after transforming outer joins to inner joins, we may be able to generate more predicates from constraints
+	// after transforming outer joins to inner joins, we may be able to generate more predicates from constraints
 	CExpression *pexprWithPreds =
 		PexprAddPredicatesFromConstraints(mp, pexprCollapsed);
 	GPOS_CHECK_ABORT;
 	pexprCollapsed->Release();
 
-	// (23) eliminate empty subtrees
+	// eliminate empty subtrees
 	CExpression *pexprPruned = PexprPruneEmptySubtrees(mp, pexprWithPreds);
 	GPOS_CHECK_ABORT;
 	pexprWithPreds->Release();
 
-	// (24) collapse cascade of projects
+	// collapse cascade of projects
 	CExpression *pexprCollapsedProjects =
 		PexprCollapseProjects(mp, pexprPruned);
 	GPOS_CHECK_ABORT;
 	pexprPruned->Release();
 
-	// (25) insert dummy project when the scalar subquery is under a project and returns an outer reference
+	// insert dummy project when the scalar subquery is under a project and returns an outer reference
 	CExpression *pexprSubquery = PexprProjBelowSubquery(
 		mp, pexprCollapsedProjects, false /* fUnderPrList */);
 	GPOS_CHECK_ABORT;
 	pexprCollapsedProjects->Release();
 
-	// (26) rewrite IN subquery to EXIST subquery with a predicate
+	// rewrite IN subquery to EXIST subquery with a predicate
 	CExpression *pexprExistWithPredFromINSubq =
 		PexprExistWithPredFromINSubq(mp, pexprSubquery);
 	GPOS_CHECK_ABORT;
 	pexprSubquery->Release();
 
-
-	// (27) swap logical select over logical project
+	// swap logical select over logical project
 	CExpression *pexprTransposeSelectAndProject =
 		PexprTransposeSelectAndProject(mp, pexprExistWithPredFromINSubq);
 	pexprExistWithPredFromINSubq->Release();
 
-	// (28) normalize expression again
+	// normalize expression again
 	CExpression *pexprNormalized2 =
 		CNormalizer::PexprNormalize(mp, pexprTransposeSelectAndProject);
 	GPOS_CHECK_ABORT;

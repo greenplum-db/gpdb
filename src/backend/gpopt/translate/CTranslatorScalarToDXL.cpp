@@ -1565,13 +1565,6 @@ CTranslatorScalarToDXL::TranslateWindowFuncToDXL(
 				   GPOS_WSZ_LIT("Aggregate functions with FILTER"));
 	}
 
-	// FIXME: DISTINCT-qualified window aggregates are currently broken in ORCA.
-	if (window_func->windistinct)
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				   GPOS_WSZ_LIT("DISTINCT-qualified Window Aggregate"));
-	}
-
 	if (!m_context)
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
 				   GPOS_WSZ_LIT("Window function in a stand-alone expression"));

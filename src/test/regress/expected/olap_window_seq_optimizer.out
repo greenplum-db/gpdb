@@ -2,6 +2,15 @@
 -- OLAP_WINDOW 
 --
 -- Changes here should also be made to olap_window_seq.sql
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
+set optimizer_trace_fallback=on;
 -- 1 -- Null window specification -- OVER () --
 select row_number() over (), cn,pn,vn 
 from sale; -- mvd 1->1
@@ -1118,6 +1127,8 @@ select
 from sale
 group by rollup(cn,vn,pn) 
 order by 2 desc, 5; -- order 2,5
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Grouping function with multiple arguments
  gr | cn | vn | pn  |   sum   | rank 
 ----+----+----+-----+---------+------
   7 |    |    |     | 2640182 |    1
@@ -1154,6 +1165,8 @@ select
 from sale
 group by rollup(cn,vn,pn) 
 order by 2, 5; -- order 2,5
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Grouping function with multiple arguments
  gr | cn | vn | pn  |   sum   | rank 
 ----+----+----+-----+---------+------
   0 |  1 | 10 | 200 |       0 |    1
@@ -1379,6 +1392,8 @@ from
   from sale
   group by rollup(cn,vn,pn)) olap_tmp_for_window_seq(g,cn,vn,pn,s)
 order by 1,5; -- order 1,5
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Grouping function with multiple arguments
  g | cn | vn | pn  |    s    | rank 
 ---+----+----+-----+---------+------
  0 |  1 | 10 | 200 |       0 |    1
@@ -1417,6 +1432,8 @@ select
 from sale
 group by rollup(cn,vn,pn)
 order by 1,5; -- order 1,5
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Grouping function with multiple arguments
  grouping | cn | vn | pn  |   sum   | rank 
 ----------+----+----+-----+---------+------
         0 |  1 | 10 | 200 |       0 |    1
@@ -1889,6 +1906,8 @@ SUM(sale.cn) OVER(partition by sale.vn order by sale.cn desc range between curre
 SELECT cn, vn, pn, GROUPING(cn,vn,pn),
 SUM(vn) OVER (PARTITION BY GROUPING(cn,vn,pn) ORDER BY cn) as sum FROM sale
 GROUP BY ROLLUP(cn,vn,pn) order by 4; -- order 4
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Grouping function with multiple arguments
  cn | vn | pn  | grouping | sum 
 ----+----+-----+----------+-----
   1 | 20 | 100 |        0 | 140
@@ -1923,6 +1942,8 @@ select cn,vn,pn,grouping,
 sum(vn) over (partition by grouping order by cn) as sum 
 from (select cn,vn,pn,grouping(cn,vn,pn) from sale group by rollup(cn,vn,pn)) t
 order by 4; -- order 4
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Grouping function with multiple arguments
  cn | vn | pn  | grouping | sum 
 ----+----+-----+----------+-----
   1 | 20 | 100 |        0 | 140
@@ -7373,6 +7394,22 @@ create view v1 as
 select dt, sum(cn) over(order by grouping(cn) range grouping(cn) preceding) 
 from sale group by rollup(cn,dt);
 \d+ v1
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+CONTEXT:  SQL function "col_description" during startup
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+CONTEXT:  SQL statement "SELECT * FROM pg_catalog.pg_rewrite WHERE ev_class = $1 AND rulename = $2"
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
               View "olap_window_seq.v1"
  Column |  Type  | Modifiers | Storage | Description 
 --------+--------+-----------+---------+-------------
@@ -8470,6 +8507,453 @@ select dt, pn, sum(distinct pn) over (partition by dt), sum(pn) over (partition 
  06-01-1401 | 800 | 3000 | 3900
 (12 rows)
 
+-- Various test cases from MDP tests. Previously, these were transformed into
+-- different plan shapes, but we now do these operations in the executor so the
+-- plan shape will be similar in the below queries. We want to ensure the
+-- executor works correctly and produces correct results in these cases.
+-- start_ignore
+drop table if exists t cascade;
+-- end_ignore
+create table t (a int, b int, c int) distributed by (c);
+insert into t select  i%3+2, i%4, i from generate_series(1,5)i;
+analyze t;
+explain (costs off) select count(distinct a) over(), sum(distinct a) over() from t;
+                   QUERY PLAN                   
+------------------------------------------------
+ WindowAgg
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+select count(distinct a) over(), sum(distinct a) over() from t;
+ count | sum 
+-------+-----
+     3 |   9
+     3 |   9
+     3 |   9
+     3 |   9
+     3 |   9
+(5 rows)
+
+explain (costs off) select count(distinct a) over() from t;
+                   QUERY PLAN                   
+------------------------------------------------
+ WindowAgg
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+select count(distinct a) over() from t;
+ count 
+-------
+     3
+     3
+     3
+     3
+     3
+(5 rows)
+
+explain (costs off) select count(distinct a) over(), sum(distinct a) over(), avg(distinct a) over()  from t;
+                   QUERY PLAN                   
+------------------------------------------------
+ WindowAgg
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+select count(distinct a) over(), sum(distinct a) over(), avg(distinct a) over()  from t;
+ count | sum |        avg         
+-------+-----+--------------------
+     3 |   9 | 3.0000000000000000
+     3 |   9 | 3.0000000000000000
+     3 |   9 | 3.0000000000000000
+     3 |   9 | 3.0000000000000000
+     3 |   9 | 3.0000000000000000
+(5 rows)
+
+explain (costs off) select count(distinct a) over(), sum(distinct a) over(), avg(distinct b) over()  from t;
+                   QUERY PLAN                   
+------------------------------------------------
+ WindowAgg
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+select count(distinct a) over(), sum(distinct a) over(), avg(distinct b) over()  from t;
+ count | sum |        avg         
+-------+-----+--------------------
+     3 |   9 | 1.5000000000000000
+     3 |   9 | 1.5000000000000000
+     3 |   9 | 1.5000000000000000
+     3 |   9 | 1.5000000000000000
+     3 |   9 | 1.5000000000000000
+(5 rows)
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct a) over(partition by a) from t;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Result
+         ->  WindowAgg
+               Partition By: a
+               ->  Sort
+                     Sort Key: a
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: a
+                           ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
+select count(distinct a) over(partition by a), sum(distinct a) over(partition by a) from t;
+ count | sum 
+-------+-----
+     1 |   2
+     1 |   3
+     1 |   3
+     1 |   4
+     1 |   4
+(5 rows)
+
+explain (costs off) select dqa1+1, dqa2+2 from (select count(distinct a) over(partition by a), sum(distinct a) over(partition by a)  from t) as foo(dqa1,dqa2);
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Result
+         ->  WindowAgg
+               Partition By: a
+               ->  Sort
+                     Sort Key: a
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: a
+                           ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
+select dqa1+1, dqa2+2 from (select count(distinct a) over(partition by a), sum(distinct a) over(partition by a)  from t) as foo(dqa1,dqa2);
+ ?column? | ?column? 
+----------+----------
+        2 |        4
+        2 |        5
+        2 |        5
+        2 |        6
+        2 |        6
+(5 rows)
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct a) over(partition by b) from t;
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  Result
+         ->  WindowAgg
+               Partition By: b
+               ->  Sort
+                     Sort Key: b
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: b
+                           ->  Result
+                                 ->  WindowAgg
+                                       Partition By: a
+                                       ->  Sort
+                                             Sort Key: a
+                                             ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                                   Hash Key: a
+                                                   ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(17 rows)
+
+select count(distinct a) over(partition by a), sum(distinct a) over(partition by b) from t;
+ count | sum 
+-------+-----
+     1 |   4
+     1 |   2
+     1 |   3
+     1 |   7
+     1 |   7
+(5 rows)
+
+explain (costs off) select dqa1+1, dqa2+2 from (select count(distinct a) over(partition by a), sum(distinct a) over(partition by b)  from t) as foo(dqa1,dqa2);
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  Result
+         ->  WindowAgg
+               Partition By: b
+               ->  Sort
+                     Sort Key: b
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: b
+                           ->  Result
+                                 ->  WindowAgg
+                                       Partition By: a
+                                       ->  Sort
+                                             Sort Key: a
+                                             ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                                   Hash Key: a
+                                                   ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(17 rows)
+
+select dqa1+1, dqa2+2 from (select count(distinct a) over(partition by a), sum(distinct a) over(partition by b)  from t) as foo(dqa1,dqa2);
+ ?column? | ?column? 
+----------+----------
+        2 |        6
+        2 |        4
+        2 |        5
+        2 |        9
+        2 |        9
+(5 rows)
+
+explain (costs off) select count(distinct a) over(), sum(distinct a) over(), row_number() over() from t;
+                   QUERY PLAN                   
+------------------------------------------------
+ WindowAgg
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(4 rows)
+
+select count(distinct a) over(), sum(distinct a) over(), row_number() over() from t;
+ count | sum | row_number 
+-------+-----+------------
+     3 |   9 |          1
+     3 |   9 |          2
+     3 |   9 |          3
+     3 |   9 |          4
+     3 |   9 |          5
+(5 rows)
+
+explain (costs off) select dqa1+1, dqa2+2 , dqa3+3 from (  select count(distinct a) over(), sum(distinct a) over(), row_number() over() from t) as foo(dqa1,dqa2,dqa3);
+                      QUERY PLAN                      
+------------------------------------------------------
+ Result
+   ->  WindowAgg
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(5 rows)
+
+select dqa1+1, dqa2+2 , dqa3+3 from (  select count(distinct a) over(), sum(distinct a) over(), row_number() over() from t) as foo(dqa1,dqa2,dqa3);
+ ?column? | ?column? | ?column? 
+----------+----------+----------
+        4 |       11 |        4
+        4 |       11 |        5
+        4 |       11 |        6
+        4 |       11 |        7
+        4 |       11 |        8
+(5 rows)
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a) from t;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Result
+         ->  WindowAgg
+               Partition By: a
+               ->  Sort
+                     Sort Key: a
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: a
+                           ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
+select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a) from t;
+ count | sum | row_number 
+-------+-----+------------
+     1 |   2 |          1
+     1 |   3 |          1
+     1 |   3 |          2
+     1 |   4 |          1
+     1 |   4 |          2
+(5 rows)
+
+explain (costs off) select dqa1+1, dqa2+2 , dqa3+3 from ( select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a) from t) as foo(dqa1,dqa2,dqa3);
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Result
+         ->  WindowAgg
+               Partition By: a
+               ->  Sort
+                     Sort Key: a
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: a
+                           ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
+select dqa1+1, dqa2+2 , dqa3+3 from ( select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a) from t) as foo(dqa1,dqa2,dqa3);
+ ?column? | ?column? | ?column? 
+----------+----------+----------
+        2 |        4 |        4
+        2 |        5 |        4
+        2 |        5 |        5
+        2 |        6 |        4
+        2 |        6 |        5
+(5 rows)
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct a) over(partition by b), row_number() over(order by c) from t;
+                                                    QUERY PLAN                                                    
+------------------------------------------------------------------------------------------------------------------
+ Result
+   ->  WindowAgg
+         Order By: c
+         ->  Gather Motion 3:1  (slice3; segments: 3)
+               Merge Key: c
+               ->  Result
+                     ->  Sort
+                           Sort Key: c
+                           ->  WindowAgg
+                                 Partition By: b
+                                 ->  Sort
+                                       Sort Key: b
+                                       ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                             Hash Key: b
+                                             ->  Result
+                                                   ->  WindowAgg
+                                                         Partition By: a
+                                                         ->  Sort
+                                                               Sort Key: a
+                                                               ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                                                     Hash Key: a
+                                                                     ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(23 rows)
+
+select count(distinct a) over(partition by a), sum(distinct a) over(partition by b), row_number() over(order by c) from t;
+ count | sum | row_number 
+-------+-----+------------
+     1 |   7 |          1
+     1 |   4 |          2
+     1 |   2 |          3
+     1 |   3 |          4
+     1 |   7 |          5
+(5 rows)
+
+explain (costs off) select dqa1+1, dqa2+2 , dqa3+3 from ( select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a order by c) from t) as foo(dqa1,dqa2,dqa3);
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Result
+         ->  WindowAgg
+               Partition By: a
+               Order By: c
+               ->  Sort
+                     Sort Key: a, c
+                     ->  WindowAgg
+                           Partition By: a
+                           ->  Sort
+                                 Sort Key: a
+                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                       Hash Key: a
+                                       ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(15 rows)
+
+select dqa1+1, dqa2+2 , dqa3+3 from ( select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a order by c) from t) as foo(dqa1,dqa2,dqa3);
+ ?column? | ?column? | ?column? 
+----------+----------+----------
+        2 |        4 |        4
+        2 |        5 |        4
+        2 |        5 |        5
+        2 |        6 |        4
+        2 |        6 |        5
+(5 rows)
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct b) over(partition by a), row_number() over(partition by a)  from t;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Result
+         ->  WindowAgg
+               Partition By: a
+               ->  Sort
+                     Sort Key: a
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: a
+                           ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
+select count(distinct a) over(partition by a), sum(distinct b) over(partition by a), row_number() over(partition by a)  from t;
+ count | sum | row_number 
+-------+-----+------------
+     1 |   3 |          1
+     1 |   1 |          1
+     1 |   1 |          2
+     1 |   3 |          1
+     1 |   3 |          2
+(5 rows)
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct b) over(partition by b), row_number() over(partition by a order by c)  from t;
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)
+   ->  Result
+         ->  WindowAgg
+               Partition By: a
+               Order By: c
+               ->  Sort
+                     Sort Key: a, c
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                           Hash Key: a
+                           ->  Result
+                                 ->  WindowAgg
+                                       Partition By: b
+                                       ->  Sort
+                                             Sort Key: b
+                                             ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                                   Hash Key: b
+                                                   ->  Result
+                                                         ->  WindowAgg
+                                                               Partition By: a
+                                                               ->  Sort
+                                                                     Sort Key: a
+                                                                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                                                           Hash Key: a
+                                                                           ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(25 rows)
+
+select count(distinct a) over(partition by a), sum(distinct b) over(partition by b), row_number() over(partition by a order by c)  from t;
+ count | sum | row_number 
+-------+-----+------------
+     1 |   3 |          1
+     1 |   1 |          1
+     1 |   0 |          2
+     1 |   2 |          1
+     1 |   1 |          2
+(5 rows)
+
+explain (costs off) select count(distinct a) over(partition by a,b), sum(distinct b) over(partition by a,b), row_number() over(partition by a,b)  from t;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Result
+         ->  WindowAgg
+               Partition By: a, b
+               ->  Sort
+                     Sort Key: a, b
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: a, b
+                           ->  Seq Scan on t
+ Optimizer: Pivotal Optimizer (GPORCA)
+(10 rows)
+
+select count(distinct a) over(partition by a,b), sum(distinct b) over(partition by a,b), row_number() over(partition by a,b)  from t;
+ count | sum | row_number 
+-------+-----+------------
+     1 |   2 |          1
+     1 |   0 |          1
+     1 |   1 |          1
+     1 |   3 |          1
+     1 |   1 |          1
+(5 rows)
+
 -- Also test with a pass-by-ref type, to make sure we don't get confused with memory contexts.
 select pcolor, pname, count(distinct pname) over (partition by pcolor) from product;
   pcolor   |   pname   | count 
@@ -8508,6 +8992,22 @@ ERROR:  DISTINCT is supported only for single-argument window aggregates
 -- Test deparsing (for \d+ and pg_dump)
 create view distinct_windowagg_view as select sum(distinct g/2) OVER (partition by g/4) from generate_series (1, 5) g;
 \d+ distinct_windowagg_view
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+CONTEXT:  SQL function "col_description" during startup
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+CONTEXT:  SQL statement "SELECT * FROM pg_catalog.pg_rewrite WHERE ev_class = $1 AND rulename = $2"
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
    View "olap_window_seq.distinct_windowagg_view"
  Column |  Type  | Modifiers | Storage | Description 
 --------+--------+-----------+---------+-------------

@@ -2,6 +2,15 @@
 -- OLAP_WINDOW 
 --
 -- Changes here should also be made to olap_window_seq.sql
+--
+-- start_matchsubs
+-- m/\(cost=.*\)/
+-- s/\(cost=.*\)//
+--
+-- m/\(slice\d+; segments: \d+\)/
+-- s/\(slice\d+; segments: \d+\)//
+-- end_matchsubs
+set optimizer_trace_fallback=on;
 -- 1 -- Null window specification -- OVER () --
 select row_number() over (), cn,pn,vn 
 from sale; -- mvd 1->1
@@ -8435,6 +8444,435 @@ select dt, pn, sum(distinct pn) over (partition by dt), sum(pn) over (partition 
  06-01-1401 | 700 | 3000 | 3900
  06-01-1401 | 800 | 3000 | 3900
 (12 rows)
+
+-- Various test cases from MDP tests. Previously, these were transformed into
+-- different plan shapes, but we now do these operations in the executor so the
+-- plan shape will be similar in the below queries. We want to ensure the
+-- executor works correctly and produces correct results in these cases.
+-- start_ignore
+drop table if exists t cascade;
+-- end_ignore
+create table t (a int, b int, c int) distributed by (c);
+insert into t select  i%3+2, i%4, i from generate_series(1,5)i;
+analyze t;
+explain (costs off) select count(distinct a) over(), sum(distinct a) over() from t;
+                   QUERY PLAN                   
+------------------------------------------------
+ WindowAgg
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+select count(distinct a) over(), sum(distinct a) over() from t;
+ count | sum 
+-------+-----
+     3 |   9
+     3 |   9
+     3 |   9
+     3 |   9
+     3 |   9
+(5 rows)
+
+explain (costs off) select count(distinct a) over() from t;
+                   QUERY PLAN                   
+------------------------------------------------
+ WindowAgg
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+select count(distinct a) over() from t;
+ count 
+-------
+     3
+     3
+     3
+     3
+     3
+(5 rows)
+
+explain (costs off) select count(distinct a) over(), sum(distinct a) over(), avg(distinct a) over()  from t;
+                   QUERY PLAN                   
+------------------------------------------------
+ WindowAgg
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+select count(distinct a) over(), sum(distinct a) over(), avg(distinct a) over()  from t;
+ count | sum |        avg         
+-------+-----+--------------------
+     3 |   9 | 3.0000000000000000
+     3 |   9 | 3.0000000000000000
+     3 |   9 | 3.0000000000000000
+     3 |   9 | 3.0000000000000000
+     3 |   9 | 3.0000000000000000
+(5 rows)
+
+explain (costs off) select count(distinct a) over(), sum(distinct a) over(), avg(distinct b) over()  from t;
+                   QUERY PLAN                   
+------------------------------------------------
+ WindowAgg
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+select count(distinct a) over(), sum(distinct a) over(), avg(distinct b) over()  from t;
+ count | sum |        avg         
+-------+-----+--------------------
+     3 |   9 | 1.5000000000000000
+     3 |   9 | 1.5000000000000000
+     3 |   9 | 1.5000000000000000
+     3 |   9 | 1.5000000000000000
+     3 |   9 | 1.5000000000000000
+(5 rows)
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct a) over(partition by a) from t;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  WindowAgg
+         Partition By: a
+         ->  Sort
+               Sort Key: a
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: a
+                     ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select count(distinct a) over(partition by a), sum(distinct a) over(partition by a) from t;
+ count | sum 
+-------+-----
+     1 |   2
+     1 |   3
+     1 |   3
+     1 |   4
+     1 |   4
+(5 rows)
+
+explain (costs off) select dqa1+1, dqa2+2 from (select count(distinct a) over(partition by a), sum(distinct a) over(partition by a)  from t) as foo(dqa1,dqa2);
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Subquery Scan on foo
+         ->  WindowAgg
+               Partition By: t.a
+               ->  Sort
+                     Sort Key: t.a
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: t.a
+                           ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+select dqa1+1, dqa2+2 from (select count(distinct a) over(partition by a), sum(distinct a) over(partition by a)  from t) as foo(dqa1,dqa2);
+ ?column? | ?column? 
+----------+----------
+        2 |        4
+        2 |        5
+        2 |        5
+        2 |        6
+        2 |        6
+(5 rows)
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct a) over(partition by b) from t;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  WindowAgg
+         Partition By: a
+         ->  Sort
+               Sort Key: a
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: a
+                     ->  WindowAgg
+                           Partition By: b
+                           ->  Sort
+                                 Sort Key: b
+                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                       Hash Key: b
+                                       ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(15 rows)
+
+select count(distinct a) over(partition by a), sum(distinct a) over(partition by b) from t;
+ count | sum 
+-------+-----
+     1 |   2
+     1 |   3
+     1 |   7
+     1 |   7
+     1 |   4
+(5 rows)
+
+explain (costs off) select dqa1+1, dqa2+2 from (select count(distinct a) over(partition by a), sum(distinct a) over(partition by b)  from t) as foo(dqa1,dqa2);
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Subquery Scan on foo
+         ->  WindowAgg
+               Partition By: t.a
+               ->  Sort
+                     Sort Key: t.a
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: t.a
+                           ->  WindowAgg
+                                 Partition By: t.b
+                                 ->  Sort
+                                       Sort Key: t.b
+                                       ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                             Hash Key: t.b
+                                             ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(16 rows)
+
+select dqa1+1, dqa2+2 from (select count(distinct a) over(partition by a), sum(distinct a) over(partition by b)  from t) as foo(dqa1,dqa2);
+ ?column? | ?column? 
+----------+----------
+        2 |        4
+        2 |        5
+        2 |        9
+        2 |        9
+        2 |        6
+(5 rows)
+
+explain (costs off) select count(distinct a) over(), sum(distinct a) over(), row_number() over() from t;
+                   QUERY PLAN                   
+------------------------------------------------
+ WindowAgg
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(4 rows)
+
+select count(distinct a) over(), sum(distinct a) over(), row_number() over() from t;
+ count | sum | row_number 
+-------+-----+------------
+     3 |   9 |          1
+     3 |   9 |          2
+     3 |   9 |          3
+     3 |   9 |          4
+     3 |   9 |          5
+(5 rows)
+
+explain (costs off) select dqa1+1, dqa2+2 , dqa3+3 from (  select count(distinct a) over(), sum(distinct a) over(), row_number() over() from t) as foo(dqa1,dqa2,dqa3);
+                      QUERY PLAN                      
+------------------------------------------------------
+ Subquery Scan on foo
+   ->  WindowAgg
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(5 rows)
+
+select dqa1+1, dqa2+2 , dqa3+3 from (  select count(distinct a) over(), sum(distinct a) over(), row_number() over() from t) as foo(dqa1,dqa2,dqa3);
+ ?column? | ?column? | ?column? 
+----------+----------+----------
+        4 |       11 |        4
+        4 |       11 |        5
+        4 |       11 |        6
+        4 |       11 |        7
+        4 |       11 |        8
+(5 rows)
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a) from t;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  WindowAgg
+         Partition By: a
+         ->  Sort
+               Sort Key: a
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: a
+                     ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a) from t;
+ count | sum | row_number 
+-------+-----+------------
+     1 |   2 |          1
+     1 |   3 |          1
+     1 |   3 |          2
+     1 |   4 |          1
+     1 |   4 |          2
+(5 rows)
+
+explain (costs off) select dqa1+1, dqa2+2 , dqa3+3 from ( select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a) from t) as foo(dqa1,dqa2,dqa3);
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Subquery Scan on foo
+         ->  WindowAgg
+               Partition By: t.a
+               ->  Sort
+                     Sort Key: t.a
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: t.a
+                           ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(10 rows)
+
+select dqa1+1, dqa2+2 , dqa3+3 from ( select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a) from t) as foo(dqa1,dqa2,dqa3);
+ ?column? | ?column? | ?column? 
+----------+----------+----------
+        2 |        4 |        4
+        2 |        5 |        4
+        2 |        5 |        5
+        2 |        6 |        4
+        2 |        6 |        5
+(5 rows)
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct a) over(partition by b), row_number() over(order by c) from t;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)
+   ->  WindowAgg
+         Partition By: a
+         ->  Sort
+               Sort Key: a
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                     Hash Key: a
+                     ->  WindowAgg
+                           Partition By: b
+                           ->  Sort
+                                 Sort Key: b
+                                 ->  Redistribute Motion 1:3  (slice2; segments: 1)
+                                       Hash Key: b
+                                       ->  WindowAgg
+                                             Order By: c
+                                             ->  Gather Motion 3:1  (slice1; segments: 3)
+                                                   Merge Key: c
+                                                   ->  Sort
+                                                         Sort Key: c
+                                                         ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(21 rows)
+
+select count(distinct a) over(partition by a), sum(distinct a) over(partition by b), row_number() over(order by c) from t;
+ count | sum | row_number 
+-------+-----+------------
+     1 |   2 |          3
+     1 |   3 |          4
+     1 |   7 |          1
+     1 |   7 |          5
+     1 |   4 |          2
+(5 rows)
+
+explain (costs off) select dqa1+1, dqa2+2 , dqa3+3 from ( select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a order by c) from t) as foo(dqa1,dqa2,dqa3);
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Subquery Scan on foo
+         ->  WindowAgg
+               Partition By: t.a
+               ->  WindowAgg
+                     Partition By: t.a
+                     Order By: t.c
+                     ->  Sort
+                           Sort Key: t.a, t.c
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                 Hash Key: t.a
+                                 ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(13 rows)
+
+select dqa1+1, dqa2+2 , dqa3+3 from ( select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a order by c) from t) as foo(dqa1,dqa2,dqa3);
+ ?column? | ?column? | ?column? 
+----------+----------+----------
+        2 |        4 |        4
+        2 |        5 |        4
+        2 |        5 |        5
+        2 |        6 |        4
+        2 |        6 |        5
+(5 rows)
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct b) over(partition by a), row_number() over(partition by a)  from t;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  WindowAgg
+         Partition By: a
+         ->  Sort
+               Sort Key: a
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: a
+                     ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select count(distinct a) over(partition by a), sum(distinct b) over(partition by a), row_number() over(partition by a)  from t;
+ count | sum | row_number 
+-------+-----+------------
+     1 |   3 |          1
+     1 |   1 |          1
+     1 |   1 |          2
+     1 |   3 |          1
+     1 |   3 |          2
+(5 rows)
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct b) over(partition by b), row_number() over(partition by a order by c)  from t;
+                                        QUERY PLAN                                        
+------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  WindowAgg
+         Partition By: a
+         ->  WindowAgg
+               Partition By: a
+               Order By: c
+               ->  Sort
+                     Sort Key: a, c
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                           Hash Key: a
+                           ->  WindowAgg
+                                 Partition By: b
+                                 ->  Sort
+                                       Sort Key: b
+                                       ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                             Hash Key: b
+                                             ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(18 rows)
+
+select count(distinct a) over(partition by a), sum(distinct b) over(partition by b), row_number() over(partition by a order by c)  from t;
+ count | sum | row_number 
+-------+-----+------------
+     1 |   3 |          1
+     1 |   1 |          1
+     1 |   0 |          2
+     1 |   2 |          1
+     1 |   1 |          2
+(5 rows)
+
+explain (costs off) select count(distinct a) over(partition by a,b), sum(distinct b) over(partition by a,b), row_number() over(partition by a,b)  from t;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  WindowAgg
+         Partition By: a, b
+         ->  Sort
+               Sort Key: a, b
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: a, b
+                     ->  Seq Scan on t
+ Optimizer: Postgres query optimizer
+(9 rows)
+
+select count(distinct a) over(partition by a,b), sum(distinct b) over(partition by a,b), row_number() over(partition by a,b)  from t;
+ count | sum | row_number 
+-------+-----+------------
+     1 |   3 |          1
+     1 |   1 |          1
+     1 |   2 |          1
+     1 |   0 |          1
+     1 |   1 |          1
+(5 rows)
 
 -- Also test with a pass-by-ref type, to make sure we don't get confused with memory contexts.
 select pcolor, pname, count(distinct pname) over (partition by pcolor) from product;
