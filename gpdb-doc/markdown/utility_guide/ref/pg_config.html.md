@@ -9,7 +9,7 @@ pg_config [<option> ...]
 
 pg_config -? | --help
 
-pg_config --version
+pg_config --gp_version
 ```
 
 ## <a id="section3"></a>Description 
@@ -84,6 +84,9 @@ If more than one option is given, the information is printed in that order, one 
 :   Print the value of the `LIBS` variable that was used for building Greenplum Database. This normally contains `-l` switches for external libraries linked into Greenplum Database.
 
 --version
+:   Print the version of PostgreSQL backend server.
+
+--gp_version
 :   Print the version of Greenplum Database.
 
 ## <a id="section5"></a>Examples 
