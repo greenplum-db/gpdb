@@ -807,6 +807,11 @@ ResGroupAlterOnCommit(const ResourceGroupCallbackContext *callbackCtx)
 		}
 		else if (callbackCtx->limittype == RESGROUP_LIMIT_TYPE_IO_LIMIT)
 		{
+			/*
+			 * When alter io_limit to -1 , the caps.io_limit will be nil.
+			 * There are no errors in io_limit string when caps.io_limit is nil.
+			 * When alter io_limit, caps.io_limit is nil means this resource group's io_limit should be clear.
+			 */
 			cgroupOpsRoutine->cleario(callbackCtx->groupid);
 			cgroupOpsRoutine->setio(callbackCtx->groupid, callbackCtx->caps.io_limit);
 		}
