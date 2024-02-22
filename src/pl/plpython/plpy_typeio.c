@@ -23,6 +23,7 @@
 
 #include "plpy_elog.h"
 #include "plpy_main.h"
+#include "plpy_anytableobject.h"
 
 
 /* conversion from Datums to Python objects */
@@ -534,6 +535,9 @@ PLy_input_setup_func(PLyDatumToOb *arg, MemoryContext arg_mcxt,
 				break;
 			case BYTEAOID:
 				arg->func = PLyBytes_FromBytea;
+				break;
+			case ANYTABLEOID: /* GPDB: support anytable type as UDF input */
+				arg->func = PLyAnytable_FromAnytable;
 				break;
 			default:
 				arg->func = PLyString_FromScalar;

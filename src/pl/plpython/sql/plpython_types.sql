@@ -569,3 +569,38 @@ return rv[0]['val']
 $$;
 
 SELECT test_prep_bytea_output();
+
+-- GPDB special AnyTable type or Table Value Expressions. or tablefunc in other test
+CREATE OR REPLACE FUNCTION test_anytable(t anytable) RETURNS void
+LANGUAGE plpythonu
+AS $$
+for i in t:
+   plpy.info(str(i))
+$$;
+
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1)) a));
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1, 2)) a));
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1), (2)) a));
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES ('a'), ('b')) a));
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES ('a'), (null)) a));
+
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1, null, (1, 2)::named_pair_2), (1, 0.30000000000000004::float, null)) a));
+
+SELECT * FROM test_anytable(TABLE(SELECT * FROM (VALUES (1, 2)) a SCATTER BY 1));
+
+DROP FUNCTION test_anytable(t anytable);
+
+CREATE OR REPLACE FUNCTION test_anytable_column_name(t anytable) RETURNS void
+LANGUAGE plpython3u
+AS $$
+column_name = t.get_column_name()
+for i in t:
+   tuple_dict = dict(zip(column_name, i))
+   plpy.info(str(sorted(tuple_dict.items())))
+$$;
+
+SELECT * FROM test_anytable_column_name(TABLE(SELECT 1 as a, 2 as b, 3 as c FROM (VALUES (1)) a));
+-- if there are 2 columns with same name, overwirte is expected
+SELECT * FROM test_anytable_column_name(TABLE(SELECT 1 as a, 2 as a, 3 as c, 4 as c FROM (VALUES (1)) a));
+
+DROP FUNCTION test_anytable_column_name(t anytable);

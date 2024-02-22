@@ -306,7 +306,8 @@ PLy_procedure_create(HeapTuple procTup, Oid fn_oid, bool is_trigger)
 				argTypeStruct = (Form_pg_type) GETSTRUCT(argTypeTup);
 
 				/* disallow pseudotype arguments */
-				if (argTypeStruct->typtype == TYPTYPE_PSEUDO)
+				if (argTypeStruct->typtype == TYPTYPE_PSEUDO &&
+					argTypeStruct->oid != ANYTABLEOID) /* GPDB: support AnyTable as arguments */
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							 errmsg("PL/Python functions cannot accept type %s",

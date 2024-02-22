@@ -23,6 +23,7 @@
 #include "plpy_spi.h"
 #include "plpy_subxactobject.h"
 #include "plpy_main.h"
+#include "plpy_anytableobject.h"
 
 
 HTAB	   *PLy_spi_exceptions = NULL;
@@ -164,6 +165,7 @@ PLy_init_plpy(void)
 	PLy_result_init_type();
 	PLy_subtransaction_init_type();
 	PLy_cursor_init_type();
+	PLy_anytable_init_type();
 
 #if PY_MAJOR_VERSION >= 3
 	PyModule_Create(&PLy_module);

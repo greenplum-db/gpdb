@@ -36,6 +36,7 @@ OBJS = \
 	plpy_subxactobject.o \
 	plpy_typeio.o \
 	plpy_util.o \
+	plpy_anytableobject.o \
 	$(WIN32RES)
 
 DATA = $(NAME)u.control $(NAME)u--1.0.sql $(NAME)u--unpackaged--1.0.sql
