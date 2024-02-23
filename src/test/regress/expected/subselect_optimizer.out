@@ -1147,3 +1147,91 @@ select (select max((select t.i))) from t;
 (1 row)
 
 drop table t;
+-- Fix join condition expression lost as pull up sublink to join.
+create table tl1(a int, b int, c int, d int) distributed by (a);
+create table tl2(a int, b int, c int, d int) distributed by (a);
+create table tl3(a int, b int, c int, d int) distributed by (a);
+create table tl4(a int, b int, c int, d int) distributed by (a);
+insert into tl1 values (-1, 3, 1, 0);
+insert into tl2 values (2, 1, 1, 0);
+insert into tl2 values (3, 1, 1, 0);
+insert into tl2 values (1, 1, 1, 0);
+insert into tl3 values (9, 9, 1, 9);
+insert into tl4 values (-1, -1, -1, -1);
+explain(costs off, verbose on)
+select * from tl1
+where
+  tl1.b = (
+    select
+      max(tl2.a)
+    from
+      tl2 join tl4
+      on tl4.d = tl2.d
+    where
+      tl2.b = tl1.c
+  );
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Hash Join
+   Output: tl1.a, tl1.b, tl1.c, tl1.d
+   Hash Cond: ((tl1.b = (max((max(tl2.a))))) AND (tl1.c = tl2.b))
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: tl1.a, tl1.b, tl1.c, tl1.d
+         ->  Seq Scan on public.tl1
+               Output: tl1.a, tl1.b, tl1.c, tl1.d
+   ->  Hash
+         Output: tl2.b, (max((max(tl2.a))))
+         ->  Gather Motion 3:1  (slice4; segments: 3)
+               Output: tl2.b, (max((max(tl2.a))))
+               ->  Result
+                     Output: tl2.b, (max((max(tl2.a))))
+                     ->  GroupAggregate
+                           Output: max((max(tl2.a))), tl2.b
+                           Group Key: tl2.b
+                           ->  Sort
+                                 Output: tl2.b, (max(tl2.a))
+                                 Sort Key: tl2.b
+                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                       Output: tl2.b, (max(tl2.a))
+                                       Hash Key: tl2.b
+                                       ->  Result
+                                             Output: tl2.b, (max(tl2.a))
+                                             ->  GroupAggregate
+                                                   Output: max(tl2.a), tl2.b
+                                                   Group Key: tl2.b
+                                                   ->  Sort
+                                                         Output: tl2.a, tl2.b
+                                                         Sort Key: tl2.b
+                                                         ->  Hash Join
+                                                               Output: tl2.a, tl2.b
+                                                               Hash Cond: (tl2.d = tl4.d)
+                                                               ->  Seq Scan on public.tl2
+                                                                     Output: tl2.a, tl2.b, tl2.d
+                                                               ->  Hash
+                                                                     Output: tl4.d
+                                                                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                                                           Output: tl4.d
+                                                                           ->  Seq Scan on public.tl4
+                                                                                 Output: tl4.d
+ Optimizer: Pivotal Optimizer (GPORCA)
+(42 rows)
+
+select * from tl1
+where
+  tl1.b = (
+    select
+      max(tl2.a)
+    from
+      tl2 join tl4
+      on tl4.d = tl2.d
+    where
+      tl2.b = tl1.c
+  );
+ a | b | c | d 
+---+---+---+---
+(0 rows)
+
+drop table tl1;
+drop table tl2;
+drop table tl3;
+drop table tl4;

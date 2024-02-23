@@ -571,3 +571,46 @@ select (select max((select t.i))) from t;
 select (select max((select t.i))) from t;
 
 drop table t;
+
+-- Fix join condition expression lost as pull up sublink to join.
+create table tl1(a int, b int, c int, d int) distributed by (a);
+create table tl2(a int, b int, c int, d int) distributed by (a);
+create table tl3(a int, b int, c int, d int) distributed by (a);
+create table tl4(a int, b int, c int, d int) distributed by (a);
+
+insert into tl1 values (-1, 3, 1, 0);
+insert into tl2 values (2, 1, 1, 0);
+insert into tl2 values (3, 1, 1, 0);
+insert into tl2 values (1, 1, 1, 0);
+insert into tl3 values (9, 9, 1, 9);
+insert into tl4 values (-1, -1, -1, -1);
+
+explain(costs off, verbose on)
+select * from tl1
+where
+  tl1.b = (
+    select
+      max(tl2.a)
+    from
+      tl2 join tl4
+      on tl4.d = tl2.d
+    where
+      tl2.b = tl1.c
+  );
+
+select * from tl1
+where
+  tl1.b = (
+    select
+      max(tl2.a)
+    from
+      tl2 join tl4
+      on tl4.d = tl2.d
+    where
+      tl2.b = tl1.c
+  );
+
+drop table tl1;
+drop table tl2;
+drop table tl3;
+drop table tl4;
