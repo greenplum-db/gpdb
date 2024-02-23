@@ -648,3 +648,79 @@ GROUP BY bb.v;
 
 reset optimizer;
 reset enable_groupagg;
+-- test multi DQA with guc gp_enable_mdqa_shared_scan
+set optimizer = off; -- the case is planner only, so disable orca
+set gp_enable_mdqa_shared_scan = true;
+explain select sum(distinct a), sum(distinct b), c from agg_a group by c;
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=2.59..2.64 rows=1 width=48)
+   ->  Hash Join  (cost=2.59..2.64 rows=1 width=48)
+         Hash Cond: (NOT (share0_ref2.c IS DISTINCT FROM share0_ref1.c))
+         ->  HashAggregate  (cost=1.29..1.30 rows=1 width=24)
+               Group Key: share0_ref2.c
+               ->  HashAggregate  (cost=1.27..1.28 rows=1 width=20)
+                     Group Key: share0_ref2.c, share0_ref2.a
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=1.23..1.25 rows=1 width=20)
+                           Hash Key: share0_ref2.c
+                           ->  HashAggregate  (cost=1.23..1.23 rows=1 width=20)
+                                 Group Key: share0_ref2.c, share0_ref2.a
+                                 ->  Shared Scan (share slice:id 1:0)  (cost=1.01..1.22 rows=1 width=13)
+         ->  Hash  (cost=1.31..1.31 rows=1 width=24)
+               ->  HashAggregate  (cost=1.29..1.30 rows=1 width=24)
+                     Group Key: share0_ref1.c
+                     ->  HashAggregate  (cost=1.27..1.28 rows=1 width=20)
+                           Group Key: share0_ref1.c, share0_ref1.b
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=1.23..1.25 rows=1 width=20)
+                                 Hash Key: share0_ref1.c
+                                 ->  HashAggregate  (cost=1.23..1.23 rows=1 width=20)
+                                       Group Key: share0_ref1.c, share0_ref1.b
+                                       ->  Shared Scan (share slice:id 2:0)  (cost=1.01..1.22 rows=1 width=13)
+                                             ->  Materialize  (cost=0.00..1.01 rows=1 width=13)
+                                                   ->  Seq Scan on agg_a  (cost=0.00..1.01 rows=1 width=13)
+ Optimizer: Postgres query optimizer
+(25 rows)
+
+select sum(distinct a), sum(distinct b), c from agg_a group by c;
+ sum | sum |  c  
+-----+-----+-----
+   1 |   1 | 100
+(1 row)
+
+set gp_enable_mdqa_shared_scan = false;
+explain select sum(distinct a), sum(distinct b), c from agg_a group by c;
+                                                   QUERY PLAN                                                    
+-----------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=2.17..2.22 rows=1 width=48)
+   ->  Hash Join  (cost=2.17..2.22 rows=1 width=48)
+         Hash Cond: (NOT (agg_a.c IS DISTINCT FROM agg_a_1.c))
+         ->  HashAggregate  (cost=1.09..1.10 rows=1 width=24)
+               Group Key: agg_a.c
+               ->  HashAggregate  (cost=1.06..1.07 rows=1 width=20)
+                     Group Key: agg_a.c, agg_a.a
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=1.02..1.04 rows=1 width=20)
+                           Hash Key: agg_a.c
+                           ->  HashAggregate  (cost=1.02..1.02 rows=1 width=20)
+                                 Group Key: agg_a.c, agg_a.a
+                                 ->  Seq Scan on agg_a  (cost=0.00..1.01 rows=1 width=13)
+         ->  Hash  (cost=1.11..1.11 rows=1 width=24)
+               ->  HashAggregate  (cost=1.09..1.10 rows=1 width=24)
+                     Group Key: agg_a_1.c
+                     ->  HashAggregate  (cost=1.06..1.07 rows=1 width=20)
+                           Group Key: agg_a_1.c, agg_a_1.b
+                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=1.02..1.04 rows=1 width=20)
+                                 Hash Key: agg_a_1.c
+                                 ->  HashAggregate  (cost=1.02..1.02 rows=1 width=20)
+                                       Group Key: agg_a_1.c, agg_a_1.b
+                                       ->  Seq Scan on agg_a agg_a_1  (cost=0.00..1.01 rows=1 width=13)
+ Optimizer: Postgres query optimizer
+(23 rows)
+
+select sum(distinct a), sum(distinct b), c from agg_a group by c;
+ sum | sum |  c  
+-----+-----+-----
+   1 |   1 | 100
+(1 row)
+
+reset optimizer;
+reset gp_enable_mdqa_shared_scan;

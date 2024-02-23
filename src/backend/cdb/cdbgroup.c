@@ -5203,7 +5203,7 @@ cost_3phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 	}
 
 	/* Determine whether to use input sharing. */
-	if (ctx->numDistinctCols < 2)
+	if (ctx->numDistinctCols < 2 || !gp_enable_mdqa_shared_scan)
 	{
 		reexec_cost = total_cost;
 		use_sharing = false;

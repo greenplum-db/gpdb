@@ -184,6 +184,7 @@
 		"gp_enable_minmax_optimization",
 		"gp_enable_minmax_optimization",
 		"gp_enable_motion_deadlock_sanity",
+		"gp_enable_mdqa_shared_scan",
 		"gp_enable_multiphase_agg",
 		"gp_enable_predicate_propagation",
 		"gp_enable_preunique",

@@ -295,6 +295,7 @@ bool		gp_log_dynamic_partition_pruning = false;
 bool		gp_cte_sharing = false;
 bool		gp_enable_relsize_collection = false;
 bool		gp_recursive_cte = true;
+bool		gp_enable_mdqa_shared_scan = true;
 
 /* Optimizer related gucs */
 bool		optimizer;
@@ -2072,6 +2073,18 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_recursive_cte,
+		true, NULL, NULL
+	},
+
+		{
+		{"gp_enable_mdqa_shared_scan", PGC_USERSET, QUERY_TUNING_METHOD,
+			gettext_noop("Planner Only. True: planner will decide whether to use shared scan in the plan for"
+			"multiple DQA query based on costs calculation for better performance. False: disable it to avoid"
+			"large spill file."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_enable_mdqa_shared_scan,
 		true, NULL, NULL
 	},
 

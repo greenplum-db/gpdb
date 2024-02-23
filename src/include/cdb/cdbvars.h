@@ -797,6 +797,8 @@ extern bool gp_dynamic_partition_pruning;
 extern bool gp_cte_sharing;
 /* Enable RECURSIVE clauses in common table expressions */
 extern bool gp_recursive_cte;
+/* Enable shared scan in three stage agg */
+extern bool gp_enable_mdqa_shared_scan;
 
 /* Enable check for compatibility of encoding and locale in createdb */
 extern bool gp_encoding_check_locale_compatibility;

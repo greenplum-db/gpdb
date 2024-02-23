@@ -247,3 +247,17 @@ ON a.a = bb.b
 GROUP BY bb.v;
 reset optimizer;
 reset enable_groupagg;
+
+-- test multi DQA with guc gp_enable_mdqa_shared_scan
+set optimizer = off; -- the case is planner only, so disable orca
+set gp_enable_mdqa_shared_scan = true;
+
+explain select sum(distinct a), sum(distinct b), c from agg_a group by c;
+select sum(distinct a), sum(distinct b), c from agg_a group by c;
+
+set gp_enable_mdqa_shared_scan = false;
+explain select sum(distinct a), sum(distinct b), c from agg_a group by c;
+select sum(distinct a), sum(distinct b), c from agg_a group by c;
+
+reset optimizer;
+reset gp_enable_mdqa_shared_scan;
