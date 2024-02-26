@@ -1028,10 +1028,10 @@ select (select max((select t.i))) from t;
 drop table t;
 
 -- Fix join condition expression lost as pull up sublink to join.
-create table tl1(a int, b int, c int, d int);
-create table tl2(a int, b int, c int, d int);
-create table tl3(a int, b int, c int, d int);
-create table tl4(a int, b int, c int, d int);
+create table tl1(a int, b int, c int, d int) distributed by (a);
+create table tl2(a int, b int, c int, d int) distributed by (a);
+create table tl3(a int, b int, c int, d int) distributed by (a);
+create table tl4(a int, b int, c int, d int) distributed by (a);
 
 insert into tl1 values (-1, 3, 1, 0);
 insert into tl2 values (2, 1, 1, 0);
