@@ -1041,36 +1041,28 @@ insert into tl3 values (9, 9, 1, 9);
 insert into tl4 values (-1, -1, -1, -1);
 
 explain(costs off, verbose on)
-WITH cte1(a, b, c, d) AS
-(
-  select * from tl1
-)
-select * from cte1
+select * from tl1
 where
-  cte1.b = (
+  tl1.b = (
     select
       max(tl2.a)
     from
-      tl2 join tl3 on tl3.c = tl2.c
-      join tl4 on tl4.d = tl2.d
+      tl2 join tl4
+      on tl4.d = tl2.d
     where
-      tl2.b = cte1.c
+      tl2.b = tl1.c
   );
 
-WITH cte1(a, b, c, d) AS
-(
-  select * from tl1
-)
-select * from cte1
+select * from tl1
 where
-  cte1.b = (
+  tl1.b = (
     select
       max(tl2.a)
     from
-      tl2 join tl3 on tl3.c = tl2.c
-      join tl4 on tl4.d = tl2.d
+      tl2 join tl4
+      on tl4.d = tl2.d
     where
-      tl2.b = cte1.c
+      tl2.b = tl1.c
   );
 
 drop table tl1;
