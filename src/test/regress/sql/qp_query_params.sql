@@ -38,7 +38,7 @@ explain (costs off) execute q1(4);
 execute q1(4);
 deallocate q1;
 
--- Should perform runtime static partition elimination, Orca does not do this currently
+-- Should perform static elimination at execution time, Orca does not do this currently
 PREPARE q1 as SELECT * from part where a=$1;
 explain (costs off) EXECUTE q1(2);
 execute q1(2);
@@ -66,14 +66,14 @@ explain (costs off) execute q1(5);
 execute q1(5);
 deallocate q1;
 
--- Test direct dispatch with delete. Explain doesn't show this, so we must verify results
+-- Should NOT do direct dispatch with delete. Explain doesn't show this, so we must verify results
 PREPARE q1 as DELETE from t1 where a=$1;
 explain (costs off) execute q1(1);
 execute q1(1);
 deallocate q1;
 select count(*) from t1;
 
--- Test direct dispatch with insert. Explain doesn't show this, so we must verify results
+-- Should NOT do direct dispatch with insert. Explain doesn't show this, so we must verify results
 PREPARE q1 as INSERT into t1 values ($1, $2);
 explain (costs off) execute q1(1,3);
 execute q1(1,3);
