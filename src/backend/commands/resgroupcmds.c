@@ -517,6 +517,10 @@ AlterResourceGroup(AlterResourceGroupStmt *stmt)
 										  groupid, RESGROUP_LIMIT_TYPE_IO_LIMIT,
 										  0, cgroupOpsRoutine->dumpio(caps.io_limit));
 		else
+			/*
+			 * When alter io_limit to -1 , the caps.io_limit will be nil.
+			 * So we should update the io_limit in capability relation to -1.
+			 */
 			updateResgroupCapabilityEntry(pg_resgroupcapability_rel,
 										  groupid, RESGROUP_LIMIT_TYPE_IO_LIMIT,
 										  0, DefaultIOLimit);
