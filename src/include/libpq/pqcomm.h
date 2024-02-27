@@ -202,12 +202,15 @@ typedef uint32 AuthRequest;
  */
 #define FINISH_REQUEST_CODE PG_PROTOCOL(1234,5677)
 
+#define MPP_BACKEND_ARRAY	1024
 typedef struct CancelRequestPacket
 {
 	/* Note that each field is stored in network byte order! */
 	MsgType		cancelRequestCode;	/* code to identify a cancel request */
 	uint32		backendPID;		/* PID of client's backend */
 	uint32		cancelAuthCode; /* secret key to authorize cancel */
+	uint32		numMppBackends;	/* number backend pid send to QE */
+	uint32		MppBackends[MPP_BACKEND_ARRAY]; /* QE backend pid array */
 } CancelRequestPacket;
 
 

@@ -4392,7 +4392,8 @@ PQfreeCancel(PGcancel *cancel)
  */
 static int
 internal_cancel(SockAddr *raddr, int be_pid, int be_key,
-				char *errbuf, int errbufsize, bool requestFinish)
+				char *errbuf, int errbufsize, bool requestFinish,
+				int numQEBackends, int *QEBackends)
 {
 	int			save_errno = SOCK_ERRNO;
 	pgsocket	tmpsock = PGINVALID_SOCKET;
@@ -4433,18 +4434,37 @@ retry3:
 	 * We needn't set nonblocking I/O or NODELAY options here.
 	 */
 
-	/* Create and send the cancel request packet. */
+	int packetlen = sizeof(uint32) + offsetof(CancelRequestPacket, MppBackends) + numQEBackends * sizeof(uint32);
 
-	crp.packetlen = pg_hton32((uint32) sizeof(crp));
-	if (requestFinish)
-		crp.cp.cancelRequestCode = (MsgType) pg_hton32(FINISH_REQUEST_CODE);
+	if (numQEBackends == 0)
+	{
+		crp.packetlen = pg_hton32((uint32) packetlen);
+		if (requestFinish)
+			crp.cp.cancelRequestCode = (MsgType) pg_hton32(FINISH_REQUEST_CODE);
+		else
+			crp.cp.cancelRequestCode = (MsgType) pg_hton32(CANCEL_REQUEST_CODE);
+		crp.cp.backendPID = pg_hton32(be_pid);
+		crp.cp.cancelAuthCode = pg_hton32(be_key);
+		crp.cp.numMppBackends = 0;
+	}
 	else
-		crp.cp.cancelRequestCode = (MsgType) pg_hton32(CANCEL_REQUEST_CODE);
-	crp.cp.backendPID = pg_hton32(be_pid);
-	crp.cp.cancelAuthCode = pg_hton32(be_key);
+	{
+		crp.packetlen = pg_hton32((uint32) packetlen);
+		if (requestFinish)
+			crp.cp.cancelRequestCode = (MsgType) pg_hton32(FINISH_REQUEST_CODE);
+		else
+			crp.cp.cancelRequestCode = (MsgType) pg_hton32(CANCEL_REQUEST_CODE);
+		crp.cp.backendPID = pg_hton32(be_pid);
+		crp.cp.cancelAuthCode = pg_hton32(be_key);
+		crp.cp.numMppBackends = pg_hton32(numQEBackends);
+		for (int i = 0; i < numQEBackends; i++)
+		{
+			crp.cp.MppBackends[i] = pg_hton32(QEBackends[i]);
+		}
+	}
 
 retry4:
-	if (send(tmpsock, (char *) &crp, sizeof(crp), 0) != (int) sizeof(crp))
+	if (send(tmpsock, (char *) &crp, packetlen, 0) != (int) packetlen)
 	{
 		if (SOCK_ERRNO == EINTR)
 			/* Interrupted system call - we'll just try again */
@@ -4561,7 +4581,7 @@ PQcancel(PGcancel *cancel, char *errbuf, int errbufsize)
 	}
 
 	return internal_cancel(&cancel->raddr, cancel->be_pid, cancel->be_key,
-						   errbuf, errbufsize, false);
+						   errbuf, errbufsize, false, 0, NULL);
 }
 
 /*
@@ -4580,8 +4600,50 @@ PQrequestFinish(PGcancel *cancel, char *errbuf, int errbufsize)
 	}
 
 	return internal_cancel(&cancel->raddr, cancel->be_pid, cancel->be_key,
-						   errbuf, errbufsize, true);
+						   errbuf, errbufsize, true, 0, NULL);
 }
+
+/*
+ * PQMppcancel: request Mpp query cancel
+ *
+ * Returns true if able to send the cancel request, false if not.
+ *
+ * On failure, an error message is stored in *errbuf, which must be of size
+ * errbufsize (recommended size is 256 bytes).  *errbuf is not changed on
+ * success return.
+ */
+int
+PQMppcancel(PGcancel *cancel, char *errbuf, int errbufsize, int nums, int *QEBackends)
+{
+	if (!cancel)
+	{
+		strlcpy(errbuf, "PQMppcancel() -- no cancel object supplied", errbufsize);
+		return false;
+	}
+
+	return internal_cancel(&cancel->raddr, cancel->be_pid, cancel->be_key,
+						   errbuf, errbufsize, false, nums, QEBackends);
+}
+
+/*
+ * PQMpprequestFinish: request Mpp query finish
+ *
+ * Same as PQMppcancel, except it sends a finish request.
+ */
+int
+PQMpprequestFinish(PGcancel *cancel, char *errbuf, int errbufsize, int nums, int *QEBackends)
+{
+	if (!cancel)
+	{
+		strlcpy(errbuf, "PQMpprequestFinish() -- no cancel object supplied",
+				errbufsize);
+		return false;
+	}
+
+	return internal_cancel(&cancel->raddr, cancel->be_pid, cancel->be_key,
+						   errbuf, errbufsize, true, nums, QEBackends);
+}
+
 
 /*
  * PQrequestCancel: old, not thread-safe function for requesting query cancel
@@ -4616,7 +4678,7 @@ PQrequestCancel(PGconn *conn)
 
 	r = internal_cancel(&conn->raddr, conn->be_pid, conn->be_key,
 						conn->errorMessage.data, conn->errorMessage.maxlen,
-						false);
+						false, 0, NULL);
 
 	if (!r)
 		conn->errorMessage.len = strlen(conn->errorMessage.data);

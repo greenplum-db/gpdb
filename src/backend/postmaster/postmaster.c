@@ -2853,6 +2853,8 @@ processCancelRequest(Port *port, void *pkt, MsgType code)
 	CancelRequestPacket *canc = (CancelRequestPacket *) pkt;
 	int			backendPID;
 	int32		cancelAuthCode;
+	int32		numsBackends;
+
 	Backend    *bp;
 
 #ifndef EXEC_BACKEND
@@ -2863,6 +2865,10 @@ processCancelRequest(Port *port, void *pkt, MsgType code)
 
 	backendPID = (int) pg_ntoh32(canc->backendPID);
 	cancelAuthCode = (int32) pg_ntoh32(canc->cancelAuthCode);
+	numsBackends = (int32) pg_ntoh32(canc->numMppBackends);
+	int	*QEBackends = palloc0(sizeof(int) * numsBackends);
+	for (int i = 0; i < numsBackends; i++)
+		QEBackends[i] = (int) pg_ntoh32(canc->MppBackends[i]);
 
 	/*
 	 * See if we have a matching backend.  In the EXEC_BACKEND case, we can no
@@ -2890,13 +2896,45 @@ processCancelRequest(Port *port, void *pkt, MsgType code)
 											 backendPID)));
 					SendProcSignal(bp->pid, PROCSIG_QUERY_FINISH,
 								   InvalidBackendId);
+					if (numsBackends == 0)
+					{
+						ereport(LOG,
+								(errmsg_internal("query finish request to process %d",
+												 backendPID)));
+						SendProcSignal(bp->pid, PROCSIG_QUERY_FINISH,
+									   InvalidBackendId);
+					}
+					else
+					{
+						for (int i = 0; i < numsBackends; i++)
+						{
+							ereport(LOG,
+									(errmsg_internal("query MPP finish request to process %d",
+													 QEBackends[i])));
+							SendProcSignal(QEBackends[i], PROCSIG_QUERY_FINISH,
+											InvalidBackendId);
+						}
+					}
 				}
 				else
 				{
-					ereport(DEBUG2,
-							(errmsg_internal("processing cancel request: sending SIGINT to process %d",
-											 backendPID)));
-					signal_child(bp->pid, SIGINT);
+					if (numsBackends == 0)
+					{
+						ereport(DEBUG2,
+								(errmsg_internal("processing cancel request: sending SIGINT to process %d",
+												 backendPID)));
+						signal_child(backendPID, SIGINT);
+					}
+					else
+					{
+						for (int i = 0; i < numsBackends; i++)
+						{
+							ereport(DEBUG2,
+									(errmsg_internal("processing MPP cancel request: sending SIGINT to process %d",
+													 QEBackends[i])));
+							signal_child(QEBackends[i], SIGINT);
+						}
+					}
 				}
 			}
 			else
