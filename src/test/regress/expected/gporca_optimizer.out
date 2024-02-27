@@ -14018,6 +14018,113 @@ select r.a, r.b, r.c, l.c from left_outer_index_nl_foo_repl r left outer join le
 reset optimizer_enable_hashjoin;
 reset enable_nestloop;
 reset enable_hashjoin;
+--
+-- Test both optimizers not switching to Generic plan.
+-- 1) Test Subquery Scan cost is correct for Postgres optimizer, which leads
+-- Custom plan to be preferred after current fix (Subquery Scan node cost
+-- calculation).
+-- 2) Test ORCA not switching to Generic plan, because it's incorrect to
+-- compare Postgres and ORCA plans cost.
+--
+-- Unlike near the same test in plancache.sql, we show Subquery Scan cost
+-- really changed and plan switching behavior just points to it.
+-- The ORCA part of test somehow duplicates plancache.sql test, showing more
+-- complex example.
+--
+create table test_subquery_scan(i integer, d date)
+partition by range(d) (start ('2019-01-01'::date) end ('2022-01-01'::date)
+every ('1 day'::interval));
+prepare test_subquery_scan_pp (date) as
+with ss_cte as (select d from test_subquery_scan where d=$1)
+select d
+from ss_cte
+where d in (select d from ss_cte);
+-- Disabling hashjoin for ORCA will force using of unoptimal plan. Before
+-- fixing ORCA and Postgres plans costs comparison, we used Genric plan after
+-- 5th execution even for ORCA, which was wrong.
+set optimizer_enable_hashjoin=off;
+-- Explain for Postgres optimizer should contain Subquery Scan node, which cost
+-- includes the cost of underlying node.
+-- ORCA should build correct plan, like before (we just showing ORCA not
+-- switching to Generic plan below).
+explain execute test_subquery_scan_pp('2021-01-01'::date);
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324463.17 rows=1 width=4)
+   ->  Sequence  (cost=0.00..1324463.17 rows=1 width=4)
+         ->  Shared Scan (share slice:id 2:0)  (cost=0.00..431.00 rows=1 width=1)
+               ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
+                     ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Partition Selector for test_subquery_scan (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 1 (out of 1096)
+                           ->  Dynamic Seq Scan on test_subquery_scan (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=4)
+                                 Filter: (d = '2021-01-01'::date)
+         ->  Result  (cost=0.00..1324032.17 rows=1 width=4)
+               Filter: (SubPlan 1)
+               ->  Shared Scan (share slice:id 2:0)  (cost=0.00..431.00 rows=1 width=4)
+               SubPlan 1  (slice2; segments: 3)
+                 ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                             ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(17 rows)
+
+execute test_subquery_scan_pp('2021-01-01'::date); -- 1x
+ d 
+---
+(0 rows)
+
+execute test_subquery_scan_pp('2021-01-01'::date); -- 2x
+ d 
+---
+(0 rows)
+
+execute test_subquery_scan_pp('2021-01-01'::date); -- 3x
+ d 
+---
+(0 rows)
+
+execute test_subquery_scan_pp('2021-01-01'::date); -- 4x
+ d 
+---
+(0 rows)
+
+execute test_subquery_scan_pp('2021-01-01'::date); -- 5x
+ d 
+---
+(0 rows)
+
+-- The plan for both, Postgres and ORCA, optimizers should be equal to first
+-- explain call.
+-- 1) Postgres optimizer should not switch to Generic plan, because Subquery
+-- Scan node cost was fixed and Custom plan cost is lower after fix.
+-- 2) ORCA should not switch to Generic plan, because it's incorrect to compare
+-- Postgres and ORCA plans cost.
+-- Filter node contains '(d = '2021-01-01'::date)' condition, which indicates
+-- Custom plan usage.
+explain execute test_subquery_scan_pp('2021-01-01'::date);
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1324463.17 rows=1 width=4)
+   ->  Sequence  (cost=0.00..1324463.17 rows=1 width=4)
+         ->  Shared Scan (share slice:id 2:0)  (cost=0.00..431.00 rows=1 width=1)
+               ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
+                     ->  Sequence  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Partition Selector for test_subquery_scan (dynamic scan id: 1)  (cost=10.00..100.00 rows=34 width=4)
+                                 Partitions selected: 1 (out of 1096)
+                           ->  Dynamic Seq Scan on test_subquery_scan (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=4)
+                                 Filter: (d = '2021-01-01'::date)
+         ->  Result  (cost=0.00..1324032.17 rows=1 width=4)
+               Filter: (SubPlan 1)
+               ->  Shared Scan (share slice:id 2:0)  (cost=0.00..431.00 rows=1 width=4)
+               SubPlan 1  (slice2; segments: 3)
+                 ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                             ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(17 rows)
+
+reset optimizer_enable_hashjoin;
 --- IS DISTINCT FROM FALSE previously simplified to IS TRUE, returning incorrect results for some hash anti joins
 --- the following tests were added to verify the behavior is correct
 CREATE TABLE tt1 (a int, b int);

@@ -18,6 +18,7 @@
 #include "access/tupdesc.h"
 #include "nodes/params.h"
 #include "nodes/parsenodes.h"
+#include "nodes/plannodes.h"
 
 #define CACHEDPLANSOURCE_MAGIC		195726186
 #define CACHEDPLAN_MAGIC			953717834
@@ -110,6 +111,12 @@ typedef struct CachedPlanSource
 	double		generic_cost;	/* cost of generic plan, or -1 if not known */
 	double		total_custom_cost;		/* total cost of custom plans so far */
 	int			num_custom_plans;		/* number of plans included in total */
+	bool		plangen_switched;		/* was plangen switched for statements
+										 * in one plan or between plans from
+										 * BuildCachedPlan() calls */
+	PlanGenerator init_plangen_used;	/* generator used for very first plan's
+										 * statement or for all statements if
+										 * plangen_switched is false */
 } CachedPlanSource;
 
 /*
