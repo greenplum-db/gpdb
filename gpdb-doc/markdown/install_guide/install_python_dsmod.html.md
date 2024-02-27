@@ -216,7 +216,7 @@ $ sudo yum install tk
 The Data Science Package for Python modules are installed in the following directory:
 
 ```
-$GPHOME/ext/DataSciencePython/lib/python3.9/site-packages/
+$GPHOME/ext/DataSciencePython/lib/python3.11/site-packages/
 ```
 
 ## <a id="topic_removepdsm"></a>Uninstalling a Data Science Package for Python 

@@ -139,7 +139,7 @@ endif
 
 
 ifneq (false, ${PG_LANG})
-CONFIGFLAGS+= --with-perl --with-python PYTHON=python3.9
+CONFIGFLAGS+= --with-perl --with-python PYTHON=python3.11
 ifdef TCL_CFG
 CONFIGFLAGS+= --with-tcl-config=${TCL_CFG}
 endif

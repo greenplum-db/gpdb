@@ -347,26 +347,26 @@ To develop with modules that are not part of the Python Data Science Module pack
 The plpython3u is built with Python 3.9. To check the Python environment, you can use the `which` command:
 
 ```
-which python3.9
+which python3.11
 ```
 
 When running shell commands on remote hosts with `gpssh`, specify the `-s` option to source the `greenplum_path.sh` file before running commands on the remote hosts. For example, this command should display the Python installed with Greenplum Database on each host specified in the `gpdb_hosts` file.
 
 ```
-gpssh -s -f gpdb_hosts which python3.9
+gpssh -s -f gpdb_hosts which python3.11
 ```
 
 To display the list of currently installed Python modules, run this command.
 
 ```
-python3.9 -c "help('modules')"
+python3.11 -c "help('modules')"
 ```
 
 You can optionally run `gpssh` in interactive mode to display Python modules on remote hosts. This example starts `gpssh` in interactive mode and lists the Python modules on the Greenplum Database host `sdw1`.
 
 ```
 $ gpssh -s -h sdw1
-=> python3.9 -c "help('modules')"
+=> python3.11 -c "help('modules')"
 . . .
 => exit
 $
@@ -378,7 +378,7 @@ The Python utility `pip` installs Python packages that contain Python modules an
 
 For Python 3.9, use:
 ```
-python3.9 -m ensurepip --default-pip
+python3.11 -m ensurepip --default-pip
 ```
 
 The command runs the `ensurepip` module to bootstrap \(install and configure\) the `pip` utility from the local Python installation.
@@ -386,14 +386,14 @@ The command runs the `ensurepip` module to bootstrap \(install and configure\) t
 You can run this command to ensure the `pip`, `setuptools` and `wheel` projects are current. Current Python projects ensure that you can install Python packages from source distributions or pre-built distributions \(wheels\).
 
 ```
-python3.9 -m pip install --upgrade pip setuptools wheel
+python3.11 -m pip install --upgrade pip setuptools wheel
 ```
 
 You can use `gpssh` to run the commands on the Greenplum Database hosts. This example runs `gpssh` in interactive mode to install `pip` on the hosts listed in the file `gpdb_hosts`.
 
 ```
 $ gpssh -s -f gpdb_hosts
-=> python3.9 -m ensurepip --default-pip
+=> python3.11 -m ensurepip --default-pip
 [centos6-cdw1] Ignoring indexes: https://pypi.python.org/simple
 [centos6-cdw1] Collecting setuptools
 [centos6-cdw1] Collecting pip
@@ -422,7 +422,7 @@ For more information about installing Python packages, see [https://packaging.py
 
 
 ```
-python3.9 -m pip install --user numpy scipy
+python3.11 -m pip install --user numpy scipy
 ```
 
 The `--user` option attempts to avoid conflicts when installing Python packages.
@@ -439,7 +439,7 @@ You can optionally install Python 3.9 modules to a non-standard location by usin
 gpssh -s -f gpdb_hosts
 => unset PYTHONHOME
 => unset PYTHONPATH
-=> $GPHOME/ext/python3.9 -m pip install --prefix=/home/gpadmin/my_python numpy scipy
+=> $GPHOME/ext/python3.11 -m pip install --prefix=/home/gpadmin/my_python numpy scipy
 ```
 
 If you use this option, keep in mind that the `PYTHONPATH` environment variable setting is cleared before initializing or executing functions using `plpython3u`. If you want to use modules installed to a custom location, you must configure the paths to those modules using the Greenplum configuration parameter `plpython3.python_path` instead of  `PYTHONPATH`. For example:
@@ -512,7 +512,7 @@ If `FAILURE` is returned, these are some possible causes:
     Make sure you get no errors when running command on the segment host as the `gpadmin` user. This `gpssh` command tests importing the numpy module on the segment host `cdw1`.
 
     ```
-    gpssh -s -h cdw1 python3.9 -c "import numpy"
+    gpssh -s -h cdw1 python3.11 -c "import numpy"
     ```
 
 -   The `plpython3.python_path` has not been set to the correct location.

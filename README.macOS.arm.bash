@@ -52,7 +52,7 @@ brew install postgresql
 # Installing python3 libraries
 brew install python@3.9
 python_version=$(echo `ls  /opt/homebrew/Cellar/python@3.9/`)
-ln -s /opt/homebrew/Cellar/python@3.9/$python_version/bin/python3.9 /opt/homebrew/bin/python3
+ln -s /opt/homebrew/Cellar/python@3.9/$python_version/bin/python3.11 /opt/homebrew/bin/python3
 ln -s /opt/homebrew/Cellar/python@3.9/$python_version/bin/pip3.9 /opt/homebrew/bin/pip3
 pip3 install -r python-dependencies.txt
 brew install pyenv
