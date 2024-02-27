@@ -7691,7 +7691,7 @@ add_paths_to_grouping_rel(PlannerInfo *root, RelOptInfo *input_rel,
 			foreach(lc, grouped_rel->pathlist)
 			{
 				Path *path = (Path *) lfirst(lc);
-				path->total_cost += disable_cost;
+				path->is_disabled = true;
 			}
 		}
 

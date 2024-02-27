@@ -185,6 +185,19 @@ compare_fractional_path_costs(Path *path1, Path *path2,
 static PathCostComparison
 compare_path_costs_fuzzily(Path *path1, Path *path2, double fuzz_factor)
 {
+	if (path1->is_disabled && path2->is_disabled)
+	{
+		return COSTS_EQUAL;
+	}
+	else if (path1->is_disabled)
+	{
+		return COSTS_BETTER2;
+	}
+	else if (path2->is_disabled)
+	{
+		return COSTS_BETTER1;
+	}
+
 #define CONSIDER_PATH_STARTUP_COST(p)  \
 	((p)->param_info == NULL ? (p)->parent->consider_startup : (p)->parent->consider_param_startup)
 
@@ -1038,6 +1051,7 @@ create_seqscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->motionHazard = false;
 	pathnode->rescannable = true;
 	pathnode->sameslice_relids = rel->relids;
+	pathnode->is_disabled = false;
 
 	cost_seqscan(pathnode, root, rel, pathnode->param_info);
 
@@ -1067,6 +1081,7 @@ create_samplescan_path(PlannerInfo *root, RelOptInfo *rel, Relids required_outer
 	pathnode->motionHazard = false;
 	pathnode->rescannable = true;
 	pathnode->sameslice_relids = rel->relids;
+	pathnode->is_disabled = false;
 
 	cost_samplescan(pathnode, root, rel, pathnode->param_info);
 
@@ -1121,6 +1136,7 @@ create_index_path(PlannerInfo *root,
 	pathnode->path.parallel_safe = rel->consider_parallel;
 	pathnode->path.parallel_workers = 0;
 	pathnode->path.pathkeys = pathkeys;
+	pathnode->path.is_disabled = false;
 
 	pathnode->indexinfo = index;
 	pathnode->indexclauses = indexclauses;
@@ -1176,6 +1192,7 @@ create_bitmap_heap_path(PlannerInfo *root,
 	pathnode->path.motionHazard = false;
 	pathnode->path.rescannable = true;
 	pathnode->path.sameslice_relids = rel->relids;
+	pathnode->path.is_disabled = false;
 
 	pathnode->bitmapqual = bitmapqual;
 
@@ -1229,6 +1246,7 @@ create_bitmap_and_path(PlannerInfo *root,
 	pathnode->path.parallel_workers = 0;
 
 	pathnode->path.pathkeys = NIL;	/* always unordered */
+	pathnode->path.is_disabled = false;
 
 	pathnode->bitmapquals = bitmapquals;
 
@@ -1281,6 +1299,7 @@ create_bitmap_or_path(PlannerInfo *root,
 	pathnode->path.parallel_workers = 0;
 
 	pathnode->path.pathkeys = NIL;	/* always unordered */
+	pathnode->path.is_disabled = false;
 
 	pathnode->bitmapquals = bitmapquals;
 
@@ -1321,6 +1340,7 @@ create_tidscan_path(PlannerInfo *root, RelOptInfo *rel, List *tidquals,
 	pathnode->path.motionHazard = false;
 	pathnode->path.rescannable = true;
 	pathnode->path.sameslice_relids = rel->relids;
+	pathnode->path.is_disabled = false;
 
 	cost_tidscan(&pathnode->path, root, rel, tidquals,
 				 pathnode->path.param_info);
@@ -1379,6 +1399,7 @@ create_append_path(PlannerInfo *root,
 
 	pathnode->path.motionHazard = false;
 	pathnode->path.rescannable = true;
+	pathnode->path.is_disabled = false;
 
 	/*
 	 * For parallel append, non-partial paths are sorted by descending total
@@ -1525,6 +1546,7 @@ create_merge_append_path(PlannerInfo *root,
 	pathnode->path.parallel_safe = rel->consider_parallel;
 	pathnode->path.parallel_workers = 0;
 	pathnode->path.pathkeys = pathkeys;
+	pathnode->path.is_disabled = false;
 	pathnode->partitioned_rels = list_copy(partitioned_rels);
 	pathnode->subpaths = subpaths;
 
@@ -2012,6 +2034,7 @@ create_group_result_path(PlannerInfo *root, RelOptInfo *rel,
 	CdbPathLocus_MakeGeneral(&pathnode->path.locus);
 	pathnode->path.motionHazard = false;
 	pathnode->path.rescannable = true;
+	pathnode->path.is_disabled = false;
 
 	return pathnode;
 }
@@ -2043,6 +2066,7 @@ create_material_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath)
 	pathnode->cdb_strict = false;
 	pathnode->path.rescannable = true; /* Independent of sub-path */
 	pathnode->path.sameslice_relids = subpath->sameslice_relids;
+	pathnode->path.is_disabled = false;
 
 	pathnode->subpath = subpath;
 
@@ -2163,6 +2187,7 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 	pathnode->path.parallel_safe = rel->consider_parallel &&
 		subpath->parallel_safe;
 	pathnode->path.parallel_workers = subpath->parallel_workers;
+	pathnode->path.is_disabled = false;
 
 	/*
 	 * Assume the output is unsorted, since we don't necessarily have pathkeys
@@ -2525,6 +2550,7 @@ create_unique_rowid_path(PlannerInfo *root,
 	 * pathkeys to represent it.
 	 */
 	pathnode->path.pathkeys = NIL;
+	pathnode->path.is_disabled = false;
 
 	pathnode->subpath = subpath;
 	pathnode->in_operators = list_make1_oid(Int8EqualOperator);
@@ -2661,6 +2687,7 @@ create_gather_merge_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 	pathnode->path.pathkeys = pathkeys;
 	pathnode->path.pathtarget = target ? target : rel->reltarget;
 	pathnode->path.rows += subpath->rows;
+	pathnode->path.is_disabled = false;
 
 	if (pathkeys_contained_in(pathkeys, subpath->pathkeys))
 	{
@@ -2746,6 +2773,7 @@ create_gather_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 	pathnode->path.parallel_safe = false;
 	pathnode->path.parallel_workers = 0;
 	pathnode->path.pathkeys = NIL;	/* Gather has unordered result */
+	pathnode->path.is_disabled = false;
 
 	pathnode->subpath = subpath;
 	pathnode->num_workers = subpath->parallel_workers;
@@ -2793,6 +2821,7 @@ create_subqueryscan_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 	pathnode->path.motionHazard = subpath->motionHazard;
 	pathnode->path.rescannable = false;
 	pathnode->path.sameslice_relids = NULL;
+	pathnode->path.is_disabled = false;
 
 	pathnode->required_outer = bms_copy(required_outer);
 	cost_subqueryscan(pathnode, root, rel, pathnode->path.param_info);
@@ -2822,6 +2851,7 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->parallel_safe = rel->consider_parallel;
 	pathnode->parallel_workers = 0;
 	pathnode->pathkeys = pathkeys;
+	pathnode->is_disabled = false;
 
 	/*
 	 * Decide where to execute the FunctionScan.
@@ -3031,6 +3061,7 @@ create_tablefunction_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 		CdbPathLocus_MakeStrewn(&pathnode->path.locus,
 								CdbPathLocus_NumSegments(pathnode->path.locus));
 	pathnode->path.sameslice_relids = NULL;
+	pathnode->path.is_disabled = false;
 
 	cost_tablefunction(pathnode, root, rel, pathnode->path.param_info);
 
@@ -3057,6 +3088,7 @@ create_tablefuncscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->parallel_safe = rel->consider_parallel;
 	pathnode->parallel_workers = 0;
 	pathnode->pathkeys = NIL;	/* result is always unordered */
+	pathnode->is_disabled = false;
 	CdbPathLocus_MakeGeneral(&pathnode->locus);
 
 	cost_tablefuncscan(pathnode, root, rel, pathnode->param_info);
@@ -3085,6 +3117,7 @@ create_valuesscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->parallel_safe = rel->consider_parallel;
 	pathnode->parallel_workers = 0;
 	pathnode->pathkeys = NIL;	/* result is always unordered */
+	pathnode->is_disabled = false;
 
 	/*
 	 * CDB: If VALUES list contains mutable functions, evaluate it on entry db.
@@ -3136,6 +3169,7 @@ create_ctescan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->locus = locus;
 
 	pathnode->sameslice_relids = NULL;
+	pathnode->is_disabled = false;
 
 	/*
 	 * GPDB: we do have the subpath, at least if it's not a shared cte.
@@ -3194,6 +3228,7 @@ create_namedtuplestorescan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->parallel_safe = rel->consider_parallel;
 	pathnode->parallel_workers = 0;
 	pathnode->pathkeys = NIL;	/* result is always unordered */
+	pathnode->is_disabled = false;
 
 	cost_namedtuplestorescan(pathnode, root, rel, pathnode->param_info);
 
@@ -3228,6 +3263,7 @@ create_resultscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->parallel_safe = rel->consider_parallel;
 	pathnode->parallel_workers = 0;
 	pathnode->pathkeys = NIL;	/* result is always unordered */
+	pathnode->is_disabled = false;
 
 	{
 		char		exec_location;
@@ -3303,6 +3339,7 @@ create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->motionHazard = false;
 	pathnode->rescannable = true;
 	pathnode->sameslice_relids = rel->relids;
+	pathnode->is_disabled = false;
 
 	/* Cost is the same as for a regular CTE scan */
 	cost_ctescan(pathnode, root, rel, pathnode->param_info);
@@ -3375,6 +3412,8 @@ create_foreignscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->path.startup_cost = startup_cost;
 	pathnode->path.total_cost = total_cost;
 	pathnode->path.pathkeys = pathkeys;
+	pathnode->path.is_disabled = false;
+
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		switch (rel->exec_location)
@@ -3517,6 +3556,8 @@ create_foreign_upper_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->path.startup_cost = startup_cost;
 	pathnode->path.total_cost = total_cost;
 	pathnode->path.pathkeys = pathkeys;
+	pathnode->path.is_disabled = false;
+
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{
 		ForeignServer *server = NULL;
@@ -3765,6 +3806,7 @@ create_nestloop_path(PlannerInfo *root,
 	pathnode->path.rescannable = outer_path->rescannable && inner_path->rescannable;
 
 	pathnode->path.sameslice_relids = bms_union(inner_path->sameslice_relids, outer_path->sameslice_relids);
+	pathnode->path.is_disabled = false;
 
 	/*
 	 * inner_path & outer_path are possibly modified above. Let's recalculate
@@ -3947,6 +3989,7 @@ create_mergejoin_path(PlannerInfo *root,
 	pathnode->jpath.path.motionHazard = outer_path->motionHazard || inner_path->motionHazard;
 	pathnode->jpath.path.rescannable = outer_path->rescannable && inner_path->rescannable;
 	pathnode->jpath.path.sameslice_relids = bms_union(inner_path->sameslice_relids, outer_path->sameslice_relids);
+	pathnode->jpath.path.is_disabled = false;
 
 	pathnode->jpath.jointype = jointype;
 	pathnode->jpath.inner_unique = extra->inner_unique;
@@ -4095,6 +4138,7 @@ create_hashjoin_path(PlannerInfo *root,
 	 */
 	pathnode->jpath.path.pathkeys = NIL;
 	pathnode->jpath.path.locus = join_locus;
+	pathnode->jpath.path.is_disabled = false;
 
 	pathnode->jpath.jointype = jointype;
 	pathnode->jpath.inner_unique = extra->inner_unique;
@@ -4208,6 +4252,7 @@ create_projection_path_with_quals(PlannerInfo *root,
 	pathnode->path.pathkeys = subpath->pathkeys;
 	pathnode->path.locus = subpath->locus;
 	pathnode->path.sameslice_relids = subpath->sameslice_relids;
+	pathnode->path.is_disabled = false;
 
 	pathnode->subpath = subpath;
 
@@ -4398,6 +4443,7 @@ create_set_projection_path(PlannerInfo *root,
 	/* Projection does not change the sort order XXX? */
 	pathnode->path.pathkeys = subpath->pathkeys;
 	pathnode->path.locus = subpath->locus;
+	pathnode->path.is_disabled = false;
 
 	pathnode->subpath = subpath;
 
@@ -4466,6 +4512,7 @@ create_sort_path(PlannerInfo *root,
 	pathnode->path.parallel_workers = subpath->parallel_workers;
 	pathnode->path.pathkeys = pathkeys;
 	pathnode->path.locus = subpath->locus;
+	pathnode->path.is_disabled = false;
 
 	pathnode->subpath = subpath;
 
@@ -4573,6 +4620,7 @@ create_upper_unique_path(PlannerInfo *root,
 	/* Unique doesn't change the input ordering */
 	pathnode->path.pathkeys = subpath->pathkeys;
 	pathnode->path.locus = subpath->locus;
+	pathnode->path.is_disabled = false;
 
 	pathnode->subpath = subpath;
 	pathnode->numkeys = numCols;
@@ -4632,6 +4680,7 @@ create_agg_path(PlannerInfo *root,
 		pathnode->path.pathkeys = subpath->pathkeys;	/* preserves order */
 	else
 		pathnode->path.pathkeys = NIL;	/* output is unordered */
+	pathnode->path.is_disabled = false;
 	pathnode->subpath = subpath;
 	pathnode->streaming = streaming;
 
@@ -4691,6 +4740,7 @@ create_tup_split_path(PlannerInfo *root,
 		subpath->parallel_safe;
 	pathnode->path.parallel_workers = subpath->parallel_workers;
 	pathnode->path.pathkeys = NIL;
+	pathnode->path.is_disabled = false;
 
 	pathnode->subpath = subpath;
 	pathnode->groupClause = groupClause;
@@ -4747,6 +4797,7 @@ create_groupingsets_path(PlannerInfo *root,
 	pathnode->path.parallel_safe = rel->consider_parallel &&
 		subpath->parallel_safe;
 	pathnode->path.parallel_workers = subpath->parallel_workers;
+	pathnode->path.is_disabled = false;
 	pathnode->subpath = subpath;
 
 	/*
@@ -4929,6 +4980,7 @@ create_minmaxagg_path(PlannerInfo *root,
 	/* Result is one unordered row */
 	pathnode->path.rows = 1;
 	pathnode->path.pathkeys = NIL;
+	pathnode->path.is_disabled = false;
 
 	pathnode->mmaggregates = mmaggregates;
 	pathnode->quals = quals;
@@ -5034,6 +5086,7 @@ create_windowagg_path(PlannerInfo *root,
 	/* WindowAgg preserves the input sort order */
 	pathnode->path.pathkeys = subpath->pathkeys;
 	pathnode->path.locus = subpath->locus;
+	pathnode->path.is_disabled = false;
 
 	pathnode->subpath = subpath;
 	pathnode->winclause = winclause;
@@ -5103,6 +5156,7 @@ create_setop_path(PlannerInfo *root,
 	pathnode->path.pathkeys =
 		(strategy == SETOP_SORTED) ? subpath->pathkeys : NIL;
 	pathnode->path.locus = subpath->locus;
+	pathnode->path.is_disabled = false;
 
 	pathnode->subpath = subpath;
 	pathnode->cmd = cmd;
@@ -5162,6 +5216,7 @@ create_recursiveunion_path(PlannerInfo *root,
 	pathnode->path.parallel_workers = leftpath->parallel_workers;
 	/* RecursiveUnion result is always unsorted */
 	pathnode->path.pathkeys = NIL;
+	pathnode->path.is_disabled = false;
 
 	pathnode->leftpath = leftpath;
 	pathnode->rightpath = rightpath;
@@ -5207,6 +5262,7 @@ create_lockrows_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->path.pathkeys = NIL;
 
 	pathnode->path.locus = subpath->locus;
+	pathnode->path.is_disabled = false;
 
 	pathnode->subpath = subpath;
 	pathnode->rowMarks = rowMarks;
@@ -5278,6 +5334,7 @@ create_modifytable_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->path.parallel_safe = false;
 	pathnode->path.parallel_workers = 0;
 	pathnode->path.pathkeys = NIL;
+	pathnode->path.is_disabled = false;
 
 	/*
 	 * Put Motions on top of the subpaths as needed, and set the locus of the
@@ -5520,6 +5577,7 @@ create_limit_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->path.total_cost = subpath->total_cost;
 	pathnode->path.pathkeys = subpath->pathkeys;
 	pathnode->path.locus = subpath->locus;
+	pathnode->path.is_disabled = false;
 	pathnode->subpath = subpath;
 	pathnode->limitOffset = limitOffset;
 	pathnode->limitCount = limitCount;
