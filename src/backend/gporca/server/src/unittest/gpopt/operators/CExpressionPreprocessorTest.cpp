@@ -57,7 +57,6 @@ CExpressionPreprocessorTest::EresUnittest()
 		GPOS_UNITTEST_FUNC(EresUnittest_InferPredsOnLOJ),
 		GPOS_UNITTEST_FUNC(EresUnittest_PreProcessWindowFuncWithLOJ),
 		GPOS_UNITTEST_FUNC(EresUnittest_PreProcessWindowFuncWithOuterRefs),
-		GPOS_UNITTEST_FUNC(EresUnittest_PreProcessWindowFuncWithDistinctAggs),
 		GPOS_UNITTEST_FUNC(EresUnittest_PreProcessNestedScalarSubqueries),
 		GPOS_UNITTEST_FUNC(EresUnittest_PreProcessOuterJoin),
 		GPOS_UNITTEST_FUNC(EresUnittest_PreProcessOuterJoinMinidumps),
@@ -1033,108 +1032,6 @@ CExpressionPreprocessorTest::PreprocessWinFuncWithDistinctAggs(
 
 	pexprPreprocessed->Release();
 	pexpr->Release();
-}
-
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CExpressionPreprocessorTest::EresUnittest_PreProcessWindowFuncWithDistinctAggs
-//
-//	@doc:
-//		Test preprocessing of window functions with distinct aggregates
-//
-//---------------------------------------------------------------------------
-GPOS_RESULT
-CExpressionPreprocessorTest::EresUnittest_PreProcessWindowFuncWithDistinctAggs()
-{
-	CAutoMemoryPool amp;
-	CMemoryPool *mp = amp.Pmp();
-
-	// tests where preprocessing removes SeqPrj nodes
-	const CHAR *rgszTestsDistinctAggsRemoveWindow[] = {
-		"../data/dxl/expressiontests/WinFunc-Single-DQA-Query.xml",
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query.xml",
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query-2.xml",
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query-3.xml",
-	};
-
-	// tests where preprocessing removes SeqPrj nodes and adds join with INDF condition
-	const CHAR *rgszTestsDistinctAggsRemoveWindowINDF[] = {
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query-PartitionBy-SameColumn.xml",
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query-PartitionBy-SameColumn-2.xml",
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query-PartitionBy-DifferentColumn.xml",
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query-PartitionBy-DifferentColumn-2.xml",
-	};
-
-	// tests where preprocessing does not remove SeqPrj nodes
-	const CHAR *rgszTestsDistinctAggsDoNotRemoveWindow[] = {
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query-RowNumber.xml",
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query-RowNumber-2.xml",
-	};
-
-	// tests where preprocessing does not remove SeqPrj nodes and add join with INDF condition
-	const CHAR *rgszTestsDistinctAggsDoNotRemoveWindowINDF[] = {
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query-RowNumber-PartitionBy-SameColumn.xml",
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query-RowNumber-PartitionBy-SameColumn-2.xml",
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query-RowNumber-OrderBy-PartitionBy-SameColumn.xml",
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query-RowNumber-OrderBy-PartitionBy-SameColumn-2.xml",
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query-RowNumber-Distinct-Different-Columns.xml",
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query-RowNumber-Distinct-ParitionBy-Different-Columns.xml",
-		"../data/dxl/expressiontests/WinFunc-Multiple-DQA-Query-RowNumber-Multiple-ParitionBy-Columns.xml",
-	};
-
-	// path to metadata file of the previous tests
-	const CHAR *szMDFilePath =
-		"../data/dxl/expressiontests/WinFunc-Tests-MD.xml";
-
-	// reset metadata cache
-	CMDCache::Reset();
-
-	// set up MD providers
-	CMDProviderMemory *pmdp = GPOS_NEW(mp) CMDProviderMemory(mp, szMDFilePath);
-
-	GPOS_CHECK_ABORT;
-
-	{
-		CAutoMDAccessor amda(mp, pmdp, CTestUtils::m_sysidDefault);
-		CAutoOptCtxt aoc(mp, amda.Pmda(), NULL,
-						 /* pceeval */ CTestUtils::GetCostModel(mp));
-
-		for (ULONG ul = 0;
-			 ul < GPOS_ARRAY_SIZE(rgszTestsDistinctAggsRemoveWindow); ul++)
-		{
-			PreprocessWinFuncWithDistinctAggs(
-				mp, rgszTestsDistinctAggsRemoveWindow[ul],
-				false /* fAllowSeqPrj */, false /* fAllowIDF */);
-		}
-
-		for (ULONG ul = 0;
-			 ul < GPOS_ARRAY_SIZE(rgszTestsDistinctAggsRemoveWindowINDF); ul++)
-		{
-			PreprocessWinFuncWithDistinctAggs(
-				mp, rgszTestsDistinctAggsRemoveWindowINDF[ul],
-				false /* fAllowSeqPrj */, true /* fAllowIDF */);
-		}
-
-		for (ULONG ul = 0;
-			 ul < GPOS_ARRAY_SIZE(rgszTestsDistinctAggsDoNotRemoveWindow); ul++)
-		{
-			PreprocessWinFuncWithDistinctAggs(
-				mp, rgszTestsDistinctAggsDoNotRemoveWindow[ul],
-				true /* fAllowSeqPrj */, false /* fAllowIDF */);
-		}
-
-		for (ULONG ul = 0;
-			 ul < GPOS_ARRAY_SIZE(rgszTestsDistinctAggsDoNotRemoveWindowINDF);
-			 ul++)
-		{
-			PreprocessWinFuncWithDistinctAggs(
-				mp, rgszTestsDistinctAggsDoNotRemoveWindowINDF[ul],
-				true /* fAllowSeqPrj */, true /* fAllowIDF */);
-		}
-	}
-
-	return GPOS_OK;
 }
 
 

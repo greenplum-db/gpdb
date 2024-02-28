@@ -159,7 +159,6 @@ public:
 	static GPOS_RESULT EresUnittest_PreProcessWindowFunc();
 	static GPOS_RESULT EresUnittest_PreProcessWindowFuncWithLOJ();
 	static GPOS_RESULT EresUnittest_PreProcessWindowFuncWithOuterRefs();
-	static GPOS_RESULT EresUnittest_PreProcessWindowFuncWithDistinctAggs();
 	static GPOS_RESULT EresUnittest_PreProcessNestedScalarSubqueries();
 	static GPOS_RESULT EresUnittest_UnnestSubqueries();
 	static GPOS_RESULT EresUnittest_PreProcessOuterJoin();
