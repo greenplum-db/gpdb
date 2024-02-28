@@ -4715,25 +4715,31 @@ write_stderr(const char *fmt,...)
 
 		if (!am_syslogger)
 		{
-			/* Write the message in the CSV format */
-			write_message_to_server_log(LOG,
-										0,
-										errbuf,
-										NULL,
-										NULL,
-										NULL,
-										0,
-										0,
-										NULL,
-										NULL,
-										NULL,
-										false,
-										NULL,
-										0,
-										0,
-										true,
-										NULL,
-										false);
+			/* 
+			 * We can only do this when we have already completed the stderr redirection, otherwise it will result
+			 * in incorrect characters.
+			 */
+			if (redirection_done)
+				write_message_to_server_log(LOG,
+											0,
+											errbuf,
+											NULL,
+											NULL,
+											NULL,
+											0,
+											0,
+											NULL,
+											NULL,
+											NULL,
+											false,
+											NULL,
+											0,
+											0,
+											true,
+											NULL,
+											false);
+			else
+				write_console(errbuf, strlen(errbuf));
 		}
 		else
 		{
