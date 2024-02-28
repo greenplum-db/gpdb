@@ -3657,6 +3657,69 @@ drop table foo;
 drop table bar;
 reset optimizer_enable_eageragg;
 
+-------------------------------------------------------------------------------
+-- Test cases to check if a function is folded in the Sub Links.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+-- TEST CASE-1 - Sublink with function call in the Quals
+-------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION any_func(p_dt date)
+RETURNS date
+LANGUAGE sql
+IMMUTABLE
+AS $$
+SELECT (date_trunc('month', p_dt) + interval '1 month')::date;
+$$
+EXECUTE ON ANY;
+
+CREATE OR REPLACE FUNCTION ret_date()
+RETURNS DATE AS
+$$
+DECLARE
+fix_date DATE := '2024-02-10';
+BEGIN
+RETURN fix_date;
+END;
+$$
+LANGUAGE plpgsql
+STABLE;
+
+drop table if exists foo_pt;
+create table foo_pt ( nagreementid int4 NULL, dtrepdate date NULL) distributed by (nagreementid)
+partition by range(dtrepdate) ( start ('2024-01-01'::date) end ('2024-12-31'::date) EVERY ('1 mon'::interval));
+analyze foo_pt;
+
+explain select (select min(dtRepDate) from foo_pt where dtRepDate = any_func(ret_date()));
+drop table if exists foo_pt;
+
+-------------------------------------------------------------------------------
+-- TEST CASE-2 : Calling stable function from an immutable function
+-------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION test_func_im(a int, b int)
+RETURNS int
+LANGUAGE sql
+IMMUTABLE
+AS $$
+SELECT a + b + 10;
+$$;
+
+CREATE OR REPLACE FUNCTION test_func_stable(a int)
+RETURNS int
+LANGUAGE sql
+STABLE
+AS $$
+SELECT (ceil(a + 10 + random())::int);
+$$;
+
+drop table if exists bar_pt;
+create table bar_pt (a int, b int) distributed by (a) partition by range(a) (start (1) inclusive end (12) every (2), default partition other);
+insert into bar_pt select i,i from generate_series(1,11)i;
+analyze bar_pt;
+
+explain select test_func_im(10, (select min(a) from bar_pt where a < test_func_stable(6)));
+select test_func_im(10, (select min(a) from bar_pt where a < test_func_stable(6)));
+drop table if exists bar_pt;
+
 -- Testcases to validate the behavior of the GUC gp_max_system_slices
 
 -- start_ignore

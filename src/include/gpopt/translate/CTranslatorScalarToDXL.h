@@ -357,6 +357,9 @@ public:
 												 INT type_modifier,
 												 BOOL is_null, ULONG len,
 												 Datum datum);
+
+	// Perform folding of functions for the given query
+	static Query *FoldConstantsWrapper(Query *subquery, Index query_level);
 };
 }  // namespace gpdxl
 #endif	// GPDXL_CTranslatorScalarToDXL_H

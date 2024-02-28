@@ -14379,6 +14379,8 @@ EXPLAIN (COSTS OFF) SELECT (
     LEFT JOIN join_null_rej2 t2 ON t1.i = t2.i
     WHERE t2.i < join_null_rej_func()
 );
+INFO:  Worker is already registered! This is an invalid state, please report this error. (_api.cpp:159)
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
                                  QUERY PLAN                                 
 ----------------------------------------------------------------------------
  Nested Loop Left Join
@@ -14390,11 +14392,12 @@ EXPLAIN (COSTS OFF) SELECT (
                      ->  Hash Join
                            Hash Cond: (join_null_rej1.i = join_null_rej2.i)
                            ->  Seq Scan on join_null_rej1
+                                 Filter: (i < 5)
                            ->  Hash
                                  ->  Seq Scan on join_null_rej2
-                                       Filter: (i < join_null_rej_func())
- Optimizer: Pivotal Optimizer (GPORCA)
-(13 rows)
+                                       Filter: (i < 5)
+ Optimizer: GPORCA
+(14 rows)
 
 -- Optional, but let's check we get same result for both, folded and
 -- not folded join_null_rej_func() function.
@@ -14975,6 +14978,105 @@ explain (costs off) select max(s1) from foo inner join bar on j1 = j2 group by g
 drop table foo;
 drop table bar;
 reset optimizer_enable_eageragg;
+-------------------------------------------------------------------------------
+-- Test cases to check if a function is folded in the Sub Links.
+-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+-- TEST CASE-1 - Sublink with function call in the Quals
+-------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION any_func(p_dt date)
+RETURNS date
+LANGUAGE sql
+IMMUTABLE
+AS $$
+SELECT (date_trunc('month', p_dt) + interval '1 month')::date;
+$$
+EXECUTE ON ANY;
+CREATE OR REPLACE FUNCTION ret_date()
+RETURNS DATE AS
+$$
+DECLARE
+fix_date DATE := '2024-02-10';
+BEGIN
+RETURN fix_date;
+END;
+$$
+LANGUAGE plpgsql
+STABLE;
+drop table if exists foo_pt;
+NOTICE:  table "foo_pt" does not exist, skipping
+create table foo_pt ( nagreementid int4 NULL, dtrepdate date NULL) distributed by (nagreementid)
+partition by range(dtrepdate) ( start ('2024-01-01'::date) end ('2024-12-31'::date) EVERY ('1 mon'::interval));
+analyze foo_pt;
+explain select (select min(dtRepDate) from foo_pt where dtRepDate = any_func(ret_date()));
+INFO:  Worker is already registered! This is an invalid state, please report this error. (_api.cpp:159)
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+INFO:  Worker is already registered! This is an invalid state, please report this error. (_api.cpp:159)
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Nested Loop Left Join  (cost=0.00..882688.09 rows=2 width=4)
+   Join Filter: true
+   ->  Result  (cost=0.00..0.00 rows=1 width=1)
+   ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+         ->  Aggregate  (cost=0.00..431.00 rows=1 width=4)
+               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Dynamic Seq Scan on foo_pt  (cost=0.00..431.00 rows=1 width=4)
+                           Number of partitions to scan: 1 (out of 12)
+                           Filter: (dtrepdate = '03-01-2024'::date)
+ Optimizer: GPORCA
+(10 rows)
+
+drop table if exists foo_pt;
+-------------------------------------------------------------------------------
+-- TEST CASE-2 : Calling stable function from an immutable function
+-------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION test_func_im(a int, b int)
+RETURNS int
+LANGUAGE sql
+IMMUTABLE
+AS $$
+SELECT a + b + 10;
+$$;
+CREATE OR REPLACE FUNCTION test_func_stable(a int)
+RETURNS int
+LANGUAGE sql
+STABLE
+AS $$
+SELECT (ceil(a + 10 + random())::int);
+$$;
+drop table if exists bar_pt;
+NOTICE:  table "bar_pt" does not exist, skipping
+create table bar_pt (a int, b int) distributed by (a) partition by range(a) (start (1) inclusive end (12) every (2), default partition other);
+insert into bar_pt select i,i from generate_series(1,11)i;
+analyze bar_pt;
+explain select test_func_im(10, (select min(a) from bar_pt where a < test_func_stable(6)));
+INFO:  Worker is already registered! This is an invalid state, please report this error. (_api.cpp:159)
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Nested Loop Left Join  (cost=0.00..882688.30 rows=2 width=4)
+   Join Filter: true
+   ->  Result  (cost=0.00..0.00 rows=1 width=1)
+   ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
+         ->  Finalize Aggregate  (cost=0.00..431.00 rows=1 width=4)
+               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Partial Aggregate  (cost=0.00..431.00 rows=1 width=4)
+                           ->  Dynamic Seq Scan on bar_pt  (cost=0.00..431.00 rows=4 width=4)
+                                 Number of partitions to scan: 7 (out of 7)
+                                 Filter: (a < 17)
+ Optimizer: GPORCA
+(11 rows)
+
+select test_func_im(10, (select min(a) from bar_pt where a < test_func_stable(6)));
+INFO:  Worker is already registered! This is an invalid state, please report this error. (_api.cpp:159)
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+ test_func_im 
+--------------
+           21
+(1 row)
+
+drop table if exists bar_pt;
 -- Testcases to validate the behavior of the GUC gp_max_system_slices
 -- start_ignore
 drop table if exists foo;

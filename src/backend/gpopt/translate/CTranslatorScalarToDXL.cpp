@@ -19,6 +19,7 @@ extern "C" {
 #include "nodes/parsenodes.h"
 #include "nodes/plannodes.h"
 #include "nodes/primnodes.h"
+#include "optimizer/clauses.h"
 #include "utils/date.h"
 #include "utils/datum.h"
 #include "utils/uuid.h"
@@ -148,6 +149,9 @@ CTranslatorScalarToDXL::CreateSubqueryTranslator(
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLError,
 				   GPOS_WSZ_LIT("Subquery in a stand-alone expression"));
 	}
+
+	// Check in the query tree if we can fold any constant expression
+	subquery = FoldConstantsWrapper(subquery, m_query_level + 1);
 
 	return GPOS_NEW(m_context->m_mp)
 		CTranslatorQueryToDXL(m_context, m_md_accessor, var_colid_mapping,
@@ -2656,6 +2660,47 @@ CTranslatorScalarToDXL::CreateIDatumFromGpdbDatum(CMemoryPool *mp,
 	IDatum *datum = md_type->GetDatumForDXLDatum(mp, datum_dxl);
 	datum_dxl->Release();
 	return datum;
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorScalarToDXL::FoldConstantsWrapper
+//
+//	@doc:
+//		Perform folding of functions for the given query
+//---------------------------------------------------------------------------
+Query *
+CTranslatorScalarToDXL::FoldConstantsWrapper(Query *subquery, Index query_level)
+{
+	PlannerInfo *root;
+	PlannerGlobal *glob;
+
+	// Initialize a dummy PlannerGlobal struct.
+
+	glob = makeNode(PlannerGlobal);
+	glob->subplans = NIL;
+	glob->subroots = NIL;
+	glob->rewindPlanIDs = nullptr;
+	glob->transientPlan = false;
+	glob->oneoffPlan = false;
+	glob->share.shared_inputs = nullptr;
+	glob->share.shared_input_count = 0;
+	glob->share.motStack = NIL;
+	glob->share.qdShares = nullptr;
+	glob->finalrtable = NIL;
+	glob->relationOids = NIL;
+	glob->invalItems = NIL;
+
+	root = makeNode(PlannerInfo);
+	root->parse = subquery;
+	root->glob = glob;
+	root->query_level = query_level;
+	root->planner_cxt = CurrentMemoryContext;
+	root->wt_param_id = -1;
+
+	return fold_constants(root, subquery, nullptr,
+						  GPOPT_MAX_FOLDED_CONSTANT_SIZE);
 }
 
 // EOF
