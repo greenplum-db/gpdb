@@ -42,6 +42,7 @@
 #include "postgres.h"
 
 #ifdef USE_ZSTD
+#define ZSTD_STATIC_LINKING_ONLY
 #include <zstd.h>
 #endif
 
@@ -55,6 +56,7 @@
 #include "utils/resowner.h"
 
 #include "storage/gp_compress.h"
+#include "utils/gp_alloc.h"
 #include "utils/faultinjector.h"
 #include "utils/workfile_mgr.h"
 
@@ -168,6 +170,9 @@ static void BufFileStartCompression(BufFile *file);
 static void BufFileDumpCompressedBuffer(BufFile *file, const void *buffer, Size nbytes);
 static void BufFileEndCompression(BufFile *file);
 static int BufFileLoadCompressedBuffer(BufFile *file, void *buffer, size_t bufsize);
+
+void *customAlloc(void *opaque, size_t size);
+void customFree(void *opaque, void *address);
 
 /*
  * Create BufFile and perform the common initialization.
@@ -1277,6 +1282,18 @@ BufFilePledgeSequential(BufFile *buffile)
 
 #define BUFFILE_ZSTD_COMPRESSION_LEVEL 1
 
+void *
+customAlloc(void *opaque, size_t size)
+{
+	return MemoryContextAlloc(TopMemoryContext, size);
+}
+
+void
+customFree(void *opaque, void *address)
+{
+	pfree(address);
+}
+
 /*
  * Temporary buffer used during compression. It's used only within the
  * functions, so we can allocate this once and reuse it for all files.
@@ -1291,6 +1308,10 @@ BufFileStartCompression(BufFile *file)
 {
 	ResourceOwner oldowner;
 	size_t ret;
+	ZSTD_customMem customMem;
+
+	customMem.customAlloc = customAlloc;
+	customMem.customFree = customFree;
 
 	/*
 	 * When working with compressed files, we rely on libzstd's buffer,
@@ -1317,7 +1338,7 @@ BufFileStartCompression(BufFile *file)
 	CurrentResourceOwner = file->resowner;
 
 	file->zstd_context = zstd_alloc_context();
-	file->zstd_context->cctx = ZSTD_createCStream();
+	file->zstd_context->cctx = ZSTD_createCStream_advanced(customMem);
 	if (!file->zstd_context->cctx)
 		elog(ERROR, "out of memory");
 	ret = ZSTD_initCStream(file->zstd_context->cctx, BUFFILE_ZSTD_COMPRESSION_LEVEL);
@@ -1399,6 +1420,10 @@ BufFileEndCompression(BufFile *file)
 	size_t		ret;
 	int			wrote;
 	off_t		pos = 0;
+	ZSTD_customMem customMem;
+
+	customMem.customAlloc = customAlloc;
+	customMem.customFree = customFree;
 
 	Assert(file->state == BFS_COMPRESSED_WRITING);
 
@@ -1424,7 +1449,7 @@ BufFileEndCompression(BufFile *file)
 		 file->uncompressed_bytes, BufFileSize(file));
 
 	/* Done writing. Initialize for reading */
-	file->zstd_context->dctx = ZSTD_createDStream();
+	file->zstd_context->dctx = ZSTD_createDStream_advanced(customMem);
 	if (!file->zstd_context->dctx)
 		elog(ERROR, "out of memory");
 	ret = ZSTD_initDStream(file->zstd_context->dctx);

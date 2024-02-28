@@ -1154,8 +1154,11 @@ AC_MSG_RESULT([$with_zstd])
 AC_SUBST(with_zstd)
 
 if test "$with_zstd" = yes; then
-  dnl zstd_errors.h was renamed from error_public.h in v1.1.1
-  PKG_CHECK_MODULES([ZSTD], [libzstd >= 1.4.0])
+  AC_CHECK_LIB(:libzstd.a, ZSTD_compressCCtx, [],
+               [AC_MSG_ERROR([zstd library not found
+If you have libzstd already installed, see config.log for details on the
+failure.  It is possible the compiler isn't looking in the proper directory.
+Use --without-zstd to disable zstd support.])])
 fi
 
 #
@@ -1721,6 +1724,12 @@ fi
 # Check for bzlib.h
 if test "$with_libbz2" = yes ; then
   AC_CHECK_HEADER(bzlib.h, [], [AC_MSG_ERROR([header file <bzlib.h> is required for bzip2 support])], [])
+fi
+
+# Check for zstd.h and zstd_errors.h
+if test "$with_zstd" = yes; then
+  AC_CHECK_HEADER(zstd.h, [], [AC_MSG_ERROR([header file <zstd.h> is required for zstd support])])
+  AC_CHECK_HEADER(zstd_errors.h, [], [AC_MSG_ERROR([header file <zstd_errors.h> is required for zstd support])])
 fi
 
 if test "$with_gssapi" = yes ; then

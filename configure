@@ -9679,18 +9679,19 @@ fi
 #
 # zstd
 #
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to build with ZSTD support" >&5
-$as_echo_n "checking whether to build with ZSTD support... " >&6; }
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to build with ZSTD support" >&5
+printf %s "checking whether to build with ZSTD support... " >&6; }
 
 
 
 # Check whether --with-zstd was given.
-if test "${with_zstd+set}" = set; then :
+if test ${with_zstd+y}
+then :
   withval=$with_zstd;
   case $withval in
     yes)
 
-$as_echo "#define USE_ZSTD 1" >>confdefs.h
+printf "%s\n" "#define USE_ZSTD 1" >>confdefs.h
 
       ;;
     no)
@@ -9701,110 +9702,67 @@ $as_echo "#define USE_ZSTD 1" >>confdefs.h
       ;;
   esac
 
-else
+else $as_nop
   with_zstd=yes
 
-$as_echo "#define USE_ZSTD 1" >>confdefs.h
+printf "%s\n" "#define USE_ZSTD 1" >>confdefs.h
 
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_zstd" >&5
-$as_echo "$with_zstd" >&6; }
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $with_zstd" >&5
+printf "%s\n" "$with_zstd" >&6; }
 
 
 if test "$with_zstd" = yes; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for ZSTD_compressCCtx in -l:libzstd.a" >&5
+printf %s "checking for ZSTD_compressCCtx in -l:libzstd.a... " >&6; }
+if test ${ac_cv_lib__libzstd_a_ZSTD_compressCCtx+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-l:libzstd.a  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
 
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for libzstd >= 1.4.0" >&5
-$as_echo_n "checking for libzstd >= 1.4.0... " >&6; }
-
-if test -n "$ZSTD_CFLAGS"; then
-    pkg_cv_ZSTD_CFLAGS="$ZSTD_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libzstd >= 1.4.0\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libzstd >= 1.4.0") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_ZSTD_CFLAGS=`$PKG_CONFIG --cflags "libzstd >= 1.4.0" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+char ZSTD_compressCCtx ();
+int
+main (void)
+{
+return ZSTD_compressCCtx ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_lib__libzstd_a_ZSTD_compressCCtx=yes
+else $as_nop
+  ac_cv_lib__libzstd_a_ZSTD_compressCCtx=no
 fi
- else
-    pkg_failed=untried
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
 fi
-if test -n "$ZSTD_LIBS"; then
-    pkg_cv_ZSTD_LIBS="$ZSTD_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libzstd >= 1.4.0\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libzstd >= 1.4.0") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_ZSTD_LIBS=`$PKG_CONFIG --libs "libzstd >= 1.4.0" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib__libzstd_a_ZSTD_compressCCtx" >&5
+printf "%s\n" "$ac_cv_lib__libzstd_a_ZSTD_compressCCtx" >&6; }
+if test "x$ac_cv_lib__libzstd_a_ZSTD_compressCCtx" = xyes
+then :
+  printf "%s\n" "#define HAVE_LIB_LIBZSTD_A 1" >>confdefs.h
+
+  LIBS="-l:libzstd.a $LIBS"
+
+else $as_nop
+  as_fn_error $? "zstd library not found
+If you have libzstd already installed, see config.log for details on the
+failure.  It is possible the compiler isn't looking in the proper directory.
+Use --without-zstd to disable zstd support." "$LINENO" 5
 fi
 
-
-
-if test $pkg_failed = yes; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        ZSTD_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libzstd >= 1.4.0" 2>&1`
-        else
-	        ZSTD_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libzstd >= 1.4.0" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$ZSTD_PKG_ERRORS" >&5
-
-	as_fn_error $? "Package requirements (libzstd >= 1.4.0) were not met:
-
-$ZSTD_PKG_ERRORS
-
-Consider adjusting the PKG_CONFIG_PATH environment variable if you
-installed software in a non-standard prefix.
-
-Alternatively, you may set the environment variables ZSTD_CFLAGS
-and ZSTD_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details." "$LINENO" 5
-elif test $pkg_failed = untried; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
-is in your PATH or set the PKG_CONFIG environment variable to the full
-path to pkg-config.
-
-Alternatively, you may set the environment variables ZSTD_CFLAGS
-and ZSTD_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details.
-
-To get pkg-config, see <http://pkg-config.freedesktop.org/>.
-See \`config.log' for more details" "$LINENO" 5; }
-else
-	ZSTD_CFLAGS=$pkg_cv_ZSTD_CFLAGS
-	ZSTD_LIBS=$pkg_cv_ZSTD_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-fi
 fi
 
 #
@@ -15435,6 +15393,26 @@ if test "x$ac_cv_header_bzlib_h" = xyes; then :
 
 else
   as_fn_error $? "header file <bzlib.h> is required for bzip2 support" "$LINENO" 5
+fi
+
+
+fi
+
+# Check for zstd.h and zstd_errors.h
+if test "$with_zstd" = yes; then
+  ac_fn_c_check_header_mongrel "$LINENO" "zstd.h" "ac_cv_header_zstd_h" "$ac_includes_default"
+if test "x$ac_cv_header_zstd_h" = xyes; then :
+
+else
+  as_fn_error $? "header file <zstd.h> is required for zstd support" "$LINENO" 5
+fi
+
+
+  ac_fn_c_check_header_mongrel "$LINENO" "zstd_errors.h" "ac_cv_header_zstd_errors_h" "$ac_includes_default"
+if test "x$ac_cv_header_zstd_errors_h" = xyes; then :
+
+else
+  as_fn_error $? "header file <zstd_errors.h> is required for zstd support" "$LINENO" 5
 fi
 
 

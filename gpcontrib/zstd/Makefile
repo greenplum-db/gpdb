@@ -2,8 +2,6 @@ PG_CONFIG = pg_config
 
 MODULE_big = gp_zstd_compression
 OBJS = zstd_compression.o
-CFLAGS_SL += -lzstd
-LDFLAGS_SL += -lzstd
 
 REGRESS = zstd_column_compression compression_zstd zstd_abort_leak AOCO_zstd AORO_zstd
 
