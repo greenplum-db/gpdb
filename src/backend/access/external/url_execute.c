@@ -24,6 +24,7 @@
 #include "libpq/pqsignal.h"
 #include "utils/resowner.h"
 #include "utils/faultinjector.h"
+#include "postmaster/fork_process.h"
 
 #define EXEC_DATA_P 0 /* index to data pipe */
 #define EXEC_ERR_P 1 /* index to error pipe  */
@@ -660,7 +661,7 @@ popen_with_stderr(int *pipes, const char *exe, bool forwrite)
 	}
 #ifndef WIN32
 
-	pid = fork();
+	pid = fork_process();
 
 	if (pid > 0) /* parent */
 	{
