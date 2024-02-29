@@ -104,8 +104,9 @@ test: bitmap_index_concurrent
 test: bitmap_union
 test: bitmap_index_inspect
 
-# below test utilizes fault injectors so it needs to be in a group by itself
+# below tests utilize fault injectors so it needs to be in a group by itself
 test: external_table
+test: pqsignal
 
 # This test validates that for AO we delay fsync to checkpointer on mirror.
 test: fsync_ao

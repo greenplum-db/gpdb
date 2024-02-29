@@ -88,6 +88,7 @@ wrapper_handler(SIGNAL_ARGS)
 
 	if (unlikely(MyProcPid != (int) getpid()))
 	{
+		SIMPLE_FAULT_INJECTOR("wrapper_handler_in_child_process");
 		pqsignal(postgres_signal_arg, SIG_DFL);
 		raise(postgres_signal_arg);
 		return;
