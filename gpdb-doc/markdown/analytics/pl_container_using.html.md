@@ -6,6 +6,7 @@ This topic covers further details on:
 
 -   [PL/Container Resource Management](#topic_resmgmt)
 -   [PL/Container Functions](#topic_rh3_p3q_dw)
+-   [Configuring a Remote PL/Container](#remote_container)
 
 ## <a id="topic_resmgmt"></a>PL/Container Resource Management 
 
@@ -477,3 +478,105 @@ For information about PL/R, see [PL/R Language](pl_r.html).
 
 For information about the `pg.spi` methods, see [http://www.joeconway.com/plr/doc/plr-spi-rsupport-funcs-normal.html](http://www.joeconway.com/plr/doc/plr-spi-rsupport-funcs-normal.html)
 
+## <a id="remote_container"></a>Configuring a Remote PL/Container
+
+You may configure one or more hosts outside your Greenplum cluster to use as a remote container host. The PL/Container workload can be dispatched to this host for execution and it will return the results, reducing the computing overload of the Greenplum hosts.
+
+### <a id="prereq"></a>Prerequisites
+
+- You are using PL/Container version 2.4.0.
+- You are using a Docker installation with a Docker engine version v19.03 or newer.
+- You have root or sudo permission on the remote host.
+
+### <a id="setup_host"></a>Configure the Remote Host
+
+Install docker on the remote host. This step may vary depending on your operating system. For example, for RHEL 7:
+
+```
+sudo yum install -y yum-utils 
+sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo 
+sudo yum install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin 
+sudo systemctl enable  --now docker 
+```
+
+Enable the remote API for Docker:
+
+```
+sudo systemctl edit docker.service 
+# add the following to the start of the file:
+ 
+[Service] 
+ExecStart= 
+ExecStart=/usr/bin/dockerd -H fd:// -H tcp://0.0.0.0:2375 
+# restart docker service 
+sudo systemctl restart docker 
+```
+Set up the remote host. This example assumes that you have created the `gpadmin` user, enabled password-less ssh access, and that `python3` and `rsync` are installed in the remote host.
+
+```
+ssh gpadmin@<remoteip> "sudo mkdir $GPHOME && sudo chown gpadmin:gpadmin $GPHOME"  
+```
+
+From the Greenplum coordinator, copy the `plcontainer` client to the remote host.
+
+```
+plcontainer remote-setup --hosts <remoteip>
+```
+
+If you are configuring multiple hosts, you may run the command against multiple remote hosts:
+
+```
+plcontainer remote-setup --hosts <remoteip_1>, <remoteip_2>, <remoteip_3>
+```
+
+### <a id="loading"></a>Load the Docker Image to the Remote Host
+
+From the coordinator host, load the Docker image into the remote host. You may run the command against multiple remote hosts:
+
+```
+plcontainer image-add --hosts <remoteip_1>, <remoteip_2>, <remoteip_3> -f <image_file> 
+```
+
+### <a id="backend"></a>Configure a Backend Node
+
+Run the following command from the coordinator host:
+
+```
+plcontainer runtime-edit 
+```
+
+This command provides the PL/Container configuration XML file. Add the backend section, as depicted in the below example, specifying the remote host IP address and port. Then edit the existing runtime section to use the newly added backend. 
+
+```
+<?xml version="1.0" ?> 
+<configuration> 
+	<backend name="calculate_cluster" type="remote_docker"> 
+		<address>{THE REMOTE ADDRESS}</address> 
+		<port>2375</port> 
+	</backend> 
+	<runtime> 
+		<id>plc_python_cuda_shared</id> 
+		<image>localhost/plcontainer_python3_cuda_shared:latest</image> 
+		<command>/clientdir/py3client.sh</command> 
+		<shared_directory access="ro" container="/clientdir" host="/home/sa/GPDB/install/bin/plcontainer_clients"/> 
+		<backend name="calculate_cluster" /> 
+	</runtime> 
+</configuration> 
+```
+
+If you are using multiple remote hosts, you must create separate backend sections. Because you can only set one backend per runtime, you must also create a separate runtime section per backend.
+
+### <a id="verify"></a>Verify the Configuration
+
+Run the following from the `psql` command line:
+
+```
+CREATE FUNCTION dummyPython() RETURNS text AS $$ 
+# container: plc_python_cuda_shared 
+return 'hello from Python' 
+$$ LANGUAGE plcontainer; 
+ 
+SELECT * from dummyPython() 
+```
+
+If the function runs successfully, it is running on the remote host.
