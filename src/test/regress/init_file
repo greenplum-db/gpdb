@@ -80,6 +80,11 @@ m/^NOTICE:  resource group required -- using .* resource group ".*"$/
 # be raised, and it is expected.  This could happen normally on the
 # random_numsegments pipeline job, so ignore this WARNING.
 m/^WARNING:  table ".*" contains rows in segment .*, which is outside the # of segments for the table's policy \(\d+ segments\)$/
+
+# Ignore "terminating connection due to administrator command" as the output is
+# not always echoed to the client.
+m/FATAL:  terminating connection due to administrator command/
+
 -- end_matchignore
 
 -- start_matchsubs
