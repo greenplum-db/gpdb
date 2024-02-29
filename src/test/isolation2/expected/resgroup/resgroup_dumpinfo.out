@@ -66,6 +66,17 @@ ERROR:  only superusers can call this function
 RESET ROLE;
 RESET
 
+create temp table t1 as select value from pg_resgroup_get_status_kv('dump');
+ERROR:  Cannot execute the pg_resgroup_get_status_kv function in entrydb, this query is not currently supported by GPDB.  (entry db 127.0.0.1:6000 pid=93315)
+HINT:  Call the function in subquery wrapped with unnest(array()). For example:
+insert into t
+select * from unnest(array(
+	select value
+	from pg_resgroup_get_status_kv('dump')
+));
+create temp table t1 as select * from unnest(array( select value from pg_resgroup_get_status_kv('dump') ));
+CREATE 1
+
 DROP ROLE role_dumpinfo_test;
 DROP
 DROP ROLE role_permission;

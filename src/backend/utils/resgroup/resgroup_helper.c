@@ -206,6 +206,21 @@ pg_resgroup_get_status(PG_FUNCTION_ARGS)
 	FuncCallContext *funcctx;
 	ResGroupStatCtx *ctx;
 
+	if (is_entry_db())
+	{
+		ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg ("Cannot execute the %s function in entrydb, this query is"
+					 " not currently supported by GPDB.", __func__),
+			 errhint("Call the function in subquery wrapped with"
+					 " unnest(array()). For example:\n"
+					 "insert into tst_json\n"
+					 "select * from unnest(array(\n"
+					 "\tselect cpu_usage\n"
+					 "\tfrom pg_resgroup_get_status(NULL::oid)\n"
+					 "));")));
+	}
+
 	if (SRF_IS_FIRSTCALL())
 	{
 		MemoryContext oldcontext;
@@ -342,6 +357,21 @@ pg_resgroup_get_status_kv(PG_FUNCTION_ARGS)
 	FuncCallContext *funcctx;
 	StringInfoData   str;
 	bool             do_dump;
+
+	if (is_entry_db())
+	{
+		ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg ("Cannot execute the %s function in entrydb, this query is"
+					 " not currently supported by GPDB.", __func__),
+			 errhint("Call the function in subquery wrapped with"
+					 " unnest(array()). For example:\n"
+					 "insert into t\n"
+					 "select * from unnest(array(\n"
+					 "\tselect value\n"
+					 "\tfrom pg_resgroup_get_status_kv('dump')\n"
+					 "));")));
+	}
 
 	do_dump = (strncmp(text_to_cstring(PG_GETARG_TEXT_P(0)), "dump", 4) == 0);
 	

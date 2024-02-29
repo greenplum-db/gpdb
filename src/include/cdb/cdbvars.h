@@ -926,6 +926,11 @@ extern int get_dbid_string_length(void);
 #define UNINITIALIZED_GP_IDENTITY_VALUE (-10000)
 #define IS_QUERY_DISPATCHER() (GpIdentity.segindex == MASTER_CONTENT_ID)
 
+static inline bool is_entry_db()
+{
+	return IS_QUERY_DISPATCHER() && Gp_role == GP_ROLE_EXECUTE;
+}
+
 /* Stores the listener port that this process uses to listen for incoming
  * Interconnect connections from other Motion nodes.
  */

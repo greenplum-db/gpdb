@@ -86,6 +86,11 @@ select value from pg_resgroup_get_status_kv('dump');
 
 RESET ROLE;
 
+create temp table t1 as select value from pg_resgroup_get_status_kv('dump');
+create temp table t1 as select * from unnest(array(
+	select value from pg_resgroup_get_status_kv('dump')
+));
+
 DROP ROLE role_dumpinfo_test;
 DROP ROLE role_permission;
 DROP RESOURCE GROUP rg_dumpinfo_test;
