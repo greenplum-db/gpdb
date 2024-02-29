@@ -49,6 +49,11 @@ static void read_err_msg(int fid, StringInfo sinfo);
  * This function is used to replace OpenPipeStream in COPY TO/FROM
  * PROGRAM command. With OpenPipeStream, COPY command can only report
  * exit code.
+ *
+ * XXX: Even though we have the ability to extract the child's stderr, we do
+ * lose out on updates/protections from upstream (such as the niceties with
+ * fd.c and SIGPIPE handling that are available with OpenPipeStream()). So we
+ * should consider augmenting OpenPipeStream() and using that instead.
  */
 int
 popen_with_stderr(int *pipes, const char *exe, bool forwrite)
