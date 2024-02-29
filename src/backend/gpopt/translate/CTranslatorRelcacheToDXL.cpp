@@ -607,25 +607,23 @@ CTranslatorRelcacheToDXL::RetrieveRel(CMemoryPool *mp, CMDAccessor *md_accessor,
 	// collect relation indexes
 	md_index_info_array = RetrieveRelIndexInfo(mp, rel.get());
 
-	is_partitioned =
-		(nullptr != gpdb::GPDBRelationRetrievePartitionDesc(rel.get()));
+	is_partitioned = (rel->rd_rel->relkind == RELKIND_PARTITIONED_TABLE);
 
 	// get number of leaf partitions
-	if (gpdb::GPDBRelationRetrievePartitionDesc(rel.get()))
+	if (is_partitioned)
 	{
 		RetrievePartKeysAndTypes(mp, rel.get(), oid, &part_keys, &part_types);
 
 		partition_oids = GPOS_NEW(mp) IMdIdArray(mp);
-		for (int i = 0;
-			 i < gpdb::GPDBRelationRetrievePartitionDesc(rel.get())->nparts;
-			 ++i)
+		PartitionDesc part_desc =
+			gpdb::GPDBRelationRetrievePartitionDesc(rel.get());
+		for (int i = 0; i < part_desc->nparts; ++i)
 		{
-			Oid part_oid =
-				gpdb::GPDBRelationRetrievePartitionDesc(rel.get())->oids[i];
+			Oid part_oid = part_desc->oids[i];
 			partition_oids->Append(GPOS_NEW(mp)
 									   CMDIdGPDB(IMDId::EmdidRel, part_oid));
 			gpdb::RelationWrapper rel_part = gpdb::GetRelation(part_oid);
-			if (gpdb::GPDBRelationRetrievePartitionDesc(rel_part.get()))
+			if (rel_part->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
 			{
 				// Multi-level partitioned tables are unsupported - fall back
 				GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported,
