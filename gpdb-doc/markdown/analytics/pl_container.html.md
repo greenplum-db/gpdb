@@ -211,12 +211,17 @@ Install the PL/Container language extension using the `gppkg` utility.
 
     You'll need to register the utility separately on each database that might need the PL/Container functionality.
 
+### <a id="install_docker_images"></a>Install PL/Container Docker Images
 
-### <a id="install_docker_images"></a>Install PL/Container Docker Images 
+Install the Docker images that PL/Container will use to create language-specific containers to run the UDFs. Before installing, review this compatiblity matrix:
 
-Install the Docker images that PL/Container will use to create language-specific containers to run the UDFs.
+|plcontainer version|R image version|python2 image version|python3 image version|
+|----------|---|--------|-------|
+|2.3.2|2.1.3|2.1.3|2.3.2|
+|2.4.0|2.1.3|2.1.3|2.4.0|
 
-> **Note** The PL/Container open source module contains dockerfiles to build Docker images that can be used with PL/Container. You can build a Docker image to run PL/Python UDFs and a Docker image to run PL/R UDFs. See the dockerfiles in the GitHub repository at [https://github.com/greenplum-db/plcontainer](https://github.com/greenplum-db/plcontainer).
+> **Note**
+>The PL/Container open source module contains dockerfiles to build Docker images that can be used with PL/Container. You can build a Docker image to run PL/Python UDFs and a Docker image to run PL/R UDFs. See the dockerfiles in the GitHub repository at [https://github.com/greenplum-db/plcontainer](https://github.com/greenplum-db/plcontainer).
 
 -   Download the files that contain the Docker images from the [VMware Tanzu Network](https://network.pivotal.io). For example, for Greenplum 6.22, click on "PL/Container Image for Python 2.2.0" which downloads **plcontainer-python3-image-2.2.0-gp6.tar.gz** with Python 3.9 and the *Python 3.9 Data Science Module Package*.
 
