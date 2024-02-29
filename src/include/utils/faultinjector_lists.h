@@ -45,6 +45,7 @@ FI_TYPE(FaultInjectorTypeSegv, "segv")
 FI_TYPE(FaultInjectorTypeInterrupt, "interrupt")
 FI_TYPE(FaultInjectorTypeFinishPending, "finish_pending")
 FI_TYPE(FaultInjectorTypeWaitUntilTriggered, "wait_until_triggered")
+FI_TYPE(FaultInjectorTypeExitNoCallbacks, "exit_no_callbacks")
 #endif
 
 /*

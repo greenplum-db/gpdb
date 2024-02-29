@@ -22,6 +22,7 @@
 #include "postgres.h"
 
 #include <signal.h>
+#include <unistd.h>
 
 #include "access/xact.h"
 #include "catalog/pg_type.h"
@@ -541,6 +542,17 @@ FaultInjector_InjectFaultIfSet_out_of_line(
 							entryLocal->faultName,
 							FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
 			QueryFinishPending = true;
+			break;
+		}
+
+		case FaultInjectorTypeExitNoCallbacks:
+		{
+			ereport(LOG,
+					(errcode(ERRCODE_FAULT_INJECT),
+						errmsg("fault triggered, fault name:'%s' fault type:'%s' ",
+							   entryLocal->faultName,
+							   FaultInjectorTypeEnumToString[entryLocal->faultInjectorType])));
+			_exit(entryLocal->extraArg);
 			break;
 		}
 
