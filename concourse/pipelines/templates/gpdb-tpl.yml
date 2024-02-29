@@ -223,6 +223,7 @@ groups:
   - icw_gporca_jit_[[ os_type ]]
   - icw_gporca_memory_[[ os_type ]]
   - icw_planner_[[ os_type ]]
+  - icw_planner_tde_[[ os_type ]]
   - icw_planner_jit_[[ os_type ]]
   - icw_gporca_icproxy_[[ os_type ]]
   - icw_planner_icproxy_[[ os_type ]]
@@ -1006,6 +1007,53 @@ jobs:
       CONFIGURE_FLAGS: ((configure_flags))
       BLDWRAP_POSTGRES_CONF_ADDONS:
         - optimizer_use_gpdb_allocators=off
+
+- name: icw_planner_tde_[[ os_type ]]
+  plan:
+  - in_parallel:
+      steps:
+      - get: gpdb_src
+        passed: [gate_icw_start]
+      - get: bin_gpdb
+        passed: [gate_icw_start]
+        trigger: true
+      {% if os_type == "rhel8" or os_type == "oel8" or os_type == "rocky8" %}
+      - get: binary_swap_gpdb
+        passed: [gate_icw_start]
+        resource: binary_swap_gpdb_[[ os_type ]]
+      {% endif %}
+      - get: gpdb7-[[ os_type ]]-test
+  - task: ic_gpdb
+    {% if use_ICW_workers %}
+    tags: [icw-worker]
+    {% endif %}
+    {% if os_type == "rhel8" or os_type == "oel8" or os_type == "rocky8" %}
+    file: gpdb_src/concourse/tasks/ic_gpdb_binary_swap.yml
+    {% else %}
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    {% endif %}
+    image: gpdb7-[[ os_type ]]-test
+    timeout: 24h
+    params:
+      SHARED_PRELOAD_LIBRARIES: "data_encryption"
+      MAKE_TEST_PRERUN_SHELL_COMMAND: |
+        # ao_checksum_corruption will read AO table directly
+        # log_directory will use pg_basebackup with is not supported for now
+        find "$COORDINATOR_DATA_DIRECTORY/../../../../../src/test/" -name '*_schedule' | xargs sed -i 's,\(ao_checksum_corruption\|log_directory\), ,' ;
+        find "$COORDINATOR_DATA_DIRECTORY/../../../../../src/test/" -name '*_schedule' | xargs sed -i 's,^test: *$, ,' ;
+        # replica_check will read table file directly
+        sed -i 's,gp_replica_check.py -d=all -r=all,true,' "$COORDINATOR_DATA_DIRECTORY/../../../../../gpcontrib/gp_replica_check/Makefile" ;
+        # pg_upgrade will read and write table file directly
+        echo "#!/usr/bin/env true" | sudo tee "$COORDINATOR_DATA_DIRECTORY/../../../../../src/bin/pg_upgrade/test_gpdb.sh" ;
+        # binary_swap will boot the old gpdb with out TDE support
+        echo "#!/usr/bin/env true" | sudo tee "$COORDINATOR_DATA_DIRECTORY/../../../../../src/test/binary_swap/test_binary_swap.sh" ;
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off -c jit=off' installcheck-world
+      TEST_OS: [[ test_os ]]
+      {% if os_type == "rhel8" or os_type == "oel8" or os_type == "rocky8" %}
+      TEST_BINARY_SWAP: ((test-binary-swap))
+      {% endif %}
+      CONFIGURE_FLAGS: ((configure_flags))
+      DUMP_DB: "true"
 
 - name: icw_planner_[[ os_type ]]
   plan:

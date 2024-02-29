@@ -97,6 +97,7 @@ run_resgroup_icw_test() {
         LANG=en_US.utf8 make create-demo-cluster WITH_MIRRORS=${WITH_MIRRORS:-true}
         source /home/gpadmin/gpdb_src/gpAux/gpdemo/gpdemo-env.sh
 
+        ${MAKE_TEST_PRERUN_SHELL_COMMAND:-true}
         PG_TEST_EXTRA="kerberos ssl" make -s ${MAKE_TEST_COMMAND}
 EOF
 }
