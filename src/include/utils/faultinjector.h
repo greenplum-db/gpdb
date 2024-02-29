@@ -61,7 +61,10 @@ typedef struct FaultInjectorEntry_s {
 	FaultInjectorType_e		faultInjectorType;
 	
 	int						extraArg;
-		/* in seconds, in use if fault injection type is sleep */
+		/*
+		 * - in seconds, in use if fault injection type is sleep
+		 * - exit code, in use if fault injection type is exit
+		 */
 	int						gpSessionid;
 		/* -1 means the fault can be triggered by any process */
 
