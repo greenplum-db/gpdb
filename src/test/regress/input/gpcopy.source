@@ -2,6 +2,23 @@
 -- This test suite tests COPY code that is unique to greenplum db.
 --
 
+--
+-- Test copying from program, simulating an exit condition in the child process
+-- before the file is re-imaged with exec. The child should exit gracefully.
+-- Earlier, we used to call exit() instead of _exit(), and that would lead to
+-- the child spuriously calling the parent's atexit handlers (which it inherited
+-- from the child). This invariably led to corruption of the child and parent's
+-- shared PGPROC, with the possibility of PANICs inside LockRefindAndRelease()
+-- and downstream assertion failures, related to PGPROC release and init.
+--
+CREATE TABLE exit_in_child(i int);
+SELECT gp_inject_fault('popen_with_stderr_in_child',
+                       'exit_no_callbacks', '', '', '', 1, 1, /* exit code */ 1, dbid)
+    FROM gp_segment_configuration WHERE content=-1 AND role='p';
+COPY exit_in_child FROM PROGRAM 'echo 1';
+SELECT gp_inject_fault('popen_with_stderr_in_child', 'reset', dbid)
+    FROM gp_segment_configuration WHERE content=-1 AND role='p';
+
 -- ######################################################
 -- different distribution columns and distribution types
 -- ######################################################
