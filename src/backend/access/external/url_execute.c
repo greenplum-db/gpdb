@@ -697,10 +697,9 @@ popen_with_stderr(int *pipes, const char *exe, bool forwrite)
 			close(data[WRITE]);
 			close(fileno(stdin));
 
-			/* assign pipes to parent to stdin */
 			if (dup2(data[READ], fileno(stdin)) < 0)
 			{
-				perror("dup2 error");
+				perror("could not redirect stdin to PROGRAM");
 				_exit(EXIT_FAILURE);
 			}
 
@@ -715,7 +714,7 @@ popen_with_stderr(int *pipes, const char *exe, bool forwrite)
 			/* assign pipes to parent to stdout */
 			if (dup2(data[WRITE], fileno(stdout)) < 0)
 			{
-				perror("dup2 error");
+				perror("could not redirect stdout to PROGRAM");
 				_exit(EXIT_FAILURE);
 			}
 
@@ -736,7 +735,6 @@ popen_with_stderr(int *pipes, const char *exe, bool forwrite)
 			else
 				close(data[READ]);
 
-			perror("dup2 error");
 			_exit(EXIT_FAILURE);
 		}
 
