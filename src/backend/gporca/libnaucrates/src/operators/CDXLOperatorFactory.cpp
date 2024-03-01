@@ -14,6 +14,7 @@
 #include <xercesc/util/NumberFormatException.hpp>
 
 #include "gpos/common/clibwrapper.h"
+#include "gpos/memory/stack.h"
 #include "gpos/string/CWStringConst.h"
 #include "gpos/string/CWStringDynamic.h"
 
@@ -3109,6 +3110,107 @@ CDXLOperatorFactory::ExtractConvertStrsToArray(
 	}
 
 	return array_strs;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CDXLOperatorFactory::ExtractConvertStrToJoinPair
+//
+//	@doc:
+//		Parse a Leading hint string into a JoinPair.
+//
+//		Examples: "((t1 (t2 t3)) t4)" and "t1 t2 t3 t4"
+//
+//---------------------------------------------------------------------------
+CJoinHint::JoinPair *
+CDXLOperatorFactory::ExtractConvertStrToJoinPair(
+	CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val)
+{
+	CMemoryPool *mp = dxl_memory_manager->Pmp();
+
+	auto is_name_char = [](WCHAR c) -> bool {
+		return c != u'(' && c != u')' && c != u' ' && c != '\0';
+	};
+
+	int depth = 0;
+	CAutoMemoryPool amp;
+	gpos::stack<CJoinHint::JoinPair *> s(amp.Pmp());
+	for (int i = 0; xml_val[i] != '\0'; i++)
+	{
+		char curr = xml_val[i];
+		switch (curr)
+		{
+			case '(':
+			{
+				depth += 1;
+				break;
+			}
+			case ')':
+			{
+				// a closing paran indicates the second argument to a directed
+				// hint has finished
+				//
+				// Example: "(T1 (T2 T3))"
+				CJoinHint::JoinPair *right = s.top();
+				s.pop();
+				CJoinHint::JoinPair *left = s.top();
+				s.pop();
+
+				CJoinHint::JoinPair *pair =
+					GPOS_NEW(mp) CJoinHint::JoinPair(left, right, depth > 0);
+				s.push(pair);
+
+				depth -= 1;
+				break;
+			}
+			case ' ':
+			{
+				break;
+			}
+			default:
+			{
+				// consume name and push it onto the stack.
+				int j = i;
+				std::string str;
+				while (is_name_char(xml_val[j]))
+				{
+					str += xml_val[j];
+					j += 1;
+				}
+				char *str_buffer = GPOS_NEW_ARRAY(mp, char, str.size() + 1);
+				memcpy(str_buffer, str.c_str(), str.size() * sizeof(char));
+				str_buffer[str.size()] = '\0';
+
+				CJoinHint::JoinPair *pair = GPOS_NEW(mp) CJoinHint::JoinPair(
+					GPOS_NEW(mp) CWStringConst(mp, str_buffer));
+
+				GPOS_DELETE_ARRAY(str_buffer);
+
+				s.push(pair);
+
+				if (depth == 0 && s.size() > 1)
+				{
+					// consumed name when paren depth is 0 and more than 1 item
+					// on the stack indicates a directed-less hint.
+					//
+					// Example: "T1 T2 T3"
+					CJoinHint::JoinPair *right = s.top();
+					s.pop();
+					CJoinHint::JoinPair *left = s.top();
+					s.pop();
+
+					CJoinHint::JoinPair *pair =
+						GPOS_NEW(mp) CJoinHint::JoinPair(left, right, false);
+					s.push(pair);
+				}
+
+				i = j - 1;
+				break;
+			}
+		}
+	}
+
+	return s.top();
 }
 
 //---------------------------------------------------------------------------

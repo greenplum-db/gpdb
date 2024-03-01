@@ -20,6 +20,7 @@
 #include "gpos/base.h"
 #include "gpos/common/CDouble.h"
 
+#include "gpopt/hints/CJoinHint.h"
 #include "naucrates/base/IDatum.h"
 #include "naucrates/dxl/operators/CDXLColRef.h"
 #include "naucrates/dxl/operators/CDXLCtasStorageOptions.h"
@@ -608,6 +609,9 @@ public:
 	// parse a comma-separated list of strings into a dynamic array
 	// will raise an exception if list is not well-formed
 	static StringPtrArray *ExtractConvertStrsToArray(
+		CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val);
+
+	static CJoinHint::JoinPair *ExtractConvertStrToJoinPair(
 		CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val);
 
 	// parses the input and output segment ids from Xerces attributes and

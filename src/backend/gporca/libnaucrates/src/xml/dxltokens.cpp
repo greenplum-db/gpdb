@@ -77,6 +77,8 @@ CDXLTokens::Init(CMemoryPool *mp)
 		{EdxltokenPlanHint, GPOS_WSZ_LIT("PlanHint")},
 		{EdxltokenScanHint, GPOS_WSZ_LIT("ScanHint")},
 		{EdxltokenRowHint, GPOS_WSZ_LIT("RowHint")},
+		{EdxltokenJoinHint, GPOS_WSZ_LIT("JoinHint")},
+		{EdxltokenLeading, GPOS_WSZ_LIT("Leading")},
 		{EdxltokenJoinArityForAssociativityCommutativity,
 		 GPOS_WSZ_LIT("JoinArityForAssociativityCommutativity")},
 		{EdxltokenArrayExpansionThreshold,
