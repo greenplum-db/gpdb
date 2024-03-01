@@ -12,6 +12,7 @@
 #include "gpopt/hints/CHintUtils.h"
 
 #include "gpos/common/clibwrapper.h"
+#include "gpos/memory/queue.h"
 
 using namespace gpopt;
 
@@ -238,4 +239,62 @@ CHintUtils::ScanHintStringToEnum(const WCHAR *type)
 		return CScanHint::NoBitmapScan;
 	}
 	return CScanHint::Sentinal;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CHintUtils::GetAliasesFromTableDescriptors
+//
+//	@doc:
+//		Returns a set containing all the aliases referenced in the table
+//		descriptor hash set.
+//---------------------------------------------------------------------------
+CWStringConstHashSet *
+CHintUtils::GetAliasesFromTableDescriptors(CMemoryPool *mp,
+										   CTableDescriptorHashSet *ptabs)
+{
+	CWStringConstHashSet *pexpr_aliases = GPOS_NEW(mp) CWStringConstHashSet(mp);
+	CTableDescriptorHashSetIter tabiter(ptabs);
+	while (tabiter.Advance())
+	{
+		const CTableDescriptor *tabdesc = tabiter.Get();
+		pexpr_aliases->Insert(tabdesc->Name().Pstr());
+	}
+
+	return pexpr_aliases;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CHintUtils::GetAliasesFromHint
+//
+//	@doc:
+//		Returns a set containing all the aliases referenced in the JoinPair.
+//---------------------------------------------------------------------------
+CWStringConstHashSet *
+CHintUtils::GetAliasesFromHint(CMemoryPool *mp,
+							   const CJoinHint::JoinPair *joinpair)
+{
+	CWStringConstHashSet *aliases = GPOS_NEW(mp) CWStringConstHashSet(mp);
+
+	CAutoMemoryPool amp;
+	gpos::queue<const CJoinHint::JoinPair *> q(amp.Pmp());
+	q.push(joinpair);
+
+	while (q.size() > 0)
+	{
+		const CJoinHint::JoinPair *pair = q.front();
+		q.pop();
+		if (nullptr != pair->GetName())
+		{
+			aliases->Insert(pair->GetName());
+		}
+		else
+		{
+			q.push(pair->GetOuter());
+			q.push(pair->GetInner());
+		}
+	}
+
+	return aliases;
 }
