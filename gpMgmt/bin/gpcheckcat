@@ -1598,7 +1598,7 @@ def checkAOLastrownums():
 # Exclude these tuples from the catalog table scan
 # pg_depend: classid 2603 (pg_amproc) is excluded because their OIDs can be
 #            nonsynchronous (catalog.c:RelationNeedsSynchronizedOIDs())
-MISSING_ENTRY_EXCLUDE = {'pg_depend': 'WHERE classid != 2603'}
+MISSING_ENTRY_EXCLUDE = {'pg_depend': 'WHERE classid != 2603', 'pg_description': 'WHERE classoid != 3381'}
 
 def missingEntryQuery(max_content, catname, pkey, castedPkey):
     # =================
