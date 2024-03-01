@@ -1,0 +1,890 @@
+-- Test Optimizer Join Hints Feature
+--
+-- Purpose: Test that join hints may be used to coerce certain plan shapes
+LOAD 'pg_hint_plan';
+DROP SCHEMA IF EXISTS joinhints CASCADE;
+CREATE SCHEMA joinhints;
+SET search_path=joinhints;
+SET optimizer_trace_fallback=on;
+-- Setup tables
+CREATE TABLE t1(a int, b int);
+CREATE TABLE t2(a int, b int);
+CREATE TABLE t3(a int, b int);
+CREATE TABLE t4(a int, b int);
+CREATE TABLE t5(a int, b int);
+-- Test that join order hint for every tree shape is applied.
+--
+-- These check that every possible order on 3 relations. There are 12 possible
+-- orders:
+--
+-- T1 T2 T3   =>   (T1 T2) T3,  T1 (T2 T3)
+-- T1 T3 T2   =>   (T1 T3) T2,  T1 (T3 T2)
+-- T2 T1 T3   =>   (T2 T1) T3,  T2 (T1 T3)
+-- T2 T3 T1   =>   (T2 T3) T1,  T2 (T3 T1)
+-- T3 T1 T2   =>   (T3 T1) T2,  T3 (T1 T2)
+-- T3 T2 T1   =>   (T3 T2) T1,  T3 (T2 T1)
+/*+
+    Leading((t1 (t2 t3)))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, t3;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Seq Scan on t1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+
+/*+
+    Leading((t1 (t3 t2)))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, t3;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Seq Scan on t1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+
+/*+
+    Leading(((t2 t3) t1))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, t3;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Seq Scan on t1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+
+/*+
+    Leading(((t3 t2) t1))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, t3;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Seq Scan on t1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+
+/*+
+    Leading(((t1 t3) t2))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, t3;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Seq Scan on t1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+
+/*+
+    Leading(((t3 t1) t2))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, t3;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Seq Scan on t1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+
+/*+
+    Leading((t2 (t1 t3)))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, t3;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Seq Scan on t1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+
+/*+
+    Leading((t2 (t3 t1)))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, t3;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Seq Scan on t1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+
+/*+
+    Leading(((t1 t2) t3))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, t3;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Seq Scan on t1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+
+/*+
+    Leading(((t2 t1) t3))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, t3;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Seq Scan on t1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+
+/*+
+    Leading((t3 (t1 t2)))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, t3;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Seq Scan on t1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+
+/*+
+    Leading((t3 (t2 t1)))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, t3;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Seq Scan on t1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+
+-- Test that join order hint may be applied over non-leaf nodes
+--
+-- These check that LIMIT, GROUP BY, or CTE queries may be coerced by a plan
+-- hint to produce a specific join order.
+/*+
+    Leading((t2 (t1 t3)))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, (SELECT * FROM t3 LIMIT 42) AS q;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t2
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Broadcast Motion 1:3  (slice3; segments: 1)
+                           ->  Limit
+                                 ->  Gather Motion 3:1  (slice4; segments: 3)
+                                       ->  Limit
+                                             ->  Seq Scan on t3
+                     ->  Materialize
+                           ->  Seq Scan on t1
+ Optimizer: Postgres-based planner
+(14 rows)
+
+/*+
+    Leading(((t5 (t4 t3)) (t1 t2)))
+ */
+EXPLAIN (costs off) SELECT * FROM (SELECT t1.a FROM t1, t2 LIMIT 42) AS q, t3, t4, t5;
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t5
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                           ->  Seq Scan on t4
+                     ->  Materialize
+                           ->  Nested Loop
+                                 ->  Broadcast Motion 1:3  (slice4; segments: 1)
+                                       ->  Limit
+                                             ->  Gather Motion 3:1  (slice5; segments: 3)
+                                                   ->  Limit
+                                                         ->  Nested Loop
+                                                               ->  Broadcast Motion 3:3  (slice6; segments: 3)
+                                                                     ->  Seq Scan on t2
+                                                               ->  Materialize
+                                                                     ->  Seq Scan on t1
+                                 ->  Materialize
+                                       ->  Seq Scan on t3
+ Optimizer: Postgres-based planner
+(22 rows)
+
+/*+
+  Leading((t1 (t2 t5)))
+*/
+EXPLAIN (costs off) SELECT * FROM (SELECT * FROM t1, t2, t5 LIMIT 42) q, t4, t3;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Broadcast Motion 1:3  (slice3; segments: 1)
+                           ->  Limit
+                                 ->  Gather Motion 3:1  (slice4; segments: 3)
+                                       ->  Limit
+                                             ->  Nested Loop
+                                                   ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                                                         ->  Seq Scan on t5
+                                                   ->  Materialize
+                                                         ->  Nested Loop
+                                                               ->  Seq Scan on t1
+                                                               ->  Materialize
+                                                                     ->  Broadcast Motion 3:3  (slice6; segments: 3)
+                                                                           ->  Seq Scan on t2
+                     ->  Materialize
+                           ->  Seq Scan on t4
+ Optimizer: Postgres-based planner
+(22 rows)
+
+/*+
+    Leading((((t1 t2) t3) t4))
+ */
+EXPLAIN (COSTS OFF) SELECT * FROM (SELECT t1.a, t2.a FROM t1, t2, t3 GROUP BY t1.a, t2.a) AS q, t4;
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t4
+         ->  Materialize
+               ->  HashAggregate
+                     Group Key: t1.a, t2.a
+                     ->  Nested Loop
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2
+                           ->  Materialize
+                                 ->  Nested Loop
+                                       ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                             ->  Seq Scan on t3
+                                       ->  Materialize
+                                             ->  Seq Scan on t1
+ Optimizer: Postgres-based planner
+(17 rows)
+
+/*+
+    Leading(((((g2_t1 g2_t2) g2_t3) t4) (g1_t1 (g1_t3 g1_t2))))
+ */
+EXPLAIN (COSTS OFF) SELECT * FROM (SELECT g1_t1.a, g1_t2.a FROM t1 AS g1_t1, t2 AS g1_t2, t3 AS g1_t3 GROUP BY g1_t1.a, g1_t2.a) AS q1,
+                                  (SELECT g2_t1.a, g2_t2.a FROM t1 AS g2_t1, t2 AS g2_t2, t3 AS g2_t3 GROUP BY g2_t1.a, g2_t2.a) AS q2, t4, t5;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  HashAggregate
+                     Group Key: g2_t1.a, g2_t2.a
+                     ->  Nested Loop
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2 g2_t2
+                           ->  Materialize
+                                 ->  Nested Loop
+                                       ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                             ->  Seq Scan on t3 g2_t3
+                                       ->  Materialize
+                                             ->  Seq Scan on t1 g2_t1
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                           ->  HashAggregate
+                                 Group Key: g1_t1.a, g1_t2.a
+                                 ->  Nested Loop
+                                       ->  Broadcast Motion 3:3  (slice6; segments: 3)
+                                             ->  Seq Scan on t2 g1_t2
+                                       ->  Materialize
+                                             ->  Nested Loop
+                                                   ->  Broadcast Motion 3:3  (slice7; segments: 3)
+                                                         ->  Seq Scan on t3 g1_t3
+                                                   ->  Materialize
+                                                         ->  Seq Scan on t1 g1_t1
+                     ->  Materialize
+                           ->  Nested Loop
+                                 ->  Seq Scan on t4
+                                 ->  Materialize
+                                       ->  Broadcast Motion 3:3  (slice8; segments: 3)
+                                             ->  Seq Scan on t5
+ Optimizer: Postgres-based planner
+(35 rows)
+
+/*+
+    Leading(((t3 t2) t1))
+    Leading((t5 t4))
+ */
+EXPLAIN (COSTS OFF)
+WITH cte AS
+(
+    SELECT * FROM t1, t2, t3
+)
+SELECT * FROM cte, t4, t5;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t5
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                           ->  Seq Scan on t4
+                     ->  Materialize
+                           ->  Nested Loop
+                                 ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                       ->  Seq Scan on t3
+                                 ->  Materialize
+                                       ->  Nested Loop
+                                             ->  Seq Scan on t1
+                                             ->  Materialize
+                                                   ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                                                         ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(19 rows)
+
+-- Test that bad join order hint is *not* applied
+--
+-- These check that invalid plans are not produced.
+-- No plan joins (t2 t3) becase the query has LIMIT on (t1 t2) which must be
+-- applied after joining (t1 t2)
+/*+
+    Leading((t1 t3))
+ */
+EXPLAIN (costs off) SELECT * FROM (SELECT t1.a FROM t1, t2 LIMIT 42) AS q, t3, t4, t5;
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t5
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                           ->  Seq Scan on t4
+                     ->  Materialize
+                           ->  Nested Loop
+                                 ->  Broadcast Motion 1:3  (slice4; segments: 1)
+                                       ->  Limit
+                                             ->  Gather Motion 3:1  (slice5; segments: 3)
+                                                   ->  Limit
+                                                         ->  Nested Loop
+                                                               ->  Broadcast Motion 3:3  (slice6; segments: 3)
+                                                                     ->  Seq Scan on t2
+                                                               ->  Materialize
+                                                                     ->  Seq Scan on t1
+                                 ->  Materialize
+                                       ->  Seq Scan on t3
+ Optimizer: Postgres-based planner
+(22 rows)
+
+-- No plan joins (t2 t3) because the GROUP BY is on (t1 t2)
+/*+
+    Leading((t2 t3))
+ */
+EXPLAIN (COSTS OFF) SELECT * FROM (SELECT t1.a, t2.a FROM t1, t2 GROUP BY t1.a, t2.a) AS q, t3;
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  HashAggregate
+                     Group Key: t1.a, t2.a
+                     ->  Nested Loop
+                           ->  Seq Scan on t1
+                           ->  Materialize
+                                 ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                       ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(13 rows)
+
+-- syntax error: extra parens
+/*+
+    Leading(((t1 t2)))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2;
+INFO:  pg_hint_plan: hint syntax error at or near "Leading(((t1 t2)))
+ "
+DETAIL:  Leading hint requires two sets of relations when parentheses nests.
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Seq Scan on t1
+         ->  Materialize
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(7 rows)
+
+-- syntax error: cannot mix directed and non-directed hint
+/*+
+    Leading((t1 (t2 t3 t4)))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, t3, t4;
+INFO:  pg_hint_plan: hint syntax error at or near "Leading((t1 (t2 t3 t4)))
+ "
+DETAIL:  Leading hint requires two sets of relations when parentheses nests.
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t4
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                           ->  Seq Scan on t3
+                     ->  Materialize
+                           ->  Nested Loop
+                                 ->  Seq Scan on t1
+                                 ->  Materialize
+                                       ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                             ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(15 rows)
+
+/*+
+    Leading((((t5 t4) (t1 t3)) t2))
+ */
+EXPLAIN (costs off) SELECT t1.a, t2.a FROM t1, t2, t3, t4, t5;
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t2
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                           ->  Nested Loop
+                                 ->  Nested Loop
+                                       ->  Seq Scan on t3
+                                       ->  Materialize
+                                             ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                                   ->  Seq Scan on t4
+                                 ->  Materialize
+                                       ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                                             ->  Seq Scan on t5
+                     ->  Materialize
+                           ->  Seq Scan on t1
+ Optimizer: Postgres-based planner
+(19 rows)
+
+/*+
+    Leading(((t5 t4) (t1 t3)))
+ */
+EXPLAIN (costs off) SELECT t1.a, t2.a FROM t1, t2, t3, t4, t5;
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t2
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                           ->  Nested Loop
+                                 ->  Nested Loop
+                                       ->  Seq Scan on t3
+                                       ->  Materialize
+                                             ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                                   ->  Seq Scan on t4
+                                 ->  Materialize
+                                       ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                                             ->  Seq Scan on t5
+                     ->  Materialize
+                           ->  Seq Scan on t1
+ Optimizer: Postgres-based planner
+(19 rows)
+
+/*+
+    Leading((t2 t1))
+ */
+EXPLAIN (costs off) SELECT t1.a, t2.a FROM t1 JOIN t2 ON t1.a=t2.a JOIN t3 ON t3.a=t1.a, t4, t5;
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Merge Join
+         Merge Cond: (t1.a = t2.a)
+         ->  Sort
+               Sort Key: t1.a
+               ->  Nested Loop
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                           ->  Seq Scan on t4
+                     ->  Materialize
+                           ->  Seq Scan on t1
+         ->  Materialize
+               ->  Merge Join
+                     Merge Cond: (t3.a = t2.a)
+                     ->  Sort
+                           Sort Key: t3.a
+                           ->  Seq Scan on t3
+                     ->  Materialize
+                           ->  Sort
+                                 Sort Key: t2.a
+                                 ->  Nested Loop
+                                       ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                             ->  Seq Scan on t5
+                                       ->  Materialize
+                                             ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(25 rows)
+
+/*+
+    Leading((t5 (((t4 t3) t2) t1)))
+ */
+EXPLAIN (costs off) SELECT t1.a, t2.a FROM t1 JOIN t2 ON t1.a=t2.a JOIN t3 ON t3.a=t1.a, t4, t5;
+                                      QUERY PLAN                                       
+---------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Merge Join
+         Merge Cond: (t1.a = t2.a)
+         ->  Sort
+               Sort Key: t1.a
+               ->  Nested Loop
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                           ->  Seq Scan on t4
+                     ->  Materialize
+                           ->  Seq Scan on t1
+         ->  Materialize
+               ->  Merge Join
+                     Merge Cond: (t3.a = t2.a)
+                     ->  Sort
+                           Sort Key: t3.a
+                           ->  Seq Scan on t3
+                     ->  Materialize
+                           ->  Sort
+                                 Sort Key: t2.a
+                                 ->  Nested Loop
+                                       ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                             ->  Seq Scan on t5
+                                       ->  Materialize
+                                             ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(25 rows)
+
+/*+
+    Leading((t5 (((t4 t3) t2) t1)))
+ */
+EXPLAIN (costs off) SELECT t1.a, t2.a FROM t1 JOIN t2 ON t1.a=t2.a JOIN t3 ON t3.a=t1.a+1 AND t3.a>42, t4, t5;
+                                         QUERY PLAN                                          
+---------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Merge Join
+         Merge Cond: (t1.a = t2.a)
+         ->  Sort
+               Sort Key: t1.a
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: t1.a
+                     ->  Merge Join
+                           Merge Cond: (((t1.a + 1)) = t3.a)
+                           ->  Sort
+                                 Sort Key: ((t1.a + 1))
+                                 ->  Result
+                                       ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                             Hash Key: (t1.a + 1)
+                                             ->  Seq Scan on t1
+                                                   Filter: ((a + 1) > 42)
+                           ->  Sort
+                                 Sort Key: t3.a
+                                 ->  Seq Scan on t3
+                                       Filter: (a > 42)
+         ->  Materialize
+               ->  Sort
+                     Sort Key: t2.a
+                     ->  Nested Loop
+                           ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                 ->  Nested Loop
+                                       ->  Seq Scan on t4
+                                       ->  Materialize
+                                             ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                                                   ->  Seq Scan on t5
+                           ->  Materialize
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(33 rows)
+
+-- Test that multiple join order hint can be applied
+--
+-- Following queries produce multiple NAry join operators where different join
+-- order hints may be applied.
+/*+
+  Leading((t3 t4))
+  Leading((t1 (t2 t5)))
+*/
+EXPLAIN (costs off) SELECT * FROM t4, t3, (SELECT * FROM t1, t2, t5 LIMIT 42) q;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Broadcast Motion 1:3  (slice3; segments: 1)
+                           ->  Limit
+                                 ->  Gather Motion 3:1  (slice4; segments: 3)
+                                       ->  Limit
+                                             ->  Nested Loop
+                                                   ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                                                         ->  Seq Scan on t5
+                                                   ->  Materialize
+                                                         ->  Nested Loop
+                                                               ->  Seq Scan on t1
+                                                               ->  Materialize
+                                                                     ->  Broadcast Motion 3:3  (slice6; segments: 3)
+                                                                           ->  Seq Scan on t2
+                     ->  Materialize
+                           ->  Seq Scan on t4
+ Optimizer: Postgres-based planner
+(22 rows)
+
+-- mixes directioned and directioned-less hint syntax
+/*+
+  Leading((t3 t4))
+  Leading(t1 t2 t5)
+*/
+EXPLAIN (costs off) SELECT * FROM t4, t3, (SELECT * FROM t1, t2, t5 LIMIT 42) q;
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Broadcast Motion 1:3  (slice3; segments: 1)
+                           ->  Limit
+                                 ->  Gather Motion 3:1  (slice4; segments: 3)
+                                       ->  Limit
+                                             ->  Nested Loop
+                                                   ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                                                         ->  Seq Scan on t5
+                                                   ->  Materialize
+                                                         ->  Nested Loop
+                                                               ->  Seq Scan on t1
+                                                               ->  Materialize
+                                                                     ->  Broadcast Motion 3:3  (slice6; segments: 3)
+                                                                           ->  Seq Scan on t2
+                     ->  Materialize
+                           ->  Seq Scan on t4
+ Optimizer: Postgres-based planner
+(22 rows)
+
+/*+
+  Leading((t3 t4))
+  Leading((t1 (t2 t5)))
+*/
+EXPLAIN (costs off) SELECT * FROM (SELECT * FROM t4, t3 LIMIT 1) p, (SELECT * FROM t1, t2, t5 LIMIT 42) q;
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Nested Loop
+   ->  Limit
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               ->  Limit
+                     ->  Nested Loop
+                           ->  Seq Scan on t4
+                           ->  Materialize
+                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                       ->  Seq Scan on t3
+   ->  Materialize
+         ->  Limit
+               ->  Gather Motion 3:1  (slice3; segments: 3)
+                     ->  Limit
+                           ->  Nested Loop
+                                 ->  Broadcast Motion 3:3  (slice4; segments: 3)
+                                       ->  Seq Scan on t5
+                                 ->  Materialize
+                                       ->  Nested Loop
+                                             ->  Seq Scan on t1
+                                             ->  Materialize
+                                                   ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                                                         ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(23 rows)
+
+-- Test that directioned-less join order hints can be applied
+--
+-- Following queries use directioned-less syntax. Example:
+--
+--     "Leading(t1 t2 ... tn)"
+--
+-- Above example specifies that t1 JOIN t2 happens *before* JOIN tn. But t1 can
+-- be on the inner or outer side of the join. In contrast "Leading((t1 t2))
+-- requires t1 to be on the outer side of the join.
+/*+
+    Leading(t1 t2 t3)
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, t3;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Seq Scan on t1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+
+/*+
+    Leading(t3 t2 t1)
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2, t3;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t3
+         ->  Materialize
+               ->  Nested Loop
+                     ->  Seq Scan on t1
+                     ->  Materialize
+                           ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+
+-- Test join order hints on non-inner join queries
+/*+
+    Leading(((t3 t2) t1))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2 LEFT JOIN t3 ON t2.a=t3.a;
+                       QUERY PLAN                        
+---------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t1
+         ->  Materialize
+               ->  Hash Right Join
+                     Hash Cond: (t3.a = t2.a)
+                     ->  Seq Scan on t3
+                     ->  Hash
+                           ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+
+/*+
+    Leading(((t3 t2) t1))
+ */
+EXPLAIN (costs off) SELECT * FROM t1, t2 RIGHT JOIN t3 ON t2.a=t3.a;
+                       QUERY PLAN                        
+---------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Nested Loop
+         ->  Broadcast Motion 3:3  (slice2; segments: 3)
+               ->  Seq Scan on t1
+         ->  Materialize
+               ->  Hash Left Join
+                     Hash Cond: (t3.a = t2.a)
+                     ->  Seq Scan on t3
+                     ->  Hash
+                           ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(11 rows)
+

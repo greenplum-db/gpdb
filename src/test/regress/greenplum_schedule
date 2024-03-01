@@ -18,7 +18,7 @@
 # required setup steps
 test: test_setup
 
-test: planhints rowhints
+test: planhints rowhints joinhints
 
 test: pg_dump_binary_upgrade
 
