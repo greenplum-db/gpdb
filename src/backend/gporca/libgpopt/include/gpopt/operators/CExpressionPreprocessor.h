@@ -17,6 +17,7 @@
 
 #include "gpopt/base/CColumnFactory.h"
 #include "gpopt/base/CUtils.h"
+#include "gpopt/hints/CJoinHint.h"
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpression.h"
 #include "gpopt/operators/CScalarBoolOp.h"

@@ -26,6 +26,7 @@
 #include "gpopt/mdcache/CMDAccessor.h"
 #include "gpopt/operators/CExpressionFactorizer.h"
 #include "gpopt/operators/CExpressionUtils.h"
+#include "gpopt/operators/CJoinOrderHintsPreprocessor.h"
 #include "gpopt/operators/CLeftJoinPruningPreprocessor.h"
 #include "gpopt/operators/CLogicalCTEAnchor.h"
 #include "gpopt/operators/CLogicalCTEConsumer.h"
@@ -3522,6 +3523,19 @@ CExpressionPreprocessor::PexprPreprocess(
 		CNormalizer::PexprNormalize(mp, pexprSplitUpdateToInplace);
 	GPOS_CHECK_ABORT;
 	pexprSplitUpdateToInplace->Release();
+
+	CPlanHint *planhint =
+		COptCtxt::PoctxtFromTLS()->GetOptimizerConfig()->GetPlanHint();
+	if (nullptr != planhint)
+	{
+		// apply join order hints
+		CExpression *pexprJoinHintsApplied =
+			CJoinOrderHintsPreprocessor::PexprPreprocess(mp, pexprNormalized2);
+		GPOS_CHECK_ABORT;
+		pexprNormalized2->Release();
+
+		return pexprJoinHintsApplied;
+	}
 
 	return pexprNormalized2;
 }

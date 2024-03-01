@@ -13,6 +13,8 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/hints/CHintUtils.h"
+
 using namespace gpopt;
 
 FORCE_GENERATE_DBGSTR(CPlanHint);
@@ -24,7 +26,8 @@ FORCE_GENERATE_DBGSTR(CPlanHint);
 CPlanHint::CPlanHint(CMemoryPool *mp)
 	: m_mp(mp),
 	  m_scan_hints(GPOS_NEW(mp) ScanHintList(mp)),
-	  m_row_hints(GPOS_NEW(mp) RowHintList(mp))
+	  m_row_hints(GPOS_NEW(mp) RowHintList(mp)),
+	  m_join_hints(GPOS_NEW(mp) JoinHintList(mp))
 {
 }
 
@@ -32,6 +35,7 @@ CPlanHint::~CPlanHint()
 {
 	m_scan_hints->Release();
 	m_row_hints->Release();
+	m_join_hints->Release();
 }
 
 void
@@ -44,6 +48,12 @@ void
 CPlanHint::AddHint(CRowHint *hint)
 {
 	m_row_hints->Append(hint);
+}
+
+void
+CPlanHint::AddHint(CJoinHint *hint)
+{
+	m_join_hints->Append(hint);
 }
 
 
@@ -112,6 +122,158 @@ CPlanHint::GetRowHint(CTableDescriptorHashSet *ptabdescs)
 	return matching_hint;
 }
 
+//---------------------------------------------------------------------------
+//	@function:
+//		CPlanHint::GetJoinHint
+//
+//	@doc:
+//		Given a join expression, find a matching CJoinHint. A match means that
+//		every alias in the hint is covered in the expression and at least one
+//		alias is a leaf child of the join.
+//
+//---------------------------------------------------------------------------
+CJoinHint *
+CPlanHint::GetJoinHint(CExpression *pexpr)
+{
+	if (COperator::EopLogicalNAryJoin != pexpr->Pop()->Eopid() &&
+		COperator::EopLogicalInnerJoin != pexpr->Pop()->Eopid())
+	{
+		return nullptr;
+	}
+
+	// Disable join order hints on LEFT/RIGHT JOINS. There's some trickiness to
+	// this because some reorders are not valid. Before enabling, extra checks
+	// need to be added.
+	//
+	// For example:
+	//
+	//    T1 LOJ T2 LOJ t3
+	//
+	// *cannot* reorder to ..
+	//
+	//    T1 LOJ (T2 LOJ T3)
+	//
+	// without risking wrong results. Consider if tables have values:
+	//
+	//    T1 values (42)
+	//    T2 values (43)
+	//    T3 values (42)
+	//
+	// Then (T1 LOJ T2) LOJ T3 produces... (42, NULL, 42)
+	// Whereas T1 LOJ (T2 LOJ T3) produces... (42, NULL, NULL)
+	//
+	// Also, unlike inner joins the join condition of LOJ and ROJ cannot be
+	// split otherwise it can produce wrong results.
+	if (COperator::EopLogicalNAryJoin == pexpr->Pop()->Eopid() &&
+		COperator::EopScalarNAryJoinPredList ==
+			(*pexpr)[pexpr->Arity() - 1]->Pop()->Eopid())
+	{
+		return nullptr;
+	}
+
+	CTableDescriptorHashSet *ptabdesc = pexpr->DeriveTableDescriptor();
+	CWStringConstHashSet *pexprAliases =
+		CHintUtils::GetAliasesFromTableDescriptors(m_mp, ptabdesc);
+
+	// If every hint alias is contained in the expression's table descriptor
+	// set, and at least one hint alias is a leaf in the expression then the
+	// hint is returned.
+	for (ULONG ul = 0; ul < m_join_hints->Size(); ul++)
+	{
+		CJoinHint *hint = (*m_join_hints)[ul];
+
+		CWStringConstHashSet *hintAliases =
+			CHintUtils::GetAliasesFromHint(m_mp, hint->GetJoinPair());
+
+		bool is_contained = true;
+		CWStringConstHashSetIter hsiter(hintAliases);
+		while (hsiter.Advance())
+		{
+			if (!pexprAliases->Contains(hsiter.Get()))
+			{
+				is_contained = false;
+				break;
+			}
+		}
+		if (is_contained)
+		{
+			for (ULONG ul = 0; ul < pexpr->Arity(); ul++)
+			{
+				CTableDescriptorHashSet *childtabs =
+					(*pexpr)[ul]->DeriveTableDescriptor();
+
+				// is a leaf and a hint
+				if (childtabs->Size() == 1 &&
+					hintAliases->Contains(childtabs->First()->Name().Pstr()))
+				{
+					pexprAliases->Release();
+					hintAliases->Release();
+					return hint;
+				}
+			}
+		}
+		hintAliases->Release();
+	}
+	pexprAliases->Release();
+	return nullptr;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CPlanHint::HasJoinHintWithDirection
+//
+//	@doc:
+//		Given an expression, check if there exists a hint that covers the
+//		expression.
+//
+//---------------------------------------------------------------------------
+bool
+CPlanHint::HasJoinHintWithDirection(CExpression *pexpr)
+{
+	CTableDescriptorHashSet *ptabdesc = pexpr->DeriveTableDescriptor();
+	CWStringConstHashSet *pexprAliases =
+		CHintUtils::GetAliasesFromTableDescriptors(m_mp, ptabdesc);
+
+	bool has_join_with_direction = false;
+
+	// If every alias is contained in the overal table descriptor and at least
+	// one alias is a leaf.
+	for (ULONG ul = 0; ul < m_join_hints->Size(); ul++)
+	{
+		CJoinHint *hint = (*m_join_hints)[ul];
+
+		// skip directed-less hints
+		if (!hint->GetJoinPair()->IsDirected())
+		{
+			continue;
+		}
+
+		CWStringConstHashSet *hintAliases =
+			CHintUtils::GetAliasesFromHint(m_mp, hint->GetJoinPair());
+
+		bool is_contained = true;
+		CWStringConstHashSetIter hsiter(pexprAliases);
+		while (hsiter.Advance())
+		{
+			if (!hintAliases->Contains(hsiter.Get()))
+			{
+				is_contained = false;
+				break;
+			}
+		}
+		hintAliases->Release();
+
+		if (is_contained)
+		{
+			has_join_with_direction = true;
+			break;
+		}
+	}
+
+	pexprAliases->Release();
+	return has_join_with_direction;
+}
+
 IOstream &
 CPlanHint::OsPrint(IOstream &os) const
 {
@@ -134,6 +296,12 @@ CPlanHint::OsPrint(IOstream &os) const
 		os << "  ";
 		(*m_row_hints)[ul]->OsPrint(os) << "\n";
 	}
+
+	for (ULONG ul = 0; ul < m_join_hints->Size(); ul++)
+	{
+		os << "  ";
+		(*m_join_hints)[ul]->OsPrint(os) << "\n";
+	}
 	os << "]";
 	return os;
 }
@@ -149,6 +317,11 @@ CPlanHint::Serialize(CXMLSerializer *xml_serializer) const
 	for (ULONG ul = 0; ul < m_row_hints->Size(); ul++)
 	{
 		(*m_row_hints)[ul]->Serialize(xml_serializer);
+	}
+
+	for (ULONG ul = 0; ul < m_join_hints->Size(); ul++)
+	{
+		(*m_join_hints)[ul]->Serialize(xml_serializer);
 	}
 }
 

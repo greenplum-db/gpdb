@@ -465,6 +465,101 @@ COptTasks::GetCostModel(CMemoryPool *mp, ULONG num_segments)
 
 
 //---------------------------------------------------------------------------
+//	@function:
+//		GenerateJoinPairs
+//
+//	@doc:
+//		Converts OuterInnerRels into a JoinPair structure
+//---------------------------------------------------------------------------
+CJoinHint::JoinPair *
+GenerateJoinPairs(CMemoryPool *mp, OuterInnerRels *outer_inner)
+{
+	if (nullptr == outer_inner)
+	{
+		return nullptr;
+	}
+
+	CJoinHint::JoinPair *pair = nullptr;
+
+	if (outer_inner->relation != nullptr)
+	{
+		// outer_inner leaf node
+		char *str_buffer =
+			GPOS_NEW_ARRAY(mp, char, strlen(outer_inner->relation) + 1);
+		memcpy(str_buffer, outer_inner->relation,
+			   strlen(outer_inner->relation));
+		str_buffer[strlen(outer_inner->relation)] = '\0';
+
+		CWStringConst *alias = GPOS_NEW(mp)
+			CWStringConst(mp, str_buffer /*outer_inner->relation*/);
+
+		GPOS_DELETE_ARRAY(str_buffer);
+
+		pair = GPOS_NEW(mp) CJoinHint::JoinPair(alias);
+	}
+	else if (2 == list_length(outer_inner->outer_inner_pair))
+	{
+		// outer_inner branch node
+		CJoinHint::JoinPair *left_joinpair = GenerateJoinPairs(
+			mp, (OuterInnerRels *) lfirst(
+					list_head(outer_inner->outer_inner_pair)));
+
+		CJoinHint::JoinPair *right_joinpair = GenerateJoinPairs(
+			mp, (OuterInnerRels *) lfirst(
+					lnext(list_head(outer_inner->outer_inner_pair))));
+
+		if (nullptr == left_joinpair || nullptr == right_joinpair)
+		{
+			// bad input - outer_inner may be malformed
+			CRefCount::SafeRelease(left_joinpair);
+			CRefCount::SafeRelease(right_joinpair);
+			return nullptr;
+		}
+
+		pair = GPOS_NEW(mp) CJoinHint::JoinPair(left_joinpair, right_joinpair,
+												/*is_directed*/ true);
+	}
+
+	return pair;
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		GenerateJoinPairs
+//
+//	@doc:
+//		Converts List of relation names into a JoinPair structure
+//---------------------------------------------------------------------------
+CJoinHint::JoinPair *
+GenerateJoinPairs(CMemoryPool *mp, List *relations)
+{
+	CJoinHint::JoinPair *pair = nullptr;
+
+	ListCell *l;
+	int count = 0;
+	foreach_with_count(l, relations, count)
+	{
+		char *relation = (char *) lfirst(l);
+		CWStringConst *alias = GPOS_NEW(mp) CWStringConst(mp, relation);
+
+		if (count == 0)
+		{
+			pair = GPOS_NEW(mp) CJoinHint::JoinPair(alias);
+		}
+		else
+		{
+			pair = GPOS_NEW(mp) CJoinHint::JoinPair(
+				pair, GPOS_NEW(mp) CJoinHint::JoinPair(alias),
+				/*is_directed*/ false);
+		}
+	}
+
+	return pair;
+}
+
+
+//---------------------------------------------------------------------------
 //      @function:
 //			COptTasks::GetPlanHints
 //
@@ -597,6 +692,36 @@ COptTasks::GetPlanHints(CMemoryPool *mp, Query *query)
 		plan_hints->AddHint(GPOS_NEW(mp) CRowHint(
 			mp, aliases, CDouble(row_hint->rows),
 			(CRowHint::RowsValueType) row_hint->value_type));
+	}
+
+
+	// Translate LeadingHint => CJoinHint
+
+	for (int hint_index = 0;
+		 hint_index < hintstate->num_hints[HINT_TYPE_LEADING]; hint_index++)
+	{
+		LeadingHint *leading_hint =
+			(LeadingHint *) hintstate->leading_hint[hint_index];
+		CJoinHint::JoinPair *joinpair = nullptr;
+
+		if (nullptr != leading_hint->outer_inner)
+		{
+			// is directed
+			joinpair = GenerateJoinPairs(mp, leading_hint->outer_inner);
+			if (nullptr != joinpair)
+			{
+				plan_hints->AddHint(GPOS_NEW(mp) CJoinHint(mp, joinpair));
+			}
+		}
+		else if (nullptr != leading_hint->relations)
+		{
+			// is directed-less
+			joinpair = GenerateJoinPairs(mp, leading_hint->relations);
+			if (nullptr != joinpair)
+			{
+				plan_hints->AddHint(GPOS_NEW(mp) CJoinHint(mp, joinpair));
+			}
+		}
 	}
 
 	return plan_hints;
