@@ -104,10 +104,13 @@ test__resetSessionForPrimaryGangLoss(void **state)
 
 	/* Assum we have created a temporary namespace. */
 	will_return(TempNamespaceOidIsValid, true);
+	will_return(GetTempToastNamespace, 9998);
 	will_return(ResetTempNamespace, 9999);
 	OldTempNamespace = InvalidOid;
+	OldTempToastNamespace = InvalidOid;
 
 	resetSessionForPrimaryGangLoss();
+	assert_int_equal(OldTempToastNamespace, 9998);
 	assert_int_equal(OldTempNamespace, 9999);
 }
 

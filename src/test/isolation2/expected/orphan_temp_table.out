@@ -1,0 +1,75 @@
+-- Test orphan temp table on coordinator.
+
+-- case 1: Before the fix, when backend process panic on the segment, the temp table will be left on the coordinator.Before the fix, when backend process panic on the segment, the temp table will be left on the coordinator.
+-- create a temp table
+1: CREATE TEMP TABLE test_temp_table_cleanup(a int);
+CREATE
+
+-- panic on segment 0
+1: SELECT gp_inject_fault('before_exec_scan', 'panic', dbid) FROM gp_segment_configuration WHERE role='p' AND content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- trigger 'before_exec_scan' panic in ExecScan
+1: SELECT * FROM test_temp_table_cleanup;
+ERROR:  fault triggered, fault name:'before_exec_scan' fault type:'panic'  (seg0 slice1 11.158.187.228:7002 pid=86207)
+
+-- make sure seg0 is recovered from panic
+1: SELECT count(*) FROM gp_dist_random('gp_id');
+ count 
+-------
+ 3     
+(1 row)
+
+-- we should not see the temp table on the coordinator
+1: SELECT oid, relname, relnamespace FROM pg_class where relname = 'test_temp_table_cleanup';
+ oid | relname | relnamespace 
+-----+---------+--------------
+(0 rows)
+
+1: SELECT gp_inject_fault('before_exec_scan', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content = 0;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1q: ... <quitting>
+
+-- case 2: Test if temp table will be left on the coordinator, when session exits in coordinator within a transaction block.
+2: CREATE TEMP TABLE test_temp_table_cleanup(a int);
+CREATE
+
+-- make sure that RemoveTempRelationsCallback is called before validation
+3: SELECT gp_inject_fault_infinite('remove_temp_relation_callback', 'suspend', dbid) FROM gp_segment_configuration WHERE role='p' AND content = -1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:                 
+(1 row)
+3&: SELECT gp_wait_until_triggered_fault('remove_temp_relation_callback', 1, dbid) FROM gp_segment_configuration where role = 'p' and content = -1;  <waiting ...>
+
+2: begin;
+BEGIN
+2: select * from test_temp_table_cleanup;
+ a 
+---
+(0 rows)
+2q: ... <quitting>
+
+3<:  <... completed>
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+3: SELECT gp_inject_fault('remove_temp_relation_callback', 'reset', dbid) FROM gp_segment_configuration WHERE role='p' AND content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+3: select count(*) from pg_class where relname = 'test_temp_table_cleanup';
+ count 
+-------
+ 0     
+(1 row)
+3q: ... <quitting>
+

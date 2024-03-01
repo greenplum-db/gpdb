@@ -58,6 +58,7 @@
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/catcache.h"
+#include "utils/faultinjector.h"
 #include "utils/guc.h"
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
@@ -3926,6 +3927,28 @@ DropTempTableNamespaceForResetSession(Oid namespaceOid)
 }
 
 /*
+ * Remove temp namespace entry from pg_namespace.
+ */
+void
+DropTempTableNamespaceEntryForResetSession(Oid namespaceOid, Oid toastNamespaceOid)
+{
+	if (IsTransactionOrTransactionBlock())
+		elog(ERROR, "Called within a transaction");
+
+	StartTransactionCommand();
+
+	/* Make sure the temp namespace is valid. */
+	if (SearchSysCacheExists1(NAMESPACEOID,
+							  ObjectIdGetDatum(namespaceOid)))
+	{
+		RemoveSchemaById(namespaceOid);
+		RemoveSchemaById(toastNamespaceOid);
+	}
+
+	CommitTransactionCommand();
+}
+
+/*
  * Called by CreateSchemaCommand when creating a temporary schema 
  */
 void
@@ -4152,6 +4175,8 @@ RemoveTempRelationsCallback(int code, Datum arg)
 		}
 
 		CommitTransactionCommand();
+
+		SIMPLE_FAULT_INJECTOR("remove_temp_relation_callback");
 	}
 }
 

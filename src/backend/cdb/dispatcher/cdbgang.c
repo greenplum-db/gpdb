@@ -72,6 +72,7 @@ CreateGangFunc pCreateGangFunc = cdbgang_createGang_async;
 
 static bool NeedResetSession = false;
 static Oid	OldTempNamespace = InvalidOid;
+static Oid	OldTempToastNamespace = InvalidOid;
 
 /*
  * cdbgang_createGang:
@@ -782,33 +783,42 @@ CheckForResetSession(void)
 	int			oldSessionId = 0;
 	int			newSessionId = 0;
 	Oid			dropTempNamespaceOid;
+	Oid			dropTempToastNamespaceOid;
 
-	if (!NeedResetSession)
+	/* No need to reset session or drop temp tables */
+	if (!NeedResetSession && OldTempNamespace == InvalidOid)
 		return;
 
 	/* Do the session id change early. */
-
-	/* If we have gangs, we can't change our session ID. */
-	Assert(!cdbcomponent_qesExist());
-
-	oldSessionId = gp_session_id;
-	ProcNewMppSessionId(&newSessionId);
-
-	gp_session_id = newSessionId;
-	gp_command_count = 0;
-	pgstat_report_sessionid(newSessionId);
-
-	/* Update the slotid for our singleton reader. */
-	if (SharedLocalSnapshotSlot != NULL)
+	if (NeedResetSession)
 	{
-		LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
-		SharedLocalSnapshotSlot->slotid = gp_session_id;
-		LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+		/* If we have gangs, we can't change our session ID. */
+		Assert(!cdbcomponent_qesExist());
+
+		oldSessionId = gp_session_id;
+		ProcNewMppSessionId(&newSessionId);
+
+		gp_session_id = newSessionId;
+		gp_command_count = 0;
+		pgstat_report_sessionid(newSessionId);
+
+		/* Update the slotid for our singleton reader. */
+		if (SharedLocalSnapshotSlot != NULL)
+		{
+			LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
+			SharedLocalSnapshotSlot->slotid = gp_session_id;
+			LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+		}
+
+		elog(LOG, "The previous session was reset because its gang was disconnected (session id = %d). "
+			"The new session id = %d", oldSessionId, newSessionId);
 	}
 
-	elog(LOG, "The previous session was reset because its gang was disconnected (session id = %d). "
-		 "The new session id = %d", oldSessionId, newSessionId);
-
+	/*
+	 * When it's in transaction block, need to bump the session id,
+	 * e.g. retry COMMIT PREPARED, but defer drop temp table to the
+	 * main loop in PostgresMain().
+	 */
 	if (IsTransactionOrTransactionBlock())
 	{
 		NeedResetSession = false;
@@ -816,14 +826,21 @@ CheckForResetSession(void)
 	}
 
 	dropTempNamespaceOid = OldTempNamespace;
+	dropTempToastNamespaceOid = OldTempToastNamespace;
 	OldTempNamespace = InvalidOid;
+	OldTempToastNamespace = InvalidOid;
 	NeedResetSession = false;
 
 	if (dropTempNamespaceOid != InvalidOid)
 	{
+		MemoryContext oldcontext = CurrentMemoryContext;
+
 		PG_TRY();
 		{
 			DropTempTableNamespaceForResetSession(dropTempNamespaceOid);
+
+			/* drop pg_temp_N schema entry from pg_namespace */
+			DropTempTableNamespaceEntryForResetSession(dropTempNamespaceOid, dropTempToastNamespaceOid);
 		} PG_CATCH();
 		{
 			/*
@@ -835,8 +852,10 @@ CheckForResetSession(void)
 				PG_RE_THROW();
 			}
 
+			MemoryContextSwitchTo(oldcontext);
 			EmitErrorReport();
 			FlushErrorState();
+			AbortCurrentTransaction();
 		} PG_END_TRY();
 	}
 }
@@ -844,7 +863,13 @@ CheckForResetSession(void)
 void
 resetSessionForPrimaryGangLoss(void)
 {
-	if (ProcCanSetMppSessionId())
+	/*
+	 * resetSessionForPrimaryGangLoss could be called twice in a transacion,
+	 * we need to use NeedResetSession to double check if we should do the
+	 * real work to avoid that OldTempToastNamespace be marked invalid before
+	 * cleaning up the temp namespace.
+	 */
+	if (ProcCanSetMppSessionId() && !NeedResetSession)
 	{
 		/*
 		 * Not too early.
@@ -860,6 +885,7 @@ resetSessionForPrimaryGangLoss(void)
 		 */
 		if (TempNamespaceOidIsValid())
 		{
+			OldTempToastNamespace = GetTempToastNamespace();
 			/*
 			 * Here we indicate we don't have a temporary table namespace
 			 * anymore so all temporary tables of the previous session will be
@@ -875,7 +901,10 @@ resetSessionForPrimaryGangLoss(void)
 				 gp_session_id);
 		}
 		else
+		{
 			OldTempNamespace = InvalidOid;
+			OldTempToastNamespace = InvalidOid;
+		}
 	}
 }
 
