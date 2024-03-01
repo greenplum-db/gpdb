@@ -13,9 +13,11 @@
 
 #include "gpos/base.h"
 
+#include "gpopt/hints/CPlanHint.h"
 #include "gpopt/metadata/CTableDescriptor.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
 #include "gpopt/operators/CPatternLeaf.h"
+#include "gpopt/optimizer/COptimizerConfig.h"
 
 using namespace gpopt;
 
@@ -101,6 +103,17 @@ CXformJoinCommutativity::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	// assemble transformed expression
 	CExpression *pexprAlt = CUtils::PexprLogicalJoin<CLogicalInnerJoin>(
 		mp, pexprRight, pexprLeft, pexprScalar);
+
+	// join order hints may specify that a specific relation be on the inner or
+	// the outer side of the join. if such a hint exists, then skip adding join
+	// commutativity alternatives.
+	CPlanHint *planhint =
+		COptCtxt::PoctxtFromTLS()->GetOptimizerConfig()->GetPlanHint();
+	if (nullptr != planhint && planhint->HasJoinHintWithDirection(pexprAlt))
+	{
+		pexprAlt->Release();
+		return;
+	}
 
 	// add alternative to transformation result
 	pxfres->Add(pexprAlt);
