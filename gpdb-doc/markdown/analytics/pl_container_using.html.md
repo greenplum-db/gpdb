@@ -472,8 +472,8 @@ You may configure one or more hosts outside your Greenplum cluster to use as a r
 
 ### <a id="prereq"></a>Prerequisites
 
-- You are using PL/Container version XX
-- You are using Docker version XX
+- You are using PL/Container version 2.4.0.
+- You are using a Docker installation with a Docker engine version v19.03 or newer.
 - You have root or sudo permission on the remote host.
 
 ### <a id="setup_host"></a>Configure the Remote Host
