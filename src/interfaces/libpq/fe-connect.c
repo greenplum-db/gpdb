@@ -4392,8 +4392,7 @@ PQfreeCancel(PGcancel *cancel)
  */
 static int
 internal_cancel(SockAddr *raddr, int be_pid, int be_key,
-				char *errbuf, int errbufsize, bool requestFinish,
-				int numQEBackends, int *QEBackends)
+				char *errbuf, int errbufsize, bool requestFinish)
 {
 	int			save_errno = SOCK_ERRNO;
 	pgsocket	tmpsock = PGINVALID_SOCKET;
@@ -4434,37 +4433,18 @@ retry3:
 	 * We needn't set nonblocking I/O or NODELAY options here.
 	 */
 
-	int packetlen = sizeof(uint32) + offsetof(CancelRequestPacket, MppBackends) + numQEBackends * sizeof(uint32);
+	/* Create and send the cancel request packet. */
 
-	if (numQEBackends == 0)
-	{
-		crp.packetlen = pg_hton32((uint32) packetlen);
-		if (requestFinish)
-			crp.cp.cancelRequestCode = (MsgType) pg_hton32(FINISH_REQUEST_CODE);
-		else
-			crp.cp.cancelRequestCode = (MsgType) pg_hton32(CANCEL_REQUEST_CODE);
-		crp.cp.backendPID = pg_hton32(be_pid);
-		crp.cp.cancelAuthCode = pg_hton32(be_key);
-		crp.cp.numMppBackends = 0;
-	}
+	crp.packetlen = pg_hton32((uint32) sizeof(crp));
+	if (requestFinish)
+		crp.cp.cancelRequestCode = (MsgType) pg_hton32(FINISH_REQUEST_CODE);
 	else
-	{
-		crp.packetlen = pg_hton32((uint32) packetlen);
-		if (requestFinish)
-			crp.cp.cancelRequestCode = (MsgType) pg_hton32(FINISH_REQUEST_CODE);
-		else
-			crp.cp.cancelRequestCode = (MsgType) pg_hton32(CANCEL_REQUEST_CODE);
-		crp.cp.backendPID = pg_hton32(be_pid);
-		crp.cp.cancelAuthCode = pg_hton32(be_key);
-		crp.cp.numMppBackends = pg_hton32(numQEBackends);
-		for (int i = 0; i < numQEBackends; i++)
-		{
-			crp.cp.MppBackends[i] = pg_hton32(QEBackends[i]);
-		}
-	}
+		crp.cp.cancelRequestCode = (MsgType) pg_hton32(CANCEL_REQUEST_CODE);
+	crp.cp.backendPID = pg_hton32(be_pid);
+	crp.cp.cancelAuthCode = pg_hton32(be_key);
 
 retry4:
-	if (send(tmpsock, (char *) &crp, packetlen, 0) != (int) packetlen)
+	if (send(tmpsock, (char *) &crp, sizeof(crp), 0) != (int) sizeof(crp))
 	{
 		if (SOCK_ERRNO == EINTR)
 			/* Interrupted system call - we'll just try again */
@@ -4563,6 +4543,184 @@ cancel_errReturn:
 }
 
 /*
+ * mpp_request: send mpp request to segment
+ *
+ * same as internal_cancel except sending a dynamic
+ * array in request packet.
+ */
+static int
+mpp_request(SockAddr *raddr, int be_pid, int be_key,
+				char *errbuf, int errbufsize, int requestCancel,
+				int numQEBackends, int *QEBackends)
+{
+	int			save_errno = SOCK_ERRNO;
+	pgsocket	tmpsock = PGINVALID_SOCKET;
+	int			maxlen;
+	struct
+	{
+		uint32		packetlen;
+		MppRequestPacket *cp;
+	}			crp;
+
+#ifndef WIN32
+	struct pollfd	pollFds[1];
+	int				pollRet;
+
+retry2:
+#endif
+	/*
+	 * We need to open a temporary connection to the postmaster. Do this with
+	 * only kernel calls.
+	 */
+	if ((tmpsock = socket(raddr->addr.ss_family, SOCK_STREAM, 0)) == PGINVALID_SOCKET)
+	{
+		strlcpy(errbuf, "PQMppRequest() -- socket() failed: ", errbufsize);
+		goto cancel_errReturn;
+	}
+retry3:
+	if (connect(tmpsock, (struct sockaddr *) &raddr->addr,
+				raddr->salen) < 0)
+	{
+		if (SOCK_ERRNO == EINTR)
+			/* Interrupted system call - we'll just try again */
+			goto retry3;
+		strlcpy(errbuf, "PQMppRequest() -- connect() failed: ", errbufsize);
+		goto cancel_errReturn;
+	}
+
+	/* construct mpp request packet */
+	int packetlen = sizeof(crp.packetlen) + offsetof(MppRequestPacket, MppBackends) + numQEBackends * sizeof(uint32);
+	char *packet = (char *)malloc(packetlen);
+
+	crp.cp = (MppRequestPacket *)malloc(sizeof(MppRequestPacket));
+	crp.packetlen = pg_hton32((uint32) packetlen);
+	if (requestCancel)
+		crp.cp->requestCode = (MsgType) pg_hton32(MPP_CANCEL_REQUEST_CODE);
+	else
+		crp.cp->requestCode = (MsgType) pg_hton32(MPP_FINISH_REQUEST_CODE);
+	crp.cp->backendPID = pg_hton32(be_pid);
+	crp.cp->cancelAuthCode = pg_hton32(be_key);
+	crp.cp->numMppBackends = pg_hton32(numQEBackends);
+
+	uint32 * MppBackends = (uint32 *)malloc(numQEBackends * sizeof(uint32));
+	memset(MppBackends, 0, numQEBackends * sizeof(uint32));
+	for (int i = 0; i < numQEBackends; i++)
+	{
+		MppBackends[i] = pg_hton32(QEBackends[i]);
+	}
+
+	/* memcpy crp.packetlen */
+	memcpy(packet, &(crp.packetlen), sizeof(crp.packetlen));
+	/* memcpy crp.cp elements */
+	memcpy(packet + sizeof(crp.packetlen), crp.cp, offsetof(MppRequestPacket, MppBackends));
+	/* memcpy crp.cp.MppBackends dynamic array */
+	memcpy(packet + sizeof(crp.packetlen) + offsetof(MppRequestPacket, MppBackends), MppBackends, numQEBackends * sizeof(uint32));
+
+	free(MppBackends);
+	free(crp.cp);
+
+retry4:
+	if (send(tmpsock, packet, packetlen, 0) != (int) packetlen)
+	{
+		if (SOCK_ERRNO == EINTR)
+			/* Interrupted system call - we'll just try again */
+			goto retry4;
+		strlcpy(errbuf, "PQMppRequest() -- send() failed: ", errbufsize);
+		goto cancel_errReturn;
+	}
+
+	/*
+	 * Wait for the postmaster to close the connection, which indicates that
+	 * it's processed the request.  Without this delay, we might issue another
+	 * command only to find that our cancel zaps that command instead of the
+	 * one we thought we were canceling.  Note we don't actually expect this
+	 * read to obtain any data, we are just waiting for EOF to be signaled.
+	 */
+#ifndef WIN32
+retry5:
+	pollFds[0].fd = tmpsock;
+	pollFds[0].events = POLLIN;
+	pollFds[0].revents = 0;
+
+	/*
+	 * Wait for at most 660 seconds, which is the sum of max values of
+	 * authentication_timeout and pre_auth_delay. Most likely, it's long enough
+	 * to make sure the process forked by the postmaster on segment is finished.
+	 */
+	pollRet = poll(pollFds, 1, 660 * 1000);
+	if (pollRet == 0)
+	{
+		/* timeout */
+		close(tmpsock);
+		tmpsock = -1;
+		goto retry2;
+	}
+	else if (pollRet < 0)
+	{
+		int olderrno = errno;
+		if (olderrno == EAGAIN || olderrno == EINTR)
+			goto retry5;
+
+		/* error */
+		close(tmpsock);
+		tmpsock = -1;
+		goto retry2;
+	}
+#endif
+
+retry6:
+	if (recv(tmpsock, (char *) &crp, 1, 0) < 0)
+	{
+		if (SOCK_ERRNO == EINTR)
+			/* Interrupted system call - we'll just try again */
+			goto retry6;
+		/* we ignore other error conditions */
+	}
+
+	/* All done */
+	closesocket(tmpsock);
+	SOCK_ERRNO_SET(save_errno);
+	free(packet);
+	return true;
+
+cancel_errReturn:
+
+	/*
+	 * Make sure we don't overflow the error buffer. Leave space for the \n at
+	 * the end, and for the terminating zero.
+	 */
+	maxlen = errbufsize - strlen(errbuf) - 2;
+	if (maxlen >= 0)
+	{
+		/*
+		 * We can't invoke strerror here, since it's not signal-safe.  Settle
+		 * for printing the decimal value of errno.  Even that has to be done
+		 * the hard way.
+		 */
+		int			val = SOCK_ERRNO;
+		char		buf[32];
+		char	   *bufp;
+
+		bufp = buf + sizeof(buf) - 1;
+		*bufp = '\0';
+		do
+		{
+			*(--bufp) = (val % 10) + '0';
+			val /= 10;
+		} while (val > 0);
+		bufp -= 6;
+		memcpy(bufp, "error ", 6);
+		strncat(errbuf, bufp, maxlen);
+		strcat(errbuf, "\n");
+	}
+	if (tmpsock != PGINVALID_SOCKET)
+		closesocket(tmpsock);
+	SOCK_ERRNO_SET(save_errno);
+	free(packet);
+	return false;
+}
+
+/*
  * PQcancel: request query cancel
  *
  * Returns true if able to send the cancel request, false if not.
@@ -4581,7 +4739,7 @@ PQcancel(PGcancel *cancel, char *errbuf, int errbufsize)
 	}
 
 	return internal_cancel(&cancel->raddr, cancel->be_pid, cancel->be_key,
-						   errbuf, errbufsize, false, 0, NULL);
+						   errbuf, errbufsize, false);
 }
 
 /*
@@ -4600,50 +4758,32 @@ PQrequestFinish(PGcancel *cancel, char *errbuf, int errbufsize)
 	}
 
 	return internal_cancel(&cancel->raddr, cancel->be_pid, cancel->be_key,
-						   errbuf, errbufsize, true, 0, NULL);
+						   errbuf, errbufsize, true);
 }
 
 /*
- * PQMppcancel: request Mpp query cancel
+ * PQMppcancel: request Mpp query cancel or finish
  *
- * Returns true if able to send the cancel request, false if not.
+ * Returns true if able to send the request, false if not.
  *
  * On failure, an error message is stored in *errbuf, which must be of size
  * errbufsize (recommended size is 256 bytes).  *errbuf is not changed on
  * success return.
  */
 int
-PQMppcancel(PGcancel *cancel, char *errbuf, int errbufsize, int nums, int *QEBackends)
+PQMppRequest(PGcancel *cancel,char *errbuf, int errbufsize,
+				int numQEBackends, int *QEBackends, int requestCancel)
 {
 	if (!cancel)
 	{
-		strlcpy(errbuf, "PQMppcancel() -- no cancel object supplied", errbufsize);
-		return false;
-	}
-
-	return internal_cancel(&cancel->raddr, cancel->be_pid, cancel->be_key,
-						   errbuf, errbufsize, false, nums, QEBackends);
-}
-
-/*
- * PQMpprequestFinish: request Mpp query finish
- *
- * Same as PQMppcancel, except it sends a finish request.
- */
-int
-PQMpprequestFinish(PGcancel *cancel, char *errbuf, int errbufsize, int nums, int *QEBackends)
-{
-	if (!cancel)
-	{
-		strlcpy(errbuf, "PQMpprequestFinish() -- no cancel object supplied",
+		strlcpy(errbuf, "PQMppRequest() -- no request object supplied",
 				errbufsize);
 		return false;
 	}
 
-	return internal_cancel(&cancel->raddr, cancel->be_pid, cancel->be_key,
-						   errbuf, errbufsize, true, nums, QEBackends);
+	return mpp_request(&cancel->raddr, cancel->be_pid, cancel->be_key,
+					   errbuf, errbufsize, requestCancel, numQEBackends, QEBackends);
 }
-
 
 /*
  * PQrequestCancel: old, not thread-safe function for requesting query cancel
@@ -4678,7 +4818,7 @@ PQrequestCancel(PGconn *conn)
 
 	r = internal_cancel(&conn->raddr, conn->be_pid, conn->be_key,
 						conn->errorMessage.data, conn->errorMessage.maxlen,
-						false, 0, NULL);
+						false);
 
 	if (!r)
 		conn->errorMessage.len = strlen(conn->errorMessage.data);

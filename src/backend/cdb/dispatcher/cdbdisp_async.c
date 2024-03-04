@@ -963,16 +963,23 @@ signalSegmentQEs(CdbDispatchCmdAsync *pParms,
 		backendsArray[i] = lfirst_int(lc);
 
 	if (isCancel)
-		ret = PQMppcancel(cancel, errbuf, 256, numBackends, backendsArray);
+		ret = PQMppRequest(cancel, errbuf, 256, numBackends, backendsArray, 1);
 	else
-		ret = PQMpprequestFinish(cancel, errbuf, 256, numBackends, backendsArray);
+		ret = PQMppRequest(cancel, errbuf, 256, numBackends, backendsArray, 0);
 
 	PQfreeCancel(cancel);
+	pfree(backendsArray);
 	return ret;
 }
 
 /*
- * Send finish or cancel signal to QEs if needed.
+ * Send finish or cancel request to Segment.
+ *
+ * Pick the first QE in one segment, and construct
+ * pids list which need to be canceled in same
+ * segment then we could kill them all. So we don't
+ * need to send cancel request to all QEs in the
+ * segment one by one.
  */
 static void
 signalQEs(CdbDispatchCmdAsync *pParms)
@@ -994,7 +1001,6 @@ signalQEs(CdbDispatchCmdAsync *pParms)
 		 * Don't send the signal if - QE is finished or canceled - the signal
 		 * was already sent - connection is dead
 		 */
-
 		if (!dispatchResult->stillRunning ||
 			dispatchResult->wasCanceled ||
 			(pParms->waitMode == DISPATCH_WAIT_ACK_ROOT &&
@@ -1007,11 +1013,12 @@ signalQEs(CdbDispatchCmdAsync *pParms)
 
 		memset(errbuf, 0, sizeof(errbuf));
 
+		/* construct pids list needed to be canceled in segment */
 		sent = signalSegmentQEs(pParms, segdbDesc, errbuf, waitMode == DISPATCH_WAIT_CANCEL);
 		if (sent)
 			dispatchResult->sentSignal = waitMode;
 		else
-			elog(LOG, "Unable to Mpp cancel: %s",
+			elog(LOG, "Unable to Mpp Request: %s",
 				 strlen(errbuf) == 0 ? "cannot allocate PGCancel" : errbuf);
 	}
 }
