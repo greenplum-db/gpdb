@@ -40,10 +40,10 @@ The *anytable* pseudo-type declares a function argument that is a table value ex
 
 The `SELECT` statement is run when the function is called and the result rows are distributed to segments so that each segment runs the function with a subset of the result table.
 
-For example, this table expression selects three columns from a table named `customer` and sets the distribution key to the first column:
+For example, this table expression selects three columns from a table named `customer` and sets the distribution key to the `cust_key` column:
 
 ```
-TABLE(SELECT cust_key, name, address FROM customer SCATTER BY 1)
+TABLE(SELECT cust_key, name, address FROM customer SCATTER BY cust_key)
 ```
 
 The `SELECT` statement may include joins on multiple base tables, `WHERE` clauses, aggregates, and any other valid query syntax.
