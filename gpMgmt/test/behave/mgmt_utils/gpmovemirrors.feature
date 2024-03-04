@@ -488,7 +488,7 @@ Feature: Tests for gpmovemirrors
         And gprecoverseg should print "Initiating segment recovery." to stdout
 
         And check if mirrors on content 0,1,2 are moved to new location on input file
-        And gpAdminLogs directory has no "pg_basebackup*" files on all segment hosts
+        And gpAdminLogs directory has "pg_basebackup*" files on respective hosts only for content 0,1,2
         And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
         And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
         And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
@@ -524,7 +524,7 @@ Feature: Tests for gpmovemirrors
         And check if mirrors on content 0 are in their original configuration
         And check if mirrors on content 1,2 are moved to new location on input file
         And verify that mirror on content 1,2,3,4,5 is up
-        And gpAdminLogs directory has "pg_basebackup*" files on respective hosts only for content 0
+        And gpAdminLogs directory has "pg_basebackup*" files on respective hosts only for content 0,1,2
         And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
         And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
         And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts

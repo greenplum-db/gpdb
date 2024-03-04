@@ -50,8 +50,7 @@ Feature: gprecoverseg tests involving migrating to a new host
     Then gprecoverseg should return a return code of 1
 #    And pg_hba file "/data/gpdata/mirror/gpseg0/pg_hba.conf" on host "sdw2" contains entries for "sdw5"
     And check if start failed for full recovery for mirrors with hostname sdw5
-    And gpAdminLogs directory has no "pg_basebackup*" files on all segment hosts
-    And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
+    And gpAdminLogs directory has "pg_basebackup*" files on sdw5
     And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
     And gpAdminLogs directory has "gpsegrecovery*" files on all segment hosts
     And datadirs from "before" configuration for "sdw1" are created on "sdw5" with mode 700

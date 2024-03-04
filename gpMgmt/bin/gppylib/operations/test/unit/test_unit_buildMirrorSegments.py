@@ -9,6 +9,7 @@ import io
 import logging
 import shutil
 import tempfile
+from datetime import datetime
 
 
 from mock import ANY, call, patch, Mock, mock_open
@@ -995,10 +996,13 @@ class SegmentProgressTestCase(GpTestCase):
         )
         self.tmp_log_dir = tempfile.mkdtemp()
         self.apply_patches([
-            patch('recoveryinfo.gplog.get_logger_dir', return_value=self.tmp_log_dir),
-            patch('gppylib.operations.buildMirrorSegments.os.remove')
+            patch('gppylib.recoveryinfo.gplog.get_logger_dir', return_value=self.tmp_log_dir),
+            patch('gppylib.operations.buildMirrorSegments.os.remove'),
+            patch('gppylib.operations.buildMirrorSegments.datetime')
         ])
         self.mock_os_remove = self.get_mock_from_apply_patch("remove")
+        self.mock_datetime = self.get_mock_from_apply_patch("datetime")
+        self.mock_datetime.now.return_value = datetime(2024, 3, 19, 16, 5, 38, 202000)
         self.combined_progress_file = "{}/recovery_progress.file".format(self.tmp_log_dir)
 
     def tearDown(self):
@@ -1025,9 +1029,9 @@ class SegmentProgressTestCase(GpTestCase):
 
         results = outfile.getvalue()
         self.assertEqual(results, (
-            'localhost (dbid 2): string 1\n'
-            'host2 (dbid 4): string 2\n'
-            'host3 (dbid 5): string 3\n'
+            '2024-03-19 16:05:38.202000: localhost (dbid 2): string 1\n'
+            '2024-03-19 16:05:38.202000: host2 (dbid 4): string 2\n'
+            '2024-03-19 16:05:38.202000: host3 (dbid 5): string 3\n'
         ))
 
     def test_recovery_pattern_returned_matches_recovery_result(self):
@@ -1039,7 +1043,7 @@ class SegmentProgressTestCase(GpTestCase):
 
         results = outfile.getvalue()
         self.assertEqual(results, (
-            'localhost (dbid 2): 1164848/1371715 kB (84%)\n'
+            '2024-03-19 16:05:38.202000: localhost (dbid 2): 1164848/1371715 kB (84%)\n'
         ))
         pattern = get_recovery_progress_pattern()
         self.assertTrue((re.search(pattern, cmd.get_results.return_value.stdout)) is not None)
@@ -1053,7 +1057,7 @@ class SegmentProgressTestCase(GpTestCase):
 
         results = outfile.getvalue()
         self.assertEqual(results, (
-            'localhost (dbid 2): 1164848/1371715 kB (84%)\n'
+            '2024-03-19 16:05:38.202000: localhost (dbid 2): 1164848/1371715 kB (84%)\n'
         ))
         pattern = get_recovery_progress_pattern('differential')
         self.assertTrue((re.search(pattern, cmd.get_results.return_value.stdout)) is None)
@@ -1069,8 +1073,8 @@ class SegmentProgressTestCase(GpTestCase):
 
         results = outfile.getvalue()
         self.assertEqual(results, (
-            'localhost (dbid 2): string 1\n'
-            'localhost (dbid 2): string 2\n'
+            '2024-03-19 16:05:38.202000: localhost (dbid 2): string 1\n'
+            '2024-03-19 16:05:38.202000: localhost (dbid 2): string 2\n'
         ))
 
     def test_inplace_display_uses_ansi_escapes_to_overwrite_previous_output(self):
@@ -1087,11 +1091,11 @@ class SegmentProgressTestCase(GpTestCase):
 
         results = outfile.getvalue()
         self.assertEqual(results, (
-            'localhost (dbid 2): string 1\x1b[K\n'
-            'host2 (dbid 4): string 3\x1b[K\n'
+            '2024-03-19 16:05:38.202000: localhost (dbid 2): string 1\x1b[K\n'
+            '2024-03-19 16:05:38.202000: host2 (dbid 4): string 3\x1b[K\n'
             '\x1b[2A'
-            'localhost (dbid 2): string 2\x1b[K\n'
-            'host2 (dbid 4): string 4\x1b[K\n'
+            '2024-03-19 16:05:38.202000: localhost (dbid 2): string 2\x1b[K\n'
+            '2024-03-19 16:05:38.202000: host2 (dbid 4): string 4\x1b[K\n'
         ))
 
     def test_errors_during_command_execution_are_displayed(self):
@@ -1109,9 +1113,9 @@ class SegmentProgressTestCase(GpTestCase):
 
         results = outfile.getvalue()
         self.assertEqual(results, (
-            'localhost (dbid 2): some error\n'
-            'host2 (dbid 4): \n'
-            'host3 (dbid 5): rsync failed\n'
+            '2024-03-19 16:05:38.202000: localhost (dbid 2): some error\n'
+            '2024-03-19 16:05:38.202000: host2 (dbid 4): \n'
+            '2024-03-19 16:05:38.202000: host3 (dbid 5): rsync failed\n'
         ))
 
     def test_successful_command_execution_should_delete_the_recovery_progress_file(self):
@@ -1229,10 +1233,11 @@ class SegmentProgressTestCase(GpTestCase):
             'full:1:1164848/1371715 kB (84%)\n'
         ])
         stdout_results = outfile.getvalue()
+
         self.assertEqual(stdout_results, (
-            'host1 (dbid 1): 1164848/1371715 kB (84%)\n'
-            'host2 (dbid 2): skipping pg_rewind on mirror as standby.signal is present\n'
-            'host3 (dbid 3): \n'
+            '2024-03-19 16:05:38.202000: host1 (dbid 1): 1164848/1371715 kB (84%)\n'
+            '2024-03-19 16:05:38.202000: host2 (dbid 2): skipping pg_rewind on mirror as standby.signal is present\n'
+            '2024-03-19 16:05:38.202000: host3 (dbid 3): \n'
         ))
 
 
