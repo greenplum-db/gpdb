@@ -111,12 +111,13 @@ CGPOptimizer::GPOPTOptimizedPlan(
 		else if (GPOS_MATCH_EX(ex, CException::ExmaInvalid,
 							   CException::ExmiORCAInvalidState))
 		{
-			errstart(INFO, ex.Filename(), ex.Line(), NULL, TEXTDOMAIN);
-			errfinish(
-				errcode(ERRCODE_INTERNAL_ERROR),
-				errmsg(
-					"Worker is already registered! This is an invalid state, please report this error. "));
-
+			if (errstart(INFO, ex.Filename(), ex.Line(), NULL, TEXTDOMAIN))
+			{
+				errfinish(
+					errcode(ERRCODE_INTERNAL_ERROR),
+					errmsg(
+						"Worker is already registered! This is an invalid state, please report this error. "));
+			}
 			GPOS_RESET_EX;
 		}
 

@@ -158,7 +158,7 @@ BroadcastSkewedHashjoin OrderByNullsFirst ConvertHashToRandomSelect ConvertHashT
 ProjectRepeatedColumn1 ProjectRepeatedColumn2 NLJ-BC-Outer-Spool-Inner Self-Comparison Self-Comparison-Nullable
 SelectCheckConstraint ExpandJoinOrder SelectOnBpchar EqualityJoin EffectsOfJoinFilter InnerJoin-With-OuterRefs
 UDA-AnyElement-1 UDA-AnyElement-2 Project-With-NonScalar-Func SixWayDPv2 Join-Varchar-Equality NLJ-Rewindability
-NLJ-Rewindability-CTAS DisableBroadcastThreshold VariadicFlagWithJson VariadicFlagWithFormatQuery WrkrOverwriting VariadicFlagWithUnionAll;
+NLJ-Rewindability-CTAS DisableBroadcastThreshold VariadicFlagWithJson VariadicFlagWithFormatQuery VariadicFlagWithUnionAll;
 
 CJoinPredTest:
 MultipleDampedPredJoinCardinality MultipleIndependentPredJoinCardinality MultiDistKeyJoinCardinality
