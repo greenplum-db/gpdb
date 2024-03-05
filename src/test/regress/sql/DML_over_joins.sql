@@ -1412,6 +1412,28 @@ delete from part_neq_dis_1 where b = (select c from part_neq_dis_2 where c=36);
 select * from part_eq_dis_1;
 select * from part_neq_dis_1;
 
+
+------------------------------------------------------------
+-- Inserts without motion:
+------------------------------------------------------------
+CREATE OR REPLACE FUNCTION nvl(p1 in text, p2 in text) RETURNS text AS $$
+DECLARE
+BEGIN
+	return COALESCE(p1, p2);
+END;
+$$ LANGUAGE plpgsql;
+
+drop table if exists t1;
+drop table if exists t2;
+drop table if exists tr;
+
+create table t1(a varchar(2), b varchar(2)) distributed by (a);
+create table t2(a varchar(2), b varchar(2)) distributed by (a);
+create table tr(a varchar(2), b varchar(2)) distributed by (a);
+
+-- No motion, colocated distribution key
+explain (costs off) insert into tr select t1.a, nvl(t1.b, '') from t1 join t2 on t1.a = t2.a;
+
 reset optimizer_trace_fallback;
 
 -- ----------------------------------------------------------------------

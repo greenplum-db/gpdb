@@ -1810,6 +1810,36 @@ select * from part_neq_dis_1;
  28 | 28
 (24 rows)
 
+------------------------------------------------------------
+-- Inserts without motion:
+------------------------------------------------------------
+CREATE OR REPLACE FUNCTION nvl(p1 in text, p2 in text) RETURNS text AS $$
+DECLARE
+BEGIN
+	return COALESCE(p1, p2);
+END;
+$$ LANGUAGE plpgsql;
+drop table if exists t1;
+drop table if exists t2;
+drop table if exists tr;
+NOTICE:  table "tr" does not exist, skipping
+create table t1(a varchar(2), b varchar(2)) distributed by (a);
+create table t2(a varchar(2), b varchar(2)) distributed by (a);
+create table tr(a varchar(2), b varchar(2)) distributed by (a);
+-- No motion, colocated distribution key
+explain (costs off) insert into tr select t1.a, nvl(t1.b, '') from t1 join t2 on t1.a = t2.a;
+                       QUERY PLAN                       
+--------------------------------------------------------
+ Insert on tr
+   ->  Subquery Scan on "*SELECT*"
+         ->  Hash Join
+               Hash Cond: ((t1.a)::text = (t2.a)::text)
+               ->  Seq Scan on t1
+               ->  Hash
+                     ->  Seq Scan on t2
+ Optimizer: Postgres-based planner
+(8 rows)
+
 reset optimizer_trace_fallback;
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
