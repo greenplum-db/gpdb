@@ -692,6 +692,26 @@ analyze rand;
 -- gather motion on a randomly distributed table.
 explain select i from generate_series(1,1000) i union all select a from rand;
 
+-------------------------------------------------------------------------------
+--Test case to check parallel union all with 'json' type 1st column in project list
+-------------------------------------------------------------------------------
+set optimizer_parallel_union to on;
+drop table if exists my_table;
+create table my_table ( id serial  primary key, json_data json);
+insert into my_table (json_data) values ('{"name": "Name1", "age": 10}');
+insert into my_table (json_data) values ('{"name": "Name2", "age": 20}');
+insert into my_table (json_data) values ('{"name": "Name3", "age": 30}');
+insert into my_table (json_data) values ('{"name": "Name4", "age": 40}');
+
+explain select json_data from my_table  where json_data->>'age' = '30' union all select json_data from my_table where json_data->>'age' = '40' ;
+select json_data from my_table  where json_data->>'age' = '30' union all select json_data from my_table where json_data->>'age' = '40' ;
+
+explain select json_data,id from my_table  where json_data->>'age' = '30' union all select json_data,id from my_table where json_data->>'age' = '40' ;
+select json_data,id from my_table  where json_data->>'age' = '30' union all select json_data,id from my_table where json_data->>'age' = '40' ;
+
+set optimizer_parallel_union to off;
+drop table if exists my_table;
+
 --
 -- Clean up
 --
