@@ -13,10 +13,6 @@ sudo yum install -y postgresql-devel
 
 pip3.11 install -r python-dependencies.txt
 
-#Remove the python3 softlink because on Rocky8 its pointing to python3.6 by default. We need python3.11 for gpdb7.
-sudo rm -rf /usr/bin/python3
-sudo ln -s /usr/bin/python3.11 /usr/bin/python3
-
 #For all Greenplum Database host systems running RHEL, CentOs or Rocky8, SELinux must either be Disabled or configured to allow unconfined access to Greenplum processes, directories, and the gpadmin user.
 setenforce 0
 sudo tee -a /etc/selinux/config << EOF
