@@ -521,9 +521,9 @@ GetAOCSSSegFilesTotalsWithProj(Relation parentrel,
 	/*
 	 * The projection list must be non-empty. If there are no columns projected,
 	 * i.e. all columns must be considered, then proj_atts should be an array
-	 * containing each and every column number.
+	 * containing each and every column number. Unless the table has 0 column.
 	 */
-	Assert(num_proj_atts > 0);
+	Assert(num_proj_atts > 0 || parentrel->rd_att->natts == 0);
 	Assert(proj_atts);
 
 	totals = (FileSegTotals *) palloc0(sizeof(FileSegTotals));

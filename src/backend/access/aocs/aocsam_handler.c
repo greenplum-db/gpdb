@@ -547,7 +547,7 @@ aoco_beginscan_extractcolumns(Relation rel, Snapshot snapshot,
 		* extractcolumns_walker will return immediately, so no columns are specified.
 		* We always scan the first column.
 		*/
-		if (!found)
+		if (!found && natts > 0)
 			proj[0] = true;
 		needFree = true;
 	}
