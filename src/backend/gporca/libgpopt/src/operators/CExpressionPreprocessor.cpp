@@ -2161,7 +2161,13 @@ CExpressionPreprocessor::PexprReplaceColWithConst(
 {
 	GPOS_ASSERT(NULL != pexpr);
 
-	COperator *pop = pexpr->Pop();
+	CExpression *pexprFilter = NULL;
+	if (COperator::EopLogicalNAryJoin == pexpr->Pop()->Eopid() ||
+		COperator::EopLogicalSelect == pexpr->Pop()->Eopid())
+	{
+		pexprFilter = (*pexpr)[pexpr->Arity() - 1];
+	}
+
 	// Here we check for following pattern:
 	//
 	//     Select
@@ -2178,15 +2184,15 @@ CExpressionPreprocessor::PexprReplaceColWithConst(
 		(COperator::EopLogicalLeftOuterJoin == ((*pexpr)[0])->Pop()->Eopid() ||
 		 COperator::EopLogicalNAryJoin == ((*pexpr)[0])->Pop()->Eopid()))
 	{
-		UpdateExprToConstantPredicateMapping(mp, (*pexpr)[pexpr->Arity() - 1],
-											 phmExprToConst, true);
+		UpdateExprToConstantPredicateMapping(mp, pexprFilter, phmExprToConst,
+											 true);
 
 		CExpression *pexprNew =
 			PexprReplaceColWithConst(mp, pexpr, phmExprToConst, false);
 
 		// erase values from map...
-		UpdateExprToConstantPredicateMapping(mp, (*pexpr)[pexpr->Arity() - 1],
-											 phmExprToConst, false);
+		UpdateExprToConstantPredicateMapping(mp, pexprFilter, phmExprToConst,
+											 false);
 
 		return pexprNew;
 	}
@@ -2202,19 +2208,24 @@ CExpressionPreprocessor::PexprReplaceColWithConst(
 		pdrgpexpr->Append(pexprChild);
 	}
 
-	if (COperator::EopLogicalNAryJoin == pexpr->Pop()->Eopid() &&
-		phmExprToConst->Size() > 0)
-	{
-		CExpression *pexprFilter = SubstituteConstantIdentifier(
-			mp, (*pexpr)[pexpr->Arity() - 1], phmExprToConst);
+	COperator *pop = pexpr->Pop();
+	pop->AddRef();
 
-		pop->AddRef();
-		return GPOS_NEW(mp) CExpression(
-			mp, GPOS_NEW(mp) CLogicalSelect(mp),
-			GPOS_NEW(mp) CExpression(mp, pop, pdrgpexpr), pexprFilter);
+	// Add a select with a filter where idents are replaced by const values.
+	// Skip if the filter contains a CTEAnchor to prevent creating an invalid
+	// plan with a duplicate CTEAnchor.
+	if (COperator::EopLogicalNAryJoin == pexpr->Pop()->Eopid() &&
+		phmExprToConst->Size() > 0 && !CUtils::FHasCTEAnchor(pexprFilter))
+	{
+		CExpression *pexprFilterWithConsts =
+			SubstituteConstantIdentifier(mp, pexprFilter, phmExprToConst);
+
+		return GPOS_NEW(mp)
+			CExpression(mp, GPOS_NEW(mp) CLogicalSelect(mp),
+						GPOS_NEW(mp) CExpression(mp, pop, pdrgpexpr),
+						pexprFilterWithConsts);
 	}
 
-	pop->AddRef();
 	return GPOS_NEW(mp) CExpression(mp, pop, pdrgpexpr);
 }
 

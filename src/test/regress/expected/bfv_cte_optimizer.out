@@ -1,6 +1,7 @@
 --
 -- Test queries mixes window functions with aggregate functions or grouping.
 --
+set optimizer_trace_fallback=on;
 DROP TABLE IF EXISTS test_group_window;
 NOTICE:  table "test_group_window" does not exist, skipping
 CREATE TABLE test_group_window(c1 int, c2 int);
@@ -305,6 +306,8 @@ SELECT cup.* FROM
 SELECT sum(t.b) OVER(PARTITION BY t.a ) AS e FROM (select 1 as a, 2 as b from pg_class limit 1)foo,t
 ) as cup
 GROUP BY cup.e;
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
  e 
 ---
  2
@@ -499,3 +502,76 @@ from t1_cte join dist2 on t1_cte.b = dist2.b;
 (10 rows)
 
 drop table dist1, dist2, rep;
+--
+-- Test for a bug in ORCA optimizing a CTE view.
+--
+-- This crashed at one point in retail build due to preprocessor creating a
+-- duplicate CTE anchor. That led ORCA to construct a bad plan where
+-- CTEConsumer project list contained an invalid scalar subplan and caused a
+-- SIGSEGV during DXL to PlStmt translation.
+--
+create table a_table(a smallint);
+create view cte_view as
+  with t1 as (select a from a_table)
+  select t1.a from t1
+  where (t1.a = (select t1.a from t1));
+-- Only by tampering with pg_stats directly I was able to guide ORCA cost model
+-- to pick a plan that would crash before this fix
+set allow_system_table_mods=true;
+update pg_class set relpages = 1::int, reltuples = 12.0::real where relname = 'a_table';
+INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Queries on master-only tables
+reset allow_system_table_mods;
+explain select * from a_table join cte_view on a_table.a = (select a from cte_view) where cte_view.a = 2024;
+NOTICE:  One or more columns in the following table(s) do not have statistics: a_table
+HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
+                                                                    QUERY PLAN                                                                     
+---------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice7; segments: 3)  (cost=0.00..2261454580.07 rows=1920 width=4)
+   ->  Nested Loop  (cost=0.00..2261454580.04 rows=640 width=4)
+         Join Filter: true
+         ->  Result  (cost=0.00..2206727.73 rows=134 width=2)
+               Filter: (a_table_1.a = ((SubPlan 1)))
+               ->  Result  (cost=0.00..2206727.70 rows=334 width=4)
+                     ->  Seq Scan on a_table a_table_1  (cost=0.00..2206727.70 rows=334 width=4)
+                     SubPlan 1  (slice7; segments: 3)
+                       ->  Materialize  (cost=0.00..1293.00 rows=12 width=2)
+                             ->  Broadcast Motion 3:3  (slice6; segments: 3)  (cost=0.00..1293.00 rows=12 width=2)
+                                   ->  Sequence  (cost=0.00..1293.00 rows=4 width=2)
+                                         ->  Shared Scan (share slice:id 6:1)  (cost=0.00..431.00 rows=4 width=1)
+                                               ->  Materialize  (cost=0.00..431.00 rows=4 width=1)
+                                                     ->  Seq Scan on a_table a_table_2  (cost=0.00..431.00 rows=4 width=2)
+                                         ->  Hash Join  (cost=0.00..862.00 rows=4 width=2)
+                                               Hash Cond: (share1_ref3.a = share1_ref2.a)
+                                               ->  Redistribute Motion 1:3  (slice5)  (cost=0.00..431.00 rows=1 width=2)
+                                                     Hash Key: share1_ref3.a
+                                                     ->  Assert  (cost=0.00..431.00 rows=1 width=2)
+                                                           Assert Cond: ((row_number() OVER (?)) = 1)
+                                                           ->  WindowAgg  (cost=0.00..431.00 rows=4 width=10)
+                                                                 ->  Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..431.00 rows=12 width=2)
+                                                                       ->  Shared Scan (share slice:id 4:1)  (cost=0.00..431.00 rows=4 width=2)
+                                               ->  Hash  (cost=431.00..431.00 rows=4 width=2)
+                                                     ->  Shared Scan (share slice:id 6:1)  (cost=0.00..431.00 rows=4 width=2)
+         ->  Materialize  (cost=0.00..1293.00 rows=5 width=2)
+               ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..1293.00 rows=5 width=2)
+                     ->  Sequence  (cost=0.00..1293.00 rows=2 width=2)
+                           ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=4 width=1)
+                                 ->  Materialize  (cost=0.00..431.00 rows=4 width=1)
+                                       ->  Seq Scan on a_table  (cost=0.00..431.00 rows=4 width=2)
+                           ->  Hash Join  (cost=0.00..862.00 rows=2 width=2)
+                                 Hash Cond: (share0_ref3.a = share0_ref2.a)
+                                 ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.00 rows=1 width=2)
+                                       Hash Key: share0_ref3.a
+                                       ->  Assert  (cost=0.00..431.00 rows=1 width=2)
+                                             Assert Cond: ((row_number() OVER (?)) = 1)
+                                             ->  WindowAgg  (cost=0.00..431.00 rows=4 width=10)
+                                                   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=12 width=2)
+                                                         ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=4 width=2)
+                                 ->  Hash  (cost=431.00..431.00 rows=2 width=2)
+                                       ->  Result  (cost=0.00..431.00 rows=2 width=2)
+                                             Filter: (share0_ref2.a = 2024)
+                                             ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=4 width=2)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(45 rows)
+
+reset optimizer_trace_fallback;

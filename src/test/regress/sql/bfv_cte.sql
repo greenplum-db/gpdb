@@ -1,6 +1,7 @@
 --
 -- Test queries mixes window functions with aggregate functions or grouping.
 --
+set optimizer_trace_fallback=on;
 DROP TABLE IF EXISTS test_group_window;
 
 CREATE TABLE test_group_window(c1 int, c2 int);
@@ -283,3 +284,28 @@ when (dist2.b in (1,2)) then (select rep_cte.a from rep_cte)
 end as rep_cte_a
 from t1_cte join dist2 on t1_cte.b = dist2.b;
 drop table dist1, dist2, rep;
+
+--
+-- Test for a bug in ORCA optimizing a CTE view.
+--
+-- This crashed at one point in retail build due to preprocessor creating a
+-- duplicate CTE anchor. That led ORCA to construct a bad plan where
+-- CTEConsumer project list contained an invalid scalar subplan and caused a
+-- SIGSEGV during DXL to PlStmt translation.
+--
+create table a_table(a smallint);
+
+create view cte_view as
+  with t1 as (select a from a_table)
+  select t1.a from t1
+  where (t1.a = (select t1.a from t1));
+
+-- Only by tampering with pg_stats directly I was able to guide ORCA cost model
+-- to pick a plan that would crash before this fix
+set allow_system_table_mods=true;
+update pg_class set relpages = 1::int, reltuples = 12.0::real where relname = 'a_table';
+reset allow_system_table_mods;
+
+explain select * from a_table join cte_view on a_table.a = (select a from cte_view) where cte_view.a = 2024;
+
+reset optimizer_trace_fallback;
