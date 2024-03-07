@@ -165,10 +165,10 @@ createMotionLayerState(int maxMotNodeID)
 		return NULL;
 
 	if (Gp_interconnect_type == INTERCONNECT_TYPE_UDPIFC)
-		Gp_max_tuple_chunk_size = Gp_max_packet_size - sizeof(struct icpkthdr) - TUPLE_CHUNK_HEADER_SIZE;
+		Gp_max_tuple_chunk_size = Gp_max_packet_size - sizeof(struct icpkthdr);
 	else if (Gp_interconnect_type == INTERCONNECT_TYPE_TCP ||
 			 Gp_interconnect_type == INTERCONNECT_TYPE_PROXY)
-		Gp_max_tuple_chunk_size = Gp_max_packet_size - PACKET_HEADER_SIZE - TUPLE_CHUNK_HEADER_SIZE;
+		Gp_max_tuple_chunk_size = Gp_max_packet_size - PACKET_HEADER_SIZE;
 
 	/*
 	 * Use the statically allocated chunk that is intended for sending end-of-
