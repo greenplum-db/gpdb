@@ -2476,6 +2476,8 @@ void ProcNewMppSessionId(int *newSessionId)
     	MySessionState->isModifiedSessionId = true;
 #endif
 
+    	MySessionState->latestCursorCommandId = 0;
+
     	MySessionState->sessionId = *newSessionId;
     }
 }
