@@ -8,7 +8,7 @@ if hash brew 2>/dev/null; then
 	echo "Homebrew is already installed!"
 else
 	echo "Installing Homebrew..."
-	ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 
 brew install bash-completion
@@ -19,22 +19,23 @@ brew install libevent # gpfdist
 brew install apr # gpfdist
 brew install apr-util # gpfdist
 brew install zstd
+brew install libxml2
 brew install pkg-config
 brew install perl
+brew install python3
+
 brew link --force apr
 brew link --force apr-util
-
-# Needed for pygresql, or you can source greenplum_path.sh after compiling database and installing python-dependencies then
-brew install postgresql
-
-brew install python3
+brew link --force libevent
+brew link --force libxml2
+brew link --force libyaml
 
 # Due to recent update on OS net-tools package. Mac doesn't have support for ss and ip by default.
 # Hence as a workaround installing iproute2mac for ip support and creating soft link for ss support
 brew install iproute2mac
 sudo ln -s /usr/sbin/netstat /usr/local/bin/ss
 
-echo 127.0.0.1$'\t'$HOSTNAME | sudo tee -a /etc/hosts
+echo 127.0.0.1$'\t'$(hostname) | sudo tee -a /etc/hosts
 
 # OS settings
 sudo sysctl -w kern.sysv.shmmax=2147483648
@@ -78,7 +79,13 @@ cat >> ~/.bashrc << EOF
 ulimit -n 65536 65536  # Increases the number of open files
 export PGHOST="$(hostname)"
 export LC_CTYPE="en_US.UTF-8"
+
+eval "$(/opt/homebrew/bin/brew shellenv)"
+export PATH="`brew --prefix`/opt/apr/bin:`brew --prefix`/opt/apr-util/bin:`brew --prefix`/opt/libxml2/bin:$PATH"
+export LDFLAGS="-L`brew --prefix`/opt/zstd/lib -L`brew --prefix`/opt/libevent/lib -L`brew --prefix`/opt/openssl/lib -L`brew --prefix`/opt/libxml2/lib -L`brew --prefix`/opt/libyaml/lib"
+export CPPFLAGS="-I`brew --prefix`/opt/zstd/include -I`brew --prefix`/opt/libevent/include -I`brew --prefix`/opt/openssl/include -I`brew --prefix`/opt/libxml2/include -I`brew --prefix`/opt/libyaml/include"
 EOF
+source ~/.bashrc
 
 cat << EOF
 
