@@ -193,7 +193,7 @@ $ sudo yum install tk
 
 1.  Locate the Data Science Package for Python that you built or downloaded.
 
-    The file name format of the package is `DataSciencePython<pythonversion>-gp7-rhel<n>-x86_64.gppkg`.  For example: `DataSciencePython3.11-3.0.0-gp7-rhel8_x86_64.gppkg`.
+    The file name format of the package is `DataSciencePython<pythonversion>-<data-science-bundle-version>-gp7-rhel<n>-x86_64.gppkg`.  For example: `DataSciencePython3.11-3.0.0-gp7-rhel8_x86_64.gppkg`.
 
 2.  Copy the package to the Greenplum Database coordinator host.
 3.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the *Greenplum Procedural Languages Python Data Science Package* software.
