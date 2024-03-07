@@ -1477,7 +1477,6 @@ gp_aocsseg_history(PG_FUNCTION_ARGS)
 		aocsRel = heap_open(aocsRelOid, AccessShareLock);
 		if (!RelationStorageIsAoCols(aocsRel))
 		{
-			heap_close(aocsRel, AccessShareLock);
 			ereport(ERROR,
 			        (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("Relation '%s' does not have append-optimized column-oriented storage",

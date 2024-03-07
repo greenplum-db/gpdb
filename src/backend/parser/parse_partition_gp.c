@@ -1726,6 +1726,12 @@ generatePartitions(Oid parentrelid, GpPartitionDefinition *gpPartSpec,
 	bool		hasImplicitRangeBounds;
 
 	partcomp.level = list_length(ancestors) + 1;
+	if (0 < gp_max_partition_level && partcomp.level > gp_max_partition_level)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+				 errmsg("Exceeds maximum configured partitioning level of %d", gp_max_partition_level)));
+	}
 
 	pstate = make_parsestate(NULL);
 	pstate->p_sourcetext = queryString;

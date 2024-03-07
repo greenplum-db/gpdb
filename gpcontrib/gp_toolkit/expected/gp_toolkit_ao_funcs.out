@@ -78,6 +78,10 @@ SELECT * FROM gp_toolkit.__gp_aoblkdir('toolkit_aocs_test');
 ---------+-------+----------------+----------+--------------+-------------+-----------
 (0 rows)
 
+CREATE TABLE toolkit_heap_test (a INT) DISTRIBUTED BY (a);
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg_history('toolkit_heap_test');
+ERROR:  Relation 'toolkit_heap_test' does not have append-optimized column-oriented storage  (seg0 slice1 127.0.1.1:7002 pid=1226082)
+DROP TABLE toolkit_heap_test;
 -- The same, but on the segments.
 SELECT (t).* FROM (
   SELECT gp_toolkit.__gp_aovisimap('toolkit_ao_test') AS t FROM gp_dist_random('gp_id')

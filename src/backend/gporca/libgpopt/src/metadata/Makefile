@@ -13,7 +13,6 @@ include $(top_srcdir)/src/backend/gporca/gporca.mk
 OBJS        = CColumnDescriptor.o \
               CIndexDescriptor.o \
               CName.o \
-              CPartConstraint.o \
               CTableDescriptor.o
 
 include $(top_srcdir)/src/backend/common.mk

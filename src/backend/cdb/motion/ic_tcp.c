@@ -2655,8 +2655,6 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 
 		}
 
-		// GPDB_12_MERGE_FIXME: should use WaitEventSetWait() instead of select()
-		// follow the routine in ic_udpifc.c
 		n = select(nfds + 1, (fd_set *) &rset, NULL, NULL, &timeout);
 		if (n < 0)
 		{

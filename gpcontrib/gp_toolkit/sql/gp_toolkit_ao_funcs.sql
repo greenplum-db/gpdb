@@ -37,6 +37,10 @@ SELECT count(*) FROM gp_toolkit.__gp_aoseg('toolkit_ao_test');
 SELECT * FROM gp_toolkit.__gp_aoblkdir('toolkit_ao_test');
 SELECT * FROM gp_toolkit.__gp_aoblkdir('toolkit_aocs_test');
 
+CREATE TABLE toolkit_heap_test (a INT) DISTRIBUTED BY (a);
+SELECT count(*) FROM gp_toolkit.__gp_aocsseg_history('toolkit_heap_test');
+DROP TABLE toolkit_heap_test;
+
 -- The same, but on the segments.
 SELECT (t).* FROM (
   SELECT gp_toolkit.__gp_aovisimap('toolkit_ao_test') AS t FROM gp_dist_random('gp_id')
