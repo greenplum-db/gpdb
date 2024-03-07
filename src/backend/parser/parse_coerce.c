@@ -210,14 +210,15 @@ coerce_type(ParseState *pstate, Node *node,
 		 */
 
 		/*
-		 * BUG BUG 
-		 * JIRA MPP-3786
+		 * GPDB: Special handling for ANYARRAY type. This enables INSERTs into
+		 * catalog tables having anyarray columns.
 		 *
-		 * Special handling for ANYARRAY type.  
-		 *
-		 * GPDB_95_MERGE_FIXME: can this be removed?
+		 * Restrict the type coercion to INSERT statements as this hack was only
+		 * meant to fix INSERTs for dumping/restoring pg_statistic tuples by
+		 * external utilities such as gpsd, minirepro, gpbackup/gprestore.  
 		 */
-		if(targetTypeId == ANYARRAYOID && IsA(node, Const) && inputTypeId != UNKNOWNOID)
+		if(targetTypeId == ANYARRAYOID && IsA(node, Const) && inputTypeId != UNKNOWNOID
+		   && (pstate != NULL && pstate->p_expr_kind == EXPR_KIND_INSERT_TARGET))
 		{
 			Const	   *con = (Const *) node;
 			Const	   *newcon = makeNode(Const);

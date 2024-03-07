@@ -74,3 +74,8 @@ CREATE TABLE "schema_view\'.gp_dist_random"."foo\'.bar" (a int);
 CREATE TEMP VIEW view_with_gp_dist_random_special_chars AS SELECT * FROM gp_dist_random(E'"schema_view\\''.gp_dist_random"."foo\\''.bar"');
 SELECT pg_get_viewdef('view_with_gp_dist_random_special_chars');
 DROP SCHEMA "schema_view\'.gp_dist_random" CASCADE;
+
+-- Check that views containing operator expressions involving arrays have the
+-- correct internal representation
+CREATE TEMP VIEW view_with_array_op_expr AS SELECT '{1}'::int[] = '{2}'::int[];
+SELECT pg_get_viewdef('view_with_array_op_expr');

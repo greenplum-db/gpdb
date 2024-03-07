@@ -35,7 +35,7 @@ explain select a from bfv_statistics_foo2 where a > 1 order by a;
 
 -- change stats manually so that MCV and MCF numbers do not match
 set allow_system_table_mods=true;
-update pg_statistic set stavalues1='{6,3,1,5,4,2}'::int[] where starelid='bfv_statistics_foo2'::regclass;
+update pg_statistic set stavalues1=array_in('{6,3,1,5,4,2}', 'int'::regtype::oid, -1) where starelid='bfv_statistics_foo2'::regclass;
 
 -- excercise the translator
 explain select a from bfv_statistics_foo2 where a > 1 order by a;
@@ -287,12 +287,12 @@ SET allow_system_table_mods=true;
 -- end_matchsubs
 
 -- Broken MCVs
-UPDATE pg_statistic SET stavalues1='{1,2,3}'::int[] WHERE starelid ='test_broken_stats'::regclass AND staattnum=2;
+UPDATE pg_statistic SET stavalues1=array_in('{1,2,3}', 'int'::regtype::oid, -1) WHERE starelid ='test_broken_stats'::regclass AND staattnum=2;
 SELECT * FROM test_broken_stats t1, good_tab t2 WHERE t1.b = t2.b;
 
 -- Broken histogram
 UPDATE pg_statistic SET stakind2=2 WHERE starelid ='test_broken_stats'::regclass AND staattnum=2;
-UPDATE pg_statistic SET stavalues2='{1,2,3}'::int[] WHERE starelid ='test_broken_stats'::regclass AND staattnum=2 and stakind2=2;
+UPDATE pg_statistic SET stavalues2=array_in('{1,2,3}', 'int'::regtype::oid, -1) WHERE starelid ='test_broken_stats'::regclass AND staattnum=2 and stakind2=2;
 SELECT * FROM test_broken_stats t1, good_tab t2 WHERE t1.b = t2.b;
 
 RESET allow_system_table_mods;

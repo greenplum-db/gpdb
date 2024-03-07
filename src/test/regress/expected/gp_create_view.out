@@ -127,3 +127,12 @@ DROP SCHEMA "schema_view\'.gp_dist_random" CASCADE;
 DETAIL:  drop cascades to table "schema_view\'.gp_dist_random"."foo\'.bar"
 NOTICE:  drop cascades to 2 other objects
 drop cascades to view view_with_gp_dist_random_special_chars
+-- Check that views containing operator expressions involving arrays have the
+-- correct internal representation
+CREATE TEMP VIEW view_with_array_op_expr AS SELECT '{1}'::int[] = '{2}'::int[];
+SELECT pg_get_viewdef('view_with_array_op_expr');
+                 pg_get_viewdef                 
+------------------------------------------------
+  SELECT ('{1}'::integer[] = '{2}'::integer[]);
+(1 row)
+
