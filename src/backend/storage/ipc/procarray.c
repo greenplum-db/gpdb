@@ -5367,3 +5367,44 @@ ResGroupMoveNotifyInitiator(pid_t callerPid)
 	}
 	LWLockRelease(ProcArrayLock);
 }
+
+/*
+ * Obtain all QE PIDs within one segment sharing the same session ID.
+ *
+ * 1. Retrieve the session ID using the input QE PID.
+ * 2. Fetch all QE PIDs based on the session ID obtained in step 1.
+ */
+List *
+GetSessionQEPids(int backendPid)
+{
+	ProcArrayStruct *arrayP = procArray;
+	int			index;
+	int			mppSessionId;
+	List 		*QEPids = NIL;
+
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+
+	/* Get sessionid */
+	for (index = 0; index < arrayP->numProcs; index++)
+	{
+		PGPROC *proc = &allProcs[arrayP->pgprocnos[index]];
+		if (proc->pid == backendPid)
+		{
+			mppSessionId = proc->mppSessionId;
+			break;
+		}
+	}
+
+	/* Get all QE pids base on sessionid */
+	for (index = 0; index < arrayP->numProcs; index++)
+	{
+		PGPROC *proc = &allProcs[arrayP->pgprocnos[index]];
+
+		if (proc->mppSessionId == mppSessionId)
+			QEPids = lappend_int(QEPids, proc->pid);
+	}
+
+	LWLockRelease(ProcArrayLock);
+
+	return QEPids;
+}

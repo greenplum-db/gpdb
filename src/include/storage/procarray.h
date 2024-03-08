@@ -158,5 +158,6 @@ extern bool ResGroupMoveSignalTarget(int sessionId, void *slot, Oid groupId,
 								bool isExecutor);
 extern void ResGroupMoveCheckTargetReady(int sessionId, bool *clean, bool *result);
 extern void ResGroupMoveNotifyInitiator(pid_t callerPid);
+extern List *GetSessionQEPids(int backendPid);
 
 #endif							/* PROCARRAY_H */

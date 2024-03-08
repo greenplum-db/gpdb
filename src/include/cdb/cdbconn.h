@@ -102,7 +102,7 @@ void cdbconn_setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc, int sliceInde
  * Returns true if we successfully sent a signal
  * (not necessarily received by the target process).
  */
-bool cdbconn_signalQE(SegmentDatabaseDescriptor *segdbDesc, char *errbuf, bool isCancel);
+bool cdbconn_signalQE(SegmentDatabaseDescriptor *segdbDesc, char *errbuf, int requestCode);
 
 extern void forwardQENotices(void);
 

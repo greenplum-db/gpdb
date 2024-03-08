@@ -134,6 +134,7 @@
 #include "storage/pg_shmem.h"
 #include "storage/pmsignal.h"
 #include "storage/proc.h"
+#include "storage/procarray.h"
 #include "storage/procsignal.h"
 #include "tcop/tcopprot.h"
 #include "utils/builtins.h"
@@ -513,6 +514,7 @@ static int	BackendStartup(Port *port);
 static int	ProcessStartupPacket(Port *port, bool ssl_done, bool gss_done);
 static void SendNegotiateProtocolVersion(List *unrecognized_protocol_options);
 static void processCancelRequest(Port *port, void *pkt, MsgType code);
+static void processMppCancelRequest(Port *port, void *pkt, MsgType code);
 static int	initMasks(fd_set *rmask);
 static void report_fork_failure_to_client(Port *port, int errnum);
 static CAC_state canAcceptConnections(int backend_type);
@@ -2335,6 +2337,22 @@ ProcessStartupPacket(Port *port, bool ssl_done, bool gss_done)
 		return STATUS_ERROR;
 	}
 
+	/*
+	 * This code handles the MPP request code. We expect to terminate all QEs
+	 * within one segment with the same session ID. However, in the current step,
+	 * processes haven't been initialized, especially MYPROC.
+	 * Thus, we must call InitProcess() first before iterating PROCARRAY.
+	 * InitProcess() also registers an exit callback function that frees resources
+	 * initialized in InitProcess() when proc_exit() occurs.
+	 */
+	if (proto == MPP_CANCEL_REQUEST_CODE || proto == MPP_FINISH_REQUEST_CODE)
+	{
+		InitProcess();
+		processMppCancelRequest(port, buf, proto);
+		/* Not really an error, but we don't want to proceed further */
+		return STATUS_ERROR;
+	}
+
 	if (proto == NEGOTIATE_SSL_CODE && !ssl_done)
 	{
 		char		SSLok;
@@ -2840,6 +2858,89 @@ SendNegotiateProtocolVersion(List *unrecognized_protocol_options)
 	pq_endmessage(&buf);
 
 	/* no need to flush, some other message will follow */
+}
+
+/*
+ * Send signals to QE pids based on same sessionid in segment.
+ */
+static void
+SendMppProcSignal(int backendPID, MsgType code)
+{
+	ListCell	*lc = NULL;
+	List 		*QEPids = GetSessionQEPids(backendPID);
+
+	ereport(LOG,
+			(errmsg("start sending signals to all QEs in segment, QEs len is %d, backendpid is %d", 
+			list_length(QEPids), backendPID)));
+
+	foreach(lc, QEPids)
+	{
+		int pid = lfirst_int(lc);
+
+		if(code == FINISH_REQUEST_CODE)
+			SendProcSignal(pid, PROCSIG_QUERY_FINISH,
+						   InvalidBackendId);
+		else
+			signal_child(pid, SIGINT);
+	}
+
+	return;
+}
+
+static void
+processMppCancelRequest(Port *port, void *pkt, MsgType code)
+{
+	CancelRequestPacket *canc = (CancelRequestPacket *) pkt;
+	int			backendPID;
+	int32		cancelAuthCode;
+	Backend    *bp;
+
+#ifndef EXEC_BACKEND
+	dlist_iter	iter;
+#else
+	int			i;
+#endif
+
+	backendPID = (int) pg_ntoh32(canc->backendPID);
+	cancelAuthCode = (int32) pg_ntoh32(canc->cancelAuthCode);
+
+	/*
+	 * See if we have a matching backend.  In the EXEC_BACKEND case, we can no
+	 * longer access the postmaster's own backend list, and must rely on the
+	 * duplicate array in shared memory.
+	 */
+#ifndef EXEC_BACKEND
+	dlist_foreach(iter, &BackendList)
+	{
+		bp = dlist_container(Backend, elem, iter.cur);
+#else
+	for (i = MaxLivePostmasterChildren() - 1; i >= 0; i--)
+	{
+		bp = (Backend *) &ShmemBackendArray[i];
+#endif
+		if (bp->pid == backendPID)
+		{
+			if (bp->cancel_key == cancelAuthCode)
+			{
+				SendMppProcSignal(backendPID, code);
+			}
+			else
+				/* Right PID, wrong key: no way, Jose */
+				ereport(LOG,
+						(errmsg("wrong key in mpp cancel request for process %d",
+								backendPID)));
+			return;
+		}
+#ifndef EXEC_BACKEND			/* make GNU Emacs 26.1 see brace balance */
+	}
+#else
+	}
+#endif
+
+	/* No matching backend */
+	ereport(LOG,
+			(errmsg("PID %d in mpp cancel request did not match any process",
+					backendPID)));
 }
 
 /*

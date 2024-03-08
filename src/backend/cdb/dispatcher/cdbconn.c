@@ -326,7 +326,7 @@ cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc)
 			if (Debug_cancel_print || gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
 				elog(LOG, "Calling PQcancel for %s", segdbDesc->whoami);
 
-			sent = cdbconn_signalQE(segdbDesc, errbuf, true);
+			sent = cdbconn_signalQE(segdbDesc, errbuf, CANCEL_REQUEST_CODE);
 			if (!sent)
 				elog(LOG, "Unable to cancel: %s", strlen(errbuf) == 0 ? "cannot allocate PGCancel" : errbuf);
 		}
@@ -460,7 +460,7 @@ cdbconn_setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc,
 bool
 cdbconn_signalQE(SegmentDatabaseDescriptor *segdbDesc,
 				 char *errbuf,
-				 bool isCancel)
+				 int requestCode)
 {
 	bool		ret;
 
@@ -469,10 +469,24 @@ cdbconn_signalQE(SegmentDatabaseDescriptor *segdbDesc,
 	if (cn == NULL)
 		return false;
 
-	if (isCancel)
-		ret = PQcancel(cn, errbuf, 256);
-	else
-		ret = PQrequestFinish(cn, errbuf, 256);
+	switch (requestCode)
+	{
+		case CANCEL_REQUEST_CODE:
+			ret = PQcancel(cn, errbuf, 256);
+			break;
+		case FINISH_REQUEST_CODE:
+			ret = PQrequestFinish(cn, errbuf, 256);
+			break;
+		case MPP_CANCEL_REQUEST_CODE:
+			ret = PQMppcancel(cn, errbuf, 256);
+			break;
+		case MPP_FINISH_REQUEST_CODE:
+			ret = PQMppFinish(cn, errbuf, 256);
+			break;
+		default:
+			elog(ERROR, "wrong requestCode");
+			break;
+	}
 
 	PQfreeCancel(cn);
 	return ret;
