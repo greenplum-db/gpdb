@@ -66,6 +66,13 @@ typedef struct CdbDispatchCmdAsync
 	 */
 	struct CdbDispatchResult **dispatchResultPtrArray;
 
+	/*
+	 * pollfd array, we will check dispatch status and dispatch results after
+	 * dispatch command to QE, each pollfd object store socket info which need
+	 * to check from.
+	 */
+	struct pollfd *fds;
+
 	/* Number of segment DBs dispatched */
 	int			dispatchCount;
 
@@ -217,7 +224,7 @@ cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds)
 	CdbDispatchCmdAsync *pParms = (CdbDispatchCmdAsync *) ds->dispatchParams;
 	int			dispatchCount = pParms->dispatchCount;
 
-	fds = (struct pollfd *) palloc(dispatchCount * sizeof(struct pollfd));
+	fds = pParms->fds;
 
 	while (true)
 	{
@@ -283,8 +290,6 @@ cdbdisp_waitDispatchFinish_async(struct CdbDispatcherState *ds)
 		if (pollRet < 0)
 			elog(ERROR, "Poll failed during dispatch");
 	}
-
-	pfree(fds);
 }
 
 /*
@@ -421,6 +426,7 @@ cdbdisp_makeDispatchParams_async(int maxSlices, int largestGangSize, char *query
 
 	size = maxResults * sizeof(CdbDispatchResult *);
 	pParms->dispatchResultPtrArray = (CdbDispatchResult **) palloc0(size);
+	pParms->fds = (struct pollfd *) palloc0(maxResults * sizeof(struct pollfd));
 	pParms->dispatchCount = 0;
 	pParms->waitMode = DISPATCH_WAIT_NONE;
 	pParms->ackMessage = NULL;
@@ -450,13 +456,12 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 	int			db_count = 0;
 	int			timeout = 0;
 	bool		sentSignal = false;
-	struct pollfd *fds;
+	struct pollfd *fds = pParms->fds;
 	uint8 ftsVersion = 0;
 	struct timeval start_ts, now;
 	int64		diff_us;
 
 	db_count = pParms->dispatchCount;
-	fds = (struct pollfd *) palloc(db_count * sizeof(struct pollfd));
 
 #ifdef FAULT_INJECTOR
 	if (SIMPLE_FAULT_INJECTOR("alloc_chunk_during_dispatch") == FaultInjectorTypeSkip)
@@ -684,8 +689,6 @@ checkDispatchResult(CdbDispatcherState *ds, int timeout_sec)
 		else
 			handlePollSuccess(pParms, fds);
 	}
-
-	pfree(fds);
 }
 
 /*
