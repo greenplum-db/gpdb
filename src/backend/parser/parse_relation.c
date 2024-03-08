@@ -531,6 +531,20 @@ GetCTEForRTE(ParseState *pstate, RangeTblEntry *rte, int rtelevelsup)
 	return NULL;				/* keep compiler quiet */
 }
 
+static bool
+IsAppendOptimizedByOid(Oid relid)
+{
+	Relation	rel;
+	bool		result;
+
+	rel = heap_open(relid, NoLock);
+
+	result = RelationIsAppendOptimized(rel);
+	heap_close(rel, NoLock);
+
+	return result;
+}
+
 /*
  * scanRTEForColumn
  *	  Search the column names of a single RTE for the given name.
@@ -601,6 +615,12 @@ scanRTEForColumn(ParseState *pstate, RangeTblEntry *rte, char *colname,
 		 */
 		if (GpPolicyIsReplicated(GpPolicyFetch(rte->relid)) &&
 			Gp_role != GP_ROLE_UTILITY)
+			return result;
+
+		/* In GPDB tables that have append-optimized storage system columns are not
+		 * stored in tuples, so we check it here
+		 */
+		if (IsAppendOptimizedByOid(rte->relid))
 			return result;
 
 		/* quick check to see if name could be a system column */

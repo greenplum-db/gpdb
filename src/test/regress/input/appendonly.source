@@ -804,3 +804,8 @@ insert into fix_ao_truncate_last_sequence select 1, 1 from generate_series(1, 5)
 select count(*) from fix_ao_truncate_last_sequence;
 abort;
 
+-- Check if system columns in ao table can be selected
+DROP TABLE IF EXISTS ttt_ao;
+CREATE TABLE ttt (id int) WITH (appendonly=true) DISTRIBUTED BY (id);
+INSERT INTO ttt VALUES(1);
+SELECT xmin FROM ttt;
