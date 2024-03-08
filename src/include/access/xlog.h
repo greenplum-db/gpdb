@@ -321,6 +321,7 @@ extern XLogRecPtr GetXLogInsertRecPtr(void);
 extern XLogRecPtr GetXLogWriteRecPtr(void);
 extern bool RecoveryIsPaused(void);
 extern void SetRecoveryPause(bool recoveryPause);
+extern void SetRecoveryPauseTarget(char *name);
 extern TimestampTz GetLatestXTime(void);
 extern TimestampTz GetCurrentChunkReplayStartTime(void);
 extern char *XLogFileNameP(TimeLineID tli, XLogSegNo segno);

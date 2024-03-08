@@ -792,3 +792,5 @@ extern PGDLLIMPORT fmgr_hook_type fmgr_hook;
 	(!needs_fmgr_hook ? false : (*needs_fmgr_hook)(fn_oid))
 
 #endif							/* FMGR_H */
+
+extern Datum gp_set_recovery_pause_target_internal(PG_FUNCTION_ARGS);

@@ -190,6 +190,7 @@ extern int xid_warn_limit;
 
 /* GPDB-specific */
 extern bool gp_pause_on_restore_point_replay;
+extern bool gp_pause_in_recovery;
 
 /*
  * prototypes for functions in transam/transam.c

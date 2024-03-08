@@ -1,4 +1,5 @@
 pgarch_start
 ConfigureNamesInt_gp
+ConfigureNamesBool_gp
 child_triggers
 has_update_triggers
