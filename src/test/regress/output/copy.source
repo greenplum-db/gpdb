@@ -242,3 +242,15 @@ SELECT * FROM table_with_oids;
 (2 rows)
 
 DROP TABLE table_with_oids;
+-- test copy null value for partition key into leaf partition
+CREATE TABLE t1 (a INT, b int)
+PARTITION BY LIST (a)
+(
+    PARTITION one VALUES (1),
+    PARTITION two VALUES (2),
+    DEFAULT PARTITION others
+);
+COPY t1_1_prt_one(b) FROM stdin ;
+ERROR:  Cannot copy to leaf partition,partition check violates.
+CONTEXT:  COPY t1_1_prt_one, line 1: "11"
+COPY t1_1_prt_others(b) FROM stdin ;

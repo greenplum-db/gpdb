@@ -220,3 +220,18 @@ COPY table_with_oids FROM '@abs_srcdir@/data/copy_with_oids.data' WITH OIDS DELI
 SELECT count(*) FROM table_with_oids;
 SELECT * FROM table_with_oids;
 DROP TABLE table_with_oids;
+
+-- test copy null value for partition key into leaf partition
+CREATE TABLE t1 (a INT, b int)
+PARTITION BY LIST (a)
+(
+    PARTITION one VALUES (1),
+    PARTITION two VALUES (2),
+    DEFAULT PARTITION others
+);
+COPY t1_1_prt_one(b) FROM stdin ;
+11
+\.
+COPY t1_1_prt_others(b) FROM stdin ;
+11
+\.
