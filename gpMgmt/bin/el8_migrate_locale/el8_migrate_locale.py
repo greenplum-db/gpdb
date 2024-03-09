@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #!-*- coding: utf-8 -*-
 import argparse
-import sys
+import subprocess, sys
 from pygresql.pg import DB
 import logging
 import signal
@@ -228,6 +228,35 @@ class CheckTables(connection):
         db.close()
         return filterResult
 
+    def try_pg_dump_db(self, oids, database_name, dest_file):
+        """
+        Backup tables to a file.
+        """
+        dmp_cmd = "pg_dump --relation-oids {} -d {} -f {}".format(oids, database_name, dest_file)
+        testddlbroken_cmd = "createdb tempdb_for_check_broken_ddl && {} && psql -d tempdb_for_check_broken_ddl -f {} && dropdb tempdb_for_check_broken_ddl".format(dmp_cmd, dest_file)
+        print testddlbroken_cmd
+        p = subprocess.Popen(testddlbroken_cmd, shell=True, stderr=subprocess.PIPE)
+        if p.wait() is not 0:
+            sys.stderr.write('\nError while dumping schema.\n\n' + p.communicate()[1] + '\n\n')
+            sys.exit(1)
+        else:
+            output, errors = p.communicate()
+            print output
+            print errors
+
+    def check_broken_partition_ddl(self, tables, dbname):
+        # only check the broken partition ddl after OS upgrade
+        if self.pre_upgrade:
+            return
+        # get the oids of the tables, then check by using pg_dump
+        oids = []
+        for parrelid, tablename, coll, attname, has_default_partition in tables:
+            oids.append(parrelid)
+
+        if len(oids) > 0:
+            result = ','.join(str(i) for i in oids)
+            self.try_pg_dump_db(result, dbname, "check_broken_ddl.sql")
+
     # get the tables which distribution column is using custom operator class, it may be affected by the OS upgrade, so give a warning.
     def get_custom_opclass_as_distribute_keys_tables(self, dbname):
         db = self.get_db_conn(dbname)
@@ -297,6 +326,9 @@ class CheckTables(connection):
 
             # get all the might-affected partitioned tables
             tables = self.get_affected_partitioned_tables(dbname)
+
+            # check the ddl for the above partition range tables
+            self.check_broken_partition_ddl(tables, dbname)
 
             if tables:
                 # if check before os upgrade, it will print the SQL results and doesn't do the GUC check.

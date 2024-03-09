@@ -259,3 +259,11 @@ PARTITION BY RANGE (date)
       (PARTITION feb START ( '02') INCLUSIVE ,
       PARTITION Mar START ( '03') INCLUSIVE,
       Default partition others);
+
+-- case15 for check partition ddl broken
+CREATE TABLE testddlbroken (id int, date text)
+    DISTRIBUTED BY (id)
+PARTITION BY RANGE (date)
+    (PARTITION Jan START ('01') END ('"01"'),
+    PARTITION Feb START ('"01"') END ('02')
+);
