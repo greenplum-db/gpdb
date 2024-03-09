@@ -26,6 +26,7 @@ The following Greenplum Database and PostgreSQL `contrib` modules are installed;
 -   [pg_buffercache](pg_buffercache.html) - Provides access to five views for obtaining cluster-wide shared buffer metrics.
 -   [pgcrypto](pgcrypto.html) - Provides cryptographic functions for Greenplum Database.
 -   [postgresml](postgresml.html) - Provides functions for using tens of thousands of pre-trained open source AI/machine learning models in VMware Greenplum.
+-   [pgsphere](pgsphere.html) - Provides spherical data types, functions, operators, and indexing for PostgreSQL or Greenplum database.
 -   [pgvector](pgvector/pgvector.html) - Provides vector similarity search capabilities for Greenplum Database that enable searching, storing, and querying machine language-generated embeddings at large scale.
 -   [postgres\_fdw](postgres_fdw.html) - Provides a foreign data wrapper \(FDW\) for accessing data stored in an external PostgreSQL or Greenplum database.
 -   [postgresql-hll](postgresql-hll.html) - Provides HyperLogLog data types for PostgreSQL and Greenplum Database.
