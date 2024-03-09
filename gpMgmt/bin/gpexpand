@@ -655,7 +655,6 @@ class SegmentTemplate:
         """Deploys the template tar file and configures the new segments"""
         self.statusLogger.set_status('BUILD_SEGMENTS_STARTED', self.segTarFile)
         self._distribute_template()
-        # FIXME: truncate the qd only tables' underlying files instead of delete the tuples
         self._configure_new_segments()
         numNewSegments = len(self.gparray.getExpansionSegDbList())
         self.statusLogger.set_status('BUILD_SEGMENTS_DONE', numNewSegments)
@@ -1431,7 +1430,7 @@ class gpexpand:
         Build the list of delete statements based on the COORDINATOR_ONLY_TABLES
         defined in gpcatalog.py
         """
-        statements = ["delete from pg_catalog.%s" % tab for tab in COORDINATOR_ONLY_TABLES]
+        statements = ["truncate pg_catalog.%s" % tab for tab in COORDINATOR_ONLY_TABLES]
 
         """
           Connect to each database in the new segments, and clean up the catalog tables.
