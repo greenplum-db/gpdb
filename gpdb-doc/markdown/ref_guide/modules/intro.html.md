@@ -29,6 +29,7 @@ The following Greenplum Database and PostgreSQL `contrib` modules are installed;
 -   [pgvector](pgvector/pgvector.html) - Provides vector similarity search capabilities for Greenplum Database that enable searching, storing, and querying machine language-generated embeddings at large scale.
 -   [postgres\_fdw](postgres_fdw.html) - Provides a foreign data wrapper \(FDW\) for accessing data stored in an external PostgreSQL or Greenplum database.
 -   [postgresql-hll](postgresql-hll.html) - Provides HyperLogLog data types for PostgreSQL and Greenplum Database.
+-   [q3c](q3c.html) - Enables fast cone, ellipse and polygonal searches and cross-matches between large astronomical catalogs inside a PostgreSQL or Greenplum database. 
 -   [sslinfo](sslinfo.html) - Provides information about the SSL certificate that the current client provided when connecting to Greenplum.
 -   [tablefunc](tablefunc.html) - Provides various functions that return tables (multiple rows).
 -   [timestamp9](timestamp9.html) - Provides an efficient nanosecond-precision timestamp data type for Greenplum Database.
