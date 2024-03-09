@@ -3960,8 +3960,6 @@ ProcessInterrupts(const char* filename, int lineno)
 		bool		lock_timeout_occurred;
 		bool		stmt_timeout_occurred;
 
-		elog(LOG,"Process interrupt for 'query cancel pending' (%s:%d)", filename, lineno);
-
 		QueryCancelPending = false;
 
 		/*
