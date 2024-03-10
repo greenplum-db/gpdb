@@ -164,11 +164,8 @@ as 'select row(r, i)::dcomptype' language sql;
 select makedcomp(1,2);
 select makedcomp(2,1);  -- fail
 select * from makedcomp(1,2) m;
--- GPDB_12_12_MERGE_FIXME
--- https://github.com/greenplum-db/gpdb/pull/14517
--- start_ignore
 select m, m is not null from makedcomp(1,2) m;
--- end_ignore
+create table t as select m, m is not null from makedcomp(1,2) m; -- ctas
 
 drop function makedcomp(float8, float8);
 drop table dcomptable;

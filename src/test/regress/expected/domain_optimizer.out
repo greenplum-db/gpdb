@@ -305,16 +305,19 @@ select * from makedcomp(1,2) m;
  1 | 2
 (1 row)
 
--- GPDB_12_12_MERGE_FIXME
--- https://github.com/greenplum-db/gpdb/pull/14517
--- start_ignore
 select m, m is not null from makedcomp(1,2) m;
-ERROR:  type dcomptype is not composite
--- end_ignore
+   m   | ?column? 
+-------+----------
+ (1,2) | t
+(1 row)
+
+create table t as select m, m is not null from makedcomp(1,2) m; -- ctas
 drop function makedcomp(float8, float8);
 drop table dcomptable;
 drop type comptype cascade;
-NOTICE:  drop cascades to type dcomptype
+DETAIL:  drop cascades to type dcomptype
+NOTICE:  drop cascades to 2 other objects
+drop cascades to column m of table t
 -- check altering and dropping columns used by domain constraints
 create type comptype as (r float8, i float8);
 create domain dcomptype as comptype;

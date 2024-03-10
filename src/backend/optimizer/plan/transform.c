@@ -25,14 +25,26 @@
 #include "parser/parse_oper.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_relation.h"
+#include "parser/parsetree.h"
 #include "utils/fmgroids.h"
+
+#define IS_DML_OR_CTAS(q) (q->commandType != CMD_SELECT \
+						 || q->intoPolicy != NULL \
+						 || q->parentStmtType == PARENTSTMTTYPE_CTAS)
+
+typedef struct
+{
+	Index rtindex;
+	List *rtable;
+} RTEI;
 
 /**
  * Static declarations
  */
 static Node *replace_sirv_functions_mutator(Node *node, void *context);
 static void replace_sirvf_tle(Query *query, int tleOffset);
-static RangeTblEntry *replace_sirvf_rte(Query *query, RangeTblEntry *rte);
+static RangeTblEntry *replace_sirvf_rte(Query *query, RangeTblEntry *rte, Index rti);
+static Node *replace_sirvf_target_list_mutator(Node *node, RTEI *rtei);
 static Node *replace_sirvf_tle_expr_mutator(Node *node, void *context);
 static SubLink *make_sirvf_subselect(FuncExpr *fe);
 static Query *make_sirvf_subquery(FuncExpr *fe);
@@ -60,7 +72,7 @@ normalize_query(Query *query)
 	 * queries like "SELECT function()", which would be executed on the QD
 	 * anyway.
 	 */
-	if (res->commandType != CMD_SELECT || res->parentStmtType != PARENTSTMTTYPE_NONE)
+	if (IS_DML_OR_CTAS(res) || res->parentStmtType != PARENTSTMTTYPE_NONE)
 	{
 		if (safe_to_replace_sirvf_tle(res))
 		{
@@ -82,6 +94,7 @@ normalize_query(Query *query)
 	if (safe_to_replace_sirvf_rte(res))
 	{
 		ListCell   *lc;
+		Index	rti;
 
 		if (!copied)
 		{
@@ -89,11 +102,14 @@ normalize_query(Query *query)
 			copied = true;
 		}
 
-		foreach(lc, res->rtable)
+		foreach_with_count(lc, res->rtable, rti)
 		{
 			RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
 
-			replace_sirvf_rte(res, rte);
+			if (IS_DML_OR_CTAS(res))
+			{
+				replace_sirvf_rte(res, rte, rti + 1);
+			}		 
 		}
 	}
 
@@ -149,12 +165,13 @@ static Node *replace_sirv_functions_mutator(Node *node, void *context)
 		if (safe_to_replace_sirvf_rte(query))
 		{
 			ListCell *lc;
+			Index rti;
 
-			foreach(lc, query->rtable)
+			foreach_with_count(lc, query->rtable, rti)
 			{
 				RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
 
-				rte = replace_sirvf_rte(query, rte);
+				rte = replace_sirvf_rte(query, rte, rti + 1);
 
 				lfirst(lc) = rte;
 			}
@@ -449,6 +466,70 @@ static bool safe_to_replace_sirvf_rte(Query *query)
 	return single_row_query(query);
 }
 
+/*
+ * Fix up a target list, by replacing outer-Vars with the exprs from
+ * the child target list, which we get from make_sirvf_subquery().
+ */
+static Node *
+replace_sirvf_target_list_mutator(Node *node, RTEI *rtei)
+{
+	if (!node)
+		return NULL;
+
+	if (IsA(node, TargetEntry))
+	{
+		TargetEntry *te = (TargetEntry *) node;
+
+		if (!IsA(te->expr, Var))
+		{
+			goto descent;
+		}
+
+		Var		   *var = (Var *) te->expr;
+
+		if (te->resjunk || var->varattno != 0 || var->varno != rtei->rtindex)
+		{
+			goto descent;
+		}
+
+		/*
+		 * For composite type, update the target list according to the
+		 * field selectors in subquery
+		 */
+		Oid typid = var->vartype;
+		int rti = var->varno;
+		RangeTblEntry *rte = rt_fetch(rti, rtei->rtable);
+
+		/* Whole-row var reference for row type */
+		if (rte->rtekind == RTE_SUBQUERY &&
+			type_is_rowtype(typid))
+		{
+			List *targetList = rte->subquery->targetList;
+			RowExpr *rowexpr = makeNode(RowExpr);
+			Oid	base_typid = getBaseType(var->vartype);
+			rowexpr->row_typeid = base_typid;
+			rowexpr->row_format = COERCE_EXPLICIT_CAST;
+
+			ListCell *lc;
+			int index = 0;
+			foreach_with_count (lc, targetList, index)
+			{
+				TargetEntry *subTe = (TargetEntry *) lfirst(lc);
+				FieldSelect *fs = (FieldSelect *) subTe->expr;
+				Var *var = makeVar(1, index + 1, fs->resulttype, -1, 0, 0);
+				rowexpr->args = lappend(rowexpr->args, var);
+			}
+
+			TargetEntry *newTe = makeTargetEntry((Expr *) rowexpr, 1, rte->eref->aliasname, false);
+
+			return (Node *) newTe;
+		}
+	}
+
+descent:
+	return expression_tree_mutator(node, replace_sirvf_target_list_mutator, rtei);
+}
+
 /**
  * If a range table entry contains a sirv function, this must be replaced
  * with a derived table (subquery) with a sublink - this will eventually be
@@ -463,7 +544,7 @@ static bool safe_to_replace_sirvf_rte(Query *query)
  * SELECT * FROM (SELECT FOO(1)) t1
  */
 static RangeTblEntry *
-replace_sirvf_rte(Query *query, RangeTblEntry *rte)
+replace_sirvf_rte(Query *query, RangeTblEntry *rte, Index rti)
 {
 	Assert(query);
 	Assert(safe_to_replace_sirvf_rte(query));
@@ -508,6 +589,12 @@ replace_sirvf_rte(Query *query, RangeTblEntry *rte)
 				 */
 				rte->rtekind = RTE_SUBQUERY;
 				rte->subquery = subquery;
+
+				RTEI *rtei = (RTEI *) palloc0fast(sizeof(RTEI));
+				rtei->rtindex = rti;
+				rtei->rtable = query->rtable;
+				query->targetList = (List *) replace_sirvf_target_list_mutator((Node *) query->targetList, 
+																		rtei);
 			}
 		}
 	}
