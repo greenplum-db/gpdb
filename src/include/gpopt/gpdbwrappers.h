@@ -679,6 +679,10 @@ bool TestexprIsHashable(Node *testexpr, List *param_ids);
 gpos::BOOL WalkQueryTree(Query *query, bool (*walker)(), void *context,
 						 int flags);
 
+// Initialize PlannerGlobal and PlannerInfo for given query and query level.
+void InitPlanGlobAndPlannerInfo(PlannerGlobal *glob, PlannerInfo *root,
+								Query *query, Index query_level);
+
 }  //namespace gpdb
 
 #define ForEach(cell, l) \

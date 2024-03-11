@@ -80,4 +80,5 @@ extern bool subexpression_match(Expr *expr1, Expr *expr2);
 // resolve the join alias varno/varattno information to its base varno/varattno information
 extern Query *flatten_join_alias_var_optimizer(Query *query, int queryLevel);
 
+extern void init_planglob_plannerinfo(PlannerGlobal *glob, PlannerInfo *root, Query *query, Index query_level);
 #endif							/* CLAUSES_H */

@@ -5849,3 +5849,31 @@ get_rightscalararrayop(const Expr *clause)
 	else
 		return NULL;
 }
+
+/*
+ * init_planglob_plannerinfo
+ *
+ * Initializes, PlannerGlobal and PlannerInfo for given query and query level.
+ */
+void init_planglob_plannerinfo(PlannerGlobal *glob, PlannerInfo *root, Query *query, Index query_level)
+{
+	glob->subplans = NIL;
+	glob->subroots = NIL;
+	glob->rewindPlanIDs = NULL;
+	glob->transientPlan = false;
+	glob->oneoffPlan = false;
+	glob->share.shared_inputs = NULL;
+	glob->share.shared_input_count = 0;
+	glob->share.motStack = NIL;
+	glob->share.qdShares = NULL;
+	/* If required, these will be filled in the pre- and post-processing steps */
+	glob->finalrtable = NIL;
+	glob->relationOids = NIL;
+	glob->invalItems = NIL;
+
+	root->parse = query;
+	root->glob = glob;
+	root->query_level = query_level;
+	root->planner_cxt = CurrentMemoryContext;
+	root->wt_param_id = -1;
+}

@@ -404,26 +404,8 @@ ExplainDXL(Query *query, ExplainState *es, const char *queryString,
 	 * pre- and post-processing steps do.
 	 */
 	glob = makeNode(PlannerGlobal);
-	glob->subplans = NIL;
-	glob->subroots = NIL;
-	glob->rewindPlanIDs = NULL;
-	glob->transientPlan = false;
-	glob->oneoffPlan = false;
-	glob->share.shared_inputs = NULL;
-	glob->share.shared_input_count = 0;
-	glob->share.motStack = NIL;
-	glob->share.qdShares = NULL;
-	/* these will be filled in below, in the pre- and post-processing steps */
-	glob->finalrtable = NIL;
-	glob->relationOids = NIL;
-	glob->invalItems = NIL;
-
 	root = makeNode(PlannerInfo);
-	root->parse = query;
-	root->glob = glob;
-	root->query_level = 1;
-	root->planner_cxt = CurrentMemoryContext;
-	root->wt_param_id = -1;
+	init_planglob_plannerinfo(glob, root, query, 1 /*query_level*/ );
 
 	/* create a local copy to hand to the optimizer */
 	pqueryCopy = (Query *) copyObject(query);

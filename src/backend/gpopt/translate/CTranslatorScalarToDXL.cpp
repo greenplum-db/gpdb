@@ -151,7 +151,12 @@ CTranslatorScalarToDXL::CreateSubqueryTranslator(
 	}
 
 	// Check in the query tree if we can fold any constant expression
-	subquery = FoldConstantsWrapper(subquery, m_query_level + 1);
+	PlannerGlobal *glob = makeNode(PlannerGlobal);
+	PlannerInfo *root = makeNode(PlannerInfo);
+	gpdb::InitPlanGlobAndPlannerInfo(glob, root, subquery,
+									 m_query_level + 1 /*query_level*/);
+	subquery =
+		fold_constants(root, subquery, nullptr, GPOPT_MAX_FOLDED_CONSTANT_SIZE);
 
 	return GPOS_NEW(m_context->m_mp)
 		CTranslatorQueryToDXL(m_context, m_md_accessor, var_colid_mapping,
@@ -2698,6 +2703,8 @@ CTranslatorScalarToDXL::FoldConstantsWrapper(Query *subquery, Index query_level)
 	root->query_level = query_level;
 	root->planner_cxt = CurrentMemoryContext;
 	root->wt_param_id = -1;
+
+	gpdb::InitPlanGlobAndPlannerInfo(glob, root, subquery, 1 /* query_level */ );
 
 	return fold_constants(root, subquery, nullptr,
 						  GPOPT_MAX_FOLDED_CONSTANT_SIZE);

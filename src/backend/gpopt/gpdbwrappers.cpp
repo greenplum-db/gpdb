@@ -49,6 +49,7 @@ extern "C" {
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
 #include "utils/partcache.h"
+#include "optimizer/clauses.h"
 }
 #define GP_WRAP_START                                            \
 	sigjmp_buf local_sigjmp_buf;                                 \
@@ -2752,6 +2753,17 @@ gpdb::TestexprIsHashable(Node *testexpr, List *param_ids)
 	}
 	GP_WRAP_END;
 	return false;
+}
+
+void
+gpdb::InitPlanGlobAndPlannerInfo(PlannerGlobal *glob, PlannerInfo *root,
+								 Query *query, Index query_level)
+{
+	GP_WRAP_START;
+	{
+		init_planglob_plannerinfo(glob, root, query, query_level);
+	}
+	GP_WRAP_END;
 }
 
 // EOF
