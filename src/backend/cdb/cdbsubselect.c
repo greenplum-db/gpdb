@@ -48,6 +48,7 @@ typedef struct NonNullableVarsContext
 	Query	   *query;              /* Query in question. */
 	List       *varsToCheck;        /* Vars to check when walking to RTE */
 	List	   *nonNullableVars;	/* Known non-nullable vars */
+	List 	   *nullableVars; 		/* Identify vars could be nullable, must be eliminated from nonNullableVars */
 } NonNullableVarsContext;
 
 typedef struct FindAllVarsContext
@@ -1077,6 +1078,7 @@ cdb_find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context)
 					c1.query = context->query;
 					c1.varsToCheck = context->varsToCheck;
 					c1.nonNullableVars = NIL;
+					c1.nullableVars = NIL;
 					ListCell   *lc = NULL;
 					int			orArgNum = 0;
 
@@ -1089,21 +1091,64 @@ cdb_find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context)
 						c2.query = context->query;
 						c2.varsToCheck = context->varsToCheck;
 						c2.nonNullableVars = NIL;
-						expression_tree_walker(orArg, cdb_find_nonnullable_vars_walker, &c2);
+						c2.nullableVars = NIL;
+
+						/*
+						 * If we are NullTest, expression_tree_walker will iterate the tree using
+						 * (NullTest*)Node->arg.
+						 * Ex, a qual like: c1 is null or c1 > 0
+						 * NullTest [nulltesttype=IS_NULL argisrow=false location=102]
+						 *			[arg] Var [varno=1 varattno=1 vartype=23 varnoold=1 varoattno=1]
+						 * Recursive cdb_find_nonnullable_vars_walker will first check the node->arg Var and
+						 * insert into nonNullableVars.
+						 * That's incorrect for NullTest type IS_NULL.
+						 * And the var under IS_NOT_NULL NullTest should be nullable.
+						 * We should record that nullable var inside an OR expression.
+						 * 
+						 * See issue https://github.com/greenplum-db/gpdb/issues/15662.
+						 */
+						if (IsA(orArg, NullTest))
+						{
+							NullTest *nexpr = (NullTest *)orArg;
+							if (nexpr->nulltesttype != IS_NOT_NULL && IsA(nexpr->arg, Var))
+							{
+								Var* nullableVar = (Var *)(nexpr->arg);
+								c1.nullableVars = list_append_unique_ptr(c1.nullableVars, nullableVar);
+							}
+						}
+
+						/*
+						 * In case there is NullTest under recursive OR expression 
+						 * GPDB_FIXME: this is more strict.
+						 */
+						if (IsA(orArg, BoolExpr) && (((BoolExpr *) orArg)->boolop == OR_EXPR))
+						{
+							cdb_find_nonnullable_vars_walker(orArg, context);
+						}
+						else
+							expression_tree_walker(orArg, cdb_find_nonnullable_vars_walker, &c2);
 
 						if (orArgNum == 0)
 						{
 							Assert(c1.nonNullableVars == NIL);
 							c1.nonNullableVars = c2.nonNullableVars;
+							if (c1.nullableVars == NIL)
+								c1.nullableVars = c2.nullableVars;
 						}
 						else
 						{
 							c1.nonNullableVars = list_intersection(c1.nonNullableVars, c2.nonNullableVars);
+							c1.nullableVars = list_append_unique(c1.nullableVars, c2.nullableVars);
 						}
+						/*
+						 * If nullable var was found here, eliminate it to keep nonNullableVars compact.
+						 */
+						c1.nonNullableVars = list_difference(c1.nonNullableVars, c1.nullableVars);
 						orArgNum++;
 					}
 
 					context->nonNullableVars = list_concat_unique(context->nonNullableVars, c1.nonNullableVars);
+					context->nullableVars = list_append_unique(context->nullableVars, c1.nullableVars);
 					return false;
 				}
 
@@ -1120,6 +1165,11 @@ cdb_find_nonnullable_vars_walker(Node *node, NonNullableVarsContext *context)
 
 				if (expr->nulltesttype != IS_NOT_NULL)
 				{
+					if (IsA(expr->arg, Var))
+					{
+						Var* nullableVar = (Var *)(expr->arg);
+						context->nullableVars = list_append_unique_ptr(context->nullableVars, nullableVar);
+					}
 					return false;
 				}
 
@@ -1416,10 +1466,16 @@ is_exprs_nullable(Node *exprs, Query *query)
 	context.query           = query;
 	context.varsToCheck     = cdb_find_all_vars(exprs, query->rtable);
 	context.nonNullableVars = NIL;
+	context.nullableVars = NIL;
 
 	/* Find nullable vars in the jointree */
 	(void) expression_tree_walker((Node *) query->jointree,
 								  cdb_find_nonnullable_vars_walker, &context);
+
+	/*
+	 * Eliminate potential nullable vars.
+	 */
+	context.nonNullableVars = list_difference(context.nonNullableVars, context.nullableVars);
 
 	return is_exprs_nullable_internal(exprs, context.nonNullableVars, query->rtable);
 }
@@ -1503,7 +1559,7 @@ is_exprs_nullable_internal(Node *exprs, List *nonnullable_vars, List *rtable)
  *		select c1 from t1 where c1 NOT IN (select c2 from t2);
  *						(to)
  *		select c1 from t1 left anti semi join (select 0 as zero, c2 from t2) foo
- *						  ON (c1 = c2) IS NOT FALSE where zero is NULL;
+ *						  ON (c1 != c2) IS NOT FALSE where zero is NULL;
  *
  * The pseudoconstant column zero is needed to correctly pipe in the NULLs
  * from the subselect upstream.

@@ -1670,6 +1670,71 @@ drop view mv_14858;
 drop table t1_14858;
 drop table t2_14858;
 drop table t3_14858;
+--
+-- Test left anti semi (not-in) join
+-- With is null expression inside an OR expression.
+--
+begin;
+create table t1_lasj(c1 int) distributed by (c1);
+create table t2_lasj_has_null(c1n int) distributed by (c1n);
+insert into t1_lasj values (generate_series (1,10));
+insert into t2_lasj_has_null values (1), (2), (3), (null), (5), (6), (7);
+analyze t1_lasj;
+analyze t2_lasj_has_null;
+-- null test
+select c1 from t1_lasj where c1 not in (select c1n from t2_lasj_has_null where c1n is null) and c1 is not null;
+ c1 
+----
+(0 rows)
+
+-- null test under OR expression
+select c1 from t1_lasj where c1 not in (select c1n from t2_lasj_has_null where c1n is null or c1n > 0) and c1 is not null;
+ c1 
+----
+(0 rows)
+
+select c1 from t1_lasj where c1 not in (select c1n from t2_lasj_has_null where c1n > 0 or c1n is null) and c1 is not null;
+ c1 
+----
+(0 rows)
+
+select c1 from t1_lasj where c1 not in (select c1n from t2_lasj_has_null where (c1n > 1) or (c1n > 0 or c1n is null));
+ c1 
+----
+(0 rows)
+
+select c1 from t1_lasj where c1 not in (select c1n from t2_lasj_has_null where c1n is null or c1n is null and c1n > 1) and c1 is not null;
+ c1 
+----
+(0 rows)
+
+select c1 from t1_lasj where c1 not in (select c1n from t2_lasj_has_null where c1n is null or c1n is null or c1n > 1) and c1 is not null;
+ c1 
+----
+(0 rows)
+
+select c1 from t1_lasj where c1 not in (select c1n from t2_lasj_has_null where c1n is null or c1n is null) and c1 is not null;
+ c1 
+----
+(0 rows)
+
+-- null test under recursive OR expression
+select c1 from t1_lasj where c1 not in (select c1n from t2_lasj_has_null where (c1n != 0 and c1n > 1) or (c1n > 0 or c1n is null)) and c1 is not null;
+ c1 
+----
+(0 rows)
+
+select c1 from t1_lasj where c1 not in (select c1n from t2_lasj_has_null where c1n is null or c1n is null or true) and c1 is not null;
+ c1 
+----
+(0 rows)
+
+select c1 from t1_lasj where c1 not in (select c1n from t2_lasj_has_null where 2 > 1 or c1n is null or c1n is null or true) and c1 is not null;
+ c1 
+----
+(0 rows)
+
+abort;
 reset search_path;
 drop schema notin cascade;
 NOTICE:  drop cascades to 22 other objects
