@@ -2200,7 +2200,7 @@ BaseBackup(const char *argv0)
 	PQfinish(conn);
 
 	if (verbose)
-		fprintf(stderr, "%s: sync the target data direcotory\n", progname);
+		fprintf(stderr, "%s: sync the target data directory\n", progname);
 	syncTargetDirectory(argv0);
 
 	if (verbose)
