@@ -46,8 +46,7 @@ Greenplum Database 7 requires the following software packages on RHEL systems. T
 -   python3-psycopg2
 -   python3-psutil
 -   python3-pyyaml
--   python3.11
--   python3.11-devel
+-   python39
 -   readline
 -   rsync
 -   sed
@@ -84,12 +83,12 @@ Greenplum Databased 7 supports these Java versions for PL/Java and PXF:
 
 #### <a id="topic_xbl_mkx_python"></a>Python
 
-Greenplum Database uses the system default `python3` for the Greenplum management utilities, and `python3.11` for the [PL/Python module](../analytics/pl_python.html). For most of the supported OS versions, the system default `python3` is `python3.9`. If you are installing Greenplum Database on Rocky Linux 8, the default `python3` version included is `python3.6`. You may want to unify the `python3` versions to `python3.11` by running the following commands:
+Greenplum Database uses the system default `python3` for the Greenplum management utilities, and `python3.9` for the [PL/Python module](../analytics/pl_python.html). For most of the supported OS versions, the system default `python3` is `python3.9`. If you are installing Greenplum Database on Rocky Linux 8, the default `python3` version included is `python3.6`. You may want to unify the `python3` versions to `python3.9` by running the following commands:
 
 ```
-sudo yum install python3.11 python3.11-devel python3.11-psycopg2 python3.11-pyyaml python3.11-psutil
-sudo update-alternatives set python3 /usr/bin/python3.11
-sudo update-alternatives set python /usr/bin/python3.11
+sudo yum install python39-psycopg2 python39-pyyaml python39-psutil
+sudo update-alternatives set python3 /usr/bin/python39
+sudo update-alternatives set python /usr/bin/python39
 ```
 
 ## <a id="topic31"></a>VMware Greenplum Tools and Extensions Compatibility
@@ -127,7 +126,7 @@ This table lists the versions of the Greenplum Extensions that are compatible wi
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 ">Supports Java 8 and 11.</td>
 </tr>
 <tr class="row">
-<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../install_guide/install_python_dsmod.html">Python 3.11 Data Science Module Package</a></td>
+<td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e683 "><a class="xref" href="../install_guide/install_python_dsmod.html">Python 3.9 Data Science Module Package</a></td>
 <td class="entry nocellnorowborder" style="vertical-align:top;" headers="d78288e686 ">1.2</td>
 <td class="entry cell-norowborder" style="vertical-align:top;" headers="d78288e689 "> </td>
 </tr>

@@ -92,7 +92,7 @@ run_resgroup_icw_test() {
         ./configure --prefix=/usr/local/greenplum-db-devel --disable-orca --enable-gpfdist \
          --enable-gpcloud --enable-orafce --enable-tap-tests \
          --with-gssapi --with-libxml --with-openssl --with-perl --with-python \
-         --with-uuid=e2fs --with-llvm --with-zstd PYTHON=python3.11 PKG_CONFIG_PATH="${GPHOME}/lib/pkgconfig" ${CONFIGURE_FLAGS}
+         --with-uuid=e2fs --with-llvm --with-zstd PYTHON=python3.9 PKG_CONFIG_PATH="${GPHOME}/lib/pkgconfig" ${CONFIGURE_FLAGS}
 
         LANG=en_US.utf8 make create-demo-cluster WITH_MIRRORS=${WITH_MIRRORS:-true}
         source /home/gpadmin/gpdb_src/gpAux/gpdemo/gpdemo-env.sh

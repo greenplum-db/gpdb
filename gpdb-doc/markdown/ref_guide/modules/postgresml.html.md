@@ -6,14 +6,14 @@ The `postgresml` module provides PostgresML functions for using tens of thousand
 
 ## <a id="prereqs"></a>Before Registering the `postgresml` Module
 
-Before registering the `postgresml` module, you must install the Data Science bundle for Python3.11, add the `pgml` library to the set of libraries the VMware Greenplum server loads at startup, and set the Python virtual environment:
+Before registering the `postgresml` module, you must install the Data Science bundle for Python3.9, add the `pgml` library to the set of libraries the VMware Greenplum server loads at startup, and set the Python virtual environment:
 
-1. Install the Data Science bundle for Python 3.11.
+1. Install the Data Science bundle for Python 3.9.
 
     For example:
 
     ```
-    gppkg install DataSciencePython3.11-x.x.x-gp7-el8_x86_64.gppkg 
+    gppkg install DataSciencePython3.9-x.x.x-gp7-el8_x86_64.gppkg 
     ```
 
     where x.x.x is the version string.
@@ -33,13 +33,13 @@ Before registering the `postgresml` module, you must install the Data Science bu
     At the session level:
 
     ```
-    SET pgml.venv='$GPHOME/ext/DataSciencePython3.11';
+    SET pgml.venv='$GPHOME/ext/DataSciencePython3.9';
     ```
 
     To last beyond a session:
 
     ```
-    gpconfig -c pgml.venv -v '$GPHOME/ext/DataSciencePython3.11'
+    gpconfig -c pgml.venv -v '$GPHOME/ext/DataSciencePython3.9'
     gpstop -u
     ```
 
