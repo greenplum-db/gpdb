@@ -1158,6 +1158,25 @@ if test "$with_zstd" = yes; then
   PKG_CHECK_MODULES([ZSTD], [libzstd >= 1.4.0])
 fi
 
+AC_MSG_CHECKING([whether to build with static ZSTD support])
+PGAC_ARG_BOOL(with, static-zstd, no, [do not build with static Zstandard],
+              [AC_DEFINE([USE_STATIC_ZSTD], 1, [Define to build with static zstd support. (--with-static-zstd)])])
+AC_MSG_RESULT([$with_static_zstd])
+AC_SUBST(with_static_zstd)
+
+if test "$with_static_zstd" = yes; then
+  if test "$with_zstd" = yes; then
+    AC_MSG_ERROR([--with-static-zstd can not be used with --with-zstd])
+  else
+    AC_DEFINE([USE_ZSTD_ADVANCED_FEATURE], 1, [Define to build with zstd support with experimental feature. (--with-static-zstd)])
+    AC_DEFINE([USE_ZSTD], 1, [Define to build with zstd support. (--with-zstd)])
+    AC_CHECK_LIB(:libzstd.a, ZSTD_compressCCtx, [],
+                [AC_MSG_ERROR([static zstd library not found.  If you have libzstd already installed,
+                see config.log for details of the failure.  It is possible the compiler is not
+                searching in the proper directory.  Use --without-static-zstd to disable static zstd support.])])
+  fi
+fi
+
 #
 # Realtime library
 #
@@ -1714,13 +1733,20 @@ fi
 if test "$with_zlib" = yes; then
   AC_CHECK_HEADER(zlib.h, [], [AC_MSG_ERROR([zlib header not found
 If you have zlib already installed, see config.log for details on the
-failure.  It is possible the compiler isn't looking in the proper directory.
+failure.  It is possible the compiler is not looking in the proper directory.
 Use --without-zlib to disable zlib support.])])
 fi
 
 # Check for bzlib.h
 if test "$with_libbz2" = yes ; then
   AC_CHECK_HEADER(bzlib.h, [], [AC_MSG_ERROR([header file <bzlib.h> is required for bzip2 support])], [])
+fi
+
+# Check for zstd.h and zstd_errors.h
+if test "$with_static_zstd" = yes; then
+  AC_CHECK_HEADER(zstd.h, [], [AC_MSG_ERROR([header file <zstd.h> is required for zstd support])])
+  AC_CHECK_HEADER(zstd_errors.h, [], [AC_MSG_ERROR([header file <zstd_errors.h> is required for zstd support])])
+  AC_CHECK_FUNC(ZSTD_createCCtx_advanced, [], [AC_MSG_ERROR([ZSTD_createCCtx_advanced is required for static zstd support])])
 fi
 
 if test "$with_gssapi" = yes ; then

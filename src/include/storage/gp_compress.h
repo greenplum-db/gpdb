@@ -80,6 +80,16 @@ typedef struct
 extern void zstd_free_context(zstd_context *context);
 extern zstd_context *zstd_alloc_context(void);
 
+extern ZSTD_CCtx *ZSTD_createCCtx_gp(void);
+
+#ifdef USE_ZSTD_ADVANCED_FEATURE
+extern ZSTD_CCtx *ZSTD_createCCtx_gp(void);
+extern ZSTD_DCtx *ZSTD_createDCtx_gp(void);
+extern ZSTD_CStream *ZSTD_createCStream_gp(void);
+extern ZSTD_DStream *ZSTD_createDStream_gp(void);
+#define ZSTD_STATIC_LINKING_ONLY
+#endif /* USE_ZSTD_ADVANCED_FEATURE */
+
 #endif	/* USE_ZSTD */
 
 

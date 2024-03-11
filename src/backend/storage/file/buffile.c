@@ -42,7 +42,7 @@
 #include "postgres.h"
 
 #ifdef USE_ZSTD
-#include <zstd.h>
+#include "storage/gp_compress.h"
 #endif
 
 #include "commands/tablespace.h"
@@ -55,6 +55,7 @@
 #include "utils/resowner.h"
 
 #include "storage/gp_compress.h"
+#include "utils/gp_alloc.h"
 #include "utils/faultinjector.h"
 #include "utils/workfile_mgr.h"
 
@@ -168,6 +169,9 @@ static void BufFileStartCompression(BufFile *file);
 static void BufFileDumpCompressedBuffer(BufFile *file, const void *buffer, Size nbytes);
 static void BufFileEndCompression(BufFile *file);
 static int BufFileLoadCompressedBuffer(BufFile *file, void *buffer, size_t bufsize);
+
+void *customAlloc(void *opaque, size_t size);
+void customFree(void *opaque, void *address);
 
 /*
  * Create BufFile and perform the common initialization.
@@ -1317,7 +1321,7 @@ BufFileStartCompression(BufFile *file)
 	CurrentResourceOwner = file->resowner;
 
 	file->zstd_context = zstd_alloc_context();
-	file->zstd_context->cctx = ZSTD_createCStream();
+	file->zstd_context->cctx = ZSTD_createCStream_gp();
 	if (!file->zstd_context->cctx)
 		elog(ERROR, "out of memory");
 	ret = ZSTD_initCStream(file->zstd_context->cctx, BUFFILE_ZSTD_COMPRESSION_LEVEL);
@@ -1398,7 +1402,7 @@ BufFileEndCompression(BufFile *file)
 	ZSTD_outBuffer output;
 	size_t		ret;
 	int			wrote;
-	off_t		pos = 0;
+	off_t pos = 0;
 
 	Assert(file->state == BFS_COMPRESSED_WRITING);
 
@@ -1424,7 +1428,7 @@ BufFileEndCompression(BufFile *file)
 		 file->uncompressed_bytes, BufFileSize(file));
 
 	/* Done writing. Initialize for reading */
-	file->zstd_context->dctx = ZSTD_createDStream();
+	file->zstd_context->dctx = ZSTD_createDStream_gp();
 	if (!file->zstd_context->dctx)
 		elog(ERROR, "out of memory");
 	ret = ZSTD_initDStream(file->zstd_context->dctx);

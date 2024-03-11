@@ -718,6 +718,7 @@ GREP
 with_apr_config
 with_libcurl
 with_rt
+with_static_zstd
 ZSTD_LIBS
 ZSTD_CFLAGS
 with_zstd
@@ -904,6 +905,7 @@ with_system_tzdata
 with_zlib
 with_libbz2
 with_zstd
+with_static_zstd
 with_rt
 with_libcurl
 with_apr_config
@@ -1623,6 +1625,7 @@ Optional Packages:
   --without-zlib          do not use Zlib
   --without-libbz2        do not use bzip2
   --without-zstd          do not build with Zstandard
+  --with-static-zstd      do not build with static Zstandard
   --without-rt            do not use Realtime Library
   --without-libcurl       do not use libcurl
   --with-apr-config=PATH  path to apr-1-config utility
@@ -9807,6 +9810,100 @@ $as_echo "yes" >&6; }
 fi
 fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to build with static ZSTD support" >&5
+$as_echo_n "checking whether to build with static ZSTD support... " >&6; }
+
+
+
+# Check whether --with-static-zstd was given.
+if test "${with_static_zstd+set}" = set; then :
+  withval=$with_static_zstd;
+  case $withval in
+    yes)
+
+$as_echo "#define USE_STATIC_ZSTD 1" >>confdefs.h
+
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --with-static-zstd option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  with_static_zstd=no
+
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_static_zstd" >&5
+$as_echo "$with_static_zstd" >&6; }
+
+
+if test "$with_static_zstd" = yes; then
+  if test "$with_zstd" = yes; then
+    as_fn_error $? "--with-static-zstd can not be used with --with-zstd" "$LINENO" 5
+  else
+
+$as_echo "#define USE_ZSTD_ADVANCED_FEATURE 1" >>confdefs.h
+
+
+$as_echo "#define USE_ZSTD 1" >>confdefs.h
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ZSTD_compressCCtx in -l:libzstd.a" >&5
+$as_echo_n "checking for ZSTD_compressCCtx in -l:libzstd.a... " >&6; }
+if ${ac_cv_lib__libzstd_a_ZSTD_compressCCtx+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-l:libzstd.a  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char ZSTD_compressCCtx ();
+int
+main ()
+{
+return ZSTD_compressCCtx ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib__libzstd_a_ZSTD_compressCCtx=yes
+else
+  ac_cv_lib__libzstd_a_ZSTD_compressCCtx=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib__libzstd_a_ZSTD_compressCCtx" >&5
+$as_echo "$ac_cv_lib__libzstd_a_ZSTD_compressCCtx" >&6; }
+if test "x$ac_cv_lib__libzstd_a_ZSTD_compressCCtx" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIB_LIBZSTD_A 1
+_ACEOF
+
+  LIBS="-l:libzstd.a $LIBS"
+
+else
+  as_fn_error $? "static zstd library not found.  If you have libzstd already installed,
+                see config.log for details of the failure.  It is possible the compiler is not
+                searching in the proper directory.  Use --without-static-zstd to disable static zstd support." "$LINENO" 5
+fi
+
+  fi
+fi
+
 #
 # Realtime library
 #
@@ -15421,7 +15518,7 @@ if test "x$ac_cv_header_zlib_h" = xyes; then :
 else
   as_fn_error $? "zlib header not found
 If you have zlib already installed, see config.log for details on the
-failure.  It is possible the compiler isn't looking in the proper directory.
+failure.  It is possible the compiler is not looking in the proper directory.
 Use --without-zlib to disable zlib support." "$LINENO" 5
 fi
 
@@ -15437,6 +15534,33 @@ else
   as_fn_error $? "header file <bzlib.h> is required for bzip2 support" "$LINENO" 5
 fi
 
+
+fi
+
+# Check for zstd.h and zstd_errors.h
+if test "$with_static_zstd" = yes; then
+  ac_fn_c_check_header_mongrel "$LINENO" "zstd.h" "ac_cv_header_zstd_h" "$ac_includes_default"
+if test "x$ac_cv_header_zstd_h" = xyes; then :
+
+else
+  as_fn_error $? "header file <zstd.h> is required for zstd support" "$LINENO" 5
+fi
+
+
+  ac_fn_c_check_header_mongrel "$LINENO" "zstd_errors.h" "ac_cv_header_zstd_errors_h" "$ac_includes_default"
+if test "x$ac_cv_header_zstd_errors_h" = xyes; then :
+
+else
+  as_fn_error $? "header file <zstd_errors.h> is required for zstd support" "$LINENO" 5
+fi
+
+
+  ac_fn_c_check_func "$LINENO" "ZSTD_createCCtx_advanced" "ac_cv_func_ZSTD_createCCtx_advanced"
+if test "x$ac_cv_func_ZSTD_createCCtx_advanced" = xyes; then :
+
+else
+  as_fn_error $? "ZSTD_createCCtx_advanced is required for static zstd support" "$LINENO" 5
+fi
 
 fi
 
