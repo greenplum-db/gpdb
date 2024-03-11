@@ -214,16 +214,16 @@ AOCSMoveTuple(TupleTableSlot *slot,
 static bool
 AOCSSegmentFileFullCompaction(Relation aorel,
 							  AOCSInsertDesc insertDesc,
-							  AOCSFileSegInfo *fsinfo,
+							  FileSegTotals *fstotal,
 							  Snapshot snapshot,
-							  AOVacuumRelStats *vacrelstats)
+							  AOVacuumRelStats *vacrelstats,
+							  List *compact_segno_list)
 {
 	const char *relname;
 	AppendOnlyVisimap visiMap;
 	AOCSScanDesc scanDesc;
 	TupleDesc	tupDesc;
 	TupleTableSlot *slot;
-	int			compact_segno;
 	ResultRelInfo *resultRelInfo;
 	EState	   *estate;
 	int64		moved_tupleCount = 0;
@@ -232,15 +232,25 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 	int64		prev_num_dead_tuples = 0;
 	int64		curr_heap_blks_scanned = 0;
 	int64		prev_heap_blks_scanned = 0;
+	int		   *compact_segnos;
+	int			compact_seg_num = list_length(compact_segno_list);
+	int			segno_idx = 0;
+	ListCell   *lc;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(RelationStorageIsAoCols(aorel));
 	Assert(insertDesc);
 
-	compact_segno = fsinfo->segno;
-	if (fsinfo->varblockcount > 0)
+	compact_segnos = (int *) palloc0(sizeof(int) * compact_seg_num);
+	foreach (lc, compact_segno_list)
 	{
-		tuplePerPage = fsinfo->total_tupcount / fsinfo->varblockcount;
+		compact_segnos[segno_idx] = lfirst_int(lc);
+		segno_idx++;
+	}
+
+	if (fstotal->totalvarblocks > 0)
+	{
+		tuplePerPage = fstotal->totaltuples / fstotal->totalvarblocks;
 	}
 	relname = RelationGetRelationName(aorel);
 
@@ -249,13 +259,13 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 						   ShareLock,
 						   snapshot);
 
-	elogif(Debug_appendonly_print_compaction,
-		   LOG, "Compact AO segfile %d, relation %sd",
-		   compact_segno, relname);
+	if (Debug_appendonly_print_compaction)
+		elog(LOG, "Starting Compact relation %s, insert segno %d",
+			 relname, insertDesc->cur_segno);
 
 	scanDesc = aocs_beginrangescan(aorel,
 								   snapshot, snapshot,
-								   &compact_segno, 1, NULL);
+								   compact_segnos, compact_seg_num, NULL);
 
 	tupDesc = RelationGetDescr(aorel);
 	slot = MakeSingleTupleTableSlot(tupDesc, &TTSOpsVirtual);
@@ -328,20 +338,23 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 	/* Accumulate total number dead tuples */
 	vacrelstats->num_dead_tuples += scanDesc->segrowsprocessed - moved_tupleCount;
 
-	MarkAOCSFileSegInfoAwaitingDrop(aorel, compact_segno);
+	for(segno_idx = 0; segno_idx < compact_seg_num; segno_idx++)
+	{
+		MarkAOCSFileSegInfoAwaitingDrop(aorel, compact_segnos[segno_idx]);
 
-	AppendOnlyVisimap_DeleteSegmentFile(&visiMap,
-										compact_segno);
+		AppendOnlyVisimap_DeleteSegmentFile(&visiMap,
+											compact_segnos[segno_idx]);
 
-	/* Delete all mini pages of the segment files if block directory exists */
-	AppendOnlyBlockDirectory_DeleteSegmentFiles(insertDesc->blkdirrelid,
-												snapshot,
-												compact_segno);
+		/* Delete all mini pages of the segment files if block directory exists */
+		AppendOnlyBlockDirectory_DeleteSegmentFiles(insertDesc->blkdirrelid,
+													snapshot,
+													compact_segnos[segno_idx]);
+	}
 
 	elogif(Debug_appendonly_print_compaction, LOG,
 		   "Finished compaction: "
-		   "AO segfile %d, relation %s, moved tuple count " INT64_FORMAT,
-		   compact_segno, relname, moved_tupleCount);
+		   "relation %s, moved tuple count " INT64_FORMAT,
+		   relname, moved_tupleCount);
 
 	AppendOnlyVisimap_Finish(&visiMap, NoLock);
 
@@ -352,79 +365,69 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 
 	aocs_endscan(scanDesc);
 
+	pfree(compact_segnos);
+
 	return true;
 }
 
 /*
  * Performs a compaction of an append-only relation in column-orientation.
  *
- * The compaction segment file should be locked for this transaction in
+ * The compaction segment files should be locked for this transaction in
  * the appendonlywriter.c code.
  *
- * On exit, *insert_segno will be set to the segment that was used as the
- * insertion target. The segfiles listed in 'avoid_segnos' will not be used
- * for insertion.
+ * insert_segno is set to the segment that used as the insertion target.
  *
  * The caller is required to hold either an AccessExclusiveLock (vacuum full)
  * or a ShareLock on the relation.
  */
 void
 AOCSCompact(Relation aorel,
-			int compaction_segno,
-			int *insert_segno,
-			bool isFull,
-			List *avoid_segnos,
+			List *compaction_segnos,
+			int insert_segno,
 			AOVacuumRelStats *vacrelstats)
 {
 	const char *relname;
 	AOCSInsertDesc insertDesc = NULL;
-	AOCSFileSegInfo *fsinfo;
+	FileSegTotals *fstotal;
 	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
 	Assert(RelationStorageIsAoCols(aorel));
-	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 
 	relname = RelationGetRelationName(aorel);
 	elogif(Debug_appendonly_print_compaction, LOG,
 		   "Compact AO relation %s", relname);
 
-	/* Fetch under the write lock to get latest committed eof. */
-	fsinfo = GetAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, compaction_segno, true);
+	/* Get segment file total info. */
+	fstotal = GetAOCSSSegFilesTotals(aorel, appendOnlyMetaDataSnapshot);
 
-	if (AppendOnlyCompaction_ShouldCompact(aorel,
-										   compaction_segno, fsinfo->total_tupcount, isFull,
-										   appendOnlyMetaDataSnapshot))
+	if (insert_segno != -1)
 	{
-		if (*insert_segno == -1)
-		{
-			/* get the insertion segment on first call. */
-			*insert_segno = ChooseSegnoForCompactionWrite(aorel, avoid_segnos);
-		}
+		/*
+		 * Note: since we don't know how many rows will actually be inserted
+		 * we provide the default number of rows to bump gp_fastsequence by.
+		 */
+		insertDesc = aocs_insert_init(aorel, insert_segno, NUM_FAST_SEQUENCES);
 
-		if (*insert_segno != -1)
-		{
-			/*
-			 * Note: since we don't know how many rows will actually be inserted
-			 * we provide the default number of rows to bump gp_fastsequence by.
-			 */
-			insertDesc = aocs_insert_init(aorel, *insert_segno, NUM_FAST_SEQUENCES);
+		AOCSSegmentFileFullCompaction(aorel,
+									  insertDesc,
+									  fstotal,
+									  appendOnlyMetaDataSnapshot,
+									  vacrelstats,
+									  compaction_segnos);
 
-			AOCSSegmentFileFullCompaction(aorel,
-										  insertDesc,
-										  fsinfo,
-										  appendOnlyMetaDataSnapshot,
-										  vacrelstats);
-
-			insertDesc->skipModCountIncrement = true;
-			aocs_insert_finish(insertDesc);
-		}
-		else
-		{
-			/* FIXME: Could not find a target segment. What now? */
-		}
+		insertDesc->skipModCountIncrement = true;
+		aocs_insert_finish(insertDesc);
+	}
+	else
+	{
+		/* Could not find a target segment. Give up */
+		ereport(WARNING,
+				(errmsg("could not find a free segment file to use for compacting relation %s",
+						RelationGetRelationName(aorel))));
 	}
 
-	pfree(fsinfo);
+	pfree(fstotal);
 
 	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
 }

@@ -351,7 +351,7 @@ ao_vacuum_rel_compact(Relation onerel, VacuumParams *params, BufferAccessStrateg
 	pgstat_progress_update_param(PROGRESS_VACUUM_PHASE,
 								 PROGRESS_VACUUM_PHASE_AO_COMPACT);
 	/*
-	 * Compact all the segfiles. Repeat as many times as required.
+	 * Compact all the segfiles.
 	 *
 	 * XXX: Because we compact all segfiles in one transaction, this can
 	 * require up 2x the disk space. Alternatively, we could split this into
@@ -359,49 +359,50 @@ ao_vacuum_rel_compact(Relation onerel, VacuumParams *params, BufferAccessStrateg
 	 * pg_aoseg needs to happen in a distributed transaction (Problem 3), so
 	 * we would need to coordinate the transactions from the QD.
 	 */
-	insert_segno = -1;
-	while ((compaction_segno = ChooseSegnoForCompaction(onerel, compacted_and_inserted_segments)) != -1)
-	{
-		/*
-		 * Compact this segment. (If the segment doesn't need compaction,
-		 * AppendOnlyCompact() will fall through quickly).
-		 */
-		compacted_segments = lappend_int(compacted_segments, compaction_segno);
-		compacted_and_inserted_segments = lappend_int(compacted_and_inserted_segments,
-													  compaction_segno);
 
-		/* XXX: maybe print this deeper, only if there's work to be done? */
+	/* get all segments need to compact */
+	insert_segno = -1;
+	while ((compaction_segno = ChooseSegnoForCompaction(onerel, compacted_and_inserted_segments, (options & VACOPT_FULL))) != -1)
+	{
+		compacted_segments = lappend_int(compacted_segments, compaction_segno);
+		compacted_and_inserted_segments = lappend_int(compacted_and_inserted_segments, compaction_segno);
+		/* get the insertion segment on first call. */
+		if (insert_segno == -1)
+		{
+			insert_segno = ChooseSegnoForCompactionWrite(onerel, compacted_segments);
+			if (insert_segno != -1)
+				compacted_and_inserted_segments = list_append_unique_int(compacted_and_inserted_segments, insert_segno);
+		}
+
 		if (Debug_appendonly_print_compaction)
-			elog(LOG, "compacting segno %d of %s", compaction_segno, relname);
+			elog(LOG, "choose compaction segno %d of %s", compaction_segno, relname);
+	}
+
+	if (list_length(compacted_segments) > 0)
+	{
 
 		if (RelationIsAoRows(onerel))
+		{
 			AppendOnlyCompact(onerel,
-							  compaction_segno,
-							  &insert_segno,
-							  (options & VACOPT_FULL) != 0,
-							  compacted_segments,
-							  vacrelstats);
+							compacted_segments,
+							insert_segno,
+							vacrelstats);
+		}
 		else
 		{
 			Assert(RelationIsAoCols(onerel));
 			AOCSCompact(onerel,
-						compaction_segno,
-						&insert_segno,
-						(options & VACOPT_FULL) != 0,
 						compacted_segments,
+						insert_segno,
 						vacrelstats);
 		}
-
-		if (insert_segno != -1)
-			compacted_and_inserted_segments = list_append_unique_int(compacted_and_inserted_segments,
-																	 insert_segno);
-
-		/*
-		 * AppendOnlyCompact() updates pg_aoseg. Increment the command counter, so
-		 * that we can update the insertion target pg_aoseg row again.
-		 */
-		CommandCounterIncrement();
 	}
+
+	/*
+	 * AppendOnlyCompact() updates pg_aoseg. Increment the command counter, so
+	 * that we can update the insertion target pg_aoseg row again.
+	 */
+	CommandCounterIncrement();
 
 	SIMPLE_FAULT_INJECTOR("vacuum_ao_after_compact");
 }

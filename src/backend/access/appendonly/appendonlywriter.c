@@ -66,7 +66,12 @@ typedef enum
 	/*
 	 * Select next segment to compact.
 	 */
-	CHOOSE_MODE_COMPACTION_TARGET
+	CHOOSE_MODE_COMPACTION_TARGET,
+
+	/*
+	 * Select next segment to compact(FULL)
+	 */
+	CHOOSE_MODE_COMPACTION_FULL_TARGET
 } choose_segno_mode;
 
 /*
@@ -313,14 +318,18 @@ ChooseSegnoForCompactionWrite(Relation rel, List *avoid_segnos)
  * Select a segfile to compact, during VACUUM.
  */
 int
-ChooseSegnoForCompaction(Relation rel, List *avoid_segnos)
+ChooseSegnoForCompaction(Relation rel, List *avoid_segnos, bool is_full)
 {
+	int			compaction_segno;
+	int			choose_mode;
+
 	if (Debug_appendonly_print_segfile_choice)
 		ereport(LOG,
 				(errmsg("ChooseSegnoForCompaction: Choosing a segfile to compact in relation \"%s\"",
 						RelationGetRelationName(rel))));
 
-	return choose_segno_internal(rel, avoid_segnos, CHOOSE_MODE_COMPACTION_TARGET);
+	choose_mode = is_full ? CHOOSE_MODE_COMPACTION_FULL_TARGET : CHOOSE_MODE_COMPACTION_TARGET;
+	return compaction_segno = choose_segno_internal(rel, avoid_segnos, choose_mode);
 }
 
 /*
@@ -470,7 +479,8 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 		if (list_member_int(avoid_segnos, segno))
 			continue;
 
-		if (mode != CHOOSE_MODE_COMPACTION_TARGET)
+		if (mode != CHOOSE_MODE_COMPACTION_TARGET && 
+			mode != CHOOSE_MODE_COMPACTION_FULL_TARGET)
 		{
 			/* If the ao segment is full, skip it */
 			if (tupcount > segfileMaxRowThreshold())
@@ -556,6 +566,18 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 					break;
 			}
 
+			if (mode == CHOOSE_MODE_COMPACTION_TARGET &&
+				!AppendOnlyCompaction_ShouldCompact(rel, candidates[i].segno, 
+												   candidates[i].tupcount, false, 
+												   snapshot))
+				continue;
+			
+			if (mode == CHOOSE_MODE_COMPACTION_FULL_TARGET &&
+				!AppendOnlyCompaction_ShouldCompact(rel, candidates[i].segno, 
+												   candidates[i].tupcount, true, 
+												   snapshot))
+				continue;
+
 			locktup.t_self = candidates[i].ctid;
 			result = heap_lock_tuple(pg_aoseg_rel, &locktup,
 									 GetCurrentCommandId(true),
@@ -587,6 +609,7 @@ choose_segno_internal(Relation rel, List *avoid_segnos, choose_segno_mode mode)
 	 */
 	if (chosen_segno == -1 &&
 		mode != CHOOSE_MODE_COMPACTION_TARGET &&
+		mode != CHOOSE_MODE_COMPACTION_FULL_TARGET &&
 		!tried_creating_new_segfile)
 	{
 		chosen_segno = choose_new_segfile(rel, used, avoid_segnos);

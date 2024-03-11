@@ -36,10 +36,8 @@ typedef struct AOVacuumRelStats
 extern Bitmapset *AppendOptimizedCollectDeadSegments(Relation aorel);
 extern void AppendOptimizedDropDeadSegments(Relation aorel, Bitmapset *segnos, AOVacuumRelStats *vacrelstats);
 extern void AppendOnlyCompact(Relation aorel,
-							  int compaction_segno,
-							  int *insert_segno,
-							  bool isFull,
-							  List *avoid_segnos,
+							  List *compaction_segnos,
+							  int insert_segno,
 							  AOVacuumRelStats *vacrelstats);
 extern bool AppendOnlyCompaction_ShouldCompact(
 								   Relation aoRelation,
