@@ -45,6 +45,7 @@ FORMAT 'text' (delimiter '|');
 -- 17. import data into table with string and numeric fields - data OK - no line_delimiter in input data file
 -- 18. import data into table with string and numeric fields - data OK - line delimiter containing several chars
 -- 19. MPP-14467 import data from file - field names with spaces
+-- 20. issue-15038 fixedwidth custom with char(n), please refer to https://github.com/greenplum-db/gpdb/issues/15038
 -- 1.  import data into table with string and numeric fields - data OK 
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
 NOTICE:  table "tbl_ext_fixedwidth" does not exist, skipping
@@ -10505,6 +10506,67 @@ SELECT * FROM clean_out_file;
 ---
 (0 rows)
 
+-- 20. issue-15038 fixedwidth custom with char(n), please refer to https://github.com/greenplum-db/gpdb/issues/15038
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth_read;
+NOTICE:  foreign table "tbl_ext_fixedwidth_read" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth_write;
+NOTICE:  foreign table "tbl_ext_fixedwidth_write" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth_read_mismatch;
+NOTICE:  foreign table "tbl_ext_fixedwidth_read_mismatch" does not exist, skipping
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth_write_mismatch;
+NOTICE:  foreign table "tbl_ext_fixedwidth_write_mismatch" does not exist, skipping
+-- fixedwidth matches the size of char(n)
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth_read (
+    s1 char(5), s2 text)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_encoding_GBK.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1=10, s2=10) ENCODING 'GBK';
+SELECT * FROM tbl_ext_fixedwidth_read ORDER BY s1;
+     s1     |     s2     
+------------+------------
+ 一二三四五 | 六七八九十
+ 一二三四五 | 六七八九十
+ 一二三四五 | 六七八九十
+ 一二三四五 | 六七八九十
+ 一二三四五 | 六七八九十
+ 一二三四五 | 六七八九十
+ 一二三四五 | 六七八九十
+ 一二三四五 | 六七八九十
+ 一二三四五 | 六七八九十
+ 一二三四五 | 六七八九十
+(10 rows)
+
+CREATE WRITABLE EXTERNAL TABLE tbl_ext_fixedwidth_write (
+    s1 char(5), s2 text)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_encoding_GBK_output.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10', s2='10') ENCODING 'GBK';
+INSERT INTO tbl_ext_fixedwidth_write (s1, s2) SELECT * FROM tbl_ext_fixedwidth_read;
+INSERT INTO tbl_ext_fixedwidth_write (s1, s2) values ('一二三四五','六七八九十');
+-- fixedwidth mismatches the size of char(n)
+CREATE READABLE EXTERNAL TABLE tbl_ext_fixedwidth_read_mismatch (
+    s1 char(10), s2 text)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_encoding_GBK.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1=10, s2=10) ENCODING 'GBK';
+SELECT * FROM tbl_ext_fixedwidth_read_mismatch ORDER BY s1;
+       s1        |     s2     
+-----------------+------------
+ 一二三四五      | 六七八九十
+ 一二三四五      | 六七八九十
+ 一二三四五      | 六七八九十
+ 一二三四五      | 六七八九十
+ 一二三四五      | 六七八九十
+ 一二三四五      | 六七八九十
+ 一二三四五      | 六七八九十
+ 一二三四五      | 六七八九十
+ 一二三四五      | 六七八九十
+ 一二三四五      | 六七八九十
+(10 rows)
+
+CREATE WRITABLE EXTERNAL TABLE tbl_ext_fixedwidth_write_mismatch (
+    s1 char(10), s2 text)
+LOCATION ('gpfdist://@hostname@:7575/fixedwidth_encoding_GBK_output.tbl')
+FORMAT 'CUSTOM' (formatter='fixedwidth_out', s1='10', s2='10') ENCODING 'GBK';
+INSERT INTO tbl_ext_fixedwidth_write_mismatch (s1, s2) SELECT * FROM tbl_ext_fixedwidth_read_mismatch;
+INSERT INTO tbl_ext_fixedwidth_write_mismatch (s1, s2) values ('一二三四五','六七八九十');
 -- --------------------------------------
 -- stop 'gpfdist'
 -- --------------------------------------
@@ -10519,3 +10581,7 @@ DROP EXTERNAL WEB TABLE IF EXISTS clean_out_file;
  
 DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth;
 DROP EXTERNAL TABLE IF EXISTS tbl_out_fixedwidth;
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth_read;
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth_write;
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth_read_mismatch;
+DROP EXTERNAL TABLE IF EXISTS tbl_ext_fixedwidth_write_mismatch;
