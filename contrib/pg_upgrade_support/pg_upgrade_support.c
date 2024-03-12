@@ -64,11 +64,13 @@ PG_FUNCTION_INFO_V1(view_has_anyarray_casts);
 PG_FUNCTION_INFO_V1(view_has_unknown_casts);
 PG_FUNCTION_INFO_V1(view_has_removed_operators);
 PG_FUNCTION_INFO_V1(view_has_removed_functions);
+PG_FUNCTION_INFO_V1(view_has_removed_types);
 
 static bool check_node_anyarray_walker(Node *node, void *context);
 static bool check_node_unknown_walker(Node *node, void *context);
 static bool check_node_removed_operators_walker(Node *node, void *context);
 static bool check_node_removed_functions_walker(Node *node, void *context);
+static bool check_node_removed_types_walker(Node *node, void *context);
 
 Datum
 set_next_pg_type_oid(PG_FUNCTION_ARGS)
@@ -639,4 +641,75 @@ check_node_removed_functions_walker(Node *node, void *context)
 	}
 
 	return expression_tree_walker(node, check_node_removed_functions_walker, context);
+}
+
+
+Datum
+view_has_removed_types(PG_FUNCTION_ARGS)
+{
+	Oid		  view_oid = PG_GETARG_OID(0);
+	Relation  rel = try_relation_open(view_oid, AccessShareLock, false);
+	Query	 *viewquery;
+	bool	  found;
+
+	if (!RelationIsValid(rel))
+		elog(ERROR, "Could not open relation file for relation oid %u", view_oid);
+
+	if(rel->rd_rel->relkind == RELKIND_VIEW)
+	{
+		viewquery = get_view_query(rel);
+		found = query_tree_walker(viewquery, check_node_removed_types_walker, NULL, 0);
+	}
+	else
+		found = false;
+
+	relation_close(rel, AccessShareLock);
+
+	PG_RETURN_BOOL(found);
+}
+
+static bool
+check_node_removed_types_walker(Node *node, void *context)
+{
+	Assert(context == NULL);
+
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, Var) || IsA(node, Const))
+	{
+		Oid type_oid;
+		if IsA(node, Var)
+			type_oid = ((Var *)node)->vartype;
+		else
+			type_oid = ((Const *)node)->consttype;
+
+		if (type_oid == 12475 || // gp_toolkit.gp_size_of_partition_and_indexes_disk
+			type_oid == 12366 || // gp_toolkit.__gp_user_data_tables
+			type_oid ==  1023 || // pg_catalog._abstime
+			type_oid ==   702 || // pg_catalog.abstime
+			type_oid == 11612 || // pg_catalog.pg_partition
+			type_oid == 11787 || // pg_catalog.pg_partition_columns
+			type_oid == 11617 || // pg_catalog.pg_partition_encoding
+			type_oid == 11613 || // pg_catalog.pg_partition_rule
+			type_oid == 11783 || // pg_catalog.pg_partitions
+			type_oid == 11790 || // pg_catalog.pg_partition_templates
+			type_oid == 11797 || // pg_catalog.pg_stat_partition_operations
+			type_oid ==  1024 || // pg_catalog._reltime
+			type_oid ==   703 || // pg_catalog.reltime
+			type_oid ==   210 || // pg_catalog.smgr
+			type_oid ==  1025 || // pg_catalog._tinterval
+			type_oid ==   704)   // pg_catalog.tinterval
+			return true;
+
+		return false;
+	}
+	else if (IsA(node, Query))
+	{
+		/* recurse into subselects and ctes */
+		Query *query = (Query *) node;
+		return query_tree_walker(query, check_node_removed_types_walker, context, 0);
+	}
+
+	return expression_tree_walker(node, check_node_removed_types_walker, context);
 }
