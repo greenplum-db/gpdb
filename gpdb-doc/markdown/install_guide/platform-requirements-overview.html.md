@@ -81,7 +81,7 @@ Greenplum Databased 7 supports these Java versions for PL/Java and PXF:
 -   Open JDK 8 or Open JDK 11, available from [AdoptOpenJDK](https://adoptopenjdk.net)
 -   Oracle JDK 8 or Oracle JDK 11
 
-#### <a id="topic_xbl_mkx_python"></a>Python
+### <a id="topic_xbl_mkx_python"></a>Python
 
 Greenplum Database uses the system default `python3` for the Greenplum management utilities, and `python3.9` for the [PL/Python module](../analytics/pl_python.html). For most of the supported OS versions, the system default `python3` is `python3.9`. If you are installing Greenplum Database on Rocky Linux 8, the default `python3` version included is `python3.6`. You may want to unify the `python3` versions to `python3.9` by running the following commands:
 
