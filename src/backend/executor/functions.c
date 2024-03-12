@@ -1278,8 +1278,6 @@ PG_TRY();
 		gp_enable_gpperfmon = false;
 	}
 
-	gp_enable_gpperfmon = orig_gp_enable_gpperfmon;
-
 	/*
 	 * Execute each command in the function one after another until we either
 	 * run out of commands or get a result row from a lazily-evaluated SELECT.
