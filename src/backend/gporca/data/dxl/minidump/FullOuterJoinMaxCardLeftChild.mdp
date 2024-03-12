@@ -123,10 +123,10 @@
         </dxl:LogicalCTEAnchor>
       </dxl:LogicalCTEAnchor>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="2">
-      <dxl:Sequence>
+    <dxl:Plan Id="0" SpaceSize="4">
+      <dxl:Result>
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="2648064.154894" Rows="4.000000" Width="8"/>
+          <dxl:Cost StartupCost="0" TotalCost="2648064.149659" Rows="4.000000" Width="8"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="2" Alias="a">
@@ -136,51 +136,27 @@
             <dxl:Ident ColId="3" ColName="column1" TypeMdid="0.23.1.0"/>
           </dxl:ProjElem>
         </dxl:ProjList>
-        <dxl:CTEProducer CTEId="2" Columns="4">
-          <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="0.000010" Rows="2.000000" Width="1"/>
-          </dxl:Properties>
-          <dxl:ProjList>
-            <dxl:ProjElem ColId="4" Alias="column1">
-              <dxl:Ident ColId="4" ColName="column1" TypeMdid="0.23.1.0"/>
-            </dxl:ProjElem>
-          </dxl:ProjList>
-          <dxl:Values>
-            <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="0.000008" Rows="2.000000" Width="4"/>
-            </dxl:Properties>
-            <dxl:ProjList>
-              <dxl:ProjElem ColId="4" Alias="column1">
-                <dxl:Ident ColId="4" ColName="column1" TypeMdid="0.23.1.0"/>
-              </dxl:ProjElem>
-            </dxl:ProjList>
-            <dxl:ValuesList>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
-            </dxl:ValuesList>
-            <dxl:ValuesList>
-              <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
-            </dxl:ValuesList>
-          </dxl:Values>
-        </dxl:CTEProducer>
+        <dxl:Filter/>
+        <dxl:OneTimeFilter/>
         <dxl:Sequence>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="2648064.154852" Rows="4.000000" Width="8"/>
+            <dxl:Cost StartupCost="0" TotalCost="2648064.149659" Rows="4.000000" Width="8"/>
           </dxl:Properties>
           <dxl:ProjList>
-            <dxl:ProjElem ColId="2" Alias="column1">
-              <dxl:Ident ColId="2" ColName="column1" TypeMdid="0.23.1.0"/>
-            </dxl:ProjElem>
             <dxl:ProjElem ColId="3" Alias="column1">
               <dxl:Ident ColId="3" ColName="column1" TypeMdid="0.23.1.0"/>
             </dxl:ProjElem>
+            <dxl:ProjElem ColId="2" Alias="column1">
+              <dxl:Ident ColId="2" ColName="column1" TypeMdid="0.23.1.0"/>
+            </dxl:ProjElem>
           </dxl:ProjList>
-          <dxl:CTEProducer CTEId="3" Columns="5">
+          <dxl:CTEProducer CTEId="4" Columns="9">
             <dxl:Properties>
               <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="1"/>
             </dxl:Properties>
             <dxl:ProjList>
-              <dxl:ProjElem ColId="5" Alias="column1">
-                <dxl:Ident ColId="5" ColName="column1" TypeMdid="0.23.1.0"/>
+              <dxl:ProjElem ColId="9" Alias="column1">
+                <dxl:Ident ColId="9" ColName="column1" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Result>
@@ -188,8 +164,8 @@
                 <dxl:Cost StartupCost="0" TotalCost="0.000000" Rows="0.000000" Width="4"/>
               </dxl:Properties>
               <dxl:ProjList>
-                <dxl:ProjElem ColId="5" Alias="column1">
-                  <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
+                <dxl:ProjElem ColId="9" Alias="column1">
+                  <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
@@ -198,108 +174,147 @@
               </dxl:OneTimeFilter>
             </dxl:Result>
           </dxl:CTEProducer>
-          <dxl:Append IsTarget="false" IsZapped="false">
+          <dxl:Sequence>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="2648064.154820" Rows="4.000000" Width="8"/>
+              <dxl:Cost StartupCost="0" TotalCost="2648064.149627" Rows="4.000000" Width="8"/>
             </dxl:Properties>
             <dxl:ProjList>
-              <dxl:ProjElem ColId="2" Alias="column1">
-                <dxl:Ident ColId="2" ColName="column1" TypeMdid="0.23.1.0"/>
-              </dxl:ProjElem>
               <dxl:ProjElem ColId="3" Alias="column1">
                 <dxl:Ident ColId="3" ColName="column1" TypeMdid="0.23.1.0"/>
               </dxl:ProjElem>
+              <dxl:ProjElem ColId="2" Alias="column1">
+                <dxl:Ident ColId="2" ColName="column1" TypeMdid="0.23.1.0"/>
+              </dxl:ProjElem>
             </dxl:ProjList>
-            <dxl:Filter/>
-            <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
+            <dxl:CTEProducer CTEId="5" Columns="10">
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1324032.133603" Rows="3.000000" Width="8"/>
+                <dxl:Cost StartupCost="0" TotalCost="0.000010" Rows="2.000000" Width="1"/>
               </dxl:Properties>
               <dxl:ProjList>
-                <dxl:ProjElem ColId="2" Alias="column1">
-                  <dxl:Ident ColId="2" ColName="column1" TypeMdid="0.23.1.0"/>
+                <dxl:ProjElem ColId="10" Alias="column1">
+                  <dxl:Ident ColId="10" ColName="column1" TypeMdid="0.23.1.0"/>
                 </dxl:ProjElem>
+              </dxl:ProjList>
+              <dxl:Values>
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="0.000008" Rows="2.000000" Width="4"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="10" Alias="column1">
+                    <dxl:Ident ColId="10" ColName="column1" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+                <dxl:ValuesList>
+                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="1"/>
+                </dxl:ValuesList>
+                <dxl:ValuesList>
+                  <dxl:ConstValue TypeMdid="0.23.1.0" Value="2"/>
+                </dxl:ValuesList>
+              </dxl:Values>
+            </dxl:CTEProducer>
+            <dxl:Append IsTarget="false" IsZapped="false">
+              <dxl:Properties>
+                <dxl:Cost StartupCost="0" TotalCost="2648064.149585" Rows="4.000000" Width="8"/>
+              </dxl:Properties>
+              <dxl:ProjList>
                 <dxl:ProjElem ColId="3" Alias="column1">
                   <dxl:Ident ColId="3" ColName="column1" TypeMdid="0.23.1.0"/>
                 </dxl:ProjElem>
+                <dxl:ProjElem ColId="2" Alias="column1">
+                  <dxl:Ident ColId="2" ColName="column1" TypeMdid="0.23.1.0"/>
+                </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:JoinFilter>
-                <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
-              </dxl:JoinFilter>
-              <dxl:CTEConsumer CTEId="2" Columns="2">
+              <dxl:NestedLoopJoin JoinType="Left" IndexNestedLoopJoin="false" OuterRefAsParam="false">
                 <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="2.000000" Width="4"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="2" Alias="column1">
-                    <dxl:Ident ColId="2" ColName="column1" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-              </dxl:CTEConsumer>
-              <dxl:CTEConsumer CTEId="3" Columns="3">
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000000" Rows="0.000000" Width="4"/>
+                  <dxl:Cost StartupCost="0" TotalCost="1324032.092324" Rows="2.000000" Width="8"/>
                 </dxl:Properties>
                 <dxl:ProjList>
                   <dxl:ProjElem ColId="3" Alias="column1">
                     <dxl:Ident ColId="3" ColName="column1" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
-                </dxl:ProjList>
-              </dxl:CTEConsumer>
-            </dxl:NestedLoopJoin>
-            <dxl:Result>
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="1324032.021184" Rows="1.000000" Width="8"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="8" Alias="column1">
-                  <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true" IsByValue="true"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="7" Alias="column1">
-                  <dxl:Ident ColId="7" ColName="column1" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:OneTimeFilter/>
-              <dxl:NestedLoopJoin JoinType="LeftAntiSemiJoin" IndexNestedLoopJoin="false" OuterRefAsParam="false">
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="1324032.021176" Rows="1.000000" Width="4"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="7" Alias="column1">
-                    <dxl:Ident ColId="7" ColName="column1" TypeMdid="0.23.1.0"/>
+                  <dxl:ProjElem ColId="2" Alias="column1">
+                    <dxl:Ident ColId="2" ColName="column1" TypeMdid="0.23.1.0"/>
                   </dxl:ProjElem>
                 </dxl:ProjList>
                 <dxl:Filter/>
                 <dxl:JoinFilter>
                   <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
                 </dxl:JoinFilter>
-                <dxl:CTEConsumer CTEId="3" Columns="7">
+                <dxl:CTEConsumer CTEId="4" Columns="3">
                   <dxl:Properties>
                     <dxl:Cost StartupCost="0" TotalCost="431.000000" Rows="0.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
-                    <dxl:ProjElem ColId="7" Alias="column1">
-                      <dxl:Ident ColId="7" ColName="column1" TypeMdid="0.23.1.0"/>
+                    <dxl:ProjElem ColId="3" Alias="column1">
+                      <dxl:Ident ColId="3" ColName="column1" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
                 </dxl:CTEConsumer>
-                <dxl:CTEConsumer CTEId="2" Columns="6">
+                <dxl:CTEConsumer CTEId="5" Columns="2">
                   <dxl:Properties>
-                    <dxl:Cost StartupCost="0" TotalCost="431.000005" Rows="2.000000" Width="1"/>
+                    <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="2.000000" Width="4"/>
                   </dxl:Properties>
                   <dxl:ProjList>
-                    <dxl:ProjElem ColId="6" Alias="column1">
-                      <dxl:Ident ColId="6" ColName="column1" TypeMdid="0.23.1.0"/>
+                    <dxl:ProjElem ColId="2" Alias="column1">
+                      <dxl:Ident ColId="2" ColName="column1" TypeMdid="0.23.1.0"/>
                     </dxl:ProjElem>
                   </dxl:ProjList>
                 </dxl:CTEConsumer>
               </dxl:NestedLoopJoin>
-            </dxl:Result>
-          </dxl:Append>
+              <dxl:Result>
+                <dxl:Properties>
+                  <dxl:Cost StartupCost="0" TotalCost="1324032.057229" Rows="2.000000" Width="8"/>
+                </dxl:Properties>
+                <dxl:ProjList>
+                  <dxl:ProjElem ColId="13" Alias="column1">
+                    <dxl:ConstValue TypeMdid="0.23.1.0" IsNull="true"/>
+                  </dxl:ProjElem>
+                  <dxl:ProjElem ColId="12" Alias="column1">
+                    <dxl:Ident ColId="12" ColName="column1" TypeMdid="0.23.1.0"/>
+                  </dxl:ProjElem>
+                </dxl:ProjList>
+                <dxl:Filter/>
+                <dxl:OneTimeFilter/>
+                <dxl:NestedLoopJoin JoinType="LeftAntiSemiJoin" IndexNestedLoopJoin="false" OuterRefAsParam="false">
+                  <dxl:Properties>
+                    <dxl:Cost StartupCost="0" TotalCost="1324032.057213" Rows="2.000000" Width="4"/>
+                  </dxl:Properties>
+                  <dxl:ProjList>
+                    <dxl:ProjElem ColId="12" Alias="column1">
+                      <dxl:Ident ColId="12" ColName="column1" TypeMdid="0.23.1.0"/>
+                    </dxl:ProjElem>
+                  </dxl:ProjList>
+                  <dxl:Filter/>
+                  <dxl:JoinFilter>
+                    <dxl:ConstValue TypeMdid="0.16.1.0" Value="true"/>
+                  </dxl:JoinFilter>
+                  <dxl:CTEConsumer CTEId="5" Columns="12">
+                    <dxl:Properties>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000019" Rows="2.000000" Width="4"/>
+                    </dxl:Properties>
+                    <dxl:ProjList>
+                      <dxl:ProjElem ColId="12" Alias="column1">
+                        <dxl:Ident ColId="12" ColName="column1" TypeMdid="0.23.1.0"/>
+                      </dxl:ProjElem>
+                    </dxl:ProjList>
+                  </dxl:CTEConsumer>
+                  <dxl:CTEConsumer CTEId="4" Columns="11">
+                    <dxl:Properties>
+                      <dxl:Cost StartupCost="0" TotalCost="431.000000" Rows="0.000000" Width="1"/>
+                    </dxl:Properties>
+                    <dxl:ProjList>
+                      <dxl:ProjElem ColId="11" Alias="column1">
+                        <dxl:Ident ColId="11" ColName="column1" TypeMdid="0.23.1.0"/>
+                      </dxl:ProjElem>
+                    </dxl:ProjList>
+                  </dxl:CTEConsumer>
+                </dxl:NestedLoopJoin>
+              </dxl:Result>
+            </dxl:Append>
+          </dxl:Sequence>
         </dxl:Sequence>
-      </dxl:Sequence>
+      </dxl:Result>
     </dxl:Plan>
   </dxl:Thread>
 </dxl:DXLMessage>
