@@ -26,6 +26,10 @@ The Greenplum Database distribution includes several PostgreSQL- and Greenplum-s
 Describes the available timezone and localization features of Greenplum Database.
 -   **[Upgrading to Greenplum 6](upgrade_intro.html)**  
 This topic identifies the upgrade paths for upgrading a Greenplum Database 6.x release to a newer 6.x release. The topic also describes the migration paths for migrating VMware Greenplum Database 4.x or 5.x data to Greenplum Database 6.x.
+-   **[Migrating Open Source Greenplum Database to VMware Greenplum Database](migrate-oss-to-vmware.html)**
+This topic describes how to migrate an Open Source Greenplum Database installation to commercial VMware Greenplum.
+-   **[Migrating VMware Greenplum from Enterprise Linux 7 to 8 or 9](migrate-linux.html)**
+This topic describes how to migrate a VMware Greenplum Database installation from Enterprise Linux (EL) version 7 to Enterprise Linux 8 or Enterprise Linux 9, while maintaining your existing version of Greenplum Database.
 -   **[Enabling iptables \(Optional\)](enable_iptables.html)**  
 On Linux systems, you can configure and enable the `iptables` firewall to work with Greenplum Database.
 -   **[Installation Management Utilities](apx_mgmt_utils.html)**  
