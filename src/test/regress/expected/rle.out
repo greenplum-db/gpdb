@@ -11286,3 +11286,38 @@ insert into sml_rle_hdr values (-1,-1.1);
 set client_min_messages=warning;
 update sml_rle_hdr set b = b + 10 where a = -1;
 commit;
+-- Some smoke tests against rle's levels using zstd
+create table co_rle_zstd1(i int encoding(compresstype=rle_type, compresslevel=5)) with (appendonly=true, orientation=column);
+create table co_rle_zstd3(i int encoding(compresstype=rle_type, compresslevel=6)) with (appendonly=true, orientation=column);
+\d+ co_rle_zstd1
+                                    Append-Only Columnar Table "public.co_rle_zstd1"
+ Column |  Type   | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+---------+-----------+---------+--------------+------------------+-------------------+------------+-------------
+ i      | integer |           | plain   |              | rle_type         | 5                 | 32768      | 
+Checksum: t
+Distributed by: (i)
+Options: appendonly=true, orientation=column
+
+\d+ co_rle_zstd3
+                                    Append-Only Columnar Table "public.co_rle_zstd3"
+ Column |  Type   | Modifiers | Storage | Stats target | Compression Type | Compression Level | Block Size | Description 
+--------+---------+-----------+---------+--------------+------------------+-------------------+------------+-------------
+ i      | integer |           | plain   |              | rle_type         | 6                 | 32768      | 
+Checksum: t
+Distributed by: (i)
+Options: appendonly=true, orientation=column
+
+insert into co_rle_zstd1 select generate_series(1, 100000);
+insert into co_rle_zstd3 select generate_series(1, 100000);
+select count(distinct i) from co_rle_zstd1;
+ count  
+--------
+ 100000
+(1 row)
+
+select count(distinct i) from co_rle_zstd3;
+ count  
+--------
+ 100000
+(1 row)
+

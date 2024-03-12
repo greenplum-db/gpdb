@@ -51,6 +51,12 @@ DROP TABLE IF EXISTS public.mergeappend_test;
 DROP TABLE IF EXISTS public.multivarblock_parttab;
 DROP TABLE IF EXISTS public.aopart_lineitem CASCADE;
 
+-- Drop tables carrying rle with zstd compression. That is not available in
+-- earlier minor versions.
+DROP TABLE co_rle_zstd1;
+DROP TABLE co_rle_zstd3;
+DROP TABLE co6;
+
 \c isolation2test;
 DROP VIEW IF EXISTS locktest_segments;
 DROP VIEW IF EXISTS locktest_master;

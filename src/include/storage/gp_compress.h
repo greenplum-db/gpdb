@@ -80,6 +80,12 @@ typedef struct
 extern void zstd_free_context(zstd_context *context);
 extern zstd_context *zstd_alloc_context(void);
 
+#define RLE_MAX_LEVEL	(6)
+
+#else
+
+#define RLE_MAX_LEVEL	(4)
+
 #endif	/* HAVE_LIBZSTD */
 
 

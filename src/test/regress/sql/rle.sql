@@ -4808,3 +4808,13 @@ insert into sml_rle_hdr values (-1,-1.1);
 set client_min_messages=warning;
 update sml_rle_hdr set b = b + 10 where a = -1;
 commit;
+
+-- Some smoke tests against rle's levels using zstd
+create table co_rle_zstd1(i int encoding(compresstype=rle_type, compresslevel=5)) with (appendonly=true, orientation=column);
+create table co_rle_zstd3(i int encoding(compresstype=rle_type, compresslevel=6)) with (appendonly=true, orientation=column);
+\d+ co_rle_zstd1
+\d+ co_rle_zstd3
+insert into co_rle_zstd1 select generate_series(1, 100000);
+insert into co_rle_zstd3 select generate_series(1, 100000);
+select count(distinct i) from co_rle_zstd1;
+select count(distinct i) from co_rle_zstd3;

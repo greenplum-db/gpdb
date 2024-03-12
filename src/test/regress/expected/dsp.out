@@ -510,16 +510,15 @@ create table co6(
 	a int encoding (compresstype=rle_type),
 	b float encoding (blocksize=8192))
 	distributed by (a);
-ERROR:  compresslevel=5 is out of range for rle_type (should be in the range 1 to 4)
 create table co7(a int, b float,
 	default column encoding (compresstype=RLE_TYPE, compresslevel=7))
 	distributed by (a);
-ERROR:  compresslevel=7 is out of range for rle_type (should be in the range 1 to 4)
+ERROR:  compresslevel=7 is out of range for rle_type (should be in the range 1 to 6)
 -- negative tests - session level set
 set gp_default_storage_options="compresstype=zlib,compresslevel=11";
 ERROR:  compresslevel=11 is out of range for zlib (should be in the range 1 to 9)
 set gp_default_storage_options="compresslevel=5,compresstype=RLE_TYPE";
-ERROR:  compresslevel=5 is out of range for rle_type (should be in the range 1 to 4)
+ERROR:  rle_type cannot be used with Append Only relations row orientation
 set gp_default_storage_options="compresslevel=1,compresstype=rle";
 ERROR:  unknown compresstype "rle"
 set gp_default_storage_options="checksum=1234";

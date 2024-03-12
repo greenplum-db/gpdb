@@ -434,7 +434,19 @@ init_datumstream_info(
 				ao_attr->compressType = "zlib";
 				ao_attr->compressLevel = 9;
 				break;
+#ifdef HAVE_LIBZSTD
+			case 5:
+				ao_attr->compress = true;
+				ao_attr->compressType = "zstd";
+				ao_attr->compressLevel = 1;
+				break;
 
+			case 6:
+				ao_attr->compress = true;
+				ao_attr->compressType = "zstd";
+				ao_attr->compressLevel = 3; /* zstd recommended default */
+				break;
+#endif
 			default:
 				ereport(ERROR,
 						(errmsg("Unexpected compresslevel %d",
