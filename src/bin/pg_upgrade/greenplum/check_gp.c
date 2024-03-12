@@ -28,6 +28,7 @@ static void check_for_array_of_partition_table_types(ClusterInfo *cluster);
 static void check_multi_column_list_partition_keys(ClusterInfo *cluster);
 static void check_for_plpython2_dependent_functions(ClusterInfo *cluster);
 static void check_views_with_removed_operators(void);
+static void check_views_with_removed_functions(void);
 
 /*
  *	check_greenplum
@@ -49,6 +50,7 @@ check_greenplum(void)
 	check_multi_column_list_partition_keys(&old_cluster);
 	check_for_plpython2_dependent_functions(&old_cluster);
 	check_views_with_removed_operators();
+	check_views_with_removed_functions();
 }
 
 /*
@@ -901,3 +903,85 @@ check_views_with_removed_operators()
 		check_ok();
 }
 
+static void
+check_views_with_removed_functions()
+{
+	char  output_path[MAXPGPATH];
+	FILE *script = NULL;
+	bool  found = false;
+	int   dbnum;
+	int   i_viewname;
+
+	prep_status("Checking for views with removed functions");
+
+	snprintf(output_path, sizeof(output_path), "views_with_removed_functions.txt");
+
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		int			ntups;
+		int			rowno;
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn;
+		bool		db_used = false;
+
+		conn = connectToServer(&old_cluster, active_db->db_name);
+		PQclear(executeQueryOrDie(conn, "SET search_path TO 'public';"));
+
+		/*
+		 * Disabling track_counts results in a large performance improvement,
+		 * several orders of magnitude, when walking the views in
+		 * view_has_removed_operators.
+		 */
+		PQclear(executeQueryOrDie(conn, "SET track_counts TO off;"));
+
+		/* Install check support function */
+		PQclear(executeQueryOrDie(conn,
+								  "CREATE OR REPLACE FUNCTION "
+								  "view_has_removed_functions(OID) "
+								  "RETURNS BOOL "
+								  "AS '$libdir/pg_upgrade_support' "
+								  "LANGUAGE C STRICT;"));
+		res = executeQueryOrDie(conn,
+								"SELECT quote_ident(n.nspname) || '.' || quote_ident(c.relname) AS badviewname "
+								"FROM pg_class c JOIN pg_namespace n on c.relnamespace=n.oid "
+								"WHERE c.relkind = 'v' "
+								"AND c.oid >= 16384 "
+								"AND view_has_removed_functions(c.oid) = TRUE;");
+
+		PQclear(executeQueryOrDie(conn, "DROP FUNCTION view_has_removed_functions(OID);"));
+		PQclear(executeQueryOrDie(conn, "SET search_path to 'pg_catalog';"));
+		PQclear(executeQueryOrDie(conn, "RESET track_counts;"));
+
+		ntups = PQntuples(res);
+		i_viewname = PQfnumber(res, "badviewname");
+		for (rowno = 0; rowno < ntups; rowno++)
+		{
+			found = true;
+			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
+			if (!db_used)
+			{
+				fprintf(script, "Database: %s\n", active_db->db_name);
+				db_used = true;
+			}
+			fprintf(script, "  %s\n", PQgetvalue(res, rowno, i_viewname));
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+
+	if (found)
+	{
+		pg_log(PG_REPORT, "fatal\n");
+		gp_fatal_log(
+			   "| Your installation contains views using removed functions.\n"
+			   "| These functions are no longer present on the target version.\n"
+			   "| These views must be updated to use functions supported in the\n"
+			   "| target version or removed before upgrade can continue. A list\n"
+			   "| of the problem views is in the file:\n\t%s\n\n", output_path);
+	}
+	else
+		check_ok();
+}
