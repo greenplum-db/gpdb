@@ -115,7 +115,6 @@ static void AcquireExecutorLocks(List *stmt_list, bool acquire);
 static void AcquirePlannerLocks(List *stmt_list, bool acquire);
 static void ScanQueryForLocks(Query *parsetree, bool acquire);
 static bool ScanQueryWalker(Node *node, bool *acquire);
-static bool plan_list_is_oneoff(List *stmt_list);
 static TupleDesc PlanCacheComputeResultDesc(List *stmt_list);
 static void PlanCacheRelCallback(Datum arg, Oid relid);
 static void PlanCacheObjectCallback(Datum arg, int cacheid, uint32 hashvalue);
@@ -913,8 +912,9 @@ BuildCachedPlan(CachedPlanSource *plansource, List *qlist,
 {
 	CachedPlan *plan;
 	List	   *plist;
-	bool		snapshot_set;
-	bool		is_transient;
+	bool		snapshot_set = false;
+	bool		is_transient = false;
+	bool		is_oneoff = false;
 	MemoryContext plan_context;
 	MemoryContext oldcxt = CurrentMemoryContext;
 	ListCell   *lc;
@@ -952,7 +952,6 @@ BuildCachedPlan(CachedPlanSource *plansource, List *qlist,
 	 * If a snapshot is already set (the normal case), we can just use that
 	 * for planning.  But if it isn't, and we need one, install one.
 	 */
-	snapshot_set = false;
 	if (!ActiveSnapshotSet() &&
 		plansource->raw_parse_tree &&
 		analyze_requires_snapshot(plansource->raw_parse_tree))
@@ -1007,7 +1006,6 @@ BuildCachedPlan(CachedPlanSource *plansource, List *qlist,
 	 */
 	plan->planRoleId = GetUserId();
 	plan->dependsOnRole = plansource->dependsOnRLS;
-	is_transient = false;
 	foreach(lc, plist)
 	{
 		PlannedStmt *plannedstmt = lfirst_node(PlannedStmt, lc);
@@ -1015,6 +1013,8 @@ BuildCachedPlan(CachedPlanSource *plansource, List *qlist,
 		if (plannedstmt->commandType == CMD_UTILITY)
 			continue;			/* Ignore utility statements */
 
+		if (plannedstmt->oneoffPlan)
+			is_oneoff = true;
 		if (plannedstmt->transientPlan)
 			is_transient = true;
 		if (plannedstmt->dependsOnRole)
@@ -1026,7 +1026,7 @@ BuildCachedPlan(CachedPlanSource *plansource, List *qlist,
 	 * 'one-off', and mustn't be reused. Likewise, plans for CTAS are not
 	 * reused, because the plan depends on the target data distribution.
 	 */
-	if (plan_list_is_oneoff(plist) || intoClause)
+	if (is_oneoff || intoClause)
 	{
 		plan->saved_xmin = BootstrapTransactionId;
 	}
@@ -1844,33 +1844,6 @@ ScanQueryWalker(Node *node, bool *acquire)
 	 */
 	return expression_tree_walker(node, ScanQueryWalker,
 								  (void *) acquire);
-}
-
-/*
- * plan_list_is_oneoff: check if any of the plans in the list are one-off plans
- *
- *
- * GPDB_96_MERGE_FIXME: This GPDB-specific function was inspired by upstream
- * plan_list_is_transient() function. But that one was removed in PostgreSQL
- * 9.6. Should we reconsider this one too?
- */
-static bool
-plan_list_is_oneoff(List *stmt_list)
-{
-	ListCell   *lc;
-
-	foreach(lc, stmt_list)
-	{
-		PlannedStmt *plannedstmt = (PlannedStmt *) lfirst(lc);
-
-		if (!IsA(plannedstmt, PlannedStmt))
-			continue;			/* Ignore utility statements */
-
-		if (plannedstmt->oneoffPlan)
-			return true;
-	}
-
-	return false;
 }
 
 /*
