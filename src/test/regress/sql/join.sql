@@ -933,10 +933,13 @@ order by 1,2;
 
 --
 -- variant where a PlaceHolderVar is needed at a join, but not above the join
--- Greenplum does not fully support the lateral join, ignore the below case.
 --
-
--- start_ignore
+-- TODO_LATERAL: failed to generate plan
+-- If the left path needs params of outer path.
+-- We can not add any motion above left path.
+-- however, in right join, we can not add broadcast motion above right path.
+-- So We can not add proper motion to generate path for right join,
+-- And hit the error: could not devise a query plan for the given query.
 explain (costs off)
 select * from
   int4_tbl as i41,
@@ -959,7 +962,8 @@ select * from
       right join int4_tbl as i43 on (i43.f1 > 1)
       where ss1.loc = ss1.lat) as ss2
 where i41.f1 > 0;
--- end_ignore
+
+select * from int4_tbl a inner join int4_tbl b on false;
 
 --
 -- test the corner cases FULL JOIN ON TRUE and FULL JOIN ON FALSE
@@ -1358,11 +1362,6 @@ select * from
 --
 -- test for appropriate join order in the presence of lateral references
 --
--- start_ignore
--- GPDB_94_STABLE_MERGE_FIXME: Currently LATERAL is not fully supported in GPDB
--- and the queries below are failing at the moment (The first one fails with
--- error and the other two fail with panic). Comment them off temporarily.
-/*
 explain (verbose, costs off)
 select * from
   text_tbl t1
@@ -1411,17 +1410,11 @@ select 1 from
   left join text_tbl as tt4 on (tt3.f1 = tt4.f1),
   lateral (select tt4.f1 as c0 from text_tbl as tt5 limit 1) as ss1
 where tt1.f1 = ss1.c0;
-*/
---end_ignore
+
 
 --
 -- check a case in which a PlaceHolderVar forces join order
 --
-
---start_ignore
---GPDB_94_STABLE_MERGE_FIXME: This query is lateral related and its plan is
---different from PostgreSQL's.  Do not know why yet. Ignore its plan
---temporarily.
 explain (verbose, costs off)
 select ss2.* from
   int4_tbl i41
@@ -1432,7 +1425,6 @@ select ss2.* from
   on i41.f1 = ss1.c1,
   lateral (select i41.*, i8.*, ss1.* from text_tbl limit 1) ss2
 where ss1.c2 = 0;
---end_ignore
 
 select ss2.* from
   int4_tbl i41
@@ -1672,8 +1664,6 @@ where ss.stringu2 !~* ss.case1;
 rollback;
 
 -- test case to expose miscomputation of required relid set for a PHV
--- Greenplum does not fully support the lateral join, ignore the below case.
--- start_ignore
 explain (verbose, costs off)
 select i8.*, ss.v, t.unique2
   from int8_tbl i8
@@ -1688,7 +1678,7 @@ select i8.*, ss.v, t.unique2
     left join lateral (select i4.f1 + 1 as v) as ss on true
     left join tenk1 t on t.unique2 = ss.v
 where q2 = 456;
--- end_ignore
+
 
 -- and check a related issue where we miscompute required relids for
 -- a PHV that's been translated to a child rel
@@ -1800,13 +1790,12 @@ select count(*) from tenk1 a,
   tenk1 b join lateral (values(a.unique1),(-1)) ss(x) on b.unique2 = ss.x;
 
 -- lateral injecting a strange outer join condition
--- start_ignore
--- GPDB_93_MERGE_FIXME: These queries are failing at the moment. Need to investigate.
--- There were a lot of LATERAL fixes in upstream minor versions, so I'm hoping that
--- these will get fixed once we catch up to those. Or if not, at least it will be
--- nicer to work on the code, knowing that there aren't going to be a dozen commits
--- coming up, touching the same area.
--- FAIL with ERROR:  could not devise a query plan for the given query (pathnode.c:416)
+-- TODO_LATERAL: failed to generate plan
+-- If the right path needs params of outer path.
+-- We can not add any motion above right path.
+-- however, in left join, we can not add broadcast motion above left path.
+-- So We can not add proper motion to generate path for left join,
+-- And hit the error: could not devise a query plan for the given query.
 explain (costs off)
   select * from int8_tbl a,
     int8_tbl x left join lateral (select a.q1 from int4_tbl y) ss(z)
@@ -1816,7 +1805,6 @@ select * from int8_tbl a,
   int8_tbl x left join lateral (select a.q1 from int4_tbl y) ss(z)
     on x.q2 = ss.z
   order by a.q1, a.q2, x.q1, x.q2, ss.z;
---end_ignore
 
 -- lateral reference to a join alias variable
 select * from (select f1/2 as x from int4_tbl) ss1 join int4_tbl i4 on x = f1,
@@ -1895,9 +1883,12 @@ select * from int4_tbl a,
   ) ss;
 
 -- lateral reference in a PlaceHolderVar evaluated at join level
--- GPDB_94_STABLE_MERGE_FIXME: The query fails. The change is related to
--- upstream commit acfcd4. Need to come back to fix it when understanding more
--- about that commit.
+-- TODO_LATERAL: failed to generate plan
+-- If the right path needs params of outer path.
+-- We can not add any motion above right path.
+-- however, in left join, we can not add broadcast motion above left path.
+-- So We can not add proper motion to generate path for left join,
+-- And hit the error: could not devise a query plan for the given query.
 explain (verbose, costs off)
 select * from
   int8_tbl a left join lateral
@@ -2039,12 +2030,12 @@ create table join_pt1p1p1 partition of join_pt1p1 for values from (0) to (100);
 insert into join_pt1 values (1, 1, 'x'), (101, 101, 'y');
 create table join_ut1 (a int, b int, c varchar);
 insert into join_ut1 values (101, 101, 'y'), (2, 2, 'z');
--- GPDB_12_MERGE_FIXME: The query fails. This test query is new with v12,
--- but a corresponding query fails on GPDB main, too. I think this is
--- similar to the case marked with GPDB_94_STABLE_MERGE_FIXME above.
--- upstream commit acfcd4. Need to come back to fix it when understanding more
--- about that commit.
--- start_ignore
+-- TODO_LATERAL: failed to generate plan
+-- If the right path needs params of outer path.
+-- We can not add any motion above right path.
+-- however, in left join, we can not add broadcast motion above left path.
+-- So We can not add proper motion to generate path for left join,
+-- And hit the error: could not devise a query plan for the given query.
 explain (verbose, costs off)
 select t1.b, ss.phv from join_ut1 t1 left join lateral
               (select t2.a as t2a, t3.a t3a, least(t1.a, t2.a, t3.a) phv
@@ -2054,7 +2045,7 @@ select t1.b, ss.phv from join_ut1 t1 left join lateral
               (select t2.a as t2a, t3.a t3a, least(t1.a, t2.a, t3.a) phv
 					  from join_pt1 t2 join join_ut1 t3 on t2.a = t3.b) ss
               on t1.a = ss.t2a order by t1.a;
--- end_ignore
+
 
 drop table join_pt1;
 drop table join_ut1;

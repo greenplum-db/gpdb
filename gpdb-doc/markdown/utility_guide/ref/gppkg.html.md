@@ -118,6 +118,6 @@ gppkg query
 Detecting network topology:    [=========================================] [OK] 
 Detect result 
  3 unique hosts found 
-DataSciencePython3.9 - 1.1.0 
+DataSciencePython3.11 - 1.1.0 
 ```
 

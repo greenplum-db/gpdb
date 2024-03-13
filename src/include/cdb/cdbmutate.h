@@ -56,4 +56,5 @@ extern Plan *cdbpathtoplan_create_sri_plan(RangeTblEntry *rte, PlannerInfo *subr
 
 extern bool contains_outer_params(Node *node, void *context);
 extern void checkMotionAboveWorkTableScan(Node* node, PlannerInfo *root);
+extern void checkMotionWithParam(Node *node, Bitmapset *bmsNestParams, PlannerInfo *root);
 #endif   /* CDBMUTATE_H */

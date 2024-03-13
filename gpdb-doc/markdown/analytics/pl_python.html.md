@@ -18,7 +18,7 @@ PL/Python is a loadable procedural language. With the Greenplum Database PL/Pyth
 
 You can run PL/Python code blocks as anonymous code blocks. See the [DO](../ref_guide/sql_commands/DO.html) command in the *Greenplum Database Reference Guide*.
 
-The Greenplum Database PL/Python extension is installed by default with Greenplum Database. `plpython3u` supports developing functions using Python 3.9. The VMware Greenplum installation process installs a Python 3.9 environment to your system as one of its dependencies.
+The Greenplum Database PL/Python extension is installed by default with Greenplum Database. `plpython3u` supports developing functions using Python 3.11. The VMware Greenplum installation process installs a Python 3.11 environment to your system as one of its dependencies.
 
 ### <a id="topic3"></a>Greenplum Database PL/Python Limitations
 
@@ -34,7 +34,7 @@ The PL/Python language is installed with Greenplum Database. To create and run a
 
 For each database that requires its use, register the PL/Python language with the SQL command `CREATE EXTENSION`. Because PL/Python is an untrusted language, only superusers can register PL/Python with a database.
 
-Run this command as the `gpadmin` user to register PL/Python with Python 3.9 support:
+Run this command as the `gpadmin` user to register PL/Python with Python 3.11 support:
 
 ```
 $ psql -d testdb -c 'CREATE EXTENSION plpython3u;'
@@ -45,7 +45,7 @@ PL/Python is registered as an untrusted language.
 ### <a id="topic6"></a>Removing PL/Python Support
 
 
-Run this command as the `gpadmin` user to remove support for PL/Python for Python 3.9:
+Run this command as the `gpadmin` user to remove support for PL/Python for Python 3.11:
 
 ```
 $ psql -d testdb -c 'DROP EXTENSION plpython3u;'
@@ -332,41 +332,41 @@ A transaction cannot be ended when an explicit subtransaction is active.
 
 When you install a Python module for development with PL/Python, the Greenplum Database Python environment must have the module added to it across all segment hosts and mirror hosts in the cluster. When expanding Greenplum Database, you must add the Python modules to the new segment hosts.
 
-Greenplum Database provides a collection of data science-related Python modules that you can use to easily develop PL/Python functions in Greenplum. The modules are provided as two `.gppkg` format files that can be installed into a Greenplum cluster using the `gppkg` utility, with one package supporting development with Python 3.9. See [Python Data Science Module Packages](/oss/install_guide/install_python_dsmod.html) for installation instructions and descriptions of the provided modules.
+Greenplum Database provides a collection of data science-related Python modules that you can use to easily develop PL/Python functions in Greenplum. The modules are provided as two `.gppkg` format files that can be installed into a Greenplum cluster using the `gppkg` utility, with one package supporting development with Python 3.11. See [Python Data Science Module Packages](/oss/install_guide/install_python_dsmod.html) for installation instructions and descriptions of the provided modules.
 
 To develop with modules that are not part of the Python Data Science Module packages, you can use Greenplum utilities such as `gpssh` and `gpsync` to run commands or copy files to all hosts in the Greenplum cluster. These sections describe how to use those utilities to install and use additional Python modules:
 
 -   [Verifying the Python Environment](#about_python_env)
 -   [Installing Python pip](#topic_yx3_yjq_rt)
--   [Installing Python Packages for Python 3.9](#pip39)
+-   [Installing Python Packages for Python 3.11](#pip311)
 -   [Building and Installing Python Modules Locally](#topic_j53_5jq_rt)
 -   [Testing Installed Python Modules](#topic_e4p_gcw_vt)
 
 ### <a id="about_python_env"></a>Verifying the Python Environment
 
-The plpython3u is built with Python 3.9. To check the Python environment, you can use the `which` command:
+The plpython3u is built with Python 3.11. To check the Python environment, you can use the `which` command:
 
 ```
-which python3.9
+which python3.11
 ```
 
 When running shell commands on remote hosts with `gpssh`, specify the `-s` option to source the `greenplum_path.sh` file before running commands on the remote hosts. For example, this command should display the Python installed with Greenplum Database on each host specified in the `gpdb_hosts` file.
 
 ```
-gpssh -s -f gpdb_hosts which python3.9
+gpssh -s -f gpdb_hosts which python3.11
 ```
 
 To display the list of currently installed Python modules, run this command.
 
 ```
-python3.9 -c "help('modules')"
+python3.11 -c "help('modules')"
 ```
 
 You can optionally run `gpssh` in interactive mode to display Python modules on remote hosts. This example starts `gpssh` in interactive mode and lists the Python modules on the Greenplum Database host `sdw1`.
 
 ```
 $ gpssh -s -h sdw1
-=> python3.9 -c "help('modules')"
+=> python3.11 -c "help('modules')"
 . . .
 => exit
 $
@@ -376,9 +376,9 @@ $
 
 The Python utility `pip` installs Python packages that contain Python modules and other resource files from versioned archive files.
 
-For Python 3.9, use:
+For Python 3.11, use:
 ```
-python3.9 -m ensurepip --default-pip
+python3.11 -m ensurepip --default-pip
 ```
 
 The command runs the `ensurepip` module to bootstrap \(install and configure\) the `pip` utility from the local Python installation.
@@ -386,14 +386,14 @@ The command runs the `ensurepip` module to bootstrap \(install and configure\) t
 You can run this command to ensure the `pip`, `setuptools` and `wheel` projects are current. Current Python projects ensure that you can install Python packages from source distributions or pre-built distributions \(wheels\).
 
 ```
-python3.9 -m pip install --upgrade pip setuptools wheel
+python3.11 -m pip install --upgrade pip setuptools wheel
 ```
 
 You can use `gpssh` to run the commands on the Greenplum Database hosts. This example runs `gpssh` in interactive mode to install `pip` on the hosts listed in the file `gpdb_hosts`.
 
 ```
 $ gpssh -s -f gpdb_hosts
-=> python3.9 -m ensurepip --default-pip
+=> python3.11 -m ensurepip --default-pip
 [centos6-cdw1] Ignoring indexes: https://pypi.python.org/simple
 [centos6-cdw1] Collecting setuptools
 [centos6-cdw1] Collecting pip
@@ -422,7 +422,7 @@ For more information about installing Python packages, see [https://packaging.py
 
 
 ```
-python3.9 -m pip install --user numpy scipy
+python3.11 -m pip install --user numpy scipy
 ```
 
 The `--user` option attempts to avoid conflicts when installing Python packages.
@@ -431,15 +431,15 @@ You can use `gpssh` to run the command on the Greenplum Database hosts.
 
 For information about these and other Python packages, see [References](#topic12).
 
-### <a id="pip39"></a>Installing Python Packages to a Non-Standard Location
+### <a id="pip311"></a>Installing Python Packages to a Non-Standard Location
 
-You can optionally install Python 3.9 modules to a non-standard location by using the `--prefix` option with `pip`. For example:
+You can optionally install Python 3.11 modules to a non-standard location by using the `--prefix` option with `pip`. For example:
 
 ```
 gpssh -s -f gpdb_hosts
 => unset PYTHONHOME
 => unset PYTHONPATH
-=> $GPHOME/ext/python3.9 -m pip install --prefix=/home/gpadmin/my_python numpy scipy
+=> $GPHOME/ext/python3.11 -m pip install --prefix=/home/gpadmin/my_python numpy scipy
 ```
 
 If you use this option, keep in mind that the `PYTHONPATH` environment variable setting is cleared before initializing or executing functions using `plpython3u`. If you want to use modules installed to a custom location, you must configure the paths to those modules using the Greenplum configuration parameter `plpython3.python_path` instead of  `PYTHONPATH`. For example:
@@ -512,14 +512,14 @@ If `FAILURE` is returned, these are some possible causes:
     Make sure you get no errors when running command on the segment host as the `gpadmin` user. This `gpssh` command tests importing the numpy module on the segment host `cdw1`.
 
     ```
-    gpssh -s -h cdw1 python3.9 -c "import numpy"
+    gpssh -s -h cdw1 python3.11 -c "import numpy"
     ```
 
 -   The `plpython3.python_path` has not been set to the correct location.
 
 ## <a id="topic11"></a>Examples
 
-This PL/Python function example uses Python 3.9 and returns the value of pi using the `numpy` module:
+This PL/Python function example uses Python 3.11 and returns the value of pi using the `numpy` module:
 
 ```
 CREATE OR REPLACE FUNCTION testpi()

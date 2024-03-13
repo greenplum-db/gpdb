@@ -3183,9 +3183,13 @@ order by 1,2;
 
 --
 -- variant where a PlaceHolderVar is needed at a join, but not above the join
--- Greenplum does not fully support the lateral join, ignore the below case.
 --
--- start_ignore
+-- TODO_LATERAL: failed to generate plan
+-- If the left path needs params of outer path.
+-- We can not add any motion above left path.
+-- however, in right join, we can not add broadcast motion above right path.
+-- So We can not add proper motion to generate path for right join,
+-- And hit the error: could not devise a query plan for the given query.
 explain (costs off)
 select * from
   int4_tbl as i41,
@@ -3209,7 +3213,11 @@ select * from
       where ss1.loc = ss1.lat) as ss2
 where i41.f1 > 0;
 ERROR:  could not devise a query plan for the given query (pathnode.c:275)
--- end_ignore
+select * from int4_tbl a inner join int4_tbl b on false;
+ f1 | f1 
+----+----
+(0 rows)
+
 --
 -- test the corner cases FULL JOIN ON TRUE and FULL JOIN ON FALSE
 --
@@ -4367,11 +4375,6 @@ select * from
 --
 -- test for appropriate join order in the presence of lateral references
 --
--- start_ignore
--- GPDB_94_STABLE_MERGE_FIXME: Currently LATERAL is not fully supported in GPDB
--- and the queries below are failing at the moment (The first one fails with
--- error and the other two fail with panic). Comment them off temporarily.
-/*
 explain (verbose, costs off)
 select * from
   text_tbl t1
@@ -4379,6 +4382,38 @@ select * from
   on i8.q2 = 123,
   lateral (select i8.q1, t2.f1 from text_tbl t2 limit 1) as ss
 where t1.f1 = ss.f1;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Nested Loop
+   Output: t1.f1, i8.q1, i8.q2, (i8.q1), t2.f1
+   Join Filter: (t1.f1 = t2.f1)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: t1.f1, i8.q1, i8.q2
+         ->  Nested Loop Left Join
+               Output: t1.f1, i8.q1, i8.q2
+               ->  Seq Scan on public.text_tbl t1
+                     Output: t1.f1
+               ->  Materialize
+                     Output: i8.q1, i8.q2
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                           Output: i8.q1, i8.q2
+                           ->  Seq Scan on public.int8_tbl i8
+                                 Output: i8.q1, i8.q2
+                                 Filter: (i8.q2 = 123)
+   ->  Materialize
+         Output: (i8.q1), t2.f1
+         ->  Limit
+               Output: (i8.q1), t2.f1
+               ->  Result
+                     Output: i8.q1, t2.f1
+                     ->  Materialize
+                           Output: t2.f1
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 Output: t2.f1
+                                 ->  Seq Scan on public.text_tbl t2
+                                       Output: t2.f1
+ Optimizer: Postgres-based planner
+(29 rows)
 
 select * from
   text_tbl t1
@@ -4386,6 +4421,10 @@ select * from
   on i8.q2 = 123,
   lateral (select i8.q1, t2.f1 from text_tbl t2 limit 1) as ss
 where t1.f1 = ss.f1;
+  f1  |        q1        | q2  |        q1        |  f1  
+------+------------------+-----+------------------+------
+ doh! | 4567890123456789 | 123 | 4567890123456789 | doh!
+(1 row)
 
 explain (verbose, costs off)
 select * from
@@ -4395,6 +4434,49 @@ select * from
   lateral (select i8.q1, t2.f1 from text_tbl t2 limit 1) as ss1,
   lateral (select ss1.* from text_tbl t3 limit 1) as ss2
 where t1.f1 = ss2.f1;
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Nested Loop
+   Output: t1.f1, i8.q1, i8.q2, (i8.q1), t2.f1, ((i8.q1)), (t2.f1)
+   Join Filter: (t1.f1 = (t2.f1))
+   ->  Nested Loop
+         Output: t1.f1, i8.q1, i8.q2, (i8.q1), t2.f1
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Output: t1.f1, i8.q1, i8.q2
+               ->  Nested Loop Left Join
+                     Output: t1.f1, i8.q1, i8.q2
+                     ->  Seq Scan on public.text_tbl t1
+                           Output: t1.f1
+                     ->  Materialize
+                           Output: i8.q1, i8.q2
+                           ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                 Output: i8.q1, i8.q2
+                                 ->  Seq Scan on public.int8_tbl i8
+                                       Output: i8.q1, i8.q2
+                                       Filter: (i8.q2 = 123)
+         ->  Materialize
+               Output: (i8.q1), t2.f1
+               ->  Limit
+                     Output: (i8.q1), t2.f1
+                     ->  Result
+                           Output: i8.q1, t2.f1
+                           ->  Materialize
+                                 Output: t2.f1
+                                 ->  Gather Motion 3:1  (slice3; segments: 3)
+                                       Output: t2.f1
+                                       ->  Seq Scan on public.text_tbl t2
+                                             Output: t2.f1
+   ->  Materialize
+         Output: ((i8.q1)), (t2.f1)
+         ->  Limit
+               Output: ((i8.q1)), (t2.f1)
+               ->  Result
+                     Output: (i8.q1), t2.f1
+                     ->  Materialize
+                           ->  Gather Motion 3:1  (slice4; segments: 3)
+                                 ->  Seq Scan on public.text_tbl t3
+ Optimizer: Postgres-based planner
+(40 rows)
 
 select * from
   text_tbl t1
@@ -4403,6 +4485,10 @@ select * from
   lateral (select i8.q1, t2.f1 from text_tbl t2 limit 1) as ss1,
   lateral (select ss1.* from text_tbl t3 limit 1) as ss2
 where t1.f1 = ss2.f1;
+  f1  |        q1        | q2  |        q1        |  f1  |        q1        |  f1  
+------+------------------+-----+------------------+------+------------------+------
+ doh! | 4567890123456789 | 123 | 4567890123456789 | doh! | 4567890123456789 | doh!
+(1 row)
 
 explain (verbose, costs off)
 select 1 from
@@ -4412,6 +4498,56 @@ select 1 from
   left join text_tbl as tt4 on (tt3.f1 = tt4.f1),
   lateral (select tt4.f1 as c0 from text_tbl as tt5 limit 1) as ss1
 where tt1.f1 = ss1.c0;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Nested Loop
+   Output: 1
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: tt1.f1, tt4.f1
+         ->  Hash Left Join
+               Output: tt1.f1, tt4.f1
+               Hash Cond: (tt3.f1 = tt4.f1)
+               ->  Nested Loop Left Join
+                     Output: tt1.f1, tt3.f1
+                     ->  Nested Loop
+                           Output: tt1.f1
+                           ->  Seq Scan on public.text_tbl tt1
+                                 Output: tt1.f1
+                                 Filter: (tt1.f1 = 'foo'::text)
+                           ->  Materialize
+                                 ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                       Hash Key: 'foo'::text
+                                       ->  Seq Scan on public.text_tbl tt2
+                     ->  Materialize
+                           Output: tt3.f1
+                           ->  Redistribute Motion 1:3  (slice3; segments: 1)
+                                 Output: tt3.f1
+                                 Hash Key: 'foo'::text
+                                 ->  Seq Scan on public.text_tbl tt3
+                                       Output: tt3.f1
+                                       Filter: (tt3.f1 = 'foo'::text)
+               ->  Hash
+                     Output: tt4.f1
+                     ->  Redistribute Motion 1:3  (slice4; segments: 1)
+                           Output: tt4.f1
+                           Hash Key: 'foo'::text
+                           ->  Seq Scan on public.text_tbl tt4
+                                 Output: tt4.f1
+                                 Filter: (tt4.f1 = 'foo'::text)
+   ->  Materialize
+         Output: ss1.c0
+         ->  Subquery Scan on ss1
+               Output: ss1.c0
+               Filter: (ss1.c0 = 'foo'::text)
+               ->  Limit
+                     Output: (tt4.f1)
+                     ->  Result
+                           Output: tt4.f1
+                           ->  Materialize
+                                 ->  Gather Motion 3:1  (slice5; segments: 3)
+                                       ->  Seq Scan on public.text_tbl tt5
+ Optimizer: Postgres-based planner
+(47 rows)
 
 select 1 from
   text_tbl as tt1
@@ -4420,15 +4556,13 @@ select 1 from
   left join text_tbl as tt4 on (tt3.f1 = tt4.f1),
   lateral (select tt4.f1 as c0 from text_tbl as tt5 limit 1) as ss1
 where tt1.f1 = ss1.c0;
-*/
---end_ignore
+ ?column? 
+----------
+(0 rows)
+
 --
 -- check a case in which a PlaceHolderVar forces join order
 --
---start_ignore
---GPDB_94_STABLE_MERGE_FIXME: This query is lateral related and its plan is
---different from PostgreSQL's.  Do not know why yet. Ignore its plan
---temporarily.
 explain (verbose, costs off)
 select ss2.* from
   int4_tbl i41
@@ -4479,7 +4613,6 @@ where ss1.c2 = 0;
  Optimizer: Postgres query optimizer
 (36 rows)
 
---end_ignore
 select ss2.* from
   int4_tbl i41
   left join int8_tbl i8
@@ -4979,8 +5112,6 @@ where ss.stringu2 !~* ss.case1;
 
 rollback;
 -- test case to expose miscomputation of required relid set for a PHV
--- Greenplum does not fully support the lateral join, ignore the below case.
--- start_ignore
 explain (verbose, costs off)
 select i8.*, ss.v, t.unique2
   from int8_tbl i8
@@ -5031,7 +5162,6 @@ where q2 = 456;
  123 | 456 |   |        
 (1 row)
 
--- end_ignore
 -- and check a related issue where we miscompute required relids for
 -- a PHV that's been translated to a child rel
 create temp table parttbl (a integer primary key) partition by range (a);
@@ -5365,13 +5495,12 @@ select count(*) from tenk1 a,
 (1 row)
 
 -- lateral injecting a strange outer join condition
--- start_ignore
--- GPDB_93_MERGE_FIXME: These queries are failing at the moment. Need to investigate.
--- There were a lot of LATERAL fixes in upstream minor versions, so I'm hoping that
--- these will get fixed once we catch up to those. Or if not, at least it will be
--- nicer to work on the code, knowing that there aren't going to be a dozen commits
--- coming up, touching the same area.
--- FAIL with ERROR:  could not devise a query plan for the given query (pathnode.c:416)
+-- TODO_LATERAL: failed to generate plan
+-- If the right path needs params of outer path.
+-- We can not add any motion above right path.
+-- however, in left join, we can not add broadcast motion above left path.
+-- So We can not add proper motion to generate path for left join,
+-- And hit the error: could not devise a query plan for the given query.
 explain (costs off)
   select * from int8_tbl a,
     int8_tbl x left join lateral (select a.q1 from int4_tbl y) ss(z)
@@ -5383,7 +5512,6 @@ select * from int8_tbl a,
     on x.q2 = ss.z
   order by a.q1, a.q2, x.q1, x.q2, ss.z;
 ERROR:  could not devise a query plan for the given query (pathnode.c:275)
---end_ignore
 -- lateral reference to a join alias variable
 select * from (select f1/2 as x from int4_tbl) ss1 join int4_tbl i4 on x = f1,
   lateral (select x) ss2(y);
@@ -5813,9 +5941,12 @@ select * from int4_tbl a,
 (25 rows)
 
 -- lateral reference in a PlaceHolderVar evaluated at join level
--- GPDB_94_STABLE_MERGE_FIXME: The query fails. The change is related to
--- upstream commit acfcd4. Need to come back to fix it when understanding more
--- about that commit.
+-- TODO_LATERAL: failed to generate plan
+-- If the right path needs params of outer path.
+-- We can not add any motion above right path.
+-- however, in left join, we can not add broadcast motion above left path.
+-- So We can not add proper motion to generate path for left join,
+-- And hit the error: could not devise a query plan for the given query.
 explain (verbose, costs off)
 select * from
   int8_tbl a left join lateral
@@ -6191,12 +6322,12 @@ create table join_ut1 (a int, b int, c varchar);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into join_ut1 values (101, 101, 'y'), (2, 2, 'z');
--- GPDB_12_MERGE_FIXME: The query fails. This test query is new with v12,
--- but a corresponding query fails on GPDB main, too. I think this is
--- similar to the case marked with GPDB_94_STABLE_MERGE_FIXME above.
--- upstream commit acfcd4. Need to come back to fix it when understanding more
--- about that commit.
--- start_ignore
+-- TODO_LATERAL: failed to generate plan
+-- If the right path needs params of outer path.
+-- We can not add any motion above right path.
+-- however, in left join, we can not add broadcast motion above left path.
+-- So We can not add proper motion to generate path for left join,
+-- And hit the error: could not devise a query plan for the given query.
 explain (verbose, costs off)
 select t1.b, ss.phv from join_ut1 t1 left join lateral
               (select t2.a as t2a, t3.a t3a, least(t1.a, t2.a, t3.a) phv
@@ -6208,7 +6339,6 @@ select t1.b, ss.phv from join_ut1 t1 left join lateral
 					  from join_pt1 t2 join join_ut1 t3 on t2.a = t3.b) ss
               on t1.a = ss.t2a order by t1.a;
 ERROR:  could not devise a query plan for the given query (pathnode.c:275)
--- end_ignore
 drop table join_pt1;
 drop table join_ut1;
 --

@@ -6,7 +6,7 @@ Greenplum Database provides a collection of data science-related Python modules 
 
 This section contains the following information:
 
--   [Data Science Package for Python 3.9 Modules](#topic_pydatascimod3)
+-   [Data Science Package for Python 3.11 Modules](#topic_pydatascimod3)
 -   [Installing a Data Science Package for Python](#topic_instpdsm)
 -   [Uninstalling a Data Science Package for Python](#topic_removepdsm)
 
@@ -14,9 +14,9 @@ For information about the Greenplum Database PL/Python Language, see [Greenplum 
 
 **Parent topic:** [Installing Optional Extensions \(VMware Greenplum\)](data_sci_pkgs.html)
 
-## <a id="topic_pydatascimod3"></a>Data Science Package for Python 3.9 Modules 
+## <a id="topic_pydatascimod3"></a>Data Science Package for Python 3.11 Modules 
 
-The following table lists the modules that are provided in the Data Science Package for Python 3.9.
+The following table lists the modules that are provided in the Data Science Package for Python 3.11.
 
 |Module Name|Description/Used For|
 |-----------|--------------------|
@@ -193,14 +193,14 @@ $ sudo yum install tk
 
 1.  Locate the Data Science Package for Python that you built or downloaded.
 
-    The file name format of the package is `DataSciencePython<pythonversion>-gp7-rhel<n>-x86_64.gppkg`.  For example: `DataSciencePython3.9-3.0.0-gp7-rhel8_x86_64.gppkg`.
+    The file name format of the package is `DataSciencePython<pythonversion>-<data-science-bundle-version>-gp7-rhel<n>-x86_64.gppkg`.  For example: `DataSciencePython3.11-3.0.0-gp7-rhel8_x86_64.gppkg`.
 
 2.  Copy the package to the Greenplum Database coordinator host.
 3.  Follow the instructions in [Verifying the Greenplum Database Software Download](../install_guide/verify_sw.html) to verify the integrity of the *Greenplum Procedural Languages Python Data Science Package* software.
 4.  Use the `gppkg` command to install the package. For example:
 
     ```
-    $ gppkg install DataSciencePython3.9-1.2.0-gp7-el8_x86_64.gppkg
+    $ gppkg install DataSciencePython3.11-1.2.0-gp7-el8_x86_64.gppkg
     ```
 
     `gppkg` installs the Data Science Package for Python modules on all nodes in your Greenplum Database cluster. The command also updates the `PYTHONPATH`, `PATH`, and `LD_LIBRARY_PATH` environment variables in your `greenplum_path.sh` file.
@@ -216,7 +216,7 @@ $ sudo yum install tk
 The Data Science Package for Python modules are installed in the following directory:
 
 ```
-$GPHOME/ext/DataSciencePython/lib/python3.9/site-packages/
+$GPHOME/ext/DataSciencePython/lib/python3.11/site-packages/
 ```
 
 ## <a id="topic_removepdsm"></a>Uninstalling a Data Science Package for Python 
