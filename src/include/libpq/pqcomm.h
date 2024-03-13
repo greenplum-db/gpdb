@@ -218,6 +218,7 @@ typedef struct CancelRequestPacket
 	MsgType		cancelRequestCode;	/* code to identify a cancel request */
 	uint32		backendPID;		/* PID of client's backend */
 	uint32		cancelAuthCode; /* secret key to authorize cancel */
+	uint32		sessionid;		/* GPDB session of client's backend */
 } CancelRequestPacket;
 
 

@@ -478,10 +478,10 @@ cdbconn_signalQE(SegmentDatabaseDescriptor *segdbDesc,
 			ret = PQrequestFinish(cn, errbuf, 256);
 			break;
 		case MPP_CANCEL_REQUEST_CODE:
-			ret = PQMppcancel(cn, errbuf, 256);
+			ret = PQMppcancel(cn, errbuf, 256, gp_session_id);
 			break;
 		case MPP_FINISH_REQUEST_CODE:
-			ret = PQMppFinish(cn, errbuf, 256);
+			ret = PQMppFinish(cn, errbuf, 256, gp_session_id);
 			break;
 		default:
 			elog(ERROR, "wrong requestCode");

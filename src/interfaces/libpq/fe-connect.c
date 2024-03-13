@@ -4392,7 +4392,8 @@ PQfreeCancel(PGcancel *cancel)
  */
 static int
 internal_cancel(SockAddr *raddr, int be_pid, int be_key,
-				char *errbuf, int errbufsize, int requestCode)
+				char *errbuf, int errbufsize, int requestCode,
+				int sessionid)
 {
 	int			save_errno = SOCK_ERRNO;
 	pgsocket	tmpsock = PGINVALID_SOCKET;
@@ -4439,6 +4440,7 @@ retry3:
 	crp.cp.cancelRequestCode = (MsgType) pg_hton32(requestCode);
 	crp.cp.backendPID = pg_hton32(be_pid);
 	crp.cp.cancelAuthCode = pg_hton32(be_key);
+	crp.cp.sessionid = pg_hton32(sessionid);
 
 retry4:
 	if (send(tmpsock, (char *) &crp, sizeof(crp), 0) != (int) sizeof(crp))
@@ -4558,7 +4560,7 @@ PQcancel(PGcancel *cancel, char *errbuf, int errbufsize)
 	}
 
 	return internal_cancel(&cancel->raddr, cancel->be_pid, cancel->be_key,
-						   errbuf, errbufsize, CANCEL_REQUEST_CODE);
+						   errbuf, errbufsize, CANCEL_REQUEST_CODE, 0);
 }
 
 /*
@@ -4577,7 +4579,7 @@ PQrequestFinish(PGcancel *cancel, char *errbuf, int errbufsize)
 	}
 
 	return internal_cancel(&cancel->raddr, cancel->be_pid, cancel->be_key,
-						   errbuf, errbufsize, FINISH_REQUEST_CODE);
+						   errbuf, errbufsize, FINISH_REQUEST_CODE, 0);
 }
 
 /*
@@ -4590,7 +4592,7 @@ PQrequestFinish(PGcancel *cancel, char *errbuf, int errbufsize)
  * success return.
  */
 int
-PQMppcancel(PGcancel *cancel, char *errbuf, int errbufsize)
+PQMppcancel(PGcancel *cancel, char *errbuf, int errbufsize, int sessionid)
 {
 	if (!cancel)
 	{
@@ -4599,7 +4601,7 @@ PQMppcancel(PGcancel *cancel, char *errbuf, int errbufsize)
 	}
 
 	return internal_cancel(&cancel->raddr, cancel->be_pid, cancel->be_key,
-						   errbuf, errbufsize, MPP_CANCEL_REQUEST_CODE);
+						   errbuf, errbufsize, MPP_CANCEL_REQUEST_CODE, sessionid);
 }
 
 /*
@@ -4608,7 +4610,7 @@ PQMppcancel(PGcancel *cancel, char *errbuf, int errbufsize)
  * Same as PQMppcancel, except it sends a mpp finish request.
  */
 int
-PQMppFinish(PGcancel *cancel, char *errbuf, int errbufsize)
+PQMppFinish(PGcancel *cancel, char *errbuf, int errbufsize, int sessionid)
 {
 	if (!cancel)
 	{
@@ -4618,7 +4620,7 @@ PQMppFinish(PGcancel *cancel, char *errbuf, int errbufsize)
 	}
 
 	return internal_cancel(&cancel->raddr, cancel->be_pid, cancel->be_key,
-						   errbuf, errbufsize, MPP_FINISH_REQUEST_CODE);
+						   errbuf, errbufsize, MPP_FINISH_REQUEST_CODE, sessionid);
 }
 
 /*
@@ -4654,7 +4656,7 @@ PQrequestCancel(PGconn *conn)
 
 	r = internal_cancel(&conn->raddr, conn->be_pid, conn->be_key,
 						conn->errorMessage.data, conn->errorMessage.maxlen,
-						false);
+						false, 0);
 
 	if (!r)
 		conn->errorMessage.len = strlen(conn->errorMessage.data);

@@ -2864,14 +2864,14 @@ SendNegotiateProtocolVersion(List *unrecognized_protocol_options)
  * Send signals to QE pids based on same sessionid in segment.
  */
 static void
-SendMppProcSignal(int backendPID, MsgType code)
+SendMppProcSignal(int sessionid, MsgType code)
 {
 	ListCell	*lc = NULL;
-	List 		*QEPids = GetSessionQEPids(backendPID);
+	List 		*QEPids = GetSessionQEPids(sessionid);
 
 	ereport(LOG,
-			(errmsg("start sending signals to all QEs in segment, QEs len is %d, backendpid is %d", 
-			list_length(QEPids), backendPID)));
+			(errmsg("start sending signals to all QEs in segment, QEs len is %d, sessionid is %d",
+			list_length(QEPids), sessionid)));
 
 	foreach(lc, QEPids)
 	{
@@ -2892,6 +2892,7 @@ processMppCancelRequest(Port *port, void *pkt, MsgType code)
 {
 	CancelRequestPacket *canc = (CancelRequestPacket *) pkt;
 	int			backendPID;
+	int			sessionid;
 	int32		cancelAuthCode;
 	Backend    *bp;
 
@@ -2903,6 +2904,7 @@ processMppCancelRequest(Port *port, void *pkt, MsgType code)
 
 	backendPID = (int) pg_ntoh32(canc->backendPID);
 	cancelAuthCode = (int32) pg_ntoh32(canc->cancelAuthCode);
+	sessionid = (int) pg_ntoh32(canc->sessionid);
 
 	/*
 	 * See if we have a matching backend.  In the EXEC_BACKEND case, we can no
@@ -2922,7 +2924,7 @@ processMppCancelRequest(Port *port, void *pkt, MsgType code)
 		{
 			if (bp->cancel_key == cancelAuthCode)
 			{
-				SendMppProcSignal(backendPID, code);
+				SendMppProcSignal(sessionid, code);
 			}
 			else
 				/* Right PID, wrong key: no way, Jose */
