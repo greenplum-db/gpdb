@@ -70,6 +70,53 @@ gfile_free(void *a)
 {
 	pfree(a);
 }
+ 
+static char*
+strsep_uri(char **uris)
+{
+        char *index;
+        char *result;
+
+        if ((index = *uris) == NULL)
+                return NULL;
+        if (*index == '\0')
+                return NULL;
+
+        size_t len = strlen(index);
+        result = (char *)malloc(len + 1);
+        int j = 0;
+        for (;;)
+        {
+                if (*index == '\0')
+                {
+                        result[j++] = '\0';
+                        *uris = index;
+                        break;
+                }
+                if (*index == '|')
+                {
+                        index++;
+                        if (*index == '|')
+                        {
+                                result[j++] = '|';
+                                index++;
+                                continue;
+                        }
+                        else
+                        {
+                                result[j++] = '\0';
+                                *uris = index;
+                                break;
+                        }
+                }
+                else
+                {
+                        result[j++] = *index;
+                        index++;
+                }
+        }
+        return result;
+}
 
 /* transform the locations string to a list */
 List*
@@ -80,7 +127,7 @@ TokenizeLocationUris(char *uris)
 
 	Assert(uris != NULL);
 
-	while ((uri = strsep(&uris, "|")) != NULL)
+	while ((uri = strsep_uri(&uris)) != NULL)
 	{
 		result = lappend(result, makeString(uri));
 	}

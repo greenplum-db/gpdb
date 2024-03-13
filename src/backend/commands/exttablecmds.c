@@ -39,6 +39,7 @@
 #include "cdb/cdbsreh.h"
 
 static char* transformLocationUris(List *locs, bool isweb, bool iswritable);
+static char* escape_uri(char *uri);
 static char* transformExecOnClause(List *on_clause);
 static char transformFormatType(char *formatname);
 static List * transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswritable);
@@ -465,12 +466,12 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 
 		if (first_uri)
 		{
-			appendStringInfo(&buf, "%s", uri_str_final);
+			appendStringInfo(&buf, "%s", escape_uri(uri_str_final));
 			first_uri = false;
 		}
 		else
 		{
-			appendStringInfo(&buf, "|%s", uri_str_final);
+			appendStringInfo(&buf, "|%s", escape_uri(uri_str_final));
 		}
 
 		FreeExternalTableUri(uri);
@@ -478,6 +479,25 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 	}
 
 	return buf.data;
+}
+static char*
+escape_uri(char *uri) {
+	size_t len = strlen(uri);
+	char *output = (char *)palloc((len * 2) + 1);
+    	int i, j = 0;
+    	for (i = 0; uri[i] != '\0'; i++) {
+		if (uri[i] == '|')
+		{
+			output[j++] = '|';
+			output[j++] = '|';
+		}
+		else
+		{
+                	output[j++] = uri[i];
+		}
+        }
+	output[j] = '\0';
+	return output;
 }
 
 static char*
