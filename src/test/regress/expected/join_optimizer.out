@@ -2376,19 +2376,16 @@ select * from
   j1_tbl full join
   (select * from j2_tbl order by j2_tbl.i desc, j2_tbl.k asc) j2_tbl
   on j1_tbl.i = j2_tbl.i and j1_tbl.i = j2_tbl.k;
-                              QUERY PLAN                               
------------------------------------------------------------------------
+                              QUERY PLAN                              
+----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Merge Full Join
-         Merge Cond: ((j1_tbl.i = j2_tbl.i) AND (j1_tbl.i = j2_tbl.k))
-         ->  Sort
-               Sort Key: j1_tbl.i, j1_tbl.i
-               ->  Seq Scan on j1_tbl
-         ->  Sort
-               Sort Key: j2_tbl.i, j2_tbl.k
+   ->  Hash Full Join
+         Hash Cond: ((j1_tbl.i = j2_tbl.i) AND (j1_tbl.i = j2_tbl.k))
+         ->  Seq Scan on j1_tbl
+         ->  Hash
                ->  Seq Scan on j2_tbl
- Optimizer: Pivotal Optimizer (GPORCA)
-(10 rows)
+ Optimizer: GPORCA
+(7 rows)
 
 select * from
   j1_tbl full join
@@ -3005,20 +3002,20 @@ SELECT qq, unique1
          ->  Result
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Merge Full Join
-                           Merge Cond: ((COALESCE(int8_tbl.q1, '0'::bigint)) = (COALESCE(int8_tbl_1.q2, '-1'::bigint)))
+                           Merge Cond: ((COALESCE(int8_tbl.q2, '-1'::bigint)) = (COALESCE(int8_tbl_1.q1, '0'::bigint)))
                            ->  Sort
-                                 Sort Key: (COALESCE(int8_tbl.q1, '0'::bigint))
+                                 Sort Key: (COALESCE(int8_tbl.q2, '-1'::bigint))
                                  ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                       Hash Key: (COALESCE(int8_tbl.q1, '0'::bigint))
+                                       Hash Key: (COALESCE(int8_tbl.q2, '-1'::bigint))
                                        ->  Seq Scan on int8_tbl
                            ->  Sort
-                                 Sort Key: (COALESCE(int8_tbl_1.q2, '-1'::bigint))
+                                 Sort Key: (COALESCE(int8_tbl_1.q1, '0'::bigint))
                                  ->  Redistribute Motion 3:3  (slice4; segments: 3)
-                                       Hash Key: (COALESCE(int8_tbl_1.q2, '-1'::bigint))
+                                       Hash Key: (COALESCE(int8_tbl_1.q1, '0'::bigint))
                                        ->  Seq Scan on int8_tbl int8_tbl_1
          ->  Index Scan using tenk1_unique2 on tenk1
-               Index Cond: (unique2 = (COALESCE((COALESCE(int8_tbl.q1, '0'::bigint)), (COALESCE(int8_tbl_1.q2, '-1'::bigint)))))
- Optimizer: Pivotal Optimizer (GPORCA)
+               Index Cond: (unique2 = (COALESCE((COALESCE(int8_tbl_1.q1, '0'::bigint)), (COALESCE(int8_tbl.q2, '-1'::bigint)))))
+ Optimizer: GPORCA
 (20 rows)
 
 SELECT qq, unique1
@@ -4639,20 +4636,16 @@ select * from
 ------------------------------------------------
  Hash Right Join
    Hash Cond: (COALESCE((1)) = (1))
-   ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Merge Full Join
-               Merge Cond: (unique1 = (1))
-               ->  Sort
-                     Sort Key: unique1
-                     ->  Seq Scan on tenk1
-               ->  Sort
-                     Sort Key: (1)
-                     ->  Result
-                           ->  Result
+   ->  Hash Full Join
+         Hash Cond: (unique1 = (1))
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               ->  Seq Scan on tenk1
+         ->  Hash
+               ->  Result
    ->  Hash
          ->  Result
- Optimizer: Pivotal Optimizer (GPORCA)
-(15 rows)
+ Optimizer: GPORCA
+(11 rows)
 
 select * from
   (select 1 as id) as xx
@@ -4690,20 +4683,17 @@ explain (costs off)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Result
          Filter: ((COALESCE(tenk1.unique2, tenk1_1.unique2)) = 42)
-         ->  Merge Full Join
-               Merge Cond: (tenk1.unique2 = tenk1_1.unique2)
-               ->  Sort
-                     Sort Key: tenk1.unique2
-                     ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                           Hash Key: tenk1.unique2
-                           ->  Seq Scan on tenk1
-               ->  Sort
-                     Sort Key: tenk1_1.unique2
+         ->  Hash Full Join
+               Hash Cond: (tenk1.unique2 = tenk1_1.unique2)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: tenk1.unique2
+                     ->  Seq Scan on tenk1
+               ->  Hash
                      ->  Redistribute Motion 3:3  (slice3; segments: 3)
                            Hash Key: tenk1_1.unique2
                            ->  Seq Scan on tenk1 tenk1_1
- Optimizer: Pivotal Optimizer (GPORCA)
-(16 rows)
+ Optimizer: GPORCA
+(13 rows)
 
 --
 -- test that quals attached to an outer join have correct semantics,
@@ -6518,21 +6508,17 @@ select * from j1 full join j2 on j1.id = j2.id;
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: j1.id, j2.id
-   ->  Merge Full Join
+   ->  Hash Full Join
          Output: j1.id, j2.id
-         Merge Cond: (j1.id = j2.id)
-         ->  Sort
+         Hash Cond: (j1.id = j2.id)
+         ->  Seq Scan on public.j1
                Output: j1.id
-               Sort Key: j1.id
-               ->  Seq Scan on public.j1
-                     Output: j1.id
-         ->  Sort
+         ->  Hash
                Output: j2.id
-               Sort Key: j2.id
                ->  Seq Scan on public.j2
                      Output: j2.id
- Optimizer: Pivotal Optimizer (GPORCA)
-(16 rows)
+ Optimizer: GPORCA
+(12 rows)
 
 -- a clauseless (cross) join can't be unique
 explain (verbose, costs off)

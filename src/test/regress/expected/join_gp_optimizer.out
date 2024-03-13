@@ -500,16 +500,13 @@ explain (costs off) select X.a from input_table X full join (select a from input
                         QUERY PLAN                         
 -----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Merge Full Join
-         Merge Cond: ((x.a)::text = (input_table.a)::text)
-         ->  Sort
-               Sort Key: x.a
-               ->  Seq Scan on input_table x
-         ->  Sort
-               Sort Key: input_table.a
-               ->  Seq Scan on input_table
- Optimizer: Postgres query optimizer
-(10 rows)
+   ->  Hash Full Join
+         Hash Cond: ((input_table.a)::text = (input_table_1.a)::text)
+         ->  Seq Scan on input_table
+         ->  Hash
+               ->  Seq Scan on input_table input_table_1
+ Optimizer: GPORCA
+(7 rows)
 
 -- Cleanup
 reset enable_hashjoin;

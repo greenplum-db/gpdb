@@ -642,12 +642,20 @@ CPhysicalHashJoin::PdshashedMatching(
 			GPOS_WSZ_LIT("Unable to create matching hashed distribution."));
 	}
 
-	// nulls colocated for inner hash joins, but not colocated in outer hash joins
+	// As of now, we cannot set nulls colocation to false for inner joins, because
+	// this logic is used by PdsDeriveFromHashedOuter and PdsDeriveFromReplicatedOuter,
+	// where the property delivered by the inner relation is calculated based on the
+	// property delivered by the outer relation in inner joins.
+	//
+	// For outer joins, this logic is only used for distribution requests, where we
+	// can safely waive the request for nulls colocation, as far as the join condition
+	// isn't null aware (not district from).
 	BOOL fNullsColocated = true;
 
 	if (!m_is_null_aware &&
 		(COperator::EopPhysicalLeftOuterHashJoin == Eopid() ||
-		 COperator::EopPhysicalRightOuterHashJoin == Eopid()))
+		 COperator::EopPhysicalRightOuterHashJoin == Eopid() ||
+		 COperator::EopPhysicalFullHashJoin == Eopid()))
 	{
 		fNullsColocated = false;
 	}
