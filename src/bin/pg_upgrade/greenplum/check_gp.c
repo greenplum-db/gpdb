@@ -824,6 +824,9 @@ teardown_GPDB6_data_type_checks(ClusterInfo *cluster)
 static void
 check_views_with_removed_operators()
 {
+	if (GET_MAJOR_VERSION(old_cluster.major_version) > 904)
+		return;
+
 	char  output_path[MAXPGPATH];
 	FILE *script = NULL;
 	bool  found = false;
@@ -906,6 +909,9 @@ check_views_with_removed_operators()
 static void
 check_views_with_removed_functions()
 {
+	if (GET_MAJOR_VERSION(old_cluster.major_version) > 904)
+		return;
+
 	char  output_path[MAXPGPATH];
 	FILE *script = NULL;
 	bool  found = false;
