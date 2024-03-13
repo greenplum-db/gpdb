@@ -130,6 +130,7 @@ test: uao/delete_while_vacuum_row
 test: uao/insert_policy_row
 test: uao/insert_while_vacuum_row
 test: uao/max_concurrency_row
+test: uao/vacuum_while_max_concurrency_row
 test: uao/max_concurrency2_row
 test: uao/modcount_row
 test: uao/modcount_vacuum_row
@@ -188,6 +189,7 @@ test: uao/delete_while_vacuum_column
 test: uao/insert_policy_column
 test: uao/insert_while_vacuum_column
 test: uao/max_concurrency_column
+test: uao/vacuum_while_max_concurrency_column
 test: uao/max_concurrency2_column
 test: uao/modcount_column
 test: uao/modcount_vacuum_column

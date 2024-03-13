@@ -63,7 +63,8 @@ static AORelHashEntry AORelGetHashEntry(Oid relid);
 static AORelHashEntry AORelLookupHashEntry(Oid relid);
 static bool AORelCreateHashEntry(Oid relid);
 static bool *get_awaiting_drop_status_from_segments(Relation parentrel);
-static int64 *GetTotalTupleCountFromSegments(Relation parentrel, int segno);
+static int64 *GetTotalTupleCountFromSegments(Relation parentrel, int segno,
+											 bool *awaiting_drop);
 
 static void
 acquire_lightweight_lock() {
@@ -836,7 +837,7 @@ SetSegnoForCompaction(Relation rel,
 	{
 		int64	   *total_tupcount;
 
-		total_tupcount = GetTotalTupleCountFromSegments(rel, 0);
+		total_tupcount = GetTotalTupleCountFromSegments(rel, 0, NULL);
 		segzero_tupcount = total_tupcount[0];
 		pfree(total_tupcount);
 	}
@@ -1317,10 +1318,16 @@ assignPerRelSegno(List *all_relids)
  * total tupcount for corresponding segfile.  This fills elements for all
  * segfiles that are available in segments if segno is negative, otherwise
  * tries to fetch the tupcount for only the segfile that is passed by segno.
+ * If the third argument is not NULL, then fills it as array of bool, whose
+ * element is true if the corresponding segfile is marked as awaiting to be
+ * dropped in any of segdb. We do this one-shot instead of interating for
+ * each segno, because the dispatch cost increases as the number of segment
+ * becomes large.
  */
 static int64 *
 GetTotalTupleCountFromSegments(Relation parentrel,
-							   int segno)
+							   int segno,
+							   bool *awaiting_drop)
 {
 	StringInfoData sqlstmt;
 	Relation	aosegrel;
@@ -1340,7 +1347,8 @@ GetTotalTupleCountFromSegments(Relation parentrel,
 	 * assemble our query string
 	 */
 	initStringInfo(&sqlstmt);
-	appendStringInfo(&sqlstmt, "SELECT tupcount, segno FROM %s.%s",
+	appendStringInfo(&sqlstmt, "SELECT tupcount, segno%s FROM %s.%s",
+					 awaiting_drop != NULL ? ", state" : "",
 					 get_namespace_name(RelationGetNamespace(aosegrel)),
 					 RelationGetRelationName(aosegrel));
 	if (segno >= 0)
@@ -1397,7 +1405,33 @@ GetTotalTupleCountFromSegments(Relation parentrel,
 					tupcount = DatumGetInt64(DirectFunctionCall1(int8in, CStringGetDatum(value)));
 					value = PQgetvalue(pgresult, j, 1);
 					segno = pg_atoi(value, sizeof(int32), 0);
+
+					ValidateAppendonlySegmentDataBeforeStorage(segno);
+
 					total_tupcount[segno] += tupcount;
+
+					if (awaiting_drop != NULL)
+					{
+						int			qe_state;
+
+						if (PQgetisnull(pgresult, j, 2) == 1)
+							elog(ERROR, "unexpected NULL in state in results[%d]: %s",
+								i, sqlstmt.data);
+
+						value = PQgetvalue(pgresult, j, 2);
+						qe_state = pg_atoi(value, sizeof(int32), 0);
+
+						if (qe_state == AOSEG_STATE_AWAITING_DROP)
+						{
+							awaiting_drop[segno] = true;
+							elogif(Debug_appendonly_print_segfile_choice, LOG,
+								   "Found awaiting drop segment file: "
+								   "relation %s (%d), segno = %d",
+								   RelationGetRelationName(parentrel),
+								   RelationGetRelid(parentrel),
+								   segno);
+						}
+					}
 				}
 			}
 		}
@@ -1557,22 +1591,29 @@ get_awaiting_drop_status_from_segments(Relation parentrel)
 
 /*
  * Updates the tupcount information from the segments.
+ * If list as fifth argument is given then updates state of segfiles,
+ * which are not really compacted on all segments, in aoentry hashmap.
  * Should only be called in rare circumstances from the QD.
  */
 void
 UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 									Snapshot appendOnlyMetaDataSnapshot,
 									List *segmentNumList,
-									int64 modcount_added)
+									int64 modcount_added,
+									List *appendonly_compaction_segno)
 {
 	ListCell   *l;
+	bool	   *awaiting_drop = NULL;
 	int64	   *total_tupcount;
 
 	Assert(RelationIsAppendOptimized(parentrel));
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
+	if (appendonly_compaction_segno != NIL)
+		awaiting_drop = palloc0(sizeof(bool) * MAX_AOREL_CONCURRENCY);
+
 	/* Give -1 for segno, so that we'll have all segfile tupcount. */
-	total_tupcount = GetTotalTupleCountFromSegments(parentrel, -1);
+	total_tupcount = GetTotalTupleCountFromSegments(parentrel, -1, awaiting_drop);
 
 	/*
 	 * We are interested in only the segfiles that were told to be updated.
@@ -1635,6 +1676,42 @@ UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 			UpdateMasterAosegTotals(parentrel, qe_segno,
 									tupcount_diff, modcount_added);
 		}
+	}
+
+	if (appendonly_compaction_segno != NIL)
+	{
+		AORelHashEntryData *aoentry;
+
+		acquire_lightweight_lock();
+
+		aoentry = AORelGetOrCreateHashEntry(RelationGetRelid(parentrel));
+		Assert(aoentry);
+
+		foreach(l, appendonly_compaction_segno)
+		{
+			int			segno = lfirst_int(l);
+
+			ValidateAppendonlySegmentDataBeforeStorage(segno);
+
+			if (!awaiting_drop[segno])
+			{
+				AOSegfileStatus *segfilestat = &aoentry->relsegfiles[segno];
+
+				elogif(Debug_appendonly_print_segfile_choice, LOG,
+					   "Update the file segment state after compaction: "
+					   "relation \"%s\" (%d), segno %d",
+					   get_rel_name(RelationGetRelid(parentrel)),
+					   RelationGetRelid(parentrel),
+					   segno);
+
+				Assert(segfilestat->state == COMPACTION_USE);
+				segfilestat->state = AVAILABLE;
+				segfilestat->xid = InvalidTransactionId;
+			}
+		}
+
+		release_lightweight_lock();
+		pfree(awaiting_drop);
 	}
 
 	pfree(total_tupcount);
