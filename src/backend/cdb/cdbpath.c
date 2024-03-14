@@ -622,8 +622,30 @@ cdbpath_create_motion_path(PlannerInfo *root,
 	 */
 	if (CdbPathLocus_IsOuterQuery(locus))
 	{
-		return (Path *) create_material_path(root, subpath->parent,
+		/*
+		 * In cdbpathtoplan_create_motion_plan we discard path->pathkeys
+		 *
+		 * else if (CdbPathLocus_IsOuterQuery(path->path.locus))
+		 * {
+		 *     motion = make_union_motion(subplan);
+		 *     motion->motionType = MOTIONTYPE_OUTER_QUERY;
+		 * }
+		 * So here add sort path above motion path.
+		 */
+
+		if (subpath->pathkeys && root->query_pathkeys
+				&&(pathkeys_contained_in(root->query_pathkeys, subpath->pathkeys)))
+		{
+			Path * sortPath;
+			sortPath = (Path *)create_sort_path(root, subpath->parent, &pathnode->path, subpath->pathkeys, -1.0);
+			return (Path *) create_material_path(root, subpath->parent,
+											 sortPath);
+		}
+		else
+		{
+			return (Path *) create_material_path(root, subpath->parent,
 											 &pathnode->path);
+		}
 	}
 
 	return (Path *) pathnode;
