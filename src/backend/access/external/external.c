@@ -109,6 +109,7 @@ strsep_uri(char **uris)
 			 */
 			else if (*index == '\0')
 			{
+				result[j++] = '\\';
 				continue;
 			}
 			/* This is only possible for previous version data without escape.
