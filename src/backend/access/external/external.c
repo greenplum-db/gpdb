@@ -83,7 +83,7 @@ strsep_uri(char **uris)
                 return NULL;
 
         size_t len = strlen(index);
-        result = (char *)malloc(len + 1);
+        result = (char *)palloc(len + 1);
         int j = 0;
         for (;;)
         {
@@ -93,21 +93,27 @@ strsep_uri(char **uris)
                         *uris = index;
                         break;
                 }
-                if (*index == '|')
+		else if (*index == '\\')
                 {
                         index++;
-                        if (*index == '|')
+                        if (*index == '\\' || *index == '|')
                         {
-                                result[j++] = '|';
-                                index++;
-                                continue;
+                                result[j++] = *index;
                         }
-                        else
+                        else if (*index != '\0')
                         {
-                                result[j++] = '\0';
-                                *uris = index;
-                                break;
+                                result[j++] = '\\';
+                                result[j++] = *index;
                         }
+                        index++;
+                        continue;
+                }
+                else if (*index == '|')
+                {
+                        index++;
+                        result[j++] = '\0';
+                        *uris = index;
+                        break;
                 }
                 else
                 {
