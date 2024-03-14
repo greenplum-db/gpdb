@@ -371,13 +371,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	 *
 	 * apply_shareinput will fix shared_id, and change the DAG to a tree.
 	 */
-	forboth(lp, glob->subplans, lr, glob->subroots)
-	{
-		Plan	   *subplan = (Plan *) lfirst(lp);
-		PlannerInfo	   *subroot = (PlannerInfo *) lfirst(lr);
-
-		lfirst(lp) = apply_shareinput_dag_to_tree(subroot, subplan);
-	}
 	top_plan = apply_shareinput_dag_to_tree(root, top_plan);
 
 	/* final cleanup of the plan */
@@ -435,12 +428,6 @@ standard_planner(Query *parse, int cursorOptions, ParamListInfo boundParams)
 	bms_free(subplan_context.bms_subplans);
 
 	/* fix ShareInputScans for EXPLAIN */
-	foreach(lp, glob->subplans)
-	{
-		Plan	   *subplan = (Plan *) lfirst(lp);
-
-		lfirst(lp) = replace_shareinput_targetlists(root, subplan);
-	}
 	top_plan = replace_shareinput_targetlists(root, top_plan);
 
 	/* build the PlannedStmt result */

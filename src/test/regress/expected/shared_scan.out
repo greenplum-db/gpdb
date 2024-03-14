@@ -284,3 +284,136 @@ select gp_inject_fault('inject_many_fds_for_shareinputscan', 'reset', dbid) from
 (1 row)
 
 \! rm -rf /tmp/_gpdb_fault_inject_tmp_dir/
+-- To be able to pass this test, Shared Scan's Material node should be marked
+-- as cross-slice. Previously, we processed all subplans separately from main
+-- plan, which caused Material node not marked as cross-slice (upper main plan's
+-- slice1 motion was ignored in processing).
+-- No error like "ERROR:  cannot execute inactive Motion (nodeMotion.c:264)"
+-- should be shown.
+create table t1 (a int, b int, c int) distributed by (a);
+explain (costs off)
+with cte1 as (
+  select max(c) as c from t1
+), 
+cte2 as (
+  select d as c
+  from generate_series(
+    (select c from cte1) - 4,
+    (select c from cte1), 1) d
+)
+select l.c from cte2 l
+left join t1 u on l.c = u.c;
+                             QUERY PLAN                             
+--------------------------------------------------------------------
+ Hash Right Join
+   Hash Cond: (u.c = d.d)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         ->  Seq Scan on t1 u
+   ->  Hash
+         ->  Function Scan on generate_series d
+               InitPlan 1 (returns $0)  (slice4)
+                 ->  Aggregate
+                       ->  Gather Motion 3:1  (slice2; segments: 3)
+                             ->  Aggregate
+                                   ->  Seq Scan on t1
+               InitPlan 2 (returns $1)  (slice5)
+                 ->  Aggregate
+                       ->  Gather Motion 3:1  (slice3; segments: 3)
+                             ->  Aggregate
+                                   ->  Seq Scan on t1 t1_1
+ Optimizer: Postgres query optimizer
+(17 rows)
+
+with cte1 as (
+  select max(c) as c from t1
+), 
+cte2 as (
+  select d as c
+  from generate_series(
+    (select c from cte1) - 4,
+    (select c from cte1), 1) d
+)
+select l.c from cte2 l
+left join t1 u on l.c = u.c;
+ c 
+---
+(0 rows)
+
+-- This case shows flacky count(*) result on pre-patched version. To make it
+-- stable wrong we use new fault point.
+-- Shared Scan consumer from slice1 not marked as cross-slice and not
+-- initialized tuple store. We got '1' as the result of the query - only
+-- Shared Scan from slice2 (the part below UNION) executed correctly.
+-- From now, cross-slice interaction detection fixed for subplans and we have
+-- stable '100' as a result.
+create table t2(i int, j int) distributed by (i);
+insert into t2 select i, i * 10 from generate_series(1, 10) i;
+select gp_inject_fault('material_pre_tuplestore_flush', 'reset', dbid)
+from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:
+(1 row)
+
+select gp_inject_fault('material_pre_tuplestore_flush',
+       'sleep', '', '', '', 1, 1, 5, dbid)
+from gp_segment_configuration where role = 'p' and content = -1;       
+ gp_inject_fault 
+-----------------
+ Success:
+(1 row)
+
+set optimizer_parallel_union = on;
+explain (costs off)
+with cte1 as (
+  select max(j) as max_j from t2
+)
+select count(*) c
+from (
+  select s * 10 s
+  from generate_series(1, (select max_j from cte1)) s
+  union
+  select max_j from cte1
+) t;
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
+ Aggregate
+   ->  HashAggregate
+         Group Key: ((s.s * 10))
+         ->  Append
+               ->  Function Scan on generate_series s
+                     InitPlan 1 (returns $0)  (slice3)
+                       ->  Aggregate
+                             ->  Gather Motion 3:1  (slice1; segments: 3)
+                                   ->  Aggregate
+                                         ->  Seq Scan on t2 t2_1
+               ->  Aggregate
+                     ->  Gather Motion 3:1  (slice2; segments: 3)
+                           ->  Aggregate
+                                 ->  Seq Scan on t2
+ Optimizer: Postgres query optimizer
+(15 rows)
+
+with cte1 as (
+  select max(j) as max_j from t2
+)
+select count(*) c
+from (
+  select s * 10 s
+  from generate_series(1, (select max_j from cte1)) s
+  union
+  select max_j from cte1
+) t;
+  c  
+-----
+ 100
+(1 row)
+
+reset optimizer_parallel_union;
+select gp_inject_fault_infinite('material_pre_tuplestore_flush', 'reset', dbid)
+from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault_infinite 
+--------------------------
+ Success:
+(1 row)
+
