@@ -30,6 +30,7 @@ static void check_for_plpython2_dependent_functions(ClusterInfo *cluster);
 static void check_views_with_removed_operators(void);
 static void check_views_with_removed_functions(void);
 static void check_views_with_removed_types(void);
+static void check_for_disallowed_pg_operator(void);
 
 /*
  *	check_greenplum
@@ -53,6 +54,7 @@ check_greenplum(void)
 	check_views_with_removed_operators();
 	check_views_with_removed_functions();
 	check_views_with_removed_types();
+	check_for_disallowed_pg_operator();
 }
 
 /*
@@ -1081,6 +1083,70 @@ check_views_with_removed_types()
 			   "| These views must be updated to use types supported in the\n"
 			   "| target version or removed before upgrade can continue. A list\n"
 			   "| of the problem views is in the file:\n\t%s\n\n", output_path);
+	}
+	else
+		check_ok();
+}
+
+/*
+ * check_for_disallowed_pg_operator(void)
+ *
+ * Versions greater than 9.4 disallows `CREATE OPERATOR =>`
+ */
+static void
+check_for_disallowed_pg_operator(void)
+{
+	int			dbnum;
+	char		output_path[MAXPGPATH];
+	bool		found = false;
+	FILE		*script = NULL;
+
+	if (GET_MAJOR_VERSION(old_cluster.major_version) > 904)
+		return;
+
+	prep_status("Checking for disallowed OPERATOR =>");
+
+	snprintf(output_path, sizeof(output_path), "%s/%s",
+			 log_opts.basedir,
+			 "databases_with_disallowed_pg_operator.txt");
+
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(&old_cluster, active_db->db_name);
+
+		/* Find any disallowed operator '=>' in all the databases */
+		res = executeQueryOrDie(conn,
+								"SELECT * "
+								"FROM pg_operator "
+								"WHERE oprname = '=>' AND "
+								"	   oid >= 16384");
+
+		if (PQntuples(res) != 0)
+		{
+			found = true;
+			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
+				pg_fatal("Could not create necessary file:  %s\n", output_path);
+
+			fprintf(script, "%s\n", active_db->db_name);
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+
+	if (script)
+		fclose(script);
+
+	if (found)
+	{
+		pg_log(PG_REPORT, "fatal\n");
+		gp_fatal_log(
+					 "| Your installation contains disallowed OPERATOR =>.\n"
+					 "| You will need to remove the disallowed OPERATOR =>\n"
+					 "| from the list of databases in the file:\n"
+					 "|    %s\n\n", output_path);
 	}
 	else
 		check_ok();
