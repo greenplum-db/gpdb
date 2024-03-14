@@ -1170,7 +1170,7 @@ class gpexpand:
         if len(contentIds_with_running_basebackup) > 0:
             raise Exception(
                 "Found pg_basebackup running for segments with contentIds %s" % contentIds_with_running_basebackup)
-        
+
         for seg in inputFileEntryList:
             self.gparray.addExpansionSeg(content=int(seg.contentId)
                                          , preferred_role=seg.role
@@ -1384,7 +1384,7 @@ class gpexpand:
         dbconn.execSQL(self.conn, "CHECKPOINT")
         self.conn.close()
 
-        # increase expand version 
+        # increase expand version
         self.conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8')
         dbconn.execSQL(self.conn, "select gp_expand_bump_version()")
         self.conn.close()
@@ -1781,7 +1781,7 @@ class gpexpand:
             FROM
                 pg_class c
                 JOIN pg_inherits a on (a.inhrelid = c.oid)
-                JOIN pg_partitions pa on (c.oid = (quote_ident(pa.schemaname) || '.' || quote_ident(pa.partitiontablename))::regclass::oid)
+                JOIN pg_partitions pa on (c.oid = (quote_ident(pa.partitionschemaname) || '.' || quote_ident(pa.partitiontablename))::regclass::oid)
                 JOIN pg_class d on (a.inhparent = d.oid)
                 JOIN pg_namespace n on (c.relnamespace = n.oid)
                 LEFT JOIN pg_exttable pe on (c.oid=pe.reloid and pe.writable)
