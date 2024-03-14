@@ -30,80 +30,7 @@
 #include "cdb/cdbvars.h"
 
 
-/*
- * Function: choose_setop_type
- *
- * Decide what type of plan to use for a set operation based on the loci of
- * the node list input to the set operation.
- *
- * See the comments in cdbsetop.h for discussion of types of setop plan.
- */
-GpSetOpType
-choose_setop_type(List *pathlist)
-{
-	ListCell   *cell;
-	bool		ok_general = true;
-	bool		ok_partitioned = true;
-	bool		ok_single_qe = true;
-	bool		has_partitioned = false;
-
-	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_UTILITY);
-
-	foreach(cell, pathlist)
-	{
-		Path	   *subpath = (Path *) lfirst(cell);
-
-		switch (subpath->locus.locustype)
-		{
-			case CdbLocusType_Hashed:
-			case CdbLocusType_HashedOJ:
-			case CdbLocusType_Strewn:
-				ok_general = false;
-				has_partitioned = true;
-				break;
-
-			case CdbLocusType_Entry:
-				ok_general = ok_partitioned = ok_single_qe = false;
-				break;
-
-			case CdbLocusType_OuterQuery:
-				return PSETOP_SEQUENTIAL_OUTERQUERY;
-
-			case CdbLocusType_SingleQE:
-				ok_general = false;
-				break;
-
-			case CdbLocusType_SegmentGeneral:
-				ok_general = false;
-				break;
-
-			case CdbLocusType_General:
-				break;
-
-			case CdbLocusType_Replicated:
-				break;
-
-			case CdbLocusType_Null:
-				elog(ERROR, "unexpected Null locus in set operation branch");
-				break;
-			default:
-				elog(ERROR, "unexpected locus type in set operation branch");
-				break;
-		}
-	}
-
-	if (ok_general)
-		return PSETOP_GENERAL;
-	else if (ok_partitioned && has_partitioned)
-		return PSETOP_PARALLEL_PARTITIONED;
-	else if (ok_single_qe)
-		return PSETOP_SEQUENTIAL_QE;
-
-	return PSETOP_SEQUENTIAL_QD;
-}
-
-
-void
+bool
 adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSetOpType setop_type)
 {
 	ListCell   *pathcell;
@@ -117,6 +44,29 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 		List	   *subtlist = (List *) lfirst(tlistcell);
 
 		adjusted_path = subpath;
+
+		if (CdbPathLocus_IsOuterQuery(subpath->locus)
+			&& setop_type != PSETOP_SEQUENTIAL_OUTERQUERY)
+		{
+			return false;
+		}
+
+		if (CdbPathLocus_IsBottleneck(subpath->locus)
+			&& setop_type == PSETOP_PARALLEL_PARTITIONED)
+		{
+			return false;
+		}
+
+		if ((CdbPathLocus_IsGeneral(subpath->locus)
+			|| CdbPathLocus_IsReplicated(subpath->locus))
+			&& setop_type != PSETOP_GENERAL)
+		{
+			return false;
+		}
+
+		if (IsA(subpath, CdbMotionPath))
+			return false;
+
 		switch (setop_type)
 		{
 			case PSETOP_GENERAL:
@@ -144,9 +94,9 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 					case CdbLocusType_Replicated:
 					case CdbLocusType_OuterQuery:
 					case CdbLocusType_End:
-						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
+						ereport(DEBUG1, (errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
-						break;
+						return false;
 				}
 				break;
 
@@ -183,9 +133,9 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 					case CdbLocusType_Null:
 					case CdbLocusType_Replicated:
 					case CdbLocusType_End:
-						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
+						ereport(DEBUG1, (errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
-						break;
+						return false;
 				}
 				break;
 
@@ -220,17 +170,17 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 					case CdbLocusType_Null:
 					case CdbLocusType_Replicated:
 					case CdbLocusType_End:
-						ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
+						ereport(DEBUG1, (errcode(ERRCODE_INTERNAL_ERROR),
 										errmsg("unexpected argument locus to set operation")));
-						break;
+						return false;
 				}
 				break;
 
 			default:
 				/* Can't happen! */
-				ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
+				ereport(DEBUG1, (errcode(ERRCODE_INTERNAL_ERROR),
 								errmsg("unexpected arguments to set operation")));
-				break;
+				return false;
 		}
 
 		/* If we made changes, inject them into the argument list. */
@@ -241,7 +191,7 @@ adjust_setop_arguments(PlannerInfo *root, List *pathlist, List *tlist_list, GpSe
 		}
 	}
 
-	return;
+	return true;
 }
 
 /*
