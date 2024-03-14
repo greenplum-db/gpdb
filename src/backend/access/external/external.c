@@ -70,58 +70,72 @@ gfile_free(void *a)
 {
 	pfree(a);
 }
- 
+
+/*  Split the uris string which may contain escape */
 static char*
 strsep_uri(char **uris)
 {
-        char *index;
-        char *result;
+	char *index;
+	char *result;
 
-        if ((index = *uris) == NULL)
-                return NULL;
-        if (*index == '\0')
-                return NULL;
+	if ((index = *uris) == NULL)
+		return NULL;
+	if (*index == '\0')
+		return NULL;
 
-        size_t len = strlen(index);
-        result = (char *)palloc(len + 1);
-        int j = 0;
-        for (;;)
-        {
-                if (*index == '\0')
-                {
-                        result[j++] = '\0';
-                        *uris = index;
-                        break;
-                }
+	size_t len = strlen(index);
+	result = (char *)palloc(len + 1);
+	int j = 0;
+	for (;;)
+	{
+		if (*index == '\0')
+		{
+			result[j++] = '\0';
+			*uris = index;
+			break;
+		}
+		/* If escape is found */
 		else if (*index == '\\')
-                {
-                        index++;
-                        if (*index == '\\' || *index == '|')
-                        {
-                                result[j++] = *index;
-                        }
-                        else if (*index != '\0')
-                        {
-                                result[j++] = '\\';
-                                result[j++] = *index;
-                        }
-                        index++;
-                        continue;
-                }
-                else if (*index == '|')
-                {
-                        index++;
-                        result[j++] = '\0';
-                        *uris = index;
-                        break;
-                }
-                else
-                {
-                        result[j++] = *index;
-                        index++;
-                }
-        }
-        return result;
+		{
+			/* Check the next character after escape. */
+			index++;
+			/* If it is a separator or another escape, skip the previous escape. */
+			if (*index == '\\' || *index == '|')
+			{
+				result[j++] = *index;
+			}
+			/* This is only possible for previous version data without escape.
+			 * If it is the end, continue and the next loop will handle it.
+			 */
+			else if (*index == '\0')
+			{
+				continue;
+			}
+			/* This is only possible for previous version data without escape.
+			 * If it is a common char, keep the original format.
+			 */
+			else
+			{
+				result[j++] = '\\';
+				result[j++] = *index;
+			}
+			index++;
+		}
+		/* For correct data, only delimiter have not escape before. */
+		else if (*index == '|')
+		{
+			index++;
+			result[j++] = '\0';
+			*uris = index;
+			break;
+		}
+		else
+		{
+			result[j++] = *index;
+			index++;
+		}
+	}
+	return result;
 }
 
 /* transform the locations string to a list */

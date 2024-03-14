@@ -481,12 +481,15 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 	return buf.data;
 }
 
+/* Since | is used as a delimiter, need to escape the | in the data,
+ * use \ as escape, and \ itself also needs to be escaped.
+ */
 static char*
 escape_uri(char *uri) {
 	size_t len = strlen(uri);
 	char *output = (char *)palloc((len * 2) + 1);
-    	int i, j = 0;
-    	for (i = 0; uri[i] != '\0'; i++) {
+	int i, j = 0;
+	for (i = 0; uri[i] != '\0'; i++) {
 		if (uri[i] == '|' || uri[i] == '\\')
 		{
 			output[j++] = '\\';
@@ -494,9 +497,9 @@ escape_uri(char *uri) {
 		}
 		else
 		{
-                	output[j++] = uri[i];
+			output[j++] = uri[i];
 		}
-        }
+ 	}
 	output[j] = '\0';
 	return output;
 }
