@@ -390,7 +390,8 @@ CREATE READABLE EXTERNAL TABLE public.test_ext
   id integer
 )
 LOCATION(
-  'file://gpdev/tmp/test1|.|txt'
+  'file://gpdev/tmp/test1|.|tx||t|||',
+  'file://gpdev/tmp/test2|.|tx||t||||'
 )
 FORMAT 'TEXT' (
   delimiter 'off' null E'\\N' escape E'\\'
@@ -398,9 +399,9 @@ FORMAT 'TEXT' (
 ENCODING 'UTF8'
 LOG ERRORS PERSISTENTLY SEGMENT REJECT LIMIT 10 PERCENT;
 SELECT urilocation FROM pg_exttable WHERE reloid = 'public.test_ext'::regclass;
-          urilocation           
---------------------------------
- {file://gpdev/tmp/test1|.|txt}
+                              urilocation                               
+------------------------------------------------------------------------
+ {file://gpdev/tmp/test1|.|tx||t|||,file://gpdev/tmp/test2|.|tx||t||||}
 (1 row)
 
 DROP EXTERNAL TABLE public.test_ext;
