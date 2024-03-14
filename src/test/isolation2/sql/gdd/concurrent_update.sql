@@ -220,3 +220,60 @@ drop table test;
 
 1q:
 2q:
+
+-- test that execution of triggers in parallel transactions won't cause a segfault
+-- (checks that ExecFilterJunk is called from ExecBRUpdateTriggers with not null
+-- junkfilter argument - relinfo.ri_junkFilter is sended as argumetn instead of
+-- estate.es_junkFilter (which is a legacy of postgres 8.3))
+create table test_table (id serial, field int default 0 not null, rand_hash text);
+
+create or replace function test_table_bu() returns trigger
+    language plpgsql
+volatile
+as
+$$
+begin
+  select md5(random()::text) into new.rand_hash; /* in func */
+  return new; /* in func */
+end; /* in func */
+$$;
+
+create trigger test_table_bu
+    before insert or update
+    on test_table
+    for each row
+execute procedure test_table_bu();
+
+insert into test_table (field) values (0), (1);
+
+-- start_matchsubs
+-- m/[a-f0-9]{32}/
+-- s/[a-f0-9]{32}/hash/
+-- end_matchsubs
+
+-- run first update transaction
+1: begin;
+1: update test_table set field = field + 1;
+1: select * from test_table order by id;
+
+-- run second update transaction, 
+2: begin;
+2&: update test_table set field = field + 1;
+
+
+-- after first transaction ended, second must continue execution (not cause a segfault) 
+1: end;
+2<:
+2: select * from test_table order by id;
+
+-- check table data
+1: select * from test_table order by id;
+2: end;
+1: select * from test_table order by id;
+
+1: drop trigger test_table_bu on test_table;
+1: drop function test_table_bu();
+1: drop table test_table;
+
+1q:
+2q:

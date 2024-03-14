@@ -2527,7 +2527,7 @@ ExecBRUpdateTriggers(EState *estate, EPQState *epqstate,
 	 */
 	if (newSlot != NULL)
 	{
-		slot = ExecFilterJunk(estate->es_junkFilter, newSlot);
+		slot = ExecFilterJunk(relinfo->ri_junkFilter, newSlot);
 		slottuple = ExecFetchSlotHeapTuple(slot);
 		newtuple = slottuple;
 	}
