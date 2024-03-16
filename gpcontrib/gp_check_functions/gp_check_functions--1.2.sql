@@ -356,37 +356,37 @@ BEGIN
     CHECKPOINT;
 
     RETURN QUERY
-    SELECT 
+    SELECT
         q.gp_segment_id,
         q.move_success,
         q.oldpath,
         q.newpath
     FROM (
-        WITH OrphanedFiles AS (
-            -- Coordinator
-            SELECT 
+        SELECT s1.gp_segment_id, s1.oldpath, s1.newpath, pg_file_rename(s1.oldpath, s1.newpath, NULL) AS move_success
+        FROM
+        (
+            SELECT
                 o.gp_segment_id,
                 s.setting || '/' || o.filepath as oldpath,
                 target_location || '/seg' || o.gp_segment_id::text || '_' || REPLACE(o.filepath, '/', '_') as newpath
             FROM __check_orphaned_files o, pg_settings s
             WHERE s.name = 'data_directory'
-            UNION ALL
-            -- Segments
+        ) s1
+        UNION ALL
+        -- Segments
+        SELECT s2.gp_segment_id, s2.oldpath, s2.newpath, pg_file_rename(s2.oldpath, s2.newpath, NULL) AS move_success
+        FROM
+        (
             SELECT
-                 o.gp_segment_id,
-                 s.setting || '/' || o.filepath as oldpath,
-                 target_location || '/seg' || o.gp_segment_id::text || '_' || REPLACE(o.filepath, '/', '_') as newpath
-            FROM gp_dist_random('__check_orphaned_files') o 
+                o.gp_segment_id,
+                s.setting || '/' || o.filepath as oldpath,
+                target_location || '/seg' || o.gp_segment_id::text || '_' || REPLACE(o.filepath, '/', '_') as newpath
+            FROM gp_dist_random('__check_orphaned_files') o
             JOIN (SELECT gp_execution_segment() as gp_segment_id, * FROM gp_dist_random('pg_settings')) s on o.gp_segment_id = s.gp_segment_id
             WHERE s.name = 'data_directory'
-        )
-        SELECT 
-            OrphanedFiles.gp_segment_id,
-            OrphanedFiles.oldpath,
-            OrphanedFiles.newpath,
-            pg_file_rename(OrphanedFiles.oldpath, OrphanedFiles.newpath, NULL) AS move_success
-        FROM OrphanedFiles
-    ) q ORDER BY q.gp_segment_id, q.oldpath;
+        ) s2
+    ) q
+    ORDER BY q.gp_segment_id, q.oldpath;
 EXCEPTION
     WHEN lock_not_available THEN
         RAISE EXCEPTION 'cannot obtain SHARE lock on pg_class';
