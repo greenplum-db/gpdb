@@ -606,6 +606,7 @@ VarBlockIsValid(
 		{
 			VarBlockByteOffset prevOffset = offset;
 
+			offset = VarBlockGetOffset(header, offsetToOffsetArray, i);
 			if (offset < prevOffset)
 			{
 				sprintf(VarBlockCheckErrorStr,

@@ -7,6 +7,8 @@
 -- start_matchsubs
 -- m/^ERROR:  (block|header) checksum does not match./
 -- s/expected 0x(........) and found 0x(........)/expected 0xXXXXXXXX and found 0xXXXXXXXX/
+-- m/^ERROR:  VarBlock is not valid, valid block check error 12, detail .* /
+-- s/detail.*//
 -- end_matchsubs
 
 -- Ignore the status messages from the helper function. They're useful for
@@ -142,6 +144,10 @@ select SUM(corrupt_file(get_aoseg1_path('corrupt_content_small_ao'), -3)) from g
 
 SELECT COUNT(*) FROM corrupt_content_small_ao;
 
+-- try again, check varblock content offset validation w/ checksum disabled
+set gp_appendonly_verify_block_checksums = off;
+SELECT COUNT(*) FROM corrupt_content_small_ao;
+reset gp_appendonly_verify_block_checksums;
 
 -- Also test gp_appendonly_verify_block_checksums=off.
 create table appendonly_verify_block_checksums_co (t text)  with (checksum=true, appendonly=true, orientation=column, compresstype=none);

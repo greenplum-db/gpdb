@@ -7,6 +7,8 @@
 -- start_matchsubs
 -- m/^ERROR:  (block|header) checksum does not match./
 -- s/expected 0x(........) and found 0x(........)/expected 0xXXXXXXXX and found 0xXXXXXXXX/
+-- m/^ERROR:  VarBlock is not valid, valid block check error 12, detail .* /
+-- s/detail.*//
 -- end_matchsubs
 -- Ignore the status messages from the helper function. They're useful for
 -- debugging, but the output is different on every invocation.
@@ -179,6 +181,11 @@ INFO:  corrupting file base/107062/107111.1 at -3  (seg2 slice1 127.0.0.1:40002 
 
 SELECT COUNT(*) FROM corrupt_content_small_ao;
 ERROR:  block checksum does not match, expected 0x30FEE3C5 and found 0xA6847419   (seg0 slice1 127.0.0.1:40000 pid=28137)
+-- try again, check varblock content offset validation w/ checksum disabled
+set gp_appendonly_verify_block_checksums = off;
+SELECT COUNT(*) FROM corrupt_content_small_ao;
+ERROR:  VarBlock is not valid, valid block check error 12, detail 'offset 10808 at index 38 is bad -- greater than itemLenSum and header 320 (bytes_0_3 0x81000138, bytes_4_7 0x00000027)' (appendonlyam.c:701)  (seg0 slice1 10.117.190.174:6002 pid=25324) (appendonlyam.c:701)
+reset gp_appendonly_verify_block_checksums;
 -- Also test gp_appendonly_verify_block_checksums=off.
 create table appendonly_verify_block_checksums_co (t text)  with (checksum=true, appendonly=true, orientation=column, compresstype=none);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 't' as the Greenplum Database data distribution key for this table.
