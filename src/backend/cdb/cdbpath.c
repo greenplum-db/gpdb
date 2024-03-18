@@ -2403,7 +2403,15 @@ create_motion_path_for_insert(PlannerInfo *root, GpPolicy *policy,
 			}
 
 		}
-		subpath = cdbpath_create_broadcast_motion_path(root, subpath, policy->numsegments);
+
+		/*
+		 * planner may have add a top Motion eariler.
+		 * Create table t1(id int) distributed randomly;
+		 * Create table t2 as select random() from t1 distributed replicated;
+		 * Avoid Motion if there already was.
+		 */
+		if (!CdbPathLocus_IsReplicated(subpath->locus))
+			subpath = cdbpath_create_broadcast_motion_path(root, subpath, policy->numsegments);
 	}
 	else
 		elog(ERROR, "unrecognized policy type %u", policyType);
