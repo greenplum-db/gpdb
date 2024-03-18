@@ -12,6 +12,11 @@
 -- This file aims to cover the things that behave sanely, even though we don't
 -- officially support anything to do with triggers.
 --
+-- Even though we claim that triggers are not supported in Greenplum, users
+-- were still allowed to create them. As such, restoring from GP6 that has
+-- triggers will cause issues; we now have a new GUC gp_enable_statement_trigger
+-- to let pg_restore by pass this issue and create the trigger anyway.
+--
 
 create or replace function insert_notice_trig() returns trigger as $$
   begin
@@ -144,3 +149,21 @@ create trigger trig_ao after insert on trigtest_ao for each row execute function
 create trigger trig_co after insert on trigtest_co for each row execute function insert_notice_trig();
 insert into trigtest_ao values(1);
 insert into trigtest_co values(1);
+
+--
+-- Add GUC test to enable statement trigger
+-- default GUC value is off
+--
+SET gp_enable_statement_trigger = on;
+
+CREATE TABLE main_table_gp (a int, b int);
+CREATE FUNCTION trigger_func_gp() RETURNS trigger LANGUAGE plpgsql AS '
+BEGIN
+	RAISE NOTICE ''trigger_func(%) called: action = %, when = %, level = %'', TG_ARGV[0], TG_OP, TG_WHEN, TG_LEVEL;
+	RETURN NULL;
+END;';
+-- We do not drop the trigger since this is used as part of the dump and restore testing of ICW
+CREATE TRIGGER before_ins_stmt_trig_gp BEFORE INSERT ON main_table_gp
+FOR EACH STATEMENT EXECUTE PROCEDURE trigger_func_gp('before_ins_stmt');
+
+SET gp_enable_statement_trigger = off;

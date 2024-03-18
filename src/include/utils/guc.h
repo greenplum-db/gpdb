@@ -325,6 +325,7 @@ extern int rep_lag_avoidance_threshold;
 extern bool gp_maintenance_mode;
 extern bool gp_maintenance_conn;
 extern bool allow_segment_DML;
+extern bool gp_enable_statement_trigger;
 
 extern bool gp_ignore_error_table;
 

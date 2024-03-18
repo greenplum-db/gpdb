@@ -173,6 +173,7 @@
 		"gp_enable_relsize_collection",
 		"gp_enable_slow_writer_testmode",
 		"gp_enable_sort_limit",
+		"gp_enable_statement_trigger",
 		"gp_encoding_check_locale_compatibility",
 		"gp_explain_jit",
 		"gp_external_enable_exec",

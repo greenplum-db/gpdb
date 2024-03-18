@@ -237,6 +237,7 @@ int			gp_max_partition_level;
 bool		gp_maintenance_mode;
 bool		gp_maintenance_conn;
 bool		allow_segment_DML;
+bool		gp_enable_statement_trigger;
 
 /* Time based authentication GUC */
 char	   *gp_auth_time_override_str = NULL;
@@ -639,6 +640,18 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false,
 		NULL, NULL, NULL
 	},
+
+	{
+		{"gp_enable_statement_trigger", PGC_USERSET, CUSTOM_OPTIONS,
+			gettext_noop("Enables statement triggers to be created instead of erroring out."),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&gp_enable_statement_trigger,
+		false,
+		NULL, NULL, NULL
+	},
+
 	{
 		{"enable_groupagg", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enables the planner's use of grouping aggregation plans."),
