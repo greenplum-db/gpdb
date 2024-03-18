@@ -43,12 +43,6 @@ clean distclean maintainer-clean:
 greenplum/aomd_filehandler.c: $(top_srcdir)/src/backend/access/appendonly/aomd_filehandler.c
 	rm -f $@ && cd greenplum && $(LN_S) ../$< aomd_filehandler.c
 
-# GPDB_UPGRADE_FIXME:
-# GPDB want to run installcheck of pg_upgrade in the end of installcheck-world
-# let installcheck be a no-op, so "make -C src/bin/ installcheck" does nothing on
-# src/bin/pg_upgrade, the real test of pg_upgrade will be triggered by
-# "make check" in the end of installcheck-world, see GNUmakefile.in
-
 # When $(MAKE) is present, make automatically infers that this is a
 # recursive make. which is not actually what we want here, as that
 # e.g. prevents output synchronization from working (as make thinks
