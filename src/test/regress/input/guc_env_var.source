@@ -13,14 +13,16 @@ select CASE WHEN d::text < 10::text THEN 1 ELSE 2 END from guc_env_tbl;
 -- ensure no Gang is reused
 set gp_vmem_idle_resource_timeout = 1;
 
-create or replace function udf_setenv(cstring, cstring) returns bool as
-'@abs_builddir@/regress@DLSUFFIX@', 'udf_setenv' LANGUAGE C;
+CREATE FUNCTION putenv(text)
+   RETURNS void
+   AS '@libdir@/regress@DLSUFFIX@', 'regress_putenv'
+   LANGUAGE C STRICT;
 
 create or replace function udf_unsetenv(cstring) returns bool as
 '@abs_builddir@/regress@DLSUFFIX@', 'udf_unsetenv' LANGUAGE C;
 
 -- set QD environment variable
-select udf_setenv('PGDATESTYLE', 'ISO, YMD');
+select putenv('PGDATESTYLE="ISO, YMD"');
 
 -- sleep to ensure the existing Gang has been destroyed
 \! sleep 0.5
