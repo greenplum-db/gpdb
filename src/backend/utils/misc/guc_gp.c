@@ -3392,7 +3392,7 @@ struct config_int ConfigureNamesInt_gp[] =
 
 	{
 		{"max_resource_portals_per_transaction", PGC_POSTMASTER, RESOURCES_MGM,
-			gettext_noop("Maximum number of resource queues."),
+			gettext_noop("Sets the maximum number of simultaneously open cursors allowed per transaction."),
 			NULL
 		},
 		&MaxResourcePortalsPerXact,
