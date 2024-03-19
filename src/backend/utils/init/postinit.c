@@ -27,6 +27,7 @@
 #include "access/tableam.h"
 #include "access/xact.h"
 #include "access/xlog.h"
+#include "access/parallel.h"
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
@@ -1270,7 +1271,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
      * This is SKIPPED when the database is in bootstrap mode or 
      * Is not UnderPostmaster.
      */
-    if (!bootstrap && IsUnderPostmaster)
+    if (!bootstrap && IsUnderPostmaster && !InitializingParallelWorker)
     {
 		cdb_setup();
 		on_proc_exit( cdb_cleanup, 0 );
