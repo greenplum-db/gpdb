@@ -153,6 +153,7 @@ create_gang_retry:
 			 */
 			ret = build_gpqeid_param(gpqeid, sizeof(gpqeid),
 									 segdbDesc->isWriter,
+									 segdbDesc->isFirstWriter,
 									 segdbDesc->identifier,
 									 segdbDesc->segment_database_info->hostPrimaryCount,
 									 totalSegs * 2);

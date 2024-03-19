@@ -52,14 +52,14 @@ typedef struct SegmentDatabaseDescriptor
     int32					backendPid;
     char                   *whoami;         /* QE identifier for msgs */
 	bool					isWriter;
+	bool					isFirstWriter;
 	int						identifier;		/* unique identifier in the cdbcomponent segment pool */
 	double					establishConnTime; /* the time of establish connection to the segment,
 												* -1 means this connection is cached */
 } SegmentDatabaseDescriptor;
 
 SegmentDatabaseDescriptor *
-
-cdbconn_createSegmentDescriptor(struct CdbComponentDatabaseInfo  *cdbinfo, int identifier, bool isWriter);
+cdbconn_createSegmentDescriptor(struct CdbComponentDatabaseInfo  *cdbinfo, int identifier, bool isWriter, bool isFirstWriter);
 
 /* Free all memory owned by a segment descriptor. */
 void

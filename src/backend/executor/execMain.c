@@ -1587,12 +1587,15 @@ ExecCheckXactReadOnly(PlannedStmt *plannedstmt)
 		if ((rte->requiredPerms & (~ACL_SELECT)) == 0)
 			continue;
 
-		/*
-		 * External and foreign tables don't need two phase commit which is for
-		 * local mpp tables
-		 */
 		if (get_rel_relkind(rte->relid) == RELKIND_FOREIGN_TABLE)
-			continue;
+		{
+			ForeignTable *ftable = GetForeignTable(rte->relid);
+			ForeignServer *server = GetForeignServer(ftable->serverid);
+			ForeignDataWrapper *fdw = GetForeignDataWrapper(server->fdwid);
+			/* non-rollback-able foreign table doesn't need two-phase commit. */
+			if (strcmp(fdw->fdwname, "gp_exttable_fdw") == 0)
+				continue;
+		}
 
 		if (isTempNamespace(get_rel_namespace(rte->relid)))
 		{

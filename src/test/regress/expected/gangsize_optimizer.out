@@ -189,13 +189,13 @@ INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTI
 update random_2_0 set a = 1 from hash_3_3_2 where hash_3_3_2.b = random_2_0.c;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
-INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 2 0 1
 begin;
 update random_2_0 set a = 1 from hash_3_3_2 where hash_3_3_2.b = random_2_0.c;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 end;
-INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to ALL contents: 2 0 1
 update replicate_2_1 set a = a + 1;
 INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 INFO:  Distributed transaction command 'Distributed Commit (one-phase)' to PARTIAL contents: 0 1

@@ -24,7 +24,15 @@ CREATE SERVER pgserver FOREIGN DATA WRAPPER postgres_fdw
            dbname 'contrib_regression', multi_hosts 'localhost  localhost',
            multi_ports '5432  5555', num_segments '2', mpp_execute 'all segments');
 
+-- pgserver1 is used to test distributed transaction.
+-- In case of build 4 remote postgres servers, we write to a table three times, but with different data.
+CREATE SERVER pgserver1 FOREIGN DATA WRAPPER postgres_fdw
+  OPTIONS (host 'dummy', port '0',
+           dbname 'contrib_regression', multi_hosts 'localhost  localhost localhost localhost',
+           multi_ports '5432 5555 5432 5432', num_segments '4', mpp_execute 'all segments');
+
 CREATE USER MAPPING FOR CURRENT_USER SERVER pgserver;
+CREATE USER MAPPING FOR CURRENT_USER SERVER pgserver1;
 
 -- ===================================================================
 -- create objects used through FDW pgserver server
@@ -51,6 +59,11 @@ CREATE FOREIGN TABLE mpp_ft2 (
 	c6 double precision,
 	c7 numeric
 ) SERVER pgserver OPTIONS (schema_name 'MPP_S 1', table_name 'T 2');
+
+CREATE FOREIGN TABLE mpp_ft3 (
+	c1 int,
+	c2 int
+) SERVER pgserver1 OPTIONS (schema_name 'MPP_S 1', table_name 'T 1');
 
 -- ===================================================================
 -- tests for validator
@@ -87,15 +100,6 @@ ALTER FOREIGN TABLE mpp_ft1 OPTIONS (drop use_remote_estimate);
 -- ===================================================================
 CREATE SCHEMA mpp_import_dest;
 IMPORT FOREIGN SCHEMA import_source FROM SERVER pgserver INTO mpp_import_dest;
-
--- ===================================================================
--- When there are multiple remote servers, we don't support INSERT/UPDATE/DELETE
--- ===================================================================
-INSERT INTO mpp_ft1 VALUES (1, 1);
-
-UPDATE mpp_ft1 SET c1 = c1 + 1;
-
-DELETE FROM mpp_ft1;
 
 -- ===================================================================
 -- Aggregate and grouping queries
@@ -249,3 +253,25 @@ SELECT count(c1), max(c6) FROM mpp_ft2 GROUP BY c2 order by c2 limit 3;
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT count(*), sum(t1.c1), avg(t2.c2) FROM mpp_ft2 t1 inner join mpp_ft2 t2 on (t1.c1 = t2.c1) where t1.c1 = 2;
 SELECT count(*), sum(t1.c1), avg(t2.c2) FROM mpp_ft2 t1 inner join mpp_ft2 t2 on (t1.c1 = t2.c1) where t1.c1 = 2;
+
+-- ===================================================================
+-- Test distributed transaction for multi-server foreign table
+-- ===================================================================
+select count(*) from mpp_ft3;
+--  drop column c2 in remote postgres server listening port 5555
+\! env PGOPTIONS='' psql -p 5555 contrib_regression -c 'alter table "MPP_S 1"."T 1" drop column c2'
+insert into mpp_ft3 select i,i from generate_series(1,100) i;
+\! env PGOPTIONS='' psql -p 5555 contrib_regression -c 'alter table "MPP_S 1"."T 1" add column c2 int'
+select count(*) from mpp_ft3;
+
+-- ===================================================================
+-- Test INSERT/UPDATE/DELETE
+-- ===================================================================
+DELETE FROM mpp_ft1;
+SELECT * FROM mpp_ft1 ORDER BY c1;
+INSERT INTO mpp_ft1 VALUES (0, 0), (1, 1), (2, 2), (3, 3), (4, 4), (5, 5);
+SELECT * FROM mpp_ft1 ORDER BY c1;
+UPDATE mpp_ft1 SET c1 = c1 * 10;
+SELECT * FROM mpp_ft1 ORDER BY c1;
+UPDATE mpp_ft1 SET c1 = c1 / (c1 - 10);
+SELECT * FROM mpp_ft1 ORDER BY c1;

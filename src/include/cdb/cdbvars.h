@@ -86,6 +86,17 @@ extern bool gp_set_proc_affinity; /* try to bind postmaster to a processor */
  */
 extern bool Gp_is_writer;
 
+/* Parameter is_first_writer
+ *
+ * This run_time parameter indicates whether session is a qExec that is the first
+ * "writer" process in a group of segmates.
+ *
+ * It defaults to false.
+ * This should only ever be set by a QD connecting to a QE, rather than
+ * directly.
+ */
+extern bool is_first_writer;
+
 /* Parameter gp_session_id
  *
  * This run time parameter indicates a unique id to identify a particular user

@@ -481,7 +481,7 @@ makeOptions(char **options, char **diff_options)
  */
 bool
 build_gpqeid_param(char *buf, int bufsz,
-				   bool is_writer, int identifier, int hostSegs, int icHtabSize)
+				   bool is_writer, bool is_first_writer, int identifier, int hostSegs, int icHtabSize)
 {
 	int		len;
 #ifdef HAVE_INT64_TIMESTAMP
@@ -494,9 +494,10 @@ build_gpqeid_param(char *buf, int bufsz,
 #endif
 #endif
 
-	len = snprintf(buf, bufsz, "%d;" TIMESTAMP_FORMAT ";%s;%d;%d;%d",
+	len = snprintf(buf, bufsz, "%d;" TIMESTAMP_FORMAT ";%s;%s;%d;%d;%d",
 				   gp_session_id, PgStartTime,
-				   (is_writer ? "true" : "false"), identifier, hostSegs, icHtabSize);
+				   (is_writer ? "true" : "false"),
+				   (is_first_writer ? "true" : "false"), identifier, hostSegs, icHtabSize);
 
 	return (len > 0 && len < bufsz);
 }
@@ -553,6 +554,12 @@ cdbgang_parse_gpqeid_params(struct Port *port pg_attribute_unused(),
 	/* Gp_is_writer */
 	if (gpqeid_next_param(&cp, &np))
 		SetConfigOption("gp_is_writer", cp, PGC_POSTMASTER, PGC_S_OVERRIDE);
+
+	/* is_first_writer */
+	if (gpqeid_next_param(&cp, &np))
+	{
+		is_first_writer = (strcmp(cp, "true") == 0) ? true : false;
+	}
 
 	/* qe_identifier */
 	if (gpqeid_next_param(&cp, &np))

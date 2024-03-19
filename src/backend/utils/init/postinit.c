@@ -1293,8 +1293,16 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
     }
     else if (Gp_role == GP_ROLE_EXECUTE)
 	{
-		if (Gp_is_writer)
+		if (Gp_is_writer && is_first_writer)
 		{
+			/*
+			 * For foreign tables which need more QEs writing
+			 * the external data than the number of segments in gpdb,
+			 * there might be more than one writer QE in the same segment.
+			 *
+			 * Only the first writer QE in the same segment needs to add
+			 * shared snapshot.
+			 */
 			addSharedSnapshot("Writer qExec", gp_session_id);
 		}
 		else

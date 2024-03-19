@@ -66,7 +66,7 @@ transStatusToString(PGTransactionStatusType status)
 
 /* Initialize a QE connection descriptor in CdbComponentsContext */
 SegmentDatabaseDescriptor *
-cdbconn_createSegmentDescriptor(struct CdbComponentDatabaseInfo *cdbinfo, int identifier, bool isWriter)
+cdbconn_createSegmentDescriptor(struct CdbComponentDatabaseInfo *cdbinfo, int identifier, bool isWriter, bool isFirstWriter)
 {
 	MemoryContext oldContext;
 	SegmentDatabaseDescriptor *segdbDesc = NULL;
@@ -89,6 +89,7 @@ cdbconn_createSegmentDescriptor(struct CdbComponentDatabaseInfo *cdbinfo, int id
 	segdbDesc->whoami = NULL;
 	segdbDesc->identifier = identifier;
 	segdbDesc->isWriter = isWriter;
+	segdbDesc->isFirstWriter = isFirstWriter;
 	segdbDesc->establishConnTime = 0;
 
 	MemoryContextSwitchTo(oldContext);

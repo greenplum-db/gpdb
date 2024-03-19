@@ -787,6 +787,7 @@ cdbcomponent_allocateIdleQE(int contentId, SegmentType segmentType)
 	ListCell					*prevItem = NULL;
 	MemoryContext 				oldContext;
 	bool						isWriter;
+	bool						isFirstWriter;
 
 	cdbinfo = cdbcomponent_getComponentInfo(contentId);	
 
@@ -826,18 +827,16 @@ cdbcomponent_allocateIdleQE(int contentId, SegmentType segmentType)
 		/*
 		 * 1. for entrydb, it's never be writer.
 		 * 2. for first QE, it must be a writer.
+		 * 3. for QE in writer gang, it must be a writer.
 		 *
-		 * This block ignores the segmentType of the not-first QEs and
-		 * sets it as a reader, foreign tables have to workaround this
-		 * if we'd like to have more QEs writing the external data than
-		 * the segment count.
-		 *
-		 * This is too critical that we'd better not change the logic of
-		 * other kind tables.
-		 *
+		 * Note: Case 3 only arises when foreign tables need more QEs writing
+		 *       the external data than the number of segments in gpdb.
 		 */
-		isWriter = contentId == -1 ? false: (cdbinfo->numIdleQEs == 0 && cdbinfo->numActiveQEs == 0);
-		segdbDesc = cdbconn_createSegmentDescriptor(cdbinfo, nextQEIdentifer(cdbinfo->cdbs), isWriter);
+		isWriter = contentId == -1 ? false :
+			((cdbinfo->numIdleQEs == 0 && cdbinfo->numActiveQEs == 0) || segmentType == SEGMENTTYPE_EXPLICT_WRITER);
+		/* isFirstWriter identifies whether the writer QE is the first writer QE in the segment.  */
+		isFirstWriter = contentId == -1 ? false : (cdbinfo->numIdleQEs == 0 && cdbinfo->numActiveQEs == 0);
+		segdbDesc = cdbconn_createSegmentDescriptor(cdbinfo, nextQEIdentifer(cdbinfo->cdbs), isWriter, isFirstWriter);
 	}
 
 	cdbconn_setQEIdentifier(segdbDesc, -1);
@@ -900,12 +899,14 @@ cdbcomponent_recycleIdleQE(SegmentDatabaseDescriptor *segdbDesc, bool forceDestr
 	MemoryContext				oldContext;	
 	int							maxLen;
 	bool						isWriter;
+	bool						isFirstWriter;
 
 	Assert(cdb_component_dbs);
 	Assert(CdbComponentsContext);
 
 	cdbinfo = segdbDesc->segment_database_info;
 	isWriter = segdbDesc->isWriter;
+	isFirstWriter = segdbDesc->isFirstWriter;
 
 	/* update num of active QEs */
 	Assert(list_member_ptr(cdbinfo->activelist, segdbDesc));
@@ -926,9 +927,27 @@ cdbcomponent_recycleIdleQE(SegmentDatabaseDescriptor *segdbDesc, bool forceDestr
 	/* Recycle the QE, put it to freelist */
 	if (isWriter)
 	{
-		/* writer is always the header of freelist */
-		segdbDesc->segment_database_info->freelist =
-			lcons(segdbDesc, segdbDesc->segment_database_info->freelist);
+		if (isFirstWriter)
+		{
+			/* the first writer in a segment for the same session is always the header of freelist */
+			segdbDesc->segment_database_info->freelist =
+				lcons(segdbDesc, segdbDesc->segment_database_info->freelist);
+		}
+		else
+		{
+			/* the extra writers must be placed after the first writer in a segment for the same session */
+			ListCell	*cell = list_head(segdbDesc->segment_database_info->freelist);
+			if (cell && ((SegmentDatabaseDescriptor *) lfirst(cell))->isFirstWriter)
+			{
+				lappend_cell(segdbDesc->segment_database_info->freelist,
+							 cell, segdbDesc);
+			}
+			else
+			{
+				segdbDesc->segment_database_info->freelist =
+					lcons(segdbDesc, segdbDesc->segment_database_info->freelist);
+			}
+		}
 	}
 	else
 	{

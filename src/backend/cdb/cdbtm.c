@@ -2395,13 +2395,10 @@ addToGxactDtxSegments(Gang *gang)
 	SegmentDatabaseDescriptor *segdbDesc;
 	MemoryContext oldContext;
 	int segindex;
+	int qe_identifier;
 	int i;
 
 	if (!isCurrentDtxActivated())
-		return;
-
-	/* skip if all segdbs are in the list */
-	if (list_length(MyTmGxactLocal->dtxSegments) >= getgpsegmentCount())
 		return;
 
 	oldContext = MemoryContextSwitchTo(TopTransactionContext);
@@ -2410,17 +2407,19 @@ addToGxactDtxSegments(Gang *gang)
 		segdbDesc = gang->db_descriptors[i];
 		Assert(segdbDesc);
 		segindex = segdbDesc->segindex;
+		qe_identifier = segdbDesc->identifier;
 
 		/* entry db is just a reader, will not involve in two phase commit */
 		if (segindex == -1)
 			continue;
 
 		/* skip if record already */
-		if (bms_is_member(segindex, MyTmGxactLocal->dtxSegmentsMap))
+		/* only need to dispatch dtx protocol command to writer QEs in a distributed transaction */
+		if (bms_is_member(qe_identifier, MyTmGxactLocal->dtxSegmentsMap) || !segdbDesc->isWriter)
 			continue;
 
 		MyTmGxactLocal->dtxSegmentsMap =
-			bms_add_member(MyTmGxactLocal->dtxSegmentsMap, segindex);
+			bms_add_member(MyTmGxactLocal->dtxSegmentsMap, qe_identifier);
 
 		MyTmGxactLocal->dtxSegments =
 			lappend_int(MyTmGxactLocal->dtxSegments, segindex);
