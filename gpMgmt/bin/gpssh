@@ -5,16 +5,17 @@ gpssh -- ssh access to multiple hosts at once
 
 Usage: gpssh [--version] [-?v] [-h host] [-f hostfile] [cmd]
 
-          --version : print version information
-          -?        : print this help screen
-          -v        : verbose mode
-          -e        : echo commands as they are executed
-          -h host   : the host to connect to (multiple -h is okay)
-          -f file   : a file listing all hosts to connect to
-          -D        : do not filter multi-homed hosts 
-          -s        : source gpdb environment while login
-          cmd       : the command to execute. If not present, 
-                      go into interactive mode
+          --version   : print version information
+          -?          : print this help screen
+          -v          : verbose mode
+          -e          : echo commands as they are executed
+          -h host     : the host to connect to (multiple -h is okay)
+          -f file     : a file listing all hosts to connect to
+          -D          : do not filter multi-homed hosts
+          -s          : source gpdb environment while login
+          --all-hosts : fail execution when not all hosts reached
+          cmd         : the command to execute. If not present,
+                        go into interactive mode
 '''
 import os
 import sys
@@ -52,6 +53,7 @@ class __globals__:
     DELAY_BEFORE_SEND = None
     PROMPT_VALIDATION_TIMEOUT = None
     SYNC_RETRIES = None
+    ALL_HOSTS = None
 
 GV = __globals__()
 
@@ -73,7 +75,7 @@ def print_version():
 
 def parseCommandLine():
     try:
-        (options, args) = getopt.getopt(sys.argv[1:], '?evsh:f:D:u:d:t:', ['version'])
+        (options, args) = getopt.getopt(sys.argv[1:], '?evsh:f:D:u:d:t:', ['version', 'all-hosts'])
     except Exception as e:
         usage('Error: ' + str(e))
     for (switch, val) in options:
@@ -93,6 +95,8 @@ def parseCommandLine():
             GV.DELAY_BEFORE_SEND = float(val)
         elif (switch == '-t'):
             GV.PROMPT_VALIDATION_TIMEOUT = float(val)
+        elif (switch == '--all-hosts'):
+            GV.ALL_HOSTS = True
     hf = (len(GV.opt['-h']) and 1 or 0) + (GV.opt['-f'] and 1 or 0)
     if hf != 1:
         usage('Error: please specify at least one of -h or -f args, but not both')
@@ -207,7 +211,7 @@ def interactive():
             if not GV.session:
                 GV.session = ssh_utils.Session()
                 GV.session.verbose = GV.opt['-v']
-                GV.session.login(GV.opt['-h'], GV.USER, GV.DELAY_BEFORE_SEND, GV.PROMPT_VALIDATION_TIMEOUT, GV.SYNC_RETRIES)
+                GV.session.login(GV.opt['-h'], GV.USER, GV.DELAY_BEFORE_SEND, GV.PROMPT_VALIDATION_TIMEOUT, GV.SYNC_RETRIES, GV.ALL_HOSTS)
                 GV.session.echoCommand = GV.opt['-e']
             if GV.opt['-s']:
                 GV.session.executeCommand("source {0}/greenplum_path.sh".format(os.environ["GPHOME"]))
@@ -261,7 +265,7 @@ def main():
             try:
                 GV.session = ssh_utils.Session()
                 GV.session.verbose = GV.opt['-v']
-                GV.session.login(GV.opt['-h'], GV.USER, GV.DELAY_BEFORE_SEND, GV.PROMPT_VALIDATION_TIMEOUT, GV.SYNC_RETRIES)
+                GV.session.login(GV.opt['-h'], GV.USER, GV.DELAY_BEFORE_SEND, GV.PROMPT_VALIDATION_TIMEOUT, GV.SYNC_RETRIES, GV.ALL_HOSTS)
                 GV.session.echoCommand = GV.opt['-e']
                 if GV.opt['-s']:
                     GV.session.executeCommand("source {0}/greenplum_path.sh".format(os.environ["GPHOME"]))
