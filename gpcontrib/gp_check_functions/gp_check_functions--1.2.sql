@@ -284,6 +284,7 @@ BEGIN
             WHERE
             sess_id <> -1
             AND sess_id <> current_setting('gp_session_id')::int -- Exclude the current session
+            AND state <> 'idle' -- Exclude idle session like GDD
         ) THEN
             RAISE EXCEPTION 'There is a client session running on one or more segment. Aborting...';
         END IF;
@@ -348,6 +349,7 @@ BEGIN
         WHERE
         sess_id <> -1
         AND sess_id <> current_setting('gp_session_id')::int -- Exclude the current session
+        AND state <> 'idle' -- Exclude idle session like GDD
     ) THEN
         RAISE EXCEPTION 'There is a client session running on one or more segment. Aborting...';
     END IF;
