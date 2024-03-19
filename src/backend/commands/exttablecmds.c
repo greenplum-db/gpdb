@@ -358,6 +358,7 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 		Uri		   *uri;
 		char	   *uri_str_orig;
 		char	   *uri_str_final;
+		char	   *uri_str_escape;
 		Value	   *v = lfirst(cell);
 
 		/* get the current URI string from the command */
@@ -464,18 +465,20 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 							uri_str_final),
 					 errhint("Specify the explicit path and file name to write into.")));
 
+		uri_str_escape = escape_uri(uri_str_final);
+		pfree(uri_str_final);
 		if (first_uri)
 		{
-			appendStringInfo(&buf, "%s", escape_uri(uri_str_final));
+			appendStringInfo(&buf, "%s", uri_str_escape);
 			first_uri = false;
 		}
 		else
 		{
-			appendStringInfo(&buf, "|%s", escape_uri(uri_str_final));
+			appendStringInfo(&buf, "|%s", uri_str_escape);
 		}
 
 		FreeExternalTableUri(uri);
-		pfree(uri_str_final);
+		pfree(uri_str_escape);
 	}
 
 	return buf.data;
