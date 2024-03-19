@@ -390,7 +390,7 @@ InitAOCSScanOpaque(SeqScanState *scanstate, Relation currentRelation)
 	 * In some cases (for example, count(*)), no columns are specified.
 	 * We always scan the first column.
 	 */
-	if (i == ncol)
+	if (i == ncol && ncol > 0)
 		proj[0] = true;
 
 	scanstate->ss_aocs_ncol = ncol;

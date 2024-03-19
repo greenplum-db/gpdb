@@ -205,3 +205,9 @@ set gp_select_invisible=false;
 select * into sto_heap_10 from sto_uao_8;
 select count(*) from sto_heap_10;
 COMMIT;
+
+-- Table with zero column
+create table sto_uao_0col();
+select * from sto_uao_0col;
+select count(*) from sto_uao_0col;
+copy sto_uao_0col to stdout;

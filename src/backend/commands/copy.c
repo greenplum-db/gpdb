@@ -3115,6 +3115,16 @@ CopyTo(CopyState cstate)
 					proj[attnum-1] = true;
 				}
 
+				/*
+				 * If the table has no column, we project the first
+				 * one, just like count(*). This is except for the
+				 * case where the table is created with no column,
+				 * in which case we'll return false in aocs_getnext
+				 * because there's no data.
+				 */
+				if (!cstate->attnumlist && nvp > 0)
+					proj[0] = true;
+
 				scan = aocs_beginscan(rel, GetActiveSnapshot(),
 									  GetActiveSnapshot(),
 									  NULL /* relationTupleDesc */, proj);

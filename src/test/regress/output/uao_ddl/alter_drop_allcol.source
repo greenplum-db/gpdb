@@ -38,6 +38,12 @@ select * from alter_drop_allcoll order by a,b;
  5 | 5
 (5 rows)
 
+copy alter_drop_allcoll to stdout;
+1	1
+2	2
+3	3
+4	4
+5	5
 ALTER TABLE alter_drop_allcoll DROP COLUMN b;
 select count(*) as b from pg_attribute pa, pg_class pc where pa.attrelid = pc.oid and pc.relname='alter_drop_allcoll' and attname='b';
  b 
@@ -55,6 +61,12 @@ select * from alter_drop_allcoll order by a;
  5
 (5 rows)
 
+copy alter_drop_allcoll to stdout;
+1
+2
+3
+4
+5
 ALTER TABLE alter_drop_allcoll DROP COLUMN a;
 NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 select count(*) as a from pg_attribute pa, pg_class pc where pa.attrelid = pc.oid and pc.relname='alter_drop_allcoll' and attname='a';
@@ -66,6 +78,12 @@ select count(*) as a from pg_attribute pa, pg_class pc where pa.attrelid = pc.oi
 select * from alter_drop_allcoll;
 --
 (5 rows)
+
+copy alter_drop_allcoll to stdout;
+
+
+
+
 
 ALTER TABLE alter_drop_allcoll ADD COLUMN a1 int default 10;
 select count(*) as a from pg_attribute pa, pg_class pc where pa.attrelid = pc.oid and pc.relname='alter_drop_allcoll' and attname='a';
@@ -96,3 +114,9 @@ select * from alter_drop_allcoll;
  10
 (5 rows)
 
+copy alter_drop_allcoll to stdout;
+10
+10
+10
+10
+10
