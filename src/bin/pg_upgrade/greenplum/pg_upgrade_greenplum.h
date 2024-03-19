@@ -73,12 +73,10 @@ char *get_output_dir(void);
 void freeze_master_data(void);
 void reset_system_identifier(void);
 
-
 /* aotable.c */
 
 void		restore_aosegment_tables(void);
 bool        is_appendonly(char relstorage);
-
 
 /* version_gp.c */
 
@@ -97,5 +95,8 @@ void teardown_GPDB6_data_type_checks(ClusterInfo *cluster);
 void report_progress(ClusterInfo *cluster, progress_type op, char *fmt,...)
 pg_attribute_printf(3, 4);
 void close_progress(void);
+
+/* util.c */
+void make_outputdirs_gp(char *pgdata);
 
 #endif /* PG_UPGRADE_GREENPLUM_H */

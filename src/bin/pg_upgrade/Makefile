@@ -15,7 +15,7 @@ OBJS = check.o controldata.o dump.o exec.o file.o function.o info.o \
 OBJS += greenplum/aotable.o greenplum/version_gp.o \
 		greenplum/check_gp.o greenplum/reporting.o \
 		greenplum/aomd_filehandler.o greenplum/option_gp.o \
-		greenplum/controldata_gp.o
+		greenplum/controldata_gp.o greenplum/util.o
 
 override CPPFLAGS := -DDLSUFFIX=\"$(DLSUFFIX)\" -I$(srcdir) -I$(libpq_srcdir) $(CPPFLAGS)
 LDFLAGS_INTERNAL += -L$(top_builddir)/src/fe_utils -lpgfeutils $(libpq_pgport)
