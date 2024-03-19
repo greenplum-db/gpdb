@@ -173,6 +173,7 @@ test: reorganize_after_ao_vacuum_skip_drop truncate_after_ao_vacuum_skip_drop ma
 # below test(s) inject faults so each of them need to be in a separate group
 test: segwalrep/master_xlog_switch
 test: idle_gang_cleaner
+test: orphaned_gang_cleaner
 
 # Tests on Append-Optimized tables (column-oriented).
 test: uao/alter_while_vacuum_column uao/alter_while_vacuum2_column

@@ -1,0 +1,29 @@
+-- restart cluster
+!\retcode gpstop -afr;
+-- save session id into table
+1: CREATE TABLE session (id int) DISTRIBUTED REPLICATED;
+1: INSERT INTO session SELECT current_setting('gp_session_id')::int;
+-- create table for long query
+1: CREATE TABLE test(i int) DISTRIBUTED BY (i);
+1: INSERT INTO test SELECT i FROM generate_series(1, 100) i;
+-- run long query
+1&: SELECT pg_sleep(10) FROM test;
+-- panic on next query should restart coordinator
+SELECT gp_inject_fault('exec_simple_query_start', 'panic', current_setting('gp_dbid')::int);
+SELECT 1;
+-- got error after restarting
+1<:
+1q:
+-- ensure first session id is less than saved
+1: SELECT current_setting('gp_session_id')::int < id FROM session;
+-- these should not raise snapshot collision error
+2: SELECT id > 0 FROM session;
+3: SELECT id > 0 FROM session;
+4: SELECT id > 0 FROM session;
+5: SELECT id > 0 FROM session;
+6: SELECT id > 0 FROM session;
+7: SELECT id > 0 FROM session;
+8: SELECT id > 0 FROM session;
+9: SELECT id > 0 FROM session;
+-- ensure last session id is greater than saved
+10: SELECT current_setting('gp_session_id')::int > id FROM session;

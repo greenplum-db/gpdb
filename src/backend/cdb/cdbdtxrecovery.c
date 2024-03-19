@@ -42,6 +42,7 @@
 static int frequent_check_times;
 
 volatile bool *shmDtmStarted = NULL;
+volatile bool *shmCleanupBackends;
 volatile pid_t *shmDtxRecoveryPid = NULL;
 
 /* transactions need recover */
@@ -71,6 +72,7 @@ typedef struct InDoubtDtx
 static void recoverTM(void);
 static bool recoverInDoubtTransactions(void);
 static HTAB *gatherRMInDoubtTransactions(int prepared_seconds, bool raiseError);
+static void TerminateMppBackends(void);
 static void abortRMInDoubtTransactions(HTAB *htab);
 static void doAbortInDoubt(char *gid);
 static bool doNotifyCommittedInDoubt(char *gid);
@@ -154,6 +156,18 @@ recoverTM(void)
 		   "Starting to Recover DTM...");
 
 	/*
+	 * We'd better terminate residual QE processes to avoid potential issues,
+	 * e.g. shared snapshot collision, etc. We do soft-terminate here so it is
+	 * still possible there are residual QE processes but it's better than doing
+	 * nothing.
+	 *
+	 * We just do this when there was abnormal shutdown on master or standby
+	 * promote, else mostly there should not have residual QE processes.
+	 */
+	if (*shmCleanupBackends)
+		TerminateMppBackends();
+
+	/*
 	 * attempt to recover all in-doubt transactions.
 	 *
 	 * first resolve all in-doubt transactions from the DTM's perspective and
@@ -235,6 +249,32 @@ recoverInDoubtTransactions(void)
 	RemoveRedoUtilityModeFile();
 
 	return true;
+}
+
+/*
+ * TerminateMppBackends:
+ * Try to terminates all mpp backend processes.
+ */
+static void
+TerminateMppBackends()
+{
+	CdbPgResults term_cdb_pgresults = {NULL, 0};
+	const char *term_buf = "select pg_terminate_backend(pid)"
+		" from pg_stat_activity"
+		" where pid != pg_backend_pid() and sess_id > 0";
+
+	PG_TRY();
+	{
+		CdbDispatchCommand(term_buf, DF_NONE, &term_cdb_pgresults);
+	}
+	PG_CATCH();
+	{
+		FlushErrorState();
+		DisconnectAndDestroyAllGangs(true);
+	}
+	PG_END_TRY();
+
+	cdbdisp_clearCdbPgResults(&term_cdb_pgresults);
 }
 
 /*
