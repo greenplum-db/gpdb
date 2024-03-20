@@ -187,8 +187,6 @@ If you specify this value without units, it is taken as seconds. The valid range
 
 Increasing this parameter can increase the amount of time needed for crash recovery.
 
-You can set this parameter only in the `postgresql.conf` file or on the server command line.
-
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |30 - 86400 (integer) |300|local, system, reload|
