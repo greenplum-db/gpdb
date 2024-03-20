@@ -26,6 +26,8 @@
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp.h"
 
+#include "cdb/cdbsrlz.h"
+
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
@@ -103,8 +105,18 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 		/* read the packet in from the network. */
 		readPacket(conn, transportStates);
 
-		/* go through and form us some TupleChunks. */
-		bytesProcessed = PACKET_HEADER_SIZE;
+		// TBD: GUC
+		if (/* uncompress ? */ true) {
+			conn->msgPos = uncompress_string(conn->rawMsgPos + PACKET_HEADER_SIZE, conn->rawMsgSize - PACKET_HEADER_SIZE, &conn->msgSize);
+			/* go through and form us some TupleChunks. */
+			bytesProcessed = 0;
+		} else {
+			conn->msgPos = conn->rawMsgPos;
+			conn->msgSize = conn->rawMsgSize;
+
+			/* go through and form us some TupleChunks. */
+			bytesProcessed = PACKET_HEADER_SIZE;
+		}
 	}
 	else
 	{
@@ -178,14 +190,14 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 
 				logChunkParseDetails(conn, transportStates->sliceTable->ic_instance_id);
 
-				ereport(ERROR,
+				ereport(WARNING,
 						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 						 errmsg("interconnect error parsing message"),
 						 errdetail("tcSize %d >= conn->msgSize %d",
 								   tcSize, conn->msgSize)));
 			}
 		}
-		Assert(tcSize < conn->msgSize);
+		// Assert(tcSize < conn->msgSize);
 
 		/*
 		 * We store the data inplace, and handle any necessary copying later
@@ -211,16 +223,16 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 		}
 	}
 
-	conn->recvBytes -= conn->msgSize;
+	conn->recvBytes -= conn->rawMsgSize;
 	if (conn->recvBytes != 0)
 	{
 #ifdef AMS_VERBOSE_LOGGING
 		elog(DEBUG5, "residual message %d bytes", conn->recvBytes);
 #endif
-		conn->msgPos += conn->msgSize;
+		conn->rawMsgPos += conn->rawMsgSize;
 	}
 
-	conn->msgSize = 0;
+	conn->rawMsgSize = 0;
 
 	return firstTcItem;
 }

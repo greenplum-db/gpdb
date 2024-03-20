@@ -50,6 +50,7 @@
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbdispatchresult.h"
 #include "cdb/cdbicudpfaultinjection.h"
+#include "cdb/cdbsrlz.h"
 
 #include <fcntl.h>
 #include <limits.h>
@@ -4560,6 +4561,7 @@ prepareXmit(MotionConn *conn)
 
 	conn->conn_info.len = conn->msgSize;
 	conn->conn_info.crc = 0;
+	/* compress ? */
 
 	memcpy(conn->pBuff, &conn->conn_info, sizeof(conn->conn_info));
 

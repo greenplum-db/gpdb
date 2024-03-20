@@ -22,5 +22,7 @@
 
 extern char *serializeNode(Node *node, int *size, int *uncompressed_size);
 extern Node *deserializeNode(const char *strNode, int size);
+extern char *compress_string(const char *src, int uncompressed_size, int *size, bool pack);
+extern char *uncompress_string(const char *src, int size, int *uncompressed_size_p);
 
 #endif   /* CDBSRLZ_H */

@@ -204,6 +204,8 @@ TODO: in fact as long as the header is completely received we could begin
 routing the data to the target backend, this could save some memory copying, as
 well as reduce the latency.
 
+XXX: when packet compression is used, data stream compression methods should be used.
+
 ### Control message
 
 Besides the data there are also control messages:

@@ -16,7 +16,8 @@
 #include "postgres.h"
 
 #include "cdb/cdbsrlz.h"
-#include "nodes/nodes.h"
+#include "cdb/cdbsrlz.h"
+#include "cdb/ml_ipc.h"
 #include "utils/memaccounting.h"
 #include "utils/memutils.h"
 
@@ -24,9 +25,6 @@
 /* Zstandard library is provided */
 
 #include <zstd.h>
-
-static char *compress_string(const char *src, int uncompressed_size, int *compressed_size_p);
-static char *uncompress_string(const char *src, int size, int *uncompressed_size_p);
 
 /* zstandard compression level to use. */
 #define COMPRESS_LEVEL 3
@@ -54,7 +52,7 @@ serializeNode(Node *node, int *size, int *uncompressed_size_out)
 
 		/* If we have been compiled with libzstd, use it to compress it */
 #ifdef HAVE_LIBZSTD
-		sNode = compress_string(pszNode, uncompressed_size, size);
+		sNode = compress_string(pszNode, uncompressed_size, size, false);
 		pfree(pszNode);
 #else
 		sNode = pszNode;
@@ -107,8 +105,8 @@ deserializeNode(const char *strNode, int size)
  *
  * returns the compressed data and the size of the compressed data.
  */
-static char *
-compress_string(const char *src, int uncompressed_size, int *size)
+char *
+compress_string(const char *src, int uncompressed_size, int *size, bool pack)
 {
 	static ZSTD_CCtx  *cxt = NULL;      /* ZSTD compression context */
 	size_t		compressed_size;
@@ -124,24 +122,37 @@ compress_string(const char *src, int uncompressed_size, int *size)
 
 	compressed_size = ZSTD_compressBound(uncompressed_size);	/* worst case */
 
-	result = palloc(compressed_size);
+	if (pack) {
+		result = palloc(compressed_size + PACKET_HEADER_SIZE);
 
-	dst_length_used = ZSTD_compressCCtx(cxt,
-										result, compressed_size,
-										src, uncompressed_size,
-										COMPRESS_LEVEL);
+		dst_length_used = ZSTD_compressCCtx(cxt,
+											result + PACKET_HEADER_SIZE, compressed_size,
+											src, uncompressed_size,
+											COMPRESS_LEVEL);
+	} else {
+		result = palloc(compressed_size);
+
+		dst_length_used = ZSTD_compressCCtx(cxt,
+											result, compressed_size,
+											src, uncompressed_size,
+											COMPRESS_LEVEL);
+	}
 	if (ZSTD_isError(dst_length_used))
 		elog(ERROR, "Compression failed: %s uncompressed len %d",
 			 ZSTD_getErrorName(dst_length_used), uncompressed_size);
 
 	*size = dst_length_used;
+	if (pack) {
+		*(uint32*) result = dst_length_used;
+		*size += PACKET_HEADER_SIZE;
+	}
 	return (char *) result;
 }
 
 /*
  * Uncompress the binary string
  */
-static char *
+char *
 uncompress_string(const char *src, int size, int *uncompressed_size_p)
 {
 	static ZSTD_DCtx  *cxt = NULL;      /* ZSTD decompression context */

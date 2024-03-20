@@ -28,6 +28,7 @@
 #include "cdb/ml_ipc.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbdisp.h"
+#include "cdb/cdbsrlz.h"
 
 #ifdef ENABLE_IC_PROXY
 #include "ic_proxy_backend.h"
@@ -321,9 +322,9 @@ readPacket(MotionConn *conn, ChunkTransportState *transportStates)
 	/* do we have a complete message waiting to be processed ? */
 	if (conn->recvBytes >= PACKET_HEADER_SIZE)
 	{
-		memcpy(&conn->msgSize, conn->msgPos, sizeof(uint32));
+		memcpy(&conn->rawMsgSize, conn->rawMsgPos, sizeof(uint32));
 		gotHeader = true;
-		if (conn->recvBytes >= conn->msgSize)
+		if (conn->recvBytes >= conn->rawMsgSize)
 		{
 #ifdef AMS_VERBOSE_LOGGING
 			elog(DEBUG5, "readpacket: returning previously read data (%d)", conn->recvBytes);
@@ -338,9 +339,9 @@ readPacket(MotionConn *conn, ChunkTransportState *transportStates)
 	 * buffer
 	 */
 	if (conn->recvBytes != 0)
-		memmove(conn->pBuff, conn->msgPos, conn->recvBytes);
+		memmove(conn->pBuff, conn->rawMsgPos, conn->recvBytes);
 
-	conn->msgPos = conn->pBuff;
+	conn->rawMsgPos = conn->pBuff;
 
 #ifdef AMS_VERBOSE_LOGGING
 	elog(DEBUG5, "readpacket: %s on previous call msgSize %d", gotHeader ? "got header" : "no header", conn->msgSize);
@@ -430,12 +431,12 @@ readPacket(MotionConn *conn, ChunkTransportState *transportStates)
 			if (!gotHeader && bytesRead >= PACKET_HEADER_SIZE)
 			{
 				/* got the header */
-				memcpy(&conn->msgSize, conn->msgPos, sizeof(uint32));
+				memcpy(&conn->rawMsgSize, conn->rawMsgPos, sizeof(uint32));
 				gotHeader = true;
 			}
 			conn->recvBytes = bytesRead;
 
-			if (gotHeader && bytesRead >= conn->msgSize)
+			if (gotHeader && bytesRead >= conn->rawMsgSize)
 				gotPacket = true;
 		}
 	}
@@ -2746,8 +2747,18 @@ SendEosTCP(ChunkTransportState *transportStates,
 	{
 		conn = pEntry->conns + i;
 
-		if (conn->sockfd >= 0 && conn->state == mcsStarted)
+		if (conn->sockfd >= 0 && conn->state == mcsStarted) {
+			/* TBD: GUC */
+
+			if (/* compress? */ true) {
+				conn->rawMsgPos = compress_string(conn->pBuff + PACKET_HEADER_SIZE, conn->msgSize - PACKET_HEADER_SIZE, &conn->rawMsgSize, true);
+			} else {
+				conn->rawMsgPos = conn->pBuff;
+				conn->rawMsgSize = conn->msgSize;
+			}
+
 			flushBuffer(transportStates, pEntry, conn, motNodeID);
+		}
 
 #ifdef AMS_VERBOSE_LOGGING
 		elog(DEBUG5, "SendEosTCP() Leaving");
@@ -2778,10 +2789,10 @@ flushBuffer(ChunkTransportState *transportStates,
 #endif
 
 	/* first set header length */
-	*(uint32 *) conn->pBuff = conn->msgSize;
+	*(uint32 *) conn->rawMsgPos = conn->rawMsgSize;
 
 	/* now send message */
-	sendptr = (char *) conn->pBuff;
+	sendptr = (char *) conn->rawMsgPos;
 	sent = 0;
 	do
 	{
@@ -2809,7 +2820,7 @@ flushBuffer(ChunkTransportState *transportStates,
 			return false;
 		}
 
-		if ((n = send(conn->sockfd, sendptr + sent, conn->msgSize - sent, 0)) < 0)
+		if ((n = send(conn->sockfd, sendptr + sent, conn->rawMsgSize - sent, 0)) < 0)
 		{
 			int	send_errno = errno;
 			ML_CHECK_FOR_INTERRUPTS(transportStates->teardownActive);
@@ -2918,9 +2929,10 @@ flushBuffer(ChunkTransportState *transportStates,
 		{
 			sent += n;
 		}
-	} while (sent < conn->msgSize);
+	} while (sent < conn->rawMsgSize);
 
 	conn->tupleCount = 0;
+	conn->rawMsgSize = PACKET_HEADER_SIZE;
 	conn->msgSize = PACKET_HEADER_SIZE;
 
 	return true;
@@ -2948,6 +2960,15 @@ SendChunkTCP(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEn
 
 	if (conn->msgSize + length > Gp_max_packet_size)
 	{
+		/* TBD: GUC */
+
+		if (/* compress? */ true) {
+			conn->rawMsgPos = compress_string(conn->pBuff + PACKET_HEADER_SIZE, conn->msgSize - PACKET_HEADER_SIZE, &conn->rawMsgSize, true);
+		} else {
+			conn->rawMsgPos = conn->pBuff;
+			conn->rawMsgSize = conn->msgSize;
+		}
+
 		if (!flushBuffer(transportStates, pEntry, conn, motionId))
 			return false;
 	}
