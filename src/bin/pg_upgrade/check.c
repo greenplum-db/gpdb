@@ -109,12 +109,46 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	 * Check for various failure cases
 	 */
 	report_progress(&old_cluster, CHECK, "Failure checks");
-	check_is_install_user(&old_cluster);
-	check_proper_datallowconn(&old_cluster);
-	check_for_prepared_transactions(&old_cluster);
-	check_for_composite_data_type_usage(&old_cluster);
-	check_for_reg_data_type_usage(&old_cluster);
-	check_for_isn_and_int8_passing_mismatch(&old_cluster);
+	if (!check_not_in_place())
+	{
+		check_is_install_user(&old_cluster);
+		check_proper_datallowconn(&old_cluster);
+		check_for_prepared_transactions(&old_cluster);
+		check_for_composite_data_type_usage(&old_cluster);
+		check_for_reg_data_type_usage(&old_cluster);
+		check_for_isn_and_int8_passing_mismatch(&old_cluster);
+
+		/*
+		 * Pre-PG 12 allowed tables to be declared WITH OIDS, which is not
+		 * supported anymore. Verify there are none, iff applicable.
+		 */
+		if (GET_MAJOR_VERSION(old_cluster.major_version) <= 1100)
+			check_for_tables_with_oids(&old_cluster);
+
+		/*
+		 * PG 12 changed the 'sql_identifier' type storage to be based on name,
+		 * not varchar, which breaks on-disk format for existing data. So we need
+		 * to prevent upgrade when used in user objects (tables, indexes, ...).
+		 */
+		if (GET_MAJOR_VERSION(old_cluster.major_version) <= 1100)
+			old_11_check_for_sql_identifier_data_type_usage(&old_cluster);
+
+		if (GET_MAJOR_VERSION(old_cluster.major_version) <= 906)
+		{
+			if (user_opts.check)
+				old_9_6_invalidate_hash_indexes(&old_cluster, true);
+		}
+
+		if (GET_MAJOR_VERSION(old_cluster.major_version) == 904 &&
+			old_cluster.controldata.cat_ver < JSONB_FORMAT_CHANGE_CAT_VER)
+			check_for_jsonb_9_4_usage(&old_cluster);
+
+		/* For now, the issue exists only for Greenplum 6.x/PostgreSQL 9.4 */
+		if (GET_MAJOR_VERSION(old_cluster.major_version) == 904)
+		{
+			check_for_appendonly_materialized_view_with_relfrozenxid(&old_cluster);
+		}
+	}
 
 	/*
 	 * Check for various Greenplum failure cases
@@ -136,44 +170,15 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 	}
 
 	/*
-	 * Pre-PG 12 allowed tables to be declared WITH OIDS, which is not
-	 * supported anymore. Verify there are none, iff applicable.
-	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 1100)
-		check_for_tables_with_oids(&old_cluster);
-
-	/*
-	 * PG 12 changed the 'sql_identifier' type storage to be based on name,
-	 * not varchar, which breaks on-disk format for existing data. So we need
-	 * to prevent upgrade when used in user objects (tables, indexes, ...).
-	 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 1100)
-		old_11_check_for_sql_identifier_data_type_usage(&old_cluster);
-
-	/*
 	 * Pre-PG 10 allowed tables with 'unknown' type columns and non WAL logged
 	 * hash indexes
 	 */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 906)
-	{
 		old_9_6_check_for_unknown_data_type_usage(&old_cluster);
-		if (user_opts.check)
-			old_9_6_invalidate_hash_indexes(&old_cluster, true);
-	}
 
 	/* 9.5 and below should not have roles starting with pg_ */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 905)
 		check_for_pg_role_prefix(&old_cluster);
-
-	if (GET_MAJOR_VERSION(old_cluster.major_version) == 904 &&
-		old_cluster.controldata.cat_ver < JSONB_FORMAT_CHANGE_CAT_VER)
-		check_for_jsonb_9_4_usage(&old_cluster);
-
-	/* For now, the issue exists only for Greenplum 6.x/PostgreSQL 9.4 */
-	if (GET_MAJOR_VERSION(old_cluster.major_version) == 904)
-	{
-		check_for_appendonly_materialized_view_with_relfrozenxid(&old_cluster);
-	}
 
 	teardown_GPDB6_data_type_checks(&old_cluster);
 
@@ -223,7 +228,7 @@ check_new_cluster(void)
 void
 report_clusters_compatible(void)
 {
-	if (user_opts.check)
+	if (user_opts.check || check_not_in_place())
 	{
 		if (get_check_fatal_occurred())
 		{

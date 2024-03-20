@@ -158,7 +158,7 @@ main(int argc, char **argv)
 
 	/* -- NEW -- */
 
-	if(!is_skip_target_check() || !skip_checks())
+	if((!is_skip_target_check() || !skip_checks()) && !check_not_in_place())
 	{
 		start_postmaster(&new_cluster, true);
 		check_new_cluster();

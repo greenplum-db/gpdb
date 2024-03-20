@@ -41,11 +41,14 @@ static void check_views_with_removed_functions(void);
 void
 check_greenplum(void)
 {
-	check_online_expansion();
+	if (!check_not_in_place())
+	{
+		check_online_expansion();
+		check_orphaned_toastrels();
+	}
 	check_external_partition();
 	check_covering_aoindex();
 	check_partition_indexes();
-	check_orphaned_toastrels();
 	check_for_array_of_partition_table_types(&old_cluster);
 	check_multi_column_list_partition_keys(&old_cluster);
 	check_for_plpython2_dependent_functions(&old_cluster);
