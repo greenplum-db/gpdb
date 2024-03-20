@@ -559,9 +559,6 @@ public:
 	// check if a given operator is a physical join
 	static BOOL FPhysicalJoin(COperator *pop);
 
-	// check if a given operator is a physical left outer join
-	static BOOL FPhysicalLeftOuterJoin(COperator *pop);
-
 	// check if a given operator is a physical scan
 	static BOOL FPhysicalScan(COperator *pop);
 
