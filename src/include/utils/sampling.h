@@ -79,4 +79,27 @@ extern double anl_random_fract(void);
 extern double anl_init_selection_state(int n);
 extern double anl_get_next_S(double t, int n, double *stateptr);
 
+/* Variable Step Length Sampling algorithm for AO/CO table rows */
+typedef struct
+{
+	int64           N;				/* number of objects, known in advance */
+	int64			n;				/* desired sample size */
+	int64           t;				/* current object number */
+	int64			m;				/* objects selected so far */
+	int64			pos;			/* current position */
+	int64			stepLength;
+	int64			startOffset;
+	SamplerRandomState randstate;	/* random generator state */
+} VslSamplerData;
+
+typedef VslSamplerData *VslSampler;
+
+extern void VslSampler_Init(VslSampler vs,
+							int64 nobjects,
+							int64 samplesize,
+							int64 randseed);
+extern bool VslSampler_HasMore(VslSampler vs);
+extern int64 VslSampler_Next(VslSampler vs);
+extern void VslSampler_SetValid(VslSampler vs);
+
 #endif							/* SAMPLING_H */

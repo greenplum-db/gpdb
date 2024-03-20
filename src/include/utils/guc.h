@@ -282,6 +282,7 @@ extern bool Debug_appendonly_print_datumstream;
 extern bool Debug_appendonly_print_visimap;
 extern bool Debug_appendonly_print_compaction;
 extern bool Debug_bitmap_print_insert;
+extern bool Debug_aocotbl_sampling_notablescan;
 extern bool enable_checksum_on_tables;
 extern int  gp_max_local_distributed_cache;
 extern bool gp_local_distributed_cache_stats;

@@ -373,3 +373,65 @@ anl_get_next_S(double t, int n, double *stateptr)
 	*stateptr = oldrs.W;
 	return result;
 }
+
+void VslSampler_Init(VslSampler vs,
+					 int64 nobjects,
+					 int64 samplesize,
+					 int64 randseed)
+{
+	vs->N = nobjects;			/* measured table size */
+
+	vs->n = samplesize;
+	if (vs->n > vs->N)
+		vs->n = vs->N;
+	vs->t = 0;					/* objects scanned so far */
+	vs->m = 0;					/* objects selected so far */
+	vs->pos = -1;
+	vs->stepLength = 1 << (int)log2(vs->N);
+
+	/*
+	 * Randomly pick up a position in the table size as start offset.
+	 * sampler_random_fract() returns a value in (0.0 - 1.0), so the
+	 * startOffset is a value in [0 - (table size)).
+	 */
+	sampler_random_init_state(randseed, vs->randstate);
+	vs->startOffset = (int64)(sampler_random_fract(vs->randstate) * vs->N);
+}
+
+bool VslSampler_HasMore(VslSampler vs)
+{
+	/*
+	 * If all the objects have been scanned, or we have selected enough objects,
+	 * return false
+	 */
+	Assert(vs->t <= vs->N);
+	Assert(vs->m <= vs->n);
+	return !((vs->t == vs->N) || (vs->m == vs->n));
+}
+
+int64 VslSampler_Next(VslSampler vs)
+{
+	Assert(VslSampler_HasMore(vs));
+
+	vs->pos += vs->stepLength;
+
+	/* If current pos has been selected in previous loop, continue */
+	if (((vs->pos + 1) % (vs->stepLength << 1)) == 0)
+		vs->pos += vs->stepLength;
+
+	/* If current loop is done, half stepLength and repeat */
+	if (vs->pos >= vs->N)
+	{
+		vs->stepLength >>= 1;
+		Assert(vs->stepLength > 0);
+		vs->pos = vs->stepLength - 1;
+	}
+	vs->t++;
+
+	return (vs->pos + vs->startOffset) % vs->N;
+}
+
+void VslSampler_SetValid(VslSampler vs)
+{
+	vs->m++;
+}
