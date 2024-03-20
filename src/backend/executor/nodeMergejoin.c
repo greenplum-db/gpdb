@@ -668,17 +668,11 @@ ExecMergeJoin_guts(PlanState *pstate)
 	ResetExprContext(econtext);
 
 	/*
-	 * MPP-4165: My fix for MPP-3300 was correct in that we avoided
-	 * the *deadlock* but had very unexpected (and painful)
-	 * performance characteristics: we basically de-pipeline and
-	 * de-parallelize execution of any query which has motion below
-	 * us.
-	 *
-	 * So now prefetch_inner is set (see createplan.c) if we have *any* motion
-	 * below us. If we don't have any motion, it doesn't matter.
-	 *
-	 * See motion_sanity_walker() for details on how a deadlock may occur.
+	 * Merge join requires inner and outer are ordered, if there are motions
+	 * in it, it should have sort node, therefore the motion deadlock won't happen. 
+	 * Disable the following codes.
 	 */
+#if 0
 	if (node->prefetch_inner)
 	{
 		innerTupleSlot = ExecProcNode(innerPlan);
@@ -688,6 +682,16 @@ ExecMergeJoin_guts(PlanState *pstate)
 		ResetExprContext(econtext);
 
 		node->prefetch_inner = false;
+	}
+#endif
+	if (node->partition_selectors_created)
+	{
+		innerTupleSlot = ExecProcNode(innerPlan);
+		node->mj_InnerTupleSlot = innerTupleSlot;
+
+		ExecReScan(innerPlan);
+		ResetExprContext(econtext);
+		node->partition_selectors_created = false;
 	}
 
 	/*
@@ -1564,11 +1568,9 @@ ExecInitMergeJoin(MergeJoin *node, EState *estate, int eflags)
 	mergestate->mj_OuterEContext = CreateExprContext(estate);
 	mergestate->mj_InnerEContext = CreateExprContext(estate);
 
-
-	mergestate->prefetch_inner = node->join.prefetch_inner;
-
 	/* Prepare inner operators for rewind after the prefetch */
-	rewindflag = mergestate->prefetch_inner ? EXEC_FLAG_REWIND : 0;
+	mergestate->partition_selectors_created = node->partition_selectors_created;
+	rewindflag = mergestate->partition_selectors_created ? EXEC_FLAG_REWIND : 0;
 
     /*
      * initialize child nodes

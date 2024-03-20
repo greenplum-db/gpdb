@@ -1134,6 +1134,7 @@ typedef struct MergeJoin
 	int		   *mergeStrategies;	/* per-clause ordering (ASC or DESC) */
 	bool	   *mergeNullsFirst;	/* per-clause nulls ordering */
 	bool		unique_outer; /*CDB-OLAP true => outer is unique in merge key */
+	bool		partition_selectors_created; /* partition_selectors_created -> need prefetch the inner */
 } MergeJoin;
 
 /* ----------------

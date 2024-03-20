@@ -1177,6 +1177,7 @@ _copyMergeJoin(const MergeJoin *from)
 	COPY_POINTER_FIELD(mergeStrategies, numCols * sizeof(int));
 	COPY_POINTER_FIELD(mergeNullsFirst, numCols * sizeof(bool));
 	COPY_SCALAR_FIELD(unique_outer);
+	COPY_SCALAR_FIELD(partition_selectors_created);
 
 	return newnode;
 }

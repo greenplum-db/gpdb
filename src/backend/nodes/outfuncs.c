@@ -1044,6 +1044,7 @@ _outMergeJoin(StringInfo str, const MergeJoin *node)
 	WRITE_INT_ARRAY(mergeStrategies, numCols);
 	WRITE_BOOL_ARRAY(mergeNullsFirst, numCols);
     WRITE_BOOL_FIELD(unique_outer);
+	WRITE_BOOL_FIELD(partition_selectors_created);
 }
 
 static void

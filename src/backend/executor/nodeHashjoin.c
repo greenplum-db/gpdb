@@ -237,6 +237,10 @@ ExecHashJoinImpl(PlanState *pstate, bool parallel)
 				Assert(hashtable == NULL);
 
 				/*
+				 * Always prefetch inner for hash join, so comment the following code.
+				 */
+#if 0
+				/*
 				 * MPP-4165: My fix for MPP-3300 was correct in that we avoided
 				 * the *deadlock* but had very unexpected (and painful)
 				 * performance characteristics: we basically de-pipeline and
@@ -312,6 +316,8 @@ ExecHashJoinImpl(PlanState *pstate, bool parallel)
 					* at least one row on the outer. */
 					node->hj_FirstOuterTupleSlot = NULL;
 				}
+#endif
+				node->hj_FirstOuterTupleSlot = NULL;
 
 				/*
 				 * Create the hash table.  If using Parallel Hash, then
@@ -801,12 +807,6 @@ ExecInitHashJoin(HashJoin *node, EState *estate, int eflags)
 	}
 	else
 		hjstate->hj_nonequijoin = false;
-
-	/*
-	 * MPP-3300, we only pre-build hashtable if we need to (this is relaxing
-	 * the fix to MPP-989)
-	 */
-	hjstate->prefetch_inner = node->join.prefetch_inner;
 
 	/*
 	 * initialize child nodes

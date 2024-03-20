@@ -3175,6 +3175,7 @@ _readMergeJoin(void)
 	READ_INT_ARRAY(mergeStrategies, numCols);
 	READ_BOOL_ARRAY(mergeNullsFirst, numCols);
 	READ_BOOL_FIELD(unique_outer);
+	READ_BOOL_FIELD(partition_selectors_created);
 
 	READ_DONE();
 }

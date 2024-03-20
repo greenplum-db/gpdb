@@ -178,9 +178,10 @@ CREATE FUNCTION recreate_two_level_table() RETURNS VOID
 $fn$;
 -- validate that there are no constraints when we start
 SELECT * FROM partition_tables_show_all('r');
-ERROR:  relation "r" does not exist
-CONTEXT:  SQL function "partition_tables" statement 1
-SQL function "partition_tables_show_all" statement 1
+ partition_name | parent_name | root_name | constraint_name | index_name | constraint_type 
+----------------+-------------+-----------+-----------------+------------+-----------------
+(0 rows)
+
 -- UNIQUE constraint: validate we correctly add it and can only drop from root
 SELECT recreate_two_level_table();
 NOTICE:  table "r" does not exist, skipping
