@@ -34,24 +34,13 @@ public:
 	CXformJoinCommutativity(const CXformJoinCommutativity &) = delete;
 
 	// ctor
-	explicit CXformJoinCommutativity(CMemoryPool *mp);
+	explicit CXformJoinCommutativity(CExpression *pexprPattern)
+		: CXformExploration(pexprPattern)
+	{
+	}
 
 	// dtor
 	~CXformJoinCommutativity() override = default;
-
-	// ident accessors
-	EXformId
-	Exfid() const override
-	{
-		return ExfJoinCommutativity;
-	}
-
-	// return a string for xform name
-	const CHAR *
-	SzId() const override
-	{
-		return "CXformJoinCommutativity";
-	}
 
 	// compatibility function
 	BOOL FCompatible(CXform::EXformId exfid) override;

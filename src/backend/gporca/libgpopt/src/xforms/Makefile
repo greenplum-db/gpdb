@@ -115,6 +115,7 @@ OBJS        = CDecorrelator.o \
               CXformRemoveSubqDistinct.o \
               CXformResult.o \
               CXformRightOuterJoin2HashJoin.o \
+              CXformFullOuterJoin2HashJoin.o \
               CXformSelect2Apply.o \
               CXformSelect2BitmapBoolOp.o \
               CXformSelect2DynamicIndexGet.o \

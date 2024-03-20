@@ -11,37 +11,11 @@
 
 #include "gpopt/xforms/CXformJoinCommutativity.h"
 
-#include "gpos/base.h"
-
-#include "gpopt/metadata/CTableDescriptor.h"
+#include "gpopt/operators/CLogicalFullOuterJoin.h"
 #include "gpopt/operators/CLogicalInnerJoin.h"
-#include "gpopt/operators/CPatternLeaf.h"
 
 using namespace gpopt;
 
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CXformJoinCommutativity::CXformJoinCommutativity
-//
-//	@doc:
-//		Ctor
-//
-//---------------------------------------------------------------------------
-CXformJoinCommutativity::CXformJoinCommutativity(CMemoryPool *mp)
-	: CXformExploration(
-		  // pattern
-		  GPOS_NEW(mp) CExpression(
-			  mp, GPOS_NEW(mp) CLogicalInnerJoin(mp),
-			  GPOS_NEW(mp)
-				  CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp)),  // left child
-			  GPOS_NEW(mp) CExpression(
-				  mp, GPOS_NEW(mp) CPatternLeaf(mp)),  // right child
-			  GPOS_NEW(mp)
-				  CExpression(mp, GPOS_NEW(mp) CPatternLeaf(mp)))  // predicate
-	  )
-{
-}
 
 
 //---------------------------------------------------------------------------
@@ -59,7 +33,8 @@ CXformJoinCommutativity::FCompatible(CXform::EXformId exfid)
 
 	switch (exfid)
 	{
-		case CXform::ExfJoinCommutativity:
+		case CXform::ExfInnerJoinCommutativity:
+		case CXform::ExfFullJoinCommutativity:
 			fCompatible = false;
 			break;
 		default:
@@ -98,9 +73,20 @@ CXformJoinCommutativity::Transform(CXformContext *pxfctxt, CXformResult *pxfres,
 	pexprRight->AddRef();
 	pexprScalar->AddRef();
 
+	CExpression *pexprAlt = nullptr;
 	// assemble transformed expression
-	CExpression *pexprAlt = CUtils::PexprLogicalJoin<CLogicalInnerJoin>(
-		mp, pexprRight, pexprLeft, pexprScalar);
+	if (COperator::EopLogicalInnerJoin == pexpr->Pop()->Eopid())
+	{
+		pexprAlt = CUtils::PexprLogicalJoin<CLogicalInnerJoin>(
+			mp, pexprRight, pexprLeft, pexprScalar);
+	}
+	else
+	{
+		GPOS_ASSERT(COperator::EopLogicalFullOuterJoin ==
+					pexpr->Pop()->Eopid());
+		pexprAlt = CUtils::PexprLogicalJoin<CLogicalFullOuterJoin>(
+			mp, pexprRight, pexprLeft, pexprScalar);
+	}
 
 	// add alternative to transformation result
 	pxfres->Add(pexprAlt);
