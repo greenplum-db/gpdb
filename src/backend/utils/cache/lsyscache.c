@@ -1591,15 +1591,14 @@ get_oprjoin(Oid opno)
 /*				---------- TRIGGER CACHE ----------					 */
 
 
-/* Does table have update triggers? */
+/* Does table and its directly or indirectly children have update triggers? */
 bool
 has_update_triggers(Oid relid)
 {
 	Relation	relation;
 	bool		result = false;
 
-	/* Assume the caller already holds a suitable lock. */
-	relation = table_open(relid, NoLock);
+	relation = RelationIdGetRelation(relid);
 
 	if (relation->rd_rel->relhastriggers)
 	{
@@ -1616,15 +1615,33 @@ has_update_triggers(Oid relid)
 				found = trigger_enabled(trigger.tgoid) &&
 					(get_trigger_type(trigger.tgoid) & TRIGGER_TYPE_UPDATE) == TRIGGER_TYPE_UPDATE;
 				if (found)
+				{
+					result = true;
 					break;
+				}
+			}
+		}
+	}
+
+	if (!result && relation->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+	{
+		List	   *partitions = find_inheritance_children(relid, NoLock);
+		ListCell   *lc;
+
+		foreach(lc, partitions)
+		{
+			Oid			partrelid = lfirst_oid(lc);
+			if (has_update_triggers(partrelid))
+			{
+				result = true;
+				break;
 			}
 		}
 
-		/* GPDB_96_MERGE_FIXME: Why is this not allowed? */
-		if (found || child_triggers(relation->rd_id, TRIGGER_TYPE_UPDATE))
-			result = true;
+		list_free(partitions);
 	}
-	table_close(relation, NoLock);
+
+	RelationClose(relation);
 
 	return result;
 }
@@ -4559,63 +4576,3 @@ child_distribution_mismatch(Relation rel)
 	return false;
 }
 
-/*
- *  child_triggers
- *  Return true if the table is partitioned and any of the child partitions
- *  have a trigger of the given type.
- */
-bool
-child_triggers(Oid relationId, int32 triggerType)
-{
-/* GPDB_12_MERGE_FIXME */
-	return false;
-#if 0
-	Assert(InvalidOid != relationId);
-	if (PART_STATUS_NONE == rel_part_status(relationId))
-	{
-		/* not a partitioned table */
-		return false;
-	}
-
-	List *childOids = find_all_inheritors(relationId, NoLock, NULL);
-	ListCell *lc;
-
-	bool found = false;
-	foreach (lc, childOids)
-	{
-		Oid oidChild = lfirst_oid(lc);
-		Relation relChild = RelationIdGetRelation(oidChild);
-		Assert(NULL != relChild);
-
-		if (relChild->rd_rel->relhastriggers && NULL == relChild->trigdesc)
-		{
-			RelationBuildTriggers(relChild);
-			if (NULL == relChild->trigdesc)
-			{
-				relChild->rd_rel->relhastriggers = false;
-			}
-		}
-
-		if (relChild->rd_rel->relhastriggers)
-		{
-			for (int i = 0; i < relChild->trigdesc->numtriggers && !found; i++)
-			{
-				Trigger trigger = relChild->trigdesc->triggers[i];
-				found = trigger_enabled(trigger.tgoid) &&
-						(get_trigger_type(trigger.tgoid) & triggerType) == triggerType;
-			}
-		}
-
-		RelationClose(relChild);
-		if (found)
-		{
-			break;
-		}
-	}
-
-	list_free(childOids);
-	
-	/* no child triggers matching the given type */
-	return found;
-#endif
-}

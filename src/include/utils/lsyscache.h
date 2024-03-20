@@ -237,7 +237,6 @@ Oid get_check_constraint_relid(Oid oidCheckconstraint);
 extern bool has_subclass_slow(Oid relationId);
 extern GpPolicy *relation_policy(Relation rel);
 extern bool child_distribution_mismatch(Relation rel);
-extern bool child_triggers(Oid relationId, int32 triggerType);
 
 extern bool get_cast_func(Oid oidSrc, Oid oidDest, bool *is_binary_coercible, Oid *oidCastFunc, CoercionPathType *pathtype);
 
