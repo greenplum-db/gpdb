@@ -55,6 +55,6 @@ extern void remove_subquery_in_RTEs(Node *node);
 extern Plan *cdbpathtoplan_create_sri_plan(RangeTblEntry *rte, PlannerInfo *subroot, Path *subpath, int createplan_flags);
 
 extern bool contains_outer_params(Node *node, void *context);
-extern void checkMotionAboveWorkTableScan(Node* node, PlannerInfo *root);
-extern void checkMotionWithParam(Node *node, Bitmapset *bmsNestParams, PlannerInfo *root);
+extern void check_motion_parameter(Plan *plan, PlannerInfo *root);
+
 #endif   /* CDBMUTATE_H */

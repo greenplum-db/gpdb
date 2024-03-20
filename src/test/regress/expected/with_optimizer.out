@@ -1081,7 +1081,7 @@ WITH RECURSIVE cte(level, id) as (
 	UNION ALL
 	SELECT level+1, c FROM (SELECT * FROM cte OFFSET 0) foo, bar)
 SELECT * FROM cte LIMIT 10;
-ERROR:  Passing parameters across motion is not supported. (cdbmutate.c:1989)
+ERROR:  Passing parameters across motion is not supported in RecursiveUnion. (cdbmutate.c:2041)
 CREATE TEMPORARY TABLE y (a INTEGER) DISTRIBUTED RANDOMLY;
 INSERT INTO y SELECT generate_series(1, 10);
 -- LEFT JOIN

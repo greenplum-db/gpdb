@@ -2823,11 +2823,6 @@ create_recursiveunion_plan(PlannerInfo *root, RecursiveUnionPath *best_path)
 								best_path->distinctList,
 								numGroups);
 
-	/*
-	 * Check whether there is a motion above WorkTableScan
-	 */
-	checkMotionAboveWorkTableScan((Node *)rightplan, root);
-
 	copy_generic_path_info(&plan->plan, (Path *) best_path);
 
 	return plan;

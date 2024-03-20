@@ -1946,107 +1946,120 @@ contains_outer_params(Node *node, void *context)
 	return expression_tree_walker(node, contains_outer_params, context);
 }
 
-typedef struct CTEMotionSearchContext
+/*
+ * Structure to hold the SUBPLAN plan_id used in the plan
+ */
+typedef struct ParamMotionWalkerContext
 {
 	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
-	bool    bellowMotion;      /* True if we are under a Motion node */
-} CTEMotionSearchContext;
+	Bitmapset			 *subplan_params; /* Bitmapset for params subplan provided */
+	Bitmapset			 *nestloop_params;
+	Bitmapset			 *wt_params;
+} ParamMotionWalkerContext;
 
 /*
- * GPDB:
- * We can not pass params by a motion.
- * So there should not be any motion between RecursiveUnion and WorkTableScan.
- * Check if there is a motion between RecursiveUnion and WorkTableScan.
+ * Checking whether there are parameters across motion involves
+ * first collecting parameters from the producer(such as NestLoop
+ * or RecursiveUnion or SubPlan, which could produce parameters).
+ * We then examine motions that have these parameters, and if
+ * they exist, we raise an error.
  */
 static bool
-cte_motion_search_walker(Node *node, CTEMotionSearchContext *context)
+motion_parameter_walker(Node *node, ParamMotionWalkerContext *context)
 {
 	if (node == NULL)
 		return false;
 
-	if (IsA(node, Motion))
-	{
-		bool savedBellowMotion = context->bellowMotion;
-		context->bellowMotion = true;
-		plan_tree_walker(node, cte_motion_search_walker, context, true);
-		context->bellowMotion = savedBellowMotion;
-		return false;
-	}
 	if (IsA(node, RecursiveUnion))
 	{
-		/*
-		 * We process RecursiveUnion recursively in create_recursiveunion_plan
-		 * here, we do not process repeatedly.
-		 */
-		return false;
-	}
-	if (IsA(node, WorkTableScan))
-	{
-		if (context->bellowMotion)
+		SubPlan    *subplan = (SubPlan *) node;
+		Plan	   *childplan = planner_subplan_get_plan((PlannerInfo *)context->base.node, subplan);
+
+		if (subplan->parParam != NULL)
 		{
-			elog(ERROR, "Passing parameters across motion is not supported.");
+			ListCell *lc = NULL;
+			Bitmapset *subplan_params = NULL;
+
+			foreach(lc, subplan->parParam)
+			{
+				int param = lfirst_int(lc);
+				subplan_params = bms_add_member(subplan_params, param);
+			}
+
+			context->subplan_params = bms_union(context->subplan_params, subplan_params);
+			bool result = plan_tree_walker((Node *)childplan, motion_parameter_walker, context, false);
+			context->subplan_params = bms_del_members(context->subplan_params, subplan_params);
+
+			return result;
 		}
-		return false;
 	}
-	return plan_tree_walker(node, cte_motion_search_walker, context, true);
-}
 
-/*
- * GPDB does not support pass params by a motion.
- * Check the rightplan of RecursiveUnion, wether there is a motion above WorkTableScan,
- * If true, throw an error.
- */
-void
-checkMotionAboveWorkTableScan(Node* node, PlannerInfo *root)
-{
-	CTEMotionSearchContext context;
-	planner_init_plan_tree_base(&context.base, root);
-	context.bellowMotion = false;
+	if (IsA(node, NestLoop))
+	{
+		ListCell	*lc = NULL;
+		NestLoop	*nl = (NestLoop *)node;
+		Bitmapset	*nestloop_params = NULL;
+		Plan		*rightchild = ((Plan *)nl)->righttree;
 
-	(void) cte_motion_search_walker(node, (void *) &context);
-}
+		/* collect set of params that will be passed to right child */
+		foreach(lc, nl->nestParams)
+		{
+			NestLoopParam *nlp = (NestLoopParam *) lfirst(lc);
 
-typedef struct MotionWithParamContext
-{
-	plan_tree_base_prefix base; /* Required prefix for plan_tree_walker/mutator */
-	Bitmapset  *nestLoopParams; /* nestloop params */
-} MotionWithParamContext;
+			nestloop_params = bms_add_member(nestloop_params,
+											 nlp->paramno);
+		}
 
-/*
- * check whether pass params by a motion
- */
-static bool
-checkMotionWithParamWalker(Node *node, MotionWithParamContext* motionWithParamcontext)
-{
-	if (node == NULL)
-		return false;
+		context->nestloop_params = nestloop_params;
+		/* check param over motion of right tree in nestloop */
+		plan_tree_walker((Node *)rightchild, motion_parameter_walker, context, false);
+		context->nestloop_params = bms_del_members(context->nestloop_params, nestloop_params);
+	}
+
+	if (IsA(node, RecursiveUnion))
+	{
+		RecursiveUnion  *ru = (RecursiveUnion *)node;
+		Plan			*rightchild = ((Plan *)ru)->righttree;
+
+		context->wt_params = bms_add_member(context->wt_params, ru->wtParam);
+		plan_tree_walker((Node *)rightchild, motion_parameter_walker, context, false);
+		context->wt_params = bms_del_member(context->wt_params, ru->wtParam);
+	}
 
 	if (IsA(node, Motion))
 	{
-		Plan * plan = (Plan *) node;
-		Bitmapset  *finalExtParam;
-		if (!bms_is_empty(plan->extParam))
-		{
-			finalExtParam = bms_intersect(plan->extParam, motionWithParamcontext->nestLoopParams);
-			if (!bms_is_empty(finalExtParam))
-			{
-				elog(ERROR, "Passing parameters across motion is not supported.");
-			}
-		}
+		Plan *motion = (Plan *)node;
+
+		Bitmapset *subplan_motion_param = bms_intersect(motion->extParam, context->subplan_params);
+		Bitmapset *nl_motion_param = bms_intersect(motion->extParam, context->nestloop_params);
+		Bitmapset *wt_motion_param = bms_intersect(motion->extParam, context->wt_params);
+
+		if (!bms_is_empty(subplan_motion_param))
+			elog(ERROR, "Passing parameters across motion is not supported in subplan.");
+
+		if (!bms_is_empty(nl_motion_param))
+			elog(ERROR, "Passing parameters across motion is not supported in nestloop.");
+
+		if (!bms_is_empty(wt_motion_param))
+			elog(ERROR, "Passing parameters across motion is not supported in RecursiveUnion.");
 	}
 
-	return plan_tree_walker(node, checkMotionWithParamWalker, motionWithParamcontext, true);
+	return plan_tree_walker(node, motion_parameter_walker, context, false);
 }
 
 /*
- * We can not deliver a param by a motion node.
- * If there is a param on motion node, we should throw an error.
+ * Check whether there are parameters across motion.
  */
 void
-checkMotionWithParam(Node *node, Bitmapset *bmsNestParams, PlannerInfo *root)
+check_motion_parameter(Plan *top_plan, PlannerInfo *root)
 {
-	MotionWithParamContext motionWithParamcontext;
-	motionWithParamcontext.nestLoopParams = bmsNestParams;
-	planner_init_plan_tree_base(&motionWithParamcontext.base, root);
-	checkMotionWithParamWalker(node, &motionWithParamcontext);
+	ParamMotionWalkerContext context;
+	context.base.node = (Node *) root;
+	context.subplan_params = NULL;
+	context.nestloop_params = NULL;
+	context.wt_params = NULL;
+
+	motion_parameter_walker((Node *) top_plan, &context);
+
+	return;
 }

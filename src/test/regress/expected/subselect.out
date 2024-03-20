@@ -606,7 +606,7 @@ select
   ( select min(tb.id) from tb
     where tb.aval = (select ta.val from ta where ta.id = tc.aid) ) as min_tb_id
 from tc;
-ERROR:  correlated subquery with skip-level correlations is not supported
+ERROR:  Passing parameters across motion is not supported in subplan. (cdbmutate.c:2035)
 --
 -- Test case for 8.3 "failed to locate grouping columns" bug
 --
@@ -705,7 +705,10 @@ from
    from int8_tbl) sq0
   join
   int4_tbl i4 on dummy = i4.f1;
-ERROR:  correlated subquery with skip-level correlations is not supported
+ qq1 
+-----
+(0 rows)
+
 --
 -- Test case for subselect within UPDATE of INSERT...ON CONFLICT DO UPDATE
 --
@@ -1078,14 +1081,53 @@ select sum(ss.tst::int) from
          random() as r
   from onek i where i.unique1 = o.unique1 ) ss
 where o.ten = 0;
-ERROR:  correlated subquery with skip-level correlations is not supported
+                                   QUERY PLAN                                   
+--------------------------------------------------------------------------------
+ Aggregate
+   Output: sum((((hashed SubPlan 1)))::integer)
+   ->  Nested Loop
+         Output: ((hashed SubPlan 1))
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Output: o.hundred, o.unique1
+               ->  Seq Scan on public.onek o
+                     Output: o.hundred, o.unique1
+                     Filter: (o.ten = 0)
+         ->  Materialize
+               Output: ((hashed SubPlan 1)), (random())
+               ->  Result
+                     Output: (hashed SubPlan 1), random()
+                     Filter: (i.unique1 = o.unique1)
+                     ->  Materialize
+                           Output: i.ten, i.unique1
+                           ->  Gather Motion 3:1  (slice3; segments: 3)
+                                 Output: i.ten, i.unique1
+                                 ->  Seq Scan on public.onek i
+                                       Output: i.ten, i.unique1
+                     SubPlan 1
+                       ->  Result
+                             Output: int4_tbl.f1
+                             Filter: (int4_tbl.f1 <= $0)
+                             ->  Materialize
+                                   Output: int4_tbl.f1
+                                   ->  Gather Motion 3:1  (slice2; segments: 3)
+                                         Output: int4_tbl.f1
+                                         ->  Seq Scan on public.int4_tbl
+                                               Output: int4_tbl.f1
+ Optimizer: Postgres-based planner
+ Settings: optimizer = 'off'
+(32 rows)
+
 select sum(ss.tst::int) from
   onek o cross join lateral (
   select i.ten in (select f1 from int4_tbl where f1 <= o.hundred) as tst,
          random() as r
   from onek i where i.unique1 = o.unique1 ) ss
 where o.ten = 0;
-ERROR:  correlated subquery with skip-level correlations is not supported
+ sum 
+-----
+ 100
+(1 row)
+
 --
 -- Test rescan of a SetOp node
 --

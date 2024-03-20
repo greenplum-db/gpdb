@@ -350,11 +350,11 @@ RESET enable_nestloop;
 select * from
   (values (0),(100)) v(pct),
   lateral (select count(*) from tenk1 tablesample bernoulli (pct)) ss;
-ERROR:  Passing parameters across motion is not supported. (cdbmutate.c:2033)
+ERROR:  Passing parameters across motion is not supported in nestloop. (cdbmutate.c:2038)
 select * from
   (values (0),(100)) v(pct),
   lateral (select count(*) from tenk1 tablesample system (pct)) ss;
-ERROR:  Passing parameters across motion is not supported. (cdbmutate.c:2033)
+ERROR:  Passing parameters across motion is not supported in nestloop. (cdbmutate.c:2038)
 explain (costs off)
 select pct, count(unique1) from
   (values (0),(100)) v(pct),

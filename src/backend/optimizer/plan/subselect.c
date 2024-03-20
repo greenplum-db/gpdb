@@ -237,52 +237,6 @@ IsSubqueryCorrelated(Query *sq)
 }
 
 /*
- * Check multi-level correlated subquery in Postgres legacy planner
- *
- * We could support one-level correlated subquery by adding
- * broadcast + result(param filter). For multi-level scenario
- * we should prevent planner from adding another motion above
- * result node which is from one-level correlated subquery.
- *
- * In this function, firstly we find the top root which refer
- * to Param, then check table distribution below current root
- * Not support if any distributed table exist.
- */
-void
-check_multi_subquery_correlated(PlannerInfo *root, Var *var)
-{
-	int levelsup;
-
-	if (Gp_role != GP_ROLE_DISPATCH)
-		return;
-	if (var->varlevelsup <= 1)
-		return;
-
-	for (levelsup = var->varlevelsup; levelsup > 0; levelsup--)
-	{
-		PlannerInfo *parent_root = root->parent_root;
-
-		if (parent_root == NULL)
-			elog(ERROR, "not found parent root when checking skip-level correlations");
-
-		/*
-		 * Only check sublink not include subquery
-		 */
-		if(parent_root->parse->hasSubLinks &&
-			QueryHasDistributedRelation(root->parse, parent_root->is_correlated_subplan))
-		{
-			ereport(ERROR,
-					errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 		errmsg("correlated subquery with skip-level correlations is not supported"));
-		}
-
-		root = root->parent_root;
-	}
-
-	return;
-}
-
-/*
  * Convert a SubLink (as created by the parser) into a SubPlan.
  *
  * We are given the SubLink's contained query, type, ID, and testexpr.  We are
@@ -2722,19 +2676,9 @@ finalize_plan(PlannerInfo *root, Plan *plan,
 		if (initplan->extParam)
 		{
 			int paramid;
-			ListCell *lc;
-			Bitmapset *upperset = NULL;
-			Bitmapset *parentset = NULL;
-			Bitmapset *extset = initplan->extParam;
+			Bitmapset *extset = bms_copy(initplan->extParam);
 
-			foreach(lc, initsubplan->parParam)
-			{
-				int tmpid = lfirst_int(lc);
-				parentset = bms_add_member(parentset, tmpid);
-			}
-
-			upperset = bms_difference(extset, parentset);
-			while ((paramid = bms_first_member(upperset)) >= 0)
+			while ((paramid = bms_first_member(extset)) >= 0)
 				initsubplan->extParam = lappend_int(initsubplan->extParam, paramid);
 		}
 	}
@@ -3306,18 +3250,6 @@ finalize_plan(PlannerInfo *root, Plan *plan,
 									 gather_param,
 									 bms_union(nestloop_params, valid_params),
 									 scan_params);
-		/*
-		 * Currently GPDB doesn't fully support lateral, following sql will
-		 * pass params by a motion. Then cause panic in QE.
-		 * So add a walker to check whether motion in righttree of nestloop
-		 * will pass params, if true throw an error to avoid panic in QE.
-		 * explain SELECT * FROM
-		 * (VALUES (0.0),(10.4),(100.7)) v(nrows),
-		 * LATERAL (SELECT count(*) FROM test_tablesample
-		 *       TABLESAMPLE system_rows (nrows)) ss;
-		 */
-		if (IsA(plan, NestLoop) && !bms_is_empty(nestloop_params))
-			checkMotionWithParam((Node*) plan->righttree, nestloop_params, root);
 
 		/* ... and they don't count as parameters used at my level */
 		child_params = bms_difference(child_params, nestloop_params);

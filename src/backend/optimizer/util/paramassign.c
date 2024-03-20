@@ -69,9 +69,6 @@ assign_param_for_var(PlannerInfo *root, Var *var)
 	PlannerParamItem *pitem;
 	Index		levelsup;
 
-	/* check multi-level correlated subquery in GPDB planner */
-	check_multi_subquery_correlated(root, var);
-
 	/* Find the query level the Var belongs to */
 	for (levelsup = var->varlevelsup; levelsup > 0; levelsup--)
 		root = root->parent_root;

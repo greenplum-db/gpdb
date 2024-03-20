@@ -2216,7 +2216,7 @@ with recursive rcte(x,y) as
   where t.b = x
 )
 select * from rcte limit 10;
-ERROR:  Passing parameters across motion is not supported. (cdbmutate.c:1989)
+ERROR:  Passing parameters across motion is not supported in RecursiveUnion. (cdbmutate.c:2041)
 -- should error out during parse-analyze
 with recursive rcte(x,y) as
 (
@@ -2228,7 +2228,7 @@ with recursive rcte(x,y) as
   where t.b = x
 )
 select * from rcte limit 10;
-ERROR:  Passing parameters across motion is not supported. (cdbmutate.c:1989)
+ERROR:  Passing parameters across motion is not supported in RecursiveUnion. (cdbmutate.c:2041)
 -- This used to deadlock, before the IPC between ShareInputScans across
 -- slices was rewritten.
 set gp_cte_sharing=on;
