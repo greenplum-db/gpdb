@@ -3114,16 +3114,16 @@ CDXLOperatorFactory::ExtractConvertStrsToArray(
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLOperatorFactory::ExtractConvertStrToJoinPair
+//		CDXLOperatorFactory::ExtractConvertStrToJoinNode
 //
 //	@doc:
-//		Parse a Leading hint string into a JoinPair.
+//		Parse a Leading hint string into a JoinNode.
 //
 //		Examples: "((t1 (t2 t3)) t4)" and "t1 t2 t3 t4"
 //
 //---------------------------------------------------------------------------
-CJoinHint::JoinPair *
-CDXLOperatorFactory::ExtractConvertStrToJoinPair(
+CJoinHint::JoinNode *
+CDXLOperatorFactory::ExtractConvertStrToJoinNode(
 	CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val)
 {
 	CMemoryPool *mp = dxl_memory_manager->Pmp();
@@ -3134,7 +3134,7 @@ CDXLOperatorFactory::ExtractConvertStrToJoinPair(
 
 	int depth = 0;
 	CAutoMemoryPool amp;
-	gpos::stack<CJoinHint::JoinPair *> s(amp.Pmp());
+	gpos::stack<CJoinHint::JoinNode *> s(amp.Pmp());
 	for (int i = 0; xml_val[i] != '\0'; i++)
 	{
 		char curr = xml_val[i];
@@ -3151,13 +3151,13 @@ CDXLOperatorFactory::ExtractConvertStrToJoinPair(
 				// hint has finished
 				//
 				// Example: "(T1 (T2 T3))"
-				CJoinHint::JoinPair *right = s.top();
+				CJoinHint::JoinNode *right = s.top();
 				s.pop();
-				CJoinHint::JoinPair *left = s.top();
+				CJoinHint::JoinNode *left = s.top();
 				s.pop();
 
-				CJoinHint::JoinPair *pair =
-					GPOS_NEW(mp) CJoinHint::JoinPair(left, right, depth > 0);
+				CJoinHint::JoinNode *pair =
+					GPOS_NEW(mp) CJoinHint::JoinNode(left, right, depth > 0);
 				s.push(pair);
 
 				depth -= 1;
@@ -3181,7 +3181,7 @@ CDXLOperatorFactory::ExtractConvertStrToJoinPair(
 				memcpy(str_buffer, str.c_str(), str.size() * sizeof(char));
 				str_buffer[str.size()] = '\0';
 
-				CJoinHint::JoinPair *pair = GPOS_NEW(mp) CJoinHint::JoinPair(
+				CJoinHint::JoinNode *pair = GPOS_NEW(mp) CJoinHint::JoinNode(
 					GPOS_NEW(mp) CWStringConst(mp, str_buffer));
 
 				GPOS_DELETE_ARRAY(str_buffer);
@@ -3194,13 +3194,13 @@ CDXLOperatorFactory::ExtractConvertStrToJoinPair(
 					// on the stack indicates a directed-less hint.
 					//
 					// Example: "T1 T2 T3"
-					CJoinHint::JoinPair *right = s.top();
+					CJoinHint::JoinNode *right = s.top();
 					s.pop();
-					CJoinHint::JoinPair *left = s.top();
+					CJoinHint::JoinNode *left = s.top();
 					s.pop();
 
-					CJoinHint::JoinPair *pair =
-						GPOS_NEW(mp) CJoinHint::JoinPair(left, right, false);
+					CJoinHint::JoinNode *pair =
+						GPOS_NEW(mp) CJoinHint::JoinNode(left, right, false);
 					s.push(pair);
 				}
 

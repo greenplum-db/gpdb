@@ -164,10 +164,10 @@ CParseHandlerPlanHint::StartElement(
 	{
 		const XMLCh *attr_val_xml = CDXLOperatorFactory::ExtractAttrValue(
 			attrs, EdxltokenLeading, EdxltokenPlanHint, true);
-		CJoinHint::JoinPair *order_spec = nullptr;
+		CJoinHint::JoinNode *order_spec = nullptr;
 		if (nullptr != attr_val_xml)
 		{
-			order_spec = CDXLOperatorFactory::ExtractConvertStrToJoinPair(
+			order_spec = CDXLOperatorFactory::ExtractConvertStrToJoinNode(
 				m_parse_handler_mgr->GetDXLMemoryManager(), attr_val_xml);
 		}
 

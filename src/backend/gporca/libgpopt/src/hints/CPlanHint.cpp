@@ -147,7 +147,7 @@ CPlanHint::GetJoinHint(CExpression *pexpr)
 	//
 	// For example:
 	//
-	//    T1 LOJ T2 LOJ t3
+	//    T1 LOJ T2 LOJ T3
 	//
 	// *cannot* reorder to ..
 	//
@@ -183,7 +183,7 @@ CPlanHint::GetJoinHint(CExpression *pexpr)
 		CJoinHint *hint = (*m_join_hints)[ul];
 
 		CWStringConstHashSet *hintAliases =
-			CHintUtils::GetAliasesFromHint(m_mp, hint->GetJoinPair());
+			CHintUtils::GetAliasesFromHint(m_mp, hint->GetJoinNode());
 
 		bool is_contained = true;
 		CWStringConstHashSetIter hsiter(hintAliases);
@@ -243,13 +243,13 @@ CPlanHint::HasJoinHintWithDirection(CExpression *pexpr)
 		CJoinHint *hint = (*m_join_hints)[ul];
 
 		// skip directed-less hints
-		if (!hint->GetJoinPair()->IsDirected())
+		if (!hint->GetJoinNode()->IsDirected())
 		{
 			continue;
 		}
 
 		CWStringConstHashSet *hintAliases =
-			CHintUtils::GetAliasesFromHint(m_mp, hint->GetJoinPair());
+			CHintUtils::GetAliasesFromHint(m_mp, hint->GetJoinNode());
 
 		bool is_contained = true;
 		CWStringConstHashSetIter hsiter(pexprAliases);

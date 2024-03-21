@@ -52,7 +52,7 @@ public:
 
 	// Get set of aliases from join pair
 	static CWStringConstHashSet *GetAliasesFromHint(
-		CMemoryPool *mp, const CJoinHint::JoinPair *joinpair);
+		CMemoryPool *mp, const CJoinHint::JoinNode *joinnode);
 };
 
 }  // namespace gpopt

@@ -18,18 +18,18 @@
 using namespace gpopt;
 
 FORCE_GENERATE_DBGSTR(CJoinHint);
-FORCE_GENERATE_DBGSTR(CJoinHint::JoinPair);
+FORCE_GENERATE_DBGSTR(CJoinHint::JoinNode);
 
 //---------------------------------------------------------------------------
 //	@function:
 //		SerializeJoinOrderHint
 //
 //	@doc:
-//		Serialize a JoinPair into the original Leading hint string. Return the
+//		Serialize a JoinNode into the original Leading hint string. Return the
 //		serialized string.
 //---------------------------------------------------------------------------
 static CWStringDynamic *
-SerializeJoinOrderHint(CMemoryPool *mp, const CJoinHint::JoinPair *join_pair)
+SerializeJoinOrderHint(CMemoryPool *mp, const CJoinHint::JoinNode *join_pair)
 {
 	CWStringDynamic *result = GPOS_NEW(mp) CWStringDynamic(mp);
 
@@ -66,7 +66,7 @@ SerializeJoinOrderHint(CMemoryPool *mp, const CJoinHint::JoinPair *join_pair)
 }
 
 IOstream &
-CJoinHint::JoinPair::OsPrint(IOstream &os) const
+CJoinHint::JoinNode::OsPrint(IOstream &os) const
 {
 	CAutoMemoryPool amp;
 	CWStringDynamic *dxl_string = SerializeJoinOrderHint(amp.Pmp(), this);
@@ -77,9 +77,9 @@ CJoinHint::JoinPair::OsPrint(IOstream &os) const
 	return os;
 }
 
-CJoinHint::CJoinHint(CMemoryPool *mp, JoinPair *join_pair)
+CJoinHint::CJoinHint(CMemoryPool *mp, JoinNode *join_pair)
 	: m_mp(mp),
-	  m_join_pair(join_pair),
+	  m_join_node(join_pair),
 	  m_aliases(GPOS_NEW(m_mp) StringPtrArray(m_mp))
 {
 }
@@ -99,7 +99,7 @@ CJoinHint::GetAliasNames() const
 	if (m_aliases->Size() == 0)
 	{
 		CWStringConstHashSet *aliasset =
-			CHintUtils::GetAliasesFromHint(m_mp, m_join_pair);
+			CHintUtils::GetAliasesFromHint(m_mp, m_join_node);
 		CWStringConstHashSetIter hsiter(aliasset);
 		while (hsiter.Advance())
 		{
@@ -119,7 +119,7 @@ CJoinHint::OsPrint(IOstream &os) const
 {
 	os << "JoinHint:";
 
-	m_join_pair->OsPrint(os);
+	m_join_node->OsPrint(os);
 
 	return os;
 }
@@ -144,7 +144,7 @@ CJoinHint::Serialize(CXMLSerializer *xml_serializer) const
 								 aliases);
 	GPOS_DELETE(aliases);
 
-	CWStringDynamic *dxl_string = SerializeJoinOrderHint(m_mp, GetJoinPair());
+	CWStringDynamic *dxl_string = SerializeJoinOrderHint(m_mp, GetJoinNode());
 	xml_serializer->AddAttribute(CDXLTokens::GetDXLTokenStr(EdxltokenLeading),
 								 dxl_string);
 	GPOS_DELETE(dxl_string);

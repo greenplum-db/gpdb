@@ -28,7 +28,6 @@ public:
 	/// \code
 	///   std::vector<int, gpos::MemoryPoolAllocator<int>> v(mp);
 	/// \endcode
-	// NOLINTNEXTLINE(google-explicit-constructor)
 	MemoryPoolAllocator(CMemoryPool *mp) noexcept : mp_(mp)
 	{
 	}

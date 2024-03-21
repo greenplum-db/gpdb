@@ -466,20 +466,20 @@ COptTasks::GetCostModel(CMemoryPool *mp, ULONG num_segments)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		GenerateJoinPairs
+//		GenerateJoinNodes
 //
 //	@doc:
-//		Converts OuterInnerRels into a JoinPair structure
+//		Converts OuterInnerRels into a JoinNode structure
 //---------------------------------------------------------------------------
-CJoinHint::JoinPair *
-GenerateJoinPairs(CMemoryPool *mp, OuterInnerRels *outer_inner)
+CJoinHint::JoinNode *
+GenerateJoinNodes(CMemoryPool *mp, OuterInnerRels *outer_inner)
 {
 	if (nullptr == outer_inner)
 	{
 		return nullptr;
 	}
 
-	CJoinHint::JoinPair *pair = nullptr;
+	CJoinHint::JoinNode *pair = nullptr;
 
 	if (outer_inner->relation != nullptr)
 	{
@@ -495,28 +495,28 @@ GenerateJoinPairs(CMemoryPool *mp, OuterInnerRels *outer_inner)
 
 		GPOS_DELETE_ARRAY(str_buffer);
 
-		pair = GPOS_NEW(mp) CJoinHint::JoinPair(alias);
+		pair = GPOS_NEW(mp) CJoinHint::JoinNode(alias);
 	}
 	else if (2 == list_length(outer_inner->outer_inner_pair))
 	{
 		// outer_inner branch node
-		CJoinHint::JoinPair *left_joinpair = GenerateJoinPairs(
+		CJoinHint::JoinNode *left_joinnode = GenerateJoinNodes(
 			mp, (OuterInnerRels *) lfirst(
 					list_head(outer_inner->outer_inner_pair)));
 
-		CJoinHint::JoinPair *right_joinpair = GenerateJoinPairs(
+		CJoinHint::JoinNode *right_joinnode = GenerateJoinNodes(
 			mp, (OuterInnerRels *) lfirst(
 					lnext(list_head(outer_inner->outer_inner_pair))));
 
-		if (nullptr == left_joinpair || nullptr == right_joinpair)
+		if (nullptr == left_joinnode || nullptr == right_joinnode)
 		{
 			// bad input - outer_inner may be malformed
-			CRefCount::SafeRelease(left_joinpair);
-			CRefCount::SafeRelease(right_joinpair);
+			CRefCount::SafeRelease(left_joinnode);
+			CRefCount::SafeRelease(right_joinnode);
 			return nullptr;
 		}
 
-		pair = GPOS_NEW(mp) CJoinHint::JoinPair(left_joinpair, right_joinpair,
+		pair = GPOS_NEW(mp) CJoinHint::JoinNode(left_joinnode, right_joinnode,
 												/*is_directed*/ true);
 	}
 
@@ -526,15 +526,15 @@ GenerateJoinPairs(CMemoryPool *mp, OuterInnerRels *outer_inner)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		GenerateJoinPairs
+//		GenerateJoinNodes
 //
 //	@doc:
-//		Converts List of relation names into a JoinPair structure
+//		Converts List of relation names into a JoinNode structure
 //---------------------------------------------------------------------------
-CJoinHint::JoinPair *
-GenerateJoinPairs(CMemoryPool *mp, List *relations)
+CJoinHint::JoinNode *
+GenerateJoinNodes(CMemoryPool *mp, List *relations)
 {
-	CJoinHint::JoinPair *pair = nullptr;
+	CJoinHint::JoinNode *pair = nullptr;
 
 	ListCell *l;
 	int count = 0;
@@ -545,12 +545,12 @@ GenerateJoinPairs(CMemoryPool *mp, List *relations)
 
 		if (count == 0)
 		{
-			pair = GPOS_NEW(mp) CJoinHint::JoinPair(alias);
+			pair = GPOS_NEW(mp) CJoinHint::JoinNode(alias);
 		}
 		else
 		{
-			pair = GPOS_NEW(mp) CJoinHint::JoinPair(
-				pair, GPOS_NEW(mp) CJoinHint::JoinPair(alias),
+			pair = GPOS_NEW(mp) CJoinHint::JoinNode(
+				pair, GPOS_NEW(mp) CJoinHint::JoinNode(alias),
 				/*is_directed*/ false);
 		}
 	}
@@ -702,24 +702,24 @@ COptTasks::GetPlanHints(CMemoryPool *mp, Query *query)
 	{
 		LeadingHint *leading_hint =
 			(LeadingHint *) hintstate->leading_hint[hint_index];
-		CJoinHint::JoinPair *joinpair = nullptr;
+		CJoinHint::JoinNode *joinnode = nullptr;
 
 		if (nullptr != leading_hint->outer_inner)
 		{
 			// is directed
-			joinpair = GenerateJoinPairs(mp, leading_hint->outer_inner);
-			if (nullptr != joinpair)
+			joinnode = GenerateJoinNodes(mp, leading_hint->outer_inner);
+			if (nullptr != joinnode)
 			{
-				plan_hints->AddHint(GPOS_NEW(mp) CJoinHint(mp, joinpair));
+				plan_hints->AddHint(GPOS_NEW(mp) CJoinHint(mp, joinnode));
 			}
 		}
 		else if (nullptr != leading_hint->relations)
 		{
 			// is directed-less
-			joinpair = GenerateJoinPairs(mp, leading_hint->relations);
-			if (nullptr != joinpair)
+			joinnode = GenerateJoinNodes(mp, leading_hint->relations);
+			if (nullptr != joinnode)
 			{
-				plan_hints->AddHint(GPOS_NEW(mp) CJoinHint(mp, joinpair));
+				plan_hints->AddHint(GPOS_NEW(mp) CJoinHint(mp, joinnode));
 			}
 		}
 	}

@@ -56,32 +56,49 @@ using CWStringConstHashSetIter =
 class CJoinHint : public IHint, public DbgPrintMixin<CJoinHint>
 {
 public:
-	// JoinPair represent join order over a set of relations
-	class JoinPair : public CRefCount, public DbgPrintMixin<JoinPair>
+	// JoinNode represent join order over a set of relations
+	//
+	// Let's say the hint is Leading(t3 (t2 t1)), then the JoinNode would be:
+	//
+	//          [JoinNode]
+	//          outer|inner
+	//           /     \                .
+	//          /       \               .
+	//     [JoinNode]    \              .
+	//         t3      [JoinNode]       .
+	//                outer|inner       .
+	//                   /  \           .
+	//                  /    \          .
+	//         [JoinNode]    [JoinNode]
+	//             t2            t1
+	class JoinNode : public CRefCount, public DbgPrintMixin<JoinNode>
 	{
 	private:
 		// alias or table name. null if non-leaf node.
 		CWStringConst *m_name{nullptr};
 
 		// outer join pair. null if leaf node.
-		JoinPair *m_outer{nullptr};
+		JoinNode *m_outer{nullptr};
 
 		// inner join pair. null if leaf node.
-		JoinPair *m_inner{nullptr};
+		JoinNode *m_inner{nullptr};
 
 		// directed "true" means that the inner/outer sides cannot be swapped.
 		bool m_is_directed{false};
 
 	public:
-		JoinPair(CWStringConst *name) : m_name(name)
+		// ctor for leaf nodes
+		JoinNode(CWStringConst *name) : m_name(name)
 		{
 		}
-		JoinPair(JoinPair *outer, JoinPair *inner, bool is_directed)
+
+		// ctor for branch nodes
+		JoinNode(JoinNode *outer, JoinNode *inner, bool is_directed)
 			: m_outer(outer), m_inner(inner), m_is_directed(is_directed)
 		{
 		}
 
-		~JoinPair() override
+		~JoinNode() override
 		{
 			GPOS_DELETE(m_name);
 
@@ -95,13 +112,13 @@ public:
 			return m_name;
 		}
 
-		JoinPair *
+		JoinNode *
 		GetOuter() const
 		{
 			return m_outer;
 		}
 
-		JoinPair *
+		JoinNode *
 		GetInner() const
 		{
 			return m_inner;
@@ -120,26 +137,26 @@ private:
 	CMemoryPool *m_mp;
 
 	// stores specified join order
-	JoinPair *m_join_pair;
+	JoinNode *m_join_node;
 
 	// sorted list of alias names.
 	StringPtrArray *m_aliases;
 
 public:
-	CJoinHint(CMemoryPool *mp, JoinPair *join_pair);
+	CJoinHint(CMemoryPool *mp, JoinNode *join_pair);
 
 	~CJoinHint() override
 	{
-		m_join_pair->Release();
+		m_join_node->Release();
 		m_aliases->Release();
 	}
 
 	const StringPtrArray *GetAliasNames() const;
 
-	const CJoinHint::JoinPair *
-	GetJoinPair() const
+	const CJoinHint::JoinNode *
+	GetJoinNode() const
 	{
-		return m_join_pair;
+		return m_join_node;
 	}
 
 	IOstream &OsPrint(IOstream &os) const;

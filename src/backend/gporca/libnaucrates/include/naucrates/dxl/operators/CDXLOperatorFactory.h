@@ -611,7 +611,7 @@ public:
 	static StringPtrArray *ExtractConvertStrsToArray(
 		CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val);
 
-	static CJoinHint::JoinPair *ExtractConvertStrToJoinPair(
+	static CJoinHint::JoinNode *ExtractConvertStrToJoinNode(
 		CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val);
 
 	// parses the input and output segment ids from Xerces attributes and

@@ -269,21 +269,21 @@ CHintUtils::GetAliasesFromTableDescriptors(CMemoryPool *mp,
 //		CHintUtils::GetAliasesFromHint
 //
 //	@doc:
-//		Returns a set containing all the aliases referenced in the JoinPair.
+//		Returns a set containing all the aliases referenced in the JoinNode.
 //---------------------------------------------------------------------------
 CWStringConstHashSet *
 CHintUtils::GetAliasesFromHint(CMemoryPool *mp,
-							   const CJoinHint::JoinPair *joinpair)
+							   const CJoinHint::JoinNode *joinnode)
 {
 	CWStringConstHashSet *aliases = GPOS_NEW(mp) CWStringConstHashSet(mp);
 
 	CAutoMemoryPool amp;
-	gpos::queue<const CJoinHint::JoinPair *> q(amp.Pmp());
-	q.push(joinpair);
+	gpos::queue<const CJoinHint::JoinNode *> q(amp.Pmp());
+	q.push(joinnode);
 
 	while (q.size() > 0)
 	{
-		const CJoinHint::JoinPair *pair = q.front();
+		const CJoinHint::JoinNode *pair = q.front();
 		q.pop();
 		if (nullptr != pair->GetName())
 		{

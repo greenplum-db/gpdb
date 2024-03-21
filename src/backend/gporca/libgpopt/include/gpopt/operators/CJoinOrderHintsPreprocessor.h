@@ -23,17 +23,17 @@ namespace gpopt
 class CJoinOrderHintsPreprocessor
 {
 private:
-	// Return list of all the children of fromExpr that are not referenced in
-	// toExpr.
+	// Return list of all the children of naryJoinPexpr that are not referenced in
+	// binaryJoinExpr.
 	static CExpressionArray *GetUnusedChildren(CMemoryPool *mp,
-											   CExpression *fromExpr,
-											   CExpression *toExpr);
+											   CExpression *naryJoinPexpr,
+											   CExpression *binaryJoinExpr);
 
 	// Recursively constructs CLogicalInnerJoin expressions using the children
 	// of a CLogicalNAryJoin.
 	static CExpression *RecursiveApplyJoinOrderHintsOnNAryJoin(
 		CMemoryPool *mp, CExpression *pexpr,
-		const CJoinHint::JoinPair *joinpair);
+		const CJoinHint::JoinNode *joinnode);
 
 public:
 	CJoinOrderHintsPreprocessor(const CJoinOrderHintsPreprocessor &) = delete;
@@ -45,7 +45,7 @@ public:
 	// more CLogicalInnerJoin(s).
 	static CExpression *PexprPreprocess(
 		CMemoryPool *mp, CExpression *pexpr,
-		const CJoinHint::JoinPair *joinpair = nullptr);
+		const CJoinHint::JoinNode *joinnode = nullptr);
 };
 
 }  // namespace gpopt

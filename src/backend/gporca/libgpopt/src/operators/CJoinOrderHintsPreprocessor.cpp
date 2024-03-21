@@ -22,14 +22,14 @@ using namespace gpopt;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		GetLeaf
+//		GetChildWithSingleAlias
 //
 //	@doc:
 //		Return the child expression of pexpr that has a single table descriptor
 //		matching alias. If none exists, return nullptr.
 //---------------------------------------------------------------------------
 static CExpression *
-GetLeaf(CExpression *pexpr, const CWStringConst *alias)
+GetChildWithSingleAlias(CExpression *pexpr, const CWStringConst *alias)
 {
 	GPOS_ASSERT(COperator::EopLogicalNAryJoin == pexpr->Pop()->Eopid());
 
@@ -107,22 +107,22 @@ IsChild(CMemoryPool *mp, CExpression *pexpr, CWStringConstHashSet *aliases)
 //		CJoinOrderHintsPreprocessor::GetUnusedChildren
 //
 //	@doc:
-//		Return list of all the children of fromExpr that are not referenced in
-//		toExpr.
+//		Return list of all the children of naryJoinPexpr that are not referenced in
+//		binaryJoinExpr.
 //---------------------------------------------------------------------------
 CExpressionArray *
 CJoinOrderHintsPreprocessor::GetUnusedChildren(CMemoryPool *mp,
-											   CExpression *fromExpr,
-											   CExpression *toExpr)
+											   CExpression *naryJoinPexpr,
+											   CExpression *binaryJoinExpr)
 {
-	GPOS_ASSERT(COperator::EopLogicalNAryJoin == fromExpr->Pop()->Eopid());
+	GPOS_ASSERT(COperator::EopLogicalNAryJoin == naryJoinPexpr->Pop()->Eopid());
 
-	// get all the alias used in the toExpr
+	// get all the alias used in the binaryJoinExpr
 	CWStringConstHashSet *usedNames = GPOS_NEW(mp) CWStringConstHashSet(mp);
 
 	CWStringConstHashSet *pexprAliasesFromTabs =
 		CHintUtils::GetAliasesFromTableDescriptors(
-			mp, toExpr->DeriveTableDescriptor());
+			mp, binaryJoinExpr->DeriveTableDescriptor());
 	CWStringConstHashSetIter iter(pexprAliasesFromTabs);
 	while (iter.Advance())
 	{
@@ -132,20 +132,23 @@ CJoinOrderHintsPreprocessor::GetUnusedChildren(CMemoryPool *mp,
 
 	CExpressionArray *unusedChildren = GPOS_NEW(mp) CExpressionArray(mp);
 
-	// check for hint aliases not used in the inner/outer child
-	for (ULONG ul = 0; ul < fromExpr->Arity(); ul++)
+	// check for hint aliases not used in any child
+	for (ULONG ul = 0; ul < naryJoinPexpr->Arity(); ul++)
 	{
-		if ((*fromExpr)[ul]->DeriveTableDescriptor()->Size() == 0)
+		if ((*naryJoinPexpr)[ul]->DeriveTableDescriptor()->Size() == 0)
 		{
 			continue;
 		}
 
-		const CWStringConst *alias =
-			(*fromExpr)[ul]->DeriveTableDescriptor()->First()->Name().Pstr();
+		const CWStringConst *alias = (*naryJoinPexpr)[ul]
+										 ->DeriveTableDescriptor()
+										 ->First()
+										 ->Name()
+										 .Pstr();
 		if (!usedNames->Contains(alias))
 		{
 			unusedChildren->Append(CJoinOrderHintsPreprocessor::PexprPreprocess(
-				mp, (*fromExpr)[ul]));
+				mp, (*naryJoinPexpr)[ul]));
 		}
 	}
 
@@ -206,25 +209,52 @@ GetOnPreds(CMemoryPool *mp, CExpression *outer, CExpression *inner,
 //	@doc:
 //		Recursively constructs CLogicalInnerJoin expressions using the children
 //		of a CLogicalNAryJoin.
+//
+//		For example, let's say the expression tree is:
+//
+//		  +--CLogicalNAryJoin
+//		     |--CLogicalGet "t1" ("t1"), Columns: ["a" (0), "b" (1),...
+//		     |--CLogicalLimit <empty> global
+//		     |  |--CLogicalNAryJoin
+//		     |  |  |--CLogicalGet "t2" ("t2"), Columns: ["a" (9), "b" (10),...
+//		     |  |  |--CLogicalGet "t3" ("t3"), Columns: ["a" (18), "b" (19),...
+//		     |  |  ...
+//		     |  ...
+//		     ...
+//
+//		And the hint is Leading((t1 (t2 t3))).
+//
+//		Our first step is to separate the left and rigt side of the hint:
+//		  left-side: "t1"
+//		  right-side: "(t2 t3)"
+//
+//		Then, apply each hint on the relevant children of Nary join. In this
+//		case, the relevant child of "t1" is CLogicalGet "t1" and the relevant
+//		child of "(t2 t3)" is CLogicalLimit. Since CLogicalLimit is not a leaf
+//		(i.e. has more than one relation), we recursively apply the right side
+//		hint "(t2 t3)" on the CLogicalLimit expression.
+//
+//		After the children have been processed, then construct the appropriate
+//		operator to join the children together.
 //---------------------------------------------------------------------------
 CExpression *
 CJoinOrderHintsPreprocessor::RecursiveApplyJoinOrderHintsOnNAryJoin(
-	CMemoryPool *mp, CExpression *pexpr, const CJoinHint::JoinPair *joinpair)
+	CMemoryPool *mp, CExpression *pexpr, const CJoinHint::JoinNode *joinnode)
 {
 	GPOS_ASSERT(COperator::EopLogicalNAryJoin == pexpr->Pop()->Eopid());
 
-	CExpression *appliedHints = nullptr;
+	CExpression *pexprAppliedHints = nullptr;
 
 	CWStringConstHashSet *hint_aliases =
-		CHintUtils::GetAliasesFromHint(mp, joinpair);
-	if (joinpair->GetName())
+		CHintUtils::GetAliasesFromHint(mp, joinnode);
+	if (joinnode->GetName())
 	{
 		// Base case when hint specifies name, then return the child of
 		// CLogicalNAryJoin by that name.
-		appliedHints = GetLeaf(pexpr, joinpair->GetName());
-		if (nullptr != appliedHints)
+		pexprAppliedHints = GetChildWithSingleAlias(pexpr, joinnode->GetName());
+		if (nullptr != pexprAppliedHints)
 		{
-			appliedHints->AddRef();
+			pexprAppliedHints->AddRef();
 		}
 	}
 	else if (IsChild(mp, pexpr, hint_aliases))
@@ -236,15 +266,15 @@ CJoinOrderHintsPreprocessor::RecursiveApplyJoinOrderHintsOnNAryJoin(
 		// Leading(T1 T2)
 		// SELECT * FROM (SELECT a FROM T1, T2 LIMIT 42) q, T3;
 		//
-		// Note: We already have a joinpair hint we are trying to satisfy. So,
+		// Note: We already have a joinnode hint we are trying to satisfy. So,
 		// explicity pass that one along so we don't try to find another
 		// matching hint
-		appliedHints = CJoinOrderHintsPreprocessor::PexprPreprocess(
-			mp, GetChild(mp, pexpr, hint_aliases), joinpair);
+		pexprAppliedHints = CJoinOrderHintsPreprocessor::PexprPreprocess(
+			mp, GetChild(mp, pexpr, hint_aliases), joinnode);
 	}
 	else
 	{
-		// If no single child covers the hint, then apply the joinpair
+		// If no single child covers the hint, then apply the joinnode
 		// inner/outer to the CLogicalNAryJoin. For example:
 		//
 		// Hint: Leading((T1 T2) (T3 T4))
@@ -253,9 +283,9 @@ CJoinOrderHintsPreprocessor::RecursiveApplyJoinOrderHintsOnNAryJoin(
 		// Then left (T1 T2) and right (T3 T4) hints need to be applied to the
 		// operator, and the result joined.
 		CExpression *outer = RecursiveApplyJoinOrderHintsOnNAryJoin(
-			mp, pexpr, joinpair->GetOuter());
+			mp, pexpr, joinnode->GetOuter());
 		CExpression *inner = RecursiveApplyJoinOrderHintsOnNAryJoin(
-			mp, pexpr, joinpair->GetInner());
+			mp, pexpr, joinnode->GetInner());
 
 		// Hint not satisfied. This can happen, for example, if joins hint
 		// splits across a GROUP BY, like:
@@ -274,14 +304,14 @@ CJoinOrderHintsPreprocessor::RecursiveApplyJoinOrderHintsOnNAryJoin(
 
 		CExpressionArray *all_on_preds = CPredicateUtils::PdrgpexprConjuncts(
 			mp, (*pexpr->PdrgPexpr())[pexpr->PdrgPexpr()->Size() - 1]);
-		appliedHints = GPOS_NEW(mp)
+		pexprAppliedHints = GPOS_NEW(mp)
 			CExpression(mp, GPOS_NEW(mp) CLogicalInnerJoin(mp), outer, inner,
 						GetOnPreds(mp, outer, inner, all_on_preds));
 		all_on_preds->Release();
 	}
 
 	hint_aliases->Release();
-	return appliedHints;
+	return pexprAppliedHints;
 }
 
 
@@ -296,7 +326,7 @@ CJoinOrderHintsPreprocessor::RecursiveApplyJoinOrderHintsOnNAryJoin(
 //---------------------------------------------------------------------------
 CExpression *
 CJoinOrderHintsPreprocessor::PexprPreprocess(
-	CMemoryPool *mp, CExpression *pexpr, const CJoinHint::JoinPair *joinpair)
+	CMemoryPool *mp, CExpression *pexpr, const CJoinHint::JoinNode *joinnode)
 {
 	// protect against stack overflow during recursion
 	GPOS_CHECK_STACK_SIZE;
@@ -306,7 +336,7 @@ CJoinOrderHintsPreprocessor::PexprPreprocess(
 	COperator *pop = pexpr->Pop();
 
 	// Search for a join order hint for this expression.
-	if (nullptr == joinpair)
+	if (nullptr == joinnode)
 	{
 		CPlanHint *planhint =
 			COptCtxt::PoctxtFromTLS()->GetOptimizerConfig()->GetPlanHint();
@@ -314,28 +344,28 @@ CJoinOrderHintsPreprocessor::PexprPreprocess(
 		CJoinHint *joinhint = planhint->GetJoinHint(pexpr);
 		if (joinhint)
 		{
-			joinpair = joinhint->GetJoinPair();
+			joinnode = joinhint->GetJoinNode();
 		}
 	}
 
 	// Given a hint, recursively traverse the hint and (bottom-up) construct a
 	// new join expression. Any leftover children are appended to the nary
 	// join.
-	if (COperator::EopLogicalNAryJoin == pop->Eopid() && nullptr != joinpair)
+	if (COperator::EopLogicalNAryJoin == pop->Eopid() && nullptr != joinnode)
 	{
-		CExpression *appliedHints =
-			RecursiveApplyJoinOrderHintsOnNAryJoin(mp, pexpr, joinpair);
+		CExpression *pexprAppliedHints =
+			RecursiveApplyJoinOrderHintsOnNAryJoin(mp, pexpr, joinnode);
 
 		CExpressionArray *naryChildren =
-			GetUnusedChildren(mp, pexpr, appliedHints);
+			GetUnusedChildren(mp, pexpr, pexprAppliedHints);
 		if (naryChildren->Size() == 0)
 		{
 			naryChildren->Release();
-			return appliedHints;
+			return pexprAppliedHints;
 		}
 		else
 		{
-			naryChildren->Append(appliedHints);
+			naryChildren->Append(pexprAppliedHints);
 			(*pexpr->PdrgPexpr())[pexpr->PdrgPexpr()->Size() - 1]->AddRef();
 			naryChildren->Append(
 				(*pexpr->PdrgPexpr())[pexpr->PdrgPexpr()->Size() - 1]);
@@ -352,7 +382,7 @@ CJoinOrderHintsPreprocessor::PexprPreprocess(
 	for (ULONG ul = 0; ul < pexpr->Arity(); ul++)
 	{
 		pdrgpexpr->Append(CJoinOrderHintsPreprocessor::PexprPreprocess(
-			mp, (*pdrgexprChildren)[ul], joinpair));
+			mp, (*pdrgexprChildren)[ul], joinnode));
 	}
 
 	pop->AddRef();
