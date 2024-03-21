@@ -14963,3 +14963,36 @@ select distinct v2 from srf_attnum();
 
 drop user ruser;
 drop table foo, bar;
+-- By default the GUC optimizer_enable_penalize_correlated_nljoin is set to ON
+-- If the GUC is set to ON then nested correlatedNLJ will be penalized similar
+-- to nested NLJ's
+-- On setting the GUC optimizer_enable_penalize_correlated_nljoin to OFF we
+-- won't penalize the nested correlatedNLJ. So by default the below query will
+-- have a Nested Loop join in the plan but since we setting the GUC off in this
+-- case we will get subplans in the plan
+set optimizer_enable_penalize_correlated_nljoin to off;
+create table foo (a int, b text, c int);
+create table bar (a int, b int, c int);
+create table baz (a int, b text, c int);
+insert into foo VALUES (100, 'false', 1);
+insert into foo VALUES (200, 'true', 2);
+insert into bar VALUES (2,2,2);
+insert into baz VALUES (200, 'falseg', 1);
+analyze foo,bar,baz;
+explain select * from foo where b::bool = ( exists(select c from bar) and not exists (select c from baz));
+                                     QUERY PLAN
+------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2.06..3.10 rows=1 width=13)
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+           ->  Seq Scan on bar  (cost=0.00..1.01 rows=1 width=4)
+   InitPlan 2 (returns $1)  (slice4)
+     ->  Gather Motion 3:1  (slice5; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+           ->  Seq Scan on baz  (cost=0.00..1.01 rows=1 width=4)
+   ->  Seq Scan on foo  (cost=0.00..1.02 rows=1 width=13)
+         Filter: ((b)::boolean = ($0 AND (NOT $1)))
+ Optimizer: Postgres-based planner
+(10 rows)
+
+drop table foo,bar,baz;
+reset optimizer_enable_penalize_correlated_nljoin;
