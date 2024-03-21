@@ -172,7 +172,7 @@ CPlanHint::GetJoinHint(CExpression *pexpr)
 	}
 
 	CTableDescriptorHashSet *ptabdesc = pexpr->DeriveTableDescriptor();
-	CWStringConstHashSet *pexprAliases =
+	StringPtrArray *pexprAliases =
 		CHintUtils::GetAliasesFromTableDescriptors(m_mp, ptabdesc);
 
 	// If every hint alias is contained in the expression's table descriptor
@@ -182,14 +182,13 @@ CPlanHint::GetJoinHint(CExpression *pexpr)
 	{
 		CJoinHint *hint = (*m_join_hints)[ul];
 
-		CWStringConstHashSet *hintAliases =
+		StringPtrArray *hintAliases =
 			CHintUtils::GetAliasesFromHint(m_mp, hint->GetJoinNode());
 
 		bool is_contained = true;
-		CWStringConstHashSetIter hsiter(hintAliases);
-		while (hsiter.Advance())
+		for (ULONG j = 0; j < hintAliases->Size(); j++)
 		{
-			if (!pexprAliases->Contains(hsiter.Get()))
+			if (nullptr == pexprAliases->Find((*hintAliases)[j]))
 			{
 				is_contained = false;
 				break;
@@ -204,7 +203,8 @@ CPlanHint::GetJoinHint(CExpression *pexpr)
 
 				// is a leaf and a hint
 				if (childtabs->Size() == 1 &&
-					hintAliases->Contains(childtabs->First()->Name().Pstr()))
+					nullptr !=
+						hintAliases->Find(childtabs->First()->Name().Pstr()))
 				{
 					pexprAliases->Release();
 					hintAliases->Release();
@@ -231,7 +231,7 @@ bool
 CPlanHint::HasJoinHintWithDirection(CExpression *pexpr)
 {
 	CTableDescriptorHashSet *ptabdesc = pexpr->DeriveTableDescriptor();
-	CWStringConstHashSet *pexprAliases =
+	StringPtrArray *pexprAliases =
 		CHintUtils::GetAliasesFromTableDescriptors(m_mp, ptabdesc);
 
 	bool has_join_with_direction = false;
@@ -248,14 +248,13 @@ CPlanHint::HasJoinHintWithDirection(CExpression *pexpr)
 			continue;
 		}
 
-		CWStringConstHashSet *hintAliases =
+		StringPtrArray *hintAliases =
 			CHintUtils::GetAliasesFromHint(m_mp, hint->GetJoinNode());
 
 		bool is_contained = true;
-		CWStringConstHashSetIter hsiter(pexprAliases);
-		while (hsiter.Advance())
+		for (ULONG j = 0; j < pexprAliases->Size(); j++)
 		{
-			if (!hintAliases->Contains(hsiter.Get()))
+			if (nullptr == hintAliases->Find((*pexprAliases)[j]))
 			{
 				is_contained = false;
 				break;

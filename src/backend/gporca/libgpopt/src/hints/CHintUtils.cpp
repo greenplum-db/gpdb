@@ -249,16 +249,17 @@ CHintUtils::ScanHintStringToEnum(const WCHAR *type)
 //		Returns a set containing all the aliases referenced in the table
 //		descriptor hash set.
 //---------------------------------------------------------------------------
-CWStringConstHashSet *
+StringPtrArray *
 CHintUtils::GetAliasesFromTableDescriptors(CMemoryPool *mp,
 										   CTableDescriptorHashSet *ptabs)
 {
-	CWStringConstHashSet *pexpr_aliases = GPOS_NEW(mp) CWStringConstHashSet(mp);
+	StringPtrArray *pexpr_aliases = GPOS_NEW(mp) StringPtrArray(mp);
 	CTableDescriptorHashSetIter tabiter(ptabs);
 	while (tabiter.Advance())
 	{
 		const CTableDescriptor *tabdesc = tabiter.Get();
-		pexpr_aliases->Insert(tabdesc->Name().Pstr());
+		pexpr_aliases->Append(GPOS_NEW(mp) CWStringConst(
+			mp, tabdesc->Name().Pstr()->GetBuffer()));
 	}
 
 	return pexpr_aliases;
@@ -271,11 +272,11 @@ CHintUtils::GetAliasesFromTableDescriptors(CMemoryPool *mp,
 //	@doc:
 //		Returns a set containing all the aliases referenced in the JoinNode.
 //---------------------------------------------------------------------------
-CWStringConstHashSet *
+StringPtrArray *
 CHintUtils::GetAliasesFromHint(CMemoryPool *mp,
 							   const CJoinHint::JoinNode *joinnode)
 {
-	CWStringConstHashSet *aliases = GPOS_NEW(mp) CWStringConstHashSet(mp);
+	StringPtrArray *aliases = GPOS_NEW(mp) StringPtrArray(mp);
 
 	CAutoMemoryPool amp;
 	gpos::queue<const CJoinHint::JoinNode *> q(amp.Pmp());
@@ -287,7 +288,8 @@ CHintUtils::GetAliasesFromHint(CMemoryPool *mp,
 		q.pop();
 		if (nullptr != pair->GetName())
 		{
-			aliases->Insert(pair->GetName());
+			aliases->Append(
+				GPOS_NEW(mp) CWStringConst(mp, pair->GetName()->GetBuffer()));
 		}
 		else
 		{

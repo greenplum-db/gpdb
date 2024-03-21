@@ -55,22 +55,21 @@ GetChildWithSingleAlias(CExpression *pexpr, const CWStringConst *alias)
 //		containing the aliases. If none exists, return nullptr.
 //---------------------------------------------------------------------------
 static CExpression *
-GetChild(CMemoryPool *mp, CExpression *pexpr, CWStringConstHashSet *aliases)
+GetChild(CMemoryPool *mp, CExpression *pexpr, StringPtrArray *aliases)
 {
 	GPOS_ASSERT(COperator::EopLogicalNAryJoin == pexpr->Pop()->Eopid());
 
 	for (ULONG ul = 0; ul < pexpr->Arity(); ul++)
 	{
-		CWStringConstHashSet *pexpr_aliases =
+		StringPtrArray *pexpr_aliases =
 			CHintUtils::GetAliasesFromTableDescriptors(
 				mp, (*pexpr)[ul]->DeriveTableDescriptor());
 
 		bool is_contained = true;
 
-		CWStringConstHashSetIter hsiter(aliases);
-		while (hsiter.Advance())
+		for (ULONG j = 0; j < aliases->Size(); j++)
 		{
-			if (!pexpr_aliases->Contains(hsiter.Get()))
+			if (nullptr == pexpr_aliases->Find((*aliases)[j]))
 			{
 				is_contained = false;
 				break;
@@ -96,7 +95,7 @@ GetChild(CMemoryPool *mp, CExpression *pexpr, CWStringConstHashSet *aliases)
 //		set containing the aliases.
 //---------------------------------------------------------------------------
 static bool
-IsChild(CMemoryPool *mp, CExpression *pexpr, CWStringConstHashSet *aliases)
+IsChild(CMemoryPool *mp, CExpression *pexpr, StringPtrArray *aliases)
 {
 	return nullptr != GetChild(mp, pexpr, aliases);
 }
@@ -118,17 +117,8 @@ CJoinOrderHintsPreprocessor::GetUnusedChildren(CMemoryPool *mp,
 	GPOS_ASSERT(COperator::EopLogicalNAryJoin == naryJoinPexpr->Pop()->Eopid());
 
 	// get all the alias used in the binaryJoinExpr
-	CWStringConstHashSet *usedNames = GPOS_NEW(mp) CWStringConstHashSet(mp);
-
-	CWStringConstHashSet *pexprAliasesFromTabs =
-		CHintUtils::GetAliasesFromTableDescriptors(
-			mp, binaryJoinExpr->DeriveTableDescriptor());
-	CWStringConstHashSetIter iter(pexprAliasesFromTabs);
-	while (iter.Advance())
-	{
-		usedNames->Insert(iter.Get());
-	}
-	pexprAliasesFromTabs->Release();
+	StringPtrArray *usedNames = CHintUtils::GetAliasesFromTableDescriptors(
+		mp, binaryJoinExpr->DeriveTableDescriptor());
 
 	CExpressionArray *unusedChildren = GPOS_NEW(mp) CExpressionArray(mp);
 
@@ -145,7 +135,7 @@ CJoinOrderHintsPreprocessor::GetUnusedChildren(CMemoryPool *mp,
 										 ->First()
 										 ->Name()
 										 .Pstr();
-		if (!usedNames->Contains(alias))
+		if (nullptr == usedNames->Find(alias))
 		{
 			unusedChildren->Append(CJoinOrderHintsPreprocessor::PexprPreprocess(
 				mp, (*naryJoinPexpr)[ul]));
@@ -245,8 +235,7 @@ CJoinOrderHintsPreprocessor::RecursiveApplyJoinOrderHintsOnNAryJoin(
 
 	CExpression *pexprAppliedHints = nullptr;
 
-	CWStringConstHashSet *hint_aliases =
-		CHintUtils::GetAliasesFromHint(mp, joinnode);
+	StringPtrArray *hint_aliases = CHintUtils::GetAliasesFromHint(mp, joinnode);
 	if (joinnode->GetName())
 	{
 		// Base case when hint specifies name, then return the child of

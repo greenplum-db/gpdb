@@ -45,14 +45,6 @@
 
 namespace gpopt
 {
-using CWStringConstHashSet =
-	CHashSet<const CWStringConst, CWStringConst::HashValue,
-			 CWStringConst::Equals, CleanupNULL<const CWStringConst>>;
-
-using CWStringConstHashSetIter =
-	CHashSetIter<const CWStringConst, CWStringConst::HashValue,
-				 CWStringConst::Equals, CleanupNULL<const CWStringConst>>;
-
 class CJoinHint : public IHint, public DbgPrintMixin<CJoinHint>
 {
 public:
@@ -140,7 +132,7 @@ private:
 	JoinNode *m_join_node;
 
 	// sorted list of alias names.
-	StringPtrArray *m_aliases;
+	StringPtrArray *m_aliases{nullptr};
 
 public:
 	CJoinHint(CMemoryPool *mp, JoinNode *join_pair);
@@ -148,10 +140,10 @@ public:
 	~CJoinHint() override
 	{
 		m_join_node->Release();
-		m_aliases->Release();
+		CRefCount::SafeRelease(m_aliases);
 	}
 
-	const StringPtrArray *GetAliasNames() const;
+	const StringPtrArray *GetAliasNames();
 
 	const CJoinHint::JoinNode *
 	GetJoinNode() const
@@ -161,7 +153,7 @@ public:
 
 	IOstream &OsPrint(IOstream &os) const;
 
-	void Serialize(CXMLSerializer *xml_serializer) const;
+	void Serialize(CXMLSerializer *xml_serializer);
 };
 
 using JoinHintList = CDynamicPtrArray<CJoinHint, CleanupRelease>;

@@ -47,11 +47,11 @@ public:
 	static CScanHint::EType ScanHintStringToEnum(const WCHAR *type);
 
 	// Get set of aliases from table descriptor set
-	static CWStringConstHashSet *GetAliasesFromTableDescriptors(
+	static StringPtrArray *GetAliasesFromTableDescriptors(
 		CMemoryPool *mp, CTableDescriptorHashSet *ptabs);
 
 	// Get set of aliases from join pair
-	static CWStringConstHashSet *GetAliasesFromHint(
+	static StringPtrArray *GetAliasesFromHint(
 		CMemoryPool *mp, const CJoinHint::JoinNode *joinnode);
 };
 

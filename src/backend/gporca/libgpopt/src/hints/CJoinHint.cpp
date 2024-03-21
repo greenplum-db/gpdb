@@ -78,9 +78,7 @@ CJoinHint::JoinNode::OsPrint(IOstream &os) const
 }
 
 CJoinHint::CJoinHint(CMemoryPool *mp, JoinNode *join_pair)
-	: m_mp(mp),
-	  m_join_node(join_pair),
-	  m_aliases(GPOS_NEW(m_mp) StringPtrArray(m_mp))
+	: m_mp(mp), m_join_node(join_pair)
 {
 }
 
@@ -94,20 +92,11 @@ CJoinHint::CJoinHint(CMemoryPool *mp, JoinNode *join_pair)
 //		the hint.
 //---------------------------------------------------------------------------
 const StringPtrArray *
-CJoinHint::GetAliasNames() const
+CJoinHint::GetAliasNames()
 {
-	if (m_aliases->Size() == 0)
+	if (nullptr == m_aliases)
 	{
-		CWStringConstHashSet *aliasset =
-			CHintUtils::GetAliasesFromHint(m_mp, m_join_node);
-		CWStringConstHashSetIter hsiter(aliasset);
-		while (hsiter.Advance())
-		{
-			m_aliases->Append(
-				GPOS_NEW(m_mp) CWStringConst(m_mp, hsiter.Get()->GetBuffer()));
-		}
-		aliasset->Release();
-
+		m_aliases = CHintUtils::GetAliasesFromHint(m_mp, m_join_node);
 		m_aliases->Sort(CWStringBase::Compare);
 	}
 	return m_aliases;
@@ -132,7 +121,7 @@ CJoinHint::OsPrint(IOstream &os) const
 //		Serialize the object
 //---------------------------------------------------------------------------
 void
-CJoinHint::Serialize(CXMLSerializer *xml_serializer) const
+CJoinHint::Serialize(CXMLSerializer *xml_serializer)
 {
 	xml_serializer->OpenElement(
 		CDXLTokens::GetDXLTokenStr(EdxltokenNamespacePrefix),
