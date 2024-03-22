@@ -1,6 +1,51 @@
 @gprecoverseg
 Feature: gprecoverseg tests
 
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg recovery with a recovery configuration file and differential flag
+      Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And user immediately stops all mirror processes for content 0,1,2
+        And the user waits until mirror on content 0,1,2 is down
+        And user can start transactions
+        And the gprecoverseg input file "recover_config_file" is cleaned up
+       When a gprecoverseg input file "recover_config_file" is created with all the failed segments and valid recovery type
+        And the user runs "gprecoverseg -i /tmp/recover_config_file -a --differential"
+       Then gprecoverseg should return a return code of 0
+        And verify that mirror on content 0,1,2 is up
+        And gprecoverseg should print "Synchronization mode.* = Differential" to stdout 2 times
+        And gprecoverseg should print "Synchronization mode.* = Full" to stdout 1 times
+        And all the segments are running
+        And the segments are synchronized
+
+
+  @demo_cluster
+  @concourse_cluster
+  Scenario: gprecoverseg" with a recovery configuration file specifying the recovery type
+      Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And user immediately stops all mirror processes for content 0,1,2
+        And the user waits until mirror on content 0,1,2 is down
+        And user can start transactions
+        And the gprecoverseg input file "recover_config_file" is cleaned up
+       When a gprecoverseg input file "recover_config_file" is created with all the failed segments and invalid recovery type
+        And the user runs "gprecoverseg -i /tmp/recover_config_file -a"
+       Then gprecoverseg should return a return code of 2
+        And gprecoverseg should print "Invalid recovery type provided, please provide any of I,D,F,i,d,f as recovery_type" to stdout
+        And verify that mirror on content 0,1,2 is down
+       When a gprecoverseg input file "recover_config_file" is created with all the failed segments and valid recovery type
+        And the user runs "gprecoverseg -i /tmp/recover_config_file -a"
+       Then gprecoverseg should return a return code of 0
+        And verify that mirror on content 0,1,2 is up
+        And gprecoverseg should print "Synchronization mode.*= Incremental" to stdout 1 times
+        And gprecoverseg should print "Synchronization mode.* = Differential" to stdout 1 times
+        And gprecoverseg should print "Synchronization mode.* = Full" to stdout 1 times
+        And all the segments are running
+        And the segments are synchronized
+
     Scenario Outline: <scenario> recovery works with tablespaces
         Given the database is running
           And user stops all primary processes
@@ -58,10 +103,7 @@ Feature: gprecoverseg tests
         And gprecoverseg should print "Only one of -F and --differential may be specified" to stdout
        When the user runs "gprecoverseg -a --differential -p localhost"
        Then gprecoverseg should return a return code of 2
-        And gprecoverseg should print "Only one of -i, -p, -r and --differential may be specified" to stdout
-       When the user runs gprecoverseg with input file and additional args "-a --differential"
-       Then gprecoverseg should return a return code of 2
-        And gprecoverseg should print "Only one of -i, -p, -r and --differential may be specified" to stdout
+        And gprecoverseg should print "Only one of -p, -r and --differential may be specified" to stdout
        When the user runs "gprecoverseg -a --differential -o outputConfigFile"
        Then gprecoverseg should return a return code of 2
         And gprecoverseg should print "Invalid -o provided with --differential argument" to stdout
@@ -668,6 +710,7 @@ Feature: gprecoverseg tests
     And the user waits until saved async process is completed
     And recovery_progress.file should not exist in gpAdminLogs
     And verify that mirror on content 0,1,2 is up
+    And user can start transactions
     When the user runs gprecoverseg with input file and additional args "-av"
     Then gprecoverseg should print "No basebackup running" to stdout
     And gprecoverseg should return a return code of 0

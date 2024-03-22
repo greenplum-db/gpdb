@@ -97,7 +97,7 @@ def get_recovery_type(file_basename):
 #   failoverSegment = segment to recover "to"
 # In other words, we are recovering the failedSegment to the failoverSegment using the liveSegment.
 class GpMirrorToBuild:
-    def __init__(self, failedSegment, liveSegment, failoverSegment, forceFullSynchronization, differentialSynchronization):
+    def __init__(self, failedSegment, liveSegment, failoverSegment, forceFullSynchronization, differentialSynchronization, recoveryType=None):
         checkNotNone("forceFullSynchronization", forceFullSynchronization)
 
         # We need to call this validate function here because addmirrors directly calls GpMirrorToBuild.
@@ -108,18 +108,23 @@ class GpMirrorToBuild:
         self.__failoverSegment = failoverSegment
 
         """
-        __forceFullSynchronization is true if full resynchronization should be FORCED -- that is, the
+            __forceFullSynchronization is true if full resynchronization should be FORCED -- that is, the
            existing segment will be cleared and all objects will be transferred by the file resynchronization
            process on the server
+           
+            __differentialSynchronization is true if differential resynchronization should be done -- that is only 
+            the delta between the source and target datadir will be copied over to the target server
         """
         self.__forceFullSynchronization = forceFullSynchronization
 
-        """
-                __differentialSynchronization is true if differential resynchronization should be done -- that is only 
-                the delta between the source and target datadir will be copied over to the target server
-                """
-
         self.__differentialSynchronization = differentialSynchronization
+
+        if not (forceFullSynchronization or differentialSynchronization) and recoveryType in ["Differential", "Full"] and self.__failoverSegment is None:
+            # If either forceFullSynchronization or differentialSynchronization is explicitly not set, and
+            # If recovery config file is provided without failover segment and recoveryType is either "Differential" or "Full",
+            # set __forceFullSynchronization and __differentialSynchronization to True accordingly.
+            self.__forceFullSynchronization = recoveryType == "Full"
+            self.__differentialSynchronization = recoveryType == "Differential"
 
     def getFailedSegment(self):
         """

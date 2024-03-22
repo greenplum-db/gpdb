@@ -101,7 +101,7 @@ The recovery process marks the segment as up again in the Greenplum Database sys
 -i recover\_config\_file
 :   Specifies the name of a file with the details about failed segments to recover.
 
-    Each line in the config file specifies a segment to recover. This line can have one of two formats. In the event of in-place \(incremental\) recovery, enter one group of pipe-delimited fields in the line. For example:
+    Each line in the config file specifies a segment to recover. This line can have one of three formats. In the event of in-place \(incremental\) recovery, enter one group of pipe-delimited fields in the line. For example:
 
     ```
     failedAddress|failedPort|failedDataDirectory
@@ -125,6 +125,18 @@ The recovery process marks the segment as up again in the Greenplum Database sys
     failedHostname|failedAddress|failedPort|failedDataDirectory<SPACE>newHostname|newAddress|newPort|newDataDirectory
     ```
 
+    To do mix recovery, include a field with values I/D/F/i/d/f on each line. Default is incremental recovery if recovery_type field is not provided.
+
+    ```
+    recoveryType|failedAddress|failedPort|failedDataDirectory
+    ```
+
+    recoveryType field supports below values:
+        I/i for incremental recovery
+        D/d for differential recovery
+        F/f for full recovery
+
+
     > **Note** Lines beginning with `#` are treated as comments and ignored.
 
     **Examples**
@@ -139,6 +151,18 @@ The recovery process marks the segment as up again in the Greenplum Database sys
 
     ```
     sdw1-1|50001|/data1/mirror/gpseg16<SPACE>sdw4-1|50001|/data1/recover1/gpseg16
+    ```
+
+    In-place recovery of down mirrors with recovery type:
+
+    ```
+    sdw1-1|50001|/data1/mirror/gpseg1   // Does incremental recovery (By default)
+    I|sdw1-1|50001|/data1/mirror/gpseg1   // Does incremental recovery
+    i|sdw1-1|50001|/data1/mirror/gpseg1   // Does incremental recovery
+    D|sdw2-1|50002|/data1/mirror/gpseg2   // Does Differential recovery
+    d|sdw2-1|50002|/data1/mirror/gpseg2   // Does Differential recovery
+    F|sdw3-1|50003|/data1/mirror/gpseg3   // Does Full recovery
+    f|sdw3-1|50003|/data1/mirror/gpseg3   // Does Full recovery
     ```
 
     **Obtaining a Sample File**

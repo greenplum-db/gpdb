@@ -837,11 +837,8 @@ def impl(context, command, out_msg, num):
     msg_list = context.stdout_message.split('\n')
     msg_list = [x.strip() for x in msg_list]
 
-    count = 0
-    for line in msg_list:
-        if out_msg in line:
-            count += 1
-    if count != int(num):
+    match_count = len(re.findall(out_msg, context.stdout_message))
+    if match_count != int(num):
         raise Exception("Expected %s to occur %s times. Found %d. stdout: %s" % (out_msg, num, count, msg_list))
 
 @given('the user records the current timestamp in log_timestamp table')
