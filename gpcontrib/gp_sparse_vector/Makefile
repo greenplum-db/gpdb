@@ -3,7 +3,7 @@ ifeq "$(CC)" "icc"
 	USE_ICC = 1
 endif
 
-override CFLAGS+=-std=gnu99
+override CFLAGS+=-std=gnu99 -fsigned-char
 
 MODULE_big = gp_svec
 EXTENSION = gp_sparse_vector
