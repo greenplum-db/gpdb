@@ -1,6 +1,6 @@
 # ABORT 
 
-Terminates the current transaction.
+Terminates the current transaction. THIS IS TEST CHANGE. WILL BE REVERTED.
 
 ## <a id="section2"></a>Synopsis 
 
