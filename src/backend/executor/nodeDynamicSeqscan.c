@@ -35,6 +35,7 @@
 #include "utils/rel.h"
 #include "access/table.h"
 #include "access/tableam.h"
+#include "jit/jit.h"
 
 static void CleanupOnePartition(DynamicSeqScanState *node);
 
@@ -159,10 +160,26 @@ initNextTableToScan(DynamicSeqScanState *node)
 		 */
 		node->lastRelOid = *pid;
 		pfree(attMap);
+		/* clean up JIT caches */
+		for (int i = 0; i < JIT_CACHE_N; i++)
+		{
+			node->jit_caches[i].valid = false;
+		}
 	}
 
+	/* refer to JIT cache */
+	if (estate->es_jit_caches)
+	{
+		elog(ERROR, "unexpected es_jit_caches in Dynamic Scan");
+	}
+	estate->es_jit_caches = node->jit_caches;
+	estate->es_jit_plan = (Plan *) plan;
+
 	node->seqScanState = ExecInitSeqScanForPartition(&plan->seqscan, estate,
+
 													 currentRelation);
+	estate->es_jit_caches = NULL;
+
 	return true;
 }
 
@@ -199,6 +216,16 @@ ExecDynamicSeqScan(PlanState *pstate)
 			node->partOids[i] = lfirst_oid(lc);
 		node->nOids = list_length(newPartOids);
 	}
+	/* init JIT cache */
+	if (!node->jit_caches)
+	{
+		node->jit_caches = palloc0(sizeof(JitCache) * JIT_CACHE_N);
+		for (int i = 0; i < JIT_CACHE_N; i++)
+		{
+			node->jit_caches[i].id = i;
+		}
+	}
+
 
 	/*
 	 * Scan the table to find next tuple to return. If the current table

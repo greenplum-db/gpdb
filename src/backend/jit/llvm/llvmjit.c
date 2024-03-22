@@ -143,7 +143,7 @@ _PG_jit_provider_init(JitProviderCallbacks *cb)
 {
 	cb->reset_after_error = llvm_reset_after_error;
 	cb->release_context = llvm_release_context;
-	cb->compile_expr = llvm_compile_expr;
+	cb->compile_expr = llvm_compile_expr_wrapper;
 }
 
 /*

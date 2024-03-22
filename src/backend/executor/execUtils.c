@@ -621,6 +621,11 @@ ExecConditionalAssignProjectionInfo(PlanState *planstate, TupleDesc inputDesc,
 							  inputDesc))
 	{
 		planstate->ps_ProjInfo = NULL;
+		if (planstate->state->es_jit_caches)
+		{
+			/* GPDB: update JIT cache */
+			planstate->state->es_jit_caches[JIT_CACHE_PROJ].valid = false;
+		}
 		planstate->resultopsset = planstate->scanopsset;
 		planstate->resultopsfixed = planstate->scanopsfixed;
 		planstate->resultops = planstate->scanops;
