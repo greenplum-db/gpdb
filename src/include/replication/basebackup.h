@@ -33,4 +33,7 @@ extern void SendBaseBackup(BaseBackupCmd *cmd);
 
 extern int64 sendTablespace(char *path, bool sizeonly);
 
+typedef char* (*basebackup_file_before_verify_hook_type)(char *buf, const char *fname, int blkno, size_t size);
+extern PGDLLIMPORT basebackup_file_before_verify_hook_type basebackup_file_before_verify_hook;
+
 #endif							/* _BASEBACKUP_H */

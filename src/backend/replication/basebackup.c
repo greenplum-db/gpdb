@@ -60,6 +60,7 @@
 #include "utils/snapmgr.h"
 #include "utils/tarrable.h"
 
+basebackup_file_before_verify_hook_type basebackup_file_before_verify_hook = NULL;
 
 typedef struct
 {
@@ -1754,6 +1755,8 @@ sendFile(const char *readfilename, const char *tarfilename, struct stat *statbuf
 			for (i = 0; i < cnt / BLCKSZ; i++)
 			{
 				page = buf + BLCKSZ * i;
+				if (basebackup_file_before_verify_hook)
+					page = basebackup_file_before_verify_hook(page, readfilename, blkno + i, BLCKSZ);
 
 				/*
 				 * Only check pages which have not been modified since the
