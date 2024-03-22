@@ -103,6 +103,43 @@ IsChild(CMemoryPool *mp, CExpression *pexpr, StringPtrArray *aliases)
 
 //---------------------------------------------------------------------------
 //	@function:
+//		IsAliasSubsetOrDisjoint
+//
+//	@doc:
+//		Return whether a table descriptor set contains all or none of the
+//		aliases.
+//---------------------------------------------------------------------------
+GPOS_ASSERTS_ONLY static bool
+IsAliasSubsetOrDisjoint(CTableDescriptorHashSet *tabdescs,
+						StringPtrArray *aliases)
+{
+	int includedCount = 0;
+	int excludedCount = 0;
+	CTableDescriptorHashSetIter hsiter(tabdescs);
+	while (hsiter.Advance())
+	{
+		CTableDescriptor *tabdesc =
+			const_cast<CTableDescriptor *>(hsiter.Get());
+		if (nullptr == aliases->Find(tabdesc->Name().Pstr()))
+		{
+			excludedCount += 1;
+		}
+		else
+		{
+			includedCount += 1;
+		}
+
+		if (excludedCount > 0 && includedCount > 0)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
 //		CJoinOrderHintsPreprocessor::GetUnusedChildren
 //
 //	@doc:
@@ -129,6 +166,9 @@ CJoinOrderHintsPreprocessor::GetUnusedChildren(CMemoryPool *mp,
 		{
 			continue;
 		}
+
+		GPOS_ASSERT(IsAliasSubsetOrDisjoint(
+			(*naryJoinPexpr)[ul]->DeriveTableDescriptor(), usedNames));
 
 		const CWStringConst *alias = (*naryJoinPexpr)[ul]
 										 ->DeriveTableDescriptor()
@@ -238,16 +278,23 @@ CJoinOrderHintsPreprocessor::RecursiveApplyJoinOrderHintsOnNAryJoin(
 	StringPtrArray *hint_aliases = CHintUtils::GetAliasesFromHint(mp, joinnode);
 	if (joinnode->GetName())
 	{
-		// Base case when hint specifies name, then return the child of
-		// CLogicalNAryJoin by that name.
+		// Base case 1:
+		//
+		// hint specifies name, then return the child of CLogicalNAryJoin by
+		// that name.
 		pexprAppliedHints = GetChildWithSingleAlias(pexpr, joinnode->GetName());
 		if (nullptr != pexprAppliedHints)
 		{
 			pexprAppliedHints->AddRef();
 		}
+		hint_aliases->Release();
+		return pexprAppliedHints;
 	}
-	else if (IsChild(mp, pexpr, hint_aliases))
+
+	if (IsChild(mp, pexpr, hint_aliases))
 	{
+		// Base case 2:
+		//
 		// If a child covers the aliases in the jointree, then recursively
 		// apply the hint to that child. For example, if child is a GROUP BY or
 		// LIMIT expression, like:
@@ -260,44 +307,48 @@ CJoinOrderHintsPreprocessor::RecursiveApplyJoinOrderHintsOnNAryJoin(
 		// matching hint
 		pexprAppliedHints = CJoinOrderHintsPreprocessor::PexprPreprocess(
 			mp, GetChild(mp, pexpr, hint_aliases), joinnode);
+
+		hint_aliases->Release();
+		return pexprAppliedHints;
 	}
-	else
+
+	// Recursive case:
+	//
+	// If no single child covers the hint, then apply the joinnode
+	// inner/outer to the CLogicalNAryJoin. For example:
+	//
+	// Hint: Leading((T1 T2) (T3 T4))
+	// Operator: NAryJoin [T1 T2 T3 T4]
+	//
+	// Then left (T1 T2) and right (T3 T4) hints need to be applied to the
+	// operator, and the result joined.
+	CExpression *outer =
+		RecursiveApplyJoinOrderHintsOnNAryJoin(mp, pexpr, joinnode->GetOuter());
+	CExpression *inner =
+		RecursiveApplyJoinOrderHintsOnNAryJoin(mp, pexpr, joinnode->GetInner());
+
+	// Hint not satisfied. This can happen, for example, if joins hint
+	// splits across a GROUP BY, like:
+	//
+	// Leading(T1 T3)
+	// SELECT * FROM (SELECT a FROM T1, T2 LIMIT 42) q, T3;
+	if (outer == nullptr || inner == nullptr)
 	{
-		// If no single child covers the hint, then apply the joinnode
-		// inner/outer to the CLogicalNAryJoin. For example:
-		//
-		// Hint: Leading((T1 T2) (T3 T4))
-		// Operator: NAryJoin [T1 T2 T3 T4]
-		//
-		// Then left (T1 T2) and right (T3 T4) hints need to be applied to the
-		// operator, and the result joined.
-		CExpression *outer = RecursiveApplyJoinOrderHintsOnNAryJoin(
-			mp, pexpr, joinnode->GetOuter());
-		CExpression *inner = RecursiveApplyJoinOrderHintsOnNAryJoin(
-			mp, pexpr, joinnode->GetInner());
+		hint_aliases->Release();
+		pexpr->AddRef();
+		CRefCount::SafeRelease(outer);
+		CRefCount::SafeRelease(inner);
 
-		// Hint not satisfied. This can happen, for example, if joins hint
-		// splits across a GROUP BY, like:
-		//
-		// Leading(T1 T3)
-		// SELECT * FROM (SELECT a FROM T1, T2 LIMIT 42) q, T3;
-		if (outer == nullptr || inner == nullptr)
-		{
-			hint_aliases->Release();
-			pexpr->AddRef();
-			CRefCount::SafeRelease(outer);
-			CRefCount::SafeRelease(inner);
-
-			return pexpr;
-		}
-
-		CExpressionArray *all_on_preds = CPredicateUtils::PdrgpexprConjuncts(
-			mp, (*pexpr->PdrgPexpr())[pexpr->PdrgPexpr()->Size() - 1]);
-		pexprAppliedHints = GPOS_NEW(mp)
-			CExpression(mp, GPOS_NEW(mp) CLogicalInnerJoin(mp), outer, inner,
-						GetOnPreds(mp, outer, inner, all_on_preds));
-		all_on_preds->Release();
+		return pexpr;
 	}
+
+	CExpressionArray *all_on_preds = CPredicateUtils::PdrgpexprConjuncts(
+		mp, (*pexpr->PdrgPexpr())[pexpr->PdrgPexpr()->Size() - 1]);
+	pexprAppliedHints = GPOS_NEW(mp)
+		CExpression(mp, GPOS_NEW(mp) CLogicalInnerJoin(mp), outer, inner,
+					GetOnPreds(mp, outer, inner, all_on_preds));
+	all_on_preds->Release();
+
 
 	hint_aliases->Release();
 	return pexprAppliedHints;
