@@ -253,7 +253,7 @@ The following table details the types of storage directives and possible values 
                   RLE then apply zlib compression level 5</p><p class="p"><code class="ph codeph">4</code> - apply RLE then
                   apply zlib compression level 9</p><p class="p"><code class="ph codeph">5</code> - apply RLE then apply zstd compression level 1</p><p class="p"><code class="ph codeph">6</code> - apply RLE then apply zstd compression level 3</p></td>
               <td class="entry" headers="topic43__im198636__entry__4"><code class="ph codeph">1</code> is the fastest method with the least
-                    compression.<p class="p"><code class="ph codeph">1</code> is the default method. Within each compression sub-type (RLE with zlib or RLE with zstd), higher compression levels yield higher compression ratios at the cost of speed. Since zstd outperforms zlib in terms of compression ratios and speed, we highly recommend using levels above 5.</p></td>
+                    compression.<p class="p"><code class="ph codeph">1</code> is the default method. Within each compression sub-type (RLE with zlib or RLE with zstd), higher compression levels yield higher compression ratios at the cost of speed. Since zstd outperforms zlib in terms of compression ratios and speed, we highly recommend using levels 5 and above.</p></td>
             </tr>
             <tr class="row">
               <td class="entry" headers="topic43__im198636__entry__1">
