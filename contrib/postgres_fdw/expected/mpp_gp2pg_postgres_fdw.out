@@ -981,7 +981,8 @@ SELECT c1, c2 FROM mpp_ft2 order by c1 offset 998;
  1000 |  0
 (2 rows)
 
--- test LIMIT 0, OFFSET null
+-- test LIMIT 0, OFFSET null/0
+ALTER FOREIGN TABLE mpp_ft2 OPTIONS(set use_remote_estimate 'true');
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT c1, c2 FROM mpp_ft2 order by c1 offset null;
                                     QUERY PLAN                                     
@@ -1026,21 +1027,19 @@ SELECT c1, c2 FROM mpp_ft2 order by c1 limit null offset 0;
 
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT c1, c2 FROM mpp_ft2 order by c1 limit null offset 998;
-                                          QUERY PLAN                                           
------------------------------------------------------------------------------------------------
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
  Limit
    Output: c1, c2
    ->  Gather Motion 2:1  (slice1; segments: 2)
          Output: c1, c2
          Merge Key: c1
-         ->  Limit
+         ->  Foreign Scan on public.mpp_ft2
                Output: c1, c2
-               ->  Foreign Scan on public.mpp_ft2
-                     Output: c1, c2
-                     Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST
+               Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST LIMIT NULL::bigint
  Optimizer: Postgres-based planner
  Settings: gp_enable_minmax_optimization = 'off'
-(12 rows)
+(10 rows)
 
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT c1, c2 FROM mpp_ft2 order by c1 limit all offset 0;
@@ -1058,21 +1057,19 @@ SELECT c1, c2 FROM mpp_ft2 order by c1 limit all offset 0;
 
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT c1, c2 FROM mpp_ft2 order by c1 limit all offset 998;
-                                          QUERY PLAN                                           
------------------------------------------------------------------------------------------------
+                                                 QUERY PLAN                                                 
+------------------------------------------------------------------------------------------------------------
  Limit
    Output: c1, c2
    ->  Gather Motion 2:1  (slice1; segments: 2)
          Output: c1, c2
          Merge Key: c1
-         ->  Limit
+         ->  Foreign Scan on public.mpp_ft2
                Output: c1, c2
-               ->  Foreign Scan on public.mpp_ft2
-                     Output: c1, c2
-                     Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST
+               Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST LIMIT NULL::bigint
  Optimizer: Postgres-based planner
  Settings: gp_enable_minmax_optimization = 'off'
-(12 rows)
+(10 rows)
 
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT c1, c2 FROM mpp_ft2 order by c1 limit all offset null;
@@ -1099,7 +1096,7 @@ SELECT c1, c2 FROM mpp_ft2 order by c1 limit 0 offset 998;
          Merge Key: c1
          ->  Foreign Scan on public.mpp_ft2
                Output: c1, c2
-               Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST LIMIT (998::bigint + 0::bigint)
+               Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST LIMIT 0::bigint
  Optimizer: Postgres-based planner
  Settings: gp_enable_minmax_optimization = 'off'
 (10 rows)
@@ -1115,7 +1112,7 @@ SELECT c1, c2 FROM mpp_ft2 order by c1 limit 0 offset null;
          Merge Key: c1
          ->  Foreign Scan on public.mpp_ft2
                Output: c1, c2
-               Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST LIMIT (NULL::bigint + 0::bigint)
+               Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST LIMIT 0::bigint
  Optimizer: Postgres-based planner
  Settings: gp_enable_minmax_optimization = 'off'
 (10 rows)
@@ -1131,7 +1128,7 @@ SELECT c1, c2 FROM mpp_ft2 order by c1 limit 3 offset null;
          Merge Key: c1
          ->  Foreign Scan on public.mpp_ft2
                Output: c1, c2
-               Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST LIMIT (NULL::bigint + 3::bigint)
+               Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST LIMIT 3::bigint
  Optimizer: Postgres-based planner
  Settings: gp_enable_minmax_optimization = 'off'
 (10 rows)
@@ -1147,11 +1144,12 @@ SELECT c1, c2 FROM mpp_ft2 order by c1 limit 3 offset 0;
          Merge Key: c1
          ->  Foreign Scan on public.mpp_ft2
                Output: c1, c2
-               Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST LIMIT (0::bigint + 3::bigint)
+               Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST LIMIT 3::bigint
  Optimizer: Postgres-based planner
  Settings: gp_enable_minmax_optimization = 'off'
 (10 rows)
 
+ALTER FOREIGN TABLE mpp_ft2 OPTIONS(set use_remote_estimate 'false');
 -- Query with aggregates and limit clause together is NOT pushed down.
 -- Because it's unsafe to do partial aggregate and limit in multiple remote servers.
 EXPLAIN (VERBOSE, COSTS OFF)

@@ -3544,14 +3544,31 @@ appendLimitClause(deparse_expr_cxt *context)
 		 * This may reduce the number of tuples that we need to fetch from remote servers.
 		 */
 		Node	   *precount = copyObject(root->parse->limitCount);
+		Node 	   *offset = copyObject(root->parse->limitOffset);
+		bool		offset_needed = ((precount != NULL) && (offset != NULL));
 
 		/*
 		 * If we've specified both OFFSET and LIMIT clause,
 		 * it's enough to fetch tuples from 0 to limitCount + limitOffset from remote servers.
+		 * optimize (N > 0):
+		 * 	LIMIT 0 OFFSET N to LIMIT 0
+		 * 	LIMIT 0 OFFSET NULL to LIMIT 0
+		 * 	LIMIT N OFFSET NULL to LIMIT N
+		 * 	LIMIT N OFFSET 0 to LIMIT N
 		 */
+		if (offset_needed &&
+			IsA(precount, Const) &&
+			(((Const *) precount)->constisnull || ((Const *) precount)->constvalue == 0))
+			offset_needed = false;
+
+		if (offset_needed &&
+			IsA(offset, Const) &&
+			(((Const *) offset)->constisnull || ((Const *) offset)->constvalue == 0))
+			offset_needed = false;
+
 		if (precount)
 		{
-			if (root->parse->limitOffset)
+			if (offset_needed)
 			{
 				ParseState *pstate = make_parsestate(NULL);
 				/*
@@ -3560,7 +3577,7 @@ appendLimitClause(deparse_expr_cxt *context)
 				 */
 				precount = (Node *) make_op(pstate,
 											list_make2(makeString("pg_catalog"), makeString(pstrdup("+"))),
-											copyObject(root->parse->limitOffset),
+											offset,
 											precount,
 											NULL,
 											-1);

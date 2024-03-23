@@ -27,7 +27,7 @@ endif
 
 # For postgres_fdw test
 export PG_PORT=5432
-installcheck: prep_postgres
+installcheck: install prep_postgres
 clean: clean_postgres
 prep_postgres:
 	./postgres_setup.bash
