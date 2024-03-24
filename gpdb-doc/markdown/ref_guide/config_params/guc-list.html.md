@@ -2058,6 +2058,14 @@ This outputs a line to the server log detailing each successful connection. Some
 |-----------|-------|-------------------|
 |Boolean|off|local, system, reload|
 
+## <a id="log_checkpoints"></a>log\_checkpoints
+
+Causes checkpoints and restartpoints to be logged in the server log. Some statistics are included in the log messages, including the number of buffers written and the time spent writing them.
+
+|Value Range| Default | Set Classifications    |
+|-----------|---------|------------------------|
+|Boolean| on| local, system, reload  |
+
 ## <a id="log_directory"></a>log\_directory
 
 Sets the destination directory for log files. You may specify its value as relative to the coordinator and segments data directory or as absolute path. Only superusers and users privilege can change this setting. The default value, `log`, indicates that the logs are located in the `log` directory under the coordinator and segment data directory.
