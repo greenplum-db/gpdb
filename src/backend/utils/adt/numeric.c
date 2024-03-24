@@ -3273,6 +3273,7 @@ numeric_avg_serialize(PG_FUNCTION_ARGS)
 	Datum				temp;
 	bytea			   *sumX;
 	bytea			   *result;
+	NumericVar			tmp_var;
 
 	/* Ensure we disallow calling when not in aggregate context */
 	if (!AggCheckCallContext(fcinfo, NULL))
@@ -3286,8 +3287,9 @@ numeric_avg_serialize(PG_FUNCTION_ARGS)
 	 * splitting the tasks in numeric_send into separate functions to stop
 	 * this? Doing so would also remove the fmgr call overhead.
 	 */
+	init_var_from_var(&(state->sumX), &tmp_var);
 	temp = DirectFunctionCall1(numeric_send,
-							   NumericGetDatum(make_result(&state->sumX)));
+							   NumericGetDatum(make_result(&tmp_var)));
 	sumX = DatumGetByteaP(temp);
 
 	pq_begintypsend(&buf);
@@ -3385,6 +3387,7 @@ numeric_serialize(PG_FUNCTION_ARGS)
 	bytea			   *sumX;
 	bytea			   *sumX2;
 	bytea			   *result;
+	NumericVar			tmp_var;
 
 	/* Ensure we disallow calling when not in aggregate context */
 	if (!AggCheckCallContext(fcinfo, NULL))
@@ -3398,12 +3401,14 @@ numeric_serialize(PG_FUNCTION_ARGS)
 	 * splitting the tasks in numeric_send into separate functions to stop
 	 * this? Doing so would also remove the fmgr call overhead.
 	 */
+	init_var_from_var(&(state->sumX), &tmp_var);
 	temp = DirectFunctionCall1(numeric_send,
-							   NumericGetDatum(make_result(&state->sumX)));
+							   NumericGetDatum(make_result(&tmp_var)));
 	sumX = DatumGetByteaP(temp);
 
+	init_var_from_var(&(state->sumX2), &tmp_var);
 	temp = DirectFunctionCall1(numeric_send,
-							   NumericGetDatum(make_result(&state->sumX2)));
+							   NumericGetDatum(make_result(&tmp_var)));
 	sumX2 = DatumGetByteaP(temp);
 
 	pq_begintypsend(&buf);
@@ -3821,12 +3826,16 @@ numeric_poly_serialize(PG_FUNCTION_ARGS)
 		sumX2 = DatumGetByteaP(temp);
 		free_var(&num);
 #else
+		NumericVar	tmp_var;
+
+		init_var_from_var(&(state->sumX), &tmp_var);
 		temp = DirectFunctionCall1(numeric_send,
-								   NumericGetDatum(make_result(&state->sumX)));
+								   NumericGetDatum(make_result(&tmp_var)));
 		sumX = DatumGetByteaP(temp);
 
+		init_var_from_var(&(state->sumX2), &tmp_var);
 		temp = DirectFunctionCall1(numeric_send,
-								  NumericGetDatum(make_result(&state->sumX2)));
+								  NumericGetDatum(make_result(&tmp_var)));
 		sumX2 = DatumGetByteaP(temp);
 #endif
 	}
@@ -4051,8 +4060,11 @@ int8_avg_serialize(PG_FUNCTION_ARGS)
 		free_var(&num);
 		sumX = DatumGetByteaP(temp);
 #else
+		NumericVar	tmp_var;
+
+		init_var_from_var(&(state->sumX), &tmp_var);
 		temp = DirectFunctionCall1(numeric_send,
-								   NumericGetDatum(make_result(&state->sumX)));
+								   NumericGetDatum(make_result(&tmp_var)));
 		sumX = DatumGetByteaP(temp);
 #endif
 	}
@@ -4309,6 +4321,7 @@ numeric_avg(PG_FUNCTION_ARGS)
 	NumericAggState *state;
 	Datum		N_datum;
 	Datum		sumX_datum;
+	NumericVar	sumX_var;
 
 	state = PG_ARGISNULL(0) ? NULL : (NumericAggState *) PG_GETARG_POINTER(0);
 
@@ -4319,8 +4332,9 @@ numeric_avg(PG_FUNCTION_ARGS)
 	if (state->NaNcount > 0)	/* there was at least one NaN input */
 		PG_RETURN_NUMERIC(make_result(&const_nan));
 
+	init_var_from_var(&(state->sumX), &sumX_var);
 	N_datum = DirectFunctionCall1(int8_numeric, Int64GetDatum(state->N));
-	sumX_datum = NumericGetDatum(make_result(&state->sumX));
+	sumX_datum = NumericGetDatum(make_result(&sumX_var));
 
 	PG_RETURN_DATUM(DirectFunctionCall2(numeric_div, sumX_datum, N_datum));
 }
@@ -4329,6 +4343,8 @@ Datum
 numeric_sum(PG_FUNCTION_ARGS)
 {
 	NumericAggState *state;
+	NumericVar		sumX_var;
+	Numeric			result;
 
 	state = PG_ARGISNULL(0) ? NULL : (NumericAggState *) PG_GETARG_POINTER(0);
 
@@ -4338,8 +4354,11 @@ numeric_sum(PG_FUNCTION_ARGS)
 
 	if (state->NaNcount > 0)	/* there was at least one NaN input */
 		PG_RETURN_NUMERIC(make_result(&const_nan));
+	
+	init_var_from_var(&(state->sumX), &sumX_var);
+	result = make_result(&sumX_var);
 
-	PG_RETURN_NUMERIC(make_result(&(state->sumX)));
+	PG_RETURN_NUMERIC(result);
 }
 
 /*

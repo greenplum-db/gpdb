@@ -1457,3 +1457,31 @@ select 10.0 ^ 2147483647 as overflows;
 ERROR:  value overflows numeric format
 select 117743296169.0 ^ 1000000000 as overflows;
 ERROR:  value overflows numeric format
+--
+-- Test window sum agg on numeric with ndigits > 34
+--
+CREATE TABLE test_win_sum_agg_numeric (c1 numeric, c2 text, c3 date);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO test_win_sum_agg_numeric VALUES ('100014942160023011133842548958242367825725430241610707803699732053545063989664069666352137812280875129584842270112562758099895079.16', 'test', '20200112');
+INSERT INTO test_win_sum_agg_numeric VALUES ('21.91', 'test', '20200113');
+INSERT INTO test_win_sum_agg_numeric values ('30.12', 'test', '20200114');
+-- test SUM
+select SUM(c1) OVER (PARTITION BY c2 ORDER BY c3 ASC) as sum from test_win_sum_agg_numeric;
+                                                                 sum                                                                  
+--------------------------------------------------------------------------------------------------------------------------------------
+ 100014942160023011133842548958242367825725430241610707803699732053545063989664069666352137812280875129584842270112562758099895079.16
+ 100014942160023011133842548958242367825725430241610707803699732053545063989664069666352137812280875129584842270112562758099895101.07
+ 100014942160023011133842548958242367825725430241610707803699732053545063989664069666352137812280875129584842270112562758099895131.19
+(3 rows)
+
+-- test AVG
+select AVG(c1) OVER (PARTITION BY c2 ORDER BY c3 ASC) as sum from test_win_sum_agg_numeric;
+                                                                 sum                                                                  
+--------------------------------------------------------------------------------------------------------------------------------------
+  33338314053341003711280849652747455941908476747203569267899910684515021329888023222117379270760291709861614090037520919366631710.40
+  50007471080011505566921274479121183912862715120805353901849866026772531994832034833176068906140437564792421135056281379049947550.54
+ 100014942160023011133842548958242367825725430241610707803699732053545063989664069666352137812280875129584842270112562758099895079.16
+(3 rows)
+
+DROP TABLE test_win_sum_agg_numeric;

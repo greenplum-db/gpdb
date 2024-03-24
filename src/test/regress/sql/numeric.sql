@@ -857,3 +857,19 @@ select 10.0 ^ -2147483648 as rounds_to_zero;
 select 10.0 ^ -2147483647 as rounds_to_zero;
 select 10.0 ^ 2147483647 as overflows;
 select 117743296169.0 ^ 1000000000 as overflows;
+
+--
+-- Test window sum agg on numeric with ndigits > 34
+--
+CREATE TABLE test_win_sum_agg_numeric (c1 numeric, c2 text, c3 date);
+INSERT INTO test_win_sum_agg_numeric VALUES ('100014942160023011133842548958242367825725430241610707803699732053545063989664069666352137812280875129584842270112562758099895079.16', 'test', '20200112');
+INSERT INTO test_win_sum_agg_numeric VALUES ('21.91', 'test', '20200113');
+INSERT INTO test_win_sum_agg_numeric values ('30.12', 'test', '20200114');
+-- test SUM
+select SUM(c1) OVER (PARTITION BY c2 ORDER BY c3 ASC) as sum from test_win_sum_agg_numeric;
+
+-- test AVG
+select AVG(c1) OVER (PARTITION BY c2 ORDER BY c3 ASC) as sum from test_win_sum_agg_numeric;
+
+DROP TABLE test_win_sum_agg_numeric;
+
