@@ -2050,6 +2050,14 @@ Logs information about automatic `ANALYZE` operations related to [gp\_autostats\
 |-----------|-------|-------------------|
 |Boolean|off|coordinator, session, reload, superuser|
 
+## <a id="log_autovacuum_min_duration"></a>log\_autovacuum\_min\_duration
+
+Causes each action executed by autovacuum to be logged if it ran for at least the specified amount of time. Setting this to zero logs all autovacuum actions. `-1` disables logging autovacuum actions. If this value is specified without units, it is taken as milliseconds. For example, if you set this to `250ms` then all automatic vacuums and analyzes that run `250ms` or longer will be logged. In addition, when this parameter is set to any value other than `-1`, a message will be logged if an autovacuum action is skipped due to a conflicting lock or a concurrently dropped relation. The default is `10min`. Enabling this parameter can be helpful in tracking autovacuum activity.
+
+| Value Range                | Default | Set Classifications              |
+|----------------------------|---------|----------------------------------|
+| `-1` - `INT_MAX` millisecs | 10min   | local, system, reload |
+
 ## <a id="log_connections"></a>log\_connections 
 
 This outputs a line to the server log detailing each successful connection. Some client programs, like psql, attempt to connect twice while determining if a password is required, so duplicate "connection received" messages do not always indicate a problem.
