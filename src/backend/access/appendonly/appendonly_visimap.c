@@ -79,6 +79,13 @@ static void AppendOnlyVisimap_Find(
 					   AppendOnlyVisimap *visiMap,
 					   AOTupleId *tupleId);
 
+static void AppendOnlyVisimapDelete_Stash(
+						AppendOnlyVisimapDelete *visiMapDelete);
+
+static void AppendOnlyVisimapDelete_Find(
+						AppendOnlyVisimapDelete *visiMapDelete,
+						AOTupleId *aoTupleId);
+
 /*
  * Finishes the visimap operations.
  * No other function should be called with the given
@@ -233,6 +240,30 @@ AppendOnlyVisimap_Store(
 
 	AppendOnlyVisimapStore_Store(&visiMap->visimapStore, &visiMap->visimapEntry);
 
+}
+
+/*
+ * If the tuple is not in the current visimap range, the current visimap entry
+ * is stashed away and the correct one is loaded or read from the spill file.
+ */
+void
+AppendOnlyVisimapDelete_LoadTuple(AppendOnlyVisimapDelete *visiMapDelete,
+								  AOTupleId *aoTupleId)
+{
+	Assert(visiMapDelete);
+	Assert(visiMapDelete->visiMap);
+	Assert(aoTupleId);
+
+	/* if the tuple is already covered, we are done */
+	if (AppendOnlyVisimapEntry_CoversTuple(&visiMapDelete->visiMap->visimapEntry,
+											aoTupleId))
+		return;
+
+	/* if necessary persist the current entry before moving. */
+	if (AppendOnlyVisimapEntry_HasChanged(&visiMapDelete->visiMap->visimapEntry))
+		AppendOnlyVisimapDelete_Stash(visiMapDelete);
+
+	AppendOnlyVisimapDelete_Find(visiMapDelete, aoTupleId);
 }
 
 /*
@@ -676,11 +707,8 @@ AppendOnlyVisimapDelete_Stash(
 
 /*
  * Hides a given tuple id.
- * If the tuple is not in the current visimap range, the current
- * visimap entry is stashed away and the correct one is loaded or
- * read from the spill file.
  *
- * Then, the bit of the tuple is set.
+ * Loads the entry for aoTupleId and sets the visibility bit for it.
  *
  * Should only be called when in-order delete of tuples can
  * be guranteed. This means that the tuples are deleted in increasing order.
@@ -691,9 +719,8 @@ AppendOnlyVisimapDelete_Stash(
 TM_Result
 AppendOnlyVisimapDelete_Hide(AppendOnlyVisimapDelete *visiMapDelete, AOTupleId *aoTupleId)
 {
-	AppendOnlyVisimap *visiMap;
-
 	Assert(visiMapDelete);
+	Assert(visiMapDelete->visiMap);
 	Assert(aoTupleId);
 
 	elogif(Debug_appendonly_print_visimap, LOG,
@@ -701,22 +728,9 @@ AppendOnlyVisimapDelete_Hide(AppendOnlyVisimapDelete *visiMapDelete, AOTupleId *
 		   "(tupleId) = %s",
 		   AOTupleIdToString(aoTupleId));
 
-	visiMap = visiMapDelete->visiMap;
-	Assert(visiMap);
+	AppendOnlyVisimapDelete_LoadTuple(visiMapDelete, aoTupleId);
 
-	if (!AppendOnlyVisimapEntry_CoversTuple(&visiMap->visimapEntry,
-											aoTupleId))
-	{
-		/* if necessary persist the current entry before moving. */
-		if (AppendOnlyVisimapEntry_HasChanged(&visiMap->visimapEntry))
-		{
-			AppendOnlyVisimapDelete_Stash(visiMapDelete);
-		}
-
-		AppendOnlyVisimapDelete_Find(visiMapDelete, aoTupleId);
-	}
-
-	return AppendOnlyVisimapEntry_HideTuple(&visiMap->visimapEntry, aoTupleId);
+	return AppendOnlyVisimapEntry_HideTuple(&visiMapDelete->visiMap->visimapEntry, aoTupleId);
 }
 
 static void

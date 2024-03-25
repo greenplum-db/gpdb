@@ -170,6 +170,10 @@ TM_Result AppendOnlyVisimapDelete_Hide(
 void AppendOnlyVisimapDelete_Finish(
 							   AppendOnlyVisimapDelete *visiMapDelete);
 
+void
+AppendOnlyVisimapDelete_LoadTuple(AppendOnlyVisimapDelete *visiMapDelete,
+								  AOTupleId *aoTupleId);
+
 /*
  * AppendOnlyVisimap_UniqueCheck
  *
