@@ -312,7 +312,10 @@ typedef struct AOCSDeleteDescData *AOCSDeleteDesc;
 typedef struct AOCSUniqueCheckDescData
 {
 	AppendOnlyBlockDirectory *blockDirectory;
+	/* visimap to check for deleted tuples as part of INSERT/COPY */
 	AppendOnlyVisimap 		 *visimap;
+	/* visimap support structure to check for deleted tuples as part of UPDATE */
+	AppendOnlyVisimapDelete  *visiMapDelete;
 } AOCSUniqueCheckDescData;
 
 typedef struct AOCSUniqueCheckDescData *AOCSUniqueCheckDesc;

@@ -834,6 +834,36 @@ AppendOnlyVisimapDelete_WriteBackStashedEntries(AppendOnlyVisimapDelete *visiMap
 	}
 }
 
+/*
+ * Checks if the given tuple id is visible according to the visimapDelete
+ * support structure.
+ * A positive result is a necessary but not sufficient condition for
+ * a tuple to be visible to the user.
+ *
+ * Loads the entry for the tuple id before checking the bit.
+ */
+bool
+AppendOnlyVisimapDelete_IsVisible(AppendOnlyVisimapDelete *visiMapDelete,
+								  AOTupleId *aoTupleId)
+{
+	AppendOnlyVisimap *visiMap;
+
+	Assert(visiMapDelete);
+	Assert(aoTupleId);
+
+	elogif(Debug_appendonly_print_visimap, LOG,
+		   "Append-only visi map delete: IsVisible check "
+		   "(tupleId) = %s",
+		   AOTupleIdToString(aoTupleId));
+
+	visiMap = visiMapDelete->visiMap;
+	Assert(visiMap);
+
+	AppendOnlyVisimapDelete_LoadTuple(visiMapDelete, aoTupleId);
+
+	return AppendOnlyVisimapEntry_IsVisible(&visiMap->visimapEntry, aoTupleId);
+}
+
 
 /*
  * Finishes the delete operation.
@@ -931,8 +961,8 @@ AppendOnlyVisimap_Finish_forUniquenessChecks(
 {
 	AppendOnlyVisimapStore *visimapStore = &visiMap->visimapStore;
 	/*
-	 * The snapshot was either reset to NULL in between calls or already cleaned
-	 * up (if this was part of an update command)
+	 * The snapshot was never set or reset to NULL in between calls to
+	 * AppendOnlyVisimap_UniqueCheck().
 	 */
 	Assert(visimapStore->snapshot == InvalidSnapshot);
 

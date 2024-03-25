@@ -134,6 +134,22 @@ SELECT * FROM uao_unique_index_update;
 (1 row)
 
 DROP TABLE uao_unique_index_update;
+-- Case 8_1: Update where pre-update key = post-update key
+-- but updates span multiple visimap rows---------------------------------------
+CREATE TABLE uao_unique_index_update_1 (a INT unique, b INT) DISTRIBUTED REPLICATED;
+INSERT INTO uao_unique_index_update_1 SELECT a, 1 FROM generate_series (1, 32768) a;
+UPDATE uao_unique_index_update_1 SET b = 2;
+-- If we were to select the contents of the visimap relation on any of the
+-- segments we would see 2 entries at this point, one with first_row_no = 0 and
+-- the other with first_row_no = 32768.
+UPDATE uao_unique_index_update_1 SET b = 3;
+SELECT DISTINCT b FROM uao_unique_index_update_1;
+ b 
+---
+ 3
+(1 row)
+
+DROP TABLE uao_unique_index_update_1;
 -- Case 9: Updating tx inserts a key that already exists------------------------
 CREATE TABLE uao_unique_index_update (a INT unique);
 INSERT INTO uao_unique_index_update VALUES (1), (2);
