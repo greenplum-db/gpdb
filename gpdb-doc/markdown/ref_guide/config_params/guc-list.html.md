@@ -1310,6 +1310,10 @@ Specifies the maximum number of active parallel retrieve cursors allowed on a Gr
 
 The default value is `-1`; there is no limit on the number of open parallel retrieve cursors that may be concurrently active in the cluster \(up to the maximum value of 1024\).
 
+Each parallel retrieve cursor creates upto `N` endpoints, where N is the number of primary segments (including the coordinator) in the cluster. On each primary segment, each endpoint costs a small amount of shared memory and consumes one `retrieve` connection that contributes towards the `max_connections` limit.
+
+This GUC is a way to limit that consumption.
+
 You must be a superuser to change the `gp_max_parallel_cursors` setting.
 
 |Value Range|Default|Set Classifications|
