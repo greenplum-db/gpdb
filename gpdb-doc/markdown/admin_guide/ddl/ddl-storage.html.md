@@ -234,13 +234,12 @@ The following table details the types of storage parameters and possible values 
             </tr>
             <tr class="row">
               <td class="entry" headers="topic43__im198636__entry__3"><code class="ph codeph">RLE_TYPE</code> compression: <code class="ph codeph">1</code> –
-                  <code class="ph codeph">4</code><p class="p"><code class="ph codeph">1</code> - apply RLE only</p><p class="p"><code class="ph codeph">2</code>
+                  <code class="ph codeph">6</code><p class="p"><code class="ph codeph">1</code> - apply RLE only</p><p class="p"><code class="ph codeph">2</code>
                   - apply RLE then apply zlib compression level 1</p><p class="p"><code class="ph codeph">3</code> - apply
                   RLE then apply zlib compression level 5</p><p class="p"><code class="ph codeph">4</code> - apply RLE then
-                  apply zlib compression level 9</p></td>
+                  apply zlib compression level 9</p><p class="p"><code class="ph codeph">5</code> - apply RLE then apply zstd compression level 1</p><p class="p"><code class="ph codeph">6</code> - apply RLE then apply zstd compression level 3</p></td>
               <td class="entry" headers="topic43__im198636__entry__4"><code class="ph codeph">1</code> is the fastest method with the least
-                    compression.<p class="p"><code class="ph codeph">4</code> is the slowest method with the most
-                  compression. <code class="ph codeph">1</code> is the default.</p></td>
+                    compression.<p class="p"><code class="ph codeph">1</code> is the default method. Within each compression sub-type (RLE with zlib or RLE with zstd), higher compression levels yield higher compression ratios at the cost of speed. Since zstd outperforms zlib in terms of compression ratios and speed, we highly recommend using levels 5 or above.</p></td>
             </tr>
             <tr class="row">
               <td class="entry" headers="topic43__im198636__entry__1">

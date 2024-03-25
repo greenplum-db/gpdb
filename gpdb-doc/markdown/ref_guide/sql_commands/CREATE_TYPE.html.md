@@ -203,7 +203,7 @@ compression\_type
 :   Set to `ZLIB` \(the default\), `ZSTD`, or `RLE_TYPE` to specify the type of compression used in columns of this type.
 
 compression\_level
-:   For Zstd compression, set to an integer value from 1 \(fastest compression\) to 19 \(highest compression ratio\). For zlib compression, the valid range is from 1 to 9. For `RLE_TYPE`, the compression level can be set to an integer value from 1 \(fastest compression\) to 4 \(highest compression ratio\). The default compression level is 1.
+:   For Zstd compression, set to an integer value from 1 \(fastest compression\) to 19 \(highest compression ratio\). For zlib compression, the valid range is from 1 to 9. For `RLE_TYPE`, the compression level can be set to an integer value from 1 \(fastest compression\) to 6 \(highest compression ratio\). The default compression level is 1.
 
 blocksize
 :   Set to the size, in bytes, for each block in the column. The `BLOCKSIZE` must be between 8192 and 2097152 bytes, and be a multiple of 8192. The default block size is 32768.
