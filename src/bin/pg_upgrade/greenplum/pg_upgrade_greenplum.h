@@ -69,7 +69,7 @@ bool is_skip_target_check(void);
 bool skip_checks(void);
 char *get_output_dir(void);
 
-/* pg_upgrade_greenplum.c */
+/* controldata_gp.c */
 void freeze_master_data(void);
 void reset_system_identifier(void);
 
