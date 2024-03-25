@@ -3706,6 +3706,12 @@ select distinct v2 from srf_attnum();
 drop user ruser;
 drop table foo, bar;
 
+-- test merge filter in orca
+CREATE TABLE merge_filter_test1 (i int, j int, k int) distributed by (i);
+EXPLAIN VERBOSE WITH cte1 AS (SELECT j, k FROM merge_filter_test1 WHERE i > 1) , cte2 AS (SELECT j, k FROM cte1 WHERE j < 40) SELECT * FROM cte2 WHERE k > 101 ORDER BY 1,2;
+EXPLAIN VERBOSE WITH cte1 AS (SELECT j, k FROM merge_filter_test1 union all SELECT j, k FROM merge_filter_test1) , cte2 AS (SELECT j, k FROM cte1 WHERE j < 40) SELECT * FROM cte2 WHERE k > 101 ORDER BY 1,2;
+DROP TABLE merge_filter_test1;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore
