@@ -1591,9 +1591,17 @@ get_oprjoin(Oid opno)
 /*				---------- TRIGGER CACHE ----------					 */
 
 
-/* Does table and its directly or indirectly children have update triggers? */
+/*
+ * Does table have update triggers?
+ *
+ * From Greenplum 7, the Postgres planner expands partitioned table's children,
+ * including directly and indirectly, and generates a plan for each child table,
+ * but ORCA doesn't do that.
+ *
+ * So having an extra parameter including_children only for ORCA.
+ */
 bool
-has_update_triggers(Oid relid)
+has_update_triggers(Oid relid, bool including_children)
 {
 	Relation	relation;
 	bool		result = false;
@@ -1623,7 +1631,7 @@ has_update_triggers(Oid relid)
 		}
 	}
 
-	if (!result && relation->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
+	if (including_children && !result && relation->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
 	{
 		List	   *partitions = find_inheritance_children(relid, NoLock);
 		ListCell   *lc;
@@ -1631,7 +1639,7 @@ has_update_triggers(Oid relid)
 		foreach(lc, partitions)
 		{
 			Oid			partrelid = lfirst_oid(lc);
-			if (has_update_triggers(partrelid))
+			if (has_update_triggers(partrelid, true))
 			{
 				result = true;
 				break;

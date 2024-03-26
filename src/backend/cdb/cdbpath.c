@@ -2632,7 +2632,7 @@ make_splitupdate_path(PlannerInfo *root, Path *subpath, Index rti)
 	 * So an update trigger is not allowed when updating the
 	 * distribution key.
 	 */
-	if (has_update_triggers(rte->relid))
+	if (has_update_triggers(rte->relid, false))
 		ereport(ERROR,
 				(errcode(ERRCODE_GP_FEATURE_NOT_YET),
 				 errmsg("UPDATE on distributed key column not allowed on relation with update triggers")));

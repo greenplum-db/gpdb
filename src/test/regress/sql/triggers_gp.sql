@@ -79,14 +79,24 @@ create table parted_trig (partkey int, nonkey int, distkey int)
 
 create trigger trig_ins_after after insert on parted_trig
   for each row execute procedure insert_notice_trig();
-create trigger trig_upd_after after update on parted_trig
-  for each row execute procedure update_notice_trig();
 create trigger trig_del_after after delete on parted_trig
   for each row execute procedure delete_notice_trig();
 
 -- Inserts. Should fire the INSERT trigger.
 insert into parted_trig values (1, 1, 1);
 insert into parted_trig values (2, 2, 2);
+
+-- Have an UPDATE trigger on a child.
+create trigger trig_upd_after after update on parted_trig2
+  for each row execute procedure update_notice_trig();
+
+-- Update distribution key column. Throws an error, currently.
+update parted_trig set distkey = 3 where distkey = 1;
+
+drop trigger trig_upd_after on parted_trig2;
+
+create trigger trig_upd_after after update on parted_trig
+  for each row execute procedure update_notice_trig();
 
 -- Update non-key column. Should fire the UPDATE trigger.
 update parted_trig set nonkey = 3 where nonkey = 1;
@@ -99,7 +109,7 @@ update parted_trig set distkey = 3 where distkey = 1;
 update parted_trig set partkey = 3 where partkey = 1;
 
 -- Update everything in one statement. Throws an error, currently, because
--- updating the distributon key is not allowed.
+-- updating the distribution key is not allowed.
 update parted_trig set partkey = partkey + 1, distkey = distkey + 1;
 
 -- Should fire the DELETE trigger.
