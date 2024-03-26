@@ -95,6 +95,8 @@ extern bool has_row_triggers(PlannerInfo *root, Index rti, CmdType event);
 
 extern bool has_stored_generated_columns(PlannerInfo *root, Index rti);
 
+extern Cost get_ao_decompress_coefficient(RelOptInfo *rel, bool proj_pushdown);
+
 #define DEFAULT_EXTERNAL_TABLE_PAGES 1000
 #define DEFAULT_EXTERNAL_TABLE_TUPLES 1000000
 

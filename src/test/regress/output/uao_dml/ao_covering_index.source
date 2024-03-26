@@ -193,16 +193,13 @@ SELECT a, b FROM test_add_drop_columns_@amname@ WHERE a<42 AND b>42 AND c>42;
 EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
 SELECT a, b, c, d, e FROM test_add_drop_columns_@amname@ WHERE a<42 AND b>42 AND c>42 AND e IS NULL;
                                        QUERY PLAN                                        
------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=20 loops=1)
-   ->  Bitmap Heap Scan on test_add_drop_columns_@amname@ (actual rows=8 loops=1)
-         Recheck Cond: ((a < 42) AND (b > 42))
+   ->  Index Scan using i_test_add_drop_columns_@amname@ on test_add_drop_columns_@amname@ (actual rows=8 loops=1)
+         Index Cond: ((a < 42) AND (b > 42))
          Filter: ((e IS NULL) AND (c > 42))
-         Heap Blocks: exact=1
-         ->  Bitmap Index Scan on i_test_add_drop_columns_@amname@ (actual rows=8 loops=1)
-               Index Cond: ((a < 42) AND (b > 42))
- Optimizer: Postgres query optimizer
-(8 rows)
+ Optimizer: Postgres-based planner
+(5 rows)
 
 -- Test various table types (e.g. AO/AOCO/replicated)
 --

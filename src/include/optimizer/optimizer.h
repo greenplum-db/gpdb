@@ -85,6 +85,7 @@ extern Selectivity clauselist_selectivity_simple(PlannerInfo *root,
 extern PGDLLIMPORT double seq_page_cost;
 extern PGDLLIMPORT double random_page_cost;
 extern PGDLLIMPORT double cpu_tuple_cost;
+extern PGDLLIMPORT double gp_cpu_decompress_cost;
 extern PGDLLIMPORT double cpu_index_tuple_cost;
 extern PGDLLIMPORT double cpu_operator_cost;
 extern PGDLLIMPORT double parallel_tuple_cost;

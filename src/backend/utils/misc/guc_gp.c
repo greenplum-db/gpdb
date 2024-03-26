@@ -54,6 +54,7 @@
 #include "utils/resource_manager.h"
 #include "utils/varlena.h"
 #include "utils/vmem_tracker.h"
+#include "optimizer/optimizer.h"
 
 /*
  * These constants are copied from guc.c. They should not bitrot when we
@@ -4385,6 +4386,18 @@ struct config_real ConfigureNamesReal_gp[] =
 		},
 		&disable_cost,
 		1.0e10, 1.0e10, 1.0e30,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_cpu_decompress_cost", PGC_USERSET, QUERY_TUNING_COST,
+		 gettext_noop("Sets the planner's estimate of the cost of "
+					  "decompressing a varblock for append-optimized tables."),
+		 NULL,
+		 GUC_EXPLAIN
+		},
+		&gp_cpu_decompress_cost,
+		DEFAULT_GP_DECOMPRESS_COST, 0, DBL_MAX,
 		NULL, NULL, NULL
 	},
 

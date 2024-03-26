@@ -1367,24 +1367,20 @@ analyze ao_tbl;
 explain select * from ao_tbl where path_hash = 'ABC'; 
                                  QUERY PLAN                                 
 ----------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=4.14..8.17 rows=1 width=4)
-   ->  Bitmap Heap Scan on ao_tbl  (cost=4.14..8.15 rows=1 width=4)
-         Recheck Cond: ((path_hash)::text = 'ABC'::text)
-         ->  Bitmap Index Scan on ao_idx  (cost=0.00..4.14 rows=1 width=0)
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.13..4.43 rows=1 width=4)
+   ->  Index Scan using ao_idx on ao_tbl  (cost=0.13..4.41 rows=1 width=4)
                Index Cond: ((path_hash)::text = 'ABC'::text)
  Optimizer: Postgres-based planner
-(6 rows)
+(4 rows)
 
 explain select * from ao_tbl where 'ABC' = path_hash;
                                  QUERY PLAN                                 
 ----------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=4.14..8.17 rows=1 width=4)
-   ->  Bitmap Heap Scan on ao_tbl  (cost=4.14..8.15 rows=1 width=4)
-         Recheck Cond: ('ABC'::text = (path_hash)::text)
-         ->  Bitmap Index Scan on ao_idx  (cost=0.00..4.14 rows=1 width=0)
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.13..4.43 rows=1 width=4)
+   ->  Index Scan using ao_idx on ao_tbl  (cost=0.13..4.41 rows=1 width=4)
                Index Cond: ((path_hash)::text = 'ABC'::text)
  Optimizer: Postgres-based planner
-(6 rows)
+(4 rows)
 
 -- Test AO partition table
 -- Dynamic index scan is disabled in AO table, so dynamic bitmap
@@ -1400,25 +1396,21 @@ analyze part_tbl;
 -- identical plans
 explain select * from part_tbl where path_hash = 'ABC'; 
                                               QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=4.14..8.17 rows=1 width=4)
-   ->  Bitmap Heap Scan on part_tbl_1_prt_other  (cost=4.14..8.15 rows=1 width=4)
-         Recheck Cond: ((path_hash)::text = 'ABC'::text)
-         ->  Bitmap Index Scan on part_tbl_1_prt_other_path_hash_idx  (cost=0.00..4.14 rows=1 width=0)
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.13..4.43 rows=1 width=4)
+   ->  Index Scan using part_tbl_1_prt_other_path_hash_idx on part_tbl_1_prt_other  (cost=0.13..4.41 rows=1 width=4)
                Index Cond: ((path_hash)::text = 'ABC'::text)
  Optimizer: Postgres-based planner
-(6 rows)
+(4 rows)
 
 explain select * from part_tbl where 'ABC' = path_hash; 
                                               QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice1; segments: 1)  (cost=4.14..8.17 rows=1 width=4)
-   ->  Bitmap Heap Scan on part_tbl_1_prt_other  (cost=4.14..8.15 rows=1 width=4)
-         Recheck Cond: ('ABC'::text = (path_hash)::text)
-         ->  Bitmap Index Scan on part_tbl_1_prt_other_path_hash_idx  (cost=0.00..4.14 rows=1 width=0)
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.13..4.43 rows=1 width=4)
+   ->  Index Scan using part_tbl_1_prt_other_path_hash_idx on part_tbl_1_prt_other  (cost=0.13..4.41 rows=1 width=4)
                Index Cond: ((path_hash)::text = 'ABC'::text)
  Optimizer: Postgres-based planner
-(6 rows)
+(4 rows)
 
 -- Test table indexed on two columns
 -- Two indices allow ORCA to generate the bitmap scan alternative

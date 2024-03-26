@@ -338,6 +338,22 @@ typedef struct StdRdOptions
 	(BLCKSZ * (100 - RelationGetFillFactor(relation, defaultff)) / 100)
 
 /*
+ * RelationGetCompressLevel
+ *		Returns an AO relation's compress level.
+ */
+#define RelationGetCompressLevel(relation, default_clevel) \
+	((relation)->rd_options ? \
+	 ((StdRdOptions *) (relation)->rd_options)->compresslevel : (default_clevel))
+
+/*
+ * RelationGetCompressType
+ *		Returns an AO relation's compress type.
+ */
+#define RelationGetCompressType(relation, default_ctype) \
+	((relation)->rd_options ? \
+	 ((StdRdOptions *) (relation)->rd_options)->compresstype : (default_ctype))
+
+/*
  * RelationIsUsedAsCatalogTable
  *		Returns whether the relation should be treated as a catalog table
  *		from the pov of logical decoding.  Note multiple eval of argument!

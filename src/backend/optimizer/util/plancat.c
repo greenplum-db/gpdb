@@ -62,7 +62,7 @@
 #include "catalog/pg_foreign_server.h"
 #include "catalog/pg_inherits.h"
 #include "utils/guc.h"
-
+#include "catalog/pg_attribute_encoding.h"
 
 /* GUC parameter */
 int			constraint_exclusion = CONSTRAINT_EXCLUSION_PARTITION;
@@ -88,6 +88,8 @@ static void set_relation_partition_info(PlannerInfo *root, RelOptInfo *rel,
 static PartitionScheme find_partition_scheme(PlannerInfo *root, Relation rel);
 static void set_baserel_partition_key_exprs(Relation relation,
 											RelOptInfo *rel);
+
+static void set_ao_storage_info(Relation relation, RelOptInfo *rel);
 
 /*
  * get_relation_info -
@@ -490,6 +492,10 @@ get_relation_info(PlannerInfo *root, Oid relationObjectId, bool inhparent,
 	 */
 	if (inhparent && relation->rd_rel->relkind == RELKIND_PARTITIONED_TABLE)
 		set_relation_partition_info(root, rel, relation);
+
+	/* GPDB: Set AO/CO specific information */
+	if (RelationIsAppendOptimized(relation))
+		set_ao_storage_info(relation, rel);
 
 	table_close(relation, NoLock);
 
@@ -2731,4 +2737,141 @@ set_baserel_partition_key_exprs(Relation relation,
 	 * match_expr_to_partition_keys().
 	 */
 	rel->nullable_partexprs = (List **) palloc0(sizeof(List *) * partnatts);
+}
+
+/*
+ * set_ao_storage_info
+ *
+ * GPDB: Sets storage attribute related information for append-optimized tables.
+ * Currently, we only capture the compression type and level information. For
+ * column-oriented tables, the information is also recorded per-column.
+ */
+static void
+set_ao_storage_info(Relation relation, RelOptInfo *rel)
+{
+	AOStorageInfo *ao_storage_info;
+
+	Assert(RelationIsAppendOptimized(relation));
+
+	rel->ao_storage_info = palloc0(sizeof(AOStorageInfo));
+	ao_storage_info = rel->ao_storage_info;
+
+	ao_storage_info->compresslevel = RelationGetCompressLevel(relation,
+															  DEFAULT_COMPRESS_LEVEL);
+	strncpy(ao_storage_info->compresstype,
+			RelationGetCompressType(relation, DEFAULT_COMPRESS_TYPE),
+			NAMEDATALEN);
+
+	ao_storage_info->col_storage_infos = NULL;
+
+	/*
+	 * If it is a CO table, there will be attribute level encodings (even if
+	 * storage settings are declared at the table level).
+	 */
+	if (RelationIsAoCols(relation))
+	{
+		StdRdOptions 	**opts;
+		int 			relnatts = RelationGetNumberOfAttributes(relation);
+
+		opts = RelationGetAttributeOptions(relation);
+		ao_storage_info->col_storage_infos = palloc0(sizeof(AOStorageInfo) * relnatts);
+		for (int i = 0; i < relnatts; i++)
+		{
+			Assert(opts[i]);
+			ao_storage_info->col_storage_infos[i].compresslevel = opts[i]->compresslevel;
+			strncpy(ao_storage_info->col_storage_infos[i].compresstype,
+					opts[i]->compresstype,
+					NAMEDATALEN);
+			pfree(opts[i]);
+		}
+		pfree(opts);
+	}
+}
+
+/*
+ * For the given relation, approximate the cost to decompress a single varblock.
+ * Notes:
+ * (1) We use zstd compression as our base. zlib is twice as expensive as seen
+ * during profiling and in literature.
+ * (2) For CO tables, we calculate a weighted average of the decompression cost,
+ * which depends on which attributes are compressed and how.
+ *
+ * XXX: We can penalize higher compression levels more.
+ *
+ * XXX: For index scans on CO tables, we currently don't support column
+ * projection pushdown. Once it becomes available, we can get rid of the extra
+ * proj_pushdown parameter.
+ *
+ * XXX: For CO tables, we could take into account column projection information,
+ * instead of estimating (once we make it available in the optimizer).
+ */
+
+Cost
+get_ao_decompress_coefficient(RelOptInfo *rel, bool proj_pushdown)
+{
+	AOStorageInfo	*ao_storage_info = rel->ao_storage_info;
+	Cost 			coefficient = 0.0;
+
+	Assert(IsAccessMethodAO(rel->relam));
+	Assert(ao_storage_info);
+
+	if (IsAccessMethodAORow(rel->relam))
+	{
+		if (pg_strcasecmp(ao_storage_info->compresstype, "zstd") == 0)
+			coefficient = gp_cpu_decompress_cost; /* baseline */
+		else if (pg_strcasecmp(ao_storage_info->compresstype, "zlib") == 0)
+			coefficient = gp_cpu_decompress_cost * 2; /* 2x baseline */
+		else
+			coefficient = 0; /* no compression */
+	}
+	else
+	{
+		int		total_compression_weight = 0;
+		int 	cols_proj_est;
+
+		Assert(ao_storage_info->col_storage_infos);
+
+		for (int i = 0; i < rel->max_attr; i++)
+		{
+			AOStorageInfo *colStorageInfo = &ao_storage_info->col_storage_infos[i];
+
+			if (pg_strcasecmp(colStorageInfo->compresstype, "zstd") == 0)
+				total_compression_weight += gp_cpu_decompress_cost;
+			else if (pg_strcasecmp(colStorageInfo->compresstype, "zlib") == 0)
+				total_compression_weight += 2 * gp_cpu_decompress_cost;
+			else if (pg_strcasecmp(colStorageInfo->compresstype, "rle_type") == 0)
+			{
+				if (colStorageInfo->compresslevel == 1)
+					total_compression_weight += 0; /* no compression */
+				else if (colStorageInfo->compresslevel >= 2 &&
+						 colStorageInfo->compresslevel <= 4)
+				{
+					/* zlib compression on top of RLE: 2x baseline */
+					total_compression_weight += 2 * gp_cpu_decompress_cost;
+				}
+				else
+				{
+					/* zstd compression on top of RLE: baseline */
+					total_compression_weight += gp_cpu_decompress_cost;
+				}
+			}
+			else
+				total_compression_weight += 0; /* no compression */
+		}
+
+		/* perform a weighted average */
+		coefficient = (total_compression_weight) / rel->max_attr;
+		/*
+		 * Scale down the coefficient by number of columns projected.
+		 * XXX: For now consider that we project 1/3rd of the columns, until
+		 * we can access column projection information here.
+		 */
+		if (proj_pushdown)
+			cols_proj_est = ceil(rel->max_attr * 0.33);
+		else
+			cols_proj_est = 1.0;
+		coefficient = coefficient * cols_proj_est / rel->max_attr;
+	}
+
+	return coefficient;
 }
