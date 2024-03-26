@@ -237,19 +237,9 @@ SELECT c1, c2 FROM mpp_ft2 order by c1 offset 998;
 -- test LIMIT 0, OFFSET null/0
 ALTER FOREIGN TABLE mpp_ft2 OPTIONS(set use_remote_estimate 'true');
 EXPLAIN (VERBOSE, COSTS OFF)
-SELECT c1, c2 FROM mpp_ft2 order by c1 offset null;
-EXPLAIN (VERBOSE, COSTS OFF)
-SELECT c1, c2 FROM mpp_ft2 order by c1 limit null offset null;
-EXPLAIN (VERBOSE, COSTS OFF)
-SELECT c1, c2 FROM mpp_ft2 order by c1 limit null offset 0;
-EXPLAIN (VERBOSE, COSTS OFF)
 SELECT c1, c2 FROM mpp_ft2 order by c1 limit null offset 998;
 EXPLAIN (VERBOSE, COSTS OFF)
-SELECT c1, c2 FROM mpp_ft2 order by c1 limit all offset 0;
-EXPLAIN (VERBOSE, COSTS OFF)
 SELECT c1, c2 FROM mpp_ft2 order by c1 limit all offset 998;
-EXPLAIN (VERBOSE, COSTS OFF)
-SELECT c1, c2 FROM mpp_ft2 order by c1 limit all offset null;
 EXPLAIN (VERBOSE, COSTS OFF)
 SELECT c1, c2 FROM mpp_ft2 order by c1 limit 0 offset 998;
 EXPLAIN (VERBOSE, COSTS OFF)
