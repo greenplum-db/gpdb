@@ -98,12 +98,145 @@ UPDATE 1
  1     
 (1 row)
 
--- expect: drop table succeeds
-5: drop table unlogged_appendonly_table_managers;
-DROP
-
 SELECT gp_inject_fault('fts_probe', 'reset', 1);
  gp_inject_fault 
 -----------------
  Success:        
 (1 row)
+
+-- test truncate for unlogged tables
+5: truncate unlogged_appendonly_table_managers;
+TRUNCATE
+
+-- set GUCs to speed-up the test
+!\retcode gpconfig -c gp_fts_probe_retries -v 2 --masteronly;
+(exited with code 0)
+!\retcode gpconfig -c gp_fts_probe_timeout -v 5 --masteronly;
+(exited with code 0)
+!\retcode gpstop -u;
+(exited with code 0)
+
+-- failover to mirror
+SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
+ role | preferred_role | content | mode | status 
+------+----------------+---------+------+--------
+ p    | p              | -1      | n    | u      
+ p    | p              | 1       | s    | u      
+ m    | m              | 1       | s    | u      
+ p    | p              | 2       | s    | u      
+ m    | m              | 2       | s    | u      
+ m    | m              | -1      | s    | u      
+ p    | p              | 0       | s    | u      
+ m    | m              | 0       | s    | u      
+(8 rows)
+-- stop a primary in order to trigger a mirror promotion
+select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'stop');
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+-- trigger failover
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+-- expect: to see the content 0, preferred primary is mirror and it's down
+-- the preferred mirror is primary and it's up and not-in-sync
+select content, preferred_role, role, status, mode from gp_segment_configuration where content = 0;
+ content | preferred_role | role | status | mode 
+---------+----------------+------+--------+------
+ 0       | p              | m    | d      | n    
+ 0       | m              | p    | u      | n    
+(2 rows)
+
+-- wait for content 0 (earlier mirror, now primary) to finish the promotion
+0U: select 1;
+ ?column? 
+----------
+ 1        
+(1 row)
+-- Quit this utility mode session
+0Uq: ... <quitting>
+
+-- test: can insert and select from the table
+5: select * from unlogged_appendonly_table_managers;
+ id | name 
+----+------
+(0 rows)
+5: insert into unlogged_appendonly_table_managers select i, 'b' from generate_series(1, 10)i;
+INSERT 10
+5: select * from unlogged_appendonly_table_managers;
+ id | name 
+----+------
+ 2  | b    
+ 3  | b    
+ 4  | b    
+ 7  | b    
+ 8  | b    
+ 1  | b    
+ 5  | b    
+ 6  | b    
+ 9  | b    
+ 10 | b    
+(10 rows)
+
+-- fully recover the failed primary as new mirror
+!\retcode gprecoverseg -aF --no-progress;
+(exited with code 0)
+
+-- loop while segments come in sync
+select wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+
+5: truncate unlogged_appendonly_table_managers;
+TRUNCATE
+
+-- now revert back to original configuration
+!\retcode gprecoverseg -ar --no-progress;
+(exited with code 0)
+
+-- loop while segments come in sync
+select wait_until_all_segments_synchronized();
+ wait_until_all_segments_synchronized 
+--------------------------------------
+ OK                                   
+(1 row)
+
+-- test: can insert and select from the table
+6: select * from unlogged_appendonly_table_managers;
+ id | name 
+----+------
+(0 rows)
+6: insert into unlogged_appendonly_table_managers select i, 'b' from generate_series(1, 10)i;
+INSERT 10
+6: select * from unlogged_appendonly_table_managers;
+ id | name 
+----+------
+ 2  | b    
+ 3  | b    
+ 4  | b    
+ 7  | b    
+ 8  | b    
+ 1  | b    
+ 5  | b    
+ 6  | b    
+ 9  | b    
+ 10 | b    
+(10 rows)
+
+-- expect: drop table succeeds
+6: drop table unlogged_appendonly_table_managers;
+DROP
+
+!\retcode gpconfig -r gp_fts_probe_retries --masteronly;
+(exited with code 0)
+!\retcode gpconfig -r gp_fts_probe_timeout --masteronly;
+(exited with code 0)
+!\retcode gpstop -u;
+(exited with code 0)
