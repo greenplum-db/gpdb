@@ -34,6 +34,7 @@
 #include "utils/memutils.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
+#include "storage/gp_compress.h"
 
 /*
  * Helper macro used for validation
@@ -1014,12 +1015,12 @@ validate_and_adjust_options(StdRdOptions *result,
 
 		if (result->compresstype[0] &&
 			(pg_strcasecmp(result->compresstype, "rle_type") == 0) &&
-			(result->compresslevel > 4))
+			(result->compresslevel > RLE_MAX_LEVEL))
 		{
 			if (validate)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("compresslevel=%d is out of range for rle_type (should be in the range 1 to 4)",
+						 errmsg("compresslevel=%d is out of range for rle_type (should be in the range 1 to 6)",
 								result->compresslevel)));
 
 			result->compresslevel = setDefaultCompressionLevel(result->compresstype);
