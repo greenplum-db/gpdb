@@ -50,6 +50,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <signal.h>
@@ -2665,7 +2666,8 @@ usage(const char *progname)
 	printf(_("\nLess commonly used options:\n"));
 	printf(_("  -d, --debug               generate lots of debugging output\n"));
 	printf(_("  -k, --data-checksums      use data page checksums\n"));
-	printf(_("  --shared-preload-libraries load libraries, same as shared_preload_libraries in postgresql.conf\n"));
+	printf(_("  --shared-preload-libraries load libraries, same as shared_preload_libraries in postgresql.conf.\n"
+			 "                             if empty will use GP_SHARED_PRELOAD_LIBRARIES environment\n"));
 	printf(_("  -L DIRECTORY              where to find the input files\n"));
 	printf(_("  -n, --no-clean            do not clean up after errors\n"));
 	printf(_("  -N, --no-sync             do not wait for changes to be written safely to disk\n"));
@@ -3519,6 +3521,10 @@ main(int argc, char *argv[])
 		}
 	}
 
+	if (shared_preload_libraries == NULL || strlen(shared_preload_libraries) == 0)
+	{
+		shared_preload_libraries = getenv("GP_SHARED_PRELOAD_LIBRARIES");
+	}
 
 	/*
 	 * Non-option argument specifies data directory as long as it wasn't
