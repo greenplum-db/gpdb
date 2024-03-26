@@ -74,12 +74,12 @@ static TupleDesc ExecTypeFromTLInternal(List *targetList,
 										bool skipjunk);
 static pg_attribute_always_inline void slot_deform_heap_tuple(TupleTableSlot *slot, HeapTuple tuple, uint32 *offp,
 															  int natts);
+static pg_attribute_always_inline void slot_deform_mem_tuple(TupleTableSlot *slot, int natts);
 static inline void tts_buffer_heap_store_tuple(TupleTableSlot *slot,
 											   HeapTuple tuple,
 											   Buffer buffer,
 											   bool transfer_pin);
 static void tts_heap_store_tuple(TupleTableSlot *slot, HeapTuple tuple, bool shouldFree);
-
 
 const TupleTableSlotOps TTSOpsVirtual;
 const TupleTableSlotOps TTSOpsHeapTuple;
@@ -868,6 +868,180 @@ tts_buffer_heap_copy_minimal_tuple(TupleTableSlot *slot)
 	return minimal_tuple_from_heap_tuple(bslot->base.tuple);
 }
 
+/*
+ * TupleTableSlotOps implementation for MemTupleTableSlot.
+ */
+
+static void
+tts_mem_init(TupleTableSlot *slot)
+{
+	MemTupleTableSlot *mslot = (MemTupleTableSlot *)slot;
+	MemoryContext oldContext;
+
+	if (slot->tts_tupleDescriptor == NULL)
+		return;
+
+	oldContext = MemoryContextSwitchTo(slot->tts_mcxt);
+
+	mslot->mt_bind = create_memtuple_binding(slot->tts_tupleDescriptor,
+											 slot->tts_tupleDescriptor->natts);
+
+	MemoryContextSwitchTo(oldContext);
+}
+
+static void
+tts_mem_release(TupleTableSlot *slot)
+{
+	MemTupleTableSlot *mslot = (MemTupleTableSlot *)slot;
+
+	if (mslot->mt_bind)
+		destroy_memtuple_binding(mslot->mt_bind);
+}
+
+static void
+tts_mem_clear(TupleTableSlot *slot)
+{
+	MemTupleTableSlot *mslot = (MemTupleTableSlot *)slot;
+	if (unlikely(TTS_SHOULDFREE(slot)))
+	{
+		appendonly_free_memtuple(mslot->tuple);
+		mslot->tuple = NULL;
+
+		slot->tts_flags &= ~TTS_FLAG_SHOULDFREE;
+	}
+
+	slot->tts_nvalid = 0;
+	slot->tts_flags |= TTS_FLAG_EMPTY;
+	ItemPointerSetInvalid(&slot->tts_tid);
+}
+
+static void
+tts_mem_getsomeattrs(TupleTableSlot *slot, int natts)
+{
+	Assert(!TTS_EMPTY(slot));
+
+	slot_deform_mem_tuple(slot, natts);
+}
+
+/*
+ * MemTupleTableSlots never provide system attributes (except those
+ * handled generically, such as tableoid).  We generally shouldn't get
+ * here, but provide a user-friendly message if we do.
+ */
+static Datum
+tts_mem_getsysattr(TupleTableSlot *slot, int attnum, bool *isnull)
+{
+	Assert(!TTS_EMPTY(slot));
+	/*
+	 * GPDB: AppendOptimized relations do need to get sysattrs AND use memory
+	 * tuples to pass around data. It is assumed that the caller knows what is
+	 * doing, if the attribute is gp_segment_id. Otherwise, error out.
+	 */
+	if (attnum == GpSegmentIdAttributeNumber)
+	{
+		*isnull = false;
+
+		return Int32GetDatum(GpIdentity.segindex);
+	}
+
+	ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			 errmsg("cannot retrieve a system column in this context")));
+
+	return 0;					/* silence compiler warnings */
+}
+
+static void
+tts_mem_materialize(TupleTableSlot *slot)
+{
+	MemTupleTableSlot *mslot = (MemTupleTableSlot *) slot;
+	MemoryContext oldContext;
+
+	Assert(!TTS_EMPTY(slot));
+
+	/* If slot has its tuple already materialized, nothing to do. */
+	if (TTS_SHOULDFREE(slot))
+		return;
+
+	oldContext = MemoryContextSwitchTo(slot->tts_mcxt);
+
+	/*
+	 * Have to deform from scratch, otherwise tts_values[] entries could point
+	 * into the non-materialized tuple (which might be gone when accessed).
+	 */
+	slot->tts_nvalid = 0;
+	if (!mslot->tuple)
+		mslot->tuple = memtuple_form(mslot->mt_bind, slot->tts_values, slot->tts_isnull);
+	else
+	{
+		/*
+		 * The tuple contained in this slot is not allocated in the memory
+		 * context of the given slot (else it would have TTS_SHOULDFREE set).
+		 * Copy the tuple into the given slot's memory context.
+		 */
+		mslot->tuple = memtuple_copytuple(mslot->tuple);
+	}
+
+	slot->tts_flags |= TTS_FLAG_SHOULDFREE;
+	MemoryContextSwitchTo(oldContext);
+}
+
+static void
+tts_mem_copyslot(TupleTableSlot *dstslot, TupleTableSlot *srcslot)
+{
+	TupleDesc	srcdesc = srcslot->tts_tupleDescriptor;
+
+	Assert(srcdesc->natts <= dstslot->tts_tupleDescriptor->natts);
+
+	tts_mem_clear(dstslot);
+
+	slot_getallattrs(srcslot);
+
+	for (int natt = 0; natt < srcdesc->natts; natt++)
+	{
+		dstslot->tts_values[natt] = srcslot->tts_values[natt];
+		dstslot->tts_isnull[natt] = srcslot->tts_isnull[natt];
+	}
+
+	dstslot->tts_nvalid = srcdesc->natts;
+	dstslot->tts_flags &= ~TTS_FLAG_EMPTY;
+
+	/* make sure storage doesn't depend on external memory */
+	tts_mem_materialize(dstslot);
+}
+
+static HeapTuple
+tts_mem_copy_heap_tuple(TupleTableSlot *slot)
+{
+	MemTupleTableSlot *mslot = (MemTupleTableSlot *) slot;
+	Assert(!TTS_EMPTY(slot));
+	if (slot->tts_nvalid < slot->tts_tupleDescriptor->natts)
+	{
+		memtuple_deform(mslot->tuple, mslot->mt_bind, slot->tts_values, slot->tts_isnull);
+		slot->tts_nvalid = slot->tts_tupleDescriptor->natts;
+	}
+
+	return heap_form_tuple(slot->tts_tupleDescriptor,
+						   slot->tts_values,
+						   slot->tts_isnull);
+}
+
+static MinimalTuple
+tts_mem_copy_minimal_tuple(TupleTableSlot *slot)
+{
+	MemTupleTableSlot *mslot = (MemTupleTableSlot *) slot;
+	Assert(!TTS_EMPTY(slot));
+	if (slot->tts_nvalid < slot->tts_tupleDescriptor->natts)
+	{
+		memtuple_deform(mslot->tuple, mslot->mt_bind, slot->tts_values, slot->tts_isnull);
+		slot->tts_nvalid = slot->tts_tupleDescriptor->natts;
+	}
+
+	return heap_form_minimal_tuple(slot->tts_tupleDescriptor,
+								   slot->tts_values,
+								   slot->tts_isnull);
+}
+
 static inline void
 tts_buffer_heap_store_tuple(TupleTableSlot *slot, HeapTuple tuple,
 							Buffer buffer, bool transfer_pin)
@@ -1034,6 +1208,42 @@ slot_deform_heap_tuple(TupleTableSlot *slot, HeapTuple tuple, uint32 *offp,
 		slot->tts_flags &= ~TTS_FLAG_SLOW;
 }
 
+/*
+ * slot_deform_mem_tuple
+ *		Given a TupleTableSlot, extract data from the slot's memtuple tuple
+ *		into its Datum/isnull arrays.  Data is extracted up through the
+ *		natts'th column (caller must ensure this is a legal column number).
+ *
+ *		This is essentially an incremental version of memtuple_deform:
+ *		on each call we extract attributes up to the one needed, without
+ *		re-computing information about previously extracted attributes.
+ *		slot->tts_nvalid is the number of attributes already extracted.
+ */
+static pg_attribute_always_inline void
+slot_deform_mem_tuple(TupleTableSlot *slot, int natts)
+{
+
+
+	int attnum = slot->tts_nvalid;
+	bool *isnull = slot->tts_isnull;
+
+	MemTupleTableSlot *mslot = (MemTupleTableSlot *)slot;
+	MemTuple tuple = mslot->tuple;
+	MemTupleBinding *pbind = mslot->mt_bind;
+
+	/* We can only fetch as many attributes as the tuple has. */
+	natts = Min(slot->tts_tupleDescriptor->natts, natts);
+
+	for (; attnum < pbind->natts; ++attnum)
+		slot->tts_values[attnum] = memtuple_getattr(tuple, pbind, attnum + 1, &isnull[attnum]);
+	for (; attnum < natts; ++attnum)
+		slot->tts_values[attnum] = getmissingattr(pbind->tupdesc, attnum + 1, &isnull[attnum]);
+
+	/*
+	 * Save state for next execution
+	 */
+	slot->tts_nvalid = natts;
+}
 
 const TupleTableSlotOps TTSOpsVirtual = {
 	.base_slot_size = sizeof(VirtualTupleTableSlot),
@@ -1106,6 +1316,25 @@ const TupleTableSlotOps TTSOpsBufferHeapTuple = {
 	.copy_minimal_tuple = tts_buffer_heap_copy_minimal_tuple
 };
 
+const TupleTableSlotOps TTSOpsMemTuple = {
+	.base_slot_size = sizeof(MemTupleTableSlot),
+	.init = tts_mem_init,
+	.release = tts_mem_release,
+	.clear = tts_mem_clear,
+	.getsomeattrs = tts_mem_getsomeattrs,
+	.getsysattr = tts_mem_getsysattr,
+	.materialize = tts_mem_materialize,
+	.copyslot = tts_mem_copyslot,
+
+	/*
+	* A memory tuple table slot can not "own" a heap tuple or a minimal
+	* tuple.
+	*/
+	.get_heap_tuple = NULL,
+	.get_minimal_tuple = NULL,
+	.copy_heap_tuple = tts_mem_copy_heap_tuple,
+	.copy_minimal_tuple = tts_mem_copy_minimal_tuple
+};
 
 /* ----------------------------------------------------------------
  *				  tuple table create/delete functions
@@ -1333,6 +1562,11 @@ ExecSetSlotDescriptor(TupleTableSlot *slot, /* slot to change */
 		MemoryContextAlloc(slot->tts_mcxt, tupdesc->natts * sizeof(Datum));
 	slot->tts_isnull = (bool *)
 		MemoryContextAlloc(slot->tts_mcxt, tupdesc->natts * sizeof(bool));
+
+	/*
+	 * And allow slot type specific initialization.
+	 */
+	slot->tts_ops->init(slot);
 }
 
 /* --------------------------------

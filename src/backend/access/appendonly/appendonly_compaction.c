@@ -280,6 +280,7 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 					ResultRelInfo *resultRelInfo,
 					EState *estate)
 {
+	bool shouldFree;
 	MemTuple	tuple;
 	AOTupleId  *oldAoTupleId;
 	AOTupleId	newAoTupleId;
@@ -293,7 +294,7 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 	/* Extract all the values of the tuple */
 	slot_getallattrs(slot);
 
-	tuple = appendonly_form_memtuple(slot, mt_bind);
+	tuple = appendonly_fetch_memtuple(slot, mt_bind, &shouldFree);
 	appendonly_insert(insertDesc,
 					  tuple,
 					  &newAoTupleId);
@@ -310,7 +311,8 @@ AppendOnlyMoveTuple(TupleTableSlot *slot,
 		ResetPerTupleExprContext(estate);
 	}
 
-	appendonly_free_memtuple(tuple);
+	if (shouldFree)
+		appendonly_free_memtuple(tuple);
 
 	if (Debug_appendonly_print_compaction)
 		ereport(DEBUG5,
@@ -324,6 +326,7 @@ AppendOnlyThrowAwayTuple(Relation rel, TupleTableSlot *slot, MemTupleBinding *mt
 {
 	int			i;
 	int			numAttrs;
+	bool		shouldFree;
 	MemTuple	tuple;
 	TupleDesc	tupleDesc;
 	AOTupleId  *aoTupleId;
@@ -336,7 +339,7 @@ AppendOnlyThrowAwayTuple(Relation rel, TupleTableSlot *slot, MemTupleBinding *mt
 	/* Extract all the values of the tuple */
 	slot_getallattrs(slot);
 
-	tuple = appendonly_form_memtuple(slot, mt_bind);
+	tuple = appendonly_fetch_memtuple(slot, mt_bind, &shouldFree);
 	tupleDesc = rel->rd_att;
 	numAttrs = tupleDesc->natts;
 
@@ -358,8 +361,9 @@ AppendOnlyThrowAwayTuple(Relation rel, TupleTableSlot *slot, MemTupleBinding *mt
 		}
 	}
 
-	appendonly_free_memtuple(tuple);
-	
+	if (shouldFree)
+		appendonly_free_memtuple(tuple);
+
 	if (Debug_appendonly_print_compaction)
 		ereport(DEBUG5,
 				(errmsg("Compaction: Throw away tuple (%d," INT64_FORMAT ")",
@@ -431,7 +435,7 @@ AppendOnlySegmentFileFullCompaction(Relation aorel,
 										 &compact_segno, 1, 0, NULL);
 
 	tupDesc = RelationGetDescr(aorel);
-	slot = MakeSingleTupleTableSlot(tupDesc, &TTSOpsVirtual);
+	slot = table_slot_create(aorel, NULL);
 	slot->tts_tableOid = RelationGetRelid(aorel);
 	mt_bind = create_memtuple_binding(tupDesc, tupDesc->natts);
 

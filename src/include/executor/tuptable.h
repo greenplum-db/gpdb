@@ -224,11 +224,13 @@ extern PGDLLIMPORT const TupleTableSlotOps TTSOpsVirtual;
 extern PGDLLIMPORT const TupleTableSlotOps TTSOpsHeapTuple;
 extern PGDLLIMPORT const TupleTableSlotOps TTSOpsMinimalTuple;
 extern PGDLLIMPORT const TupleTableSlotOps TTSOpsBufferHeapTuple;
+extern PGDLLIMPORT const TupleTableSlotOps TTSOpsMemTuple;
 
 #define TTS_IS_VIRTUAL(slot) ((slot)->tts_ops == &TTSOpsVirtual)
 #define TTS_IS_HEAPTUPLE(slot) ((slot)->tts_ops == &TTSOpsHeapTuple)
 #define TTS_IS_MINIMALTUPLE(slot) ((slot)->tts_ops == &TTSOpsMinimalTuple)
 #define TTS_IS_BUFFERTUPLE(slot) ((slot)->tts_ops == &TTSOpsBufferHeapTuple)
+#define TTS_IS_MEMTUPLE(slot) ((slot)->tts_ops == &TTSOpsMemTuple)
 
 /*
  * Tuple table slot implementations.
@@ -284,6 +286,15 @@ typedef struct MinimalTupleTableSlot
 #define FIELDNO_MINIMALTUPLETABLESLOT_OFF 4
 	uint32		off;			/* saved state for slot_deform_heap_tuple */
 } MinimalTupleTableSlot;
+
+typedef struct MemTupleTableSlot
+{
+	TupleTableSlot base;
+#define FIELDNO_MEMTUPLETABLESLOT_TUPLE 1
+	MemTuple tuple;
+#define FIELDNO_MEMTUPLETABLESLOT_BINDING 2
+	MemTupleBinding *mt_bind;
+} MemTupleTableSlot;
 
 /*
  * TupIsNull -- is a TupleTableSlot empty?
