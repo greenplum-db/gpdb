@@ -185,7 +185,7 @@ typedef struct SnapshotData
 
 	bool		takenDuringRecovery;	/* recovery-shaped snapshot? */
 	bool		copied;			/* false if it's a static snapshot */
-	bool		haveDistribSnapshot; /* True if this snapshot is distributed. */
+	bool		haveDistribSnapshot; /* True if this snapshot is distributed. *///
 
 	CommandId	curcid;			/* in my xact, CID < curcid are visible */
 
@@ -193,14 +193,14 @@ typedef struct SnapshotData
 	 * An extra return value for HeapTupleSatisfiesDirty, not used in MVCC
 	 * snapshots.
 	 */
-	uint32		speculativeToken;
+	uint32		speculativeToken;//
 
 	/*
 	 * Book-keeping information, used by the snapshot manager
 	 */
 	uint32		active_count;	/* refcount on ActiveSnapshot stack */
 	uint32		regd_count;		/* refcount on RegisteredSnapshots */
-	pairingheap_node ph_node;	/* link in the RegisteredSnapshots heap */
+	pairingheap_node ph_node;	/* link in the RegisteredSnapshots heap *///
 
 	TimestampTz whenTaken;		/* timestamp when snapshot was taken */
 	XLogRecPtr	lsn;			/* position in the WAL stream when taken */
