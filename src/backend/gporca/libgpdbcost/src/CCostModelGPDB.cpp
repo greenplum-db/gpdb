@@ -1374,7 +1374,6 @@ CCostModelGPDB::CostNLJoin(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 	CCost costTotal = CCost(costLocal + costChild);
 
-	COperator::EOperatorId parentOpId = exprhdl.Pop()->Eopid();
 	COperator *popFirstChild = exprhdl.Pop(0);
 	COperator *popSecondChild = exprhdl.Pop(1);
 
@@ -1392,15 +1391,14 @@ CCostModelGPDB::CostNLJoin(CMemoryPool *mp, CExpressionHandle &exprhdl,
 	// Correlated NLJ operator as a inner child of Correlated NLJ operator
 	// (subplans within subplans i.e nested subplans), we will continue to
 	// penalize it.
+
 	if (GPOS_FTRACE(EopttraceDisablePenalizeCorrelatedNLjoin) &&
-		COperator::EopPhysicalCorrelatedInnerNLJoin == parentOpId &&
-		((popFirstChild == nullptr && popSecondChild == nullptr) ||
-		 (popFirstChild != nullptr &&
-		  COperator::EopPhysicalCorrelatedInnerNLJoin ==
-			  popFirstChild->Eopid() &&
-		  popSecondChild != nullptr &&
-		  COperator::EopPhysicalCorrelatedInnerNLJoin !=
-			  popSecondChild->Eopid())))
+		CUtils::FCorrelatedNLJoin(exprhdl.Pop()) &&
+		((nullptr == popFirstChild && nullptr == popSecondChild) ||
+		 (nullptr != popFirstChild &&
+		  CUtils::FCorrelatedNLJoin(popFirstChild) &&
+		  nullptr != popSecondChild &&
+		  !CUtils::FCorrelatedNLJoin(popSecondChild))))
 	{
 		return costTotal;
 	}
