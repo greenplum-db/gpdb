@@ -364,3 +364,50 @@ analyze analyze_@amname@_3;
 select attname, correlation from pg_stats where tablename='analyze_@amname@_3';
 
 drop table analyze_@amname@_3;
+
+--
+-- Test dead values returned in sampling CO tuples.
+-- Non-blkdir based sampling had the following bug:
+-- 
+-- If you have 3 rows: (i,j) = (1, 1), (1, 2) and (1,3),
+-- if (1, 2) is deleted, then we would return (1,1) and (1,2)
+-- instead of (1,1) and (1,3) as visible.
+--
+-- This is because we missed advancing the datum streams for
+-- non-first columns when the tuple was deleted.
+--
+
+-- partially same as Case 6 of tablesample.source
+create table test_dead_values_return_@amname@(i int, j int, k int) using @amname@;
+insert into test_dead_values_return_@amname@ select 1, j, j from generate_series(1, 10) j;
+delete from test_dead_values_return_@amname@ where j % 2 = 0;
+select * from test_dead_values_return_@amname@;
+select * from gp_acquire_sample_rows('test_dead_values_return_@amname@'::regclass, 10000, 'f') as
+  (totalrows pg_catalog.float8, totaldeadrows pg_catalog.float8, oversized_cols_length pg_catalog._float8, i int, j int, k int);
+
+truncate test_dead_values_return_@amname@;
+
+1: begin;
+2: begin;
+
+1: insert into test_dead_values_return_@amname@ select 2, j, j from generate_series(1, 10) j;
+2: insert into test_dead_values_return_@amname@ select 2, j, j from generate_series(11, 20) j;
+
+2: abort;
+1: commit;
+
+1: begin;
+2: begin;
+
+1: insert into test_dead_values_return_@amname@ select 2, j, j from generate_series(21, 30) j;
+2: insert into test_dead_values_return_@amname@ select 2, j, j from generate_series(31, 40) j;
+2: commit;
+
+1: delete from test_dead_values_return_@amname@ where j % 2 = 1;
+1: commit;
+
+select * from test_dead_values_return_@amname@;
+select * from gp_acquire_sample_rows('test_dead_values_return_@amname@'::regclass, 10000, 'f') as
+  (totalrows pg_catalog.float8, totaldeadrows pg_catalog.float8, oversized_cols_length pg_catalog._float8, i int, j int, k int);
+
+drop table test_dead_values_return_@amname@;

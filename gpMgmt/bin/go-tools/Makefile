@@ -8,20 +8,28 @@ LINUX_ENV := env GOOS=linux GOARCH=amd64
 MAC_ENV := env GOOS=darwin GOARCH=amd64
 
 
-.PHONY: unit test
+.PHONY: unit integration test
 TEST_PACKAGES := ./...
 unit: TEST_PACKAGES := $(shell go list ./... | grep -v ./test/integration)
 unit:
-	go test -v -count=1 $(TEST_PACKAGES) --cover -coverprofile=coverage.out;
-	@cat coverage.out | \
+	go test -v -count=1 $(TEST_PACKAGES) --cover -coverprofile=/tmp/coverage.out;
+	@cat /tmp/coverage.out | \
 	awk 'BEGIN {cov=0; stat=0;} \
 	$$3!="" { cov+=($$3==1?$$2:0); stat+=$$2; } \
     END {printf("\n\ntotal coverage: %.2f%% of statements\n", (cov/stat)*100);}'
 
-test: unit
+# You can override this from the command line to run tests for specific utility.
+# For example, to run start related tests: make integration UTILITY=start
+# NOTE: If hostfile is not provided, by default it will run tests on localhost.
+UTILITY = ''
+integration: TEST_PACKAGES := $(shell go list ./test/integration/... | grep -E $(UTILITY))
+integration:
+	go test -v -count=1 $(TEST_PACKAGES) -timeout 0 -p 1 -args -hostfile=$(FILE)
+
+test: unit integration
 
 .PHONY: test-coverage
-PACKAGE_DIRS := $(shell go list ./... | grep -vE "gp$$|constants$$|testutils|idl$$")
+PACKAGE_DIRS := $(shell go list ./... | grep -vE "gp$$|constants$$|testutils|idl$$|integration")
 test-coverage:
 	@for dir in $(PACKAGE_DIRS); do \
 		PACKAGE_NAME=$$(basename $$dir); \
@@ -29,14 +37,14 @@ test-coverage:
 		echo "$$dir: $$COVERAGE_PERCENTAGE"; \
 	done
 	@echo ""
-	@go test --count=1 -coverprofile=coverage.out ./... > /dev/null 2>&1; \
-	cat coverage.out | \
+	@go test --count=1 -coverprofile=/tmp/coverage.out $(PACKAGE_DIRS) > /dev/null 2>&1; \
+	cat /tmp/coverage.out | \
 	awk 'BEGIN {cov=0; stat=0;} \
 	$$3!="" { cov+=($$3==1?$$2:0); stat+=$$2; } \
     END {printf("Total: %.2f%%\n", (cov/stat)*100);}'
 	@echo "----------------------"
 	@echo "Show HTML report with:"
-	@echo "$ go tool cover -html coverage.out"
+	@echo "$ go tool cover -html /tmp/coverage.out"
 
 .PHONY: depend-dev
 depend-dev: export GOBIN := $(CURDIR)/dev-bin
@@ -100,9 +108,3 @@ clean:
 
 uninstall:
 	rm -rf $(GPHOME)/bin/gp
-
-.PHONY: integration-test
-TEST_PACKAGES := ./test/integration/...
-integration-test: TEST_PACKAGES := $(shell go list ./test/integration/...)
-integration-test:
-	go test -v -count=1 $(TEST_PACKAGES) -timeout 0 -p 1 -args -hostfile=$(FILE)

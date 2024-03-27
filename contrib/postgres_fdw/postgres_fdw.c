@@ -6765,12 +6765,6 @@ add_foreign_final_paths(PlannerInfo *root, RelOptInfo *input_rel,
 		return;
 
 	/*
-	 * It's unsafe to pushdown OFFSET/LIMIT when mpp_execute = 'all segments' and the OFFSET is specified.
-	 */
-	if (final_rel->exec_location == FTEXECLOCATION_ALL_SEGMENTS && parse->limitOffset)
-		return;
-
-	/*
 	 * Also, the LIMIT/OFFSET cannot be pushed down, if their expressions are
 	 * not safe to remote.
 	 */
@@ -6789,6 +6783,29 @@ add_foreign_final_paths(PlannerInfo *root, RelOptInfo *input_rel,
 	fpextra->limit_tuples = extra->limit_tuples;
 	fpextra->count_est = extra->count_est;
 	fpextra->offset_est = extra->offset_est;
+
+	/* If mpp_execute = 'all segments', we need to adjust origin count_est and offset_est. */
+	if (final_rel->exec_location == FTEXECLOCATION_ALL_SEGMENTS && fpextra->offset_est > 0)
+	{
+		if (fpextra->count_est > 0)
+		{
+			/*
+			 * When both OFFSET and LIMIT clause are specified,
+			 * we need to fetch tuples from 0 to limitOffset + limitCount from remote servers.
+			 */
+			fpextra->count_est += fpextra->offset_est;
+		}
+		else
+		{
+			/*
+			 * When only OFFSET clasue is specified,
+			 * we need to fetch all tuples from remote servers.
+			 */
+			fpextra->count_est = 0;
+		}
+
+		fpextra->offset_est = 0;
+	}
 
 	/*
 	 * Estimate the costs of performing the final sort and the LIMIT

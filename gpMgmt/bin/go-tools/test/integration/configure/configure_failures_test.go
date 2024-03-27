@@ -154,33 +154,33 @@ func TestConfigureFailure(t *testing.T) {
 			},
 		},
 		{
-			name: "configure service fails when --gphome value is invalid",
+			name: "configure service fails when --gpHome value is invalid",
 			cliParams: []string{
 				"--host", testutils.DefaultHost,
-				"--gphome", "invalid",
+				"--gpHome", "invalid",
 			},
 			expectedOut: []string{
 				"could not create configuration file invalid/gp.conf",
 			},
 		},
 		{
-			name: "configure service fails when --gphome value is empty",
+			name: "configure service fails when --gpHome value is empty",
 			cliParams: []string{
 				"--host", testutils.DefaultHost,
-				"--gphome", "",
+				"--gpHome", "",
 			},
 			expectedOut: []string{
-				"not a valid gphome found",
+				"not a valid gpHome found",
 			},
 		},
 		{
-			name: "configure service fails when no value given for --gphome",
+			name: "configure service fails when no value given for --gpHome",
 			cliParams: []string{
 				"--host", testutils.DefaultHost,
-				"--gphome",
+				"--gpHome",
 			},
 			expectedOut: []string{
-				"flag needs an argument: --gphome",
+				"flag needs an argument: --gpHome",
 			},
 		},
 		{

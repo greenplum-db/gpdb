@@ -1408,14 +1408,9 @@ select * from PField_v1 where pfname = 'PF0_2' order by slotname;
 --
 insert into PField values ('PF1_1', 'should fail due to unique index');
 /*
- * GPDB_96_MERGE_FIXME : should these update statements  trigger the error
- * ERRCODE_FEATURE_NOT_SUPPORTED: function cannot execute on a QE slice because
- * it accesses relation "public.wslot"?
- * In Postgres, the expected behavior of these tests is to error out because
- * 'WS.not.there' does not exist.
- * However, in GPDB, it is unclear what the intended behavior is.
- * Currently, it does not error out but has no effect, as the table is empty at
- * this point in the test in GPDB
+ * It does not error out but has no effect, as the table is empty at this point
+ * in the test in GPDB. If data exist it errors out "ERROR:  function cannot
+ * execute on a QE slice because it accesses relation "public.pfield"
  * Adding an ignore block for now
  */
 --start_ignore

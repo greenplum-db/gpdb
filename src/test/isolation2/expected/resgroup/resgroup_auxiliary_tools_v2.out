@@ -157,3 +157,9 @@ clear_io_max(groupid)
 cgroup_path = "/sys/fs/cgroup/gpdb/%d/io.max" % groupid 
 return os.stat(cgroup_path).st_size == 0 $$ LANGUAGE plpython3u;
 CREATE FUNCTION
+
+0: CREATE OR REPLACE FUNCTION check_io_max_empty(groupname text) RETURNS BOOL AS $$ import os 
+# get group oid sql = "select groupid from gp_toolkit.gp_resgroup_config where groupname = '%s'" % groupname result = plpy.execute(sql) groupid = result[0]['groupid'] 
+cgroup_path = "/sys/fs/cgroup/gpdb/%d/io.max" % groupid 
+return os.stat(cgroup_path).st_size == 0 $$ LANGUAGE plpython3u;
+CREATE FUNCTION

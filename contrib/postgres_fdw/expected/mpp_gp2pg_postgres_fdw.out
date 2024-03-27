@@ -1,9 +1,4 @@
 -- This file is used to test the feature that there are multiple remote postgres servers.
---
--- start_matchsubs
--- m/\(cost=.*\)/
--- s/\(cost=.*\)//
--- end_matchsubs
 -- ===================================================================
 -- create FDW objects
 -- ===================================================================
@@ -122,10 +117,10 @@ ALTER FOREIGN TABLE mpp_ft1 OPTIONS (add use_remote_estimate 'true');
 EXPLAIN VERBOSE SELECT * FROM mpp_ft1 ORDER BY c1;
                                     QUERY PLAN                                     
 -----------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=102.22..102.74 rows=20 width=8)
+ Gather Motion 2:1  (slice1; segments: 2)  (cost=101.11..101.37 rows=10 width=8)
    Output: c1, c2
    Merge Key: c1
-   ->  Foreign Scan on public.mpp_ft1  (cost=102.22..102.44 rows=10 width=8)
+   ->  Foreign Scan on public.mpp_ft1  (cost=101.11..101.22 rows=5 width=8)
          Output: c1, c2
          Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 1" ORDER BY c1 ASC NULLS LAST
  Optimizer: Postgres query optimizer
@@ -913,19 +908,19 @@ ALTER FOREIGN TABLE mpp_ft2 OPTIONS(set use_remote_estimate 'false');
 -- Queries with LIMIT/OFFSET clauses
 -- ===================================================================
 -- Simple query with LIMIT clause is pushed down.
-EXPLAIN (VERBOSE, COSTS OFF)
+EXPLAIN VERBOSE
 SELECT c1, c2 FROM mpp_ft2 order by c1 limit 3;
                                                QUERY PLAN                                                
 ---------------------------------------------------------------------------------------------------------
- Limit
+ Limit  (cost=100.00..100.10 rows=3 width=8)
    Output: c1, c2
-   ->  Gather Motion 2:1  (slice1; segments: 2)
+   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=100.00..100.19 rows=6 width=8)
          Output: c1, c2
          Merge Key: c1
-         ->  Foreign Scan on public.mpp_ft2
+         ->  Foreign Scan on public.mpp_ft2  (cost=100.00..100.10 rows=3 width=8)
                Output: c1, c2
                Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST LIMIT 3::bigint
- Optimizer: Postgres query optimizer
+ Optimizer: Postgres-based planner
  Settings: gp_enable_minmax_optimization = 'off'
 (10 rows)
 
@@ -937,25 +932,22 @@ SELECT c1, c2 FROM mpp_ft2 order by c1 limit 3;
   3 |  3
 (3 rows)
 
--- Simple query with OFFSET and LIMIT clause together is NOT pushed down.
--- Because it's unsafe to do offset and limit in multiple remote servers.
-EXPLAIN (VERBOSE, COSTS OFF)
+-- Simple query with OFFSET and LIMIT clause together is pushed down.
+EXPLAIN VERBOSE
 SELECT c1, c2 FROM mpp_ft2 order by c1 offset 2 limit 3;
-                                          QUERY PLAN                                           
------------------------------------------------------------------------------------------------
- Limit
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=100.06..100.16 rows=3 width=8)
    Output: c1, c2
-   ->  Gather Motion 2:1  (slice1; segments: 2)
+   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=100.00..100.32 rows=10 width=8)
          Output: c1, c2
          Merge Key: c1
-         ->  Limit
+         ->  Foreign Scan on public.mpp_ft2  (cost=100.00..100.17 rows=5 width=8)
                Output: c1, c2
-               ->  Foreign Scan on public.mpp_ft2
-                     Output: c1, c2
-                     Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST
- Optimizer: Postgres query optimizer
+               Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST LIMIT (2::bigint + 3::bigint)
+ Optimizer: Postgres-based planner
  Settings: gp_enable_minmax_optimization = 'off'
-(12 rows)
+(10 rows)
 
 SELECT c1, c2 FROM mpp_ft2 order by c1 offset 2 limit 3;
  c1 | c2 
@@ -964,6 +956,30 @@ SELECT c1, c2 FROM mpp_ft2 order by c1 offset 2 limit 3;
   4 |  4
   5 |  5
 (3 rows)
+
+-- Simple query with only OFFSET clause is NOT pushed down.
+EXPLAIN VERBOSE
+SELECT c1, c2 FROM mpp_ft2 order by c1 offset 998;
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
+ Limit  (cost=132.62..2421.00 rows=70002 width=8)
+   Output: c1, c2
+   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=100.00..2421.00 rows=71000 width=8)
+         Output: c1, c2
+         Merge Key: c1
+         ->  Foreign Scan on public.mpp_ft2  (cost=100.00..1356.00 rows=35500 width=8)
+               Output: c1, c2
+               Remote SQL: SELECT c1, c2 FROM "MPP_S 1"."T 2" ORDER BY c1 ASC NULLS LAST
+ Optimizer: Postgres-based planner
+ Settings: gp_enable_minmax_optimization = 'off'
+(10 rows)
+
+SELECT c1, c2 FROM mpp_ft2 order by c1 offset 998;
+  c1  | c2 
+------+----
+  999 |  9
+ 1000 |  0
+(2 rows)
 
 -- Query with aggregates and limit clause together is NOT pushed down.
 -- Because it's unsafe to do partial aggregate and limit in multiple remote servers.

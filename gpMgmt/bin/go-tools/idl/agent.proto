@@ -1,20 +1,62 @@
 syntax = "proto3";
 
 package idl;
+import "hub.proto";
 
 option go_package= "../idl";
 
 service Agent {
     rpc Stop(StopAgentRequest) returns (StopAgentReply) {}
     rpc Status(StatusAgentRequest) returns (StatusAgentReply) {}
+    rpc MakeSegment(MakeSegmentRequest) returns(MakeSegmentReply) {}
+    rpc StartSegment(StartSegmentRequest) returns (StartSegmentReply){}
+    rpc ValidateHostEnv(ValidateHostEnvRequest) returns(ValidateHostEnvReply) {}
 }
 
+message StartSegmentRequest{
+    string dataDir=1;
+    bool wait=2;
+    int32 timeout = 4;
+    string options=5;
+}
+
+message StartSegmentReply {}
+
 message StopAgentRequest {}
+
 message StopAgentReply {}
 
 message StatusAgentRequest {}
+
 message StatusAgentReply {
-	string status = 1;
-	string uptime = 2;
-	uint32 pid = 3;
+    string status = 1;
+    string uptime = 2;
+    uint32 pid = 3;
 }
+
+message ValidateHostEnvRequest{
+    repeated string hostAddressList = 1;
+    repeated string DirectoryList = 2;
+    repeated string portList = 3;
+    Locale locale = 4;
+    string gpVersion = 5;
+    bool forced = 6;
+}
+
+message ValidateHostEnvReply {
+    repeated LogMessage messages = 1;
+}
+
+message MakeSegmentRequest {
+    Segment segment = 1;
+    Locale locale = 2 ;
+    string Encoding = 3;
+    map<string, string> SegConfig = 4;
+    repeated string coordinatorAddrs = 5;
+    bool hbaHostNames = 6;
+    bool dataChecksums = 7;
+}
+
+message MakeSegmentReply {
+}
+

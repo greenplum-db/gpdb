@@ -110,6 +110,7 @@ typedef struct
 
 typedef struct
 {
+	bool has_mirrors; /* mirrored or mirrorless cluster */
 	int num_pairs; /* number of primary-mirror pairs FTS wants to probe */
 	fts_segment_info *perSegInfos;
 } fts_context;

@@ -14935,10 +14935,7 @@ dumpExtProtocol(Archive *fout, ExtProtInfo *ptcinfo)
 	 * qualified with namespace, we must ensure that we have the search_path
 	 * set with the namespaces of the referenced functions. We only need the
 	 * dump file to have the search_path so inject a SET search_path = .. ;
-	 * into the output stream instead of calling selectSourceSchema().
-	 *
-	 * GPDB_96_MERGE_FIXME: update the above comment because selectSourceSchema
-	 * has been removed in upstream 9f6e5296a  Security: CVE-2018-1058
+	 * into the output stream.
 	 */
 	prev_ns = NULL;
 	for (i = 0; i < FCOUNT; i++)

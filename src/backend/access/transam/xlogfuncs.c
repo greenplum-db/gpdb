@@ -69,11 +69,6 @@ pg_start_backup(PG_FUNCTION_ARGS)
 	XLogRecPtr	startpoint;
 	SessionBackupState status = get_backup_status();
 
-	ereport(NOTICE,
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 errmsg("pg_start_backup() is not supported in Greenplum Database"),
-			 errhint("Contact support to get more information and resolve the issue")));
-
 	backupidstr = text_to_cstring(backupid);
 
 	if (status == SESSION_BACKUP_NON_EXCLUSIVE)
@@ -135,11 +130,6 @@ pg_stop_backup(PG_FUNCTION_ARGS)
 {
 	XLogRecPtr	stoppoint = InvalidXLogRecPtr;
 	SessionBackupState status = get_backup_status();
-
-	ereport(NOTICE,
-			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			 errmsg("pg_stop_backup() is not supported in Greenplum Database"),
-			 errhint("Contact support to get more information and resolve the issue")));
 
 	if (status == SESSION_BACKUP_NON_EXCLUSIVE)
 		ereport(ERROR,

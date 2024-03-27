@@ -724,7 +724,6 @@ ShareInputShmemInit(void)
 	{
 		HASHCTL		info;
 
-		/* GPDB_12_MERGE_FIXME: would be nicer to store this hash in the DSM segment or DSA */
 		info.keysize = sizeof(shareinput_tag);
 		info.entrysize = sizeof(shareinput_Xslice_state);
 

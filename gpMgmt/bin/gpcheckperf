@@ -443,6 +443,7 @@ def parseMultiDDResult(out):
         if o.find('real') >= 0:
             h = line[1:i]
             o = o.split()
+            o[1] = o[1].replace(',', '.')
             m = re.search("(^\d+.\d+)", o[1])
             if m is None:
                 sys.exit('[Error] expected %s to be a floating point number' % o[1])

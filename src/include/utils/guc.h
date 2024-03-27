@@ -373,6 +373,7 @@ extern bool trace_sort;
 extern bool vmem_process_interrupt;
 extern bool execute_pruned_plan;
 
+extern int gp_max_partition_level;
 extern bool gp_enable_relsize_collection;
 
 /* Debug DTM Action */

@@ -100,6 +100,25 @@ explain (costs off) update base_tbl set a=a+1;
 (12 rows)
 
 update base_tbl set a = 5;
+-- Test dropped column for update.
+alter table base_tbl drop column b;
+explain (costs off) update base_tbl set a=a+1;
+                          QUERY PLAN                           
+---------------------------------------------------------------
+ Update on base_tbl
+   Update on base_tbl
+   Update on child_a
+   Update on child_b
+   ->  Explicit Redistribute Motion 3:3  (slice1; segments: 3)
+         ->  Split
+               ->  Seq Scan on base_tbl
+   ->  Explicit Redistribute Motion 3:3  (slice2; segments: 3)
+         ->  Split
+               ->  Seq Scan on child_a
+   ->  Seq Scan on child_b
+ Optimizer: Postgres-based planner
+(12 rows)
+
 --
 -- Explicit Distribution motion must be added if any of the child nodes
 -- contains any motion excluding the motions in initplans.

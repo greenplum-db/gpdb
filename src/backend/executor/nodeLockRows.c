@@ -110,11 +110,6 @@ lnext:
 		}
 		erm->ermActive = true;
 
-		/*
-		 * GPDB_96_MERGE_FIXME: Shouldn't we fetch gp_segment_id as well, and
-		 * verify that this tuple originated from this server?
-		 */
-
 		/* fetch the tuple's ctid */
 		datum = ExecGetJunkAttribute(slot,
 									 aerm->ctidAttNo,

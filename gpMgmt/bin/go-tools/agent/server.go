@@ -19,6 +19,7 @@ var (
 type Config struct {
 	Port        int
 	ServiceName string
+	GpHome      string
 
 	Credentials utils.Credentials
 }
@@ -92,7 +93,7 @@ func (s *Server) Shutdown() {
 func (s *Server) Status(ctx context.Context, in *idl.StatusAgentRequest) (*idl.StatusAgentReply, error) {
 	status, err := s.GetStatus()
 	if err != nil {
-		return &idl.StatusAgentReply{}, fmt.Errorf("could not get agent status: %w", err)
+		return &idl.StatusAgentReply{}, utils.LogAndReturnError(fmt.Errorf("could not get agent status: %w", err))
 	}
 
 	return &idl.StatusAgentReply{Status: status.Status, Uptime: status.Uptime, Pid: uint32(status.Pid)}, nil

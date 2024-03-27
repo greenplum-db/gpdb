@@ -3206,7 +3206,14 @@ CopyTo(CopyState cstate)
 							fmgr_info(out_func_oid, &cstate->out_functions[attnum - 1]);
 						}
 					}
-					scandesc = table_beginscan_es(rel, GetActiveSnapshot(), 0, NULL, proj, NULL);
+					/*
+					 * We specifically pass NULL proj if the table has no column, and leave it
+					 * to the underlying CO AM layer to handle it - the behavior should be same
+					 * as SELECT * which is to choose one column to scan.
+					 */
+					scandesc = table_beginscan_es(rel, GetActiveSnapshot(), 0, NULL, 
+													cstate->attnumlist ? proj : NULL, 
+													NULL);
 					slot = table_slot_create(rel, NULL);
 
 					while (table_scan_getnextslot(scandesc, ForwardScanDirection, slot))

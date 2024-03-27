@@ -200,6 +200,7 @@
 		"gp_maintenance_conn",
 		"gp_max_local_distributed_cache",
 		"gp_max_parallel_cursors",
+		"gp_max_partition_level",
 		"gp_max_plan_size",
 		"gp_max_slices",
 		"gp_max_system_slices",

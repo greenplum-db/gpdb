@@ -113,5 +113,5 @@ To check the status of the services you can use the following command:
 
 #### Log Locations
 Logs are located in the path provided in the configuration file.
-By default, it will be generated in `/tmp` directory.
+By default, it will be generated in `~/gpAdminLogs/` directory.
 Logs file gets created on the local machine when the service is running. 

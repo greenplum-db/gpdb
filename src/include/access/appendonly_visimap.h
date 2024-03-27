@@ -170,33 +170,73 @@ TM_Result AppendOnlyVisimapDelete_Hide(
 void AppendOnlyVisimapDelete_Finish(
 							   AppendOnlyVisimapDelete *visiMapDelete);
 
+void
+AppendOnlyVisimapDelete_LoadTuple(AppendOnlyVisimapDelete *visiMapDelete,
+								   AOTupleId *aoTupleId);
+
+bool
+AppendOnlyVisimapDelete_IsVisible(AppendOnlyVisimapDelete *visiMapDelete,
+								  AOTupleId *aoTupleId);
+
 /*
  * AppendOnlyVisimap_UniqueCheck
  *
  * During a uniqueness check, look up the visimap to see if a tuple was deleted
  * by a *committed* transaction.
  *
- * Note: We need to use the passed in per-tuple snapshot to perform the block
- * directory lookup. See AppendOnlyVisimap_Init_forUniqueCheck() for details on
- * why we can't set up the metadata snapshot at init time.
- * If this is part of an update, we are reusing the visimap from the delete half
- * of the update, so better restore its snapshot once we are done.
+ * If this uniqueness check is part of an UPDATE, we consult the visiMapDelete
+ * structure. Otherwise, we consult the visiMap structure. Only one of these
+ * arguments should be supplied.
  */
-static inline bool AppendOnlyVisimap_UniqueCheck(
-											AppendOnlyVisimap *visiMap,
-											AOTupleId *aoTupleId,
-											Snapshot appendOnlyMetaDataSnapshot)
+static inline bool AppendOnlyVisimap_UniqueCheck(AppendOnlyVisimapDelete *visiMapDelete,
+												 AppendOnlyVisimap *visiMap,
+												 AOTupleId *aoTupleId,
+												 Snapshot appendOnlyMetaDataSnapshot)
 {
-	Snapshot save_snapshot;
-	bool visible;
+	Snapshot          save_snapshot;
+	bool              visible;
 
 	Assert(appendOnlyMetaDataSnapshot->snapshot_type == SNAPSHOT_DIRTY ||
-			appendOnlyMetaDataSnapshot->snapshot_type == SNAPSHOT_SELF);
+			   appendOnlyMetaDataSnapshot->snapshot_type == SNAPSHOT_SELF);
 
-	save_snapshot = visiMap->visimapStore.snapshot;
-	visiMap->visimapStore.snapshot = appendOnlyMetaDataSnapshot;
-	visible = AppendOnlyVisimap_IsVisible(visiMap, aoTupleId);
-	visiMap->visimapStore.snapshot = save_snapshot;
+	if (visiMapDelete)
+	{
+		/* part of an UPDATE */
+		Assert(!visiMap);
+		Assert(visiMapDelete->visiMap);
+
+		/* Save the snapshot used for the delete half of the UPDATE */
+		save_snapshot = visiMapDelete->visiMap->visimapStore.snapshot;
+
+		/*
+		 * Replace with per-tuple snapshot meant for uniqueness checks. See
+		 * AppendOnlyVisimap_Init_forUniqueCheck() for details on why we can't
+		 * set up the metadata snapshot at init time.
+		 */
+		visiMapDelete->visiMap->visimapStore.snapshot = appendOnlyMetaDataSnapshot;
+
+		visible = AppendOnlyVisimapDelete_IsVisible(visiMapDelete, aoTupleId);
+
+		/* Restore the snapshot used for the delete half of the UPDATE */
+		visiMapDelete->visiMap->visimapStore.snapshot = save_snapshot;
+	}
+	else
+	{
+		/* part of a COPY/INSERT */
+		Assert(visiMap);
+
+		/*
+		 * Set up per-tuple snapshot meant for uniqueness checks. See
+		 * AppendOnlyVisimap_Init_forUniqueCheck() for details on why we can't
+		 * set up the metadata snapshot at init time.
+		 */
+		visiMap->visimapStore.snapshot = appendOnlyMetaDataSnapshot;
+
+		visible = AppendOnlyVisimap_IsVisible(visiMap, aoTupleId);
+
+		visiMap->visimapStore.snapshot = NULL; /* be a good citizen */
+	}
+
 	return visible;
 }
 

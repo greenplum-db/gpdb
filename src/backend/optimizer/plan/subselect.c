@@ -3306,6 +3306,19 @@ finalize_plan(PlannerInfo *root, Plan *plan,
 									 gather_param,
 									 bms_union(nestloop_params, valid_params),
 									 scan_params);
+		/*
+		 * Currently GPDB doesn't fully support lateral, following sql will
+		 * pass params by a motion. Then cause panic in QE.
+		 * So add a walker to check whether motion in righttree of nestloop
+		 * will pass params, if true throw an error to avoid panic in QE.
+		 * explain SELECT * FROM
+		 * (VALUES (0.0),(10.4),(100.7)) v(nrows),
+		 * LATERAL (SELECT count(*) FROM test_tablesample
+		 *       TABLESAMPLE system_rows (nrows)) ss;
+		 */
+		if (IsA(plan, NestLoop) && !bms_is_empty(nestloop_params))
+			checkMotionWithParam((Node*) plan->righttree, nestloop_params, root);
+
 		/* ... and they don't count as parameters used at my level */
 		child_params = bms_difference(child_params, nestloop_params);
 		bms_free(nestloop_params);

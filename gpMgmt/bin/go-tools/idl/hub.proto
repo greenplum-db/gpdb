@@ -9,23 +9,101 @@ service Hub {
     rpc StartAgents(StartAgentsRequest) returns (StartAgentsReply) {}
     rpc StatusAgents(StatusAgentsRequest) returns (StatusAgentsReply) {}
     rpc StopAgents(StopAgentsRequest) returns (StopAgentsReply) {}
+    rpc MakeCluster(MakeClusterRequest) returns (stream HubReply) {}
 }
 
 message StopHubRequest {}
+
 message StopHubReply {}
 
 message StartAgentsRequest {}
+
 message StartAgentsReply {}
 
 message StatusAgentsRequest {}
+
 message ServiceStatus {
-	string host = 1;
-	string status = 2;
-	string uptime = 3;
-	uint32 pid = 4;
+    string host = 1;
+    string status = 2;
+    string uptime = 3;
+    uint32 pid = 4;
 }
 message StatusAgentsReply {
-	repeated ServiceStatus statuses = 1;
+    repeated ServiceStatus statuses = 1;
 }
+
 message StopAgentsRequest {}
+
 message StopAgentsReply {}
+
+message MakeClusterRequest {
+    gpArray gpArray = 1;
+    ClusterParams clusterParams = 2;
+    bool forceFlag = 3;
+    bool verbose = 4;
+}
+
+message HubReply {
+    oneof message {
+        LogMessage logMsg = 1;
+        string stdoutMsg = 2;
+        ProgressMessage progressMsg = 3;
+    };
+}
+
+message LogMessage {
+    string message = 1;
+    logLevel level = 2;
+}
+enum logLevel {
+    FATAL = 0;
+    ERROR = 1;
+    WARNING = 2;
+    INFO = 3;
+    DEBUG = 4;
+}
+message ProgressMessage {
+    string label = 2;
+    int32 total = 4;
+}
+
+message gpArray {
+    Segment Coordinator = 1;
+    repeated SegmentPair SegmentArray = 2;
+}
+
+message Segment {
+    int32 port = 1;
+    string dataDirectory = 2;
+    string hostName = 3;
+    string hostAddress = 4;
+    int32 contentid = 5;
+    int32 dbid = 6;
+}
+
+message SegmentPair {
+    Segment primary = 1;
+    Segment mirror = 2;
+}
+
+message ClusterParams{
+    map<string, string> CoordinatorConfig = 1;
+    map<string, string> SegmentConfig = 2;
+    map<string, string> CommonConfig = 3;
+    Locale locale = 4;
+    bool hbaHostnames = 5;
+    string encoding = 6;
+    string suPassword = 7;
+    string dbName = 8;
+    bool dataChecksums = 9;
+}
+
+message Locale {
+    string lc_all=1;
+    string lc_collate=2;
+    string lc_ctype = 3;
+    string lc_messages=4;
+    string lc_monetory=5;
+    string lc_numeric=6;
+    string lc_time=7;
+}

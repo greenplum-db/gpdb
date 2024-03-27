@@ -61,6 +61,41 @@ class GpCheckPerf(GpTestCase):
         self.subject.parseCommandLine()
         self.assertEqual(self.subject.GV.opt['-S'], 246.0)
 
+    def test_parseMultiDDResult_when_output_regular(self):
+        inputText = """[localhost] dd if=/dev/zero of=/tmp/gpcheckperf_gpadmin/ddfile count=131072 bs=32768
+[localhost] 131072+0 records in
+[localhost] 131072+0 records out
+[localhost] 4294967296 bytes transferred in 2.973025 secs (1444645536 bytes/sec)
+[localhost]
+[localhost] multidd total bytes  4294967296
+[localhost] real 3.65
+[localhost] user 0.18
+[localhost] sys 2.52
+    """
+        actual_result = self.subject.parseMultiDDResult(inputText)
+        (mbps, time, bytes) = actual_result["localhost"]
+        exp_mbps, exp_time, exp_bytes = (1122.1917808219177, 3.65, 4294967296)
+        self.assertEqual(mbps, exp_mbps)
+        self.assertEqual(time, exp_time)
+        self.assertEqual(bytes, exp_bytes)
+
+    def test_parseMultiDDResult_when_output_comma(self):
+        inputText = """[localhost] dd if=/dev/zero of=/tmp/gpcheckperf_gpadmin/ddfile count=131072 bs=32768
+[localhost] 131072+0 records in
+[localhost] 131072+0 records out
+[localhost] 4294967296 bytes transferred in 2.973025 secs (1444645536 bytes/sec)
+[localhost]
+[localhost] multidd total bytes  4294967296
+[localhost] real 3,65
+[localhost] user 0,18
+[localhost] sys 2,52
+    """
+        actual_result = self.subject.parseMultiDDResult(inputText)
+        (mbps, time, bytes) = actual_result["localhost"]
+        exp_mbps, exp_time, exp_bytes = (1122.1917808219177, 3.65, 4294967296)
+        self.assertEqual(mbps, exp_mbps)
+        self.assertEqual(time, exp_time)
+        self.assertEqual(bytes, exp_bytes)
 
 if __name__ == '__main__':
     run_tests()

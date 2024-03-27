@@ -102,6 +102,7 @@ func ShowAgentsStatusFunc(conf *hub.Config, skipHeader bool) error {
 	}
 
 	reply, err := client.StatusAgents(context.Background(), &idl.StatusAgentsRequest{})
+
 	if err != nil {
 		return err
 	}

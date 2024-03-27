@@ -13,6 +13,7 @@
 
 -- reduce noise, specifying a precision
 set extra_float_digits=-2;
+set optimizer_trace_fallback=on;
 
 -- start_ignore
 create schema olap_window_seq;
@@ -1685,6 +1686,65 @@ insert into window_preds with CTE as (select i, row_number() over (partition by 
 select dt, pn, count(distinct pn) over (partition by dt) from sale;
 select dt, pn, count(distinct pn) over (partition by dt), sum(distinct pn) over (partition by dt) from sale;
 select dt, pn, sum(distinct pn) over (partition by dt), sum(pn) over (partition by dt) from sale;
+
+-- Various test cases from MDP tests. Previously, these were transformed into
+-- different plan shapes, but we now do these operations in the executor so the
+-- plan shape will be similar in the below queries. We want to ensure the
+-- executor works correctly and produces correct results in these cases.
+drop table if exists t;
+create table t (a int, b int, c int) distributed by (c);
+insert into t select  i%3+2, i%4, i from generate_series(1,5)i;
+analyze t;
+explain (costs off) select count(distinct a) over(), sum(distinct a) over() from t;
+select count(distinct a) over(), sum(distinct a) over() from t;
+
+explain (costs off) select count(distinct a) over() from t;
+select count(distinct a) over() from t;
+
+explain (costs off) select count(distinct a) over(), sum(distinct a) over(), avg(distinct a) over()  from t;
+select count(distinct a) over(), sum(distinct a) over(), avg(distinct a) over()  from t;
+
+explain (costs off) select count(distinct a) over(), sum(distinct a) over(), avg(distinct b) over()  from t;
+select count(distinct a) over(), sum(distinct a) over(), avg(distinct b) over()  from t;
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct a) over(partition by a) from t;
+select count(distinct a) over(partition by a), sum(distinct a) over(partition by a) from t;
+
+explain (costs off) select dqa1+1, dqa2+2 from (select count(distinct a) over(partition by a), sum(distinct a) over(partition by a)  from t) as foo(dqa1,dqa2);
+select dqa1+1, dqa2+2 from (select count(distinct a) over(partition by a), sum(distinct a) over(partition by a)  from t) as foo(dqa1,dqa2);
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct a) over(partition by b) from t;
+select count(distinct a) over(partition by a), sum(distinct a) over(partition by b) from t;
+
+explain (costs off) select dqa1+1, dqa2+2 from (select count(distinct a) over(partition by a), sum(distinct a) over(partition by b)  from t) as foo(dqa1,dqa2);
+select dqa1+1, dqa2+2 from (select count(distinct a) over(partition by a), sum(distinct a) over(partition by b)  from t) as foo(dqa1,dqa2);
+
+explain (costs off) select count(distinct a) over(), sum(distinct a) over(), row_number() over() from t;
+select count(distinct a) over(), sum(distinct a) over(), row_number() over() from t;
+
+explain (costs off) select dqa1+1, dqa2+2 , dqa3+3 from (  select count(distinct a) over(), sum(distinct a) over(), row_number() over() from t) as foo(dqa1,dqa2,dqa3);
+select dqa1+1, dqa2+2 , dqa3+3 from (  select count(distinct a) over(), sum(distinct a) over(), row_number() over() from t) as foo(dqa1,dqa2,dqa3);
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a) from t;
+select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a) from t;
+
+explain (costs off) select dqa1+1, dqa2+2 , dqa3+3 from ( select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a) from t) as foo(dqa1,dqa2,dqa3);
+select dqa1+1, dqa2+2 , dqa3+3 from ( select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a) from t) as foo(dqa1,dqa2,dqa3);
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct a) over(partition by b), row_number() over(order by c) from t;
+select count(distinct a) over(partition by a), sum(distinct a) over(partition by b), row_number() over(order by c) from t;
+
+explain (costs off) select dqa1+1, dqa2+2 , dqa3+3 from ( select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a order by c) from t) as foo(dqa1,dqa2,dqa3);
+select dqa1+1, dqa2+2 , dqa3+3 from ( select count(distinct a) over(partition by a), sum(distinct a) over(partition by a), row_number() over(partition by a order by c) from t) as foo(dqa1,dqa2,dqa3);
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct b) over(partition by a), row_number() over(partition by a)  from t;
+select count(distinct a) over(partition by a), sum(distinct b) over(partition by a), row_number() over(partition by a)  from t;
+
+explain (costs off) select count(distinct a) over(partition by a), sum(distinct b) over(partition by b), row_number() over(partition by a order by c)  from t;
+select count(distinct a) over(partition by a), sum(distinct b) over(partition by b), row_number() over(partition by a order by c)  from t;
+
+explain (costs off) select count(distinct a) over(partition by a,b), sum(distinct b) over(partition by a,b), row_number() over(partition by a,b)  from t;
+select count(distinct a) over(partition by a,b), sum(distinct b) over(partition by a,b), row_number() over(partition by a,b)  from t;
 
 -- Also test with a pass-by-ref type, to make sure we don't get confused with memory contexts.
 

@@ -48,6 +48,10 @@ private:
 	// is the column a distribution key
 	BOOL m_is_dist_col;
 
+	// is the column a partition key
+	BOOL m_is_part_col;
+
+
 	// width of the column, for instance  char(10) column has width 10
 	ULONG m_width;
 
@@ -101,6 +105,13 @@ public:
 	IsDistCol() const override
 	{
 		return m_is_dist_col;
+	}
+
+	// is column a partition column?
+	BOOL
+	IsPartCol() const override
+	{
+		return m_is_part_col;
 	}
 
 	// width of the column

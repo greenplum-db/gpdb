@@ -7092,6 +7092,7 @@ create_preliminary_limit_path(PlannerInfo *root, RelOptInfo *rel,
 {
 	Node	   *precount = copyObject(limitCount);
 	Path	   *result_path;
+	int64 		precount_est = count_est;
 
 	/*
 	 * If we've specified an offset *and* a limit, we need to collect
@@ -7125,6 +7126,7 @@ create_preliminary_limit_path(PlannerInfo *root, RelOptInfo *rel,
 									precount,
 									NULL,
 									-1);
+		precount_est += offset_est;
 	}
 
 	if (precount != NULL)
@@ -7136,7 +7138,7 @@ create_preliminary_limit_path(PlannerInfo *root, RelOptInfo *rel,
 		result_path = (Path *) create_limit_path(root, rel, subpath,
 												 NULL, /* limitOffset */
 												 precount,	/* limitCount */
-												 -1, offset_est + count_est);
+												 0, precount_est);
 	}
 	else
 		result_path = subpath;

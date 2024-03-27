@@ -137,7 +137,7 @@ func TestStartAgents(t *testing.T) {
 		[]string{"sdw1", "sdw2"},
 		"/tmp/logDir",
 		"gp",
-		"gphome",
+		"gpHome",
 		credentials,
 	}
 
@@ -180,7 +180,7 @@ func TestDialAllAgents(t *testing.T) {
 		[]string{"sdw1", "sdw2"},
 		"/tmp/logDir",
 		"gp",
-		"gphome",
+		"gpHome",
 		credentials,
 	}
 
@@ -256,7 +256,7 @@ func TestStatusAgents(t *testing.T) {
 		[]string{"sdw1", "sdw2"},
 		"/tmp/logDir",
 		"gp",
-		"gphome",
+		"gpHome",
 		credentials,
 	}
 	hubServer := hub.New(hubConfig, nil)
@@ -348,7 +348,7 @@ func TestStatusAgents(t *testing.T) {
 
 		_, err := hubServer.StatusAgents(context.Background(), &idl.StatusAgentsRequest{})
 		expectedErr := "failed to get agent status on host sdw2"
-		if err.Error() != expectedErr {
+		if err == nil || !strings.Contains(err.Error(), expectedErr) {
 			t.Fatalf("got %v, want %v", err, expectedErr)
 		}
 	})
@@ -364,7 +364,7 @@ func TestStopAgents(t *testing.T) {
 		[]string{"sdw1", "sdw2"},
 		"/tmp/logDir",
 		"gp",
-		"gphome",
+		"gpHome",
 		credentials,
 	}
 	hubServer := hub.New(hubConfig, nil)
@@ -430,7 +430,7 @@ func TestStopAgents(t *testing.T) {
 
 		_, err := hubServer.StopAgents(context.Background(), &idl.StopAgentsRequest{})
 		expectedErr := "failed to stop agent on host sdw2: error"
-		if err.Error() != expectedErr {
+		if !strings.Contains(err.Error(), expectedErr) {
 			t.Fatalf("got %v, want %v", err, expectedErr)
 		}
 	})
@@ -455,7 +455,7 @@ func TestConfig(t *testing.T) {
 			Hostnames:   []string{"sdw1", "sdw2"},
 			LogDir:      "/path/to/logdir",
 			ServiceName: "gp_test",
-			GpHome:      "gphome",
+			GpHome:      "gpHome",
 			Credentials: &utils.GpCredentials{
 				CACertPath:     "/path/to/caCertFile",
 				CAKeyPath:      "/path/to/caKeyFile",

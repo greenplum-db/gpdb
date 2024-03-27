@@ -3382,18 +3382,20 @@ select g%100000 as c1, sum(g::numeric) as c2, count(*) as c3
   from generate_series(0, 199999) g
   group by g%100000;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
-/*
- * create table agg_group_2 as
- * select * from
- *   (values (100), (300), (500)) as r(a),
- *   lateral (
- *     select (g/2)::numeric as c1,
- *            array_agg(g::numeric) as c2,
- *            count(*) as c3
- *     from generate_series(0, 1999) g
- *     where g < r.a
- *     group by g/2) as s;
- */
+create table agg_group_2 as
+select * from
+  (values (100), (300), (500)) as r(a),
+  lateral (
+    select (g/2)::numeric as c1,
+           array_agg(g::numeric) as c2,
+           count(*) as c3
+    from generate_series(0, 1999) g
+    where g < r.a
+    group by g/2) as s;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: LATERAL
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 set jit_above_cost to default;
 create table agg_group_3 as
 select (g/2)::numeric as c1, sum(7::int4) as c2, count(*) as c3
@@ -3426,18 +3428,20 @@ select g%100000 as c1, sum(g::numeric) as c2, count(*) as c3
   from generate_series(0, 199999) g
   group by g%100000;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause. Creating a NULL policy entry.
-/*
- * create table agg_hash_2 as
- * select * from
- *   (values (100), (300), (500)) as r(a),
- *   lateral (
- *     select (g/2)::numeric as c1,
- *            array_agg(g::numeric) as c2,
- *            count(*) as c3
- *     from generate_series(0, 1999) g
- *     where g < r.a
- *     group by g/2) as s;
- */
+create table agg_hash_2 as
+select * from
+  (values (100), (300), (500)) as r(a),
+  lateral (
+    select (g/2)::numeric as c1,
+          array_agg(g::numeric) as c2,
+           count(*) as c3
+    from generate_series(0, 1999) g
+    where g < r.a
+    group by g/2) as s;
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: LATERAL
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 set jit_above_cost to default;
 create table agg_hash_3 as
 select (g/2)::numeric as c1, sum(7::int4) as c2, count(*) as c3

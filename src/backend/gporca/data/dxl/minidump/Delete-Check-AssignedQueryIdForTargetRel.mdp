@@ -308,16 +308,12 @@
       </dxl:LogicalDelete>
     </dxl:Query>
     <dxl:Plan Id="0" SpaceSize="150">
-      <dxl:DMLDelete Columns="0" ActionCol="20" CtidCol="1" SegmentIdCol="7">
+      <dxl:DMLDelete Columns="" ActionCol="20" CtidCol="1" SegmentIdCol="7">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.023818" Rows="1.000000" Width="1"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.018603" Rows="1.000000" Width="1"/>
         </dxl:Properties>
         <dxl:DirectDispatchInfo/>
-        <dxl:ProjList>
-          <dxl:ProjElem ColId="0" Alias="i">
-            <dxl:Ident ColId="0" ColName="i" TypeMdid="0.23.1.0"/>
-          </dxl:ProjElem>
-        </dxl:ProjList>
+        <dxl:ProjList/>
         <dxl:TableDescriptor Mdid="6.16384.1.0" TableName="test" LockMode="7" AssignedQueryIdForTargetRel="1">
           <dxl:Columns>
             <dxl:Column ColId="21" Attno="1" ColName="i" TypeMdid="0.23.1.0" ColWidth="4"/>
@@ -332,12 +328,9 @@
         </dxl:TableDescriptor>
         <dxl:Result>
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.000380" Rows="1.000000" Width="18"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.000374" Rows="1.000000" Width="14"/>
           </dxl:Properties>
           <dxl:ProjList>
-            <dxl:ProjElem ColId="0" Alias="i">
-              <dxl:Ident ColId="0" ColName="i" TypeMdid="0.23.1.0"/>
-            </dxl:ProjElem>
             <dxl:ProjElem ColId="1" Alias="ctid">
               <dxl:Ident ColId="1" ColName="ctid" TypeMdid="0.27.1.0"/>
             </dxl:ProjElem>
@@ -352,12 +345,9 @@
           <dxl:OneTimeFilter/>
           <dxl:HashJoin JoinType="In">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="862.000374" Rows="1.000000" Width="14"/>
+              <dxl:Cost StartupCost="0" TotalCost="862.000369" Rows="1.000000" Width="10"/>
             </dxl:Properties>
             <dxl:ProjList>
-              <dxl:ProjElem ColId="0" Alias="i">
-                <dxl:Ident ColId="0" ColName="i" TypeMdid="0.23.1.0"/>
-              </dxl:ProjElem>
               <dxl:ProjElem ColId="1" Alias="ctid">
                 <dxl:Ident ColId="1" ColName="ctid" TypeMdid="0.27.1.0"/>
               </dxl:ProjElem>

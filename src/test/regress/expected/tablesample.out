@@ -347,40 +347,35 @@ RESET enable_hashjoin;
 RESET enable_mergejoin;
 RESET enable_nestloop;
 -- check behavior during rescans, as well as correct handling of min/max pct
--- Greenplum: does not support laterals completely, rescan specific tests above
--- start_ignore
 select * from
   (values (0),(100)) v(pct),
   lateral (select count(*) from tenk1 tablesample bernoulli (pct)) ss;
- pct | count 
------+-------
-   0 |     0
- 100 | 10000
-(2 rows)
-
+ERROR:  Passing parameters across motion is not supported. (cdbmutate.c:2033)
 select * from
   (values (0),(100)) v(pct),
   lateral (select count(*) from tenk1 tablesample system (pct)) ss;
- pct | count 
------+-------
-   0 |     0
- 100 | 10000
-(2 rows)
-
+ERROR:  Passing parameters across motion is not supported. (cdbmutate.c:2033)
 explain (costs off)
 select pct, count(unique1) from
   (values (0),(100)) v(pct),
   lateral (select * from tenk1 tablesample bernoulli (pct)) ss
   group by pct;
-                       QUERY PLAN                       
---------------------------------------------------------
- HashAggregate
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
+ Finalize GroupAggregate
    Group Key: "*VALUES*".column1
-   ->  Nested Loop
-         ->  Values Scan on "*VALUES*"
-         ->  Sample Scan on tenk1
-               Sampling: bernoulli ("*VALUES*".column1)
-(6 rows)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: "*VALUES*".column1
+         ->  Partial GroupAggregate
+               Group Key: "*VALUES*".column1
+               ->  Sort
+                     Sort Key: "*VALUES*".column1
+                     ->  Nested Loop
+                           ->  Values Scan on "*VALUES*"
+                           ->  Sample Scan on tenk1
+                                 Sampling: bernoulli ("*VALUES*".column1)
+ Optimizer: Postgres-based planner
+(13 rows)
 
 select pct, count(unique1) from
   (values (0),(100)) v(pct),
@@ -400,7 +395,6 @@ select pct, count(unique1) from
  100 | 10000
 (1 row)
 
--- end_ignore
 -- Greenplum: we do have to test min/max pct tests though
 select 0 as pct, count(*) from tenk1 tablesample bernoulli (0)
 union all

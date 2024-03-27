@@ -72,6 +72,10 @@ insert into base_tbl select g, g from generate_series(1, 5) g;
 explain (costs off) update base_tbl set a=a+1;
 update base_tbl set a = 5;
 
+-- Test dropped column for update.
+alter table base_tbl drop column b;
+explain (costs off) update base_tbl set a=a+1;
+
 --
 -- Explicit Distribution motion must be added if any of the child nodes
 -- contains any motion excluding the motions in initplans.

@@ -99,8 +99,9 @@ test: bitmap_index_crash
 test: bitmap_update_words_backup_block
 test: bitmap_index_inspect
 
-# below test utilizes fault injectors so it needs to be in a group by itself
+# below tests utilize fault injectors so it needs to be in a group by itself
 test: external_table
+test: pqsignal
 
 test: fsync_ao
 
@@ -292,6 +293,7 @@ test: segwalrep/hintbit_throttle
 test: fts_manual_probe
 test: fts_session_reset
 test: fts_segment_reset
+test: fts_doublefault
 
 # Reindex tests
 test: reindex/abort_reindex

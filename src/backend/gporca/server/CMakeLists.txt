@@ -22,7 +22,6 @@ if (COMPILER_HAS_WNO_LONG_LONG)
                                 src/unittest/dxl/statistics/CJoinCardinalityTest.cpp
                                 src/unittest/dxl/statistics/CFilterCardinalityTest.cpp
                                 src/unittest/gpopt/base/CConstraintTest.cpp
-                                src/unittest/gpopt/metadata/CPartConstraintTest.cpp
                                 PROPERTIES COMPILE_FLAGS "-Wno-long-long")
 endif()
 
@@ -281,7 +280,7 @@ CSetop4Test:
 PushSelectDownUnionAllOfCTG Push-Subplan-Below-Union Intersect-OuterRefs
 PushSelectWithOuterRefBelowUnion PushGbBelowUnion UnionGbSubquery
 AnyPredicate-Over-UnionOfConsts EquivClassesUnion EquivClassesIntersect
-IndexScanWithNestedCTEAndSetOp Blocking-Spool-Parallel-Union-All;
+IndexScanWithNestedCTEAndSetOp Blocking-Spool-Parallel-Union-All ParallelUnionAllWithJson;
 
 CEquivClassTest:
 Equiv-HashedDistr-1 Equiv-HashedDistr-2 EquivClassesAndOr EquivClassesLimit IndexNLJoin_Cast_NoMotion;
@@ -590,7 +589,6 @@ add_orca_test(CNameTest)
 add_orca_test(COrderSpecTest)
 add_orca_test(CRangeTest)
 add_orca_test(CPredicateUtilsTest)
-add_orca_test(CPartConstraintTest)
 
 add_orca_test(CSearchStrategyTest)
 

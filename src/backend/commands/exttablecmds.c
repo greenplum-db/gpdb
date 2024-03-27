@@ -39,6 +39,7 @@
 #include "cdb/cdbsreh.h"
 
 static char* transformLocationUris(List *locs, bool isweb, bool iswritable);
+static char* escape_uri(char *uri);
 static char* transformExecOnClause(List *on_clause);
 static char transformFormatType(char *formatname);
 static List * transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswritable);
@@ -357,6 +358,7 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 		Uri		   *uri;
 		char	   *uri_str_orig;
 		char	   *uri_str_final;
+		char	   *uri_str_escape;
 		Value	   *v = lfirst(cell);
 
 		/* get the current URI string from the command */
@@ -463,21 +465,48 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 							uri_str_final),
 					 errhint("Specify the explicit path and file name to write into.")));
 
+		uri_str_escape = escape_uri(uri_str_final);
+		pfree(uri_str_final);
 		if (first_uri)
 		{
-			appendStringInfo(&buf, "%s", uri_str_final);
+			appendStringInfo(&buf, "%s", uri_str_escape);
 			first_uri = false;
 		}
 		else
 		{
-			appendStringInfo(&buf, "|%s", uri_str_final);
+			appendStringInfo(&buf, "|%s", uri_str_escape);
 		}
 
 		FreeExternalTableUri(uri);
-		pfree(uri_str_final);
+		pfree(uri_str_escape);
 	}
 
 	return buf.data;
+}
+
+/* Since | is used as a delimiter, need to escape the | in the data,
+ * use \ as escape, and \ itself also needs to be escaped.
+ */
+static char*
+escape_uri(char *uri)
+{
+	size_t len = strlen(uri);
+	char *output = (char *)palloc((len * 2) + 1);
+	int i, j = 0;
+	for (i = 0; uri[i] != '\0'; i++)
+	{
+		if (uri[i] == '|' || uri[i] == '\\')
+		{
+			output[j++] = '\\';
+			output[j++] = uri[i];
+		}
+		else
+		{
+			output[j++] = uri[i];
+		}
+ 	}
+	output[j] = '\0';
+	return output;
 }
 
 static char*

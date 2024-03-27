@@ -25,6 +25,12 @@ clean_output()
     rm -f dump_current.sql dump_other.sql
 }
 
+## Run pre test to ignore expected failures
+run_pre_test()
+{
+    psql -f test_binary_swap_pre.sql postgres > /dev/null 2>&1
+}
+
 ## Run tests via pg_regress with given schedule name
 run_tests()
 {
@@ -134,6 +140,7 @@ clean_output
 
 ## Start/restart current Greenplum and do initial dump to compare against
 start_binary $GPHOME_CURRENT
+run_pre_test
 run_tests schedule1${VARIANT}
 
 ## Change the binary, dump, and then compare the two dumps generated

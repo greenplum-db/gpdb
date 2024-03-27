@@ -18,17 +18,13 @@ create database gpsd_db_without_hll;
 \c gpsd_db_without_hll
 
 create table gpsd_foo(a int, s text) partition by range(a);
-create table gpsd_foo_1 partition of gpsd_foo for values from (1) to (5);
+create table gpsd_foo_1 partition of gpsd_foo for values from (1) to (6);
 insert into gpsd_foo values(1, 'something');
 insert into gpsd_foo values(2, chr(1000));
 insert into gpsd_foo values(3, chr(105));
 insert into gpsd_foo values(4, 'a \ and a "');
+insert into gpsd_foo values(5, 'z''world''');
 analyze gpsd_foo;
-
--- arbitrarily populate stats data values having text (with quotes) in a slot
--- (without paying heed to the slot's stakind) to test dumpability
-set allow_system_table_mods to on;
-update pg_statistic set stavalues3='{"hello", "''world''"}'::text[] where starelid='gpsd_foo'::regclass and staattnum=2;
 
 -- start_ignore
 \! PYTHONIOENCODING=utf-8 gpsd gpsd_db_without_hll > data/gpsd-without-hll.sql

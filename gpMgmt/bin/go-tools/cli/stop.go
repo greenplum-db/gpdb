@@ -47,7 +47,7 @@ func RunStopHub(cmd *cobra.Command, args []string) error {
 	}
 	gplog.Info("Hub stopped successfully")
 	if Verbose {
-		ShowHubStatus(Conf, false)
+		ShowHubStatus(Conf, false) // nolint
 	}
 	return nil
 }
@@ -89,7 +89,7 @@ func RunStopAgents(cmd *cobra.Command, args []string) error {
 	}
 	gplog.Info("Agents stopped successfully")
 	if Verbose {
-		ShowAgentsStatus(Conf, false)
+		ShowAgentsStatus(Conf, false) // nolint
 	}
 	return nil
 }

@@ -3688,6 +3688,21 @@ set session authorization ruser;
 set gp_max_system_slices=10;
 reset session authorization;
 
+-- Test that set returning function with multiple columns works with explain
+CREATE FUNCTION srf_attnum() RETURNS TABLE(v1 int, v2 int)
+    LANGUAGE plpgsql NO SQL
+    AS $_$
+BEGIN
+    DROP TABLE IF EXISTS tbl_2_cols;
+    CREATE TEMP TABLE tbl_2_cols (col1 int, col2 int) DISTRIBUTED RANDOMLY;
+    RETURN QUERY SELECT * from tbl_2_cols;
+END;
+$_$;
+explain select distinct v1 from srf_attnum();
+select distinct v1 from srf_attnum();
+explain select distinct v2 from srf_attnum();
+select distinct v2 from srf_attnum();
+
 drop user ruser;
 drop table foo, bar;
 

@@ -5282,12 +5282,31 @@ CTranslatorExprToDXL::GetDXLDirectDispatchInfo(CExpression *pexprDML)
 		return nullptr;
 	}
 
-
+	// get index of distribution column in the DML's source array. For non-delete DMLs, the
+	// source array has the same columns as the table descriptor's, and the columns will match.
+	// For deletes, we need to find the distribution col's index by iterating through the delete operator's source
+	// columns (which will only include distribution and partitioning columns, so this will be fast)
+	ULONG ulPos = 0;
 	GPOS_ASSERT(1 == pdrgpcoldescDist->Size());
-	CColumnDescriptor *pcoldesc = (*pdrgpcoldescDist)[0];
-	ULONG ulPos =
-		gpopt::CTableDescriptor::UlPos(pcoldesc, ptabdesc->Pdrgpcoldesc());
-	GPOS_ASSERT(ulPos < ptabdesc->Pdrgpcoldesc()->Size() && "Column not found");
+	if (CLogicalDML::EdmlDelete == popDML->Edmlop())
+	{
+		for (ULONG ul = 0; ul < (popDML->PdrgpcrSource())->Size(); ul++)
+		{
+			if ((*popDML->PdrgpcrSource())[ul]->IsDistCol())
+			{
+				ulPos = ul;
+				break;
+			}
+		}
+	}
+	else
+	{
+		CColumnDescriptor *pcoldesc = (*pdrgpcoldescDist)[0];
+		ulPos =
+			gpopt::CTableDescriptor::UlPos(pcoldesc, ptabdesc->Pdrgpcoldesc());
+		GPOS_ASSERT(ulPos < ptabdesc->Pdrgpcoldesc()->Size() &&
+					"Column not found");
+	}
 
 	CColRef *pcrDistrCol = (*popDML->PdrgpcrSource())[ulPos];
 	CPropConstraint *ppc = (*pexprDML)[0]->DerivePropertyConstraint();

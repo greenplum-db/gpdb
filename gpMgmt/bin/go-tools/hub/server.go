@@ -12,17 +12,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/greenplum-db/gpdb/gp/constants"
-
-	"github.com/greenplum-db/gp-common-go-libs/gplog"
-	"github.com/greenplum-db/gpdb/gp/idl"
-	"github.com/greenplum-db/gpdb/gp/testutils/exectest"
-	"github.com/greenplum-db/gpdb/gp/utils"
+	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/reflection"
 	grpcStatus "google.golang.org/grpc/status"
+
+	"github.com/greenplum-db/gp-common-go-libs/gplog"
+	"github.com/greenplum-db/gpdb/gp/constants"
+	"github.com/greenplum-db/gpdb/gp/idl"
+	"github.com/greenplum-db/gpdb/gp/testutils/exectest"
+	"github.com/greenplum-db/gpdb/gp/utils"
 )
 
 var (
@@ -312,7 +313,9 @@ func ExecuteRPC(agentConns []*Connection, executeRequest func(conn *Connection) 
 		go func() {
 			defer wg.Done()
 			err := executeRequest(conn)
-			errs <- err
+			if err != nil {
+				errs <- fmt.Errorf("host: %s, %w", conn.Hostname, err)
+			}
 		}()
 	}
 
@@ -360,7 +363,7 @@ func (conf *Config) Write(ConfigFilePath string) error {
 	if err != nil {
 		return fmt.Errorf("could not write to configuration file %s: %w\n", ConfigFilePath, err)
 	}
-	gplog.Debug("Wrote configuration file to %s", ConfigFilePath)
+	gplog.Verbose("Wrote configuration file to %s", ConfigFilePath)
 
 	err = copyConfigFileToAgents(conf, ConfigFilePath)
 	if err != nil {
@@ -378,7 +381,7 @@ func copyConfigFileToAgents(conf *Config, ConfigFilePath string) error {
 	}
 	greenplumPathSh := filepath.Join(conf.GpHome, "greenplum_path.sh")
 	if len(hostList) < 1 {
-		return fmt.Errorf("hostlist should not be empty. No hosts to copy files.")
+		return fmt.Errorf("hostlist should not be empty. No hosts to copy files")
 	}
 
 	remoteCmd := append(hostList, ConfigFilePath, fmt.Sprintf("=:%s", ConfigFilePath))
@@ -391,7 +394,18 @@ func copyConfigFileToAgents(conf *Config, ConfigFilePath string) error {
 	return nil
 }
 
-// used only for testing
+func getConnByHost(conns []*Connection, hostnames []string) []*Connection {
+	result := []*Connection{}
+	for _, conn := range conns {
+		if slices.Contains(hostnames, conn.Hostname) {
+			result = append(result, conn)
+		}
+	}
+
+	return result
+}
+
+// SetEnsureConnectionsAreReady used only for testing
 func SetEnsureConnectionsAreReady(customFunc func(conns []*Connection) error) {
 	ensureConnectionsAreReadyFunc = customFunc
 }

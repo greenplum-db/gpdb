@@ -323,3 +323,16 @@ select count(*) from sto_heap_10;
 (1 row)
 
 COMMIT;
+-- Table with zero column
+create table sto_uao_0col();
+select * from sto_uao_0col;
+--
+(0 rows)
+
+select count(*) from sto_uao_0col;
+ count 
+-------
+     0
+(1 row)
+
+copy sto_uao_0col to stdout;

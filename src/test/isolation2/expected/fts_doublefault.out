@@ -1,0 +1,358 @@
+-- to make test deterministic and fast
+!\retcode gpconfig -c gp_fts_mark_mirror_down_grace_period -v 0;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+
+-- Get an entry into gp_conf_history for a segment
+-- start_ignore
+select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'stop');
+ pg_ctl
+--------
+ OK
+(1 row)
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'stop');
+ pg_ctl
+--------
+ OK
+(1 row)
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan
+---------------------------
+ t
+(1 row)
+select pg_ctl_start(datadir, port, false) from gp_segment_configuration where role = 'p' and content = 0;
+ pg_ctl_start     
+------------------
+ server starting
+ 
+(1 row)
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan
+---------------------------
+ t
+(1 row)
+-- end_ignore
+
+!\retcode gprecoverseg -aF --no-progress;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gprecoverseg -ar;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+
+-- no segment down.
+select count(*) from gp_segment_configuration where status = 'd';
+ count 
+-------
+ 0     
+(1 row)
+
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+-- note the last_timestamp in gp_configuration_history, we only need to check entries after this one
+-1U: create table last_timestamp as select time from gp_configuration_history order by time desc limit 1;
+SELECT 1
+
+-- stop primary in order to promote mirror for content 0
+select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'stop');
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+-- primary is down, and mirror has now been promoted to primary. Verify
+-1U: select wait_until_segments_are_down(1);
+ wait_until_segments_are_down 
+------------------------------
+ t                            
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                                                                   
+------+-------------------------------------------------------------------------------
+ 2    | FTS: update role, status, and mode for dbid 2 with contentid 0 to m, d, and n 
+ 5    | FTS: update role, status, and mode for dbid 5 with contentid 0 to p, u, and n 
+(2 rows)
+
+-- stop acting primary in order to trigger double fault for content 0
+select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'stop');
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+-- trigger double fault on content 0 (FTS_PROBE_FAILED)
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                                                                   
+------+-------------------------------------------------------------------------------
+ 2    | FTS: update role, status, and mode for dbid 2 with contentid 0 to m, d, and n 
+ 5    | FTS: update role, status, and mode for dbid 5 with contentid 0 to p, u, and n 
+ 5    | FTS: double fault detected for content id 0                                   
+(3 rows)
+
+-- stop mirror for content 1
+select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=1), 'stop');
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                                                                   
+------+-------------------------------------------------------------------------------
+ 2    | FTS: update role, status, and mode for dbid 2 with contentid 0 to m, d, and n 
+ 5    | FTS: update role, status, and mode for dbid 5 with contentid 0 to p, u, and n 
+ 5    | FTS: double fault detected for content id 0                                   
+ 3    | FTS: update role, status, and mode for dbid 3 with contentid 1 to p, u, and n 
+ 6    | FTS: update role, status, and mode for dbid 6 with contentid 1 to m, d, and n 
+(5 rows)
+
+-1U: select wait_until_segments_are_down(2);
+ wait_until_segments_are_down 
+------------------------------
+ t                            
+(1 row)
+
+-- stop primary in order to trigger double fault for content 1
+select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=1), 'stop');
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+-- trigger double fault on content 1 (FTS_PROMOTE_FAILED)
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                                                                   
+------+-------------------------------------------------------------------------------
+ 2    | FTS: update role, status, and mode for dbid 2 with contentid 0 to m, d, and n 
+ 5    | FTS: update role, status, and mode for dbid 5 with contentid 0 to p, u, and n 
+ 5    | FTS: double fault detected for content id 0                                   
+ 3    | FTS: update role, status, and mode for dbid 3 with contentid 1 to p, u, and n 
+ 6    | FTS: update role, status, and mode for dbid 6 with contentid 1 to m, d, and n 
+ 3    | FTS: double fault detected for content id 1                                   
+(6 rows)
+
+select pg_ctl_start(datadir, port, false) from gp_segment_configuration where role = 'p' and content = 0;
+ pg_ctl_start     
+------------------
+ server starting
+ 
+(1 row)
+
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                                                                   
+------+-------------------------------------------------------------------------------
+ 2    | FTS: update role, status, and mode for dbid 2 with contentid 0 to m, d, and n 
+ 5    | FTS: update role, status, and mode for dbid 5 with contentid 0 to p, u, and n 
+ 5    | FTS: double fault detected for content id 0                                   
+ 3    | FTS: update role, status, and mode for dbid 3 with contentid 1 to p, u, and n 
+ 6    | FTS: update role, status, and mode for dbid 6 with contentid 1 to m, d, and n 
+ 3    | FTS: double fault detected for content id 1                                   
+ 5    | FTS: content id 0 is out of double fault, dbid 5 is up                        
+(7 rows)
+
+select pg_ctl_start(datadir, port, false) from gp_segment_configuration where role = 'p' and content = 1;
+ pg_ctl_start     
+------------------
+ server starting
+ 
+(1 row)
+
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                                                                   
+------+-------------------------------------------------------------------------------
+ 2    | FTS: update role, status, and mode for dbid 2 with contentid 0 to m, d, and n 
+ 5    | FTS: update role, status, and mode for dbid 5 with contentid 0 to p, u, and n 
+ 5    | FTS: double fault detected for content id 0                                   
+ 3    | FTS: update role, status, and mode for dbid 3 with contentid 1 to p, u, and n 
+ 6    | FTS: update role, status, and mode for dbid 6 with contentid 1 to m, d, and n 
+ 3    | FTS: double fault detected for content id 1                                   
+ 5    | FTS: content id 0 is out of double fault, dbid 5 is up                        
+ 3    | FTS: content id 1 is out of double fault, dbid 3 is up                        
+(8 rows)
+
+-- fully recover the failed primary as new mirror
+!\retcode gprecoverseg -aF --no-progress;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+
+!\retcode gprecoverseg -ar;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+
+-- Test for when ftsprobe process is killed
+
+-1U: drop table last_timestamp;
+DROP TABLE
+
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+-- note the last_timestamp in gp_configuration_history, we only need to check entries after this one
+-1U: create table last_timestamp as select time from gp_configuration_history order by time desc limit 1;
+SELECT 1
+
+-- stop primary in order to promote mirror for content 0
+select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'stop');
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+
+-- primary is down, and mirror has now been promoted to primary. Verify
+-1U: select wait_until_segments_are_down(1);
+ wait_until_segments_are_down 
+------------------------------
+ t                            
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                                                                   
+------+-------------------------------------------------------------------------------
+ 2    | FTS: update role, status, and mode for dbid 2 with contentid 0 to m, d, and n 
+ 5    | FTS: update role, status, and mode for dbid 5 with contentid 0 to p, u, and n 
+(2 rows)
+
+-- stop acting primary in order to trigger double fault for content 0
+select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'stop');
+ pg_ctl 
+--------
+ OK     
+(1 row)
+
+-- trigger double fault on content 0 (FTS_PROBE_FAILED)
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                                                                   
+------+-------------------------------------------------------------------------------
+ 2    | FTS: update role, status, and mode for dbid 2 with contentid 0 to m, d, and n 
+ 5    | FTS: update role, status, and mode for dbid 5 with contentid 0 to p, u, and n 
+ 5    | FTS: double fault detected for content id 0                                   
+(3 rows)
+
+-- kill the ftsprobe process.
+!\retcode pkill -f ftsprobe;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+
+-- restarts ftsprobe, we should see another entry for content 0 doublefault into gp_configuration_history
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                                                                   
+------+-------------------------------------------------------------------------------
+ 2    | FTS: update role, status, and mode for dbid 2 with contentid 0 to m, d, and n 
+ 5    | FTS: update role, status, and mode for dbid 5 with contentid 0 to p, u, and n 
+ 5    | FTS: double fault detected for content id 0                                   
+ 5    | FTS: double fault detected for content id 0                                   
+(4 rows)
+
+select pg_ctl_start(datadir, port, false) from gp_segment_configuration where role = 'p' and content = 0;
+ pg_ctl_start     
+------------------
+ server starting
+ 
+(1 row)
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+-1U: select dbid, description from gp_configuration_history where time > (select time from last_timestamp) order by time;
+ dbid | description                                                                   
+------+-------------------------------------------------------------------------------
+ 2    | FTS: update role, status, and mode for dbid 2 with contentid 0 to m, d, and n 
+ 5    | FTS: update role, status, and mode for dbid 5 with contentid 0 to p, u, and n 
+ 5    | FTS: double fault detected for content id 0                                   
+ 5    | FTS: double fault detected for content id 0                                   
+ 5    | FTS: content id 0 is out of double fault, dbid 5 is up                        
+(5 rows)
+
+-- fully recover the failed primary as new mirror
+!\retcode gprecoverseg -aF --no-progress;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+
+!\retcode gprecoverseg -ar;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+
+-1U: drop table last_timestamp;
+DROP TABLE
+
+!\retcode gpconfig -r gp_fts_mark_mirror_down_grace_period;
+-- start_ignore
+-- end_ignore
+(exited with code 0)
+!\retcode gpstop -u;
+-- start_ignore
+-- end_ignore
+(exited with code 0)

@@ -187,8 +187,6 @@ If you specify this value without units, it is taken as seconds. The valid range
 
 Increasing this parameter can increase the amount of time needed for crash recovery.
 
-You can set this parameter only in the `postgresql.conf` file or on the server command line.
-
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |30 - 86400 (integer) |300|local, system, reload|
@@ -1309,6 +1307,10 @@ Sets the tuple-serialization chunk size for the Greenplum Database interconnect.
 Specifies the maximum number of active parallel retrieve cursors allowed on a Greenplum Database cluster. A parallel retrieve cursor is considered active after it has been `DECLARE`d, but before it is `CLOSE`d or returns an error.
 
 The default value is `-1`; there is no limit on the number of open parallel retrieve cursors that may be concurrently active in the cluster \(up to the maximum value of 1024\).
+
+Each parallel retrieve cursor creates upto `N` endpoints, where N is the number of primary segments (including the coordinator) in the cluster. On each primary segment, each endpoint costs a small amount of shared memory and consumes one `retrieve` connection that contributes towards the `max_connections` limit.
+
+This GUC is a way to limit that consumption.
 
 You must be a superuser to change the `gp_max_parallel_cursors` setting.
 

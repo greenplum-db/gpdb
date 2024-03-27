@@ -663,3 +663,159 @@ explain (analyze, costs off, timing off, summary off) insert into test default v
  Optimizer: Postgres query optimizer
 (4 rows)
 
+-- Test delete on partition table with dropped/added columns
+CREATE TABLE part (
+    a int,
+    b int,
+    c text,
+    d numeric)
+DISTRIBUTED BY (b)
+partition by range(a) (
+    start(1) end(6) every(2),
+    default partition def);
+alter table part add column e int;
+insert into part select i, i, 'abc', i*1.01,i from generate_series(1,10)i;
+alter table part drop column b;
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+alter table part set WITH (reorganize=true) distributed by (e);
+-- test delete with dropped column
+explain delete from part where d>9;
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
+ Delete on part  (cost=0.00..671.00 rows=14267 width=10)
+   Delete on part_1_prt_2
+   Delete on part_1_prt_3
+   Delete on part_1_prt_4
+   Delete on part_1_prt_def
+   ->  Seq Scan on part_1_prt_2  (cost=0.00..167.75 rows=3567 width=10)
+         Filter: (d > '9'::numeric)
+   ->  Seq Scan on part_1_prt_3  (cost=0.00..167.75 rows=3567 width=10)
+         Filter: (d > '9'::numeric)
+   ->  Seq Scan on part_1_prt_4  (cost=0.00..167.75 rows=3567 width=10)
+         Filter: (d > '9'::numeric)
+   ->  Seq Scan on part_1_prt_def  (cost=0.00..167.75 rows=3567 width=10)
+         Filter: (d > '9'::numeric)
+ Optimizer: Postgres-based planner
+(14 rows)
+
+delete from part where d>9;
+select count(*) from part;
+ count 
+-------
+     8
+(1 row)
+
+-- test delete with added partition key
+explain delete from part where e=3;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Delete on part  (cost=0.00..671.00 rows=43 width=10)
+   Delete on part_1_prt_2
+   Delete on part_1_prt_3
+   Delete on part_1_prt_4
+   Delete on part_1_prt_def
+   ->  Seq Scan on part_1_prt_2  (cost=0.00..167.75 rows=11 width=10)
+         Filter: (e = 3)
+   ->  Seq Scan on part_1_prt_3  (cost=0.00..167.75 rows=11 width=10)
+         Filter: (e = 3)
+   ->  Seq Scan on part_1_prt_4  (cost=0.00..167.75 rows=11 width=10)
+         Filter: (e = 3)
+   ->  Seq Scan on part_1_prt_def  (cost=0.00..167.75 rows=11 width=10)
+         Filter: (e = 3)
+ Optimizer: Postgres-based planner
+(14 rows)
+
+delete from part where e=3;
+select count(*) from part;
+ count 
+-------
+     7
+(1 row)
+
+-- test delete from default partition
+explain delete from part where a=8;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Delete on part  (cost=0.00..167.75 rows=11 width=10)
+   Delete on part_1_prt_def
+   ->  Seq Scan on part_1_prt_def  (cost=0.00..167.75 rows=11 width=10)
+         Filter: (a = 8)
+ Optimizer: Postgres-based planner
+(5 rows)
+
+delete from part where a=8;
+select count(*) from part;
+ count 
+-------
+     6
+(1 row)
+
+DROP TABLE IF EXISTS part;
+CREATE TABLE part (
+    a int,
+    b int,
+    partkey int,
+    c text,
+    d numeric)
+DISTRIBUTED BY (b)
+partition by range(partkey) (
+    start(1) end(6) every(2),
+    default partition def);
+alter table part add column e int;
+insert into part select i, i, i, 'abc', i*1.01,i from generate_series(1,10)i;
+alter table part drop column b;
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a random distribution policy
+alter table part set WITH (reorganize=true) distributed by (e);
+-- test delete with column order change
+explain delete from part where d>9;
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
+ Delete on part  (cost=0.00..649.33 rows=13689 width=10)
+   Delete on part_1_prt_2
+   Delete on part_1_prt_3
+   Delete on part_1_prt_4
+   Delete on part_1_prt_def
+   ->  Seq Scan on part_1_prt_2  (cost=0.00..162.33 rows=3422 width=10)
+         Filter: (d > '9'::numeric)
+   ->  Seq Scan on part_1_prt_3  (cost=0.00..162.33 rows=3422 width=10)
+         Filter: (d > '9'::numeric)
+   ->  Seq Scan on part_1_prt_4  (cost=0.00..162.33 rows=3422 width=10)
+         Filter: (d > '9'::numeric)
+   ->  Seq Scan on part_1_prt_def  (cost=0.00..162.33 rows=3422 width=10)
+         Filter: (d > '9'::numeric)
+ Optimizer: Postgres-based planner
+(14 rows)
+
+delete from part where d>9;
+select count(*) from part;
+ count 
+-------
+     8
+(1 row)
+
+-- Test delete on mid-level partitions. Ensure Orca properly handles tuple routing
+create table deep_part (
+  i int,
+  j int,
+  k int,
+  s char(5)
+) distributed by (i) partition by list(s) subpartition by range (j) subpartition template (
+  start(1) end(3) every(1)
+) (
+  partition p1
+  values
+    ('A'),
+    partition p2
+  values
+    ('B')
+);
+insert into deep_part values (1,1,1,'A');
+delete from deep_part_1_prt_p1 where j=1;

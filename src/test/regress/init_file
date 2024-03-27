@@ -100,6 +100,10 @@ m/^DEBUG:  time to inline:/
 # Ignore data access indicator notice.
 m/NOTICE:  specifying ".*" acts as no operation./
 
+# Ignore "terminating connection due to administrator command" as the output is
+# not always echoed to the client.
+m/FATAL:  terminating connection due to administrator command/
+
 -- end_matchignore
 
 -- start_matchsubs

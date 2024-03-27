@@ -327,8 +327,13 @@ Datum pg_exttable(PG_FUNCTION_ARGS)
 		 * options. Since our document not contains the OPTION clause, so we
 		 * assume no external table options in used for now.  Except
 		 * gpextprotocol.c.
+		 * 
+		 * Besides, we need to provide extra information about error_log_persisitent here.
 		 */
-		nulls[5] = true;
+		if IS_LOG_ERRORS_PERSISTENTLY(extentry->logerrors)
+			values[5] = strListToArray(list_make1(makeString("error_log_persistent=true")));
+		else
+			nulls[5] = true;
 
 		/* command */
 		if (extentry->command)

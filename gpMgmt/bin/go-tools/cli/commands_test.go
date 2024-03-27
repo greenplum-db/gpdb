@@ -42,6 +42,14 @@ func resetCLIVars() {
 	cli.PrintServicesStatus = cli.PrintServicesStatusFunc
 	cli.StopAgentService = cli.StopAgentServiceFunc
 	cli.StopHubService = cli.StopHubServiceFunc
+	cli.InitClusterService = cli.InitClusterServiceFn
+	cli.LoadInputConfigToIdl = cli.LoadInputConfigToIdlFn
+	cli.ValidateInputConfigAndSetDefaults = cli.ValidateInputConfigAndSetDefaultsFn
+	cli.CheckForDuplicatPortAndDataDirectory = cli.CheckForDuplicatePortAndDataDirectoryFn
+	cli.GetSystemLocale = cli.GetSystemLocaleFn
+	cli.SetDefaultLocale = cli.SetDefaultLocaleFn
+	cli.ParseStreamResponse = cli.ParseStreamResponseFn
+	cli.IsGpServicesEnabled = cli.IsGpServicesEnabledFn
 }
 
 func funcNilError() func() error {

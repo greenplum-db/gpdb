@@ -1,10 +1,4 @@
 -- This file is used to test the feature that there are multiple remote postgres servers.
---
--- start_matchsubs
--- m/\(cost=.*\)/
--- s/\(cost=.*\)//
--- end_matchsubs
-
 -- ===================================================================
 -- create FDW objects
 -- ===================================================================
@@ -228,14 +222,17 @@ ALTER FOREIGN TABLE mpp_ft2 OPTIONS(set use_remote_estimate 'false');
 -- Queries with LIMIT/OFFSET clauses
 -- ===================================================================
 -- Simple query with LIMIT clause is pushed down.
-EXPLAIN (VERBOSE, COSTS OFF)
+EXPLAIN VERBOSE
 SELECT c1, c2 FROM mpp_ft2 order by c1 limit 3;
 SELECT c1, c2 FROM mpp_ft2 order by c1 limit 3;
--- Simple query with OFFSET and LIMIT clause together is NOT pushed down.
--- Because it's unsafe to do offset and limit in multiple remote servers.
-EXPLAIN (VERBOSE, COSTS OFF)
+-- Simple query with OFFSET and LIMIT clause together is pushed down.
+EXPLAIN VERBOSE
 SELECT c1, c2 FROM mpp_ft2 order by c1 offset 2 limit 3;
 SELECT c1, c2 FROM mpp_ft2 order by c1 offset 2 limit 3;
+-- Simple query with only OFFSET clause is NOT pushed down.
+EXPLAIN VERBOSE
+SELECT c1, c2 FROM mpp_ft2 order by c1 offset 998;
+SELECT c1, c2 FROM mpp_ft2 order by c1 offset 998;
 -- Query with aggregates and limit clause together is NOT pushed down.
 -- Because it's unsafe to do partial aggregate and limit in multiple remote servers.
 EXPLAIN (VERBOSE, COSTS OFF)

@@ -5,32 +5,38 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
+	"github.com/greenplum-db/gp-common-go-libs/gplog"
 	"github.com/greenplum-db/gpdb/gp/constants"
 	"github.com/greenplum-db/gpdb/gp/hub"
 	"github.com/greenplum-db/gpdb/gp/utils"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"github.com/greenplum-db/gpdb/gp/utils/greenplum"
 )
 
 var (
 	Platform          = utils.GetPlatform()
 	DefaultServiceDir = Platform.GetDefaultServiceDir()
+	agentPort         int
+	caCertPath        string
+	caKeyPath         string
+	gpHome            string
+	hubLogDir         string
+	hubPort           int
+	hostnames         []string
+	hostfilePath      string
+	serverCertPath    string
+	serverKeyPath     string
+	serviceDir        string // Provide the service file's directory and name separately so users can name different files for different clusters
+	serviceName       string
+	serviceUser       string
 
-	agentPort      int
-	caCertPath     string
-	caKeyPath      string
-	gphome         string
-	hubLogDir      string
-	hubPort        int
-	hostnames      []string
-	hostfilePath   string
-	serverCertPath string
-	serverKeyPath  string
-	serviceDir     string // Provide the service file's directory and name separately so users can name different files for different clusters
-	serviceName    string
-	serviceUser    string
+	GetUlimitSsh = GetUlimitSshFn
 )
 
 func hubCmd() *cobra.Command {
@@ -58,18 +64,18 @@ func RunHub(cmd *cobra.Command, args []string) (err error) {
 
 func configureCmd() *cobra.Command {
 	configureCmd := &cobra.Command{
-		Use:    "configure",
-		Short:  "Configure gp as a systemd daemon",
+		Use:     "configure",
+		Short:   "Configure gp as a systemd daemon",
 		PreRunE: InitializeLogger,
-		RunE:   RunConfigure,
+		RunE:    RunConfigure,
 	}
 
 	viper.AutomaticEnv()
 	// TODO: Adding input validation
 	configureCmd.Flags().IntVar(&agentPort, "agent-port", constants.DefaultAgentPort, `Port on which the agents should listen`)
-	configureCmd.Flags().StringVar(&gphome, "gphome", "/usr/local/greenplum-db", `Path to GPDB installation`)
+	configureCmd.Flags().StringVar(&gpHome, "gphome", "/usr/local/greenplum-db", `Path to GPDB installation`)
 	configureCmd.Flags().IntVar(&hubPort, "hub-port", constants.DefaultHubPort, `Port on which the hub should listen`)
-	configureCmd.Flags().StringVar(&hubLogDir, "log-dir", constants.DefaultHubLogDir, `Path to gp hub log directory`)
+	configureCmd.Flags().StringVar(&hubLogDir, "log-dir", greenplum.GetDefaultHubLogDir(), `Path to gp hub log directory`)
 	configureCmd.Flags().StringVar(&serviceName, "service-name", constants.DefaultServiceName, `Name for the generated systemd service file`)
 	configureCmd.Flags().StringVar(&serviceDir, "service-dir", fmt.Sprintf(DefaultServiceDir, os.Getenv("USER")), `Path to service file directory`)
 	configureCmd.Flags().StringVar(&serviceUser, "service-user", os.Getenv("USER"), `User for whom to configure the service`)
@@ -94,19 +100,19 @@ func configureCmd() *cobra.Command {
 	}
 
 	viper.BindPFlag("gphome", configureCmd.Flags().Lookup("gphome")) // nolint
-	gphome = viper.GetString("gphome")
+	gpHome = viper.GetString("gphome")
 
 	return configureCmd
 }
 
 func RunConfigure(cmd *cobra.Command, args []string) (err error) {
-	if gphome == "" {
-		return fmt.Errorf("not a valid gphome found\n")
+	if gpHome == "" {
+		return fmt.Errorf("not a valid gpHome found\n")
 	}
 
 	// Regenerate default flag values if a custom GPHOME or username is passed
 	if !cmd.Flags().Lookup("config-file").Changed {
-		ConfigFilePath = filepath.Join(gphome, constants.ConfigFileName)
+		ConfigFilePath = filepath.Join(gpHome, constants.ConfigFileName)
 	}
 
 	if cmd.Flags().Lookup("service-user").Changed && !cmd.Flags().Lookup("service-dir").Changed {
@@ -116,13 +122,13 @@ func RunConfigure(cmd *cobra.Command, args []string) (err error) {
 	if !cmd.Flags().Lookup("host").Changed && !cmd.Flags().Lookup("hostfile").Changed {
 		return errors.New("at least one hostname must be provided using either --host or --hostfile")
 	}
-	
+
 	if agentPort == hubPort {
 		return errors.New("hub port and agent port must be different")
 	}
 
 	// Convert file/directory paths to absolute path before writing to gp.Conf file
-	err = resolveAbsolutePaths(cmd)
+	err = resolveAbsolutePaths()
 	if err != nil {
 		return err
 	}
@@ -147,7 +153,7 @@ func RunConfigure(cmd *cobra.Command, args []string) (err error) {
 		Hostnames:   hostnames,
 		LogDir:      hubLogDir,
 		ServiceName: serviceName,
-		GpHome:      gphome,
+		GpHome:      gpHome,
 		Credentials: &utils.GpCredentials{
 			CACertPath:     caCertPath,
 			CAKeyPath:      caKeyPath,
@@ -160,31 +166,99 @@ func RunConfigure(cmd *cobra.Command, args []string) (err error) {
 		return err
 	}
 
-	err = Platform.CreateServiceDir(hostnames, serviceDir, gphome)
+	err = Platform.CreateServiceDir(hostnames, serviceDir, gpHome)
 	if err != nil {
 		return err
 	}
 
-	err = Platform.CreateAndInstallHubServiceFile(gphome, serviceDir, serviceName)
+	err = Platform.CreateAndInstallHubServiceFile(gpHome, serviceDir, serviceName)
 	if err != nil {
 		return err
 	}
 
-	err = Platform.CreateAndInstallAgentServiceFile(hostnames, gphome, serviceDir, serviceName)
+	err = Platform.CreateAndInstallAgentServiceFile(hostnames, gpHome, serviceDir, serviceName)
 	if err != nil {
 		return err
 	}
 
-	err = Platform.EnableUserLingering(hostnames, gphome, serviceUser)
+	err = Platform.EnableUserLingering(hostnames, gpHome, serviceUser)
 	if err != nil {
 		return err
 	}
+	CheckOpenFilesLimitOnHosts(hostnames)
 
 	return nil
 }
 
-func resolveAbsolutePaths(cmd *cobra.Command) error {
-	paths := []*string{&caCertPath, &caKeyPath, &serverCertPath, &serverKeyPath, &hubLogDir, &gphome}
+/*
+CheckOpenFilesLimitOnHosts checks for open files limit by calling ulimit command
+Executes gpssh command to get the ulimit from remote hosts using go routine
+Prints a warning if ulimit is lower.
+This function depends on gpssh. Use only in the configure command.
+*/
+func CheckOpenFilesLimitOnHosts(hostnames []string) {
+	// check Ulimit on local host
+	ulimit, err := utils.ExecuteAndGetUlimit()
+	if err != nil {
+		gplog.Warn(err.Error())
+	} else if ulimit < constants.OsOpenFiles {
+		gplog.Warn("Open files limit for coordinator host. Value set to %d, expected:%d. For proper functioning make sure"+
+			" limit is set properly for system and services before starting gp services.",
+			ulimit, constants.OsOpenFiles)
+	}
+	var wg sync.WaitGroup
+	//Check ulimit on other hosts
+	channel := make(chan Response)
+	for _, host := range hostnames {
+		wg.Add(1)
+		go GetUlimitSsh(host, channel, &wg)
+	}
+	go func() {
+		wg.Wait()
+		close(channel)
+	}()
+	for hostlimits := range channel {
+		if hostlimits.Ulimit < constants.OsOpenFiles {
+			gplog.Warn("Open files limit for host: %s is set to %d, expected:%d. For proper functioning make sure"+
+				" limit is set properly for system and services before starting gp services.",
+				hostlimits.Hostname, hostlimits.Ulimit, constants.OsOpenFiles)
+		}
+	}
+}
+func GetUlimitSshFn(hostname string, channel chan Response, wg *sync.WaitGroup) {
+	defer wg.Done()
+	cmd := utils.System.ExecCommand(filepath.Join(gpHome, "bin", constants.GpSSH), "-h", hostname, "-e", "ulimit -n")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		gplog.Warn("error executing command to fetch open files limit on host:%s, %v", hostname, err)
+		return
+	}
+
+	lines := strings.Split(string(out), "\n")
+	if len(lines) < 2 {
+		gplog.Warn("unexpected output when fetching open files limit on host:%s, gpssh output:%s", hostname, lines)
+		return
+	}
+	values := strings.Split(lines[1], " ")
+	if len(values) < 2 {
+		gplog.Warn("unexpected output when parsing open files limit output for host:%s, gpssh output:%s", hostname, lines)
+		return
+	}
+	ulimit, err := strconv.Atoi(values[1])
+	if err != nil {
+		gplog.Warn("unexpected output when converting open files limit value for host:%s, value:%s", hostname, values[1])
+		return
+	}
+	channel <- Response{Hostname: hostname, Ulimit: ulimit}
+}
+
+type Response struct {
+	Hostname string
+	Ulimit   int
+}
+
+func resolveAbsolutePaths() error {
+	paths := []*string{&caCertPath, &caKeyPath, &serverCertPath, &serverKeyPath, &hubLogDir, &gpHome}
 	for _, path := range paths {
 		p, err := filepath.Abs(*path)
 		if err != nil {

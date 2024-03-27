@@ -11,3 +11,6 @@ test: gpdispatch
 test: check_gxid
 test: sync_guc
 test: upgrade_numsegments
+
+# fts tests
+test: fts_mirrorless

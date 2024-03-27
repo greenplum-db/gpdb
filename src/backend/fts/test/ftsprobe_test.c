@@ -708,6 +708,14 @@ test_PrimayUpMirrorUpNotInSync_to_PrimaryDown(void **state)
 	expect_value(PQfinish, conn, context.perSegInfos[1].conn);
 	will_be_called(PQfinish);
 
+	will_be_called(StartTransactionCommand);
+	will_be_called(GetTransactionSnapshot);
+	expect_value(probeUpdateConfHistory, primary, context.perSegInfos[0].primary_cdbinfo);
+	expect_value(probeUpdateConfHistory, isSegmentAlive, false);
+	expect_value(probeUpdateConfHistory, hasMirrors, true);
+	will_be_called(probeUpdateConfHistory);
+	will_be_called(CommitTransactionCommand);
+
 	/* No update must happen */
 	bool is_updated = processResponse(&context);
 
@@ -1218,6 +1226,14 @@ test_PrimaryUpMirrorDownNotInSync_to_PrimayUpMirrorUpSync(void **state)
 	expect_value(PQfinish, conn, context.perSegInfos[0].conn);
 	will_be_called(PQfinish);
 
+	will_be_called(StartTransactionCommand);
+	will_be_called(GetTransactionSnapshot);
+	expect_value(probeUpdateConfHistory, primary, context.perSegInfos[0].primary_cdbinfo);
+	expect_value(probeUpdateConfHistory, isSegmentAlive, true);
+	expect_value(probeUpdateConfHistory, hasMirrors, true);
+	will_be_called(probeUpdateConfHistory);
+	will_be_called(CommitTransactionCommand);
+
 	bool is_updated = processResponse(&context);
 
 	assert_true(is_updated);
@@ -1297,6 +1313,14 @@ test_PrimaryUpMirrorDownNotInSync_to_PrimaryDown(void **state)
 	will_be_called(PQfinish);
 	expect_value(PQfinish, conn, context.perSegInfos[1].conn);
 	will_be_called(PQfinish);
+
+	will_be_called(StartTransactionCommand);
+	will_be_called(GetTransactionSnapshot);
+	expect_value(probeUpdateConfHistory, primary, context.perSegInfos[0].primary_cdbinfo);
+	expect_value(probeUpdateConfHistory, isSegmentAlive, false);
+	expect_value(probeUpdateConfHistory, hasMirrors, true);
+	will_be_called(probeUpdateConfHistory);
+	will_be_called(CommitTransactionCommand);
 
 	bool is_updated = processResponse(&context);
 

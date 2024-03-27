@@ -131,9 +131,16 @@ main(int argc, char **argv)
 	 * cluster in adjust_data_dir().
 	 *
 	 * GPDB allows for relocateable output with the --output-dir flag
+	 *
+	 * Use make_outputdirs() for the default option; this ensures that there is a
+	 * unique directory for pg_upgrade on the data directory. If not,
+	 * pg_upgrade will fail immediately. The default option will create the directory
+	 * `<data-directory>/pg_upgrade_output.d/<timestamp>` for pg_upgrade. Otherwise, use
+	 * make_outputdirs_gp() when the user knows the exact directory to put the
+	 * files and logs that pg_upgrade generates.
 	 */
 	if ((output_dir = get_output_dir()) != NULL)
-		make_outputdirs(output_dir);
+		make_outputdirs_gp(output_dir);
 	else
 		make_outputdirs(new_cluster.pgdata);
 

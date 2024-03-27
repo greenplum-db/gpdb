@@ -891,10 +891,11 @@ aocs_blkdirscan_get_target_tuple(AOCSScanDesc scan, int64 targrow, TupleTableSlo
 										targrow,
 										&rowsprocessed);
 
-		elog(DEBUG2, "AOBlkDirScan_GetRowNum(segno: %d, col: %d, targrow: %ld): "
-			 "[segfirstrow: %ld, segrowsprocessed: %ld, rownum: %ld, cached_entry_no: %d]",
-			 segno, col, targrow, scan->segfirstrow, scan->segrowsprocessed, rownum,
-			 blkdir->minipages[col].cached_entry_no);
+		elogif(Debug_appendonly_print_datumstream, LOG,
+			   "AOBlkDirScan_GetRowNum(segno: %d, col: %d, targrow: %ld): "
+			   "[segfirstrow: %ld, segrowsprocessed: %ld, rownum: %ld, cached_entry_no: %d]",
+			   segno, col, targrow, scan->segfirstrow, scan->segrowsprocessed, rownum,
+			   blkdir->minipages[col].cached_entry_no);
 
 		if (rownum < 0)
 			continue;
@@ -1039,6 +1040,12 @@ out:
 	/* update rows processed */
 	ds->blockRowsProcessed += rowstoprocess;
 
+	elogif(Debug_appendonly_print_datumstream, LOG,
+		   "aocs_gettuple_column(): [attno: %d, targrow: %ld, startrow: %ld, segno: %d, rownum: %ld, "
+		   "segfirstrow: %ld, segrowsprocessed: %ld, nth: %d, blockRowCount: %d, blockRowsProcessed: %d, ret: %d]",
+		   attno, endrow, startrow, segno, rownum, scan->segfirstrow, scan->segrowsprocessed, datumstreamread_nth(ds),
+		   ds->blockRowCount, ds->blockRowsProcessed, (int)ret);
+
 	return ret;
 }
 
@@ -1094,13 +1101,6 @@ aocs_gettuple(AOCSScanDesc scan, int64 targrow, TupleTableSlot *slot)
 		 */
 		while (true)
 		{
-			elog(DEBUG2, "aocs_gettuple(): [targrow: %ld, currow: %ld, diff: %ld, "
-				 "startrow: %ld, rowcount: %ld, segfirstrow: %ld, segrowsprocessed: %ld, nth: %d, "
-				 "blockRowCount: %d, blockRowsProcessed: %d]", targrow, startrow + rowcount - 1,
-				 startrow + rowcount - 1 - targrow, startrow, rowcount, scan->segfirstrow,
-				 scan->segrowsprocessed, datumstreamread_nth(ds), ds->blockRowCount,
-				 ds->blockRowsProcessed);
-
 			if (datumstreamread_block_info(ds))
 			{
 				rowcount = ds->blockRowCount;
@@ -1229,6 +1229,13 @@ ReadNext:
 		/* If necessary, open next seg */
 		if (scan->cur_seg < 0 || err < 0)
 		{
+			/*
+			 * Bail out early if we do not have any column in the projection.
+			 * Placing here in order to have less impact on the hot path. 
+			 */
+			if (scan->columnScanInfo.num_proj_atts == 0)
+				return false;
+
 			err = open_next_scan_seg(scan);
 			if (err < 0)
 			{
@@ -1239,6 +1246,9 @@ ReadNext:
 			}
 			scan->segrowsprocessed = 0;
 		}
+
+		/* We shouldn't have a 0-column projection as we should've bailed out above */
+		Assert(scan->columnScanInfo.num_proj_atts > 0);
 
 		Assert(scan->cur_seg >= 0);
 		curseginfo = scan->seginfo[scan->cur_seg];

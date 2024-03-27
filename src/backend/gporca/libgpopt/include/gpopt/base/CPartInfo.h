@@ -27,8 +27,6 @@ namespace gpopt
 using namespace gpos;
 using namespace gpmd;
 
-// fwd decl
-class CPartConstraint;
 
 //---------------------------------------------------------------------------
 //	@class:

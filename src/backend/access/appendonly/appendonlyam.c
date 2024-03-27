@@ -1284,12 +1284,13 @@ appendonly_getblock(AppendOnlyScanDesc scan, int64 targrow, int64 *startrow)
 	 */
 	while (true)
 	{
-		elog(DEBUG2, "appendonly_getblock(): [targrow: %ld, currow: %ld, diff: %ld, "
-			 "startrow: %ld, rowcount: %ld, segfirstrow: %ld, segrowsprocessed: %ld, "
-			 "blockRowsProcessed: %ld, blockRowCount: %d]", targrow, *startrow + rowcount - 1,
-			 *startrow + rowcount - 1 - targrow, *startrow, rowcount, scan->segfirstrow,
-			 scan->segrowsprocessed, varblock->blockRowsProcessed,
-			 varblock->rowCount);
+		elogif(Debug_appendonly_print_scan, LOG,
+			   "appendonly_getblock(): [targrow: %ld, currow: %ld, diff: %ld, "
+			   "startrow: %ld, rowcount: %ld, segfirstrow: %ld, segrowsprocessed: %ld, "
+			   "blockRowsProcessed: %ld, blockRowCount: %d]", targrow, *startrow + rowcount - 1,
+			   *startrow + rowcount - 1 - targrow, *startrow, rowcount, scan->segfirstrow,
+			   scan->segrowsprocessed, varblock->blockRowsProcessed,
+			   varblock->rowCount);
 
 		if (AppendOnlyExecutorReadBlock_GetBlockInfo(&scan->storageRead, varblock))
 		{
@@ -1381,10 +1382,11 @@ appendonly_blkdirscan_get_target_tuple(AppendOnlyScanDesc scan, int64 targrow, T
 									targrow,
 									&rowsprocessed);
 
-	elog(DEBUG2, "AOBlkDirScan_GetRowNum(segno: %d, col: %d, targrow: %ld): "
-		 "[segfirstrow: %ld, segrowsprocessed: %ld, rownum: %ld, cached_entry_no: %d]",
-		 segno, 0, targrow, scan->segfirstrow, scan->segrowsprocessed, rownum,
-		 blkdir->minipages[0].cached_entry_no);
+	elogif(Debug_appendonly_print_scan, LOG,
+		   "AOBlkDirScan_GetRowNum(segno: %d, col: %d, targrow: %ld): "
+		   "[segfirstrow: %ld, segrowsprocessed: %ld, rownum: %ld, cached_entry_no: %d]",
+		   segno, 0, targrow, scan->segfirstrow, scan->segrowsprocessed, rownum,
+		   blkdir->minipages[0].cached_entry_no);
 	
 	if (rownum < 0)
 		return false;
@@ -1451,7 +1453,8 @@ appendonly_get_target_tuple(AppendOnlyScanDesc aoscan, int64 targrow, TupleTable
 	Assert(rowsprocessed + varblock->rowCount - 1 >= targrow);
 	rownum = varblock->blockFirstRowNum + (targrow - rowsprocessed);
 
-	elog(DEBUG2, "appendonly_getblock() returns: [segno: %d, rownum: %ld]", segno, rownum);
+	elogif(Debug_appendonly_print_scan, LOG,
+		   "appendonly_getblock() returns: [segno: %d, rownum: %ld]", segno, rownum);
 
 	/* form the target tuple TID */
 	AOTupleIdInit(&aotid, segno, rownum);

@@ -30,13 +30,13 @@ func TestMain(m *testing.M) {
 	os.Exit(exectest.Run(m))
 }
 
-func setMocks(t *testing.T) {
+func setMocks() {
 	utils.GpsyncCommand = nil
 	utils.LoadServiceCommand = nil
 	utils.UnloadServiceCommand = nil
 }
 
-func resetMocks(t *testing.T) {
+func resetMocks() {
 	utils.GpsyncCommand = exec.Command
 	utils.LoadServiceCommand = exec.Command
 	utils.UnloadServiceCommand = exec.Command
@@ -51,7 +51,7 @@ func TestCreateServiceDir(t *testing.T) {
 		utils.SetExecCommand(exectest.NewCommand(exectest.Failure))
 		defer utils.ResetExecCommand()
 
-		err := platform.CreateServiceDir([]string{"host1"}, "path/to/serviceDir", "gphome")
+		err := platform.CreateServiceDir([]string{"host1"}, "path/to/serviceDir", "gpHome")
 		if err.Error() != "could not create service directory path/to/serviceDir on hosts: exit status 1" {
 			t.Fatalf("unexpected error: %#v", err)
 		}
@@ -63,7 +63,7 @@ func TestCreateServiceDir(t *testing.T) {
 		utils.SetExecCommand(exectest.NewCommand(exectest.Success))
 		defer utils.ResetExecCommand()
 
-		err := platform.CreateServiceDir([]string{"host1"}, "path/to/serviceDir", "gphome")
+		err := platform.CreateServiceDir([]string{"host1"}, "path/to/serviceDir", "gpHome")
 		if err != nil {
 			t.Fatalf("unexpected error: %#v", err)
 		}
@@ -164,6 +164,8 @@ Type=simple
 Environment=GPHOME=/test
 ExecStart=/test/bin/gp hub
 Restart=on-failure
+StandardOutput=file:/tmp/grpc_hub.log
+StandardError=file:/tmp/grpc_hub.log
 
 [Install]
 Alias=gp_hub.service
@@ -218,8 +220,8 @@ func TestReloadServices(t *testing.T) {
 			var err error
 			platform := GetPlatform(tc.os, t)
 
-			setMocks(t)
-			defer resetMocks(t)
+			setMocks()
+			defer resetMocks()
 			utils.UnloadServiceCommand = exectest.NewCommand(exectest.Success)
 			utils.LoadServiceCommand = exectest.NewCommand(exectest.Success)
 
@@ -229,7 +231,7 @@ func TestReloadServices(t *testing.T) {
 			if tc.service == "hub" {
 				err = platform.ReloadHubService("/path/to/service/file")
 			} else {
-				err = platform.ReloadAgentService("gphome", []string{"host1"}, "/path/to/service/file")
+				err = platform.ReloadAgentService("gpHome", []string{"host1"}, "/path/to/service/file")
 			}
 
 			if err != nil {
@@ -247,15 +249,15 @@ func TestReloadServices(t *testing.T) {
 			var err error
 			platform := GetPlatform(tc.os, t)
 
-			setMocks(t)
-			defer resetMocks(t)
+			setMocks()
+			defer resetMocks()
 			utils.UnloadServiceCommand = exectest.NewCommand(exectest.Failure)
 			utils.LoadServiceCommand = exectest.NewCommand(exectest.Success)
 
 			if tc.service == "hub" {
 				err = platform.ReloadHubService("/path/to/service/file")
 			} else {
-				err = platform.ReloadAgentService("gphome", []string{"host1"}, "/path/to/service/file")
+				err = platform.ReloadAgentService("gpHome", []string{"host1"}, "/path/to/service/file")
 			}
 
 			expectedErr := fmt.Sprintf("could not unload %s service file /path/to/service/file%s: exit status 1", tc.service, tc.errSuffix)
@@ -268,15 +270,15 @@ func TestReloadServices(t *testing.T) {
 			var err error
 			platform := GetPlatform(constants.PlatformDarwin, t)
 
-			setMocks(t)
-			defer resetMocks(t)
+			setMocks()
+			defer resetMocks()
 			utils.UnloadServiceCommand = exectest.NewCommand(exectest.Success)
 			utils.LoadServiceCommand = exectest.NewCommand(exectest.Failure)
 
 			if tc.service == "hub" {
 				err = platform.ReloadHubService("/path/to/service/file")
 			} else {
-				err = platform.ReloadAgentService("gphome", []string{"host1"}, "/path/to/service/file")
+				err = platform.ReloadAgentService("gpHome", []string{"host1"}, "/path/to/service/file")
 			}
 
 			expectedErr := fmt.Sprintf("could not load %s service file /path/to/service/file%s: exit status 1", tc.service, tc.errSuffix)
@@ -302,7 +304,7 @@ func TestReloadServices(t *testing.T) {
 			if tc.service == "hub" {
 				err = platform.ReloadHubService("/path/to/service/file")
 			} else {
-				err = platform.ReloadAgentService("gphome", []string{"host1"}, "/path/to/service/file")
+				err = platform.ReloadAgentService("gpHome", []string{"host1"}, "/path/to/service/file")
 			}
 
 			expectedErr := fmt.Sprintf("could not reload %s service file /path/to/service/file%s: exit status 1", tc.service, tc.errSuffix)
@@ -327,7 +329,7 @@ func TestCreateAndInstallHubServiceFile(t *testing.T) {
 		utils.SetExecCommand(exectest.NewCommand(exectest.Success))
 		defer utils.ResetExecCommand()
 
-		err := platform.CreateAndInstallHubServiceFile("gphome", "testdir", "gptest")
+		err := platform.CreateAndInstallHubServiceFile("gpHome", "testdir", "gptest")
 		if err != nil {
 			t.Fatalf("unexpected error: %#v", err)
 		}
@@ -344,7 +346,7 @@ func TestCreateAndInstallHubServiceFile(t *testing.T) {
 		utils.SetExecCommand(exectest.NewCommand(exectest.Success))
 		defer utils.ResetExecCommand()
 
-		err := platform.CreateAndInstallHubServiceFile("gphome", "testdir", "gptest")
+		err := platform.CreateAndInstallHubServiceFile("gpHome", "testdir", "gptest")
 		expectedErr := os.ErrPermission
 		if !errors.Is(err, expectedErr) {
 			t.Fatalf("got %q, want %q", err, expectedErr)
@@ -362,7 +364,7 @@ func TestCreateAndInstallHubServiceFile(t *testing.T) {
 		utils.SetExecCommand(exectest.NewCommand(exectest.Failure))
 		defer utils.ResetExecCommand()
 
-		err := platform.CreateAndInstallHubServiceFile("gphome", "testdir", "gptest")
+		err := platform.CreateAndInstallHubServiceFile("gpHome", "testdir", "gptest")
 		expectedErr := "could not reload hub service file testdir/gptest_hub.service: exit status 1"
 		if err.Error() != expectedErr {
 			t.Fatalf("got %q, want %q", err, expectedErr)
@@ -381,8 +383,8 @@ func TestCreateAndInstallAgentServiceFile(t *testing.T) {
 		})
 		defer utils.ResetWriteServiceFileFunc()
 
-		setMocks(t)
-		defer resetMocks(t)
+		setMocks()
+		defer resetMocks()
 		utils.GpsyncCommand = exectest.NewCommandWithVerifier(exectest.Success, func(utility string, args ...string) {
 			if !strings.HasSuffix(utility, "gpsync") {
 				t.Fatalf("got %q, want gpsync", utility)
@@ -397,7 +399,7 @@ func TestCreateAndInstallAgentServiceFile(t *testing.T) {
 		utils.SetExecCommand(exectest.NewCommand(exectest.Success))
 		defer utils.ResetExecCommand()
 
-		err := platform.CreateAndInstallAgentServiceFile([]string{"host1", "host2"}, "gphome", "testdir", "gptest")
+		err := platform.CreateAndInstallAgentServiceFile([]string{"host1", "host2"}, "gpHome", "testdir", "gptest")
 		if err != nil {
 			t.Fatalf("unexpected error: %#v", err)
 		}
@@ -411,8 +413,8 @@ func TestCreateAndInstallAgentServiceFile(t *testing.T) {
 		})
 		defer utils.ResetWriteServiceFileFunc()
 
-		setMocks(t)
-		defer resetMocks(t)
+		setMocks()
+		defer resetMocks()
 		utils.GpsyncCommand = exectest.NewCommandWithVerifier(exectest.Failure, func(utility string, args ...string) {
 			if !strings.HasSuffix(utility, "gpsync") {
 				t.Fatalf("got %q, want gpsync", utility)
@@ -427,7 +429,7 @@ func TestCreateAndInstallAgentServiceFile(t *testing.T) {
 		utils.SetExecCommand(exectest.NewCommand(exectest.Success))
 		defer utils.ResetExecCommand()
 
-		err := platform.CreateAndInstallAgentServiceFile([]string{"host1", "host2"}, "gphome", "testdir", "gptest")
+		err := platform.CreateAndInstallAgentServiceFile([]string{"host1", "host2"}, "gpHome", "testdir", "gptest")
 		expectedErr := "could not copy agent service files to segment hosts: exit status 1"
 		if err.Error() != expectedErr {
 			t.Fatalf("got %q, want %q", err, expectedErr)
@@ -442,14 +444,14 @@ func TestCreateAndInstallAgentServiceFile(t *testing.T) {
 		})
 		defer utils.ResetWriteServiceFileFunc()
 
-		setMocks(t)
-		defer resetMocks(t)
+		setMocks()
+		defer resetMocks()
 		utils.GpsyncCommand = exectest.NewCommand(exectest.Success)
 
 		utils.SetExecCommand(exectest.NewCommand(exectest.Success))
 		defer utils.ResetExecCommand()
 
-		err := platform.CreateAndInstallAgentServiceFile([]string{"host1", "host2"}, "gphome", "testdir", "gptest")
+		err := platform.CreateAndInstallAgentServiceFile([]string{"host1", "host2"}, "gpHome", "testdir", "gptest")
 		expectedErr := os.ErrPermission
 		if !errors.Is(err, expectedErr) {
 			t.Fatalf("got %q, want %q", err, expectedErr)
@@ -464,14 +466,14 @@ func TestCreateAndInstallAgentServiceFile(t *testing.T) {
 		})
 		defer utils.ResetWriteServiceFileFunc()
 
-		setMocks(t)
-		defer resetMocks(t)
+		setMocks()
+		defer resetMocks()
 		utils.GpsyncCommand = exectest.NewCommand(exectest.Success)
 
 		utils.SetExecCommand(exectest.NewCommand(exectest.Failure))
 		defer utils.ResetExecCommand()
 
-		err := platform.CreateAndInstallAgentServiceFile([]string{"host1", "host2"}, "gphome", "testdir", "gptest")
+		err := platform.CreateAndInstallAgentServiceFile([]string{"host1", "host2"}, "gpHome", "testdir", "gptest")
 		expectedErr := "could not reload agent service file testdir/gptest_agent.service on segment hosts: exit status 1"
 		if err.Error() != expectedErr {
 			t.Fatalf("got %q, want %q", err, expectedErr)
@@ -658,12 +660,14 @@ func TestParseServiceStatusMessage(t *testing.T) {
 			name: "ParseServiceStatusMessage gets status for linux when service is running",
 			os:   constants.PlatformLinux,
 			message: `
-			ExecMainStartTimestamp=Sun 2023-08-20 14:43:35 UTC
+			ActiveEnterTimestamp=Sun 2023-08-20 14:43:35 UTC
+			ExecMainStartTimestamp=Sat 2022-09-12 16:31:03 UTC
 			ExecMainStartTimestampMonotonic=286453245
 			ExecMainExitTimestampMonotonic=0
-			ExecMainPID=83008
+			ExecMainPID=83001
 			ExecMainCode=0
 			ExecMainStatus=0
+			MainPID=83008
 			`,
 			expected: &idl.ServiceStatus{Status: "running", Uptime: "Sun 2023-08-20 14:43:35 UTC", Pid: uint32(83008)},
 		},
@@ -673,9 +677,10 @@ func TestParseServiceStatusMessage(t *testing.T) {
 			message: `
 			ExecMainStartTimestampMonotonic=286453245
 			ExecMainExitTimestampMonotonic=0
-			ExecMainPID=0
+			ExecMainPID=83001
 			ExecMainCode=0
 			ExecMainStatus=0
+			MainPID=0
 			`,
 			expected: &idl.ServiceStatus{Status: "not running", Pid: uint32(0)},
 		},
@@ -746,7 +751,7 @@ func TestEnableUserLingering(t *testing.T) {
 		utils.SetExecCommand(exectest.NewCommand(exectest.Success))
 		defer utils.ResetExecCommand()
 
-		err := platform.EnableUserLingering([]string{"host1", "host2"}, "/path/to/gphome", "serviceUser")
+		err := platform.EnableUserLingering([]string{"host1", "host2"}, "/path/to/gpHome", "serviceUser")
 		if err != nil {
 			t.Fatalf("unexpected error: %#v", err)
 		}
@@ -755,7 +760,7 @@ func TestEnableUserLingering(t *testing.T) {
 	t.Run("EnableUserLingering runs successfully for other platforms", func(t *testing.T) {
 		platform := GetPlatform(constants.PlatformDarwin, t)
 
-		err := platform.EnableUserLingering([]string{"host1", "host2"}, "path/to/gphome", "serviceUser")
+		err := platform.EnableUserLingering([]string{"host1", "host2"}, "path/to/gpHome", "serviceUser")
 		if err != nil {
 			t.Fatalf("unexpected error: %#v", err)
 		}
@@ -766,7 +771,7 @@ func TestEnableUserLingering(t *testing.T) {
 		utils.SetExecCommand(exectest.NewCommand(exectest.Failure))
 		defer utils.ResetExecCommand()
 
-		err := platform.EnableUserLingering([]string{"host1", "host2"}, "path/to/gphome", "serviceUser")
+		err := platform.EnableUserLingering([]string{"host1", "host2"}, "path/to/gpHome", "serviceUser")
 		expected := "could not enable user lingering: exit status 1"
 		if err.Error() != expected {
 			t.Fatalf("got %q, want %q", err, expected)

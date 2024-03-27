@@ -75,7 +75,9 @@ extern bool FtsIsActive(void);
 extern void HandleFtsMessage(const char* query_string);
 extern void probeWalRepUpdateConfig(int16 dbid, int16 segindex, char role,
 									bool IsSegmentAlive, bool IsInSync);
-
+extern void probeUpdateConfHistory(const CdbComponentDatabaseInfo *primary,
+									bool isSegmentAlive,
+									bool hasMirrors);
 extern bool FtsProbeStartRule(Datum main_arg);
 extern void FtsProbeMain (Datum main_arg);
 extern pid_t FtsProbePID(void);

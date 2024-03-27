@@ -271,7 +271,7 @@ func TestConfigureSuccess(t *testing.T) {
 		testutils.CleanupFilesOnAgents(agentFile, hosts)
 	})
 
-	t.Run("configure service with changing gphome value", func(t *testing.T) {
+	t.Run("configure service with changing gpHome value", func(t *testing.T) {
 		cliParams := []string{
 			"--hostfile", *hostfile,
 			"--gphome", os.Getenv("GPHOME"),

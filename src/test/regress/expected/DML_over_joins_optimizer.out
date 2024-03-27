@@ -1681,25 +1681,24 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 explain (costs off) delete from tab1 using tab2, tab3 where tab1.a = tab2.a and tab1.b = tab3.b;
 NOTICE:  One or more columns in the following table(s) do not have statistics: tab2
 HINT:  For non-partitioned tables, run analyze <table_name>(<column_list>). For partitioned tables, run analyze rootpartition <table_name>(<column_list>). See log for columns missing statistics.
-                                  QUERY PLAN                                  
-------------------------------------------------------------------------------
+                                     QUERY PLAN
+------------------------------------------------------------------------------------
  Delete on tab1
-   ->  Result
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)
-               Hash Key: tab1.b
-               ->  Hash Join
-                     Hash Cond: (tab2.a = tab1.a)
-                     ->  Seq Scan on tab2
-                     ->  Hash
-                           ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                 Hash Key: tab1.a
-                                 ->  Hash Join
-                                       Hash Cond: (tab3.b = tab1.b)
-                                       ->  Seq Scan on tab3
-                                       ->  Hash
-                                             ->  Seq Scan on tab1
- Optimizer: Pivotal Optimizer (GPORCA) version 3.86.0
-(16 rows)
+   ->  Hash Join
+         Hash Cond: (tab3.b = tab1.b)
+         ->  Seq Scan on tab3
+         ->  Hash
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                     Hash Key: tab1.b
+                     ->  Hash Join
+                           Hash Cond: (tab2.a = tab1.a)
+                           ->  Seq Scan on tab2
+                           ->  Hash
+                                 ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                       Hash Key: tab1.a
+                                       ->  Seq Scan on tab1
+ Optimizer: GPORCA
+(15 rows)
 
 -- ----------------------------------------------------------------------
 -- Test delete on partition table from join on another partition table

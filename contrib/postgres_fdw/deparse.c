@@ -58,6 +58,7 @@
 #include "utils/rel.h"
 #include "utils/syscache.h"
 #include "utils/typcache.h"
+#include "parser/parse_oper.h"
 
 
 /*
@@ -3517,19 +3518,61 @@ appendLimitClause(deparse_expr_cxt *context)
 	PlannerInfo *root = context->root;
 	StringInfo	buf = context->buf;
 	int			nestlevel;
+	RelOptInfo	*foreignrel = context->foreignrel;
 
 	/* Make sure any constants in the exprs are printed portably */
 	nestlevel = set_transmission_modes();
 
-	if (root->parse->limitCount)
+	if (foreignrel->exec_location != FTEXECLOCATION_ALL_SEGMENTS)
 	{
-		appendStringInfoString(buf, " LIMIT ");
-		deparseExpr((Expr *) root->parse->limitCount, context);
+		if (root->parse->limitCount)
+		{
+			appendStringInfoString(buf, " LIMIT ");
+			deparseExpr((Expr *) root->parse->limitCount, context);
+		}
+		if (root->parse->limitOffset)
+		{
+			appendStringInfoString(buf, " OFFSET ");
+			deparseExpr((Expr *) root->parse->limitOffset, context);
+		}
 	}
-	if (root->parse->limitOffset)
+	else
 	{
-		appendStringInfoString(buf, " OFFSET ");
-		deparseExpr((Expr *) root->parse->limitOffset, context);
+		/*
+		 * If mpp_execute = 'all segments', we can add a preliminary LIMIT
+		 * on the partitioned results.
+		 * This may reduce the number of tuples that we need to fetch from remote servers.
+		 */
+		Node	   *precount = copyObject(root->parse->limitCount);
+
+		/*
+		 * If we've specified both OFFSET and LIMIT clause,
+		 * it's enough to fetch tuples from 0 to limitCount + limitOffset from remote servers.
+		 */
+		if (precount)
+		{
+			if (root->parse->limitOffset)
+			{
+				ParseState *pstate = make_parsestate(NULL);
+				/*
+				 * we should explicitly specify the schema of operator "+",
+				 * to avoid misuse user defined operator "+".
+				 */
+				precount = (Node *) make_op(pstate,
+											list_make2(makeString("pg_catalog"), makeString(pstrdup("+"))),
+											copyObject(root->parse->limitOffset),
+											precount,
+											NULL,
+											-1);
+			}
+
+			appendStringInfoString(buf, " LIMIT ");
+			deparseExpr((Expr *) precount, context);
+		}
+		/*
+		 * If LIMIT clause is NOT specified, we need to fetch all tuple of foreign table.
+		 * So here we don't append LIMIT to Remote SQL.
+		 */
 	}
 
 	reset_transmission_modes(nestlevel);

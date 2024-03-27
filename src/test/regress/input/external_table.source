@@ -297,6 +297,23 @@ SELECT encoding from gp_dist_random('pg_exttable') where urilocation='{gpfdist:/
 DROP FOREIGN TABLE issue_9727;
 RESET client_encoding;
 
+-- Test external table location escape
+-- GitHub Issue #17179: https://github.com/greenplum-db/gpdb/issues/17179
+CREATE READABLE EXTERNAL TABLE public.test_ext
+(
+  id integer
+)
+LOCATION(
+  'file://gpdev/tmp/test1|.|tx||t|||',
+  'file://gpdev/tmp/test2|.|tx||t||||'
+)
+FORMAT 'TEXT' (
+  delimiter 'off' null E'\\N' escape E'\\'
+)
+ENCODING 'UTF8'
+LOG ERRORS PERSISTENTLY SEGMENT REJECT LIMIT 10 PERCENT;
+SELECT urilocation FROM pg_exttable WHERE reloid = 'public.test_ext'::regclass;
+DROP EXTERNAL TABLE public.test_ext;
 --
 -- WET tests
 --
@@ -3670,9 +3687,9 @@ CREATE EXTERNAL TABLE ext_persistently (c INT)
 location ('file://@hostname@@abs_srcdir@/data/ext_persistently.tbl' )
 FORMAT 'text' (delimiter '|') LOG ERRORS PERSISTENTLY SEGMENT REJECT LIMIT 100;
 
-SELECT logerrors from pg_exttable a, pg_class b where a.reloid = b.oid and b.relname = 'ext_false';
-SELECT logerrors from pg_exttable a, pg_class b where a.reloid = b.oid and b.relname = 'ext_true';
-SELECT logerrors from pg_exttable a, pg_class b where a.reloid = b.oid and b.relname = 'ext_persistently';
+SELECT logerrors, options from pg_exttable a, pg_class b where a.reloid = b.oid and b.relname = 'ext_false';
+SELECT logerrors, options from pg_exttable a, pg_class b where a.reloid = b.oid and b.relname = 'ext_true';
+SELECT logerrors, options from pg_exttable a, pg_class b where a.reloid = b.oid and b.relname = 'ext_persistently';
 
 -- drop tables
 DROP EXTERNAL TABLE ext_false;

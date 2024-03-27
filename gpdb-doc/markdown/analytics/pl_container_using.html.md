@@ -368,7 +368,7 @@ Record the name of the GPU device ID (0 in the above example) or the device UUID
         <image>localhost/plcontainer_python3_cuda_shared:latest</image> 
         <command>/clientdir/py3client.sh</command> 
         <setting roles="gpadmin"/> 
-        <shared_directory access="ro" container="/clientdir" host="/home/sa/GPDB/install/bin/plcontainer_clients"/> 
+        <shared_directory access="ro" container="/clientdir" host="/usr/local/greenplum-db/bin/plcontainer_clients"/> 
         <device_request type="gpu"> 
             <deviceid>0</deviceid> 
         </device_request> 
@@ -472,8 +472,8 @@ You may configure one or more hosts outside your Greenplum cluster to use as a r
 
 ### <a id="prereq"></a>Prerequisites
 
-- You are using PL/Container version XX
-- You are using Docker version XX
+- You are using PL/Container version 2.4.0.
+- You are using a Docker installation with a Docker engine version v19.03 or newer.
 - You have root or sudo permission on the remote host.
 
 ### <a id="setup_host"></a>Configure the Remote Host
@@ -552,6 +552,7 @@ This command provides the PL/Container configuration XML file. Add the backend s
 		<command>/clientdir/py3client.sh</command> 
 		<shared_directory access="ro" container="/clientdir" host="/home/sa/GPDB/install/bin/plcontainer_clients"/> 
 		<backend name="calculate_cluster" /> 
+		<setting enable_network="yes" roles="gpadmin" /> 
 	</runtime> 
 </configuration> 
 ```

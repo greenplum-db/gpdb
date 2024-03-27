@@ -361,20 +361,6 @@ typedef union Datum_U
 
 #define SIZEOF_DATUM 8
 
-typedef Datum *DatumPtr;
-
-#define GET_1_BYTE(datum)	(((Datum) (datum)) & 0x000000ff)
-#define GET_2_BYTES(datum)	(((Datum) (datum)) & 0x0000ffff)
-#define GET_4_BYTES(datum)	(((Datum) (datum)) & 0xffffffff)
-#if SIZEOF_DATUM == 8
-#define GET_8_BYTES(datum)	((Datum) (datum))
-#endif
-#define SET_1_BYTE(value)	(((Datum) (value)) & 0x000000ff)
-#define SET_2_BYTES(value)	(((Datum) (value)) & 0x0000ffff)
-#define SET_4_BYTES(value)	(((Datum) (value)) & 0xffffffff)
-#if SIZEOF_DATUM == 8
-#define SET_8_BYTES(value)	((Datum) (value))
-#endif
 /*
  * A NullableDatum is used in places where both a Datum and its nullness needs
  * to be stored. This can be more efficient than storing datums and nullness
