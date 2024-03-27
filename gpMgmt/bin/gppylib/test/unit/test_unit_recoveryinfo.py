@@ -1,3 +1,4 @@
+import os
 from mock import call, Mock, patch
 
 from .gp_unittest import Contains, GpTestCase
@@ -516,3 +517,33 @@ class RecoveryResultTestCase(GpTestCase):
                 dbids_that_passed_bb_rewind = self.all_dbids - set(dbids_that_failed_bb_rewind)
                 for pass_dbid in dbids_that_passed_bb_rewind:
                     self.assertTrue(r.was_bb_rewind_rsync_successful(pass_dbid))
+
+    def test_get_last_reported_error(self):
+        recovery_result = RecoveryResult('action',[], None)
+        expected_err = recovery_result.get_last_reported_error("", "")
+        self.assertEqual(expected_err, "None")
+
+        test_start_err = "2023-12-20 10:43:39.648149 startup logfile error"
+        expected_err = recovery_result.get_last_reported_error("", test_start_err)
+        self.assertEqual(expected_err, "2023-12-20 10:43:39.648149 startup logfile error")
+
+        test_gpdb_err = "2023-12-20 10:56:00.069632 gpdb logfile error"
+        expected_err = recovery_result.get_last_reported_error(test_gpdb_err, test_start_err)
+        self.assertEqual(expected_err, "2023-12-20 10:56:00.069632 gpdb logfile error")
+
+    def test_get_current_logfile_path(self):
+        coordinator_datadir = os.environ.get('COORDINATOR_DATA_DIRECTORY')
+        if not coordinator_datadir:
+            coordinator_datadir = os.environ.get('MASTER_DATA_DIRECTORY')
+
+        self.assertIsNotNone(coordinator_datadir)
+
+        host = os.environ.get('HOSTNAME')
+        if not host:
+            host = os.environ.get('PGHOST')
+
+        self.assertIsNotNone(host)
+
+        recovery_result = RecoveryResult('action', [], None)
+        result_path = recovery_result.get_current_logfile_path(coordinator_datadir, host)
+        self.assertRegex(result_path, 'log/gpdb-\d{4}-\d{2}-\d{2}_\d+\.csv$')

@@ -1,8 +1,10 @@
 from collections import defaultdict
 import datetime
 import json
+import os
 
 from gppylib import gplog
+from gppylib.commands.base import Command, REMOTE
 
 
 class RecoveryInfo(object):
@@ -187,8 +189,65 @@ class RecoveryResult(object):
                     self._logger.error(setup_recovery_error_pattern.format(hostname, error.port, error.error_msg))
         self._print_invalid_errors()
 
+    def get_timestamp(self, errLine):
+        date_str = errLine.split()[0]
+        time_str = errLine.split()[1]
+        timestamp_str = date_str + " " + time_str
+        return datetime.datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S.%f')
+
+
+    def get_last_reported_error(self, gpdb_err, start_err):
+        """
+        Segment startup related errors can be either reported in startup.log or gpdb*.csv file.
+        This depends on when the error is encountered during postmaster startup process.
+        This function fetches and compares the timestamp of errors found in both the files and returns the
+        error with latest timestamp.
+        """
+        if not gpdb_err and not start_err:
+            return "None"
+        if not gpdb_err:
+            return start_err
+        if not start_err:
+            return gpdb_err
+
+        timestamp1 = self.get_timestamp(gpdb_err)
+        timestamp2 = self.get_timestamp(start_err)
+        if timestamp1 >= timestamp2:
+            return gpdb_err
+
+        return start_err
+
+    def get_current_logfile_path(self, datadir, hostname):
+        current_logfile_path = os.path.join(datadir, 'current_logfiles')
+        cmdStr = "set -o pipefail; cat {} | awk '{{print $ 2}}'".format(current_logfile_path)
+        cmd = Command(name="Get current logfile that has startUp errors", cmdStr=cmdStr, ctxt=REMOTE, remoteHost=hostname)
+        cmd.run()
+
+        if cmd.get_results().rc != 0:
+            self._logger.warn("Failed to read current_logfile %s" % current_logfile_path)
+            return None
+
+        return cmd.get_results().stdout.strip()
+
+    def get_error_from_logfile(self, progress_file, hostname):
+        """
+        Traverse the error file to fetch last registered occurrence of 'error, panic or fatal'.
+        'fatal: postgres single-user mode of target instance failed for command' is removed from the search pattern
+        as it is logged after every failed pg_rewind operation.
+        To ensure grep doesn't return a non-zero exit code, it is ORed with true.
+        """
+        cmdStr = 'set -o pipefail; cat {} | (grep -i "ERROR\|PANIC\|FATAL" | grep -v "fatal: postgres single-user mode of target instance failed for command" || true) | tail -1'.format(progress_file)
+        cmd = Command(name="Parse logfile for errors on a remote host", cmdStr=cmdStr, ctxt=REMOTE, remoteHost=hostname)
+        cmd.run()
+
+        if cmd.get_results().rc != 0:
+            self._logger.debug("Failed while parsing the logfile %s" % progress_file)
+            return None
+
+        return cmd.get_results().stdout.strip()
+
     def print_bb_rewind_differential_update_and_start_errors(self):
-        bb_rewind_differential_error_pattern = " hostname: {}; port: {}; logfile: {}; recoverytype: {}"
+        bb_rewind_differential_error_pattern = " hostname: {}; port: {}; logfile: {}; recoverytype: {}; error: {}"
         if len(self._bb_errors) > 0 or len(self._rewind_errors) > 0 or len(self._differential_errors) > 0:
             self._logger.info("----------------------------------------------------------")
             if len(self._rewind_errors) > 0:
@@ -202,26 +261,42 @@ class RecoveryResult(object):
             for hostname, errors in self._rewind_errors.items():
                 for error in errors:
                     self._logger.info(bb_rewind_differential_error_pattern.format(hostname, error.port, error.progress_file,
-                                                                     error.error_type))
+                                                                     error.error_type, self.get_error_from_logfile(error.progress_file, hostname)))
 
             for hostname, errors in self._differential_errors.items():
                 for error in errors:
                     self._logger.info(bb_rewind_differential_error_pattern.format(hostname, error.port, error.progress_file,
-                                                                     error.error_type))
+                                                                     error.error_type, self.get_error_from_logfile(error.progress_file, hostname)))
             for hostname, errors in self._bb_errors.items():
                 for error in errors:
                     self._logger.info(bb_rewind_differential_error_pattern.format(hostname, error.port, error.progress_file,
-                                                                 error.error_type))
+                                                                 error.error_type, self.get_error_from_logfile(error.progress_file, hostname)))
 
         if len(self._start_errors) > 0:
-            start_error_pattern = " hostname: {}; port: {}; datadir: {}"
+            start_error_pattern = " hostname: {}; port: {}; datadir: {}; error: {}"
             self._logger.info("----------------------------------------------------------")
             self._logger.info("Failed to start the following segments. "
                               "Please check the latest logs located in segment's data directory")
 
             for hostname, errors in self._start_errors.items():
                 for error in errors:
-                    self._logger.info(start_error_pattern.format(hostname, error.port, error.datadir))
+                    gpdb_logfile_error = ''
+                    startup_logfile_error = ''
+
+                    #Fetch error from current gpdb-*.csv logfile
+                    gpdb_logfile_path = self.get_current_logfile_path(error.datadir, hostname)
+                    if gpdb_logfile_path:
+                        gpdb_logfile = os.path.join(error.datadir, gpdb_logfile_path)
+                        gpdb_logfile_error = self.get_error_from_logfile(gpdb_logfile, hostname)
+
+                    #Fetch error from startup logfile
+                    startup_logfile = os.path.join(error.datadir, 'log/startup.log')
+                    startup_logfile_error = self.get_error_from_logfile(startup_logfile, hostname)
+
+                    #Report startup error with latest timestamp
+                    self._logger.info(start_error_pattern.format(hostname, error.port, error.datadir,
+                                      self.get_last_reported_error(gpdb_logfile_error, startup_logfile_error)))
+
 
         if len(self._update_errors) > 0:
             update_error_pattern = " hostname: {}; port: {}; datadir: {}"

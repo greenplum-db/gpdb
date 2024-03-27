@@ -50,6 +50,7 @@ Feature: gprecoverseg tests involving migrating to a new host
     Then gprecoverseg should return a return code of 1
 #    And pg_hba file "/data/gpdata/mirror/gpseg0/pg_hba.conf" on host "sdw2" contains entries for "sdw5"
     And check if start failed for full recovery for mirrors with hostname sdw5
+    And gprecoverseg should print "error:.*data directory.* has invalid permissions" to stdout
     And gpAdminLogs directory has no "pg_basebackup*" files on all segment hosts
     And gpAdminLogs directory has no "pg_rewind*" files on all segment hosts
     And gpAdminLogs directory has "gpsegsetuprecovery*" files on all segment hosts
@@ -87,6 +88,7 @@ Feature: gprecoverseg tests involving migrating to a new host
     And gprecoverseg should print "Recovery Target instance port        = 20001" to stdout
     And gprecoverseg should print "Recovery Target instance port        = 20002" to stdout
     And gprecoverseg should print "Recovery Target instance port        = 20003" to stdout
+    And gprecoverseg should print "error: could not access directory.* Permission denied" to stdout
     And the cluster configuration is saved for "after_backout"
     And the "before_recoverseg" and "after_backout" cluster configuration matches for gprecoverseg newhost
     And datadirs from "before_recoverseg" configuration for "sdw1" are created on "sdw5" with mode 700

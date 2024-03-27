@@ -484,6 +484,16 @@ def impl(context):
 
     context.data_dirs_created.clear()
 
+@given("the mode of all the created data directories is non-recursively changed to {mode}")
+@when("the mode of all the created data directories is non-recursively changed to {mode}")
+@then("the mode of all the created data directories is non-recursively changed to {mode}")
+def impl(context, mode):
+    for hostname, data_dirs in context.data_dirs_created.items():
+        for data_dir in data_dirs:
+            command = 'ssh {} "chmod {} {}"'.format(hostname, mode, data_dir)
+            run_command(context, command)
+
+
 #TODO improve this function
 def make_temp_dir_on_remote(context, hostname, tmp_base_dir_remote, mode='700'):
     if not tmp_base_dir_remote:
