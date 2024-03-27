@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2012 EMC Corp.
+//	Copyright (C) 2024 VMware by Broadcom.
 //
 //	@filename:
 //		CPhysicalFullHashJoin.h
@@ -33,9 +33,8 @@ public:
 	// ctor
 	CPhysicalFullHashJoin(CMemoryPool *mp, CExpressionArray *pdrgpexprOuterKeys,
 						  CExpressionArray *pdrgpexprInnerKeys,
-						  IMdIdArray *hash_opfamilies,
-						  BOOL is_null_aware = true,
-						  CXform::EXformId origin_xform = CXform::ExfSentinel);
+						  IMdIdArray *hash_opfamilies, BOOL is_null_aware,
+						  CXform::EXformId origin_xform);
 
 	// dtor
 	~CPhysicalFullHashJoin() override;

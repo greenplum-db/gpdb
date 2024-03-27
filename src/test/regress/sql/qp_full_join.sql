@@ -36,6 +36,10 @@ create table rep2 (c1 int) distributed replicated;
 insert into rep2 select i from generate_series(-300,699) i;
 insert into rep2 select null from generate_series(1,20);
 
+-- tainted replicated
+create view tainted_rep as (select * from rep limit 2);
+create view tainted_rep2 as (select * from rep2 limit 3);
+
 -- universal
 create view uni as (select generate_series(-10,10) c1);
 create view uni2 as (select unnest(string_to_array('-3,-2,-1,0,1,2,3',','))::int c1);
@@ -123,6 +127,16 @@ select count(*) from rep full join uni on rep.c1 = uni.c1;
 -- avoid duplicates, the right side is gathered onto the coordinator.
 explain (costs off, timing off, summary off) select * from uni full join rep on uni.c1 = rep.c1;
 select count(*) from uni full join rep on uni.c1 = rep.c1;
+
+-- tainted-replicated ⟗  tainted-replicated 
+-- Both left and right relations are tainted-replicated. To avoid duplicates,
+-- both sides are gathered onto the coordinator.
+explain (costs off, timing off, summary off) select * from tainted_rep full join tainted_rep2 on tainted_rep.c1 = tainted_rep2.c1;
+
+-- tainted-replicated ⟗  distributed 
+-- The left relation is tainted-replicated. To avoid duplicates, the left side
+-- is redistributed from one segment onto all the segments.
+explain (costs off, timing off, summary off) select * from tainted_rep full join dist on tainted_rep.c1 = dist.c1;
 
 ------------------------------------------
 -- 3-table join: test derived distribution spec

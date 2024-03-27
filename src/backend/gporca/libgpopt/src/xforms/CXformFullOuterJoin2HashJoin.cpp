@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	Greenplum Database
-//	Copyright (C) 2012 EMC Corp.
+//	Copyright (C) 2024 VMware by Broadcom
 //
 //	@filename:
 //		CXformFullOuterJoin2HashJoin.cpp
