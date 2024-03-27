@@ -2305,6 +2305,21 @@ BEGIN
   END IF;
 END
 $$;
+
+do $$
+BEGIN
+  IF EXISTS(SELECT * FROM pg_settings WHERE name = 'server_version_num' AND setting::int >= 120000) THEN
+    EXECUTE $_$ALTER FUNCTION oracle.varchar2(oracle.varchar2, integer, boolean) SUPPORT oracle.varchar2_transform$_$;
+  ELSE
+    UPDATE pg_proc SET protransform= 'oracle.varchar2_transform'::regproc::oid WHERE proname='varchar2';
+
+    INSERT INTO pg_depend (classid, objid, objsubid,
+                           refclassid, refobjid, refobjsubid, deptype)
+       VALUES('pg_proc'::regclass::oid, 'oracle.varchar2'::regproc::oid, 0,
+              'pg_proc'::regclass::oid, 'oracle.varchar2_transform'::regproc::oid, 0, 'n');
+  END IF;
+END
+$$;
 */
 --RESET allow_system_table_mods;
 

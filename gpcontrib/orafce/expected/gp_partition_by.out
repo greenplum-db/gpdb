@@ -1,0 +1,144 @@
+-- test partition by list
+CREATE TABLE t3 (
+    str oracle.varchar2(30)
+) PARTITION BY LIST (str)
+(
+    PARTITION t3_1 VALUES ('a', 'b'),
+    PARTITION t3_2 VALUES ('c')
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'str' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO t3 VALUES ('a'), ('b'), ('c');
+SELECT * FROM t3 ORDER BY str;
+ str 
+-----
+ a
+ b
+ c
+(3 rows)
+
+\d+ t3
+                                     Partitioned table "public.t3"
+ Column |        Type         | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+---------------------+-----------+----------+---------+----------+--------------+-------------
+ str    | oracle.varchar2(30) |           |          |         | extended |              | 
+Partition key: LIST (str)
+Partitions: t3_1_prt_t3_1 FOR VALUES IN ('a', 'b'),
+            t3_1_prt_t3_2 FOR VALUES IN ('c')
+Distributed by: (str)
+
+CREATE TABLE t4 (
+    str oracle.nvarchar2(30)
+) PARTITION BY LIST (str)
+(
+    PARTITION t4_1 VALUES ('a', 'b'),
+    PARTITION t4_2 VALUES ('c')
+);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'str' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+INSERT INTO t4 VALUES ('a'), ('b'), ('c');
+SELECT * FROM t4 ORDER BY str;
+ str 
+-----
+ a
+ b
+ c
+(3 rows)
+
+\d+ t4
+                                     Partitioned table "public.t4"
+ Column |         Type         | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+----------------------+-----------+----------+---------+----------+--------------+-------------
+ str    | oracle.nvarchar2(30) |           |          |         | extended |              | 
+Partition key: LIST (str)
+Partitions: t4_1_prt_t4_1 FOR VALUES IN ('a', 'b'),
+            t4_1_prt_t4_2 FOR VALUES IN ('c')
+Distributed by: (str)
+
+-- test partition by hash
+CREATE TABLE t5 (
+    str oracle.varchar2(30)
+) PARTITION BY HASH (str);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'str' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE t5_1 PARTITION OF t5 FOR VALUES WITH (MODULUS 3, REMAINDER 0);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE t5_2 PARTITION OF t5 FOR VALUES WITH (MODULUS 3, REMAINDER 1);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE t5_3 PARTITION OF t5 FOR VALUES WITH (MODULUS 3, REMAINDER 2);
+NOTICE:  table has parent, setting distribution columns to match parent table
+INSERT INTO t5 VALUES ('a'), ('b'), ('c');
+SELECT * FROM t5_1 ORDER BY str;
+ str 
+-----
+ b
+(1 row)
+
+SELECT * FROM t5_2 ORDER BY str;
+ str 
+-----
+(0 rows)
+
+SELECT * FROM t5_3 ORDER BY str;
+ str 
+-----
+ a
+ c
+(2 rows)
+
+\d+ t5
+                                     Partitioned table "public.t5"
+ Column |        Type         | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+---------------------+-----------+----------+---------+----------+--------------+-------------
+ str    | oracle.varchar2(30) |           |          |         | extended |              | 
+Partition key: HASH (str)
+Partitions: t5_1 FOR VALUES WITH (modulus 3, remainder 0),
+            t5_2 FOR VALUES WITH (modulus 3, remainder 1),
+            t5_3 FOR VALUES WITH (modulus 3, remainder 2)
+Distributed by: (str)
+
+CREATE TABLE t6 (
+    str oracle.nvarchar2(30)
+) PARTITION BY HASH (str);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'str' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE t6_1 PARTITION OF t6 FOR VALUES WITH (MODULUS 3, REMAINDER 0);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE t6_2 PARTITION OF t6 FOR VALUES WITH (MODULUS 3, REMAINDER 1);
+NOTICE:  table has parent, setting distribution columns to match parent table
+CREATE TABLE t6_3 PARTITION OF t6 FOR VALUES WITH (MODULUS 3, REMAINDER 2);
+NOTICE:  table has parent, setting distribution columns to match parent table
+INSERT INTO t6 VALUES ('a'), ('b'), ('c');
+SELECT * FROM t6_1 ORDER BY str;
+ str 
+-----
+ b
+(1 row)
+
+SELECT * FROM t6_2 ORDER BY str;
+ str 
+-----
+(0 rows)
+
+SELECT * FROM t6_3 ORDER BY str;
+ str 
+-----
+ a
+ c
+(2 rows)
+
+\d+ t6
+                                     Partitioned table "public.t6"
+ Column |         Type         | Collation | Nullable | Default | Storage  | Stats target | Description 
+--------+----------------------+-----------+----------+---------+----------+--------------+-------------
+ str    | oracle.nvarchar2(30) |           |          |         | extended |              | 
+Partition key: HASH (str)
+Partitions: t6_1 FOR VALUES WITH (modulus 3, remainder 0),
+            t6_2 FOR VALUES WITH (modulus 3, remainder 1),
+            t6_3 FOR VALUES WITH (modulus 3, remainder 2)
+Distributed by: (str)
+
+DROP TABLE t3;
+DROP TABLE t4;
+DROP TABLE t5;
+DROP TABLE t6;
