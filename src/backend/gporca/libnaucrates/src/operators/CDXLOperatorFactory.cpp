@@ -3112,29 +3112,26 @@ CDXLOperatorFactory::ExtractConvertStrsToArray(
 	return array_strs;
 }
 
+
 //---------------------------------------------------------------------------
 //	@function:
-//		CDXLOperatorFactory::ExtractConvertStrToJoinNode
+//		CDXLOperatorFactory::ExtractConvertStrToDirectionedJoinNode
 //
 //	@doc:
-//		Parse a Leading hint string into a JoinNode.
+//		Parse a directed Leading hint string into a JoinNode.
 //
-//		Examples: "((t1 (t2 t3)) t4)" and "t1 t2 t3 t4"
+//		Examples: "((t1 (t2 t3)) t4)"
 //
 //---------------------------------------------------------------------------
 CJoinHint::JoinNode *
-CDXLOperatorFactory::ExtractConvertStrToJoinNode(
-	CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val)
+CDXLOperatorFactory::ExtractConvertStrToDirectionedJoinNode(
+	CMemoryPool *mp, const XMLCh *xml_val)
 {
-	CMemoryPool *mp = dxl_memory_manager->Pmp();
-
 	auto is_name_char = [](WCHAR c) -> bool {
 		return c != u'(' && c != u')' && c != u' ' && c != '\0';
 	};
 
-	int depth = 0;
-	CAutoMemoryPool amp;
-	gpos::stack<CJoinHint::JoinNode *> s(amp.Pmp());
+	gpos::stack<CJoinHint::JoinNode *> s(mp);
 	for (int i = 0; xml_val[i] != '\0'; i++)
 	{
 		char curr = xml_val[i];
@@ -3142,7 +3139,6 @@ CDXLOperatorFactory::ExtractConvertStrToJoinNode(
 		{
 			case '(':
 			{
-				depth += 1;
 				break;
 			}
 			case ')':
@@ -3156,11 +3152,8 @@ CDXLOperatorFactory::ExtractConvertStrToJoinNode(
 				CJoinHint::JoinNode *left = s.top();
 				s.pop();
 
-				CJoinHint::JoinNode *pair =
-					GPOS_NEW(mp) CJoinHint::JoinNode(left, right, depth > 0);
-				s.push(pair);
+				s.push(GPOS_NEW(mp) CJoinHint::JoinNode(left, right, true));
 
-				depth -= 1;
 				break;
 			}
 			case ' ':
@@ -3188,22 +3181,6 @@ CDXLOperatorFactory::ExtractConvertStrToJoinNode(
 
 				s.push(pair);
 
-				if (depth == 0 && s.size() > 1)
-				{
-					// consumed name when paren depth is 0 and more than 1 item
-					// on the stack indicates a directed-less hint.
-					//
-					// Example: "T1 T2 T3"
-					CJoinHint::JoinNode *right = s.top();
-					s.pop();
-					CJoinHint::JoinNode *left = s.top();
-					s.pop();
-
-					CJoinHint::JoinNode *pair =
-						GPOS_NEW(mp) CJoinHint::JoinNode(left, right, false);
-					s.push(pair);
-				}
-
 				i = j - 1;
 				break;
 			}
@@ -3211,6 +3188,106 @@ CDXLOperatorFactory::ExtractConvertStrToJoinNode(
 	}
 
 	return s.top();
+}
+
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CDXLOperatorFactory::ExtractConvertStrToNonDirectionedJoinNode
+//
+//	@doc:
+//		Parse a directed Leading hint string into a JoinNode.
+//
+//		Examples: "t1 t2 t3 t4"
+//
+//---------------------------------------------------------------------------
+CJoinHint::JoinNode *
+CDXLOperatorFactory::ExtractConvertStrToNonDirectionedJoinNode(
+	CMemoryPool *mp, const XMLCh *xml_val)
+{
+	auto is_name_char = [](WCHAR c) -> bool {
+		return c != u'(' && c != u')' && c != u' ' && c != '\0';
+	};
+
+	gpos::stack<CJoinHint::JoinNode *> s(mp);
+	for (int i = 0; xml_val[i] != '\0'; i++)
+	{
+		if (' ' == xml_val[i])
+		{
+			continue;
+		}
+
+		// consume name and push it onto the stack.
+		int j = i;
+		std::string str;
+		while (is_name_char(xml_val[j]))
+		{
+			str += xml_val[j];
+			j += 1;
+		}
+		char *str_buffer = GPOS_NEW_ARRAY(mp, char, str.size() + 1);
+		memcpy(str_buffer, str.c_str(), str.size() * sizeof(char));
+		str_buffer[str.size()] = '\0';
+
+		CJoinHint::JoinNode *right = GPOS_NEW(mp)
+			CJoinHint::JoinNode(GPOS_NEW(mp) CWStringConst(mp, str_buffer));
+
+		GPOS_DELETE_ARRAY(str_buffer);
+
+		if (s.size() > 0)
+		{
+			// if there is 1 item on the stack, then construct a new node out
+			// of the two children.
+			//
+			// Example: "T1 T2 T3"
+			CJoinHint::JoinNode *left = s.top();
+			s.pop();
+
+			s.push(GPOS_NEW(mp) CJoinHint::JoinNode(left, right, false));
+		}
+		else
+		{
+			s.push(right);
+		}
+
+		i = j - 1;
+	}
+
+	return s.top();
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CDXLOperatorFactory::ExtractConvertStrToJoinNode
+//
+//	@doc:
+//		Parse a Leading hint string into a JoinNode.
+//
+//		Examples: "((t1 (t2 t3)) t4)" and "t1 t2 t3 t4"
+//
+//---------------------------------------------------------------------------
+CJoinHint::JoinNode *
+CDXLOperatorFactory::ExtractConvertStrToJoinNode(
+	CDXLMemoryManager *dxl_memory_manager, const XMLCh *xml_val)
+{
+	CMemoryPool *mp = dxl_memory_manager->Pmp();
+
+	bool is_directed = false;
+	for (int i = 0; xml_val[i] != '\0'; i++)
+	{
+		char curr = xml_val[i];
+		if (curr == '(')
+		{
+			is_directed = true;
+			break;
+		}
+	}
+
+	if (is_directed)
+	{
+		return ExtractConvertStrToDirectionedJoinNode(mp, xml_val);
+	}
+	return ExtractConvertStrToNonDirectionedJoinNode(mp, xml_val);
 }
 
 //---------------------------------------------------------------------------
