@@ -87,6 +87,7 @@
 #include "gpopt/operators/CScalarMinMax.h"
 #include "gpopt/operators/CScalarNullIf.h"
 #include "gpopt/operators/CScalarOp.h"
+#include "gpopt/operators/CScalarParam.h"
 #include "gpopt/operators/CScalarProjectElement.h"
 #include "gpopt/operators/CScalarSortGroupClause.h"
 #include "gpopt/operators/CScalarSwitch.h"
@@ -163,6 +164,7 @@
 #include "naucrates/dxl/operators/CDXLScalarOneTimeFilter.h"
 #include "naucrates/dxl/operators/CDXLScalarOpExpr.h"
 #include "naucrates/dxl/operators/CDXLScalarOpList.h"
+#include "naucrates/dxl/operators/CDXLScalarParam.h"
 #include "naucrates/dxl/operators/CDXLScalarProjElem.h"
 #include "naucrates/dxl/operators/CDXLScalarProjList.h"
 #include "naucrates/dxl/operators/CDXLScalarRecheckCondFilter.h"
@@ -661,6 +663,8 @@ CTranslatorExprToDXL::PdxlnScalar(CExpression *pexpr)
 			return CTranslatorExprToDXL::PdxlnBitmapIndexProbe(pexpr);
 		case COperator::EopScalarBitmapBoolOp:
 			return CTranslatorExprToDXL::PdxlnBitmapBoolOp(pexpr);
+		case COperator::EopScalarParam:
+			return CTranslatorExprToDXL::PdxlnScParam(pexpr);
 		default:
 			GPOS_RAISE(gpopt::ExmaGPOPT, gpopt::ExmiUnsupportedOp,
 					   pexpr->Pop()->SzId());
@@ -6286,6 +6290,32 @@ CTranslatorExprToDXL::PdxlnScArrayCoerceExpr(CExpression *pexprArrayCoerceExpr)
 	pdxlnArrayCoerceExpr->AddChild(elemexpr_dxlnode);
 
 	return pdxlnArrayCoerceExpr;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorExprToDXL::PdxlnScParam
+//
+//	@doc:
+//		Create a DXL scalar param node from an optimizer scalar param expr.
+//
+//---------------------------------------------------------------------------
+CDXLNode *
+CTranslatorExprToDXL::PdxlnScParam(CExpression *pexprScParam)
+{
+	GPOS_ASSERT(nullptr != pexprScParam);
+
+	CScalarParam *popScParam = CScalarParam::PopConvert(pexprScParam->Pop());
+	popScParam->MdidType()->AddRef();
+
+	CDXLScalarParam *dxl_scalar_param = GPOS_NEW(m_mp)
+		CDXLScalarParam(m_mp, popScParam->Id(), popScParam->MdidType(),
+						popScParam->TypeModifier());
+
+	// create the DXL node holding the scalar param operator
+	CDXLNode *dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, dxl_scalar_param);
+
+	return dxlnode;
 }
 
 //---------------------------------------------------------------------------

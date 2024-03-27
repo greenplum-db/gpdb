@@ -635,8 +635,9 @@ DROP FUNCTION rngfunct(int);
 DROP TABLE rngfunc2;
 DROP TABLE rngfunc;
 -- Rescan tests --
-CREATE TEMPORARY SEQUENCE rngfunc_rescan_seq1;
-CREATE TEMPORARY SEQUENCE rngfunc_rescan_seq2;
+-- GPDB sets the cache to 1 to ensure consistency in tests
+CREATE TEMPORARY SEQUENCE rngfunc_rescan_seq1 CACHE 1;
+CREATE TEMPORARY SEQUENCE rngfunc_rescan_seq2 CACHE 1;
 CREATE TYPE rngfunc_rescan_t AS (i integer, s bigint);
 CREATE FUNCTION rngfunc_sql(int,int) RETURNS setof rngfunc_rescan_t AS 'SELECT i, nextval(''rngfunc_rescan_seq1'') FROM generate_series($1,$2) i;' LANGUAGE SQL;
 -- plpgsql functions use materialize mode
@@ -1549,7 +1550,12 @@ DROP FUNCTION rngfunc();
 --
 -- some tests on SQL functions with RETURNING
 --
-create temp table tt(f1 serial, data text);
+-- GPDB: use a sequence column instead of serial to enforce a cache size for consistent results
+create temporary sequence tt_seq cache 1;
+create temp table tt(f1 int NOT NULL DEFAULT nextval('tt_seq'), data text);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+alter sequence tt_seq owned by tt.f1;
 -- GPDB: The tests below which throw NOTICEs, throw them in indeterminate
 -- order, if the rows are hashed to different segments. Force the rows
 -- that have problem to be hashed to the same segment, using a custom hash
@@ -1601,8 +1607,8 @@ select * from tt;
 ----+----------
   1 | foo
   2 | bar
- 21 | fool
- 22 | foolfool
+  4 | foolfool
+  3 | fool
 (4 rows)
 
 -- setof does what's expected
@@ -1612,15 +1618,15 @@ language sql;
 select insert_tt2('foolish','barrish');
  insert_tt2 
 ------------
-         41
-         42
+          5
+          6
 (2 rows)
 
 select * from insert_tt2('baz','quux');
  insert_tt2 
 ------------
-         43
-         44
+          7
+          8
 (2 rows)
 
 select * from tt;
@@ -1628,12 +1634,12 @@ select * from tt;
 ----+----------
   1 | foo
   2 | bar
- 21 | fool
- 22 | foolfool
- 41 | foolish
- 42 | barrish
- 43 | baz
- 44 | quux
+  7 | baz
+  8 | quux
+  4 | foolfool
+  5 | foolish
+  3 | fool
+  6 | barrish
 (8 rows)
 
 -- limit doesn't prevent execution to completion
@@ -1648,14 +1654,14 @@ select * from tt;
 ----+----------
   1 | foo
   2 | bar
- 21 | fool
- 46 | barrish
- 43 | baz
- 44 | quux
- 45 | foolish
- 22 | foolfool
- 41 | foolish
- 42 | barrish
+  7 | baz
+  8 | quux
+  9 | foolish
+ 10 | barrish
+  4 | foolfool
+  5 | foolish
+  3 | fool
+  6 | barrish
 (10 rows)
 
 -- triggers will fire, too
@@ -1667,8 +1673,8 @@ end $$ language plpgsql;
 create trigger tnoticetrigger after insert on tt for each row
 execute procedure noticetrigger();
 select 1 from insert_tt2('foolme','barme') limit 1;
-NOTICE:  noticetrigger 61 foolme  (seg2 slice1 127.0.1.1:7004 pid=281770)
-NOTICE:  noticetrigger 62 barme  (seg2 slice1 127.0.1.1:7004 pid=281770)
+NOTICE:  noticetrigger 11 foolme  (seg0 slice1 127.0.0.1:7007 pid=90538)
+NOTICE:  noticetrigger 12 barme  (seg0 slice1 127.0.0.1:7007 pid=90538)
  ?column? 
 ----------
         1
@@ -1679,16 +1685,16 @@ select * from tt;
 ----+----------
   1 | foo
   2 | bar
- 21 | fool
- 46 | barrish
- 43 | baz
- 44 | quux
- 45 | foolish
- 22 | foolfool
- 41 | foolish
- 42 | barrish
- 61 | foolme
- 62 | barme
+  7 | baz
+  8 | quux
+  9 | foolish
+ 10 | barrish
+ 11 | foolme
+ 12 | barme
+  3 | fool
+  6 | barrish
+  4 | foolfool
+  5 | foolish
 (12 rows)
 
 -- and rules work
@@ -1696,12 +1702,12 @@ create temp table tt_log(f1 int, data text);
 create rule insert_tt_rule as on insert to tt do also
   insert into tt_log values(new.*);
 select * from insert_tt2('foollog','barlog');
-NOTICE:  noticetrigger 82 barlog  (seg2 slice1 127.0.1.1:7004 pid=282018)
-NOTICE:  noticetrigger 81 foollog  (seg1 slice1 127.0.1.1:7003 pid=282017)
+NOTICE:  noticetrigger 13 foollog  (seg0 slice1 127.0.0.1:7007 pid=90538)
+NOTICE:  noticetrigger 14 barlog  (seg0 slice1 127.0.0.1:7007 pid=90538)
  insert_tt2 
 ------------
-         81
-         82
+         13
+         14
 (2 rows)
 
 select * from tt;
@@ -1709,27 +1715,31 @@ select * from tt;
 ----+----------
   1 | foo
   2 | bar
- 21 | fool
- 46 | barrish
- 43 | baz
- 44 | quux
- 45 | foolish
- 81 | foollog
- 22 | foolfool
- 41 | foolish
- 42 | barrish
- 61 | foolme
- 62 | barme
- 82 | barlog
+  7 | baz
+  8 | quux
+  9 | foolish
+ 10 | barrish
+ 11 | foolme
+ 12 | barme
+ 13 | foollog
+ 14 | barlog
+  4 | foolfool
+  5 | foolish
+  3 | fool
+  6 | barrish
 (14 rows)
 
 -- note that nextval() gets executed a second time in the rule expansion,
 -- which is expected.
-select * from tt_log;
- f1 |  data   
-----+---------
- 84 | barlog
- 83 | foollog
+-- GPDB: Only select data here. With triggers and rules, some may execute in
+-- different orders depending on which segment triggers first--causing the
+-- sequence number to be different. Therefore, we only select the data here to
+-- ensure consistency in the tests
+select data from tt_log;
+  data   
+---------
+ barlog
+ foollog
 (2 rows)
 
 -- test case for a whole-row-variable bug

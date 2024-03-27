@@ -230,8 +230,9 @@ DROP TABLE rngfunc2;
 DROP TABLE rngfunc;
 
 -- Rescan tests --
-CREATE TEMPORARY SEQUENCE rngfunc_rescan_seq1;
-CREATE TEMPORARY SEQUENCE rngfunc_rescan_seq2;
+-- GPDB sets the cache to 1 to ensure consistency in tests
+CREATE TEMPORARY SEQUENCE rngfunc_rescan_seq1 CACHE 1;
+CREATE TEMPORARY SEQUENCE rngfunc_rescan_seq2 CACHE 1;
 CREATE TYPE rngfunc_rescan_t AS (i integer, s bigint);
 
 CREATE FUNCTION rngfunc_sql(int,int) RETURNS setof rngfunc_rescan_t AS 'SELECT i, nextval(''rngfunc_rescan_seq1'') FROM generate_series($1,$2) i;' LANGUAGE SQL;
@@ -438,7 +439,10 @@ DROP FUNCTION rngfunc();
 -- some tests on SQL functions with RETURNING
 --
 
-create temp table tt(f1 serial, data text);
+-- GPDB: use a sequence column instead of serial to enforce a cache size for consistent results
+create temporary sequence tt_seq cache 1;
+create temp table tt(f1 int NOT NULL DEFAULT nextval('tt_seq'), data text);
+alter sequence tt_seq owned by tt.f1;
 
 -- GPDB: The tests below which throw NOTICEs, throw them in indeterminate
 -- order, if the rows are hashed to different segments. Force the rows
@@ -509,7 +513,11 @@ select * from insert_tt2('foollog','barlog');
 select * from tt;
 -- note that nextval() gets executed a second time in the rule expansion,
 -- which is expected.
-select * from tt_log;
+-- GPDB: Only select data here. With triggers and rules, some may execute in
+-- different orders depending on which segment triggers first--causing the
+-- sequence number to be different. Therefore, we only select the data here to
+-- ensure consistency in the tests
+select data from tt_log;
 
 -- test case for a whole-row-variable bug
 create function rngfunc1(n integer, out a text, out b text)

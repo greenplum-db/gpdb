@@ -401,7 +401,7 @@ CScalarFuncPushDownTest:
 ScalarFuncPushedBelowGather ConstScalarFuncNotPushedBelowGather;
 
 CScalarTest:
-FieldSelect;
+FieldSelect FunctionWithQueryParam BasicQueryParam;
 
 COrderedAggTest:
 CTAS_OrderedAgg_multiple_cols OrderedAgg_multiple_diffcol OrderedAgg_with_groupby OrderedAgg_computed_col

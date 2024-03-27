@@ -60,6 +60,8 @@ PREPARE q2(text) AS
 	SELECT datname, datistemplate, datallowconn
 	FROM pg_database WHERE datname = $1;
 EXECUTE q2('postgres');
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Queries on coordinator-only tables
  datname  | datistemplate | datallowconn 
 ----------+---------------+--------------
  postgres | t             | t

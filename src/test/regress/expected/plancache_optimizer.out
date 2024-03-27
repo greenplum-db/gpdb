@@ -1,6 +1,7 @@
 --
 -- Tests to exercise the plan caching/invalidation mechanism
 --
+SET optimizer_trace_fallback to on;
 CREATE TEMP TABLE pcachetest AS SELECT * FROM int8_tbl;
 -- create and use a cached plan
 PREPARE prepstmt AS SELECT * FROM pcachetest;
@@ -119,18 +120,24 @@ begin
 end
 $$ language plpgsql;
 select cache_test(1);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  cache_test 
 ------------
          37
 (1 row)
 
 select cache_test(2);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  cache_test 
 ------------
          38
 (1 row)
 
 select cache_test(3);
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  cache_test 
 ------------
          39
@@ -144,6 +151,8 @@ begin
 	return f1 from v1;
 end$$ language plpgsql;
 select cache_test_2();
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  cache_test_2 
 --------------
             4
@@ -152,6 +161,8 @@ select cache_test_2();
 create or replace temp view v1 as
   select 2+2+4 as f1;
 select cache_test_2();
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  cache_test_2 
 --------------
             8
@@ -160,6 +171,8 @@ select cache_test_2();
 create or replace temp view v1 as
   select 2+2+4+(select max(unique1) from tenk1) as f1;
 select cache_test_2();
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
  cache_test_2 
 --------------
         10007
@@ -241,6 +254,8 @@ begin
   end loop;
 end$$ language plpgsql;
 select cachebug();
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
 NOTICE:  table "temptable" does not exist, skipping
 NOTICE:  1
 NOTICE:  2
@@ -251,6 +266,8 @@ NOTICE:  3
 (1 row)
 
 select cachebug();
+INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
+DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: SIRV functions
 NOTICE:  drop cascades to view vv
 NOTICE:  1
 NOTICE:  2
@@ -306,14 +323,14 @@ explain (costs off) execute test_mode_pp(2);
 -- force generic plan
 set plan_cache_mode to force_generic_plan;
 explain (costs off) execute test_mode_pp(2);
-                   QUERY PLAN                   
-------------------------------------------------
+                           QUERY PLAN                            
+-----------------------------------------------------------------
  Finalize Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
-               ->  Seq Scan on test_mode
-                     Filter: (a = $1)
- Optimizer: Postgres query optimizer
+               ->  Index Scan using test_mode_a_idx on test_mode
+                     Index Cond: (a = $1)
+ Optimizer: GPORCA
 (6 rows)
 
 -- get to generic plan by 5 executions

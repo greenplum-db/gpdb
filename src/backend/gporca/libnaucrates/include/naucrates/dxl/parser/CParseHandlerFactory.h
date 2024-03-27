@@ -562,6 +562,11 @@ private:
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
 		CParseHandlerBase *parse_handler_root);
 
+	// construct a scalar param parse handler
+	static CParseHandlerBase *CreateScParamParseHandler(
+		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,
+		CParseHandlerBase *parse_handler_root);
+
 	// construct an array compare parse handler
 	static CParseHandlerBase *CreateScArrayCmpParseHandler(
 		CMemoryPool *mp, CParseHandlerManager *parse_handler_mgr,

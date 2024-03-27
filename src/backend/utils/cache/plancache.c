@@ -1088,25 +1088,6 @@ choose_custom_plan(CachedPlanSource *plansource, ParamListInfo boundParams, Into
 	if (plansource->cursor_options & CURSOR_OPT_CUSTOM_PLAN)
 		return true;
 
-	/*
-	 * GPORCA doesn't support Params at all, so there's no hope of generating
-	 * a generic plan. We could generate a generic plan with the Postgres
-	 * planner, but the cost model between GPORCA and the Postgres planner is
-	 * is different, so comparing the costs between plans generated with
-	 * GPORCA and the Postgres planner would not be sensible. Therefore always
-	 * continue with custom plans if GPORCA is enabled.
-	 *
-	 * Arguably we should check if the custom plan was actually generated with
-	 * GPORCA or if GPORCA fell back to the Postgres planner. If the custom
-	 * plan was was generated with the Postgres planner, even though the
-	 * optimizer GUC was enabled, then it would be fair to compare it with a
-	 * generic plan also generated with the Postgres planner. But it seems
-	 * more straightforward that if "optimizer=on" and "plan_cache_mode=auto",
-	 * you always get custom plans.
-	 */
-	if (optimizer)
-		return true;
-
 	/* Generate custom plans until we have done at least 5 (arbitrary) */
 	if (plansource->num_custom_plans < 5)
 		return true;

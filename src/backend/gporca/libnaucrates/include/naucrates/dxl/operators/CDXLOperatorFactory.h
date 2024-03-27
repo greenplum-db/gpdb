@@ -208,6 +208,10 @@ public:
 	static CDXLScalar *MakeDXLOpExpr(CDXLMemoryManager *dxl_memory_manager,
 									 const Attributes &attrs);
 
+	// create a scalar Param
+	static CDXLScalar *MakeDXLScalarParam(CDXLMemoryManager *dxl_memory_manager,
+										  const Attributes &attrs);
+
 	// create a scalar ArrayComp
 	static CDXLScalar *MakeDXLArrayComp(CDXLMemoryManager *dxl_memory_manager,
 										const Attributes &attrs);

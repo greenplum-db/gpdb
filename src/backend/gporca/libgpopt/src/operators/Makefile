@@ -173,6 +173,7 @@ OBJS        = CExpression.o \
               CScalarNullIf.o \
               CScalarNullTest.o \
               CScalarOp.o \
+              CScalarParam.o \
               CScalarProjectElement.o \
               CScalarProjectList.o \
               CScalarSortGroupClause.o \

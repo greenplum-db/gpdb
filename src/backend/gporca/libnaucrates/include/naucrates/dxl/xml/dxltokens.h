@@ -168,6 +168,7 @@ enum Edxltoken
 	EdxltokenScalarLimitOffset,
 	EdxltokenScalarOneTimeFilter,
 	EdxltokenScalarOpExpr,
+	EdxltokenScalarParam,
 	EdxltokenScalarProjElem,
 	EdxltokenScalarCast,
 	EdxltokenScalarCoerceToDomain,
@@ -357,6 +358,8 @@ enum Edxltoken
 	EdxltokenColNdvRemain,
 	EdxltokenColFreqRemain,
 	EdxltokenColStatsMissing,
+
+	EdxltokenParamId,
 
 	EdxltokenCtidColName,
 	EdxltokenOidColName,
