@@ -115,10 +115,10 @@ Feature: gpstate tests
             | \S+             | [0-9]+ | \S+    | [0-9]+ |
         And gpstate should print "Unsynchronized Segment Pairs" to stdout
         And gpstate output looks like
-            | Current Primary | Port   | WAL sync remaining bytes | Mirror | Port   |
-            | \S+             | [0-9]+ | Unknown                  | \S+    | [0-9]+ |
-            | \S+             | [0-9]+ | Unknown                  | \S+    | [0-9]+ |
-            | \S+             | [0-9]+ | Unknown                  | \S+    | [0-9]+ |
+            | Current Primary | Port   | WAL sync remaining bytes | Startup recovery remaining bytes | Mirror | Port   |
+            | \S+             | [0-9]+ | Unknown                  | Unknown                          | \S+    | [0-9]+ |
+            | \S+             | [0-9]+ | Unknown                  | Unknown                          | \S+    | [0-9]+ |
+            | \S+             | [0-9]+ | Unknown                  | Unknown                          | \S+    | [0-9]+ |
         And gpstate should print "Downed Segments" to stdout
         And gpstate output looks like
             | Segment | Port   | Config status | Status                |
@@ -136,8 +136,8 @@ Feature: gpstate tests
         When the user runs "gpstate -e"
         Then gpstate should print "Unsynchronized Segment Pairs" to stdout
         And gpstate output looks like
-            | Current Primary | Port   | WAL sync remaining bytes            | Mirror | Port   |
-            | \S+             | [0-9]+ | [0-9]+                              | \S+    | [0-9]+ |
+            | Current Primary | Port   | WAL sync remaining bytes            | Startup recovery remaining bytes | Mirror | Port   |
+            | \S+             | [0-9]+ | [0-9]+                              | Completed                        | \S+    | [0-9]+ |
         When the user runs "gpstate -s"
         Then gpstate output has rows
             |Bytes remaining to send to mirror     = [1-9]\d* |
@@ -145,6 +145,24 @@ Feature: gpstate tests
         And the user waits until all bytes are sent to mirror on content 0
         When the user runs "gpstate -e"
         Then gpstate should not print "Unsynchronized Segment Pairs" to stdout
+
+    Scenario: gpstate shows startup recovery remaining bytes when mirror is still starting up
+        Given a standard local demo cluster is running
+        And the primary on content 0 is stopped
+        And user can start transactions
+        And a process is started on host of mirror 0 which keeps running and contains temp walfile
+        When the user runs "gpstate -ev"
+        Then gpstate should print "Unsynchronized Segment Pairs" to stdout
+        And gpstate output looks like
+            | Current Primary | Port   | WAL sync remaining bytes            | Startup recovery remaining bytes | Mirror | Port   |
+            | \S+             | [0-9]+ | Not started yet                     | [0-9]+.*                         | \S+    | [0-9]+ |
+        And gpstate prints info message related to startup recovery to stdout
+        When the user asynchronously sets up to end that process in 1 seconds
+        And the user runs "gprecoverseg -a"
+        Then gprecoverseg should return a return code of 0
+        And gpstate should not print "Unsynchronized Segment Pairs" to stdout
+        And the segments are synchronized
+        And the cluster is rebalanced
 
     Scenario: gpstate -s logs show WAL remaining bytes when mirror hasn't flushed wal
         Given a standard local demo cluster is running
