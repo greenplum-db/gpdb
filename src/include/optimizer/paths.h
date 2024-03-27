@@ -242,7 +242,8 @@ cdb_pull_up_eclass(PlannerInfo    *root,
                     Relids          relids,
                     List           *targetlist,
                     List           *newvarlist,
-                    Index           newrelid);
+                    Index           newrelid,
+					bool			ignore_relabel);
 
 extern List *make_pathkeys_for_sortclauses(PlannerInfo *root,
 										   List *sortclauses,

@@ -516,3 +516,43 @@ select * from prtx1
 where not exists (select 1 from prtx2
                   where prtx2.a=prtx1.a and (prtx2.b=prtx1.b+1 or prtx2.c=99))
   and a<20 and c=91;
+
+--
+-- test issue https://github.com/greenplum-db/gpdb/issues/13402
+--
+begin;
+create table t_issue_13402_big(
+	id varchar(32),
+	t varchar(32)
+) distributed by (id)
+partition by range(t)
+(
+partition p1 start ('0') end ('5'),
+partition p2 start ('5') end ('9999999999999999999')
+);
+create index idx_t_issue_13402_big_id on t_issue_13402_big(id);
+insert into t_issue_13402_big select seq, seq from generate_series(1, 100000) as seq;
+create table t_issue_13402_small(
+  id varchar(32),
+  t varchar(32)
+) distributed by (id);
+insert into t_issue_13402_small select seq*10000, seq*10000 from generate_series(1, 100) as seq;
+set local optimizer = off;
+set local enable_nestloop to on;
+analyze t_issue_13402_big;
+analyze t_issue_13402_small;
+explain(costs off) select a.* from t_issue_13402_small a left join t_issue_13402_big b on a.id=b.id;
+abort;
+
+BEGIN;
+CREATE TABLE t1 (id varchar(32), date date) DISTRIBUTED BY (id)
+PARTITION BY RANGE (date)
+(START (date '2016-01-01') INCLUSIVE END (date '2016-01-04') EXCLUSIVE EVERY (INTERVAL '1 day'));
+CREATE TABLE t2 (id varchar(32)) DISTRIBUTED BY (id);
+analyze t1;
+analyze t2;
+\d+ t1;
+\d+ t2;
+EXPLAIN(COSTS OFF) SELECT COUNT(*) FROM t1_1_prt_1 JOIN t2 USING(id);
+EXPLAIN(COSTS OFF) SELECT COUNT(*) FROM t1 JOIN t2 USING(id);
+ABORT;

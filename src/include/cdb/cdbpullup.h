@@ -55,7 +55,7 @@
 Expr *
 cdbpullup_expr(Expr *expr, List *targetlist, List *newvarlist, Index newvarno);
 
-extern Expr *cdbpullup_findEclassInTargetList(EquivalenceClass *eclass, List *targetlist, Oid hashOpFamily);
+extern Expr *cdbpullup_findEclassInTargetList(EquivalenceClass *eclass, List *targetlist, Oid hashOpFamily, bool *relabel_stripped);
 
 extern List *cdbpullup_truncatePathKeysForTargetList(List *pathkeys, List *targetlist);
 
