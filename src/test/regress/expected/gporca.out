@@ -12418,8 +12418,9 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
    ->  Materialize  (cost=1.08..2.17 rows=3 width=8)
          ->  Hash Left Join  (cost=1.08..2.15 rows=3 width=8)
                Hash Cond: (tcorr1.a = tcorr2.a)
-               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
-                     ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
+               ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
+                     ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                           ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
                ->  Hash  (cost=1.07..1.07 rows=1 width=12)
                      ->  HashAggregate  (cost=1.05..1.06 rows=1 width=12)
                            Group Key: tcorr2.a
@@ -12428,8 +12429,8 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                  ->  Materialize  (cost=0.00..1.03 rows=1 width=8)
                                        ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
                                              ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=8)
- Optimizer: Postgres query optimizer
-(18 rows)
+ Optimizer: Postgres-based planner
+(19 rows)
 
 -- expect 1 row
 select *
@@ -12539,8 +12540,9 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
    ->  Materialize  (cost=1.08..2.17 rows=3 width=8)
          ->  Hash Left Join  (cost=1.08..2.15 rows=3 width=8)
                Hash Cond: (tcorr1.a = tcorr2.a)
-               ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
-                     ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
+               ->  Materialize  (cost=0.00..1.03 rows=1 width=4)
+                     ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1.03 rows=1 width=4)
+                           ->  Seq Scan on tcorr1  (cost=0.00..1.01 rows=1 width=4)
                ->  Hash  (cost=1.07..1.07 rows=1 width=12)
                      ->  HashAggregate  (cost=1.05..1.06 rows=1 width=12)
                            Group Key: tcorr2.a
@@ -12549,8 +12551,8 @@ where out.b in (select coalesce(tcorr2_d.c, 99)
                                  ->  Materialize  (cost=0.00..1.03 rows=1 width=8)
                                        ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1.03 rows=1 width=8)
                                              ->  Seq Scan on tcorr2  (cost=0.00..1.01 rows=1 width=8)
- Optimizer: Postgres query optimizer
-(18 rows)
+ Optimizer: Postgres-based planner
+(19 rows)
 
 -- expect 1 row
 select *

@@ -4041,6 +4041,20 @@ create_hashjoin_path(PlannerInfo *root,
 		return NULL;
 
 	/*
+	 * If this join path is parameterized by a parameter above this path, then
+	 * this path needs to be rescannable. Make outer rescannable by adding 
+	 * Material Node when required_outer
+	 */
+	if (!outer_path->rescannable && !bms_is_empty(required_outer))
+	{
+		MaterialPath *matouter = create_material_path(root, outer_path->parent, outer_path);
+
+		matouter->cdb_shield_child_from_rescans = true;
+
+		outer_path = (Path *) matouter;
+	}
+
+	/*
 	 * CDB: If gp_enable_hashjoin_size_heuristic is set, disallow inner
 	 * joins where the inner rel is the larger of the two inputs.
 	 *

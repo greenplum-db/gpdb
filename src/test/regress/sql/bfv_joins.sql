@@ -348,6 +348,36 @@ reset join_collapse_limit;
 reset from_collapse_limit;
 
 --
+-- Another test case of Materialize shield Motion node from rescanning under Hash Join
+--
+create table tcorr1(a int, b int);
+create table tcorr2(a int, b int);
+
+insert into tcorr1 values (1,1), (1,1);
+insert into tcorr2 values (1,1);
+analyze tcorr1;
+analyze tcorr2;
+
+explain
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2_d.c, 1)
+                from tcorr1 join (select a, count(*) as c
+                                  from tcorr2
+                                  where tcorr2.b = out.b
+                                  group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
+
+select *
+from tcorr1 out
+where out.b in (select coalesce(tcorr2_d.c, 1)
+                from tcorr1 join (select a, count(*) as c
+                                  from tcorr2
+                                  where tcorr2.b = out.b
+                                  group by a) tcorr2_d on tcorr1.a=tcorr2_d.a);
+
+drop table tcorr1, tcorr2;
+
+--
 -- Mix timestamp and timestamptz in a join. We cannot use a Redistribute
 -- Motion, because the cross-datatype = operator between them doesn't belong
 -- to any hash operator class. We cannot hash rows in a way that matches would
