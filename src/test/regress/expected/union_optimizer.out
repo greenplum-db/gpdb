@@ -865,3 +865,68 @@ select * from
 reset optimizer_trace_fallback;
 drop table t3;
 drop function expensivefunc(int);
+-------------------------------------------------------------------------------
+--Test case to check parallel union all with 'json' type 1st column in project list
+-------------------------------------------------------------------------------
+set optimizer_parallel_union to on;
+drop table if exists my_table;
+NOTICE:  table "my_table" does not exist, skipping
+create table my_table ( id serial  primary key, json_data json);
+insert into my_table (json_data) values ('{"name": "Name1", "age": 10}');
+insert into my_table (json_data) values ('{"name": "Name2", "age": 20}');
+insert into my_table (json_data) values ('{"name": "Name3", "age": 30}');
+insert into my_table (json_data) values ('{"name": "Name4", "age": 40}');
+explain select json_data from my_table  where json_data->>'age' = '30' union all select json_data from my_table where json_data->>'age' = '40' ;
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=2 width=29)
+   ->  Append  (cost=0.00..431.00 rows=1 width=29)
+         ->  Result  (cost=0.00..431.00 rows=1 width=29)
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=29)
+                     Hash Key: my_table.id
+                     ->  Result  (cost=0.00..431.00 rows=1 width=33)
+                           ->  Seq Scan on my_table  (cost=0.00..431.00 rows=1 width=33)
+                                 Filter: ((json_data ->> 'age'::text) = '30'::text)
+         ->  Result  (cost=0.00..431.00 rows=1 width=29)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=29)
+                     Hash Key: my_table_1.id
+                     ->  Result  (cost=0.00..431.00 rows=1 width=33)
+                           ->  Seq Scan on my_table my_table_1  (cost=0.00..431.00 rows=1 width=33)
+                                 Filter: ((json_data ->> 'age'::text) = '40'::text)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(15 rows)
+
+select json_data from my_table  where json_data->>'age' = '30' union all select json_data from my_table where json_data->>'age' = '40' ;
+          json_data           
+------------------------------
+ {"name": "Name3", "age": 30}
+ {"name": "Name4", "age": 40}
+(2 rows)
+
+explain select json_data,id from my_table  where json_data->>'age' = '30' union all select json_data,id from my_table where json_data->>'age' = '40' ;
+                                           QUERY PLAN                                            
+-------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.00 rows=2 width=33)
+   ->  Append  (cost=0.00..431.00 rows=1 width=33)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=33)
+               Hash Key: my_table.id
+               ->  Result  (cost=0.00..431.00 rows=1 width=33)
+                     ->  Seq Scan on my_table  (cost=0.00..431.00 rows=1 width=33)
+                           Filter: ((json_data ->> 'age'::text) = '30'::text)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=33)
+               Hash Key: my_table_1.id
+               ->  Result  (cost=0.00..431.00 rows=1 width=33)
+                     ->  Seq Scan on my_table my_table_1  (cost=0.00..431.00 rows=1 width=33)
+                           Filter: ((json_data ->> 'age'::text) = '40'::text)
+ Optimizer: Pivotal Optimizer (GPORCA)
+(13 rows)
+
+select json_data,id from my_table  where json_data->>'age' = '30' union all select json_data,id from my_table where json_data->>'age' = '40' ;
+          json_data           | id 
+------------------------------+----
+ {"name": "Name3", "age": 30} |  3
+ {"name": "Name4", "age": 40} |  4
+(2 rows)
+
+set optimizer_parallel_union to off;
+drop table if exists my_table;
