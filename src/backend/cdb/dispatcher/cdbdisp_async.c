@@ -913,6 +913,7 @@ static void
 signalQEs(CdbDispatchCmdAsync *pParms)
 {
 	int			i;
+	Bitmapset	*segbp = NULL;
 	DispatchWaitMode waitMode = pParms->waitMode;
 
 	for (i = 0; i < pParms->dispatchCount; i++)
@@ -933,14 +934,19 @@ signalQEs(CdbDispatchCmdAsync *pParms)
 			dispatchResult->wasCanceled ||
 			(pParms->waitMode == DISPATCH_WAIT_ACK_ROOT &&
 			 dispatchResult->receivedAckMsg) ||
-			cdbconn_isBadConnection(segdbDesc))
+			cdbconn_isBadConnection(segdbDesc) ||
+			bms_is_member(segdbDesc->segindex, segbp))
 			continue;
 
 		memset(errbuf, 0, sizeof(errbuf));
 
-		sent = cdbconn_signalQE(segdbDesc, errbuf, waitMode == DISPATCH_WAIT_CANCEL);
+		sent = cdbconn_signalQE(segdbDesc, errbuf, waitMode == DISPATCH_WAIT_CANCEL ?
+								MPP_CANCEL_REQUEST_CODE : MPP_FINISH_REQUEST_CODE);
 		if (sent)
+		{
 			dispatchResult->sentSignal = waitMode;
+			segbp = bms_add_member(segbp, segdbDesc->segindex);
+		}
 		else
 			elog(LOG, "Unable to cancel: %s",
 				 strlen(errbuf) == 0 ? "cannot allocate PGCancel" : errbuf);

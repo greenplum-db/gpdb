@@ -202,12 +202,23 @@ typedef uint32 AuthRequest;
  */
 #define FINISH_REQUEST_CODE PG_PROTOCOL(1234,5677)
 
+/*
+ * mpp request operation is a message between QD and QE, used to
+ * cancel/finish all QEs in one segment at the same time.
+ *
+ * The MPP signal request code must not match any protocol version number
+ * we're ever likely to use. This random choice should do.
+ */
+#define MPP_FINISH_REQUEST_CODE PG_PROTOCOL(8751, 1234)
+#define MPP_CANCEL_REQUEST_CODE PG_PROTOCOL(8751, 1235)
+
 typedef struct CancelRequestPacket
 {
 	/* Note that each field is stored in network byte order! */
 	MsgType		cancelRequestCode;	/* code to identify a cancel request */
 	uint32		backendPID;		/* PID of client's backend */
 	uint32		cancelAuthCode; /* secret key to authorize cancel */
+	uint32		sessionid;		/* GPDB session of client's backend */
 } CancelRequestPacket;
 
 
