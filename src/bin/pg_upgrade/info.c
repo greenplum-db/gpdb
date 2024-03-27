@@ -340,8 +340,11 @@ get_db_and_rel_infos(ClusterInfo *cluster)
 
 	get_db_infos(cluster);
 
-	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
-		get_rel_infos(cluster, &cluster->dbarr.dbs[dbnum]);
+	if (!check_not_in_place())
+	{
+		for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+			get_rel_infos(cluster, &cluster->dbarr.dbs[dbnum]);
+	}
 
 	if (cluster == &old_cluster)
 		pg_log(PG_VERBOSE, "\nsource databases:\n");

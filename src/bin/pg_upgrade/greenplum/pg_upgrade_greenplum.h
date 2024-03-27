@@ -37,7 +37,8 @@ typedef enum {
 	GREENPLUM_CONTINUE_CHECK_ON_FATAL = 12,
 	GREENPLUM_SKIP_TARGET_CHECK = 13,
 	GREENPLUM_SKIP_CHECKS = 14,
-	GREENPLUM_OUTPUT_DIR = 15
+	GREENPLUM_OUTPUT_DIR = 15,
+	GREENPLUM_CHECK_NOT_IN_PLACE = 16
 } greenplumOption;
 
 #define GREENPLUM_OPTIONS \
@@ -46,15 +47,16 @@ typedef enum {
 	{"continue-check-on-fatal", no_argument, NULL, GREENPLUM_CONTINUE_CHECK_ON_FATAL}, \
 	{"skip-target-check", no_argument, NULL, GREENPLUM_SKIP_TARGET_CHECK}, \
 	{"skip-checks", no_argument, NULL, GREENPLUM_SKIP_CHECKS}, \
-	{"output-dir", required_argument, NULL, GREENPLUM_OUTPUT_DIR},
-
+	{"output-dir", required_argument, NULL, GREENPLUM_OUTPUT_DIR}, \
+	{"check-not-in-place", no_argument, NULL, GREENPLUM_CHECK_NOT_IN_PLACE},
 #define GREENPLUM_USAGE "\
-      --mode=TYPE               designate node type to upgrade, \"segment\" or \"dispatcher\" (default \"segment\")\n\
-      --progress                enable progress reporting\n\
-      --continue-check-on-fatal continue to run through all pg_upgrade checks without upgrade. Stops on major issues\n\
-      --skip-target-check       skip all checks on new/target cluster\n\
-      --skip-checks             skip all checks\n\
-      --output-dir              directory to output logs. Default=\"COORDINATOR_DATA_DIRECTORY/pg_upgrade.d\"\n\
+  --mode=TYPE                   designate node type to upgrade, \"segment\" or \"dispatcher\" (default \"segment\")\n\
+  --progress                    enable progress reporting\n\
+  --continue-check-on-fatal     continue to run through all pg_upgrade checks without upgrade. Stops on major issues\n\
+  --skip-target-check           skip all checks on new/target cluster\n\
+  --skip-checks                 skip all checks\n\
+  --output-dir                  directory to output logs. Default=\"COORDINATOR_DATA_DIRECTORY/pg_upgrade.d\"\n\
+  --check-not-in-place          run only the subset of checks applicable for logical upgrade using gpbackup.\"\n\
 "
 
 /* option_gp.c */
@@ -68,6 +70,7 @@ bool get_check_fatal_occurred(void);
 bool is_skip_target_check(void);
 bool skip_checks(void);
 char *get_output_dir(void);
+bool check_not_in_place(void);
 
 /* controldata_gp.c */
 void freeze_master_data(void);
