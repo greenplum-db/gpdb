@@ -168,13 +168,9 @@ explain (costs off) select * from legacy_domain_over_int a inner join legacy_dom
 explain (costs off) select * from legacy_int a inner join legacy_domain_over_int b on a.id = b.id;
 explain (costs off) select * from modern_int a inner join legacy_domain_over_int b on a.id = b.id;
 
-
--- Distributing by enum has been banned, so this test is updated to instead distribute by a dummy int column
--- Banned because in backup/restore scenarios the data will be in the "wrong" segment as oids for each enum
--- entry are re-generated and hashing them will result in arbitrary segment assignment.
 create type colors as enum ('red', 'green', 'blue');
-create table legacy_enum(col1 int, color colors) distributed by(col1);
-insert into legacy_enum values (1, 'red'), (2, 'green'), (3, 'blue');
+create table legacy_enum(color colors) distributed by(color cdbhash_enum_ops);
+insert into legacy_enum values ('red'), ('green'), ('blue');
 
 explain (costs off) select * from legacy_enum a inner join legacy_enum b on a.color = b.color;
 select * from legacy_enum a inner join legacy_enum b on a.color = b.color;

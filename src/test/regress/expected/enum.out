@@ -198,71 +198,71 @@ ORDER BY enumsortorder;
 --
 -- Basic table creation, row selection
 --
-CREATE TABLE enumtest (i int, col rainbow);
-INSERT INTO enumtest values (1, 'red'), (2, 'orange'), (3, 'yellow'), (4, 'green');
-COPY enumtest (i, col) FROM stdin;
+CREATE TABLE enumtest (col rainbow);
+INSERT INTO enumtest values ('red'), ('orange'), ('yellow'), ('green');
+COPY enumtest FROM stdin;
 SELECT * FROM enumtest;
- i |  col   
----+--------
- 5 | blue
- 6 | purple
- 2 | orange
- 3 | yellow
- 4 | green
- 1 | red
+  col   
+--------
+ red
+ orange
+ yellow
+ green
+ blue
+ purple
 (6 rows)
 
 --
 -- Operators, no index
 --
 SELECT * FROM enumtest WHERE col = 'orange';
- i |  col   
----+--------
- 2 | orange
+  col   
+--------
+ orange
 (1 row)
 
 SELECT * FROM enumtest WHERE col <> 'orange' ORDER BY col;
- i |  col   
----+--------
- 1 | red
- 3 | yellow
- 4 | green
- 5 | blue
- 6 | purple
+  col   
+--------
+ red
+ yellow
+ green
+ blue
+ purple
 (5 rows)
 
 SELECT * FROM enumtest WHERE col > 'yellow' ORDER BY col;
- i |  col   
----+--------
- 4 | green
- 5 | blue
- 6 | purple
+  col   
+--------
+ green
+ blue
+ purple
 (3 rows)
 
 SELECT * FROM enumtest WHERE col >= 'yellow' ORDER BY col;
- i |  col   
----+--------
- 3 | yellow
- 4 | green
- 5 | blue
- 6 | purple
+  col   
+--------
+ yellow
+ green
+ blue
+ purple
 (4 rows)
 
 SELECT * FROM enumtest WHERE col < 'green' ORDER BY col;
- i |  col   
----+--------
- 1 | red
- 2 | orange
- 3 | yellow
+  col   
+--------
+ red
+ orange
+ yellow
 (3 rows)
 
 SELECT * FROM enumtest WHERE col <= 'green' ORDER BY col;
- i |  col   
----+--------
- 1 | red
- 2 | orange
- 3 | yellow
- 4 | green
+  col   
+--------
+ red
+ orange
+ yellow
+ green
 (4 rows)
 
 --
@@ -311,53 +311,53 @@ SET enable_bitmapscan = off;
 --
 CREATE INDEX enumtest_btree ON enumtest USING btree (col);
 SELECT * FROM enumtest WHERE col = 'orange';
- i |  col   
----+--------
- 2 | orange
+  col   
+--------
+ orange
 (1 row)
 
 SELECT * FROM enumtest WHERE col <> 'orange' ORDER BY col;
- i |  col   
----+--------
- 1 | red
- 3 | yellow
- 4 | green
- 5 | blue
- 6 | purple
+  col   
+--------
+ red
+ yellow
+ green
+ blue
+ purple
 (5 rows)
 
 SELECT * FROM enumtest WHERE col > 'yellow' ORDER BY col;
- i |  col   
----+--------
- 4 | green
- 5 | blue
- 6 | purple
+  col   
+--------
+ green
+ blue
+ purple
 (3 rows)
 
 SELECT * FROM enumtest WHERE col >= 'yellow' ORDER BY col;
- i |  col   
----+--------
- 3 | yellow
- 4 | green
- 5 | blue
- 6 | purple
+  col   
+--------
+ yellow
+ green
+ blue
+ purple
 (4 rows)
 
 SELECT * FROM enumtest WHERE col < 'green' ORDER BY col;
- i |  col   
----+--------
- 1 | red
- 2 | orange
- 3 | yellow
+  col   
+--------
+ red
+ orange
+ yellow
 (3 rows)
 
 SELECT * FROM enumtest WHERE col <= 'green' ORDER BY col;
- i |  col   
----+--------
- 1 | red
- 2 | orange
- 3 | yellow
- 4 | green
+  col   
+--------
+ red
+ orange
+ yellow
+ green
 (4 rows)
 
 SELECT min(col) FROM enumtest;
@@ -384,9 +384,9 @@ DROP INDEX enumtest_btree;
 --
 CREATE INDEX enumtest_hash ON enumtest USING hash (col);
 SELECT * FROM enumtest WHERE col = 'orange';
- i |  col   
----+--------
- 2 | orange
+  col   
+--------
+ orange
 (1 row)
 
 DROP INDEX enumtest_hash;
@@ -537,11 +537,11 @@ DROP FUNCTION echo_me(rainbow);
 --
 -- RI triggers on enum types
 --
-CREATE TABLE enumtest_parent (i int PRIMARY KEY, id rainbow);
-CREATE TABLE enumtest_child (i int REFERENCES enumtest_parent, parent rainbow);
-INSERT INTO enumtest_parent VALUES (1, 'red');
-INSERT INTO enumtest_child VALUES (1, 'red');
-INSERT INTO enumtest_child VALUES (2, 'blue');  -- fail
+CREATE TABLE enumtest_parent (id rainbow PRIMARY KEY);
+CREATE TABLE enumtest_child (parent rainbow REFERENCES enumtest_parent);
+INSERT INTO enumtest_parent VALUES ('red');
+INSERT INTO enumtest_child VALUES ('red');
+INSERT INTO enumtest_child VALUES ('blue');  -- fail
 -- start_ignore
 -- foreign keys are not checked in GPDB, hence these pass.
 -- end_ignore
@@ -550,9 +550,9 @@ DELETE FROM enumtest_parent;  -- fail
 -- cross-type RI should fail
 --
 CREATE TYPE bogus AS ENUM('good', 'bad', 'ugly');
-CREATE TABLE enumtest_bogus_child(i int, parent bogus REFERENCES enumtest_parent);
+CREATE TABLE enumtest_bogus_child(parent bogus REFERENCES enumtest_parent);
 ERROR:  foreign key constraint "enumtest_bogus_child_parent_fkey" cannot be implemented
-DETAIL:  Key columns "parent" and "i" are of incompatible types: bogus and integer.
+DETAIL:  Key columns "parent" and "id" are of incompatible types: bogus and rainbow.
 DROP TYPE bogus;
 -- check renaming a value
 ALTER TYPE rainbow RENAME VALUE 'red' TO 'crimson';

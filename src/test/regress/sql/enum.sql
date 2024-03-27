@@ -120,11 +120,11 @@ ORDER BY enumsortorder;
 --
 -- Basic table creation, row selection
 --
-CREATE TABLE enumtest (i int, col rainbow);
-INSERT INTO enumtest values (1, 'red'), (2, 'orange'), (3, 'yellow'), (4, 'green');
-COPY enumtest (i, col) FROM stdin;
-5	blue
-6	purple
+CREATE TABLE enumtest (col rainbow);
+INSERT INTO enumtest values ('red'), ('orange'), ('yellow'), ('green');
+COPY enumtest FROM stdin;
+blue
+purple
 \.
 SELECT * FROM enumtest;
 
@@ -244,17 +244,17 @@ DROP FUNCTION echo_me(rainbow);
 --
 -- RI triggers on enum types
 --
-CREATE TABLE enumtest_parent (i int PRIMARY KEY, id rainbow);
-CREATE TABLE enumtest_child (i int REFERENCES enumtest_parent, parent rainbow);
-INSERT INTO enumtest_parent VALUES (1, 'red');
-INSERT INTO enumtest_child VALUES (1, 'red');
-INSERT INTO enumtest_child VALUES (2, 'blue');  -- fail
+CREATE TABLE enumtest_parent (id rainbow PRIMARY KEY);
+CREATE TABLE enumtest_child (parent rainbow REFERENCES enumtest_parent);
+INSERT INTO enumtest_parent VALUES ('red');
+INSERT INTO enumtest_child VALUES ('red');
+INSERT INTO enumtest_child VALUES ('blue');  -- fail
 DELETE FROM enumtest_parent;  -- fail
 --
 -- cross-type RI should fail
 --
 CREATE TYPE bogus AS ENUM('good', 'bad', 'ugly');
-CREATE TABLE enumtest_bogus_child(i int, parent bogus REFERENCES enumtest_parent);
+CREATE TABLE enumtest_bogus_child(parent bogus REFERENCES enumtest_parent);
 DROP TYPE bogus;
 
 -- check renaming a value

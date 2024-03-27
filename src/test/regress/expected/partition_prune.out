@@ -3769,13 +3769,13 @@ explain (costs off) select * from pph_arrpart where a in ('{4, 5}', '{1}');
 drop table pph_arrpart;
 -- enum type list partition key
 create type pp_colors as enum ('green', 'blue', 'black');
-create table pp_enumpart (col1 int, a pp_colors) partition by list (a);
+create table pp_enumpart (a pp_colors) partition by list (a);
 create table pp_enumpart_green partition of pp_enumpart for values in ('green');
 create table pp_enumpart_blue partition of pp_enumpart for values in ('blue');
 explain (costs off) select * from pp_enumpart where a = 'blue';
                 QUERY PLAN                
 ------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)
+ Gather Motion 1:1  (slice1; segments: 1)
    ->  Seq Scan on pp_enumpart_blue
          Filter: (a = 'blue'::pp_colors)
  Optimizer: Postgres query optimizer

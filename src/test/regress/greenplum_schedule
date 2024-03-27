@@ -355,9 +355,6 @@ test: resource_manager_restore_to_none
 # test dispatch and result handling of gp_log_memory_backend_contexts
 test: gp_log_mem_dispatch
 
-# test that distributing or hash partitioning by an enum field or expression is blocked
-test: enum_dist_part_ban
-
 # test compresstype fallback from quicklz when gp_quicklz_fallback=true
 test: quicklz_fallback
 
