@@ -3706,6 +3706,27 @@ select distinct v2 from srf_attnum();
 drop user ruser;
 drop table foo, bar;
 
+-- By default the GUC optimizer_enable_penalize_correlated_nljoin is set to ON
+-- If the GUC is set to ON then nested correlatedNLJ will be penalized similar
+-- to nested NLJ's
+-- On setting the GUC optimizer_enable_penalize_correlated_nljoin to OFF we
+-- won't penalize the nested correlatedNLJ. So by default the below query will
+-- have a Nested Loop join in the plan but since we setting the GUC off in this
+-- case we will get subplans in the plan
+set optimizer_enable_penalize_correlated_nljoin to off;
+create table foo (a int, b text, c int);
+create table bar (a int, b int, c int);
+create table baz (a int, b text, c int);
+
+insert into foo VALUES (100, 'false', 1);
+insert into foo VALUES (200, 'true', 2);
+insert into bar VALUES (2,2,2);
+insert into baz VALUES (200, 'falseg', 1);
+analyze foo,bar,baz;
+explain select * from foo where b::bool = ( exists(select c from bar) and not exists (select c from baz));
+drop table foo,bar,baz;
+reset optimizer_enable_penalize_correlated_nljoin;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

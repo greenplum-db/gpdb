@@ -3983,6 +3983,17 @@ CTranslatorExprToDXL::BuildDxlnSubPlan(CDXLNode *pdxlnRelChild,
 									   CDXLColRefArray *dxl_colref_array)
 {
 	GPOS_ASSERT(nullptr != colref);
+
+	// If the output column is already present in the map then
+	// the subplan already exists. No need to create a subplan
+	// dxl node again.
+	if (nullptr != m_phmcrdxln->Find(const_cast<CColRef *>(colref)))
+	{
+		pdxlnRelChild->Release();
+		dxl_colref_array->Release();
+		return;
+	}
+
 	IMDId *mdid = colref->RetrieveType()->MDId();
 	mdid->AddRef();
 

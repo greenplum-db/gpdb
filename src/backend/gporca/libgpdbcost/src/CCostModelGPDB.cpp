@@ -1374,6 +1374,35 @@ CCostModelGPDB::CostNLJoin(CMemoryPool *mp, CExpressionHandle &exprhdl,
 
 	CCost costTotal = CCost(costLocal + costChild);
 
+	COperator *popFirstChild = exprhdl.Pop(0);
+	COperator *popSecondChild = exprhdl.Pop(1);
+
+	// We should not penalize nested correlated NLJ operators in the plan tree
+	// like nested NLJ operators beacuse the nested Correlated NLJ operators are
+	// coverted into subplans which are not acutally nested in the final plan.
+	// Don't penalize Correlated Nested Loop Joins if the GUC
+	// optimizer_enable_penalize_correlated_nljoin is set to OFF. By default
+	// the GUC value is set to ON so we will continue to penalize Correlated
+	// Nested Loop Joins same as Nested Loop joins which is the default
+	// behaviour.
+	// On setting the GUC to off we won't penalize Correlated Nested Loop
+	// Joins only if we have nested operators in the plan tree. The inner child
+	// of the Correlated NLJ are converted to subplans. So if we have a
+	// Correlated NLJ operator as a inner child of Correlated NLJ operator
+	// (subplans within subplans i.e nested subplans), we will continue to
+	// penalize it.
+
+	if (GPOS_FTRACE(EopttraceDisablePenalizeCorrelatedNLjoin) &&
+		CUtils::FCorrelatedNLJoin(exprhdl.Pop()) &&
+		((nullptr == popFirstChild && nullptr == popSecondChild) ||
+		 (nullptr != popFirstChild &&
+		  CUtils::FCorrelatedNLJoin(popFirstChild) &&
+		  nullptr != popSecondChild &&
+		  !CUtils::FCorrelatedNLJoin(popSecondChild))))
+	{
+		return costTotal;
+	}
+
 	// amplify NLJ cost based on NLJ factor and stats estimation risk
 	// we don't want to penalize index join compared to nested loop join, so we make sure
 	// that every time index join is penalized, we penalize nested loop join by at least the
