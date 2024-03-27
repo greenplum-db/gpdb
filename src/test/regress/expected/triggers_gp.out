@@ -66,7 +66,11 @@ create table parted_trig2 partition of parted_trig for values in (2);
 NOTICE:  table has parent, setting distribution columns to match parent table
 create table parted_trig3 partition of parted_trig for values in (3);
 NOTICE:  table has parent, setting distribution columns to match parent table
-create table parted_trig4 partition of parted_trig for values in (4);
+create table parted_trig4 partition of parted_trig for values in (4,5) partition by list (partkey);
+NOTICE:  table has parent, setting distribution columns to match parent table
+create table parted_trig4_1 partition of parted_trig4 for values in (4);
+NOTICE:  table has parent, setting distribution columns to match parent table
+create table parted_trig4_2 partition of parted_trig4 for values in (5);
 NOTICE:  table has parent, setting distribution columns to match parent table
 /* Could create similar structure with this legacy GPDB syntax:
 create table parted_trig (partkey int, nonkey int, distkey int)
@@ -82,20 +86,42 @@ insert into parted_trig values (1, 1, 1);
 NOTICE:  insert trigger fired on parted_trig1 for INSERT  (seg1 127.0.0.1:40001 pid=10560)
 insert into parted_trig values (2, 2, 2);
 NOTICE:  insert trigger fired on parted_trig2 for INSERT  (seg0 127.0.0.1:40000 pid=10559)
--- Have an UPDATE trigger on a child.
-create trigger trig_upd_after after update on parted_trig2
+insert into parted_trig values (5, 5, 5);
+NOTICE:  insert trigger fired on parted_trig4_2 for INSERT  (seg2 127.0.0.1:40002 pid=250082)
+-- Have an UPDATE trigger on the middle level partition.
+create trigger trig_upd_after after update on parted_trig4
   for each row execute procedure update_notice_trig();
--- Update distribution key column. Throws an error, currently.
-update parted_trig set distkey = 3 where distkey = 1;
+-- Update distribution key column on each level partition. Throws an error, currently.
+update parted_trig set distkey = 4 where distkey = 5;
 ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
-drop trigger trig_upd_after on parted_trig2;
+update parted_trig4 set distkey = 4 where distkey = 5;
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
+update parted_trig4_1 set distkey = 4 where distkey = 5;
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
+drop trigger trig_upd_after on parted_trig4;
+-- Have an UPDATE trigger on a leaf partition.
+create trigger trig_upd_after after update on parted_trig4_1
+  for each row execute procedure update_notice_trig();
+-- Update distribution key column on each level partition. Throws an error, currently.
+update parted_trig set distkey = 3 where distkey = 4;
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
+update parted_trig4 set distkey = 3 where distkey = 4;
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
+update parted_trig4_1 set distkey = 3 where distkey = 4;
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
+drop trigger trig_upd_after on parted_trig4_1;
+-- Have an UPDATE trigger on the top level partition.
 create trigger trig_upd_after after update on parted_trig
   for each row execute procedure update_notice_trig();
 -- Update non-key column. Should fire the UPDATE trigger.
 update parted_trig set nonkey = 3 where nonkey = 1;
 NOTICE:  update trigger fired on parted_trig1 for UPDATE  (seg1 127.0.0.1:40001 pid=10560)
--- Update distribution key column. Throws an error, currently.
+-- Update distribution key column on each level partition. Throws an error, currently.
 update parted_trig set distkey = 3 where distkey = 1;
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
+update parted_trig4 set distkey = 3 where distkey = 1;
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
+update parted_trig4_1 set distkey = 3 where distkey = 1;
 ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 -- Update partitioning key column. Should fire the DELETE+INSERT triggers,
 -- like in PostgreSQL.

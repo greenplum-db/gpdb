@@ -69,7 +69,9 @@ create table parted_trig (partkey int, nonkey int, distkey int)
 create table parted_trig1 partition of parted_trig for values in (1);
 create table parted_trig2 partition of parted_trig for values in (2);
 create table parted_trig3 partition of parted_trig for values in (3);
-create table parted_trig4 partition of parted_trig for values in (4);
+create table parted_trig4 partition of parted_trig for values in (4,5) partition by list (partkey);
+create table parted_trig4_1 partition of parted_trig4 for values in (4);
+create table parted_trig4_2 partition of parted_trig4 for values in (5);
 
 /* Could create similar structure with this legacy GPDB syntax:
 create table parted_trig (partkey int, nonkey int, distkey int)
@@ -85,24 +87,41 @@ create trigger trig_del_after after delete on parted_trig
 -- Inserts. Should fire the INSERT trigger.
 insert into parted_trig values (1, 1, 1);
 insert into parted_trig values (2, 2, 2);
+insert into parted_trig values (5, 5, 5);
 
--- Have an UPDATE trigger on a child.
-create trigger trig_upd_after after update on parted_trig2
+-- Have an UPDATE trigger on the middle level partition.
+create trigger trig_upd_after after update on parted_trig4
   for each row execute procedure update_notice_trig();
 
--- Update distribution key column. Throws an error, currently.
-update parted_trig set distkey = 3 where distkey = 1;
+-- Update distribution key column on each level partition. Throws an error, currently.
+update parted_trig set distkey = 4 where distkey = 5;
+update parted_trig4 set distkey = 4 where distkey = 5;
+update parted_trig4_1 set distkey = 4 where distkey = 5;
 
-drop trigger trig_upd_after on parted_trig2;
+drop trigger trig_upd_after on parted_trig4;
 
+-- Have an UPDATE trigger on a leaf partition.
+create trigger trig_upd_after after update on parted_trig4_1
+  for each row execute procedure update_notice_trig();
+
+-- Update distribution key column on each level partition. Throws an error, currently.
+update parted_trig set distkey = 3 where distkey = 4;
+update parted_trig4 set distkey = 3 where distkey = 4;
+update parted_trig4_1 set distkey = 3 where distkey = 4;
+
+drop trigger trig_upd_after on parted_trig4_1;
+
+-- Have an UPDATE trigger on the top level partition.
 create trigger trig_upd_after after update on parted_trig
   for each row execute procedure update_notice_trig();
 
 -- Update non-key column. Should fire the UPDATE trigger.
 update parted_trig set nonkey = 3 where nonkey = 1;
 
--- Update distribution key column. Throws an error, currently.
+-- Update distribution key column on each level partition. Throws an error, currently.
 update parted_trig set distkey = 3 where distkey = 1;
+update parted_trig4 set distkey = 3 where distkey = 1;
+update parted_trig4_1 set distkey = 3 where distkey = 1;
 
 -- Update partitioning key column. Should fire the DELETE+INSERT triggers,
 -- like in PostgreSQL.
