@@ -1073,8 +1073,6 @@ select Tbl01.*,foo(Tbl01.a) as foo from Tbl01; -- showing foo values
 (4 rows)
 
 select Tbl01.* from Tbl01 where foo(Tbl01.a) not in (select a from Tbl03);
-INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
-DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Query Parameter
  a | b  | c  
 ---+----+----
    | 11 | 12
