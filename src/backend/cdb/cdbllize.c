@@ -405,6 +405,10 @@ cdbllize_adjust_top_path(PlannerInfo *root, Path *best_path,
 
 	if (query->commandType == CMD_SELECT && query->parentStmtType == PARENTSTMTTYPE_CTAS)
 	{
+		if (query->hasModifyingCTE)
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+					 errmsg("cannot create plan with several writing gangs")));
 		/* CREATE TABLE AS or SELECT INTO */
 		if (query->intoPolicy != NULL)
 		{
