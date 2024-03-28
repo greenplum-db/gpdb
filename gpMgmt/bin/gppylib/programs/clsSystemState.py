@@ -22,6 +22,7 @@ from gppylib.operations.buildMirrorSegments import get_recovery_progress_file, g
 from gppylib.system import configurationInterface as configInterface
 from gppylib.system.environment import GpCoordinatorEnvironment
 from gppylib.utils import TableLogger
+from gppylib.util.gp_utils import get_startup_recovery_remaining_bytes
 
 logger = gplog.get_default_logger()
 
@@ -70,6 +71,7 @@ VALUE__REPL_SENT_LEFT = FieldDefinition("Bytes remaining to send to mirror", "se
 VALUE__REPL_FLUSH_LEFT = FieldDefinition("Bytes received but remain to flush", "flush_left", "int")
 VALUE__REPL_REPLAY_LEFT = FieldDefinition("Bytes received but remain to replay", "replay_left", "int")
 VALUE__REPL_SYNC_REMAINING_BYTES = FieldDefinition("WAL sync remaining bytes", "wal_sync_bytes", "int")
+VALUE__STARTUP_RECOVERY_REMAINING_BYTES = FieldDefinition("Startup recovery remaining bytes", "startup_recovery_remaining_bytes", "int")
 
 VALUE_RECOVERY_COMPLETED_BYTES = FieldDefinition("Completed bytes (kB)", "recovery_completed_bytes", "int")
 VALUE_RECOVERY_TOTAL_BYTES = FieldDefinition("Total bytes (kB)", "recovery_total_bytes", "int")
@@ -164,7 +166,7 @@ class GpStateData:
                     VALUE__ACTIVE_PID_INT, VALUE__POSTMASTER_PID_VALUE_INT,
                     VALUE__POSTMASTER_PID_FILE, VALUE__POSTMASTER_PID_VALUE, VALUE__LOCK_FILES,
                     VALUE_RECOVERY_COMPLETED_BYTES, VALUE_RECOVERY_TOTAL_BYTES, VALUE_RECOVERY_PERCENTAGE,
-                    VALUE_RECOVERY_TYPE,VALUE_RECOVERY_STAGE
+                    VALUE_RECOVERY_TYPE,VALUE_RECOVERY_STAGE, VALUE__STARTUP_RECOVERY_REMAINING_BYTES
                     ]:
             self.__allValues[k] = True
 
@@ -665,7 +667,7 @@ class GpSystemStateProgram:
         if unsync_segs:
             logger.info("----------------------------------------------------")
             logger.info("Unsynchronized Segment Pairs")
-            logSegments(unsync_segs, True, [VALUE__REPL_SYNC_REMAINING_BYTES])
+            logSegments(unsync_segs, True, [VALUE__REPL_SYNC_REMAINING_BYTES, VALUE__STARTUP_RECOVERY_REMAINING_BYTES])
             exitCode = 1
         else:
             pass # logger.info( "No segment pairs are in resynchronization")
@@ -707,6 +709,14 @@ class GpSystemStateProgram:
         if exitCode == 0:
             logger.info("----------------------------------------------------")
             logger.info("All segments are running normally")
+
+        if exitCode == 1:
+            logger.info("*****************************************************")
+            logger.info("Please monitor the output of the 'Wal sync remaining bytes' and 'Startup recovery remaining"
+                        " bytes' columns when tracking recovery of segments. Segments undergoing WAL sync or Startup "
+                        "recovery may still be marked 'Down' in gp_segment_configuration. Please allow these "
+                        "operations to complete for the segments to get marked 'Up'.")
+            logger.info("*****************************************************")
 
         return exitCode
 
@@ -1035,8 +1045,9 @@ class GpSystemStateProgram:
         returns list of primary segments of pairs which aren't in sync state
         """
         unsync_segs = []
-        primaries = [s for s in gpArray.getSegDbList() if s.isSegmentPrimary(current_role=True)]
-        for s in primaries:
+        for segmentPair in gpArray.segmentPairs:
+            s = segmentPair.primaryDB
+            m = segmentPair.mirrorDB
             try:
                 data.switchSegment(s)
                 url = dbconn.DbURL(hostname=s.hostname, port=s.port, dbname='template1')
@@ -1054,11 +1065,22 @@ class GpSystemStateProgram:
                             wal_sync_bytes_out = rows[0][0]
                             unsync_segs.append(s)
                             data.addValue(VALUE__REPL_SYNC_REMAINING_BYTES, wal_sync_bytes_out)
+                            data.addValue(VALUE__STARTUP_RECOVERY_REMAINING_BYTES, 'Completed')
                     else:
-                        # no return value from pg_stat_replication, there isn't a replication connection
                         wal_sync_bytes_out = 'Unknown'
+                        # no return value from pg_stat_replication, there isn't a replication connection
+                        # It is possible that segment is still finishing startup recovery and that's why
+                        # there is no replication connection. In that case the startup recovery remaining bytes
+                        # will be shown instead of unknown.
+                        startup_recovery_remaining_bytes = get_startup_recovery_remaining_bytes(m.hostname, m.port,
+                                                                                                m.datadir)
+                        if startup_recovery_remaining_bytes is not None:
+                            data.addValue(VALUE__REPL_SYNC_REMAINING_BYTES, 'Not started yet')
+                            data.addValue(VALUE__STARTUP_RECOVERY_REMAINING_BYTES, startup_recovery_remaining_bytes)
+                        else:
+                            data.addValue(VALUE__REPL_SYNC_REMAINING_BYTES, wal_sync_bytes_out)
+                            data.addValue(VALUE__STARTUP_RECOVERY_REMAINING_BYTES, 'Unknown')
                         unsync_segs.append(s)
-                        data.addValue(VALUE__REPL_SYNC_REMAINING_BYTES, wal_sync_bytes_out)
             except (psycopg2.InternalError, psycopg2.OperationalError):
                 logger.warning('could not query segment {} ({}:{})'.format(
                     s.dbid, s.hostname, s.port

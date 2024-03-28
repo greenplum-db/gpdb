@@ -4,7 +4,9 @@ import re
 
 from gppylib.db import dbconn
 from gppylib.gparray import GpArray, ROLE_MIRROR
-from test.behave_utils.utils import check_stdout_msg, check_string_not_present_stdout
+
+from gppylib.commands.base import Command
+from test.behave_utils.utils import check_stdout_msg, get_primary_segment_host_port
 from gppylib.commands.gp import get_coordinatordatadir
 from gppylib.commands import unix
 
@@ -142,3 +144,27 @@ def impl(context):
             "of dbid 5\n")
         fp.write("differential:6:          8,192 100%    7.81MB/s    0:00:00 (xfr#1, to-chk=0/1) :Syncing tablespace of "
                  "dbid 6 for oid 20516")
+
+
+@given('a process is started on host of mirror {content} which keeps running and contains temp walfile')
+@when('a process is started on host of mirror {content} which keeps running and contains temp walfile')
+@then('a process is started on host of mirror {content} which keeps running and contains temp walfile')
+def impl(context, content):
+    host, port = get_primary_segment_host_port()
+    cmd_str = "ssh {} 'exec -a \"postgres:  {}, startup  recovering   000000010000000100000001\" sleep 180'".format(host, port)
+    cmd = Command(name='Running Remote command: {}'.format(cmd_str), cmdStr=cmd_str)
+    proc = cmd.runNoWait()
+    context.asyncproc = proc
+    context.mirror_host = host
+
+
+@then('gpstate prints info message related to startup recovery to stdout')
+def impl(context):
+    message = "Please monitor the output of the 'Wal sync remaining bytes' and 'Startup recovery remaining bytes' " \
+              "columns when tracking recovery of segments. Segments undergoing WAL sync or Startup recovery may still " \
+              "be marked 'Down' in gp_segment_configuration. Please allow these operations to complete for the " \
+              "segments to get marked 'Up'."
+    context.execute_steps(u'''
+           Then gpstate should print "{}" to stdout
+       '''.format(message))
+
