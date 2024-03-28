@@ -2,6 +2,7 @@ from gppylib import gplog
 from gppylib.commands.base import Command
 from gppylib.commands import base
 from gppylib.gparray import STATUS_DOWN
+import socket
 
 logger = gplog.get_default_logger()
 
@@ -12,8 +13,13 @@ def get_unreachable_segment_hosts(hosts, num_workers):
 
     pool = base.WorkerPool(numWorkers=num_workers)
     try:
+        localhost = socket.gethostname()
         for host in set(hosts):
-            cmd = Command(name='check %s is up' % host, cmdStr="ssh %s 'echo %s'" % (host, host))
+            cmd = None
+            if host != localhost:
+                cmd = Command(name='check %s is up' % host, cmdStr="ssh %s 'echo %s'" % (host, host))
+            else:
+                cmd = Command(name='check %s is up' % host, cmdStr="echo {}".format(host))
             pool.addCommand(cmd)
         pool.join()
     finally:

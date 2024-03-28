@@ -1694,11 +1694,13 @@ class IfAddrs:
         cmd = ["echo 'START_CMD_OUTPUT'; %s/libexec/ifaddrs" % GPHOME]
         if not include_loopback:
             cmd.append('--no-loopback')
-        if hostname:
+        localhost = socket.gethostname()
+        if hostname and hostname != localhost:
             args = ['ssh', '-n', hostname]
             args.append(' '.join(cmd))
         else:
-            args = cmd
+            args = ['bash', '-c']
+            args.append(' '.join(cmd))
 
         result = subprocess.check_output(args).decode()
         return result.split('START_CMD_OUTPUT\n')[1].splitlines()
