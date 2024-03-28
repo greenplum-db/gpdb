@@ -36,6 +36,7 @@
 #include "utils/snapshot.h"
 
 #include "access/appendonlytid.h"
+#include "access/appendonlywriter.h"
 
 #include "cdb/cdbbufferedappend.h"
 #include "cdb/cdbbufferedread.h"
@@ -52,6 +53,16 @@
 #define MAX_APPENDONLY_BLOCK_SIZE			 (2 * 1024 * 1024)
 #define DEFAULT_VARBLOCK_TEMPSPACE_LEN   	 (4 * 1024)
 #define DEFAULT_FS_SAFE_WRITE_SIZE			 (0)
+
+/*
+ * Check if an attribute value is missing in an AO/CO row according to the row number
+ * and the mapping from attnum to "lastrownum" for the corresponding table/segment.
+ *
+ * See comment for AppendOnlyExecutorReadBlock_BindingInit() for an explanation 
+ * on AO tables, which applies to CO tables as well.
+ */
+#define AO_ATTR_VAL_IS_MISSING(rowNum, colno, segmentFileNum, attnum_to_rownum) \
+		((rowNum) <= (attnum_to_rownum)[(colno) * MAX_AOREL_CONCURRENCY + (segmentFileNum)])
 
 extern AppendOnlyBlockDirectory *GetAOBlockDirectory(Relation relation);
 

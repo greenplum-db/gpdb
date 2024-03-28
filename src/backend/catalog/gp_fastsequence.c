@@ -417,13 +417,5 @@ RemoveFastSequenceEntry(Oid relid, Oid objid)
 	systable_endscan(sscan);
 	table_close(rel, RowExclusiveLock);
 
-	rel = table_open(relid, NoLock);
-	/*
-	 * Currently lastrownums are only used by ao_row tables. Once ao_column
-	 * tables need them (i.e. when the same ADD COLUMN optimization for 
-	 * ao_column), we can change this check to RelationStorageIsAO.
-	 */
-	if (RelationStorageIsAoRows(rel))
-		ClearAttributeEncodingLastrownums(relid);
-	table_close(rel, NoLock);
+	ClearAttributeEncodingLastrownums(relid);
 }

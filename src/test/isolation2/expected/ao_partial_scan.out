@@ -827,10 +827,10 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 1U: SELECT tupleid, columngroup_no, segno, count(entry_no) AS num_entries, sum(row_count) AS total_rowcount FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan1') WHERE columngroup_no IN (1, 2) GROUP BY tupleid, columngroup_no, segno ORDER BY 1,2,3;
  tupleid | columngroup_no | segno | num_entries | total_rowcount 
 ---------+----------------+-------+-------------+----------------
- (0,2)   | 1              | 1     | 161         | 1317141        
+ (0,1)   | 1              | 1     | 161         | 1317141        
  (0,4)   | 1              | 1     | 1           | 2859           
  (0,5)   | 2              | 1     | 81          | 1320000        
- (0,7)   | 1              | 2     | 161         | 1317141        
+ (0,6)   | 1              | 2     | 161         | 1317141        
  (0,9)   | 1              | 2     | 1           | 2859           
  (0,10)  | 2              | 2     | 81          | 1320000        
 (6 rows)
@@ -952,19 +952,19 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
 1U: SELECT * FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan1') WHERE first_row_no < ((33554435 - 33554432) * 32768) AND columngroup_no IN (1, 2) AND segno = 1 ORDER BY 1,2,3,4,5;
  tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
 ---------+-------+----------------+----------+--------------+-------------+-----------
- (0,2)   | 1     | 1              | 0        | 1            | 0           | 8181      
- (0,2)   | 1     | 1              | 1        | 8182         | 32768       | 8181      
- (0,2)   | 1     | 1              | 2        | 16363        | 65536       | 8181      
- (0,2)   | 1     | 1              | 3        | 24544        | 98304       | 8181      
- (0,2)   | 1     | 1              | 4        | 32725        | 131072      | 8181      
- (0,2)   | 1     | 1              | 5        | 40906        | 163840      | 8181      
- (0,2)   | 1     | 1              | 6        | 49087        | 196608      | 8181      
- (0,2)   | 1     | 1              | 7        | 57268        | 229376      | 8181      
- (0,2)   | 1     | 1              | 8        | 65449        | 262144      | 8181      
- (0,2)   | 1     | 1              | 9        | 73630        | 294912      | 8181      
- (0,2)   | 1     | 1              | 10       | 81811        | 327680      | 8181      
- (0,2)   | 1     | 1              | 11       | 89992        | 360448      | 8181      
- (0,2)   | 1     | 1              | 12       | 98173        | 393216      | 8181      
+ (0,1)   | 1     | 1              | 0        | 1            | 0           | 8181      
+ (0,1)   | 1     | 1              | 1        | 8182         | 32768       | 8181      
+ (0,1)   | 1     | 1              | 2        | 16363        | 65536       | 8181      
+ (0,1)   | 1     | 1              | 3        | 24544        | 98304       | 8181      
+ (0,1)   | 1     | 1              | 4        | 32725        | 131072      | 8181      
+ (0,1)   | 1     | 1              | 5        | 40906        | 163840      | 8181      
+ (0,1)   | 1     | 1              | 6        | 49087        | 196608      | 8181      
+ (0,1)   | 1     | 1              | 7        | 57268        | 229376      | 8181      
+ (0,1)   | 1     | 1              | 8        | 65449        | 262144      | 8181      
+ (0,1)   | 1     | 1              | 9        | 73630        | 294912      | 8181      
+ (0,1)   | 1     | 1              | 10       | 81811        | 327680      | 8181      
+ (0,1)   | 1     | 1              | 11       | 89992        | 360448      | 8181      
+ (0,1)   | 1     | 1              | 12       | 98173        | 393216      | 8181      
  (0,5)   | 1     | 2              | 0        | 1            | 0           | 16363     
  (0,5)   | 1     | 2              | 1        | 16364        | 32768       | 16363     
  (0,5)   | 1     | 2              | 2        | 32727        | 65536       | 16363     
@@ -1823,3 +1823,154 @@ SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', d
  1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}   
  2          | 33554433 | 1      | f        | f        | f           | f     | {20 .. 20} 
 (2 rows)
+
+--------------------------------------------------------------------------------
+-- Scenario 5: BRIN index includes a column that has missing rownums
+--------------------------------------------------------------------------------
+
+CREATE TABLE aoco_partial_scan5(i int) USING ao_column;
+CREATE TABLE
+
+-- Insert one logical heap block worth of committed rows.
+INSERT INTO aoco_partial_scan5 SELECT 1 FROM generate_series(1, 32767);
+INSERT 0 32767
+
+-- add a new column j
+ALTER TABLE aoco_partial_scan5 ADD COLUMN j int DEFAULT 10;
+ALTER TABLE
+
+-- First index: built on column i and j.
+-- Doing an index build will result in scanning the table.
+-- But the new column won't have any blocks to scan.
+-- The number of scanned blocks equal to the total number of blocks of the
+-- table shown by gp_toolkit.__gp_aoblkdir later.
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+CREATE INDEX ON aoco_partial_scan5 USING brin(i, j) WITH (pages_per_range = 3);
+CREATE INDEX
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault                                                                                                                                                                                                                                   
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 
+ Success: fault name:'AppendOnlyStorageRead_ReadNextBlock_success' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'5' 
+(1 row)
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- no blkdir entry for column j
+1U: SELECT * FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan5') ORDER BY 1,2,3,4,5;
+ tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------+-------+----------------+----------+--------------+-------------+-----------
+ (0,1)   | 1     | 0              | 0        | 1            | 0           | 8181      
+ (0,1)   | 1     | 0              | 1        | 8182         | 32768       | 8181      
+ (0,1)   | 1     | 0              | 2        | 16363        | 65536       | 8181      
+ (0,1)   | 1     | 0              | 3        | 24544        | 98304       | 8181      
+ (0,1)   | 1     | 0              | 4        | 32725        | 131072      | 43        
+(5 rows)
+
+-- but the summarization shows expected default value for the column j
+1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan5_i_j_idx', 2), 'aoco_partial_scan5_i_j_idx');
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 1}   
+ 1          | 33554432 | 2      | f        | f        | f           | f     | {10 .. 10} 
+(2 rows)
+
+-- Second index built only on column j. The block count should be the same as
+-- the first index because we'll use the first column as the anchor column.
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'skip', '', '', '', 1, -1, 0, dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+CREATE INDEX ON aoco_partial_scan5 USING brin(j) WITH (pages_per_range = 3);
+CREATE INDEX
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'status', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault                                                                                                                                                                                                                                   
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 
+ Success: fault name:'AppendOnlyStorageRead_ReadNextBlock_success' fault type:'skip' ddl statement:'' database name:'' table name:'' start occurrence:'1' end occurrence:'-1' extra arg:'0' fault injection state:'triggered'  num times hit:'5' 
+(1 row)
+SELECT gp_inject_fault('AppendOnlyStorageRead_ReadNextBlock_success', 'reset', dbid) FROM gp_segment_configuration WHERE content = 1 AND role = 'p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- we should see correct summarization even the only column is incomplete
+1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan5_j_idx', 2), 'aoco_partial_scan5_j_idx');
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value      
+------------+----------+--------+----------+----------+-------------+-------+------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {10 .. 10} 
+(1 row)
+
+-- now desummarize everything
+SELECT brin_desummarize_range('aoco_partial_scan5_i_j_idx', 33554432);
+ brin_desummarize_range 
+------------------------
+(0 rows)
+SELECT brin_desummarize_range('aoco_partial_scan5_j_idx', 33554432);
+ brin_desummarize_range 
+------------------------
+(0 rows)
+
+-- Insert some new rows. The new column will physically contain values for these rows.
+INSERT INTO aoco_partial_scan5 SELECT 20, k FROM generate_series(1, 50000) k;
+INSERT 0 50000
+
+-- column j will have blkdir entries for the newly added rows
+1U: SELECT * FROM gp_toolkit.__gp_aoblkdir('aoco_partial_scan5') ORDER BY 1,2,3,4,5;
+ tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------+-------+----------------+----------+--------------+-------------+-----------
+ (0,2)   | 1     | 0              | 0        | 1            | 0           | 8181      
+ (0,2)   | 1     | 0              | 1        | 8182         | 32768       | 8181      
+ (0,2)   | 1     | 0              | 2        | 16363        | 65536       | 8181      
+ (0,2)   | 1     | 0              | 3        | 24544        | 98304       | 8181      
+ (0,2)   | 1     | 0              | 4        | 32725        | 131072      | 43        
+ (0,2)   | 1     | 0              | 5        | 32801        | 131288      | 8181      
+ (0,2)   | 1     | 0              | 6        | 40982        | 164056      | 8181      
+ (0,2)   | 1     | 0              | 7        | 49163        | 196824      | 8181      
+ (0,2)   | 1     | 0              | 8        | 57344        | 229592      | 8181      
+ (0,2)   | 1     | 0              | 9        | 65525        | 262360      | 8181      
+ (0,2)   | 1     | 0              | 10       | 73706        | 295128      | 8181      
+ (0,2)   | 1     | 0              | 11       | 81887        | 327896      | 914       
+ (0,3)   | 1     | 1              | 0        | 32801        | 0           | 8181      
+ (0,3)   | 1     | 1              | 1        | 40982        | 32768       | 8181      
+ (0,3)   | 1     | 1              | 2        | 49163        | 65536       | 8181      
+ (0,3)   | 1     | 1              | 3        | 57344        | 98304       | 8181      
+ (0,3)   | 1     | 1              | 4        | 65525        | 131072      | 8181      
+ (0,3)   | 1     | 1              | 5        | 73706        | 163840      | 8181      
+ (0,3)   | 1     | 1              | 6        | 81887        | 196608      | 914       
+(19 rows)
+
+-- summarize from the very first rownum which is missing in column j
+SELECT brin_summarize_range('aoco_partial_scan5_i_j_idx', 33554432);
+ brin_summarize_range 
+----------------------
+ 1                    
+(1 row)
+SELECT brin_summarize_range('aoco_partial_scan5_j_idx', 33554432);
+ brin_summarize_range 
+----------------------
+ 1                    
+(1 row)
+
+-- but we should see correct summarization for it
+1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan5_i_j_idx', 2), 'aoco_partial_scan5_i_j_idx');
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value        
+------------+----------+--------+----------+----------+-------------+-------+--------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 20}    
+ 1          | 33554432 | 2      | f        | f        | f           | f     | {1 .. 50000} 
+(2 rows)
+1U: SELECT * FROM brin_page_items(get_raw_page('aoco_partial_scan5_j_idx', 2), 'aoco_partial_scan5_j_idx');
+ itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value        
+------------+----------+--------+----------+----------+-------------+-------+--------------
+ 1          | 33554432 | 1      | f        | f        | f           | f     | {1 .. 50000} 
+(1 row)
+

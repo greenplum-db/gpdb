@@ -128,7 +128,7 @@ Feature: gpcheckcat tests
         Then gpcheckcat should print "Extra" to stdout
         And gpcheckcat should print "Table miss_attr_db4.public.heap_table.1" to stdout
 
-    Scenario: gpcheckcat should report inconsistent pg_fastsequence.lastrownums values with gp_fastsequence
+    Scenario: gpcheckcat should report inconsistent pg_fastsequence.lastrownums values with gp_fastsequence for AO tables
         Given database "errorneous_lastrownums" is dropped and recreated
         And the user runs "psql errorneous_lastrownums -c "create table errlastrownum(a int) using ao_row; insert into errlastrownum select * from generate_series(1,100);""
         And the user runs "psql errorneous_lastrownums -c "alter table errlastrownum add column newcol int;""
@@ -140,6 +140,26 @@ Feature: gpcheckcat tests
         And gpcheckcat should print "Failed test\(s\) that are not reported here: ao_lastrownums" to stdout
         Given database "errorneous_lastrownums" is dropped and recreated
         And the user runs "psql errorneous_lastrownums -c "create table errlastrownum(a int) using ao_row; insert into errlastrownum select * from generate_series(1,10);""
+        And the user runs "psql errorneous_lastrownums -c "alter table errlastrownum add column newcol int;""
+        When the user runs "gpcheckcat -R ao_lastrownums errorneous_lastrownums"
+        Then gpcheckcat should return a return code of 0
+        Then the user runs sql "set allow_system_table_mods=on; delete from gp_fastsequence where last_sequence > 0;" in "errorneous_lastrownums" on first primary segment
+        When the user runs "gpcheckcat -R ao_lastrownums errorneous_lastrownums"
+        Then gpcheckcat should return a return code of 3
+        And gpcheckcat should print "Failed test\(s\) that are not reported here: ao_lastrownums" to stdout
+
+    Scenario: gpcheckcat should report inconsistent pg_fastsequence.lastrownums values with gp_fastsequence for AOCO tables
+        Given database "errorneous_lastrownums" is dropped and recreated
+        And the user runs "psql errorneous_lastrownums -c "create table errlastrownum(a int) using ao_column; insert into errlastrownum select * from generate_series(1,100);""
+        And the user runs "psql errorneous_lastrownums -c "alter table errlastrownum add column newcol int;""
+        When the user runs "gpcheckcat -R ao_lastrownums errorneous_lastrownums"
+        Then gpcheckcat should return a return code of 0
+        When the user runs sql "set allow_system_table_mods=on; update gp_fastsequence set last_sequence = 0 where last_sequence > 0;" in "errorneous_lastrownums" on first primary segment
+        When the user runs "gpcheckcat -R ao_lastrownums errorneous_lastrownums"
+        Then gpcheckcat should return a return code of 3
+        And gpcheckcat should print "Failed test\(s\) that are not reported here: ao_lastrownums" to stdout
+        Given database "errorneous_lastrownums" is dropped and recreated
+        And the user runs "psql errorneous_lastrownums -c "create table errlastrownum(a int) using ao_column; insert into errlastrownum select * from generate_series(1,10);""
         And the user runs "psql errorneous_lastrownums -c "alter table errlastrownum add column newcol int;""
         When the user runs "gpcheckcat -R ao_lastrownums errorneous_lastrownums"
         Then gpcheckcat should return a return code of 0

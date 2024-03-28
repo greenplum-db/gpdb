@@ -30,6 +30,7 @@
 #include "catalog/index.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_appendonly.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_type.h"
 #include "catalog/storage.h"
 #include "catalog/storage_xlog.h"
@@ -1106,6 +1107,12 @@ appendonly_relation_nontransactional_truncate(Relation rel)
 	heap_truncate_one_relid(aoseg_relid);
 	heap_truncate_one_relid(aoblkdir_relid);
 	heap_truncate_one_relid(aovisimap_relid);
+
+	/*
+	 * Also clean up pg_attribute_encoding entries which were only useful for
+	 * the AO table about the lastrownums information. Since table data is
+	 * truncated we do not need the lastrownums info anymore. */
+	RemoveAttributeEncodingsByRelid(RelationGetRelid(rel));
 }
 
 static void

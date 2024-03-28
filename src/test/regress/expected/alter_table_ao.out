@@ -1116,7 +1116,7 @@ select count(*) from t_addcol;
 
 -- unsafe truncate
 begin;
-create table t_addcol_truncate(a int) distributed replicated;
+create table t_addcol_truncate(a int) using ao_row distributed replicated;
 insert into t_addcol_truncate select * from generate_series(1,10000);
 alter table t_addcol_truncate add column b int default 10;
 select count(*) from t_addcol_truncate;
@@ -1133,12 +1133,13 @@ select count(*) from t_addcol_truncate;
 (1 row)
 
 end;
--- columns gone after truncate in pg_attribute_encoding
+-- columns gone after safe truncate
 execute checkattributeencoding('t_addcol');
  attnum | filenum | lastrownums | attoptions 
 --------+---------+-------------+------------
 (0 rows)
 
+-- for unsafe truncate, since we don't clear up gp_fastsequence, we don't need to clear up lastrownums
 execute checkattributeencoding('t_addcol_truncate');
  attnum | filenum | lastrownums | attoptions 
 --------+---------+-------------+------------

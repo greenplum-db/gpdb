@@ -31,6 +31,9 @@ SELECT attstattarget FROM pg_attribute
 2: COMMIT;
 3: COMMIT;
 
+-- make sure new column does not affect the result
+ALTER TABLE fast_analyze_@amname@_1 ADD COLUMN newcol int;
+
 SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid)
   FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
 
@@ -82,6 +85,9 @@ CREATE TABLE fast_analyze_@amname@_2(i int, j int) USING @amname@ DISTRIBUTED BY
 2: COMMIT;
 3: COMMIT;
 
+-- make sure new column does not affect the result
+ALTER TABLE fast_analyze_@amname@_2 ADD COLUMN newcol int;
+
 SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid)
   FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
 
@@ -130,6 +136,9 @@ CREATE TABLE fast_analyze_@amname@_3(i int, j int) USING @amname@ DISTRIBUTED BY
 1: ABORT;
 2: ABORT;
 3: ABORT;
+
+-- make sure new column does not affect the result
+ALTER TABLE fast_analyze_@amname@_3 ADD COLUMN newcol int;
 
 SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid)
   FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
@@ -183,6 +192,9 @@ CREATE TABLE fast_analyze_@amname@_4(i int, j int) USING @amname@ DISTRIBUTED BY
 DELETE FROM fast_analyze_@amname@_4;
 SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid)
   FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
+
+-- make sure new column does not affect the result
+ALTER TABLE fast_analyze_@amname@_4 ADD COLUMN newcol int;
 
 ANALYZE fast_analyze_@amname@_4;
 

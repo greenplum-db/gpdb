@@ -15,6 +15,10 @@ PREPARE
 PREPARE checkrelfilenodediff AS SELECT a.segid, b.casename, b.relname, (relfilenodebefore != a.relfilenode) rewritten FROM ( SELECT -1 segid, relname, pg_relation_filenode(relname::text) as relfilenode FROM pg_class WHERE relname LIKE $2 UNION SELECT gp_segment_id segid, relname, pg_relation_filenode(relname::text) as relfilenode FROM gp_dist_random('pg_class') WHERE relname LIKE $2 ORDER BY segid )a, relfilenodecheck b WHERE b.casename LIKE $1 and b.relname LIKE $2 and a.segid = b.segid;
 PREPARE
 
+-- we skip the activity checks in gp_toolkit.gp_check_orphaned_files as that could make the test flaky
+PREPARE check_orphaned_file_skip_activity AS SELECT pg_catalog.gp_execution_segment() AS gp_segment_id, * FROM gp_dist_random('gp_toolkit.__check_orphaned_files') WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = $1) UNION ALL SELECT -1 AS gp_segment_id, * FROM gp_toolkit.__check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = $1);
+PREPARE
+
 --------------------------------------------------------------------------------
 -- Test if ALTER COLUMN TYPE and ADD COLUMN on AOCO doesn't rewrite the entire table
 --------------------------------------------------------------------------------
@@ -106,16 +110,15 @@ SELECT * FROM gp_toolkit.__gp_aocsseg('alter_type_aoco') ORDER BY segment_id, co
  1          | 1     | 0          | 1              | 3        | 144 | 144              | 5        | 3             | 1     
  1          | 1     | 1          | 204929         | 3        | 144 | 144              | 5        | 3             | 1     
  1          | 1     | 2          | 257            | 3        | 144 | 144              | 5        | 3             | 1     
- 1          | 1     | 3          | 385            | 3        | 144 | 144              | 5        | 3             | 1     
+ 1          | 1     | 3          | 385            | 3        | 48  | 48               | 5        | 3             | 1     
 (4 rows)
 DROP TABLE alter_type_aoco;
 DROP TABLE
 -- check if all files are dropped correctly
-SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_type_aoco');
- count 
--------
- 0     
-(1 row)
+EXECUTE check_orphaned_file_skip_activity('alter_type_aoco');
+ gp_segment_id | tablespace | filename | filepath | gp_segment_id 
+---------------+------------+----------+----------+---------------
+(0 rows)
 
 --------------------------------------------------------------------------------
 -- Test if column rewrite handles deleted rows in blockdirectory correctly for
@@ -685,11 +688,10 @@ SELECT * FROM part_alter_col;
 DROP TABLE part_alter_col;
 DROP TABLE
 -- check if all files are dropped correctly
-SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'part_alter_col');
- count 
--------
- 0     
-(1 row)
+EXECUTE check_orphaned_file_skip_activity('part_alter_col');
+ gp_segment_id | tablespace | filename | filepath | gp_segment_id 
+---------------+------------+----------+----------+---------------
+(0 rows)
 --------------------------------------------------------------------------------
 -- Test if column rewrite works when AT ALTER COLUMN TYPE for a column
 -- and then alter it back to the original type
@@ -793,11 +795,10 @@ SELECT * FROM alter_column_back;
 DROP TABLE alter_column_back;
 DROP TABLE
 -- check if all files are dropped correctly
-SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_back');
- count 
--------
- 0     
-(1 row)
+EXECUTE check_orphaned_file_skip_activity('alter_column_back');
+ gp_segment_id | tablespace | filename | filepath | gp_segment_id 
+---------------+------------+----------+----------+---------------
+(0 rows)
 
 --------------------------------------------------------------------------------
 -- Test if ALTER COLUMN TYPE and SET ACCESS METHOD can be done in the same command
@@ -936,23 +937,25 @@ EXECUTE attribute_encoding_check ('alter_column_other');
  alter_column_other | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
 (3 rows)
 
+-- ALTER TYPE and adding constraint can be done together when rewriting column-only. No table rewrite.
+-- SET DEFAULT is essentially adding a constraint.
 ALTER TABLE alter_column_other ALTER COLUMN b TYPE text, ALTER COLUMN c SET DEFAULT 5;
 ALTER TABLE
 
 EXECUTE attribute_encoding_check ('alter_column_other');
  relname            | attname | filenum | attoptions                                                  
 --------------------+---------+---------+-------------------------------------------------------------
- alter_column_other | b       | 2       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
+ alter_column_other | b       | 1602    | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
  alter_column_other | c       | 3       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
  alter_column_other | a       | 1       | ['compresstype=none', 'blocksize=32768', 'compresslevel=0'] 
 (3 rows)
 EXECUTE checkrelfilenodediff ('alter_column_other', 'alter_column_other');
  segid | casename           | relname            | rewritten 
 -------+--------------------+--------------------+-----------
- 2     | alter_column_other | alter_column_other | t         
- -1    | alter_column_other | alter_column_other | t         
- 0     | alter_column_other | alter_column_other | t         
- 1     | alter_column_other | alter_column_other | t         
+ 2     | alter_column_other | alter_column_other | f         
+ -1    | alter_column_other | alter_column_other | f         
+ 0     | alter_column_other | alter_column_other | f         
+ 1     | alter_column_other | alter_column_other | f         
 (4 rows)
 SELECT * FROM alter_column_other;
  a | b | c 
@@ -1026,16 +1029,16 @@ EXECUTE checkrelfilenodediff ('alter_column_constraints_col_rewrite', 'alter_col
 
 EXECUTE capturerelfilenodebefore ('alter_column_constraints_fullrewrite', 'alter_column_constraints');
 INSERT 0 4
--- should succeed and relfile changed (not using the column rewrite optimization because there's other command)
+-- should succeed and no table rewrite
 ALTER TABLE alter_column_constraints ADD CONSTRAINT checkb2 CHECK (b < 100), ALTER COLUMN b TYPE int;
 ALTER TABLE
 EXECUTE checkrelfilenodediff ('alter_column_constraints_fullrewrite', 'alter_column_constraints');
  segid | casename                             | relname                  | rewritten 
 -------+--------------------------------------+--------------------------+-----------
- -1    | alter_column_constraints_fullrewrite | alter_column_constraints | t         
- 0     | alter_column_constraints_fullrewrite | alter_column_constraints | t         
- 1     | alter_column_constraints_fullrewrite | alter_column_constraints | t         
- 2     | alter_column_constraints_fullrewrite | alter_column_constraints | t         
+ -1    | alter_column_constraints_fullrewrite | alter_column_constraints | f         
+ 2     | alter_column_constraints_fullrewrite | alter_column_constraints | f         
+ 0     | alter_column_constraints_fullrewrite | alter_column_constraints | f         
+ 1     | alter_column_constraints_fullrewrite | alter_column_constraints | f         
 (4 rows)
 
 --------------------------------------------------------------------------------
@@ -1052,8 +1055,6 @@ ALTER TABLE
 INSERT 0 10
 1: COMMIT;
 COMMIT
--- gp_toolkit.gp_check_orphaned_files later requires that there's no concurrent sessions
-1q: ... <quitting>
 INSERT INTO alter_column_seg0 SELECT 1,i,i FROM generate_series(1,10)i;
 INSERT 0 10
 ALTER TABLE alter_column_seg0 ALTER COLUMN b TYPE text;
@@ -1075,11 +1076,10 @@ SELECT * FROM gp_toolkit.__gp_aocsseg('alter_column_seg0');
 (6 rows)
 DROP TABLE alter_column_seg0;
 DROP TABLE
-SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_seg0');
- count 
--------
- 0     
-(1 row)
+EXECUTE check_orphaned_file_skip_activity('alter_column_seg0');
+ gp_segment_id | tablespace | filename | filepath | gp_segment_id 
+---------------+------------+----------+----------+---------------
+(0 rows)
 
 --------------------------------------------------------------------------------
 -- Test if ALTER COLUMN TYPE works correctly multiple segfiles are created
@@ -1119,11 +1119,10 @@ SELECT * FROM gp_toolkit.__gp_aocsseg('alter_column_multiple_concurrency');
 (4 rows)
 DROP TABLE alter_column_multiple_concurrency;
 DROP TABLE
-SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_multiple_concurrency');
- count 
--------
- 0     
-(1 row)
+EXECUTE check_orphaned_file_skip_activity('alter_column_multiple_concurrency');
+ gp_segment_id | tablespace | filename | filepath | gp_segment_id 
+---------------+------------+----------+----------+---------------
+(0 rows)
 
 --------------------------------------------------------------------------------
 -- Test if ALTER COLUMN TYPE works correctly when a segfile is in AWAITING_DROP state
@@ -1178,17 +1177,10 @@ SELECT * FROM gp_toolkit.__gp_aocsseg('alter_column_awaiting_drop');
 (6 rows)
 DROP TABLE alter_column_awaiting_drop;
 DROP TABLE
--- VACUUM seems to incur some left-over session, wait a little while for that to go away to placate gp_check_orphaned_files
-SELECT pg_sleep(3);
- pg_sleep 
-----------
-          
-(1 row)
-SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_awaiting_drop');
- count 
--------
- 0     
-(1 row)
+EXECUTE check_orphaned_file_skip_activity('alter_column_awaiting_drop');
+ gp_segment_id | tablespace | filename | filepath | gp_segment_id 
+---------------+------------+----------+----------+---------------
+(0 rows)
 
 --------------------------------------------------------------------------------
 -- Test if ALTER COLUMN TYPE works correctly for 0 inserted rows
@@ -1226,11 +1218,10 @@ SELECT * FROM gp_toolkit.__gp_aocsseg('alter_column_zero_tupcount');
 (4 rows)
 DROP TABLE alter_column_zero_tupcount;
 DROP TABLE
-SELECT count(*) FROM gp_toolkit.gp_check_orphaned_files WHERE split_part(filename,'.',1) = (SELECT oid::text FROM pg_class WHERE relname = 'alter_column_zero_tupcount');
- count 
--------
- 0     
-(1 row)
+EXECUTE check_orphaned_file_skip_activity('alter_column_zero_tupcount');
+ gp_segment_id | tablespace | filename | filepath | gp_segment_id 
+---------------+------------+----------+----------+---------------
+(0 rows)
 
 --------------------------------------------------------------------------------
 -- Test if ALTER COLUMN TYPE works correctly for generated columns.
@@ -1403,7 +1394,7 @@ execute attribute_encoding_check('atsetenc');
 select relname, attnum, size, compression_ratio from gp_toolkit.gp_column_size where relid::regclass::text = 'atsetenc' and gp_segment_id = 0 and attnum = 3;
  relname  | attnum | size  | compression_ratio 
 ----------+--------+-------+-------------------
- atsetenc | 3      | 10096 | 1.00              
+ atsetenc | 3      | 10048 | 1.00              
 (1 row)
 execute capturerelfilenodebefore('set encoding - compress effect', 'atsetenc');
 INSERT 0 4

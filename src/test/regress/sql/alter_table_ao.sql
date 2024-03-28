@@ -642,15 +642,16 @@ truncate t_addcol;
 select count(*) from t_addcol;
 -- unsafe truncate
 begin;
-create table t_addcol_truncate(a int) distributed replicated;
+create table t_addcol_truncate(a int) using ao_row distributed replicated;
 insert into t_addcol_truncate select * from generate_series(1,10000);
 alter table t_addcol_truncate add column b int default 10;
 select count(*) from t_addcol_truncate;
 truncate t_addcol_truncate;
 select count(*) from t_addcol_truncate;
 end;
--- columns gone after truncate in pg_attribute_encoding
+-- columns gone after safe truncate
 execute checkattributeencoding('t_addcol');
+-- for unsafe truncate, since we don't clear up gp_fastsequence, we don't need to clear up lastrownums
 execute checkattributeencoding('t_addcol_truncate');
 
 --
@@ -672,3 +673,5 @@ select sum(a), sum(b), sum(c) from t_addcol_part;
 execute checkattributeencoding('t_addcol');
 execute checkattributeencoding('t_addcol_p1');
 execute checkattributeencoding('t_addcol_p2');
+
+

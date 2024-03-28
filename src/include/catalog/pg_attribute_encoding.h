@@ -75,10 +75,12 @@ extern void CloneAttributeEncodings(Oid oldrelid, Oid newrelid, AttrNumber max_a
 extern void UpdateAttributeEncodings(Oid relid, List *new_attr_encodings);
 extern void UpdateOrAddAttributeEncodingsAttoptionsOnly(Relation rel, List *new_attr_encodings);
 extern void ClearAttributeEncodingLastrownums(Oid relid);
+extern void ClearAttributeEncodingLastrownumsByAttnum(Oid relid, int attnum);
 extern FileNumber GetFilenumForAttribute(Oid relid, AttrNumber attnum);
 extern FileNumber GetFilenumForRewriteAttribute(Oid relid, AttrNumber attnum);
 extern List *GetNextNAvailableFilenums(Oid relid, int n);
 extern int64 *GetAttnumToLastrownumMapping(Oid relid, int natts);
+extern bool *ExistValidLastrownums(Oid relid, int natts);
 extern Datum *get_rel_attoptions(Oid relid, AttrNumber max_attno);
 extern List * rel_get_column_encodings(Relation rel);
 

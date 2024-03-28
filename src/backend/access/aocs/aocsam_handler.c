@@ -26,8 +26,10 @@
 #include "catalog/heap.h"
 #include "catalog/index.h"
 #include "catalog/pg_appendonly.h"
+#include "catalog/pg_attribute_encoding.h"
 #include "catalog/storage.h"
 #include "catalog/storage_xlog.h"
+#include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbaocsam.h"
 #include "cdb/cdbvars.h"
 #include "commands/progress.h"
@@ -542,6 +544,7 @@ aoco_beginscan_extractcolumns(Relation rel, Snapshot snapshot,
 							  List* constraintList, uint32 flags)
 {
 	bool needFree = false;
+	AOCSProjectionKind projKind = AOCS_PROJ_SOME;
 	AOCSScanDesc	aoscan;
 
 	AssertImply(list_length(targetlist) || list_length(qual) || list_length(constraintList), !proj);
@@ -557,15 +560,22 @@ aoco_beginscan_extractcolumns(Relation rel, Snapshot snapshot,
 		/*
 		* In some cases (for example, count(*)), targetlist and qual may be null,
 		* extractcolumns_walker will return immediately, so no columns are specified.
-		* We always scan the first column.
+		* We will pass no proj and defer the choice of the column later.
 		*/
-		if (!found && natts > 0)
-			proj[0] = true;
-		needFree = true;
+		if (!found)
+		{
+			projKind = AOCS_PROJ_ANY;
+			pfree(proj);
+			proj = NULL;
+			needFree = false;
+		}
+		else
+			needFree = true;
 	}
 	aoscan = aocs_beginscan(rel,
 							snapshot,
 							proj,
+							projKind,
 							flags);
 
 	if (needFree)
@@ -643,7 +653,8 @@ aoco_beginscan(Relation relation,
 
 	aoscan = aocs_beginscan(relation,
 							snapshot,
-							NULL,
+							NULL, /* proj */
+							AOCS_PROJ_ALL,
 							flags);
 
 	return (TableScanDesc) aoscan;
@@ -1335,6 +1346,9 @@ aoco_relation_nontransactional_truncate(Relation rel)
 	heap_truncate_one_relid(aoseg_relid);
 	heap_truncate_one_relid(aoblkdir_relid);
 	heap_truncate_one_relid(aovisimap_relid);
+
+	/* Also clear pg_attribute_encoding.lastrownums */
+	ClearAttributeEncodingLastrownums(RelationGetRelid(rel));
 }
 
 static void
@@ -1500,6 +1514,7 @@ aoco_relation_cluster_internals(Relation OldHeap, Relation NewHeap, TupleDesc ol
 
 	scan = aocs_beginscan(OldHeap, GetActiveSnapshot(),
 						  NULL /* proj */,
+						  AOCS_PROJ_ALL,
 						  0 /* flags */);
 
 	/* Report cluster progress */
@@ -1969,6 +1984,8 @@ aoco_index_build_range_scan(Relation heapRelation,
 		int		relnatts = RelationGetNumberOfAttributes(heapRelation);
 		bool 		needs_second_phase_positioning = true;
 		int64 		common_start_rownum = 0;
+		int64 		targetRownum = AOHeapBlockGet_startRowNum(start_blockno);
+		int 		targetSegno = AOSegmentGet_segno(start_blockno);
 
 		/* The range is contained within one seg. */
 		Assert(AOSegmentGet_segno(start_blockno) ==
@@ -1992,6 +2009,14 @@ aoco_index_build_range_scan(Relation heapRelation,
 												true,
 												proj);
 
+		if (aocoscan->columnScanInfo.relationTupleDesc == NULL)
+		{
+			aocoscan->columnScanInfo.relationTupleDesc = RelationGetDescr(aocoscan->rs_base.rs_rd);
+			/* Pin it! ... and of course release it upon destruction / rescan */
+			PinTupleDesc(aocoscan->columnScanInfo.relationTupleDesc);
+			initscan_with_colinfo(aocoscan);
+		}
+
 		/*
 		 * The first phase positioning.
 		 *
@@ -2005,6 +2030,17 @@ aoco_index_build_range_scan(Relation heapRelation,
 		{
 			int		fsInfoIdx;
 			int 	columnGroupNo = aocoscan->columnScanInfo.proj_atts[colIdx];
+
+			/*
+			 * If the target rownum is missing in this column, no point searching
+			 * blkdir for it. Do nothing here, because later when we do the scan
+			 * we won't need to scan varblock for the target rownum for this column.
+			 * When we actually start to scan a rownum that is not missing, we will
+			 * open the first varblock of this column which starts with that rownum.
+			 */
+			if (AO_ATTR_VAL_IS_MISSING(targetRownum, columnGroupNo, targetSegno,
+								aocoscan->columnScanInfo.attnum_to_rownum))
+				continue;
 
 			if (AppendOnlyBlockDirectory_GetEntryForPartialScan(&existingBlkdir,
 																start_blockno,
@@ -2036,8 +2072,9 @@ aoco_index_build_range_scan(Relation heapRelation,
 			else
 			{
 				/*
-				 * So far we shouldn't have a case where some column has block
-				 * directory entry but others don't.
+				 * We should only reach here for the first column. Since we've
+				 * skipped any missing columns, we shouldn't have another case
+				 * where some column has blkdir entry but the other doesn't.
 				 */
 				Assert(colIdx == 0);
 
@@ -2103,8 +2140,12 @@ aoco_index_build_range_scan(Relation heapRelation,
 				AttrNumber		attno = aocoscan->columnScanInfo.proj_atts[colIdx];
 				int32 			rowNumInBlock;
 
-				/* We must've found a valid block directory entry for every column */
-				Assert(dirEntries[colIdx].range.firstRowNum >= 1);
+				/* no need to position if we don't have a varblock for it */
+				if (dirEntries[colIdx].range.firstRowNum == 0)
+					continue;
+
+				/* otherwise, the blkdir entry we found must have a valid firstRowNum */
+				Assert(dirEntries[colIdx].range.firstRowNum > 0);
 
 				/* The common start rownum has to fall in the range of every block directory entry */
 				Assert(common_start_rownum >= dirEntries[colIdx].range.firstRowNum

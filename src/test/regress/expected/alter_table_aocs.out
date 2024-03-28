@@ -839,19 +839,19 @@ SELECT * FROM gp_toolkit.__gp_aocsseg('aocs_addcol_abort') ORDER BY segment_id, 
           0 |     0 |          1 |            128 |        5 |  64 |               64 |        1 |             3 |     1
           0 |     1 |          1 |            129 |        5 |  64 |               64 |        2 |             3 |     1
           0 |     0 |          2 |            256 |        5 |  64 |               64 |        1 |             3 |     1
-          0 |     1 |          2 |            257 |        5 |  48 |               48 |        2 |             3 |     1
+          0 |     1 |          2 |            257 |        5 |   0 |                0 |        2 |             3 |     1
           1 |     0 |          0 |              0 |        1 |  48 |               48 |        1 |             3 |     1
           1 |     1 |          0 |              1 |        1 |  48 |               48 |        2 |             3 |     1
           1 |     0 |          1 |            128 |        1 |  48 |               48 |        1 |             3 |     1
           1 |     1 |          1 |            129 |        1 |  48 |               48 |        2 |             3 |     1
           1 |     0 |          2 |            256 |        1 |  48 |               48 |        1 |             3 |     1
-          1 |     1 |          2 |            257 |        1 |  48 |               48 |        2 |             3 |     1
+          1 |     1 |          2 |            257 |        1 |   0 |                0 |        2 |             3 |     1
           2 |     0 |          0 |              0 |        4 |  56 |               56 |        1 |             3 |     1
           2 |     1 |          0 |              1 |        4 |  56 |               56 |        2 |             3 |     1
           2 |     0 |          1 |            128 |        4 |  56 |               56 |        1 |             3 |     1
           2 |     1 |          1 |            129 |        4 |  56 |               56 |        2 |             3 |     1
           2 |     0 |          2 |            256 |        4 |  56 |               56 |        1 |             3 |     1
-          2 |     1 |          2 |            257 |        4 |  48 |               48 |        2 |             3 |     1
+          2 |     1 |          2 |            257 |        4 |   0 |                0 |        2 |             3 |     1
 (18 rows)
 
 SELECT * FROM aocs_addcol_abort;
@@ -914,3 +914,831 @@ SELECT * FROM aocs_addcol_abort;
 (10 rows)
 
 DROP TABLE aocs_addcol_abort;
+------------
+-- ADD COLUMN optimization for ao_column tables
+------------
+drop table if exists relfilenodecheck;
+create table relfilenodecheck(segid int, relname text, relfilenodebefore int, relfilenodeafter int, casename text);
+-- capture relfilenode for a table, which will be checked by checkrelfilenodediff
+prepare capturerelfilenodebefore as
+insert into relfilenodecheck select -1 segid, relname, pg_relation_filenode(relname::text) as relfilenode, null::int, $1 as casename from pg_class where relname like $2
+union select gp_segment_id segid, relname, pg_relation_filenode(relname::text) as relfilenode, null::int, $1 as casename  from gp_dist_random('pg_class')
+where relname like $2 order by segid;
+-- check to see if relfilenode changed (i.e. whether a table is rewritten), only showing result of primary seg0
+prepare checkrelfilenodediff as
+select a.segid, b.casename, b.relname, (relfilenodebefore != a.relfilenode) rewritten
+from
+    (
+        select -1 segid, relname, pg_relation_filenode(relname::text) as relfilenode
+        from pg_class
+        where relname like $2
+        union
+        select gp_segment_id segid, relname, pg_relation_filenode(relname::text) as relfilenode
+        from gp_dist_random('pg_class')
+        where relname like $2 order by segid
+    )a, relfilenodecheck b
+where b.casename like $1 and b.relname like $2 and a.segid = b.segid and a.segid = 0;
+-- checking pg_attribute_encoding on one of the primaries (most of tested tables are distributed replicated)
+prepare checkattributeencoding as
+select attnum, filenum, lastrownums, attoptions 
+from gp_dist_random('pg_attribute_encoding') e
+  join pg_class c
+  on e.attrelid = c.oid
+where c.relname = $1 and e.gp_segment_id = 0;
+-- prepare the initial table
+drop table if exists t_addcol_aoco;
+create table t_addcol_aoco(a int) using ao_column distributed replicated;
+create index t_addcol_aoco_a on t_addcol_aoco(a);
+insert into t_addcol_aoco select * from generate_series(1, 10);
+--
+-- ADD COLUMN w/ default value
+--
+execute capturerelfilenodebefore('add column default 10', 't_addcol_aoco');
+alter table t_addcol_aoco add column def10 int default 10;
+-- no table rewrite
+execute checkrelfilenodediff('add column default 10', 't_addcol_aoco');
+ segid |       casename        |    relname    | rewritten 
+-------+-----------------------+---------------+-----------
+     0 | add column default 10 | t_addcol_aoco | f
+(1 row)
+
+-- select results are expected
+select sum(a), sum(def10) from t_addcol_aoco;
+ sum | sum 
+-----+-----
+  55 | 100
+(1 row)
+
+select gp_segment_id, (gp_toolkit.__gp_aoblkdir('t_addcol_aoco')).* from gp_dist_random('gp_id');
+ gp_segment_id | tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------------+---------+-------+----------------+----------+--------------+-------------+-----------
+             0 | (0,1)   |     1 |              0 |        0 |            1 |           0 |        10
+             1 | (0,1)   |     1 |              0 |        0 |            1 |           0 |        10
+             2 | (0,1)   |     1 |              0 |        0 |            1 |           0 |        10
+(3 rows)
+
+-- pg_attribute_encoding shows expected lastrownums
+execute checkattributeencoding('t_addcol_aoco');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+(2 rows)
+
+--
+-- ADD COLUMN w/ null default
+--
+execute capturerelfilenodebefore('add column NULL default', 't_addcol_aoco');
+alter table t_addcol_aoco add column defnull1 int;
+alter table t_addcol_aoco add column defnull2 int default NULL;
+-- no table rewrite and results stay the same
+execute checkrelfilenodediff('add column NULL default', 't_addcol_aoco');
+ segid |        casename         |    relname    | rewritten 
+-------+-------------------------+---------------+-----------
+     0 | add column NULL default | t_addcol_aoco | f
+(1 row)
+
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol_aoco;
+ sum | sum | sum | sum 
+-----+-----+-----+-----
+  55 | 100 |     |    
+(1 row)
+
+-- pg_attribute_encoding shows more entries for the new columns
+execute checkattributeencoding('t_addcol_aoco');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      4 |       4 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+(4 rows)
+
+-- add more data
+insert into t_addcol_aoco select 0 from generate_series(1, 10)i;
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol_aoco;
+ sum | sum | sum | sum 
+-----+-----+-----+-----
+  55 | 200 |     |    
+(1 row)
+
+-- insert explict NULLs
+insert into t_addcol_aoco values(1,NULL,1, NULL);
+insert into t_addcol_aoco values(1,NULL,NULL, 1);
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol_aoco;
+ sum | sum | sum | sum 
+-----+-----+-----+-----
+  57 | 200 |   1 |   1
+(1 row)
+
+--
+-- transaction abort should work fine
+--
+begin;
+alter table t_addcol_aoco add column colabort int default 1;
+insert into t_addcol_aoco values(1);
+-- results updated in transaction
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(colabort), count(*) from t_addcol_aoco;
+ sum | sum | sum | sum | sum | count 
+-----+-----+-----+-----+-----+-------
+  58 | 210 |   1 |   1 |  23 |    23
+(1 row)
+
+-- pg_attribute_encoding shows the new column
+execute checkattributeencoding('t_addcol_aoco');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      4 |       4 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      5 |       5 | {0,400}     | {compresstype=none,blocksize=32768,compresslevel=0}
+(5 rows)
+
+abort;
+-- results reverts to previous ones
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol_aoco;
+ sum | sum | sum | sum 
+-----+-----+-----+-----
+  57 | 200 |   1 |   1
+(1 row)
+
+-- error out
+select colabort from t_addcol_aoco;
+ERROR:  column "colabort" does not exist
+LINE 1: select colabort from t_addcol_aoco;
+               ^
+-- the aborted column is not visible in pg_attribute_encoding
+execute checkattributeencoding('t_addcol_aoco');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      4 |       4 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+(4 rows)
+
+--
+-- column rewrite scenarios
+--
+alter table t_addcol_aoco add column colrewrite int default 1;
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(colrewrite) from t_addcol_aoco;
+ sum | sum | sum | sum | sum 
+-----+-----+-----+-----+-----
+  57 | 200 |   1 |   1 |  22
+(1 row)
+
+execute checkattributeencoding('t_addcol_aoco');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      4 |       4 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      5 |       5 | {100,400}   | {compresstype=none,blocksize=32768,compresslevel=0}
+(5 rows)
+
+alter table t_addcol_aoco alter column colrewrite type text;
+-- check new column's values
+select colrewrite from t_addcol_aoco;
+ colrewrite 
+------------
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+ 1
+(22 rows)
+
+-- lastrownums should be reset since column is rewritten
+execute checkattributeencoding('t_addcol_aoco');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      4 |       4 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      5 |    1605 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+(5 rows)
+
+--
+-- table rewrite scenarios
+--
+-- 1. reorganize
+execute capturerelfilenodebefore('reorganize', 't_addcol_aoco');
+alter table t_addcol_aoco set with(reorganize=true);
+execute checkrelfilenodediff('reorganize', 't_addcol_aoco');
+ segid |  casename  |    relname    | rewritten 
+-------+------------+---------------+-----------
+     0 | reorganize | t_addcol_aoco | t
+(1 row)
+
+-- lastrownums are gone
+execute checkattributeencoding('t_addcol_aoco');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      4 |       4 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      5 |       5 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+(5 rows)
+
+-- results intact
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol_aoco;
+ sum | sum | sum | sum 
+-----+-----+-----+-----
+  57 | 200 |   1 |   1
+(1 row)
+
+--
+-- DELETE and VACUUM
+--
+alter table t_addcol_aoco add column def20 int default 20;
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(def20) from t_addcol_aoco;
+ sum | sum | sum | sum | sum 
+-----+-----+-----+-----+-----
+  57 | 200 |   1 |   1 | 440
+(1 row)
+
+-- delete
+delete from t_addcol_aoco where a = 10;
+-- the row (10, 10, NULL, NULL, 20) is deleted
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(def20) from t_addcol_aoco;
+ sum | sum | sum | sum | sum 
+-----+-----+-----+-----+-----
+  47 | 190 |   1 |   1 | 420
+(1 row)
+
+-- visimap shows effect of the deletion
+select gp_segment_id, (gp_toolkit.__gp_aovisimap('t_addcol_aoco')).* from gp_dist_random('gp_id');
+ gp_segment_id |  tid   | segno | row_num 
+---------------+--------+-------+---------
+             0 | (0,11) |     0 |      10
+             1 | (0,11) |     0 |      10
+             2 | (0,11) |     0 |      10
+(3 rows)
+
+-- vacuum
+vacuum t_addcol_aoco;
+-- results intact
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(def20) from t_addcol_aoco;
+ sum | sum | sum | sum | sum 
+-----+-----+-----+-----+-----
+  47 | 190 |   1 |   1 | 420
+(1 row)
+
+-- insert one row and delete it
+insert into t_addcol_aoco values(99);
+delete from t_addcol_aoco where a = 99;
+-- results stay the same, but visimap shows effect for segno=1 (which the new row is inserted)
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(def20) from t_addcol_aoco;
+ sum | sum | sum | sum | sum 
+-----+-----+-----+-----+-----
+  47 | 190 |   1 |   1 | 420
+(1 row)
+
+select gp_segment_id, (gp_toolkit.__gp_aovisimap('t_addcol_aoco')).* from gp_dist_random('gp_id');
+ gp_segment_id |     tid      | segno | row_num 
+---------------+--------------+-------+---------
+             0 | (0,11)       |     0 |      10
+             0 | (33554432,2) |     1 |       1
+             1 | (0,11)       |     0 |      10
+             1 | (33554432,2) |     1 |       1
+             2 | (0,11)       |     0 |      10
+             2 | (33554432,2) |     1 |       1
+(6 rows)
+
+vacuum t_addcol_aoco;
+-- segno=1 has been vacuum'ed, visimap shows effect
+select gp_segment_id, (gp_toolkit.__gp_aovisimap('t_addcol_aoco')).* from gp_dist_random('gp_id');
+ gp_segment_id |  tid   | segno | row_num 
+---------------+--------+-------+---------
+             0 | (0,11) |     0 |      10
+             1 | (0,11) |     0 |      10
+             2 | (0,11) |     0 |      10
+(3 rows)
+
+-- delete all but the newly inserted
+insert into t_addcol_aoco values(NULL, NULL, NULL, NULL, 'a', 100);
+delete from t_addcol_aoco where def20 != 100;
+select a, def10, defnull1, defnull2, def20 from t_addcol_aoco;
+ a | def10 | defnull1 | defnull2 | def20 
+---+-------+----------+----------+-------
+   |       |          |          |   100
+(1 row)
+
+-- delete all for further testing
+delete from t_addcol_aoco;
+select count(*) from t_addcol_aoco;
+ count 
+-------
+     0
+(1 row)
+
+vacuum t_addcol_aoco;
+-- visimap cleared
+select gp_segment_id, (gp_toolkit.__gp_aovisimap('t_addcol_aoco')).* from gp_dist_random('gp_id');
+ gp_segment_id | tid | segno | row_num 
+---------------+-----+-------+---------
+(0 rows)
+
+-- truncate to make test stable (more predictable segment)
+truncate t_addcol_aoco;
+--
+-- large/toasted values
+--
+-- 1. new column has large default value
+insert into t_addcol_aoco values(1);
+alter table t_addcol_aoco add column deflarge1 text default repeat('a', 100000);
+select a, def10, defnull1, defnull2, def20, char_length(deflarge1) from t_addcol_aoco;
+ a | def10 | defnull1 | defnull2 | def20 | char_length 
+---+-------+----------+----------+-------+-------------
+ 1 |    10 |          |          |    20 |      100000
+(1 row)
+
+execute checkattributeencoding('t_addcol_aoco');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      4 |       4 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      5 |       5 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      6 |       6 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      7 |       7 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+(7 rows)
+
+-- 2. large existing value
+insert into t_addcol_aoco values(1,1,1,1,'a',1,repeat('a',100001));
+alter table t_addcol_aoco add column deflarge2 text default repeat('a', 1000002);
+select a, def10, defnull1, defnull2, def20, char_length(deflarge1), char_length(deflarge2) from t_addcol_aoco;
+ a | def10 | defnull1 | defnull2 | def20 | char_length | char_length 
+---+-------+----------+----------+-------+-------------+-------------
+ 1 |     1 |        1 |        1 |     1 |      100001 |     1000002
+ 1 |    10 |          |          |    20 |      100000 |     1000002
+(2 rows)
+
+execute checkattributeencoding('t_addcol_aoco');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      4 |       4 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      5 |       5 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      6 |       6 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      7 |       7 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      8 |       8 | {0,200}     | {compresstype=none,blocksize=32768,compresslevel=0}
+(8 rows)
+
+--
+-- drop column
+--
+-- check current pg_attribute_encoding
+execute checkattributeencoding('t_addcol_aoco');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      4 |       4 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      5 |       5 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      6 |       6 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      7 |       7 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      8 |       8 | {0,200}     | {compresstype=none,blocksize=32768,compresslevel=0}
+(8 rows)
+
+-- drop a column
+alter table t_addcol_aoco drop column def20;
+-- error out
+select def20 from t_addcol_aoco;
+ERROR:  column "def20" does not exist
+LINE 1: select def20 from t_addcol_aoco;
+               ^
+HINT:  Perhaps you meant to reference the column "t_addcol_aoco.def10".
+-- other results intact
+select a, def10, defnull1, defnull2, char_length(deflarge1), char_length(deflarge2) from t_addcol_aoco;
+ a | def10 | defnull1 | defnull2 | char_length | char_length 
+---+-------+----------+----------+-------------+-------------
+ 1 |     1 |        1 |        1 |      100001 |     1000002
+ 1 |    10 |          |          |      100000 |     1000002
+(2 rows)
+
+-- dropped column info still expected in pg_attribute_encoding
+execute checkattributeencoding('t_addcol_aoco');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      4 |       4 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      5 |       5 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      6 |       6 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      7 |       7 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      8 |       8 | {0,200}     | {compresstype=none,blocksize=32768,compresslevel=0}
+(8 rows)
+
+--
+-- default value is an expression
+--
+-- non-volatile expressions
+execute capturerelfilenodebefore('addexp_nonvolatile', 't_addcol_aoco');
+alter table t_addcol_aoco add column defexp1 int default char_length(repeat('a', 100003));
+alter table t_addcol_aoco add column defexp2 timestamptz default current_timestamp;
+-- no table rewrite
+execute checkrelfilenodediff('addexp_nonvolatile', 't_addcol_aoco');
+ segid |      casename      |    relname    | rewritten 
+-------+--------------------+---------------+-----------
+     0 | addexp_nonvolatile | t_addcol_aoco | f
+(1 row)
+
+-- results are expected
+select a, def10, defnull1, defnull2, char_length(deflarge1), char_length(deflarge2), defexp1, defexp2 <= current_timestamp as expected_defexp2 from t_addcol_aoco;
+ a | def10 | defnull1 | defnull2 | char_length | char_length | defexp1 | expected_defexp2 
+---+-------+----------+----------+-------------+-------------+---------+------------------
+ 1 |     1 |        1 |        1 |      100001 |     1000002 |  100003 | t
+ 1 |    10 |          |          |      100000 |     1000002 |  100003 | t
+(2 rows)
+
+-- volatile expression, do not expect a table rewrite, only column rewrite
+execute capturerelfilenodebefore('addexp_volatile', 't_addcol_aoco');
+execute checkattributeencoding('t_addcol_aoco');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      4 |       4 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      5 |       5 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      6 |       6 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      7 |       7 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      8 |       8 | {0,200}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      9 |       9 | {0,200}     | {compresstype=none,blocksize=32768,compresslevel=0}
+     10 |      10 | {0,200}     | {compresstype=none,blocksize=32768,compresslevel=0}
+(10 rows)
+
+alter table t_addcol_aoco add column defexp3 int default random()*1000::int;
+execute checkrelfilenodediff('addexp_volatile', 't_addcol_aoco');
+ segid |    casename     |    relname    | rewritten 
+-------+-----------------+---------------+-----------
+     0 | addexp_volatile | t_addcol_aoco | f
+(1 row)
+
+execute checkattributeencoding('t_addcol_aoco');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      4 |       4 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      5 |       5 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      6 |       6 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      7 |       7 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      8 |       8 | {0,200}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      9 |       9 | {0,200}     | {compresstype=none,blocksize=32768,compresslevel=0}
+     10 |      10 | {0,200}     | {compresstype=none,blocksize=32768,compresslevel=0}
+     11 |      11 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+(11 rows)
+
+-- results are expected
+select a, def10, defnull1, defnull2, char_length(deflarge1), char_length(deflarge2), defexp1, defexp2 <= current_timestamp as expected_defexp2, defexp3 >=0 and defexp3 <= 1000 as expected_defexp3 from t_addcol_aoco;
+ a | def10 | defnull1 | defnull2 | char_length | char_length | defexp1 | expected_defexp2 | expected_defexp3 
+---+-------+----------+----------+-------------+-------------+---------+------------------+------------------
+ 1 |     1 |        1 |        1 |      100001 |     1000002 |  100003 | t                | t
+ 1 |    10 |          |          |      100000 |     1000002 |  100003 | t                | t
+(2 rows)
+
+--
+-- truncate
+--
+-- safe truncate
+truncate t_addcol_aoco;
+select count(*) from t_addcol_aoco;
+ count 
+-------
+     0
+(1 row)
+
+-- unsafe truncate
+begin;
+create table t_addcol_aoco_truncate(a int) using ao_column distributed replicated;
+insert into t_addcol_aoco_truncate select * from generate_series(1,10000);
+alter table t_addcol_aoco_truncate add column b int default 10;
+select count(*) from t_addcol_aoco_truncate;
+ count 
+-------
+ 10000
+(1 row)
+
+truncate t_addcol_aoco_truncate;
+select count(*) from t_addcol_aoco_truncate;
+ count 
+-------
+     0
+(1 row)
+
+end;
+-- columns gone after safe truncate
+execute checkattributeencoding('t_addcol_aoco');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      4 |       4 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      5 |       5 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      6 |       6 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      7 |       7 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      8 |       8 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      9 |       9 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+     10 |      10 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+     11 |      11 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+(11 rows)
+
+-- for unsafe truncate, since we don't clear up gp_fastsequence, we don't need to clear up lastrownums
+execute checkattributeencoding('t_addcol_aoco_truncate');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+(2 rows)
+
+--
+-- partition table
+--
+create table t_addcol_aoco_part(a int, b int) using ao_column partition by range(b);
+create table t_addcol_aoco_p1 partition of t_addcol_aoco_part for values from (1) to (51);
+create table t_addcol_aoco_p2 partition of t_addcol_aoco_part for values from (51) to (101);
+insert into t_addcol_aoco_part select i,i from generate_series(1,100)i;
+-- no rewrite for child partitions (parent partition doesn't have valid relfilenode)
+alter table t_addcol_aoco_part add column c int default 10;
+-- results are expected
+select sum(a), sum(b), sum(c) from t_addcol_aoco_part;
+ sum  | sum  | sum  
+------+------+------
+ 5050 | 5050 | 1000
+(1 row)
+
+-- child partitions have expected lastrownums info in the pg_attribute_encoding, while parent partition doesn't
+execute checkattributeencoding('t_addcol_aoco');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      4 |       4 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      5 |       5 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      6 |       6 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      7 |       7 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      8 |       8 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      9 |       9 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+     10 |      10 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+     11 |      11 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+(11 rows)
+
+execute checkattributeencoding('t_addcol_aoco_p1');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+(3 rows)
+
+execute checkattributeencoding('t_addcol_aoco_p2');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |       3 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+(3 rows)
+
+--
+-- drop column
+--
+create table t_addcol_aoco2(a int) using ao_column;
+create index t_addcol_aoco2_i on t_addcol_aoco2(a);
+insert into t_addcol_aoco2 select * from generate_series(1,10);
+alter table t_addcol_aoco2 add column dropcol1 int default 1;
+alter table t_addcol_aoco2 add column dropcol2 int default 1;
+alter table t_addcol_aoco2 add column dropcol3 int default 1;
+select count(*), sum(dropcol1), sum(dropcol2) from t_addcol_aoco2;
+ count | sum | sum 
+-------+-----+-----
+    10 |  10 |  10
+(1 row)
+
+-- drop an incomplete column
+alter table t_addcol_aoco2 drop column dropcol1;
+select sum(dropcol1) from t_addcol_aoco2;
+ERROR:  column "dropcol1" does not exist
+LINE 1: select sum(dropcol1) from t_addcol_aoco2;
+                   ^
+HINT:  Perhaps you meant to reference the column "t_addcol_aoco2.dropcol2" or the column "t_addcol_aoco2.dropcol3".
+select count(*), sum(dropcol2) from t_addcol_aoco2;
+ count | sum 
+-------+-----
+    10 |  10
+(1 row)
+
+-- drop the only complete column, one of the incomplete column will be rewritten
+alter table t_addcol_aoco2 drop column a;
+WARNING:  dropping the last complete column "a" of the AOCO table incurs a column rewrite of the incomplete column dropcol2. This DROP COLUMN command might be slower than usual
+execute checkattributeencoding('t_addcol_aoco2');
+ attnum | filenum | lastrownums |                     attoptions                      
+--------+---------+-------------+-----------------------------------------------------
+      1 |       1 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      2 |       2 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+      3 |    1603 |             | {compresstype=none,blocksize=32768,compresslevel=0}
+      4 |       4 | {0,100}     | {compresstype=none,blocksize=32768,compresslevel=0}
+(4 rows)
+
+select a from t_addcol_aoco2;
+ERROR:  column "a" does not exist
+LINE 1: select a from t_addcol_aoco2;
+               ^
+select count(*), sum(dropcol2) from t_addcol_aoco2;
+ count | sum 
+-------+-----
+    10 |  10
+(1 row)
+
+-- drop, add and alter column done together
+alter table t_addcol_aoco2 drop column dropcol3, add column b int, alter column dropcol2 type text;
+insert into t_addcol_aoco2 values('aaa', 1);
+select * from t_addcol_aoco2;
+ dropcol2 | b 
+----------+---
+ 1        |  
+ 1        |  
+ 1        |  
+ 1        |  
+ aaa      | 1
+ 1        |  
+ 1        |  
+ 1        |  
+ 1        |  
+ 1        |  
+ 1        |  
+(11 rows)
+
+-- drop the last complete column which is also the last column in the table,
+-- and that is fine.
+alter table t_addcol_aoco2 drop column b;
+alter table t_addcol_aoco2 drop column dropcol2;
+select * from t_addcol_aoco2;
+--
+(11 rows)
+
+--
+-- alter the last complete column
+--
+create table t_addcol_aoco3(a int, b int) using ao_column;
+insert into t_addcol_aoco3 select i,i+1 from generate_series(1,10)i;
+alter table t_addcol_aoco3 add column c int default 1;
+insert into t_addcol_aoco3 select i,i+1 from generate_series(1,10)i;
+alter table t_addcol_aoco3 drop column a;
+-- b should be the last complete column remaining. Alter column should work
+alter table t_addcol_aoco3 alter column b type text;
+-- alter the missing column should also work
+alter table t_addcol_aoco3 alter column c type text;
+-- add two more missing columns
+alter table t_addcol_aoco3 add column d int default 2, add column e int default 3;
+-- alter e, to make it complete
+alter table t_addcol_aoco3 alter column e type text;
+-- drop b and c, so d becomes the first non-dropped column which is also a non-complete column
+alter table t_addcol_aoco3 drop column b, drop column c;
+-- eof is as expected
+select * from gp_toolkit.__gp_aocsseg('t_addcol_aoco3') where column_num = 3 or column_num = 4;
+ segment_id | segno | column_num | physical_segno | tupcount | eof | eof_uncompressed | modcount | formatversion | state 
+------------+-------+------------+----------------+----------+-----+------------------+----------+---------------+-------
+          2 |     1 |          3 |            385 |        8 |   0 |                0 |        7 |             3 |     1
+          2 |     1 |          4 |         205313 |        8 |  96 |               96 |        7 |             3 |     1
+          0 |     1 |          3 |            385 |       10 |   0 |                0 |        7 |             3 |     1
+          0 |     1 |          4 |         205313 |       10 | 112 |              112 |        7 |             3 |     1
+          1 |     1 |          3 |            385 |        2 |   0 |                0 |        7 |             3 |     1
+          1 |     1 |          4 |         205313 |        2 |  96 |               96 |        7 |             3 |     1
+(6 rows)
+
+-- data is good
+select * from t_addcol_aoco3;
+ d | e 
+---+---
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+ 2 | 3
+(20 rows)
+
+--
+-- index scan on the added column
+--
+create table t_addcol_aoco4(a int) using ao_column;
+insert into t_addcol_aoco4 select * from generate_series(1,10);
+alter table t_addcol_aoco4 add column b int default 10;
+create index t_addcol_aoco4_i on t_addcol_aoco4(b);
+-- the new column doesn't have block directory entry
+select gp_segment_id, (gp_toolkit.__gp_aoblkdir('t_addcol_aoco4')).* from gp_dist_random('gp_id');
+ gp_segment_id | tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------------+---------+-------+----------------+----------+--------------+-------------+-----------
+             0 | (0,1)   |     1 |              0 |        0 |            1 |           0 |         5
+             1 | (0,1)   |     1 |              0 |        0 |            1 |           0 |         1
+             2 | (0,1)   |     1 |              0 |        0 |            1 |           0 |         4
+(3 rows)
+
+-- indexscan works
+set optimizer = false;
+set enable_seqscan=off;
+explain select * from t_addcol_aoco4 where b = 10;
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=4.14..8.17 rows=1 width=8)
+   ->  Bitmap Heap Scan on t_addcol_aoco4  (cost=4.14..8.15 rows=1 width=8)
+         Recheck Cond: (b = 10)
+         ->  Bitmap Index Scan on t_addcol_aoco4_i  (cost=0.00..4.14 rows=1 width=0)
+               Index Cond: (b = 10)
+ Optimizer: Postgres-based planner
+(6 rows)
+
+select * from t_addcol_aoco4 where b = 10;
+ a  | b  
+----+----
+  1 | 10
+  2 | 10
+  3 | 10
+  4 | 10
+  5 | 10
+  6 | 10
+  7 | 10
+  8 | 10
+  9 | 10
+ 10 | 10
+(10 rows)
+
+select * from t_addcol_aoco4 where b = 0;
+ a | b 
+---+---
+(0 rows)
+
+reset optimizer;
+reset enable_seqscan;
+--
+-- block directory covering test
+--
+create table t_addcol_aoco5(a int unique) using ao_column;
+insert into t_addcol_aoco5 select * from generate_series(1,10);
+alter table t_addcol_aoco5 add column b int default 1, add column c int default 1;
+-- unique check is working
+insert into t_addcol_aoco5 values(1); -- bad
+ERROR:  duplicate key value violates unique constraint "t_addcol_aoco5_a_key"  (seg1 127.0.1.1:7003 pid=21296)
+DETAIL:  Key (a)=(1) already exists.
+insert into t_addcol_aoco5 values(11); -- good
+select * from t_addcol_aoco5;
+ a  | b | c 
+----+---+---
+  1 | 1 | 1
+  2 | 1 | 1
+  3 | 1 | 1
+  4 | 1 | 1
+  7 | 1 | 1
+  8 | 1 | 1
+  5 | 1 | 1
+  6 | 1 | 1
+  9 | 1 | 1
+ 10 | 1 | 1
+ 11 | 1 | 1
+(11 rows)
+

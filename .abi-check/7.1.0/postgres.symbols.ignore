@@ -2,3 +2,5 @@ pgarch_start
 ConfigureNamesInt_gp
 child_triggers
 has_update_triggers
+aocs_beginscan
+AppendOnlyBlockDirectory_GetEntry

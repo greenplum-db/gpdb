@@ -491,3 +491,330 @@ ABORT;
 SELECT * FROM gp_toolkit.__gp_aocsseg('aocs_addcol_abort') ORDER BY segment_id, column_num;
 SELECT * FROM aocs_addcol_abort;
 DROP TABLE aocs_addcol_abort;
+
+---------------------------------------------------
+-- ADD COLUMN optimization for ao_column tables
+---------------------------------------------------
+drop table if exists relfilenodecheck;
+create table relfilenodecheck(segid int, relname text, relfilenodebefore int, relfilenodeafter int, casename text);
+
+-- capture relfilenode for a table, which will be checked by checkrelfilenodediff
+prepare capturerelfilenodebefore as
+insert into relfilenodecheck select -1 segid, relname, pg_relation_filenode(relname::text) as relfilenode, null::int, $1 as casename from pg_class where relname like $2
+union select gp_segment_id segid, relname, pg_relation_filenode(relname::text) as relfilenode, null::int, $1 as casename  from gp_dist_random('pg_class')
+where relname like $2 order by segid;
+
+-- check to see if relfilenode changed (i.e. whether a table is rewritten), only showing result of primary seg0
+prepare checkrelfilenodediff as
+select a.segid, b.casename, b.relname, (relfilenodebefore != a.relfilenode) rewritten
+from
+    (
+        select -1 segid, relname, pg_relation_filenode(relname::text) as relfilenode
+        from pg_class
+        where relname like $2
+        union
+        select gp_segment_id segid, relname, pg_relation_filenode(relname::text) as relfilenode
+        from gp_dist_random('pg_class')
+        where relname like $2 order by segid
+    )a, relfilenodecheck b
+where b.casename like $1 and b.relname like $2 and a.segid = b.segid and a.segid = 0;
+
+-- checking pg_attribute_encoding on one of the primaries (most of tested tables are distributed replicated)
+prepare checkattributeencoding as
+select attnum, filenum, lastrownums, attoptions 
+from gp_dist_random('pg_attribute_encoding') e
+  join pg_class c
+  on e.attrelid = c.oid
+where c.relname = $1 and e.gp_segment_id = 0;
+
+-- prepare the initial table
+drop table if exists t_addcol_aoco;
+create table t_addcol_aoco(a int) using ao_column distributed replicated;
+create index t_addcol_aoco_a on t_addcol_aoco(a);
+insert into t_addcol_aoco select * from generate_series(1, 10);
+
+--
+-- ADD COLUMN w/ default value
+--
+
+execute capturerelfilenodebefore('add column default 10', 't_addcol_aoco');
+alter table t_addcol_aoco add column def10 int default 10;
+-- no table rewrite
+execute checkrelfilenodediff('add column default 10', 't_addcol_aoco');
+-- select results are expected
+select sum(a), sum(def10) from t_addcol_aoco;
+select gp_segment_id, (gp_toolkit.__gp_aoblkdir('t_addcol_aoco')).* from gp_dist_random('gp_id');
+-- pg_attribute_encoding shows expected lastrownums
+execute checkattributeencoding('t_addcol_aoco');
+
+--
+-- ADD COLUMN w/ null default
+--
+
+execute capturerelfilenodebefore('add column NULL default', 't_addcol_aoco');
+alter table t_addcol_aoco add column defnull1 int;
+alter table t_addcol_aoco add column defnull2 int default NULL;
+-- no table rewrite and results stay the same
+execute checkrelfilenodediff('add column NULL default', 't_addcol_aoco');
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol_aoco;
+-- pg_attribute_encoding shows more entries for the new columns
+execute checkattributeencoding('t_addcol_aoco');
+-- add more data
+insert into t_addcol_aoco select 0 from generate_series(1, 10)i;
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol_aoco;
+-- insert explict NULLs
+insert into t_addcol_aoco values(1,NULL,1, NULL);
+insert into t_addcol_aoco values(1,NULL,NULL, 1);
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol_aoco;
+
+--
+-- transaction abort should work fine
+--
+begin;
+alter table t_addcol_aoco add column colabort int default 1;
+insert into t_addcol_aoco values(1);
+-- results updated in transaction
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(colabort), count(*) from t_addcol_aoco;
+-- pg_attribute_encoding shows the new column
+execute checkattributeencoding('t_addcol_aoco');
+abort;
+-- results reverts to previous ones
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol_aoco;
+-- error out
+select colabort from t_addcol_aoco;
+-- the aborted column is not visible in pg_attribute_encoding
+execute checkattributeencoding('t_addcol_aoco');
+
+--
+-- column rewrite scenarios
+--
+alter table t_addcol_aoco add column colrewrite int default 1;
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(colrewrite) from t_addcol_aoco;
+execute checkattributeencoding('t_addcol_aoco');
+alter table t_addcol_aoco alter column colrewrite type text;
+-- check new column's values
+select colrewrite from t_addcol_aoco;
+-- lastrownums should be reset since column is rewritten
+execute checkattributeencoding('t_addcol_aoco');
+
+--
+-- table rewrite scenarios
+--
+
+-- 1. reorganize
+execute capturerelfilenodebefore('reorganize', 't_addcol_aoco');
+alter table t_addcol_aoco set with(reorganize=true);
+execute checkrelfilenodediff('reorganize', 't_addcol_aoco');
+-- lastrownums are gone
+execute checkattributeencoding('t_addcol_aoco');
+-- results intact
+select sum(a), sum(def10), sum(defnull1), sum(defnull2) from t_addcol_aoco;
+
+--
+-- DELETE and VACUUM
+--
+
+alter table t_addcol_aoco add column def20 int default 20;
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(def20) from t_addcol_aoco;
+-- delete
+delete from t_addcol_aoco where a = 10;
+-- the row (10, 10, NULL, NULL, 20) is deleted
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(def20) from t_addcol_aoco;
+-- visimap shows effect of the deletion
+select gp_segment_id, (gp_toolkit.__gp_aovisimap('t_addcol_aoco')).* from gp_dist_random('gp_id');
+
+-- vacuum
+vacuum t_addcol_aoco;
+-- results intact
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(def20) from t_addcol_aoco;
+-- insert one row and delete it
+insert into t_addcol_aoco values(99);
+delete from t_addcol_aoco where a = 99;
+-- results stay the same, but visimap shows effect for segno=1 (which the new row is inserted)
+select sum(a), sum(def10), sum(defnull1), sum(defnull2), sum(def20) from t_addcol_aoco;
+select gp_segment_id, (gp_toolkit.__gp_aovisimap('t_addcol_aoco')).* from gp_dist_random('gp_id');
+vacuum t_addcol_aoco;
+-- segno=1 has been vacuum'ed, visimap shows effect
+select gp_segment_id, (gp_toolkit.__gp_aovisimap('t_addcol_aoco')).* from gp_dist_random('gp_id');
+
+-- delete all but the newly inserted
+insert into t_addcol_aoco values(NULL, NULL, NULL, NULL, 'a', 100);
+delete from t_addcol_aoco where def20 != 100;
+select a, def10, defnull1, defnull2, def20 from t_addcol_aoco;
+
+-- delete all for further testing
+delete from t_addcol_aoco;
+select count(*) from t_addcol_aoco;
+vacuum t_addcol_aoco;
+-- visimap cleared
+select gp_segment_id, (gp_toolkit.__gp_aovisimap('t_addcol_aoco')).* from gp_dist_random('gp_id');
+
+-- truncate to make test stable (more predictable segment)
+truncate t_addcol_aoco;
+
+--
+-- large/toasted values
+--
+
+-- 1. new column has large default value
+insert into t_addcol_aoco values(1);
+alter table t_addcol_aoco add column deflarge1 text default repeat('a', 100000);
+select a, def10, defnull1, defnull2, def20, char_length(deflarge1) from t_addcol_aoco;
+execute checkattributeencoding('t_addcol_aoco');
+
+-- 2. large existing value
+insert into t_addcol_aoco values(1,1,1,1,'a',1,repeat('a',100001));
+alter table t_addcol_aoco add column deflarge2 text default repeat('a', 1000002);
+select a, def10, defnull1, defnull2, def20, char_length(deflarge1), char_length(deflarge2) from t_addcol_aoco;
+execute checkattributeencoding('t_addcol_aoco');
+
+--
+-- drop column
+--
+-- check current pg_attribute_encoding
+execute checkattributeencoding('t_addcol_aoco');
+-- drop a column
+alter table t_addcol_aoco drop column def20;
+-- error out
+select def20 from t_addcol_aoco;
+-- other results intact
+select a, def10, defnull1, defnull2, char_length(deflarge1), char_length(deflarge2) from t_addcol_aoco;
+-- dropped column info still expected in pg_attribute_encoding
+execute checkattributeencoding('t_addcol_aoco');
+
+--
+-- default value is an expression
+--
+-- non-volatile expressions
+execute capturerelfilenodebefore('addexp_nonvolatile', 't_addcol_aoco');
+alter table t_addcol_aoco add column defexp1 int default char_length(repeat('a', 100003));
+alter table t_addcol_aoco add column defexp2 timestamptz default current_timestamp;
+-- no table rewrite
+execute checkrelfilenodediff('addexp_nonvolatile', 't_addcol_aoco');
+-- results are expected
+select a, def10, defnull1, defnull2, char_length(deflarge1), char_length(deflarge2), defexp1, defexp2 <= current_timestamp as expected_defexp2 from t_addcol_aoco;
+-- volatile expression, do not expect a table rewrite, only column rewrite
+execute capturerelfilenodebefore('addexp_volatile', 't_addcol_aoco');
+execute checkattributeencoding('t_addcol_aoco');
+alter table t_addcol_aoco add column defexp3 int default random()*1000::int;
+execute checkrelfilenodediff('addexp_volatile', 't_addcol_aoco');
+execute checkattributeencoding('t_addcol_aoco');
+-- results are expected
+select a, def10, defnull1, defnull2, char_length(deflarge1), char_length(deflarge2), defexp1, defexp2 <= current_timestamp as expected_defexp2, defexp3 >=0 and defexp3 <= 1000 as expected_defexp3 from t_addcol_aoco;
+
+--
+-- truncate
+--
+-- safe truncate
+truncate t_addcol_aoco;
+select count(*) from t_addcol_aoco;
+-- unsafe truncate
+begin;
+create table t_addcol_aoco_truncate(a int) using ao_column distributed replicated;
+insert into t_addcol_aoco_truncate select * from generate_series(1,10000);
+alter table t_addcol_aoco_truncate add column b int default 10;
+select count(*) from t_addcol_aoco_truncate;
+truncate t_addcol_aoco_truncate;
+select count(*) from t_addcol_aoco_truncate;
+end;
+-- columns gone after safe truncate
+execute checkattributeencoding('t_addcol_aoco');
+-- for unsafe truncate, since we don't clear up gp_fastsequence, we don't need to clear up lastrownums
+execute checkattributeencoding('t_addcol_aoco_truncate');
+
+--
+-- partition table
+--
+create table t_addcol_aoco_part(a int, b int) using ao_column partition by range(b);
+create table t_addcol_aoco_p1 partition of t_addcol_aoco_part for values from (1) to (51);
+create table t_addcol_aoco_p2 partition of t_addcol_aoco_part for values from (51) to (101);
+insert into t_addcol_aoco_part select i,i from generate_series(1,100)i;
+-- no rewrite for child partitions (parent partition doesn't have valid relfilenode)
+alter table t_addcol_aoco_part add column c int default 10;
+-- results are expected
+select sum(a), sum(b), sum(c) from t_addcol_aoco_part;
+-- child partitions have expected lastrownums info in the pg_attribute_encoding, while parent partition doesn't
+execute checkattributeencoding('t_addcol_aoco');
+execute checkattributeencoding('t_addcol_aoco_p1');
+execute checkattributeencoding('t_addcol_aoco_p2');
+
+--
+-- drop column
+--
+create table t_addcol_aoco2(a int) using ao_column;
+create index t_addcol_aoco2_i on t_addcol_aoco2(a);
+insert into t_addcol_aoco2 select * from generate_series(1,10);
+alter table t_addcol_aoco2 add column dropcol1 int default 1;
+alter table t_addcol_aoco2 add column dropcol2 int default 1;
+alter table t_addcol_aoco2 add column dropcol3 int default 1;
+select count(*), sum(dropcol1), sum(dropcol2) from t_addcol_aoco2;
+-- drop an incomplete column
+alter table t_addcol_aoco2 drop column dropcol1;
+select sum(dropcol1) from t_addcol_aoco2;
+select count(*), sum(dropcol2) from t_addcol_aoco2;
+-- drop the only complete column, one of the incomplete column will be rewritten
+alter table t_addcol_aoco2 drop column a;
+execute checkattributeencoding('t_addcol_aoco2');
+select a from t_addcol_aoco2;
+select count(*), sum(dropcol2) from t_addcol_aoco2;
+-- drop, add and alter column done together
+alter table t_addcol_aoco2 drop column dropcol3, add column b int, alter column dropcol2 type text;
+insert into t_addcol_aoco2 values('aaa', 1);
+select * from t_addcol_aoco2;
+-- drop the last complete column which is also the last column in the table,
+-- and that is fine.
+alter table t_addcol_aoco2 drop column b;
+alter table t_addcol_aoco2 drop column dropcol2;
+select * from t_addcol_aoco2;
+
+--
+-- alter the last complete column
+--
+create table t_addcol_aoco3(a int, b int) using ao_column;
+insert into t_addcol_aoco3 select i,i+1 from generate_series(1,10)i;
+alter table t_addcol_aoco3 add column c int default 1;
+insert into t_addcol_aoco3 select i,i+1 from generate_series(1,10)i;
+alter table t_addcol_aoco3 drop column a;
+-- b should be the last complete column remaining. Alter column should work
+alter table t_addcol_aoco3 alter column b type text;
+-- alter the missing column should also work
+alter table t_addcol_aoco3 alter column c type text;
+-- add two more missing columns
+alter table t_addcol_aoco3 add column d int default 2, add column e int default 3;
+-- alter e, to make it complete
+alter table t_addcol_aoco3 alter column e type text;
+-- drop b and c, so d becomes the first non-dropped column which is also a non-complete column
+alter table t_addcol_aoco3 drop column b, drop column c;
+-- eof is as expected
+select * from gp_toolkit.__gp_aocsseg('t_addcol_aoco3') where column_num = 3 or column_num = 4;
+-- data is good
+select * from t_addcol_aoco3;
+
+--
+-- index scan on the added column
+--
+create table t_addcol_aoco4(a int) using ao_column;
+insert into t_addcol_aoco4 select * from generate_series(1,10);
+alter table t_addcol_aoco4 add column b int default 10;
+create index t_addcol_aoco4_i on t_addcol_aoco4(b);
+-- the new column doesn't have block directory entry
+select gp_segment_id, (gp_toolkit.__gp_aoblkdir('t_addcol_aoco4')).* from gp_dist_random('gp_id');
+-- indexscan works
+set optimizer = false;
+set enable_seqscan=off;
+explain select * from t_addcol_aoco4 where b = 10;
+select * from t_addcol_aoco4 where b = 10;
+select * from t_addcol_aoco4 where b = 0;
+reset optimizer;
+reset enable_seqscan;
+
+--
+-- block directory covering test
+--
+create table t_addcol_aoco5(a int unique) using ao_column;
+insert into t_addcol_aoco5 select * from generate_series(1,10);
+alter table t_addcol_aoco5 add column b int default 1, add column c int default 1;
+-- unique check is working
+insert into t_addcol_aoco5 values(1); -- bad
+insert into t_addcol_aoco5 values(11); -- good
+select * from t_addcol_aoco5;

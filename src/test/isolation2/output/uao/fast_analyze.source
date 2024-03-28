@@ -49,6 +49,10 @@ COMMIT
 3: COMMIT;
 COMMIT
 
+-- make sure new column does not affect the result
+ALTER TABLE fast_analyze_@amname@_1 ADD COLUMN newcol int;
+ALTER TABLE
+
 SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid) FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
  gp_inject_fault_infinite 
 --------------------------
@@ -149,6 +153,10 @@ COMMIT
 3: COMMIT;
 COMMIT
 
+-- make sure new column does not affect the result
+ALTER TABLE fast_analyze_@amname@_2 ADD COLUMN newcol int;
+ALTER TABLE
+
 SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid) FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
  gp_inject_fault_infinite 
 --------------------------
@@ -246,6 +254,10 @@ ROLLBACK
 ROLLBACK
 3: ABORT;
 ROLLBACK
+
+-- make sure new column does not affect the result
+ALTER TABLE fast_analyze_@amname@_3 ADD COLUMN newcol int;
+ALTER TABLE
 
 SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid) FROM gp_segment_configuration WHERE content != -1 AND role = 'p';
  gp_inject_fault_infinite 
@@ -354,6 +366,10 @@ SELECT gp_inject_fault_infinite('returned_sample_row', 'skip', dbid) FROM gp_seg
  Success:                 
  Success:                 
 (3 rows)
+
+-- make sure new column does not affect the result
+ALTER TABLE fast_analyze_@amname@_4 ADD COLUMN newcol int;
+ALTER TABLE
 
 ANALYZE fast_analyze_@amname@_4;
 ANALYZE

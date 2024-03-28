@@ -15,6 +15,7 @@
 #include "postgres.h"
 
 #include "access/xact.h"
+#include "cdb/cdbaocsam.h"
 #include "cdb/cdbappendonlyblockdirectory.h"
 #include "catalog/aoblkdir.h"
 #include "catalog/aocatalog.h"
@@ -59,9 +60,6 @@ insert_new_entry(AppendOnlyBlockDirectory *blockDirectory,
 				 int64 fileOffset,
 				 int64 rowCount);
 static void clear_minipage(MinipagePerColumnGroup *minipagePerColumnGroup);
-static bool blkdir_entry_exists(AppendOnlyBlockDirectory *blockDirectory,
-								AOTupleId *aoTupleId,
-								int columnGroupNo);
 
 static int findFileSegInfo(AppendOnlyBlockDirectory *blockDirectory,
 						   int segmentFileNum);
@@ -141,15 +139,11 @@ init_internal(AppendOnlyBlockDirectory *blockDirectory)
 	/* Initialize the last minipage */
 	blockDirectory->minipages =
 		palloc0(sizeof(MinipagePerColumnGroup) * blockDirectory->numColumnGroups);
-	for (groupNo = 0; groupNo < blockDirectory->numColumnGroups; groupNo++)
+	for (int i = 0; i < blockDirectory->num_proj_atts; i++)
 	{
-		if (blockDirectory->proj && !blockDirectory->proj[groupNo])
-		{
-			/* Ignore columns that are not projected. */
-			continue;
-		}
+		groupNo = blockDirectory->proj_atts[i];
 		MinipagePerColumnGroup *minipageInfo =
-		&blockDirectory->minipages[groupNo];
+							&blockDirectory->minipages[groupNo];
 
 		minipageInfo->minipage =
 			palloc0(minipage_size(NUM_MINIPAGE_ENTRIES));
@@ -159,6 +153,62 @@ init_internal(AppendOnlyBlockDirectory *blockDirectory)
 	}
 
 	MemoryContextSwitchTo(oldcxt);
+}
+
+/*
+ * init_internal_proj
+ *
+ * Initialize the projected column number array using the projection bool array.
+ * If there is no projection, still initialize a number array that contains every
+ * column in the table.
+ *
+ * If required, also initialize the "anchor column" in a CO table which is a 
+ * column which we always fetch first.
+ */
+static void
+init_internal_proj(AppendOnlyBlockDirectory *blockDirectory, bool *proj, bool use_anchor_column)
+{
+	AOCSFileSegInfo 	**segInfos;
+	int32 			nseg;
+	Snapshot 		snapshot;
+
+	blockDirectory->proj_atts = (AttrNumber *) palloc0(blockDirectory->numColumnGroups * sizeof(AttrNumber));
+	blockDirectory->num_proj_atts = 0;
+
+	/* initialize the projection array */
+	for (int colno = 0; colno < blockDirectory->numColumnGroups; colno++)
+	{
+		if (!proj || proj[colno])
+			blockDirectory->proj_atts[blockDirectory->num_proj_atts++] = colno;
+	}
+
+	/* initialize the anchor column if needed */
+	if (use_anchor_column)
+	{
+		int 		anchor_colno;
+
+		/* anchor column is only for a CO table */
+		Assert(blockDirectory->isAOCol);
+
+		/*
+		 * We can't use appendOnlyMetaDataSnapshot as that isn't set up in certain paths (like
+		 * for unique checks). So, use a catalog snapshot instead to look up the column.
+		 */
+		snapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
+		segInfos = GetAllAOCSFileSegInfo(blockDirectory->aoRel, snapshot, &nseg, NULL);
+
+		anchor_colno = get_anchor_col(segInfos,
+													nseg,
+													blockDirectory->aoRel->rd_att->natts,
+													blockDirectory->aoRel,
+													blockDirectory->proj_atts,
+													blockDirectory->num_proj_atts);
+		UnregisterSnapshot(snapshot);
+
+		blockDirectory->num_proj_atts = aoco_proj_move_anchor_first(blockDirectory->proj_atts,
+													blockDirectory->num_proj_atts,
+													anchor_colno);
+	}
 }
 
 /*
@@ -207,7 +257,6 @@ AppendOnlyBlockDirectory_Init_forSearch(
 	blockDirectory->appendOnlyMetaDataSnapshot = appendOnlyMetaDataSnapshot;
 	blockDirectory->numColumnGroups = numColumnGroups;
 	blockDirectory->isAOCol = isAOCol;
-	blockDirectory->proj = proj;
 	blockDirectory->currentSegmentFileNum = -1;
 
 	Assert(OidIsValid(blkdirrelid));
@@ -220,6 +269,8 @@ AppendOnlyBlockDirectory_Init_forSearch(
 
 	blockDirectory->blkdirIdx =
 		index_open(blkdiridxid, AccessShareLock);
+
+	init_internal_proj(blockDirectory, proj, isAOCol);
 
 	init_internal(blockDirectory);
 }
@@ -273,7 +324,6 @@ AppendOnlyBlockDirectory_Init_forUniqueChecks(
 	blockDirectory->appendOnlyMetaDataSnapshot = InvalidSnapshot;
 
 	blockDirectory->numColumnGroups = numColumnGroups;
-	blockDirectory->proj = NULL;
 
 	blockDirectory->blkdirRel = heap_open(blkdirrelid, AccessShareLock);
 
@@ -286,6 +336,8 @@ AppendOnlyBlockDirectory_Init_forUniqueChecks(
 						 aoRel->rd_id, blkdirrelid, blkdiridxid, numColumnGroups)));
 
 	blockDirectory->blkdirIdx = index_open(blkdiridxid, AccessShareLock);
+
+	init_internal_proj(blockDirectory, NULL, blockDirectory->isAOCol);
 
 	init_internal(blockDirectory);
 }
@@ -331,7 +383,6 @@ AppendOnlyBlockDirectory_Init_forIndexOnlyScan(
 	blockDirectory->appendOnlyMetaDataSnapshot = snapshot;
 
 	blockDirectory->numColumnGroups = numColumnGroups;
-	blockDirectory->proj = NULL;
 
 	blockDirectory->blkdirRel = heap_open(blkdirrelid, AccessShareLock);
 
@@ -344,6 +395,8 @@ AppendOnlyBlockDirectory_Init_forIndexOnlyScan(
 						 aoRel->rd_id, blkdirrelid, blkdiridxid, numColumnGroups)));
 
 	blockDirectory->blkdirIdx = index_open(blkdiridxid, AccessShareLock);
+
+	init_internal_proj(blockDirectory, NULL, blockDirectory->isAOCol);
 
 	init_internal(blockDirectory);
 }
@@ -392,7 +445,6 @@ AppendOnlyBlockDirectory_Init_forInsert(
 	blockDirectory->currentSegmentFileNum = segno;
 	blockDirectory->numColumnGroups = numColumnGroups;
 	blockDirectory->isAOCol = isAOCol;
-	blockDirectory->proj = NULL;
 
 	Assert(OidIsValid(blkdirrelid));
 
@@ -406,6 +458,8 @@ AppendOnlyBlockDirectory_Init_forInsert(
 		index_open(blkdiridxid, RowExclusiveLock);
 
 	blockDirectory->indinfo = CatalogOpenIndexes(blockDirectory->blkdirRel);
+
+	init_internal_proj(blockDirectory, NULL, false);
 
 	init_internal(blockDirectory);
 
@@ -462,7 +516,6 @@ AppendOnlyBlockDirectory_Init_writeCols(
 	blockDirectory->currentSegmentFileNum = segno;
 	blockDirectory->numColumnGroups = numColumnGroups;
 	blockDirectory->isAOCol = isAOCol;
-	blockDirectory->proj = NULL;
 
 	Assert(OidIsValid(blkdirrelid));
 
@@ -483,6 +536,8 @@ AppendOnlyBlockDirectory_Init_writeCols(
 		index_open(blkdiridxid, RowExclusiveLock);
 
 	blockDirectory->indinfo = CatalogOpenIndexes(blockDirectory->blkdirRel);
+
+	init_internal_proj(blockDirectory, NULL, false);
 
 	init_internal(blockDirectory);
 }
@@ -598,7 +653,8 @@ AppendOnlyBlockDirectory_GetEntry(
 								  AppendOnlyBlockDirectory *blockDirectory,
 								  AOTupleId *aoTupleId,
 								  int columnGroupNo,
-								  AppendOnlyBlockDirectoryEntry *directoryEntry)
+								  AppendOnlyBlockDirectoryEntry *directoryEntry,
+								  int64 *attnum_to_rownum)
 {
 	int			segmentFileNum = AOTupleIdGet_segmentFileNum(aoTupleId);
 	int64		rowNum = AOTupleIdGet_rowNum(aoTupleId);
@@ -702,13 +758,20 @@ AppendOnlyBlockDirectory_GetEntry(
 
 	Assert(numScanKeys == 3);
 
-	for (tmpGroupNo = 0; tmpGroupNo < blockDirectory->numColumnGroups; tmpGroupNo++)
+	for (int i = 0; i < blockDirectory->num_proj_atts; i++)
 	{
-		if (blockDirectory->proj && !blockDirectory->proj[tmpGroupNo])
+		tmpGroupNo = blockDirectory->proj_atts[i];
+		if (attnum_to_rownum && AO_ATTR_VAL_IS_MISSING(rowNum, tmpGroupNo, segmentFileNum, attnum_to_rownum))
 		{
-			/* Ignore columns that are not projected. */
+			/*
+			 * Ignore if the value doesn't exist in the column file of the
+			 * CO table, since there won't be a blkdir entry for that. 
+			 * This should be only relevant to CO tables.
+			 */
+			Assert(blockDirectory->isAOCol);
 			continue;
 		}
+
 		/*
 		 * Set up the scan keys values. The keys have already been set up in
 		 * init_internal() with the following strategy:
@@ -991,8 +1054,9 @@ AppendOnlyBlockDirectory_GetEntryForPartialScan(AppendOnlyBlockDirectory *blockD
  * Note about AOCO tables:
  * For AOCO tables, there are multiple block directory entries for each tid.
  * However, it is currently sufficient to check the block directory entry for
- * just one of these columns. We do so for the 1st non-dropped column. Note that
- * if we write a placeholder row for the 1st non-dropped column i, there is a
+ * just one of these columns. We do so for the "anchor column" which is
+ * picked using the same logic as regular table scan. Note that if we write a 
+ * placeholder row for the anchor column being picked, there is a
  * guarantee that if there is a conflict on the placeholder row, the covering
  * block directory entry will be based on the same column i (as columnar DDL
  * changes need exclusive locks and placeholder rows can't be seen after tx end)
@@ -1006,27 +1070,15 @@ AppendOnlyBlockDirectory_CoversTuple(
 									 AOTupleId *aoTupleId)
 {
 	Relation	aoRel = blockDirectory->aoRel;
-	int 		firstNonDroppedColumn = -1;
 
 	Assert(RelationIsValid(aoRel));
 
 	if (RelationIsAoRows(aoRel))
 		return blkdir_entry_exists(blockDirectory, aoTupleId, 0);
 	else
-	{
-		for(int i = 0; i < aoRel->rd_att->natts; i++)
-		{
-			if (!aoRel->rd_att->attrs[i].attisdropped) {
-				firstNonDroppedColumn = i;
-				break;
-			}
-		}
-		Assert(firstNonDroppedColumn != -1);
-
 		return blkdir_entry_exists(blockDirectory,
 								   aoTupleId,
-								   firstNonDroppedColumn);
-	}
+								   blockDirectory->proj_atts[ANCHOR_COL_IN_PROJ]);
 }
 
 /*
@@ -1039,7 +1091,7 @@ AppendOnlyBlockDirectory_CoversTuple(
  * SNAPSHOT_SELF or SNAPSHOT_ANY also would mean that we shouldn't consult the
  * cache, in order to see the latest updates.
  */
-static bool
+bool
 blkdir_entry_exists(AppendOnlyBlockDirectory *blockDirectory,
 					AOTupleId *aoTupleId,
 					int columnGroupNo)
@@ -1066,7 +1118,8 @@ blkdir_entry_exists(AppendOnlyBlockDirectory *blockDirectory,
 	 * Check the cached minipage first to see if the row number exists. If not,
 	 * proceed to perform a sysscan of the block directory.
 	 */
-	if (IsMVCCSnapshot(blockDirectory->appendOnlyMetaDataSnapshot) &&
+	if (blockDirectory->appendOnlyMetaDataSnapshot && 
+		IsMVCCSnapshot(blockDirectory->appendOnlyMetaDataSnapshot) &&
 		blockDirectory->currentSegmentFileNum == segmentFileNum)
 	{
 		MinipagePerColumnGroup *minipageInfo =
