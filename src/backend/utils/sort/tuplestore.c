@@ -1080,7 +1080,7 @@ tuplestore_gettuple(Tuplestorestate *state, bool forward,
 					/* CDB XXX XXX XXX XXX */
 					/* MPP-1347: EXPLAIN ANALYZE shows runaway memory usage.
 					 * Readtup does a usemem, but the free happens in
-					 * ExecStoreTuple.  Do a free so state->availMem
+					 * ExecStoreHeapTuple.  Do a free so state->availMem
 					 * doesn't go massively negative to screw up
 					 * stats.  It would be better to interrogate the
 					 * heap for actual memory usage than use this
