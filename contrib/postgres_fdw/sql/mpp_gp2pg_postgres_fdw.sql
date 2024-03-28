@@ -233,6 +233,23 @@ SELECT c1, c2 FROM mpp_ft2 order by c1 offset 2 limit 3;
 EXPLAIN VERBOSE
 SELECT c1, c2 FROM mpp_ft2 order by c1 offset 998;
 SELECT c1, c2 FROM mpp_ft2 order by c1 offset 998;
+
+-- test LIMIT 0, OFFSET null/0
+ALTER FOREIGN TABLE mpp_ft2 OPTIONS(set use_remote_estimate 'true');
+EXPLAIN (VERBOSE, COSTS OFF)
+SELECT c1, c2 FROM mpp_ft2 order by c1 limit null offset 998;
+EXPLAIN (VERBOSE, COSTS OFF)
+SELECT c1, c2 FROM mpp_ft2 order by c1 limit all offset 998;
+EXPLAIN (VERBOSE, COSTS OFF)
+SELECT c1, c2 FROM mpp_ft2 order by c1 limit 0 offset 998;
+EXPLAIN (VERBOSE, COSTS OFF)
+SELECT c1, c2 FROM mpp_ft2 order by c1 limit 0 offset null;
+EXPLAIN (VERBOSE, COSTS OFF)
+SELECT c1, c2 FROM mpp_ft2 order by c1 limit 3 offset null;
+EXPLAIN (VERBOSE, COSTS OFF)
+SELECT c1, c2 FROM mpp_ft2 order by c1 limit 3 offset 0;
+ALTER FOREIGN TABLE mpp_ft2 OPTIONS(set use_remote_estimate 'false');
+
 -- Query with aggregates and limit clause together is NOT pushed down.
 -- Because it's unsafe to do partial aggregate and limit in multiple remote servers.
 EXPLAIN (VERBOSE, COSTS OFF)
