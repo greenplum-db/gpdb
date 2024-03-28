@@ -907,18 +907,34 @@ handlePollSuccess(CdbDispatchCmdAsync *pParms,
 }
 
 /*
- * Send finish or cancel signal to QEs if needed.
+ * Send cancel/finish request to still-running QE through libpq.
+ * Request packet includes all backend pid in one segment, and
+ * all QEs in same segment will be killed at one time.
+ *
+ * errbuf is used to return error message(recommended size is 256 bytes).
+ *
+ * Returns true if we successfully sent a signal
+ * (not necessarily received by the target process).
  */
-static void
-signalQEs(CdbDispatchCmdAsync *pParms)
+static bool
+signalSegmentQEs(CdbDispatchCmdAsync *pParms,
+				 SegmentDatabaseDescriptor *segdb,
+				 char *errbuf,
+				 bool isCancel)
 {
-	int			i;
-	DispatchWaitMode waitMode = pParms->waitMode;
+	bool		ret;
+	int 		i = 0;
+	ListCell 	*lc = NULL;
+	List		*mppBackends = NIL;
+	int			numBackends = 0;
 
-	for (i = 0; i < pParms->dispatchCount; i++)
+	PGcancel   *cancel = PQgetCancel(segdb->conn);
+
+	if (cancel == NULL)
+		return false;
+
+	for (int i = 0; i < pParms->dispatchCount; i++)
 	{
-		char		errbuf[256];
-		bool		sent = false;
 		CdbDispatchResult *dispatchResult = pParms->dispatchResultPtrArray[i];
 
 		Assert(dispatchResult != NULL);
@@ -933,16 +949,76 @@ signalQEs(CdbDispatchCmdAsync *pParms)
 			dispatchResult->wasCanceled ||
 			(pParms->waitMode == DISPATCH_WAIT_ACK_ROOT &&
 			 dispatchResult->receivedAckMsg) ||
-			cdbconn_isBadConnection(segdbDesc))
+			cdbconn_isBadConnection(segdbDesc) ||
+			segdbDesc->segindex != segdb->segindex)
 			continue;
+
+		mppBackends = lappend_int(mppBackends, segdbDesc->backendPid);
+	}
+
+	numBackends = list_length(mppBackends);
+	int *backendsArray = palloc0(sizeof(int) * numBackends);
+
+	foreach_with_count(lc, mppBackends, i)
+		backendsArray[i] = lfirst_int(lc);
+
+	if (isCancel)
+		ret = PQMppRequest(cancel, errbuf, 256, numBackends, backendsArray, 1);
+	else
+		ret = PQMppRequest(cancel, errbuf, 256, numBackends, backendsArray, 0);
+
+	PQfreeCancel(cancel);
+	pfree(backendsArray);
+	return ret;
+}
+
+/*
+ * Send finish or cancel request to Segment.
+ *
+ * Pick the first QE in one segment, and construct
+ * pids list which need to be canceled in same
+ * segment then we could kill them all. So we don't
+ * need to send cancel request to all QEs in the
+ * segment one by one.
+ */
+static void
+signalQEs(CdbDispatchCmdAsync *pParms)
+{
+	int			i;
+	DispatchWaitMode waitMode = pParms->waitMode;
+	List			 *segindexList = NIL;
+
+	for (i = 0; i < pParms->dispatchCount; i++)
+	{
+		char		errbuf[256];
+		bool		sent = false;
+		CdbDispatchResult *dispatchResult = pParms->dispatchResultPtrArray[i];
+
+		Assert(dispatchResult != NULL);
+		SegmentDatabaseDescriptor *segdbDesc = dispatchResult->segdbDesc;
+
+		/*
+		 * Don't send the signal if - QE is finished or canceled - the signal
+		 * was already sent - connection is dead
+		 */
+		if (!dispatchResult->stillRunning ||
+			dispatchResult->wasCanceled ||
+			(pParms->waitMode == DISPATCH_WAIT_ACK_ROOT &&
+			 dispatchResult->receivedAckMsg) ||
+			cdbconn_isBadConnection(segdbDesc) ||
+			list_member_int(segindexList, segdbDesc->segindex))
+			continue;
+
+		segindexList = lappend_int(segindexList, segdbDesc->segindex);
 
 		memset(errbuf, 0, sizeof(errbuf));
 
-		sent = cdbconn_signalQE(segdbDesc, errbuf, waitMode == DISPATCH_WAIT_CANCEL);
+		/* construct pids list needed to be canceled in segment */
+		sent = signalSegmentQEs(pParms, segdbDesc, errbuf, waitMode == DISPATCH_WAIT_CANCEL);
 		if (sent)
 			dispatchResult->sentSignal = waitMode;
 		else
-			elog(LOG, "Unable to cancel: %s",
+			elog(LOG, "Unable to Mpp Request: %s",
 				 strlen(errbuf) == 0 ? "cannot allocate PGCancel" : errbuf);
 	}
 }

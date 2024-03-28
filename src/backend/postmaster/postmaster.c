@@ -513,6 +513,7 @@ static int	BackendStartup(Port *port);
 static int	ProcessStartupPacket(Port *port, bool ssl_done, bool gss_done);
 static void SendNegotiateProtocolVersion(List *unrecognized_protocol_options);
 static void processCancelRequest(Port *port, void *pkt, MsgType code);
+static void processMppRequest(Port *port, void *pkt, MsgType code);
 static int	initMasks(fd_set *rmask);
 static void report_fork_failure_to_client(Port *port, int errnum);
 static CAC_state canAcceptConnections(int backend_type);
@@ -2335,6 +2336,12 @@ ProcessStartupPacket(Port *port, bool ssl_done, bool gss_done)
 		return STATUS_ERROR;
 	}
 
+	if (proto == MPP_CANCEL_REQUEST_CODE || proto == MPP_FINISH_REQUEST_CODE)
+	{
+		processMppRequest(port, buf, proto);
+		return STATUS_ERROR;
+	}
+
 	if (proto == NEGOTIATE_SSL_CODE && !ssl_done)
 	{
 		char		SSLok;
@@ -2915,6 +2922,101 @@ processCancelRequest(Port *port, void *pkt, MsgType code)
 	/* No matching backend */
 	ereport(LOG,
 			(errmsg("PID %d in cancel request did not match any process",
+					backendPID)));
+}
+
+/*
+ * The client has sent a mpp request packet, not a normal
+ * start-a-new-connection packet.  Perform the necessary processing.
+ * Nothing is sent back to the client.
+ */
+static void
+processMppRequest(Port *port, void *pkt, MsgType code)
+{
+	MppRequestPacket *canc = (MppRequestPacket *) pkt;
+	int			backendPID;
+	int32		cancelAuthCode;
+	int32		numsBackends;
+
+	Backend    *bp;
+
+#ifndef EXEC_BACKEND
+	dlist_iter	iter;
+#else
+	int			i;
+#endif
+
+	backendPID = (int) pg_ntoh32(canc->backendPID);
+	cancelAuthCode = (int32) pg_ntoh32(canc->cancelAuthCode);
+	numsBackends = (int32) pg_ntoh32(canc->numMppBackends);
+	int	*QEBackends = palloc0(sizeof(int) * numsBackends);
+	for (int i = 0; i < numsBackends; i++)
+		QEBackends[i] = (int) pg_ntoh32(canc->MppBackends[i]);
+
+	/*
+	 * See if we have a matching backend.  In the EXEC_BACKEND case, we can no
+	 * longer access the postmaster's own backend list, and must rely on the
+	 * duplicate array in shared memory.
+	 */
+#ifndef EXEC_BACKEND
+	dlist_foreach(iter, &BackendList)
+	{
+		bp = dlist_container(Backend, elem, iter.cur);
+#else
+	for (i = MaxLivePostmasterChildren() - 1; i >= 0; i--)
+	{
+		bp = (Backend *) &ShmemBackendArray[i];
+#endif
+		if (bp->pid == backendPID)
+		{
+			if (bp->cancel_key == cancelAuthCode)
+			{
+				/* Found a match; signal that backend to cancel current op */
+				if (code == MPP_FINISH_REQUEST_CODE)
+				{
+					ereport(LOG,
+							(errmsg_internal("query MPP finish request executed on process %d",
+							 backendPID)));
+					for (int i = 0; i < numsBackends; i++)
+					{
+						if (SendProcSignal(QEBackends[i], PROCSIG_QUERY_FINISH, InvalidBackendId) < 0)
+						{
+							/* Again, just a warning to allow loops */
+							ereport(WARNING,
+									(errmsg("could not send signal to process %d", QEBackends[i])));
+						}
+					}
+				}
+				else
+				{
+					ereport(LOG,
+							(errmsg_internal("query MPP cancel request executed on process %d",
+							 backendPID)));
+					for (int i = 0; i < numsBackends; i++)
+					{
+						ereport(DEBUG2,
+								(errmsg_internal("processing MPP cancel request: sending SIGINT to process %d",
+								 QEBackends[i])));
+						signal_child(QEBackends[i], SIGINT);
+					}
+				}
+			}
+			else
+				/* Right PID, wrong key: no way, Jose */
+				ereport(LOG,
+						(errmsg("wrong key in MPP request for process %d",
+						 backendPID)));
+			return;
+		}
+#ifndef EXEC_BACKEND			/* make GNU Emacs 26.1 see brace balance */
+	}
+#else
+	}
+#endif
+
+	/* No matching backend */
+	ereport(LOG,
+			(errmsg("PID %d in MPP request did not match any process",
 					backendPID)));
 }
 

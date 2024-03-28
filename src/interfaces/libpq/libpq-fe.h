@@ -322,6 +322,10 @@ extern int	PQrequestFinish(PGcancel *cancel, char *errbuf, int errbufsize);
 /* backwards compatible version of PQcancel; not thread-safe */
 extern int	PQrequestCancel(PGconn *conn);
 
+/* issue a Mpp request */
+extern int	PQMppRequest(PGcancel *cancel, char *errbuf, int errbufsize,
+			int numQEBackends, int *QEBackends, int requestCancel);
+
 /* Accessor functions for PGconn objects */
 extern char *PQdb(const PGconn *conn);
 extern char *PQuser(const PGconn *conn);
