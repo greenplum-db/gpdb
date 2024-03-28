@@ -860,6 +860,11 @@ decide_file_action(file_entry_t *entry)
 
 	if (entry->source_type != entry->target_type)
 	{
+		/* Don't fatal if this is a tablespace directory */
+		if (entry->source_type == FILE_TYPE_DIRECTORY &&
+			strncmp(entry->path, "pg_tblspc/", strlen("pg_tblspc/")) == 0)
+			return FILE_ACTION_NONE;
+
 		/* But it's a different kind of object. Strange.. */
 		pg_fatal("file \"%s\" is of different type in source and target", entry->path);
 	}
