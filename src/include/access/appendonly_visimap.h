@@ -42,6 +42,82 @@
 #define APPENDONLY_VISIMAP_MAX_BITMAP_WORD_COUNT \
 	(APPENDONLY_VISIMAP_MAX_BITMAP_SIZE / sizeof(bitmapword))
 
+#define APPENDONLY_VISIMAP_RANGE_FIRSTROWNO(rownum) \
+	((rownum) & ~(APPENDONLY_VISIMAP_MAX_RANGE - 1))
+
+/*
+ * Key structure for the visimap entry hash table.
+ */
+typedef struct AppendOnlyVisimapEntryKey
+{
+	/*
+	 * Segno of the dirty visimap entry.
+	 *
+	 * MPP-23546: Changed the type of segno from int to uint64.  With uint
+	 * (4-bytes), additional 4-bytes were being used for padding. The padding
+	 * bits may differ for two keys causing two otherwise equal objects to be
+	 * treated as unequal by hash functions. Keeping type to uint64 does not
+	 * change the value of sizeof(AppendOnlyVisimapEntryKey) but eliminates
+	 * padding.
+	 */
+	uint64		segno;
+
+	/*
+	 * First row num of the dirty visimap entry.
+	 */
+	uint64		firstRowNum;
+} AppendOnlyVisimapEntryKey;
+
+typedef struct AppendOnlyVisimapRangeEntry
+{
+	/*
+	 * Key of the visimap cache entry
+	 */
+	AppendOnlyVisimapEntryKey key;
+
+	/*
+	 * Index of the visimap cache LRU array
+	 */
+	int rangeid;
+} AppendOnlyVisimapRangeEntry;
+
+typedef struct AppendOnlyVisimapRangeDesc
+{
+	int nextfree;
+	int morerecently; /* pointing to the pre element of the LRU list */
+	int lessrecently; /* pointing to the post element of the LRU list */
+
+	/* range descriptor info */
+	bool inlru; /* in LRU or not */
+	bool allvisible;
+	int segno;
+	uint64 firstrowno;
+} AppendOnlyVisimapRangeDesc;
+
+/*
+ * The appendonly visimap cache is intended to cache allvisible flag of
+ * ranges under current scanning context. The range is identified by
+ * {segno, firstrowno} which could contain 32768 consecutive rowNums at
+ * most. The cache is composed of the following components:
+ * 
+ * `rangetab` is a hashtable for looking up a `rangeid` which is mapped
+ * to a {segno, firstrowno} calculated based on the given AOTupleId.
+ * 
+ * `rdescs` is an array to save range descriptors identified (and indexed)
+ * by the above `rangeid`, bahaving as the backend LRU list of the `rangetab`.
+ * 
+ * `lastrange` is used to save the range info accessed at last time for
+ * returning early in the case of falling into the same range again.
+ */
+typedef struct AppendOnlyVisimapCache
+{
+	HTAB *rangetab;
+	AppendOnlyVisimapRangeDesc *rdescs;
+	int ndescs;
+	MemoryContext mctx;
+	AppendOnlyVisimapRangeEntry lastrange;
+} AppendOnlyVisimapCache;
+
 /*
  * Data structure for the ao visibility map processing.
  *
@@ -63,6 +139,13 @@ typedef struct AppendOnlyVisimap
 	 * Support operations to search, load, and store visibility map entries.
 	 */
 	AppendOnlyVisimapStore visimapStore;
+
+	/*
+	 * A range cache for visibility map query optimization,
+	 * the range aligns with a visimap entry, caching "allvisibleset"
+	 * to determine whether needs to query catalog or not.
+	 */
+	AppendOnlyVisimapCache visimapCache;
 
 } AppendOnlyVisimap;
 
