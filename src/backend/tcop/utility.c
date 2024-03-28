@@ -1788,7 +1788,7 @@ ProcessUtilitySlow(ParseState *pstate,
 					}
 
 					/*
-					 * Greenplum specifi behavior:
+					 * Greenplum specific behavior:
 					 * Postgres will pass false for is_alter_table for DefineIndex.
 					 * This argument is only used at two places in DefineIndex (in original postgres code):
 					 *   1. the function index_check_primary_key
