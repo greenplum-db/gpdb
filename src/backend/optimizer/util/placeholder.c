@@ -105,7 +105,19 @@ find_placeholder_info(PlannerInfo *root, PlaceHolderVar *phv,
 	phinfo->ph_lateral = bms_difference(rels_used, phv->phrels);
 	if (bms_is_empty(phinfo->ph_lateral))
 		phinfo->ph_lateral = NULL;	/* make it exactly NULL if empty */
-	phinfo->ph_eval_at = bms_int_members(rels_used, phv->phrels);
+	
+    /*
+     * Greenplum specific: We implement multi SubPlan refer to a single
+     * subplan at https://github.com/greenplum-db/gpdb/pull/8624 via
+     * PlaceholderVar. However, pull_varnos will only look at the parameters 
+     * passed to the subplan, will not recurse into them to look for uplevel
+     * references to the desired rtable level, so there could be a problem.
+     * More detials could be found at https://github.com/greenplum-db/gpdb/issues/16680
+     */
+	if (IsA((Node *) phv->phexpr, SubPlan) && bms_is_subset(rels_used, phv->phrels))
+        phinfo->ph_var->phrels = bms_copy(rels_used);
+	
+    phinfo->ph_eval_at = bms_int_members(rels_used, phv->phrels);
 	/* If no contained vars, force evaluation at syntactic location */
 	if (bms_is_empty(phinfo->ph_eval_at))
 	{
