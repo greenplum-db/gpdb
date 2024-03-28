@@ -1567,3 +1567,35 @@ DETAIL:  Conflict scan method hint.
  Optimizer: GPORCA
 (4 rows)
 
+-- Scan Hints with Semi/Anti Semi Joins
+/*+
+    SeqScan(t2) SeqScan(t1)
+ */
+EXPLAIN (costs off) SELECT t1.a, t1.b FROM my_table AS t1 WHERE EXISTS (SELECT 1 FROM your_table AS t2 WHERE t1.a = t2.a);
+                   QUERY PLAN
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Semi Join
+         Hash Cond: (my_table.a = your_table.a)
+         ->  Seq Scan on my_table
+               Filter: (NOT (a IS NULL))
+         ->  Hash
+               ->  Seq Scan on your_table
+ Optimizer: GPORCA
+(8 rows)
+
+/*+
+    SeqScan(t2) SeqScan(t1)
+ */
+EXPLAIN (costs off) SELECT t1.a, t1.b FROM my_table AS t1 WHERE NOT EXISTS (SELECT 1 FROM your_table AS t2 WHERE t1.a = t2.a);
+                   QUERY PLAN
+------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Anti Join
+         Hash Cond: (my_table.a = your_table.a)
+         ->  Seq Scan on my_table
+         ->  Hash
+               ->  Seq Scan on your_table
+ Optimizer: GPORCA
+(7 rows)
+
