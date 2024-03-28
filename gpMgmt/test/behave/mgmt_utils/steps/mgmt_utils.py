@@ -2677,11 +2677,13 @@ def impl(context, expected_file, content_ids):
                 raise Exception("Found unexpected file {} in {}".format(file, log_dir))
 
 
-@then('gpAdminLogs directory {has} "{expected_file}" files on all segment hosts')
-def impl(context, has, expected_file):
+@then('gpAdminLogs directory {has} "{expected_file}" files on {hosts}')
+def impl(context, has, expected_file, hosts):
     all_segments = GpArray.initFromCatalog(dbconn.DbURL()).getDbList()
     all_segment_hosts = [seg.getSegmentHostName() for seg in all_segments if seg.getSegmentContentId() >= 0]
 
+    if hosts != 'all segment hosts':
+        all_segment_hosts = [host for host in hosts.split(',')]
     for seg_host in all_segment_hosts:
         log_dir = "%s/gpAdminLogs" % os.path.expanduser("~")
         listdir_cmd = Command(name="list logfiles on host",

@@ -321,7 +321,6 @@ def recovery_fail_check(context, recovery_type, content_ids, utility):
     And gprecoverseg should print "{print_msg}" to stdout for mirrors with content {content_ids}
     And gprecoverseg should print "Failed to recover the following segments" to stdout
     And gprecoverseg should print "{recovery_type}" errors to stdout for content {content_ids}
-    And gpAdminLogs directory has "{logfile_name}" files on respective hosts only for content {content_ids}
     And verify that mirror on content {content_ids} is down
     And gprecoverseg should not print "Segments successfully recovered" to stdout
     '''.format(return_code=return_code, print_msg=print_msg, content_ids=content_ids, recovery_type=recovery_type,

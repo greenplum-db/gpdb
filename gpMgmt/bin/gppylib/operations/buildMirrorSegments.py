@@ -4,6 +4,7 @@ import pipes
 import signal
 import time
 import re
+from datetime import datetime
 
 from gppylib.recoveryinfo import RecoveryResult
 from gppylib.mainUtils import *
@@ -342,14 +343,6 @@ class GpMirrorListToBuild:
             signal.signal(signal.SIGINT, old_handler)
             return backout_map
 
-    def _remove_progress_files(self, recovery_info_by_host, recovery_results):
-        remove_progress_file_cmds = []
-        for hostName, recovery_info_list in recovery_info_by_host.items():
-            for ri in recovery_info_list:
-                if recovery_results.was_bb_rewind_rsync_successful(ri.target_segment_dbid):
-                    remove_progress_file_cmds.append(self._get_remove_cmd(ri.progress_file, hostName))
-        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(remove_progress_file_cmds, suppressErrorCheck=False)
-
     def _revert_config_update(self, recovery_results, backout_map):
         if len(backout_map) == 0:
             return
@@ -447,7 +440,7 @@ class GpMirrorListToBuild:
                     else:
                         results = ''
 
-                output.append("%s (dbid %d): %s" % (cmd.remoteHost, cmd.dbid, results))
+                output.append("%s: %s (dbid %d): %s" % (datetime.now(), cmd.remoteHost, cmd.dbid, results))
                 if inplace:
                     output.append("\x1B[K")
                 output.append("\n")
@@ -584,7 +577,6 @@ class GpMirrorListToBuild:
         recovery_results = RecoveryResult(action_name, completed_recovery_results, self.__logger)
         recovery_results.print_bb_rewind_differential_update_and_start_errors()
 
-        self._remove_progress_files(recovery_info_by_host, recovery_results)
         return recovery_results
 
     def _do_recovery(self, recovery_info_by_host, gpEnv):
