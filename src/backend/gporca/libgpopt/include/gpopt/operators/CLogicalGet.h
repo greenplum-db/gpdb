@@ -61,11 +61,11 @@ public:
 	explicit CLogicalGet(CMemoryPool *mp);
 
 	CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
-				CTableDescriptor *ptabdesc, BOOL hasSecurityQuals = false);
+				CTableDescriptor *ptabdesc, BOOL hasSecurityQuals);
 
 	CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
 				CTableDescriptor *ptabdesc, CColRefArray *pdrgpcrOutput,
-				BOOL hasSecurityQuals = false);
+				BOOL hasSecurityQuals);
 
 	// dtor
 	~CLogicalGet() override;

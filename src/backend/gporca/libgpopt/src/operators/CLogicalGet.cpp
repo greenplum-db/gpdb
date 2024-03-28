@@ -58,30 +58,13 @@ CLogicalGet::CLogicalGet(CMemoryPool *mp)
 //---------------------------------------------------------------------------
 CLogicalGet::CLogicalGet(CMemoryPool *mp, const CName *pnameAlias,
 						 CTableDescriptor *ptabdesc, BOOL hasSecurityQuals)
-	: CLogical(mp),
-	  m_pnameAlias(pnameAlias),
-	  m_ptabdesc(GPOS_NEW(mp) CTableDescriptorHashSet(mp)),
-	  m_pdrgpcrOutput(nullptr),
-	  m_pdrgpdrgpcrPart(nullptr),
-	  m_pcrsDist(nullptr),
-	  m_has_security_quals(hasSecurityQuals)
+	: CLogicalGet(mp, pnameAlias, ptabdesc,
+				  PdrgpcrCreateMapping(mp, ptabdesc->Pdrgpcoldesc(),
+									   // XXX: UlOpId() isn't valid yet..
+									   COperator::m_aulOpIdCounter + 1,
+									   ptabdesc->MDId()),
+				  hasSecurityQuals)
 {
-	GPOS_ASSERT(nullptr != ptabdesc);
-	GPOS_ASSERT(nullptr != pnameAlias);
-
-	m_ptabdesc->Insert(ptabdesc);
-
-	// generate a default column set for the table descriptor
-	m_pdrgpcrOutput = PdrgpcrCreateMapping(mp, Ptabdesc()->Pdrgpcoldesc(),
-										   UlOpId(), Ptabdesc()->MDId());
-
-	if (Ptabdesc()->IsPartitioned())
-	{
-		m_pdrgpdrgpcrPart = PdrgpdrgpcrCreatePartCols(
-			mp, m_pdrgpcrOutput, Ptabdesc()->PdrgpulPart());
-	}
-
-	m_pcrsDist = CLogical::PcrsDist(mp, Ptabdesc(), m_pdrgpcrOutput);
 }
 
 //---------------------------------------------------------------------------

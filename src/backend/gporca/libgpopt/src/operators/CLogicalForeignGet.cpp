@@ -47,7 +47,7 @@ CLogicalForeignGet::CLogicalForeignGet(CMemoryPool *mp) : CLogicalGet(mp)
 //---------------------------------------------------------------------------
 CLogicalForeignGet::CLogicalForeignGet(CMemoryPool *mp, const CName *pnameAlias,
 									   CTableDescriptor *ptabdesc)
-	: CLogicalGet(mp, pnameAlias, ptabdesc)
+	: CLogicalGet(mp, pnameAlias, ptabdesc, /*hasSecurityQuals*/ false)
 {
 }
 
@@ -62,7 +62,8 @@ CLogicalForeignGet::CLogicalForeignGet(CMemoryPool *mp, const CName *pnameAlias,
 CLogicalForeignGet::CLogicalForeignGet(CMemoryPool *mp, const CName *pnameAlias,
 									   CTableDescriptor *ptabdesc,
 									   CColRefArray *pdrgpcrOutput)
-	: CLogicalGet(mp, pnameAlias, ptabdesc, pdrgpcrOutput)
+	: CLogicalGet(mp, pnameAlias, ptabdesc, pdrgpcrOutput,
+				  /*hasSecurityQuals*/ false)
 {
 }
 
