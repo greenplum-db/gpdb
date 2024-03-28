@@ -1543,6 +1543,8 @@ exec_mpp_dtx_protocol_command(DtxProtocolCommand dtxProtocolCommand,
 	CommandDest dest = whereToSendOutput;
 	const char *commandTag = loggingStr;
 
+	SIMPLE_FAULT_INJECTOR("exec_dtx_protocol_start");
+
 	if (log_statement == LOGSTMT_ALL)
 		elog(LOG,"DTM protocol command '%s' for gid = %s", loggingStr, gid);
 

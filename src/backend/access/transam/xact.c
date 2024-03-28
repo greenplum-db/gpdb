@@ -1787,17 +1787,23 @@ cleanup:
 /*
  *	RecordDistributedForgetCommitted
  */
-void
+XLogRecPtr
 RecordDistributedForgetCommitted(DistributedTransactionId gxid)
 {
 	xl_xact_distributed_forget xlrec;
+	XLogRecPtr recptr;
 
 	xlrec.gxid = gxid;
 
 	XLogBeginInsert();
 	XLogRegisterData((char *) &xlrec, sizeof(xl_xact_distributed_forget));
 
-	XLogInsert(RM_XACT_ID, XLOG_XACT_DISTRIBUTED_FORGET);
+	recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_DISTRIBUTED_FORGET);
+	/* only flush immediately if we want to wait for remote_apply */
+	if (synchronous_commit >= SYNCHRONOUS_COMMIT_REMOTE_APPLY)
+		XLogFlush(recptr);
+
+	return recptr;
 }
 
 /*
@@ -2430,7 +2436,7 @@ StartTransaction(void)
 	 * Greenplum yet.
 	 */
 	AssertImply(DistributedTransactionContext != DTX_CONTEXT_LOCAL_ONLY,
-				!s->startedInRecovery);
+				EnableHotStandby || !s->startedInRecovery);
 	/*
 	 * MPP Modification
 	 *
@@ -2477,19 +2483,35 @@ StartTransaction(void)
 
 		case DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER:
 		case DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER:
+			/*
+			 * Sanity check for the global xid.
+			 * 
+			 * Note for hot standby dispatch: the standby QEs are still 
+			 * writers, just like primary QEs for SELECT queries. But 
+			 * hot standby dispatch never has a valid gxid, so we skip
+			 * the gxid checks for the standby QEs.
+			 */
+			if (!IS_STANDBY_QE())
+			{
+				if (QEDtxContextInfo.distributedXid == InvalidDistributedTransactionId)
+					elog(ERROR,
+						 "distributed transaction id is invalid in context %s",
+						 DtxContextToString(DistributedTransactionContext));
+
+				/*
+				 * Update distributed XID info, this is only used for
+				 * debugging.
+				 */
+				LocalDistribXactData *ele = &MyProc->localDistribXactData;
+				ele->distribXid = QEDtxContextInfo.distributedXid;
+				ele->state = LOCALDISTRIBXACT_STATE_ACTIVE;
+			}
+			/* fall through */
 		case DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT:
 		{
 			/* If we're running in test-mode insert a delay in writer. */
 			if (gp_enable_slow_writer_testmode)
 				pg_usleep(500000);
-
-			if (DistributedTransactionContext != DTX_CONTEXT_QE_AUTO_COMMIT_IMPLICIT &&
-				QEDtxContextInfo.distributedXid == InvalidDistributedTransactionId)
-			{
-				elog(ERROR,
-					 "distributed transaction id is invalid in context %s",
-					 DtxContextToString(DistributedTransactionContext));
-			}
 
 			/*
 			 * Snapshot must not be created before setting transaction
@@ -2507,23 +2529,6 @@ StartTransaction(void)
 			 * MPP: we're a QE Writer.
 			 */
 			MyTmGxact->gxid = QEDtxContextInfo.distributedXid;
-
-			if (DistributedTransactionContext ==
-				DTX_CONTEXT_QE_TWO_PHASE_EXPLICIT_WRITER ||
-				DistributedTransactionContext ==
-				DTX_CONTEXT_QE_TWO_PHASE_IMPLICIT_WRITER)
-			{
-				Assert(QEDtxContextInfo.distributedXid !=
-					   InvalidDistributedTransactionId);
-
-				/*
-				 * Update distributed XID info, this is only used for
-				 * debugging.
-				 */
-				LocalDistribXactData *ele = &MyProc->localDistribXactData;
-				ele->distribXid = QEDtxContextInfo.distributedXid;
-				ele->state = LOCALDISTRIBXACT_STATE_ACTIVE;
-			}
 
 			if (SharedLocalSnapshotSlot != NULL)
 			{

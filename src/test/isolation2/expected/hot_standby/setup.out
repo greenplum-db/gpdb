@@ -4,5 +4,8 @@
 -- let primary wait for standby to apply changes, make test less flaky
 !\retcode gpconfig -c synchronous_commit -v remote_apply;
 (exited with code 0)
+-- make it faster to handle query conflict
+!\retcode gpconfig -c max_standby_streaming_delay -v 1000;
+(exited with code 0)
 !\retcode gpstop -ar;
 (exited with code 0)

@@ -511,6 +511,8 @@ heapgetpage(TableScanDesc sscan, BlockNumber page)
 
 	LockBuffer(buffer, BUFFER_LOCK_UNLOCK);
 
+	SIMPLE_FAULT_INJECTOR("heapgetpage_after_unlock_buffer");
+
 	Assert(ntup <= MaxHeapTuplesPerPage);
 	scan->rs_ntuples = ntup;
 }

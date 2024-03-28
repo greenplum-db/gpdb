@@ -60,7 +60,7 @@ DtxContextInfo_CreateOnCoordinator(DtxContextInfo *dtxContextInfo, bool inCursor
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 				 errmsg("cannot have more than 2^32-2 commands in a session")));
 
-	AssertImply(inCursor,
+	AssertImply(inCursor && !IS_HOT_STANDBY_QD(),
 				dtxContextInfo->distributedXid != InvalidDistributedTransactionId &&
 				gp_command_count == MySessionState->latestCursorCommandId);
 

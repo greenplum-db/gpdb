@@ -13,12 +13,16 @@ select length(txid_current_snapshot()::text) >= 4;
 (1 row)
 
 select pg_start_backup('should fail');
+NOTICE:  pg_start_backup() is not supported in Greenplum Database
+HINT:  Contact support to get more information and resolve the issue
 ERROR:  recovery is in progress
 HINT:  WAL control functions cannot be executed during recovery.
 select pg_switch_wal();
 ERROR:  recovery is in progress
 HINT:  WAL control functions cannot be executed during recovery.
 select pg_stop_backup();
+NOTICE:  pg_stop_backup() is not supported in Greenplum Database
+HINT:  Contact support to get more information and resolve the issue
 ERROR:  recovery is in progress
 HINT:  WAL control functions cannot be executed during recovery.
 -- should return no rows
@@ -27,13 +31,16 @@ select * from pg_prepared_xacts;
 -------------+-----+----------+-------+----------
 (0 rows)
 
--- just the startup process
-select locktype, virtualxid, virtualtransaction, mode, granted
+-- just the startup processes of all standby coordinator and segments, since pg_locks show cluster-wide view
+select gp_segment_id, locktype, virtualxid, virtualtransaction, mode, granted
 from pg_locks where virtualxid = '1/1';
-  locktype  | virtualxid | virtualtransaction |     mode      | granted 
-------------+------------+--------------------+---------------+---------
- virtualxid | 1/1        | 1/0                | ExclusiveLock | t
-(1 row)
+ gp_segment_id |  locktype  | virtualxid | virtualtransaction |     mode      | granted 
+---------------+------------+------------+--------------------+---------------+---------
+            -1 | virtualxid | 1/1        | 1/0                | ExclusiveLock | t
+             0 | virtualxid | 1/1        | 1/0                | ExclusiveLock | t
+             1 | virtualxid | 1/1        | 1/0                | ExclusiveLock | t
+             2 | virtualxid | 1/1        | 1/0                | ExclusiveLock | t
+(4 rows)
 
 -- suicide is painless
 select pg_cancel_backend(pg_backend_pid());

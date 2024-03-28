@@ -11,9 +11,15 @@ commit;
 WARNING:  there is no transaction in progress
 -- SELECT
 select * from hs1 FOR SHARE;
-ERROR:  cannot execute SELECT FOR SHARE in a read-only transaction
+ERROR:  cannot acquire lock mode ExclusiveLock on database objects while recovery is in progress
+LINE 1: select * from hs1 FOR SHARE;
+                      ^
+HINT:  Only RowExclusiveLock or less can be acquired on database objects during recovery.
 select * from hs1 FOR UPDATE;
-ERROR:  cannot execute SELECT FOR UPDATE in a read-only transaction
+ERROR:  cannot acquire lock mode ExclusiveLock on database objects while recovery is in progress
+LINE 1: select * from hs1 FOR UPDATE;
+                      ^
+HINT:  Only RowExclusiveLock or less can be acquired on database objects during recovery.
 -- DML
 BEGIN;
 insert into hs1 values (37);
@@ -21,11 +27,17 @@ ERROR:  cannot execute INSERT in a read-only transaction
 ROLLBACK;
 BEGIN;
 delete from hs1 where col1 = 1;
-ERROR:  cannot execute DELETE in a read-only transaction
+ERROR:  cannot acquire lock mode ExclusiveLock on database objects while recovery is in progress
+LINE 1: delete from hs1 where col1 = 1;
+                    ^
+HINT:  Only RowExclusiveLock or less can be acquired on database objects during recovery.
 ROLLBACK;
 BEGIN;
 update hs1 set col1 = NULL where col1 > 0;
-ERROR:  cannot execute UPDATE in a read-only transaction
+ERROR:  cannot acquire lock mode ExclusiveLock on database objects while recovery is in progress
+LINE 1: update hs1 set col1 = NULL where col1 > 0;
+               ^
+HINT:  Only RowExclusiveLock or less can be acquired on database objects during recovery.
 ROLLBACK;
 BEGIN;
 truncate hs3;
@@ -54,7 +66,7 @@ SELECT count(*) FROM hs1;
 (1 row)
 
 PREPARE TRANSACTION 'foobar';
-ERROR:  cannot execute PREPARE TRANSACTION during recovery
+ERROR:  PREPARE TRANSACTION is not yet supported in Greenplum Database
 ROLLBACK;
 BEGIN;
 SELECT count(*) FROM hs1;
@@ -64,7 +76,7 @@ SELECT count(*) FROM hs1;
 (1 row)
 
 COMMIT PREPARED 'foobar';
-ERROR:  COMMIT PREPARED cannot run inside a transaction block
+ERROR:  COMMIT PREPARED is not yet supported in Greenplum Database
 ROLLBACK;
 BEGIN;
 SELECT count(*) FROM hs1;
@@ -74,7 +86,7 @@ SELECT count(*) FROM hs1;
 (1 row)
 
 PREPARE TRANSACTION 'foobar';
-ERROR:  cannot execute PREPARE TRANSACTION during recovery
+ERROR:  PREPARE TRANSACTION is not yet supported in Greenplum Database
 ROLLBACK PREPARED 'foobar';
 ERROR:  current transaction is aborted, commands ignored until end of transaction block
 ROLLBACK;
@@ -86,7 +98,7 @@ SELECT count(*) FROM hs1;
 (1 row)
 
 ROLLBACK PREPARED 'foobar';
-ERROR:  ROLLBACK PREPARED cannot run inside a transaction block
+ERROR:  ROLLBACK PREPARED is not yet supported in Greenplum Database
 ROLLBACK;
 -- Locks
 BEGIN;
@@ -131,3 +143,15 @@ REVOKE SELECT ON hs1 FROM PUBLIC;
 ERROR:  cannot execute REVOKE in a read-only transaction
 GRANT SELECT ON hs1 TO PUBLIC;
 ERROR:  cannot execute GRANT in a read-only transaction
+-- GPDB: backward fetch is not supported, moved from hs_standby_allowed.
+BEGIN;
+DECLARE hsc CURSOR FOR select * from hs3 order by col1 asc;
+fetch next from hsc;
+ col1 
+------
+  113
+(1 row)
+
+fetch first from hsc;
+ERROR:  backward scan is not supported in this version of Greenplum Database
+COMMIT;

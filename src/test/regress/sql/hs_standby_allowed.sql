@@ -82,11 +82,12 @@ discard all;
 
 BEGIN;
 
-DECLARE hsc CURSOR FOR select * from hs3;
+DECLARE hsc CURSOR FOR select * from hs3 order by col1 asc;
 
 FETCH next from hsc;
-fetch first from hsc;
-fetch last from hsc;
+-- GPDB: backward fetch isn't allowed, moved to hs_standby_disallowed
+-- fetch first from hsc;
+-- fetch last from hsc;
 fetch 1 from hsc;
 
 CLOSE hsc;

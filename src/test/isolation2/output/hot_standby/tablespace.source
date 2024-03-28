@@ -1,0 +1,57 @@
+-- tablespace test for Hot Standby
+
+----------------------------------------------------------------
+-- Test query conflict with tablespace operations on a hot standby
+----------------------------------------------------------------
+
+-- assume no conflict when the test starts
+-1S: select max(confl_tablespace) from gp_stat_database_conflicts where datname = 'isolation2test';
+ max 
+-----
+ 0   
+(1 row)
+
+-- create tablespace
+!\retcode mkdir -p @testtablespace@/hs_tablespace_directory;
+(exited with code 0)
+create tablespace hs_ts location '@testtablespace@/hs_tablespace_directory';
+CREATE TABLESPACE
+
+-- some prepartion on the primary
+create table hs_ts_foo (i int, j int) distributed by(i);
+CREATE TABLE
+insert into hs_ts_foo select i, i from generate_series(1,80000)i;
+INSERT 0 80000
+analyze hs_ts_foo;
+ANALYZE
+
+-- on the standby, run some query that requires workfile, this example is taken
+-- from regress/temp_tablespaces test
+-1S: set temp_tablespaces = hs_ts;
+SET
+-1S: begin;
+BEGIN
+
+-- drop tablespace, should see conflict on the hot standby
+drop tablespace hs_ts;
+DROP TABLESPACE
+-1S: with a1 as (select * from hs_ts_foo), a2 as (select * from hs_ts_foo) select a1.i xx from a1 inner join a2 on a2.i = a1.i union all select count(a1.i) from a1 inner join a2 on a2.i = a1.i;
+DETAIL:  User was or might have been using tablespace that must be dropped.
+ERROR:  terminating connection due to conflict with recovery
+HINT:  In a moment you should be able to reconnect to the database and repeat your command.
+-1Sq: ... <quitting>
+
+-- conflict has been recorded
+-1S: select max(confl_tablespace) from gp_stat_database_conflicts where datname = 'isolation2test';
+ max 
+-----
+ 1   
+(1 row)
+
+-- cleanup
+!\retcode rm -rf @testtablespace@/hs_tablespace_directory;
+GP_IGNORE:-- start_ignore
+GP_IGNORE:
+GP_IGNORE:-- end_ignore
+(exited with code 0)
+

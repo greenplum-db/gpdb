@@ -559,6 +559,17 @@ redoDistributedForgetCommitRecord(DistributedTransactionId gxid)
 			if (i != *shmNumCommittedGxacts)
 				shmCommittedGxidArray[i] = shmCommittedGxidArray[*shmNumCommittedGxacts];
 
+			/*
+			 * Advance latestCompletedGxid if needed.
+			 * Have to acquire exclusive lock for the possible update.
+			 */
+			LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
+			if (gxid > ShmemVariableCache->latestCompletedGxid)
+			{
+				ShmemVariableCache->latestCompletedGxid = gxid;
+				SIMPLE_FAULT_INJECTOR("redo_dtx_forget_commit");
+			}
+			LWLockRelease(ProcArrayLock);
 			return;
 		}
 	}

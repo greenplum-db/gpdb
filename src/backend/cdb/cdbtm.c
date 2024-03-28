@@ -24,6 +24,7 @@
 #include "libpq/libpq-be.h"
 #include "libpq/pqformat.h"
 #include "miscadmin.h"
+#include "replication/syncrep.h"
 #include "storage/lmgr.h"
 #include "storage/pmsignal.h"
 #include "storage/s_lock.h"
@@ -120,7 +121,7 @@ int gp_gxid_prefetch_num;
  * FUNCTIONS PROTOTYPES
  */
 static void doPrepareTransaction(void);
-static void doInsertForgetCommitted(void);
+static XLogRecPtr doInsertForgetCommitted(void);
 static void doNotifyingOnePhaseCommit(void);
 static void doNotifyingCommitPrepared(void);
 static void doNotifyingAbort(void);
@@ -262,6 +263,19 @@ static void
 currentDtxActivate(void)
 {
 	bool signal_dtx_recovery;
+
+	/*
+	 * A hot standby does not have a valid gxid, so can skip most of the
+	 * things in this function.
+	 */
+	if (IS_HOT_STANDBY_QD())
+	{
+		/* XXX: do we need sessionId? */
+		MyTmGxact->sessionId = gp_session_id;
+		/* standby QD still sets the active dtx state so we don't blow up asserts elsewhere. */
+		setCurrentDtxState(DTX_STATE_ACTIVE_DISTRIBUTED);
+		return;
+	}
 
 	if (ShmemVariableCache->GxidCount <= GXID_PRETCH_THRESHOLD &&
 		(GetDtxRecoveryEvent() & DTX_RECOVERY_EVENT_BUMP_GXID) == 0)
@@ -497,17 +511,21 @@ doPrepareTransaction(void)
 /*
  * Insert FORGET COMMITTED into the xlog.
  */
-static void
+static XLogRecPtr
 doInsertForgetCommitted(void)
 {
+	XLogRecPtr recptr;
+
 	elog(DTM_DEBUG5, "doInsertForgetCommitted entering in state = %s", DtxStateToString(MyTmGxactLocal->state));
 
 	setCurrentDtxState(DTX_STATE_INSERTING_FORGET_COMMITTED);
 
-	RecordDistributedForgetCommitted(getDistributedTransactionId());
+	recptr = RecordDistributedForgetCommitted(getDistributedTransactionId());
 
 	setCurrentDtxState(DTX_STATE_INSERTED_FORGET_COMMITTED);
 	MyTmGxact->includeInCkpt = false;
+
+	return recptr;
 }
 
 static void
@@ -543,6 +561,7 @@ doNotifyingCommitPrepared(void)
 	MemoryContext oldcontext = CurrentMemoryContext;;
 	time_t		retry_time_start;
 	bool		retry_timedout;
+	XLogRecPtr 	recptr;
 
 	elog(DTM_DEBUG5, "doNotifyingCommitPrepared entering in state = %s", DtxStateToString(MyTmGxactLocal->state));
 
@@ -647,7 +666,7 @@ doNotifyingCommitPrepared(void)
 
 	SIMPLE_FAULT_INJECTOR("dtm_before_insert_forget_comitted");
 
-	doInsertForgetCommitted();
+	recptr = doInsertForgetCommitted();
 
 	/*
 	 * We release the TwophaseCommitLock only after writing our distributed
@@ -655,6 +674,10 @@ doNotifyingCommitPrepared(void)
 	 * their commit prepared records.
 	 */
 	LWLockRelease(TwophaseCommitLock);
+
+	/* wait for sync'ing the FORGET commit to hot standby, if remote_apply or higher is requested. */
+	if (synchronous_commit >= SYNCHRONOUS_COMMIT_REMOTE_APPLY)
+		SyncRepWaitForLSN(recptr, true);
 }
 
 static void
@@ -1612,7 +1635,7 @@ isDtxQueryDispatcher(void)
 	isSharedLocalSnapshotSlotPresent = (SharedLocalSnapshotSlot != NULL);
 
 	return (Gp_role == GP_ROLE_DISPATCH &&
-			isDtmStarted &&
+			(isDtmStarted || EnableHotStandby) &&
 			isSharedLocalSnapshotSlotPresent);
 }
 

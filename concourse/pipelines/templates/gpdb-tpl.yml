@@ -1255,7 +1255,7 @@ jobs:
       image: gpdb7-[[ os_type ]]-test
       params:
         MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off -c jit=off'
-          BUILD_TYPE=((rc-build-type)) -C src/test/isolation2 installcheck-hot-standby
+          BUILD_TYPE=((rc-build-type)) installcheck-hot-standby
         TEST_OS: [[ test_os ]]
 
 - name: icw_extensions_gpcloud_[[ os_type ]]

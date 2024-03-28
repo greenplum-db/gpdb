@@ -1195,6 +1195,10 @@ rq.oid=rc.resqueueid AND rc.restypid = rt.restypid
 ORDER BY rsqname, restypid
 ;
 
+-- FIXME: we have a cluster-wide view gp_stat_database_conflicts, but that is 
+-- only showing conflicts of every segment. Some conflict might be encountered
+-- on just part of the segments. Ideally we should have a view like
+-- gp_stat_database_conflicts_summary that prints the overall conflicts and types.
 CREATE VIEW pg_stat_database_conflicts AS
     SELECT
             D.oid AS datid,

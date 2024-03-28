@@ -101,3 +101,11 @@ REINDEX TABLE hs2;
 
 REVOKE SELECT ON hs1 FROM PUBLIC;
 GRANT SELECT ON hs1 TO PUBLIC;
+
+-- GPDB: backward fetch is not supported, moved from hs_standby_allowed.
+BEGIN;
+DECLARE hsc CURSOR FOR select * from hs3 order by col1 asc;
+fetch next from hsc;
+fetch first from hsc;
+COMMIT;
+

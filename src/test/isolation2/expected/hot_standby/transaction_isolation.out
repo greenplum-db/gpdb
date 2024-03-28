@@ -1,0 +1,1072 @@
+----------------------------------------------------------------
+-- Test transaction isolation in general, not specific to dtx
+----------------------------------------------------------------
+1: create table hs_tx(a int);
+CREATE TABLE
+1: insert into hs_tx select * from generate_series(1,10);
+INSERT 0 10
+
+1: begin;
+BEGIN
+1: insert into hs_tx select * from generate_series(11,20);
+INSERT 0 10
+2: begin;
+BEGIN
+2: insert into hs_tx select * from generate_series(21,30);
+INSERT 0 10
+2: abort;
+ROLLBACK
+
+-- standby should only see completed transactions, not in-progress transactions, nor aborted transactions
+-1S: select * from hs_tx;
+ a  
+----
+ 1  
+ 5  
+ 6  
+ 9  
+ 10 
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+(10 rows)
+
+1: end;
+COMMIT
+-1S: select * from hs_tx;
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 16 
+ 18 
+ 19 
+ 1  
+ 12 
+ 15 
+ 20 
+ 5  
+ 6  
+ 9  
+ 10 
+ 11 
+ 13 
+ 14 
+ 17 
+(20 rows)
+
+----------------------------------------------------------------
+-- Test isolation between hot standby query and in-progress dtx
+----------------------------------------------------------------
+
+1: create table hs_dtx1(a int);
+CREATE TABLE
+1: create table hs_dtx2(a int);
+CREATE TABLE
+
+-- inject two suspend faults:
+-- 1. on seg0, suspend before PREPARE phase of 2PC
+1: select gp_inject_fault('exec_dtx_protocol_start', 'suspend','','','',1,1,-1, dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: insert into hs_dtx1 select * from  generate_series(1,10);  <waiting ...>
+-- 2. on seg1, suspend before COMMIT phase of 2PC
+2: select gp_inject_fault('exec_dtx_protocol_start', 'suspend','','','',2,2,-1, dbid) from gp_segment_configuration where content=1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2&: insert into hs_dtx2 select * from  generate_series(1,10);  <waiting ...>
+
+-- standby should not see any rows from either dtx
+-1S: select * from hs_dtx1;
+ a 
+---
+(0 rows)
+-1S: select * from hs_dtx2;
+ a 
+---
+(0 rows)
+
+-- reset
+3: select gp_inject_fault('exec_dtx_protocol_start', 'reset',dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+3: select gp_inject_fault('exec_dtx_protocol_start', 'reset',dbid) from gp_segment_configuration where content=1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1<:  <... completed>
+INSERT 0 10
+2<:  <... completed>
+INSERT 0 10
+
+-- standby should see the results from the dtx now
+-1S: select * from hs_dtx1;
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 1  
+ 5  
+ 6  
+ 9  
+ 10 
+(10 rows)
+-1S: select * from hs_dtx2;
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 5  
+ 6  
+ 9  
+ 10 
+ 1  
+(10 rows)
+
+----------------------------------------------------------------
+-- Test DTX abort that happens in different phases
+----------------------------------------------------------------
+
+1: create table hs_abort_dtx1(a int);
+CREATE TABLE
+1: create table hs_abort_dtx2(a int);
+CREATE TABLE
+
+-- inject two errors:
+-- 1. on seg0, error out before PREPARE phase of 2PC
+1: select gp_inject_fault('exec_dtx_protocol_start', 'error','','','',1,1,-1, dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: insert into hs_abort_dtx1 select * from  generate_series(1,10);
+ERROR:  fault triggered, fault name:'exec_dtx_protocol_start' fault type:'error'  (seg0 127.0.1.1:7002 pid=14329)
+1: select gp_inject_fault('exec_dtx_protocol_start', 'reset',dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-- 2. on seg1, error out before COMMIT phase of 2PC
+1: select gp_inject_fault('exec_dtx_protocol_start', 'error','','','',2,2,-1, dbid) from gp_segment_configuration where content=1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1: insert into hs_abort_dtx2 select * from  generate_series(1,10);
+INSERT 0 10
+1: select gp_inject_fault('exec_dtx_protocol_start', 'reset',dbid) from gp_segment_configuration where content=1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- standby should not see dtx1 which is aborted but should see dtx2 which is recovered
+-1S: select * from hs_abort_dtx1;
+ a 
+---
+(0 rows)
+-1S: select * from hs_abort_dtx2;
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 1  
+ 5  
+ 6  
+ 9  
+ 10 
+(10 rows)
+
+----------------------------------------------------------------
+-- Test isolation between hot standby query and in-progress dtx,
+-- but also run more queries in between
+----------------------------------------------------------------
+1: create table hs_dtx3(a int);
+CREATE TABLE
+
+-- inject faults to suspend segments in 2PC
+1: select gp_inject_fault('exec_dtx_protocol_start', 'suspend','','','',1,1,-1, dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: insert into hs_dtx3 select * from  generate_series(1,10);  <waiting ...>
+2: select gp_inject_fault('exec_dtx_protocol_start', 'suspend','','','',2,2,-1, dbid) from gp_segment_configuration where content=1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2&: insert into hs_dtx3 select * from  generate_series(11,20);  <waiting ...>
+
+-- standby should not see rows in the in-progress dtx
+-1S: select * from hs_dtx3;
+ a 
+---
+(0 rows)
+
+-- now run some dtx and completed
+3: insert into hs_dtx3 values(99);
+INSERT 0 1
+3: create table hs_dtx4(a int);
+CREATE TABLE
+3: insert into hs_dtx4 select * from  generate_series(1,10);
+INSERT 0 10
+
+-- standby should still not see rows in the in-progress DTX, but should see the completed ones
+-1S: select * from hs_dtx3;
+ a  
+----
+ 99 
+(1 row)
+-1S: select * from hs_dtx4;
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 5  
+ 6  
+ 9  
+ 10 
+ 1  
+(10 rows)
+
+3: select gp_inject_fault('exec_dtx_protocol_start', 'reset',dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+3: select gp_inject_fault('exec_dtx_protocol_start', 'reset',dbid) from gp_segment_configuration where content=1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1<:  <... completed>
+INSERT 0 10
+2<:  <... completed>
+INSERT 0 10
+
+-- standby should see all rows now
+-1S: select * from hs_dtx3;
+ a  
+----
+ 1  
+ 12 
+ 15 
+ 20 
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 16 
+ 18 
+ 19 
+ 99 
+ 5  
+ 6  
+ 9  
+ 10 
+ 11 
+ 13 
+ 14 
+ 17 
+(21 rows)
+
+----------------------------------------------------------------
+-- Test isolation between standby QD and in-progress dtx,
+-- but after standby QD resets and gets running DTX from checkpoint.
+-- Same tests will be repeated twice:
+-- (1) with primary QD conducting a checkpoint;
+-- (2) with standby QD conducting a checkpoint (restartpoint);
+----------------------------------------------------------------
+1: create table hs_t5(a int, b text);
+CREATE TABLE
+1: create table hs_t6(a int, b text);
+CREATE TABLE
+
+-- inject fault to suspend a primary right before it conducts the commit phase of 2PC,
+-- so in the subsequent INSERT, all local transactions will be committed but the dtx is not.
+1: select gp_inject_fault('exec_dtx_protocol_start', 'suspend','','','',2,2,-1, dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: insert into hs_t5 select i, 'in-progress' from generate_series(1,10) i;  <waiting ...>
+
+-- now run some dtx and completed, and primary conducts a checkpoint
+2: insert into hs_t5 values(1, 'commited');
+INSERT 0 1
+2: insert into hs_t6 select i, 'committed' from generate_series(1,10) i;
+INSERT 0 10
+2: begin;
+BEGIN
+2: insert into hs_t5 values(99, 'aborted');
+INSERT 0 1
+2: abort;
+ROLLBACK
+2: checkpoint;
+CHECKPOINT
+
+-- now make the standby QD resets itself
+-1S: select gp_inject_fault('exec_simple_query_start', 'panic', dbid) from gp_segment_configuration where content=-1 and role='m';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-1S: select 1;
+PANIC:  fault triggered, fault name:'exec_simple_query_start' fault type:'panic'
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+-1Sq: ... <quitting>
+
+-- standby should still not see rows in the in-progress DTX, but should see the completed ones
+-1S: select * from hs_t5;
+ a | b        
+---+----------
+ 1 | commited 
+(1 row)
+-1S: select * from hs_t6;
+ a  | b         
+----+-----------
+ 1  | committed 
+ 2  | committed 
+ 3  | committed 
+ 4  | committed 
+ 7  | committed 
+ 8  | committed 
+ 5  | committed 
+ 6  | committed 
+ 9  | committed 
+ 10 | committed 
+(10 rows)
+
+2: select gp_inject_fault('exec_dtx_protocol_start', 'reset',dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1<:  <... completed>
+INSERT 0 10
+
+-- standby should see all rows now
+-1S: select * from hs_t5;
+ a  | b           
+----+-------------
+ 1  | in-progress 
+ 1  | commited    
+ 5  | in-progress 
+ 6  | in-progress 
+ 9  | in-progress 
+ 10 | in-progress 
+ 2  | in-progress 
+ 3  | in-progress 
+ 4  | in-progress 
+ 7  | in-progress 
+ 8  | in-progress 
+(11 rows)
+-1S: select * from hs_t6;
+ a  | b         
+----+-----------
+ 1  | committed 
+ 5  | committed 
+ 6  | committed 
+ 9  | committed 
+ 10 | committed 
+ 2  | committed 
+ 3  | committed 
+ 4  | committed 
+ 7  | committed 
+ 8  | committed 
+(10 rows)
+
+truncate hs_t5;
+TRUNCATE TABLE
+truncate hs_t6;
+TRUNCATE TABLE
+
+-- now repeat the above, but with standby QD conducting a checkpoint (restartpoint)
+1: select gp_inject_fault('exec_dtx_protocol_start', 'suspend','','','',2,2,-1, dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: insert into hs_t5 select i, 'in-progress' from generate_series(1,10) i;  <waiting ...>
+
+2: insert into hs_t5 values(1, 'commited');
+INSERT 0 1
+2: insert into hs_t6 select i, 'committed' from generate_series(1,10) i;
+INSERT 0 10
+2: begin;
+BEGIN
+2: insert into hs_t5 values(99, 'aborted');
+INSERT 0 1
+2: abort;
+ROLLBACK
+
+-1S: checkpoint;
+CHECKPOINT
+-1S: select gp_inject_fault('exec_simple_query_start', 'panic', dbid) from gp_segment_configuration where content=-1 and role='m';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-1S: select 1;
+PANIC:  fault triggered, fault name:'exec_simple_query_start' fault type:'panic'
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+-1Sq: ... <quitting>
+
+-- same result: standby should still not see rows in the in-progress DTX, but should see the completed ones
+-1S: select * from hs_t5;
+ a | b        
+---+----------
+ 1 | commited 
+(1 row)
+-1S: select * from hs_t6;
+ a  | b         
+----+-----------
+ 2  | committed 
+ 3  | committed 
+ 4  | committed 
+ 7  | committed 
+ 8  | committed 
+ 1  | committed 
+ 5  | committed 
+ 6  | committed 
+ 9  | committed 
+ 10 | committed 
+(10 rows)
+
+2: select gp_inject_fault('exec_dtx_protocol_start', 'reset',dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1<:  <... completed>
+INSERT 0 10
+
+-- standby should see all rows now
+-1S: select * from hs_t5;
+ a  | b           
+----+-------------
+ 2  | in-progress 
+ 3  | in-progress 
+ 4  | in-progress 
+ 7  | in-progress 
+ 8  | in-progress 
+ 1  | in-progress 
+ 1  | commited    
+ 5  | in-progress 
+ 6  | in-progress 
+ 9  | in-progress 
+ 10 | in-progress 
+(11 rows)
+-1S: select * from hs_t6;
+ a  | b         
+----+-----------
+ 1  | committed 
+ 2  | committed 
+ 3  | committed 
+ 4  | committed 
+ 7  | committed 
+ 8  | committed 
+ 5  | committed 
+ 6  | committed 
+ 9  | committed 
+ 10 | committed 
+(10 rows)
+
+-- more isolation test with in-progress dtx.
+-- the purpose: Previously this would be fail because the standby gets a bumped nextGxid from checkpoint,
+-- and moves its latestCompletedGxid too far (so that it thinks the new dtx already completed).
+1: select gp_inject_fault('exec_dtx_protocol_start', 'suspend','','','',1,1,-1, dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1&: delete from hs_t5;  <waiting ...>
+2: select gp_inject_fault('exec_dtx_protocol_start', 'suspend','','','',2,2,-1, dbid) from gp_segment_configuration where content=1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+2&: delete from hs_t6;  <waiting ...>
+-- standby should not see the effect of the deletes
+-1S: select * from hs_t5;
+ a  | b           
+----+-------------
+ 2  | in-progress 
+ 3  | in-progress 
+ 4  | in-progress 
+ 7  | in-progress 
+ 8  | in-progress 
+ 1  | in-progress 
+ 1  | commited    
+ 5  | in-progress 
+ 6  | in-progress 
+ 9  | in-progress 
+ 10 | in-progress 
+(11 rows)
+-1S: select * from hs_t6;
+ a  | b         
+----+-----------
+ 1  | committed 
+ 2  | committed 
+ 3  | committed 
+ 4  | committed 
+ 7  | committed 
+ 8  | committed 
+ 5  | committed 
+ 6  | committed 
+ 9  | committed 
+ 10 | committed 
+(10 rows)
+3: select gp_inject_fault('exec_dtx_protocol_start', 'reset',dbid) from gp_segment_configuration where content=0 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+3: select gp_inject_fault('exec_dtx_protocol_start', 'reset',dbid) from gp_segment_configuration where content=1 and role='p';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+1<:  <... completed>
+DELETE 11
+2<:  <... completed>
+DELETE 10
+
+----------------------------------------------------------------
+-- Read-committed isolation: query on hot standby should not see dtx that completed after it
+-- created distributed snapshot, but should see dtx that completed before that.
+----------------------------------------------------------------
+
+1: create table hs_rc(a int);
+CREATE TABLE
+1: insert into hs_rc select * from generate_series(1,10);
+INSERT 0 10
+
+-- case 1: suspend SELECT on the standby QD right after it created snapshot
+-1S: select gp_inject_fault('select_after_qd_create_snapshot', 'suspend', dbid) from gp_segment_configuration where content=-1 and role='m';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-1S&: select * from hs_rc;  <waiting ...>
+
+-- new INSERT or DELETE won't be observed by the standby
+1: insert into hs_rc select * from generate_series(11,20);
+INSERT 0 10
+1: delete from hs_rc where a < 5;
+DELETE 4
+1: select gp_inject_fault('select_after_qd_create_snapshot', 'reset', dbid) from gp_segment_configuration where content=-1 and role='m';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- should only see the rows at the time when SELECT started (1...10).
+-1S<:  <... completed>
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 1  
+ 5  
+ 6  
+ 9  
+ 10 
+(10 rows)
+
+-- SELECT again, should see the effect from the INSERT and DELETE now
+-1S: select * from hs_rc;
+ a  
+----
+ 12 
+ 15 
+ 20 
+ 7  
+ 8  
+ 16 
+ 18 
+ 19 
+ 5  
+ 6  
+ 9  
+ 10 
+ 11 
+ 13 
+ 14 
+ 17 
+(16 rows)
+
+-- case 2: suspend SELECT on the standby QD before creating snapshot
+-1S: select gp_inject_fault('exec_simple_query_start', 'suspend', dbid) from gp_segment_configuration where content=-1 and role='m';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+-1S&: select * from hs_rc;  <waiting ...>
+
+1: insert into hs_rc select * from generate_series(21,30);
+INSERT 0 10
+1: delete from hs_rc where a < 21;
+DELETE 16
+1: select gp_inject_fault('exec_simple_query_start', 'reset', dbid) from gp_segment_configuration where content=-1 and role='m';
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- standby should see the effect of the INSERT and DELETE
+-1S<:  <... completed>
+ a  
+----
+ 23 
+ 26 
+ 30 
+ 22 
+ 24 
+ 27 
+ 29 
+ 21 
+ 25 
+ 28 
+(10 rows)
+
+----------------------------------------------------------------
+-- Read-committed isolation in the BEGIN...END block
+----------------------------------------------------------------
+
+1: truncate hs_rc;
+TRUNCATE TABLE
+1: insert into hs_rc select * from generate_series(1,30);
+INSERT 0 30
+
+-1S: begin;
+BEGIN
+-1S: select count(*) from hs_rc;
+ count 
+-------
+ 30    
+(1 row)
+
+-- have some concurrent sessions on primary QD:
+-- 1. a completed transaction
+1: delete from hs_rc where a <= 10;
+DELETE 10
+-- 3. an aborted transaction
+2: begin;
+BEGIN
+2: delete from hs_rc where a > 10 and a <= 20;
+DELETE 10
+2: abort;
+ROLLBACK
+-- 3. an ongoing transaction
+3: begin;
+BEGIN
+3: delete from hs_rc where a > 20 and a <= 30;
+DELETE 10
+
+-- the standby should see results accordingly
+-1S: select * from hs_rc;
+ a  
+----
+ 12 
+ 15 
+ 20 
+ 23 
+ 26 
+ 30 
+ 11 
+ 13 
+ 14 
+ 17 
+ 21 
+ 25 
+ 28 
+ 16 
+ 18 
+ 19 
+ 22 
+ 24 
+ 27 
+ 29 
+(20 rows)
+-1S: end;
+COMMIT
+
+3: end;
+COMMIT
+-1S: select * from hs_rc;
+ a  
+----
+ 12 
+ 15 
+ 20 
+ 11 
+ 13 
+ 14 
+ 17 
+ 16 
+ 18 
+ 19 
+(10 rows)
+
+----------------------------------------------------------------
+-- Repeatable-read isolation: distributed snapshot is created at time of the
+-- first query in transaction block. All queries in the transaction block
+-- should only see results committed before the distributed snapshot creation.
+----------------------------------------------------------------
+
+1: create table hs_rr(a int);
+CREATE TABLE
+1: insert into hs_rr select * from generate_series(1,10);
+INSERT 0 10
+
+-1S: begin isolation level repeatable read;
+BEGIN
+-- should see 10
+-1S: select count(*) from hs_rr;
+ count 
+-------
+ 10    
+(1 row)
+
+-- do some more INSERT, DELETE and UPDATE
+1: insert into hs_rr select * from generate_series(11,20);
+INSERT 0 10
+1: delete from hs_rr where a <= 10;
+DELETE 10
+1: update hs_rr set a = a + 100;
+UPDATE 10
+
+-- should still the initial rows {1...10}
+-1S: select * from hs_rr;
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 1  
+ 5  
+ 6  
+ 9  
+ 10 
+(10 rows)
+-1S: end;
+COMMIT
+
+-- should see the results from the INSERT, DELETE and UPDATE
+-1S: begin isolation level repeatable read;
+BEGIN
+-1S: select * from hs_rr;
+ a   
+-----
+ 115 
+ 120 
+ 118 
+ 113 
+ 114 
+ 112 
+ 116 
+ 119 
+ 111 
+ 117 
+(10 rows)
+
+-- standby won't see ongoing or aborted transactions either
+1: begin;
+BEGIN
+1: insert into hs_rr select * from generate_series(1,10);
+INSERT 0 10
+2: begin;
+BEGIN
+2: insert into hs_rr select * from generate_series(1,10);
+INSERT 0 10
+2: abort;
+ROLLBACK
+
+-1S: select * from hs_rr;
+ a   
+-----
+ 114 
+ 115 
+ 120 
+ 118 
+ 113 
+ 112 
+ 116 
+ 119 
+ 111 
+ 117 
+(10 rows)
+
+1: end;
+COMMIT
+-1S: end;
+COMMIT
+
+----------------------------------------------------------------
+-- Transaction isolation is respected in subtransactions too
+----------------------------------------------------------------
+
+1: create table hs_subtrx(a int);
+CREATE TABLE
+
+-- (1) read-committed
+-1S: begin;
+BEGIN
+-1S: select count(*) from hs_subtrx;
+ count 
+-------
+ 0     
+(1 row)
+-1S: savepoint s1;
+SAVEPOINT
+
+1: insert into hs_subtrx select * from generate_series(1,10);
+INSERT 0 10
+
+-1S: select count(*) from hs_subtrx;
+ count 
+-------
+ 10    
+(1 row)
+-1S: savepoint s2;
+SAVEPOINT
+-1S: select count(*) from hs_subtrx;
+ count 
+-------
+ 10    
+(1 row)
+-1S: rollback to savepoint s1;
+ROLLBACK
+-1S: select count(*) from hs_subtrx;
+ count 
+-------
+ 10    
+(1 row)
+-1S: end;
+COMMIT
+
+-- (2) repeatable-read
+-1S: begin isolation level repeatable read;
+BEGIN
+-1S: select * from hs_subtrx;
+ a  
+----
+ 1  
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 5  
+ 6  
+ 9  
+ 10 
+(10 rows)
+-1S: savepoint s1;
+SAVEPOINT
+
+1: insert into hs_subtrx select * from generate_series(11,20);
+INSERT 0 10
+1: delete from hs_subtrx where a <= 10;
+DELETE 10
+1: update hs_subtrx set a = a + 100;
+UPDATE 10
+
+-1S: select * from hs_subtrx;
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 1  
+ 5  
+ 6  
+ 9  
+ 10 
+(10 rows)
+-1S: savepoint s2;
+SAVEPOINT
+-1S: select * from hs_subtrx;
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 1  
+ 5  
+ 6  
+ 9  
+ 10 
+(10 rows)
+-1S: rollback to savepoint s1;
+ROLLBACK
+-1S: select * from hs_subtrx;
+ a  
+----
+ 2  
+ 3  
+ 4  
+ 7  
+ 8  
+ 1  
+ 5  
+ 6  
+ 9  
+ 10 
+(10 rows)
+-1S: end;
+COMMIT
+-1S: select * from hs_subtrx;
+ a   
+-----
+ 114 
+ 115 
+ 120 
+ 118 
+ 113 
+ 112 
+ 116 
+ 119 
+ 111 
+ 117 
+(10 rows)
+
+----------------------------------------------------------------
+-- Various isolation tests that involve AO/CO table.
+----------------------------------------------------------------
+1: create table hs_ao(a int, id int unique) using ao_row;
+CREATE TABLE
+1: insert into hs_ao select 1,i from generate_series(1,10) i;
+INSERT 0 10
+1: begin;
+BEGIN
+1: insert into hs_ao select 2,i from generate_series(11,20) i;
+INSERT 0 10
+
+-- standby sees the same AO metadata as primary
+2: select * from gp_toolkit.__gp_aoseg('hs_ao');
+ segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
+------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
+ 0          | 1     | 128 | 5        | 1             | 128              | 1        | 3             | 1     
+ 1          | 1     | 40  | 1        | 1             | 40               | 1        | 3             | 1     
+ 2          | 1     | 104 | 4        | 1             | 104              | 1        | 3             | 1     
+(3 rows)
+-1S: select * from gp_toolkit.__gp_aoseg('hs_ao');
+ segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
+------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
+ 0          | 1     | 128 | 5        | 1             | 128              | 1        | 3             | 1     
+ 1          | 1     | 40  | 1        | 1             | 40               | 1        | 3             | 1     
+ 2          | 1     | 104 | 4        | 1             | 104              | 1        | 3             | 1     
+(3 rows)
+2: select (gp_toolkit.__gp_aoblkdir('hs_ao')).* from gp_dist_random('gp_id');
+ tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------+-------+----------------+----------+--------------+-------------+-----------
+ (0,2)   | 1     | 0              | 0        | 1            | 0           | 4         
+ (0,2)   | 1     | 0              | 0        | 1            | 0           | 1         
+ (0,2)   | 1     | 0              | 0        | 1            | 0           | 5         
+(3 rows)
+-1S: select (gp_toolkit.__gp_aoblkdir('hs_ao')).* from gp_dist_random('gp_id');
+ tupleid | segno | columngroup_no | entry_no | first_row_no | file_offset | row_count 
+---------+-------+----------------+----------+--------------+-------------+-----------
+ (0,2)   | 1     | 0              | 0        | 1            | 0           | 5         
+ (0,2)   | 1     | 0              | 0        | 1            | 0           | 1         
+ (0,2)   | 1     | 0              | 0        | 1            | 0           | 4         
+(3 rows)
+
+-- standby sees correct table data
+-1S: select * from hs_ao;
+ a | id 
+---+----
+ 1 | 2  
+ 1 | 3  
+ 1 | 4  
+ 1 | 7  
+ 1 | 8  
+ 1 | 1  
+ 1 | 5  
+ 1 | 6  
+ 1 | 9  
+ 1 | 10 
+(10 rows)
+
+-- standby sees the effect of vacuum
+1: end;
+COMMIT
+1: delete from hs_ao where a = 1;
+DELETE 10
+1: vacuum hs_ao;
+VACUUM
+1: select * from gp_toolkit.__gp_aoseg('hs_ao');
+ segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
+------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
+ 2          | 1     | 0   | 0        | 0             | 0                | 3        | 3             | 1     
+ 2          | 2     | 104 | 4        | 1             | 104              | 0        | 3             | 1     
+ 0          | 1     | 0   | 0        | 0             | 0                | 3        | 3             | 1     
+ 0          | 2     | 88  | 3        | 1             | 88               | 0        | 3             | 1     
+ 1          | 1     | 0   | 0        | 0             | 0                | 3        | 3             | 1     
+ 1          | 2     | 88  | 3        | 1             | 88               | 0        | 3             | 1     
+(6 rows)
+-1S: select * from gp_toolkit.__gp_aoseg('hs_ao');
+ segment_id | segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
+------------+-------+-----+----------+---------------+------------------+----------+---------------+-------
+ 2          | 1     | 0   | 0        | 0             | 0                | 3        | 3             | 1     
+ 2          | 2     | 104 | 4        | 1             | 104              | 0        | 3             | 1     
+ 0          | 1     | 0   | 0        | 0             | 0                | 3        | 3             | 1     
+ 0          | 2     | 88  | 3        | 1             | 88               | 0        | 3             | 1     
+ 1          | 1     | 0   | 0        | 0             | 0                | 3        | 3             | 1     
+ 1          | 2     | 88  | 3        | 1             | 88               | 0        | 3             | 1     
+(6 rows)
+-1S: select * from hs_ao;
+ a | id 
+---+----
+ 2 | 11 
+ 2 | 13 
+ 2 | 14 
+ 2 | 17 
+ 2 | 12 
+ 2 | 15 
+ 2 | 20 
+ 2 | 16 
+ 2 | 18 
+ 2 | 19 
+(10 rows)

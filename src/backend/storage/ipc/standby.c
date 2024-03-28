@@ -29,6 +29,7 @@
 #include "storage/procarray.h"
 #include "storage/sinvaladt.h"
 #include "storage/standby.h"
+#include "utils/faultinjector.h"
 #include "utils/hsearch.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
@@ -301,13 +302,6 @@ ResolveRecoveryConflictWithVirtualXIDs(VirtualTransactionId *waitlist,
 				if (pid != 0)
 					pg_usleep(5000L);
 			}
-		}
-
-		/* Reset ps display if we changed it */
-		if (new_status)
-		{
-			set_ps_display(new_status, false);
-			pfree(new_status);
 		}
 
 		/* The virtual transaction is gone now, wait for the next one */
@@ -654,6 +648,8 @@ SendRecoveryConflictWithBufferPin(ProcSignalReason reason)
 	 * SIGUSR1 handling in each backend decide their own fate.
 	 */
 	CancelDBBackends(InvalidOid, reason, false);
+
+	SIMPLE_FAULT_INJECTOR("recovery_conflict_bufferpin_signal_sent");
 }
 
 /*

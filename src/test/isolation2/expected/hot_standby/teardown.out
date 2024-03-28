@@ -3,5 +3,7 @@
 (exited with code 0)
 !\retcode gpconfig -r synchronous_commit;
 (exited with code 0)
+!\retcode gpconfig -r max_standby_streaming_delay;
+(exited with code 0)
 !\retcode gpstop -ar;
 (exited with code 0)

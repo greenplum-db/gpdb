@@ -16,8 +16,8 @@ select pg_stop_backup();
 -- should return no rows
 select * from pg_prepared_xacts;
 
--- just the startup process
-select locktype, virtualxid, virtualtransaction, mode, granted
+-- just the startup processes of all standby coordinator and segments, since pg_locks show cluster-wide view
+select gp_segment_id, locktype, virtualxid, virtualtransaction, mode, granted
 from pg_locks where virtualxid = '1/1';
 
 -- suicide is painless

@@ -638,6 +638,8 @@ PortalStart(Portal portal, ParamListInfo params,
 				/* reset value */
 				needDistributedSnapshot = true;
 
+				SIMPLE_FAULT_INJECTOR("select_after_qd_create_snapshot");
+
 				/*
 				 * We could remember the snapshot in portal->portalSnapshot,
 				 * but presently there seems no need to, as this code path

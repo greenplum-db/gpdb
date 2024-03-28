@@ -858,3 +858,31 @@ yet simplifies emulation of subtransactions considerably.
 
 Further details on locking mechanics in recovery are given in comments
 with the Lock rmgr code.
+
+Distributed Transaction Emulation during Recovery
+-------------------------------------
+
+In GPDB, the MVCC snapshot also includes distributed transactions (aka dtx). 
+Accordingly, on a hot standby we also emulate running dtx. The way to do that 
+is to re-use the shmCommittedGxidArray which has been used on a primary for dtx
+recovery: it bookkeepings all the 2PC dtx that have their PREPARE phase done, 
+but not yet COMMIT phase. On a hot standby, any dtx shown in that array are 
+regarded as in-progress. The MVCC snapshot does not really need to account for
+dtx not in that array: if a dtx has not done the PREPARE phase, we know there 
+is no data committed yet; if a dtx has done the COMMIT phase, we know all data 
+has committed.
+
+For 1PC dtx, however, there is a known limitation where the hot standby won't 
+see the last 1PC (or the last few 1PCs if they are all 1PC). This is because 
+since 1PC does not have any WAL on QD, the standby QD won't advance its 
+latestCompletedGxid, so its distributed snapshot horizon does not include the
+last 1PC - it would view the last 1PC not yet started or at best still in 
+progress. Only if another 2PC comes, the standby would advance its 
+latestCompletedGxid and its distributed snapshot will include the previous 1PC. 
+
+We don't emulate the full architecture of "running transaction" for dtx because
+that is unnecessary, at least ATM. For example, we don't create a dtx-version
+of XLOG_RUNNING_XACTS, because we already have that information as part of the
+extended checkpoint (see TMGXACT_CHECKPOINT). We also don't need to emulate 
+other members in RunningTransactionsData, like subxid or xid-pruning related 
+variables because those do not apply to dtx.

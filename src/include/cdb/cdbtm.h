@@ -32,8 +32,12 @@ typedef enum
 	DTX_STATE_NONE = 0,
 
 	/**
-	 * The distributed transaction is active and requires distributed coordination
-	 *   (because it is explicit or an implicit writer transaction)
+	 * The distributed transaction is active.
+	 * For a primary, this state means the transaction requires distributed
+	 * coordination (because it is explicit or an implicit writer transaction),
+	 * and it will switch to other dtx states in different phases.
+	 * For a hot standby, there is no coordination necessary so transaction 
+	 * will stay in this state until the end of the commit.
 	 */
 	DTX_STATE_ACTIVE_DISTRIBUTED,
 

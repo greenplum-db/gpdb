@@ -2009,7 +2009,8 @@ CreateDistributedSnapshot(DistributedSnapshot *ds)
 	ProcArrayStruct *arrayP = procArray;
 
 	Assert(LWLockHeldByMe(ProcArrayLock));
-	if (*shmNumCommittedGxacts != 0)
+	/* Standby QD accepts query while constantly replaying dtx */
+	if (*shmNumCommittedGxacts != 0 && !IS_HOT_STANDBY_QD())
 		elog(ERROR, "Create distributed snapshot before DTM recovery finish");
 
 	xmin = xmax = ShmemVariableCache->latestCompletedGxid + 1;
@@ -2022,6 +2023,25 @@ CreateDistributedSnapshot(DistributedSnapshot *ds)
 	count = 0;
 
 	Assert(ds->inProgressXidArray != NULL);
+
+	/* for a hot standby QD, check shmCommittedGxidArray to build the knowledge */
+	if (IS_HOT_STANDBY_QD())
+	{
+		for (i = 0; i < *shmNumCommittedGxacts; i++)
+		{
+			DistributedTransactionId gxid;
+
+			gxid = shmCommittedGxidArray[i];
+
+			if (gxid == InvalidDistributedTransactionId || gxid >= xmax)
+				continue;
+
+			if (gxid < xmin)
+				xmin = gxid;
+
+			ds->inProgressXidArray[count++] = gxid;
+		}
+	}
 
 	/*
 	 * Gather up current in-progress global transactions for the distributed

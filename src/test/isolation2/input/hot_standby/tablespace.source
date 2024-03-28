@@ -1,0 +1,37 @@
+-- tablespace test for Hot Standby
+
+----------------------------------------------------------------
+-- Test query conflict with tablespace operations on a hot standby
+----------------------------------------------------------------
+
+-- assume no conflict when the test starts
+-1S: select max(confl_tablespace) from gp_stat_database_conflicts where datname = 'isolation2test';
+
+-- create tablespace
+!\retcode mkdir -p @testtablespace@/hs_tablespace_directory;
+create tablespace hs_ts location '@testtablespace@/hs_tablespace_directory';
+
+-- some prepartion on the primary
+create table hs_ts_foo (i int, j int) distributed by(i);
+insert into hs_ts_foo select i, i from generate_series(1,80000)i;
+analyze hs_ts_foo;
+
+-- on the standby, run some query that requires workfile, this example is taken
+-- from regress/temp_tablespaces test
+-1S: set temp_tablespaces = hs_ts;
+-1S: begin;
+-- start_ignore
+-1S: with a1 as (select * from hs_ts_foo), a2 as (select * from hs_ts_foo) select a1.i xx from a1 inner join a2 on a2.i = a1.i union all select count(a1.i) from a1 inner join a2 on a2.i = a1.i;
+-- end_ignore
+
+-- drop tablespace, should see conflict on the hot standby
+drop tablespace hs_ts;
+-1S: with a1 as (select * from hs_ts_foo), a2 as (select * from hs_ts_foo) select a1.i xx from a1 inner join a2 on a2.i = a1.i union all select count(a1.i) from a1 inner join a2 on a2.i = a1.i;
+-1Sq:
+
+-- conflict has been recorded
+-1S: select max(confl_tablespace) from gp_stat_database_conflicts where datname = 'isolation2test';
+
+-- cleanup
+!\retcode rm -rf @testtablespace@/hs_tablespace_directory;
+

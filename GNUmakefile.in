@@ -224,6 +224,11 @@ installcheck-analyze:
 $(call recurse,installcheck-world,gpcontrib/gp_replica_check,installcheck)
 $(call recurse,installcheck-world,src/bin/pg_upgrade,check)
 
+.PHONY: installcheck-hot-standby
+installcheck-hot-standby: submake-generated-headers
+	$(MAKE) -C src/test/regress installcheck-hot-standby
+	$(MAKE) -C src/test/isolation2 installcheck-hot-standby
+
 # Run mock tests, that don't require a running server. Arguably these should
 # be part of [install]check-world, but we treat them more like part of
 # compilation than regression testing, in the CI. But they are too heavy-weight

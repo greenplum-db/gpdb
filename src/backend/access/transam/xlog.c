@@ -6986,7 +6986,11 @@ StartupXLOG(void)
 
 	/* initialize shared memory variables from the checkpoint record */
 	ShmemVariableCache->nextFullXid = checkPoint.nextFullXid;
-	ShmemVariableCache->nextGxid = checkPoint.nextGxid;
+	/* Primary QD needs to jump over gxids that might need recovery */
+	if (IS_QUERY_DISPATCHER() && !(ArchiveRecoveryRequested && EnableHotStandby))
+		ShmemVariableCache->nextGxid = checkPoint.nextGxid + gp_gxid_prefetch_num;
+	else
+		ShmemVariableCache->nextGxid = checkPoint.nextGxid;
 	ShmemVariableCache->GxidCount = 0;
 	ShmemVariableCache->nextOid = checkPoint.nextOid;
 	ShmemVariableCache->oidCount = 0;
@@ -7301,6 +7305,14 @@ StartupXLOG(void)
 			StartupSUBTRANS(oldestActiveXID);
 			DistributedLog_Startup(oldestActiveXID,
 								   XidFromFullTransactionId(ShmemVariableCache->nextFullXid));
+
+			/*
+			 * The hot standby will stay in the recovery loop, so initialize 
+			 * latestCompletedGxid now.
+			 */
+			LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
+			ShmemVariableCache->latestCompletedGxid = ShmemVariableCache->nextGxid;
+			LWLockRelease(ProcArrayLock);
 
 			/*
 			 * If we're beginning at a shutdown checkpoint, we know that
@@ -9385,19 +9397,15 @@ CreateCheckPoint(int flags)
 	 *
 	 * We need to hold GxidBumpLock since XLOG_NEXTGXID is created with the
 	 * lock held. nextGxid in online checkpoint is not used during replay but
-	 * during crash recovery, it is used as the initial nextGxid so need to add
-	 * the ShmemVariableCache->GxidCount variable. For the crash recovery case,
-	 * if XLOG_NEXTGXID is created before checkpoint.redo, we get the nextGxid
-	 * same as the XLOG_NEXTGXID value; else we rely on XLOG_NEXTGXID
-	 * replay finally. See bumpGxid() for more details.
-	 *
+	 * during crash recovery, it is used to get the initial nextGxid. For the
+	 * crash recovery case, we will jump over all possibly need-recovery
+	 * gxids; else we rely on XLOG_NEXTGXID replay finally. See bumpGxid()
+	 * for more details.
 	 */
 	if (IS_QUERY_DISPATCHER())
 		LWLockAcquire(GxidBumpLock, LW_SHARED);
 	SpinLockAcquire(shmGxidGenLock);
 	checkPoint.nextGxid = ShmemVariableCache->nextGxid;
-	if (!shutdown)
-		checkPoint.nextGxid += ShmemVariableCache->GxidCount;
 	SpinLockRelease(shmGxidGenLock);
 	if (IS_QUERY_DISPATCHER())
 		LWLockRelease(GxidBumpLock);

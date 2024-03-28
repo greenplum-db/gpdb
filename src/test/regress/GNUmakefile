@@ -224,6 +224,16 @@ installcheck-mirrorless: all tablespace-setup
 standbycheck: all
 	$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=$(srcdir)/standby_schedule  $(EXTRA_TESTS)
 
+# GPDB: installcheck for hot standby. This is essentially same as the upstream 'standbycheck'
+# above but we just make sure that we do the primary preparation and use the desired standby port.
+# If no standby port is given, just use the demo cluster's standby port 7001. 
+ifeq ($(STANDBY_PGPORT),)
+  STANDBY_PGPORT = 7001
+endif
+installcheck-hot-standby: all
+	$(pg_regress_installcheck) $(REGRESS_OPTS) hs_primary_setup
+	$(pg_regress_installcheck) $(REGRESS_OPTS) --port=$(STANDBY_PGPORT) --use-existing --schedule=$(srcdir)/standby_schedule  $(EXTRA_TESTS)
+
 # old interfaces follow...
 
 runcheck: check

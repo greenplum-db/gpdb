@@ -164,31 +164,25 @@ show synchronous_commit;
 reset synchronous_commit;
 discard temp;
 discard all;
+NOTICE:  command without clusterwide effect
+HINT:  Consider alternatives as DEALLOCATE ALL, or DISCARD TEMP if a clusterwide effect is desired.
 -- CURSOR commands
 BEGIN;
-DECLARE hsc CURSOR FOR select * from hs3;
+DECLARE hsc CURSOR FOR select * from hs3 order by col1 asc;
 FETCH next from hsc;
  col1 
 ------
   113
 (1 row)
 
-fetch first from hsc;
- col1 
-------
-  113
-(1 row)
-
-fetch last from hsc;
- col1 
-------
-  115
-(1 row)
-
+-- GPDB: backward fetch isn't allowed, moved to hs_standby_disallowed
+-- fetch first from hsc;
+-- fetch last from hsc;
 fetch 1 from hsc;
  col1 
 ------
-(0 rows)
+  114
+(1 row)
 
 CLOSE hsc;
 COMMIT;
@@ -216,3 +210,5 @@ UNLISTEN *;
 -- ALLOWED COMMANDS
 CHECKPOINT;
 discard all;
+NOTICE:  command without clusterwide effect
+HINT:  Consider alternatives as DEALLOCATE ALL, or DISCARD TEMP if a clusterwide effect is desired.
