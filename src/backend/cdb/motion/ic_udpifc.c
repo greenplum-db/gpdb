@@ -1804,10 +1804,23 @@ sendControlMessage(icpkthdr *pkt, int fd, struct sockaddr *addr, socklen_t peerL
 	if (gp_interconnect_full_crc)
 		addCRC(pkt);
 
-	char errDetail[100];
-	snprintf(errDetail, sizeof(errDetail), "Send control message: got error with seq %u", pkt->seq);
-	/* Retry for infinite times since we have no retransmit mechanism for control message */
-	n = sendtoWithRetry(fd, (const char *) pkt, pkt->len, 0, addr, peerLen, -1, errDetail);
+	/* retry 10 times for sending control message */
+	int counter = 0;
+	while (counter < 10)
+	{
+		counter++;
+		n = sendto(fd, (const char *) pkt, pkt->len, 0, addr, peerLen);
+		if (n < 0)
+		{
+			if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
+				continue;
+			else {
+				write_log("sendcontrolmessage: got errno %d", errno);
+				return;
+			}
+		}
+		break;
+	}
 	if (n < pkt->len)
 		write_log("sendcontrolmessage: got error %d errno %d seq %d", n, errno, pkt->seq);
 }
@@ -4613,6 +4626,19 @@ xmit_retry:
 					 errmsg("Interconnect error writing an outgoing packet: %m"),
 					 errdetail("error during sendto() %s", errDetail)));
 			return n;
+		}
+
+		/*
+		 * If the OS can detect an MTU issue on the host network interfaces, we 
+		 * would get EMSGSIZE here. So, bail with a HINT about checking MTU.
+		 */
+		if (errno == EMSGSIZE)
+		{
+			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+							errmsg("Interconnect error writing an outgoing packet: %m"),
+							errdetail("error during sendto() call (error:%d).\n"
+									"%s", save_errno, errDetail),
+							errhint("check if interface MTU is equal across the cluster and lower than gp_max_packet_size")));
 		}
 
 		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),

@@ -83,6 +83,7 @@ typedef enum {
 	FINC_OS_NET_INTERFACE = 19,
 	FINC_OS_MEM_INTERFACE = 20,
 	FINC_OS_CREATE_THREAD = 21,
+	FINC_PKT_TOO_LONG = 22,
 
 	/* These are used to inject network faults. */
 	FINC_NET_PKT_DUP = 24,
@@ -244,6 +245,13 @@ testmode_sendto(const char *caller_name, int socket, const void *buffer,
 				break;
 			write_log("inject fault to sendto: FINC_OS_NET_INTERFACE");
 			errno = EFAULT;
+			return -1;
+		
+		case FINC_PKT_TOO_LONG:
+			if (!FINC_HAS_FAULT(fault_type))
+				break;
+			write_log("inject fault to sendto: FINC_PKT_TOO_LONG");
+			errno = EMSGSIZE;
 			return -1;
 
 		default:

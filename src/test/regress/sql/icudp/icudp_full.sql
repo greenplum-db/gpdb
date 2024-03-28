@@ -276,6 +276,10 @@ $$;
 SET gp_udpic_fault_inject_bitmap = 524288;
 SELECT system_call_fault_injection_test();
 
+-- inject faults for errMsgSize when packet is too long.
+SET gp_udpic_fault_inject_bitmap = 4194304;
+SELECT system_call_fault_injection_test();
+
 -- disable ipv6 may increase the code coverage.
 SET gp_udpic_network_disable_ipv6 = 1;
 SELECT system_call_fault_injection_test();
