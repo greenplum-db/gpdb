@@ -1749,8 +1749,8 @@ SELECT min(x) FROM
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
                ->  Append
-                     ->  Seq Scan on tenk1
-                     ->  Seq Scan on tenk1 tenk1_1
+                     ->  Seq Scan on tenk1 a
+                     ->  Seq Scan on tenk1 b
  Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (7 rows)
 
@@ -1765,8 +1765,8 @@ SELECT min(y) FROM
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
                ->  Append
-                     ->  Seq Scan on tenk1
-                     ->  Seq Scan on tenk1 tenk1_1
+                     ->  Seq Scan on tenk1 a
+                     ->  Seq Scan on tenk1 b
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (7 rows)
 
@@ -1780,12 +1780,12 @@ ORDER BY x, y;
                     QUERY PLAN                    
 --------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Merge Key: tenk1.thousand, tenk1.tenthous
+   Merge Key: a.thousand, a.tenthous
    ->  Sort
-         Sort Key: tenk1.thousand, tenk1.tenthous
+         Sort Key: a.thousand, a.tenthous
          ->  Append
-               ->  Seq Scan on tenk1
-               ->  Seq Scan on tenk1 tenk1_1
+               ->  Seq Scan on tenk1 a
+               ->  Seq Scan on tenk1 b
  Optimizer: Pivotal Optimizer (GPORCA) version 2.74.0
 (8 rows)
 

@@ -757,12 +757,12 @@ explain (costs off) select * from t_hashdist, t_replicate_volatile x, t_replicat
 -----------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
-         Join Filter: (((t_replicate_volatile.a + t_replicate_volatile_1.a))::double precision > random())
+         Join Filter: (((x.a + y.a))::double precision > random())
          ->  Nested Loop
                Join Filter: true
                ->  Seq Scan on t_hashdist
-               ->  Seq Scan on t_replicate_volatile t_replicate_volatile_1
-         ->  Seq Scan on t_replicate_volatile
+               ->  Seq Scan on t_replicate_volatile y
+         ->  Seq Scan on t_replicate_volatile x
  Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 
@@ -1178,9 +1178,9 @@ explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() an
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Nested Loop
          Join Filter: true
-         ->  Seq Scan on t1_13532
-         ->  Index Scan using idx_t2_13532 on t2_13532
-               Index Cond: (b = t1_13532.b)
+         ->  Seq Scan on t1_13532 x
+         ->  Index Scan using idx_t2_13532 on t2_13532 y
+               Index Cond: (b = x.b)
                Filter: ((a)::double precision < random())
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
@@ -1192,9 +1192,9 @@ explain (costs off) select * from t1_13532 x, t2_13532 y where y.a < random() an
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Nested Loop
          Join Filter: true
-         ->  Seq Scan on t1_13532
-         ->  Index Scan using idx_t2_13532 on t2_13532
-               Index Cond: (b = t1_13532.b)
+         ->  Seq Scan on t1_13532 x
+         ->  Index Scan using idx_t2_13532 on t2_13532 y
+               Index Cond: (b = x.b)
                Filter: ((a)::double precision < random())
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)

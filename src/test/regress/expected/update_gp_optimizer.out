@@ -148,14 +148,14 @@ WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Update on keo1
    ->  Hash Join
-         Hash Cond: ((keo1.user_vie_project_code_pk)::text = (keo1_1.user_vie_project_code_pk)::text)
+         Hash Cond: ((keo1.user_vie_project_code_pk)::text = (a.user_vie_project_code_pk)::text)
          ->  Seq Scan on keo1
          ->  Hash
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                      ->  Hash Join
-                           Hash Cond: ((keo1_1.user_vie_project_code_pk)::text = (keo2.projects_pk)::text)
+                           Hash Cond: ((a.user_vie_project_code_pk)::text = (b.projects_pk)::text)
                            ->  Hash Join
-                                 Hash Cond: ((max((keo3.sky_per)::text)) = (keo1_1.user_vie_fiscal_year_period_sk)::text)
+                                 Hash Cond: ((max((keo3.sky_per)::text)) = (a.user_vie_fiscal_year_period_sk)::text)
                                  ->  Redistribute Motion 1:3  (slice2; segments: 1)
                                        ->  Aggregate
                                              ->  Hash Join
@@ -178,10 +178,10 @@ WHERE t1.user_vie_project_code_pk = keo1.user_vie_project_code_pk;
                                                                                              ->  Seq Scan on keo4 keo4_1
                                  ->  Hash
                                        ->  Broadcast Motion 3:3  (slice8; segments: 3)
-                                             ->  Seq Scan on keo1 keo1_1
+                                             ->  Seq Scan on keo1 a
                            ->  Hash
                                  ->  Broadcast Motion 3:3  (slice9; segments: 3)
-                                       ->  Seq Scan on keo2
+                                       ->  Seq Scan on keo2 b
  Optimizer: Pivotal Optimizer (GPORCA)
 (38 rows)
 

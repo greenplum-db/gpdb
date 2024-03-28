@@ -32,15 +32,15 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
 --------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
+         Hash Cond: (t2.a = t3.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
+               ->  Index Only Scan using your_awesome_index on your_table t2
                      Index Cond: (a < 42)
-               ->  Index Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+               ->  Index Scan using my_awesome_index on my_table t1
+                     Index Cond: ((a = t2.a) AND (a < 42))
          ->  Hash
-               ->  Dynamic Index Scan on our_awesome_index on our_table
+               ->  Dynamic Index Scan on our_awesome_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -61,17 +61,17 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
 ----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
+         Hash Cond: (t1.a = t2.a)
          ->  Hash Join
-               Hash Cond: (my_table.a = our_table.a)
-               ->  Seq Scan on my_table
+               Hash Cond: (t1.a = t3.a)
+               ->  Seq Scan on my_table t1
                      Filter: (a < 42)
                ->  Hash
-                     ->  Dynamic Seq Scan on our_table
+                     ->  Dynamic Seq Scan on our_table t3
                            Number of partitions to scan: 4 (out of 4)
                            Filter: (a < 42)
          ->  Hash
-               ->  Seq Scan on your_table
+               ->  Seq Scan on your_table t2
                      Filter: (a < 42)
  Optimizer: GPORCA
 (15 rows)
@@ -87,15 +87,15 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
 --------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
+         Hash Cond: (t2.a = t3.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
+               ->  Index Only Scan using your_awesome_index on your_table t2
                      Index Cond: (a < 42)
-               ->  Index Scan using my_incredible_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+               ->  Index Scan using my_incredible_index on my_table t1
+                     Index Cond: ((a = t2.a) AND (a < 42))
          ->  Hash
-               ->  Dynamic Index Scan on our_amazing_index on our_table
+               ->  Dynamic Index Scan on our_amazing_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -112,15 +112,15 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
 --------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
+         Hash Cond: (t2.a = t3.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
+               ->  Index Only Scan using your_awesome_index on your_table t2
                      Index Cond: (a < 42)
-               ->  Index Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+               ->  Index Scan using my_awesome_index on my_table t1
+                     Index Cond: ((a = t2.a) AND (a < 42))
          ->  Hash
-               ->  Dynamic Index Scan on our_awesome_index on our_table
+               ->  Dynamic Index Scan on our_awesome_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -136,15 +136,15 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
 -----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
+         Hash Cond: (t2.a = t3.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Index Only Scan using your_amazing_index on your_table
+               ->  Index Only Scan using your_amazing_index on your_table t2
                      Index Cond: (a < 42)
-               ->  Index Only Scan using my_incredible_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+               ->  Index Only Scan using my_incredible_index on my_table t1
+                     Index Cond: ((a = t2.a) AND (a < 42))
          ->  Hash
-               ->  Dynamic Index Only Scan on our_amazing_index on our_table
+               ->  Dynamic Index Only Scan on our_amazing_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -160,15 +160,15 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
 -----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
+         Hash Cond: (t2.a = t3.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
+               ->  Index Only Scan using your_awesome_index on your_table t2
                      Index Cond: (a < 42)
-               ->  Index Only Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+               ->  Index Only Scan using my_awesome_index on my_table t1
+                     Index Cond: ((a = t2.a) AND (a < 42))
          ->  Hash
-               ->  Dynamic Index Only Scan on our_awesome_index on our_table
+               ->  Dynamic Index Only Scan on our_awesome_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -184,21 +184,21 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
+         Hash Cond: (t1.a = t2.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Dynamic Bitmap Heap Scan on our_table
+               ->  Dynamic Bitmap Heap Scan on our_table t3
                      Number of partitions to scan: 4 (out of 4)
                      Recheck Cond: (a < 42)
                      Filter: (a < 42)
                      ->  Dynamic Bitmap Index Scan on our_bitmap_index
                            Index Cond: (a < 42)
-               ->  Bitmap Heap Scan on my_table
-                     Recheck Cond: ((a = our_table.a) AND (a < 42))
+               ->  Bitmap Heap Scan on my_table t1
+                     Recheck Cond: ((a = t3.a) AND (a < 42))
                      ->  Bitmap Index Scan on my_bitmap_index
-                           Index Cond: ((a = our_table.a) AND (a < 42))
+                           Index Cond: ((a = t3.a) AND (a < 42))
          ->  Hash
-               ->  Bitmap Heap Scan on your_table
+               ->  Bitmap Heap Scan on your_table t2
                      Recheck Cond: (a < 42)
                      ->  Bitmap Index Scan on your_bitmap_index
                            Index Cond: (a < 42)
@@ -215,21 +215,21 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
+         Hash Cond: (t1.a = t2.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Dynamic Bitmap Heap Scan on our_table
+               ->  Dynamic Bitmap Heap Scan on our_table t3
                      Number of partitions to scan: 4 (out of 4)
                      Recheck Cond: (a < 42)
                      Filter: (a < 42)
                      ->  Dynamic Bitmap Index Scan on our_bitmap_index
                            Index Cond: (a < 42)
-               ->  Bitmap Heap Scan on my_table
-                     Recheck Cond: ((a = our_table.a) AND (a < 42))
+               ->  Bitmap Heap Scan on my_table t1
+                     Recheck Cond: ((a = t3.a) AND (a < 42))
                      ->  Bitmap Index Scan on my_bitmap_index
-                           Index Cond: ((a = our_table.a) AND (a < 42))
+                           Index Cond: ((a = t3.a) AND (a < 42))
          ->  Hash
-               ->  Bitmap Heap Scan on your_table
+               ->  Bitmap Heap Scan on your_table t2
                      Recheck Cond: (a < 42)
                      ->  Bitmap Index Scan on your_bitmap_index
                            Index Cond: (a < 42)
@@ -248,7 +248,7 @@ EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
                 QUERY PLAN                
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on my_table
+   ->  Seq Scan on my_table t1
          Filter: (a < 42)
  Optimizer: GPORCA
 (4 rows)
@@ -260,7 +260,7 @@ EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
                 QUERY PLAN                
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on your_table
+   ->  Seq Scan on your_table t2
          Filter: (a < 42)
  Optimizer: GPORCA
 (4 rows)
@@ -272,7 +272,7 @@ EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
                      QUERY PLAN                     
 ----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Dynamic Seq Scan on our_table
+   ->  Dynamic Seq Scan on our_table t3
          Number of partitions to scan: 4 (out of 4)
          Filter: (a < 42)
  Optimizer: GPORCA
@@ -285,7 +285,7 @@ EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
                        QUERY PLAN                       
 --------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Scan using my_incredible_index on my_table
+   ->  Index Scan using my_incredible_index on my_table t1
          Index Cond: (a < 42)
  Optimizer: GPORCA
 (4 rows)
@@ -297,7 +297,7 @@ EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
                      QUERY PLAN                      
 -----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Scan using my_awesome_index on my_table
+   ->  Index Scan using my_awesome_index on my_table t1
          Index Cond: (a < 42)
  Optimizer: GPORCA
 (4 rows)
@@ -321,7 +321,7 @@ EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
                          QUERY PLAN                         
 ------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Dynamic Index Scan on our_amazing_index on our_table
+   ->  Dynamic Index Scan on our_amazing_index on our_table t3
          Index Cond: (a < 42)
          Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -334,7 +334,7 @@ EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
                          QUERY PLAN                         
 ------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Dynamic Index Scan on our_awesome_index on our_table
+   ->  Dynamic Index Scan on our_awesome_index on our_table t3
          Index Cond: (a < 42)
          Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -347,7 +347,7 @@ EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
                          QUERY PLAN                          
 -------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Only Scan using my_incredible_index on my_table
+   ->  Index Only Scan using my_incredible_index on my_table t1
          Index Cond: (a < 42)
  Optimizer: GPORCA
 (4 rows)
@@ -359,7 +359,7 @@ EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
                         QUERY PLAN                        
 ----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Only Scan using my_awesome_index on my_table
+   ->  Index Only Scan using my_awesome_index on my_table t1
          Index Cond: (a < 42)
  Optimizer: GPORCA
 (4 rows)
@@ -371,7 +371,7 @@ EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
                           QUERY PLAN                          
 --------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Only Scan using your_amazing_index on your_table
+   ->  Index Only Scan using your_amazing_index on your_table t2
          Index Cond: (a < 42)
  Optimizer: GPORCA
 (4 rows)
@@ -383,7 +383,7 @@ EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
                           QUERY PLAN                          
 --------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Only Scan using your_awesome_index on your_table
+   ->  Index Only Scan using your_awesome_index on your_table t2
          Index Cond: (a < 42)
  Optimizer: GPORCA
 (4 rows)
@@ -395,7 +395,7 @@ EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
                            QUERY PLAN                            
 -----------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Dynamic Index Only Scan on our_amazing_index on our_table
+   ->  Dynamic Index Only Scan on our_amazing_index on our_table t3
          Index Cond: (a < 42)
          Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -408,7 +408,7 @@ EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
                            QUERY PLAN                            
 -----------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Dynamic Index Only Scan on our_awesome_index on our_table
+   ->  Dynamic Index Only Scan on our_awesome_index on our_table t3
          Index Cond: (a < 42)
          Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -421,7 +421,7 @@ EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
                     QUERY PLAN                    
 --------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on my_table
+   ->  Bitmap Heap Scan on my_table t1
          Recheck Cond: (a < 42)
          ->  Bitmap Index Scan on my_bitmap_index
                Index Cond: (a < 42)
@@ -435,7 +435,7 @@ EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
                     QUERY PLAN                    
 --------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on my_table
+   ->  Bitmap Heap Scan on my_table t1
          Recheck Cond: (a < 42)
          ->  Bitmap Index Scan on my_bitmap_index
                Index Cond: (a < 42)
@@ -449,7 +449,7 @@ EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
                      QUERY PLAN                     
 ----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on your_table
+   ->  Bitmap Heap Scan on your_table t2
          Recheck Cond: (a < 42)
          ->  Bitmap Index Scan on your_bitmap_index
                Index Cond: (a < 42)
@@ -463,7 +463,7 @@ EXPLAIN (costs off) SELECT t2.a FROM your_table AS t2 WHERE t2.a<42;
                      QUERY PLAN                     
 ----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on your_table
+   ->  Bitmap Heap Scan on your_table t2
          Recheck Cond: (a < 42)
          ->  Bitmap Index Scan on your_bitmap_index
                Index Cond: (a < 42)
@@ -477,7 +477,7 @@ EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
                         QUERY PLAN                         
 -----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Dynamic Bitmap Heap Scan on our_table
+   ->  Dynamic Bitmap Heap Scan on our_table t3
          Number of partitions to scan: 4 (out of 4)
          Recheck Cond: (a < 42)
          Filter: (a < 42)
@@ -493,7 +493,7 @@ EXPLAIN (costs off) SELECT t3.a FROM our_table AS t3 WHERE t3.a<42;
                         QUERY PLAN                         
 -----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Dynamic Bitmap Heap Scan on our_table
+   ->  Dynamic Bitmap Heap Scan on our_table t3
          Number of partitions to scan: 4 (out of 4)
          Recheck Cond: (a < 42)
          Filter: (a < 42)
@@ -517,15 +517,15 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
 --------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
+         Hash Cond: (t2.a = t3.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
+               ->  Index Only Scan using your_awesome_index on your_table t2
                      Index Cond: (a < 42)
-               ->  Index Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+               ->  Index Scan using my_awesome_index on my_table t1
+                     Index Cond: ((a = t2.a) AND (a < 42))
          ->  Hash
-               ->  Dynamic Index Scan on our_awesome_index on our_table
+               ->  Dynamic Index Scan on our_awesome_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -541,15 +541,15 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
 -----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
+         Hash Cond: (t2.a = t3.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
+               ->  Index Only Scan using your_awesome_index on your_table t2
                      Index Cond: (a < 42)
-               ->  Index Only Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+               ->  Index Only Scan using my_awesome_index on my_table t1
+                     Index Cond: ((a = t2.a) AND (a < 42))
          ->  Hash
-               ->  Dynamic Index Only Scan on our_awesome_index on our_table
+               ->  Dynamic Index Only Scan on our_awesome_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -565,16 +565,16 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
+         Hash Cond: (t1.a = t2.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Dynamic Index Scan on our_awesome_index on our_table
+               ->  Dynamic Index Scan on our_awesome_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
-               ->  Index Scan using my_awesome_index on my_table
-                     Index Cond: ((a = our_table.a) AND (a < 42))
+               ->  Index Scan using my_awesome_index on my_table t1
+                     Index Cond: ((a = t3.a) AND (a < 42))
          ->  Hash
-               ->  Bitmap Heap Scan on your_table
+               ->  Bitmap Heap Scan on your_table t2
                      Recheck Cond: (a < 42)
                      ->  Bitmap Index Scan on your_bitmap_index
                            Index Cond: (a < 42)
@@ -591,15 +591,15 @@ EXPLAIN (costs off) SELECT t1.a, t2.a, t3.a FROM my_table AS t1 JOIN your_table 
 --------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
+         Hash Cond: (t2.a = t3.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
+               ->  Index Only Scan using your_awesome_index on your_table t2
                      Index Cond: (a < 42)
-               ->  Index Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+               ->  Index Scan using my_awesome_index on my_table t1
+                     Index Cond: ((a = t2.a) AND (a < 42))
          ->  Hash
-               ->  Dynamic Index Scan on our_awesome_index on our_table
+               ->  Dynamic Index Scan on our_awesome_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -643,7 +643,7 @@ DETAIL:  Conflict scan method hint.
                 QUERY PLAN                
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on my_table
+   ->  Seq Scan on my_table t1
          Filter: (a < 42)
  Optimizer: GPORCA
 (4 rows)
@@ -675,7 +675,7 @@ DETAIL:  Conflict scan method hint.
                 QUERY PLAN                
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on your_table
+   ->  Seq Scan on your_table t2
          Filter: (a < 42)
  Optimizer: GPORCA
 (4 rows)
@@ -707,7 +707,7 @@ DETAIL:  Conflict scan method hint.
                      QUERY PLAN                     
 ----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Dynamic Seq Scan on our_table
+   ->  Dynamic Seq Scan on our_table t3
          Number of partitions to scan: 4 (out of 4)
          Filter: (a < 42)
  Optimizer: GPORCA
@@ -743,7 +743,7 @@ DETAIL:  Conflict scan method hint.
                      QUERY PLAN                      
 -----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Scan using my_awesome_index on my_table
+   ->  Index Scan using my_awesome_index on my_table t1
          Index Cond: (a < 42)
  Optimizer: GPORCA
 (4 rows)
@@ -809,7 +809,7 @@ DETAIL:  Conflict scan method hint.
                          QUERY PLAN                         
 ------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Dynamic Index Scan on our_awesome_index on our_table
+   ->  Dynamic Index Scan on our_awesome_index on our_table t3
          Index Cond: (a < 42)
          Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -845,7 +845,7 @@ DETAIL:  Conflict scan method hint.
                         QUERY PLAN                        
 ----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Only Scan using my_awesome_index on my_table
+   ->  Index Only Scan using my_awesome_index on my_table t1
          Index Cond: (a < 42)
  Optimizer: GPORCA
 (4 rows)
@@ -877,7 +877,7 @@ DETAIL:  Conflict scan method hint.
                           QUERY PLAN                          
 --------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Only Scan using your_awesome_index on your_table
+   ->  Index Only Scan using your_awesome_index on your_table t2
          Index Cond: (a < 42)
  Optimizer: GPORCA
 (4 rows)
@@ -909,7 +909,7 @@ DETAIL:  Conflict scan method hint.
                            QUERY PLAN                            
 -----------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Dynamic Index Only Scan on our_awesome_index on our_table
+   ->  Dynamic Index Only Scan on our_awesome_index on our_table t3
          Index Cond: (a < 42)
          Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -945,7 +945,7 @@ DETAIL:  Conflict scan method hint.
                     QUERY PLAN                    
 --------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on my_table
+   ->  Bitmap Heap Scan on my_table t1
          Recheck Cond: (a < 42)
          ->  Bitmap Index Scan on my_bitmap_index
                Index Cond: (a < 42)
@@ -979,7 +979,7 @@ DETAIL:  Conflict scan method hint.
                      QUERY PLAN                     
 ----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Bitmap Heap Scan on your_table
+   ->  Bitmap Heap Scan on your_table t2
          Recheck Cond: (a < 42)
          ->  Bitmap Index Scan on your_bitmap_index
                Index Cond: (a < 42)
@@ -1013,7 +1013,7 @@ DETAIL:  Conflict scan method hint.
                         QUERY PLAN                         
 -----------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Dynamic Bitmap Heap Scan on our_table
+   ->  Dynamic Bitmap Heap Scan on our_table t3
          Number of partitions to scan: 4 (out of 4)
          Recheck Cond: (a < 42)
          Filter: (a < 42)
@@ -1038,17 +1038,17 @@ EXPLAIN (costs off) SELECT * FROM everybody_view;
 ----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
+         Hash Cond: (t1.a = t2.a)
          ->  Hash Join
-               Hash Cond: (my_table.a = our_table.a)
-               ->  Seq Scan on my_table
+               Hash Cond: (t1.a = t3.a)
+               ->  Seq Scan on my_table t1
                      Filter: (a < 42)
                ->  Hash
-                     ->  Dynamic Seq Scan on our_table
+                     ->  Dynamic Seq Scan on our_table t3
                            Number of partitions to scan: 4 (out of 4)
                            Filter: (a < 42)
          ->  Hash
-               ->  Seq Scan on your_table
+               ->  Seq Scan on your_table t2
                      Filter: (a < 42)
  Optimizer: GPORCA
 (15 rows)
@@ -1064,15 +1064,15 @@ EXPLAIN (costs off) SELECT * FROM everybody_view;
 --------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
+         Hash Cond: (t2.a = t3.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
+               ->  Index Only Scan using your_awesome_index on your_table t2
                      Index Cond: (a < 42)
-               ->  Index Scan using my_incredible_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+               ->  Index Scan using my_incredible_index on my_table t1
+                     Index Cond: ((a = t2.a) AND (a < 42))
          ->  Hash
-               ->  Dynamic Index Scan on our_amazing_index on our_table
+               ->  Dynamic Index Scan on our_amazing_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -1089,15 +1089,15 @@ EXPLAIN (costs off) SELECT * FROM everybody_view;
 --------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
+         Hash Cond: (t2.a = t3.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
+               ->  Index Only Scan using your_awesome_index on your_table t2
                      Index Cond: (a < 42)
-               ->  Index Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+               ->  Index Scan using my_awesome_index on my_table t1
+                     Index Cond: ((a = t2.a) AND (a < 42))
          ->  Hash
-               ->  Dynamic Index Scan on our_awesome_index on our_table
+               ->  Dynamic Index Scan on our_awesome_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -1113,15 +1113,15 @@ EXPLAIN (costs off) SELECT * FROM everybody_view;
 -----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
+         Hash Cond: (t2.a = t3.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Index Only Scan using your_amazing_index on your_table
+               ->  Index Only Scan using your_amazing_index on your_table t2
                      Index Cond: (a < 42)
-               ->  Index Only Scan using my_incredible_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+               ->  Index Only Scan using my_incredible_index on my_table t1
+                     Index Cond: ((a = t2.a) AND (a < 42))
          ->  Hash
-               ->  Dynamic Index Only Scan on our_amazing_index on our_table
+               ->  Dynamic Index Only Scan on our_amazing_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -1137,15 +1137,15 @@ EXPLAIN (costs off) SELECT * FROM everybody_view;
 -----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (your_table.a = our_table.a)
+         Hash Cond: (t2.a = t3.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Index Only Scan using your_awesome_index on your_table
+               ->  Index Only Scan using your_awesome_index on your_table t2
                      Index Cond: (a < 42)
-               ->  Index Only Scan using my_awesome_index on my_table
-                     Index Cond: ((a = your_table.a) AND (a < 42))
+               ->  Index Only Scan using my_awesome_index on my_table t1
+                     Index Cond: ((a = t2.a) AND (a < 42))
          ->  Hash
-               ->  Dynamic Index Only Scan on our_awesome_index on our_table
+               ->  Dynamic Index Only Scan on our_awesome_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
  Optimizer: GPORCA
@@ -1161,21 +1161,21 @@ EXPLAIN (costs off) SELECT * FROM everybody_view;
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
+         Hash Cond: (t1.a = t2.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Dynamic Bitmap Heap Scan on our_table
+               ->  Dynamic Bitmap Heap Scan on our_table t3
                      Number of partitions to scan: 4 (out of 4)
                      Recheck Cond: (a < 42)
                      Filter: (a < 42)
                      ->  Dynamic Bitmap Index Scan on our_bitmap_index
                            Index Cond: (a < 42)
-               ->  Bitmap Heap Scan on my_table
-                     Recheck Cond: ((a = our_table.a) AND (a < 42))
+               ->  Bitmap Heap Scan on my_table t1
+                     Recheck Cond: ((a = t3.a) AND (a < 42))
                      ->  Bitmap Index Scan on my_bitmap_index
-                           Index Cond: ((a = our_table.a) AND (a < 42))
+                           Index Cond: ((a = t3.a) AND (a < 42))
          ->  Hash
-               ->  Bitmap Heap Scan on your_table
+               ->  Bitmap Heap Scan on your_table t2
                      Recheck Cond: (a < 42)
                      ->  Bitmap Index Scan on your_bitmap_index
                            Index Cond: (a < 42)
@@ -1192,21 +1192,21 @@ EXPLAIN (costs off) SELECT * FROM everybody_view;
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
+         Hash Cond: (t1.a = t2.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Dynamic Bitmap Heap Scan on our_table
+               ->  Dynamic Bitmap Heap Scan on our_table t3
                      Number of partitions to scan: 4 (out of 4)
                      Recheck Cond: (a < 42)
                      Filter: (a < 42)
                      ->  Dynamic Bitmap Index Scan on our_bitmap_index
                            Index Cond: (a < 42)
-               ->  Bitmap Heap Scan on my_table
-                     Recheck Cond: ((a = our_table.a) AND (a < 42))
+               ->  Bitmap Heap Scan on my_table t1
+                     Recheck Cond: ((a = t3.a) AND (a < 42))
                      ->  Bitmap Index Scan on my_bitmap_index
-                           Index Cond: ((a = our_table.a) AND (a < 42))
+                           Index Cond: ((a = t3.a) AND (a < 42))
          ->  Hash
-               ->  Bitmap Heap Scan on your_table
+               ->  Bitmap Heap Scan on your_table t2
                      Recheck Cond: (a < 42)
                      ->  Bitmap Index Scan on your_bitmap_index
                            Index Cond: (a < 42)
@@ -1232,17 +1232,17 @@ SELECT a1, a2, a3 FROM cte WHERE a1<42;
 ----------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
+         Hash Cond: (t1.a = t2.a)
          ->  Hash Join
-               Hash Cond: (my_table.a = our_table.a)
-               ->  Seq Scan on my_table
+               Hash Cond: (t1.a = t3.a)
+               ->  Seq Scan on my_table t1
                      Filter: (a < 42)
                ->  Hash
-                     ->  Dynamic Seq Scan on our_table
+                     ->  Dynamic Seq Scan on our_table t3
                            Number of partitions to scan: 4 (out of 4)
                            Filter: (a < 42)
          ->  Hash
-               ->  Seq Scan on your_table
+               ->  Seq Scan on your_table t2
                      Filter: (a < 42)
  Optimizer: GPORCA
 (15 rows)
@@ -1265,13 +1265,13 @@ SELECT a1, a2, a3 FROM cte WHERE a1<42;
          Join Filter: true
          ->  Nested Loop
                Join Filter: true
-               ->  Dynamic Index Scan on our_amazing_index on our_table
+               ->  Dynamic Index Scan on our_amazing_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
-               ->  Index Scan using my_incredible_index on my_table
-                     Index Cond: ((a = our_table.a) AND (a < 42))
-         ->  Index Only Scan using your_incredible_index on your_table
-               Index Cond: ((a = my_table.a) AND (a < 42))
+               ->  Index Scan using my_incredible_index on my_table t1
+                     Index Cond: ((a = t3.a) AND (a < 42))
+         ->  Index Only Scan using your_incredible_index on your_table t2
+               Index Cond: ((a = t1.a) AND (a < 42))
  Optimizer: GPORCA
 (13 rows)
 
@@ -1293,13 +1293,13 @@ SELECT a1, a2, a3 FROM cte WHERE a1<42;
          Join Filter: true
          ->  Nested Loop
                Join Filter: true
-               ->  Dynamic Index Scan on our_awesome_index on our_table
+               ->  Dynamic Index Scan on our_awesome_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
-               ->  Index Scan using my_awesome_index on my_table
-                     Index Cond: ((a = our_table.a) AND (a < 42))
-         ->  Index Only Scan using your_incredible_index on your_table
-               Index Cond: ((a = my_table.a) AND (a < 42))
+               ->  Index Scan using my_awesome_index on my_table t1
+                     Index Cond: ((a = t3.a) AND (a < 42))
+         ->  Index Only Scan using your_incredible_index on your_table t2
+               Index Cond: ((a = t1.a) AND (a < 42))
  Optimizer: GPORCA
 (13 rows)
 
@@ -1320,13 +1320,13 @@ SELECT a1, a2, a3 FROM cte WHERE a1<42;
          Join Filter: true
          ->  Nested Loop
                Join Filter: true
-               ->  Dynamic Index Only Scan on our_amazing_index on our_table
+               ->  Dynamic Index Only Scan on our_amazing_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
-               ->  Index Only Scan using my_incredible_index on my_table
-                     Index Cond: ((a = our_table.a) AND (a < 42))
-         ->  Index Only Scan using your_amazing_index on your_table
-               Index Cond: ((a = my_table.a) AND (a < 42))
+               ->  Index Only Scan using my_incredible_index on my_table t1
+                     Index Cond: ((a = t3.a) AND (a < 42))
+         ->  Index Only Scan using your_amazing_index on your_table t2
+               Index Cond: ((a = t1.a) AND (a < 42))
  Optimizer: GPORCA
 (13 rows)
 
@@ -1347,13 +1347,13 @@ SELECT a1, a2, a3 FROM cte WHERE a1<42;
          Join Filter: true
          ->  Nested Loop
                Join Filter: true
-               ->  Dynamic Index Only Scan on our_awesome_index on our_table
+               ->  Dynamic Index Only Scan on our_awesome_index on our_table t3
                      Index Cond: (a < 42)
                      Number of partitions to scan: 4 (out of 4)
-               ->  Index Only Scan using my_awesome_index on my_table
-                     Index Cond: ((a = our_table.a) AND (a < 42))
-         ->  Index Only Scan using your_incredible_index on your_table
-               Index Cond: ((a = my_table.a) AND (a < 42))
+               ->  Index Only Scan using my_awesome_index on my_table t1
+                     Index Cond: ((a = t3.a) AND (a < 42))
+         ->  Index Only Scan using your_incredible_index on your_table t2
+               Index Cond: ((a = t1.a) AND (a < 42))
  Optimizer: GPORCA
 (13 rows)
 
@@ -1371,21 +1371,21 @@ SELECT a1, a2, a3 FROM cte WHERE a1<42;
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
+         Hash Cond: (t1.a = t2.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Dynamic Bitmap Heap Scan on our_table
+               ->  Dynamic Bitmap Heap Scan on our_table t3
                      Number of partitions to scan: 4 (out of 4)
                      Recheck Cond: (a < 42)
                      Filter: (a < 42)
                      ->  Dynamic Bitmap Index Scan on our_bitmap_index
                            Index Cond: (a < 42)
-               ->  Bitmap Heap Scan on my_table
-                     Recheck Cond: ((a = our_table.a) AND (a < 42))
+               ->  Bitmap Heap Scan on my_table t1
+                     Recheck Cond: ((a = t3.a) AND (a < 42))
                      ->  Bitmap Index Scan on my_bitmap_index
-                           Index Cond: ((a = our_table.a) AND (a < 42))
+                           Index Cond: ((a = t3.a) AND (a < 42))
          ->  Hash
-               ->  Bitmap Heap Scan on your_table
+               ->  Bitmap Heap Scan on your_table t2
                      Recheck Cond: (a < 42)
                      ->  Bitmap Index Scan on your_bitmap_index
                            Index Cond: (a < 42)
@@ -1406,21 +1406,21 @@ SELECT a1, a2, a3 FROM cte WHERE a1<42;
 ------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (my_table.a = your_table.a)
+         Hash Cond: (t1.a = t2.a)
          ->  Nested Loop
                Join Filter: true
-               ->  Dynamic Bitmap Heap Scan on our_table
+               ->  Dynamic Bitmap Heap Scan on our_table t3
                      Number of partitions to scan: 4 (out of 4)
                      Recheck Cond: (a < 42)
                      Filter: (a < 42)
                      ->  Dynamic Bitmap Index Scan on our_bitmap_index
                            Index Cond: (a < 42)
-               ->  Bitmap Heap Scan on my_table
-                     Recheck Cond: ((a = our_table.a) AND (a < 42))
+               ->  Bitmap Heap Scan on my_table t1
+                     Recheck Cond: ((a = t3.a) AND (a < 42))
                      ->  Bitmap Index Scan on my_bitmap_index
-                           Index Cond: ((a = our_table.a) AND (a < 42))
+                           Index Cond: ((a = t3.a) AND (a < 42))
          ->  Hash
-               ->  Bitmap Heap Scan on your_table
+               ->  Bitmap Heap Scan on your_table t2
                      Recheck Cond: (a < 42)
                      ->  Bitmap Index Scan on your_bitmap_index
                            Index Cond: (a < 42)
@@ -1525,7 +1525,7 @@ DETAIL:  SeqScan hint requires a relation.
                      QUERY PLAN                      
 -----------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Index Scan using my_awesome_index on my_table
+   ->  Index Scan using my_awesome_index on my_table t1
          Index Cond: (a < 42)
  Optimizer: GPORCA
 (4 rows)
@@ -1544,7 +1544,7 @@ DETAIL:  Conflict scan method hint.
                 QUERY PLAN                
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on my_table
+   ->  Seq Scan on my_table t1
          Filter: (a < 42)
  Optimizer: GPORCA
 (4 rows)
@@ -1562,7 +1562,7 @@ DETAIL:  Conflict scan method hint.
                 QUERY PLAN                
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   ->  Seq Scan on my_table
+   ->  Seq Scan on my_table t1
          Filter: (a < 42)
  Optimizer: GPORCA
 (4 rows)

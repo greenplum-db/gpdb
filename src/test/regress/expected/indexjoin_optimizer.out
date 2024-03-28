@@ -37,22 +37,22 @@ ORDER BY 1 asc ;
                                                                         QUERY PLAN                                                                        
 ----------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..878.47 rows=413 width=16)
-   Merge Key: ((((my_tt_agg_small.event_ts / 100000) / 5) * 5))
+   Merge Key: ((((tt.event_ts / 100000) / 5) * 5))
    ->  Finalize GroupAggregate  (cost=0.00..878.44 rows=138 width=16)
-         Group Key: ((((my_tt_agg_small.event_ts / 100000) / 5) * 5))
+         Group Key: ((((tt.event_ts / 100000) / 5) * 5))
          ->  Sort  (cost=0.00..878.44 rows=138 width=16)
-               Sort Key: ((((my_tt_agg_small.event_ts / 100000) / 5) * 5))
+               Sort Key: ((((tt.event_ts / 100000) / 5) * 5))
                ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..878.35 rows=138 width=16)
-                     Hash Key: ((((my_tt_agg_small.event_ts / 100000) / 5) * 5))
+                     Hash Key: ((((tt.event_ts / 100000) / 5) * 5))
                      ->  Streaming Partial HashAggregate  (cost=0.00..878.34 rows=138 width=16)
-                           Group Key: (((my_tt_agg_small.event_ts / 100000) / 5) * 5)
+                           Group Key: (((tt.event_ts / 100000) / 5) * 5)
                            ->  Hash Join  (cost=0.00..865.64 rows=94594 width=8)
-                                 Hash Cond: ((my_tq_agg_small.sym)::text = (my_tt_agg_small.symbol)::text)
-                                 Join Filter: ((my_tt_agg_small.event_ts >= my_tq_agg_small.ets) AND (my_tt_agg_small.event_ts < my_tq_agg_small.end_ts))
-                                 ->  Seq Scan on my_tq_agg_small  (cost=0.00..431.02 rows=676 width=20)
+                                 Hash Cond: ((tq.sym)::text = (tt.symbol)::text)
+                                 Join Filter: ((tt.event_ts >= tq.ets) AND (tt.event_ts < tq.end_ts))
+                                 ->  Seq Scan on my_tq_agg_small tq  (cost=0.00..431.02 rows=676 width=20)
                                  ->  Hash  (cost=431.30..431.30 rows=420 width=25)
                                        ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.30 rows=420 width=25)
-                                             ->  Seq Scan on my_tt_agg_small  (cost=0.00..431.01 rows=140 width=25)
+                                             ->  Seq Scan on my_tt_agg_small tt  (cost=0.00..431.01 rows=140 width=25)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (18 rows)
 
@@ -98,20 +98,20 @@ ORDER BY 1 asc ;
                                                                                                       QUERY PLAN                                                                                                       
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1359.12 rows=413 width=16)
-   Merge Key: ((((my_tt_agg_small.event_ts / 100000) / 5) * 5))
+   Merge Key: ((((tt.event_ts / 100000) / 5) * 5))
    ->  Finalize GroupAggregate  (cost=0.00..1359.09 rows=138 width=16)
-         Group Key: ((((my_tt_agg_small.event_ts / 100000) / 5) * 5))
+         Group Key: ((((tt.event_ts / 100000) / 5) * 5))
          ->  Sort  (cost=0.00..1359.08 rows=138 width=16)
-               Sort Key: ((((my_tt_agg_small.event_ts / 100000) / 5) * 5))
+               Sort Key: ((((tt.event_ts / 100000) / 5) * 5))
                ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1358.94 rows=138 width=16)
-                     Hash Key: ((((my_tt_agg_small.event_ts / 100000) / 5) * 5))
+                     Hash Key: ((((tt.event_ts / 100000) / 5) * 5))
                      ->  Streaming Partial HashAggregate  (cost=0.00..1358.93 rows=138 width=16)
-                           Group Key: (((my_tt_agg_small.event_ts / 100000) / 5) * 5)
+                           Group Key: (((tt.event_ts / 100000) / 5) * 5)
                            ->  Nested Loop  (cost=0.00..1339.87 rows=94594 width=8)
-                                 Join Filter: (((my_tq_agg_small.sym)::bpchar = my_tt_agg_small.symbol) AND (my_tt_agg_small.event_ts >= my_tq_agg_small.ets) AND (my_tt_agg_small.event_ts < my_tq_agg_small.end_ts))
+                                 Join Filter: (((tq.sym)::bpchar = tt.symbol) AND (tt.event_ts >= tq.ets) AND (tt.event_ts < tq.end_ts))
                                  ->  Broadcast Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.29 rows=280 width=25)
-                                       ->  Seq Scan on my_tt_agg_small  (cost=0.00..431.01 rows=140 width=25)
-                                 ->  Seq Scan on my_tq_agg_small  (cost=0.00..431.03 rows=676 width=20)
+                                       ->  Seq Scan on my_tt_agg_small tt  (cost=0.00..431.01 rows=140 width=25)
+                                 ->  Seq Scan on my_tq_agg_small tq  (cost=0.00..431.03 rows=676 width=20)
  Optimizer: Pivotal Optimizer (GPORCA)
 (16 rows)
 
@@ -161,13 +161,13 @@ SELECT * from with_index_table td JOIN no_index_table ro ON td.y = ro.a AND td.x
    ->  Nested Loop
          Join Filter: true
          ->  Redistribute Motion 3:3  (slice2; segments: 3)
-               Hash Key: no_index_table.b
-               ->  Seq Scan on no_index_table
-         ->  Bitmap Heap Scan on with_index_table
-               Recheck Cond: (x = no_index_table.b)
-               Filter: (y = no_index_table.a)
+               Hash Key: ro.b
+               ->  Seq Scan on no_index_table ro
+         ->  Bitmap Heap Scan on with_index_table td
+               Recheck Cond: (x = ro.b)
+               Filter: (y = ro.a)
                ->  Bitmap Index Scan on with_index_table_index
-                     Index Cond: (x = no_index_table.b)
+                     Index Cond: (x = ro.b)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.88.1
 (12 rows)
 

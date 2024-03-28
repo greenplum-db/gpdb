@@ -2356,7 +2356,7 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (2, 'New row 2');
                                        ->  Result
                                        ->  Materialize
                                              ->  Gather Motion 3:1  (slice2; segments: 3)
-                                                   ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+                                                   ->  Index Scan using base_tbl_pkey on base_tbl t
                                                          Index Cond: (id = 2)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
  
@@ -2370,7 +2370,7 @@ EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (2, 'New row 2');
                      ->  Result
                            ->  Limit
                                  ->  Gather Motion 3:1  (slice2; segments: 3)
-                                       ->  Index Scan using base_tbl_pkey on base_tbl base_tbl_1
+                                       ->  Index Scan using base_tbl_pkey on base_tbl t
                                              Index Cond: (id = 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (32 rows)

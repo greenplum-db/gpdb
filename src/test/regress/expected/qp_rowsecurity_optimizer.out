@@ -200,7 +200,7 @@ from foo_rls where abs(a) >= 10 and leak_data(c)) and bar_rls.q is not null;
                Filter: (NOT (q IS NULL))
          ->  Hash
                ->  Seq Scan on foo_rls
-                     Filter: (((b IS DISTINCT FROM c) OR ((b + 1) = 4)) AND ((abs(a) >= 10) AND leak_data(c)))
+                     Filter: ((("" IS DISTINCT FROM c) OR (("" + 1) = 4)) AND ((abs(a) >= 10) AND leak_data(c)))
  Optimizer: GPORCA
 (9 rows)
 
@@ -291,7 +291,7 @@ explain (costs off) select a from foo_rls where a is null;
 --------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)
    ->  Seq Scan on foo_rls
-         Filter: ((b = 10) AND (a IS NULL))
+         Filter: (("" = 10) AND (a IS NULL))
  Optimizer: GPORCA
 (4 rows)
 

@@ -120,7 +120,7 @@ SELECT * FROM few f1,
                ->  Result
                      Output: NULL::integer, NULL::tid, NULL::xid, NULL::cid, NULL::xid, NULL::cid, NULL::oid, NULL::integer
                      One-Time Filter: false
-         ->  Seq Scan on public.few
+         ->  Seq Scan on public.few f1
                Output: id, dataa, datab
  Optimizer: Pivotal Optimizer (GPORCA)
 (13 rows)

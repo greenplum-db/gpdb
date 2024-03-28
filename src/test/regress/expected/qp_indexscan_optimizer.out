@@ -2708,13 +2708,13 @@ explain(costs off) select e.id, e.name, e.salary, d.dep_name from employee e joi
                           QUERY PLAN
 --------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Merge Key: employee.salary
+   Merge Key: e.salary
    ->  Sort
-         Sort Key: employee.salary DESC
+         Sort Key: e.salary DESC
          ->  Nested Loop
-               Join Filter: (employee.id = department.dep_id)
-               ->  Seq Scan on employee
-               ->  Seq Scan on department
+               Join Filter: (e.id = d.dep_id)
+               ->  Seq Scan on employee e
+               ->  Seq Scan on department d
  Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 
@@ -2723,13 +2723,13 @@ explain(costs off) select e.id, e.name, e.salary, d.dep_name from employee e joi
 --------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: employee.salary
+         Merge Key: e.salary
          ->  Sort
-               Sort Key: employee.salary DESC
+               Sort Key: e.salary DESC
                ->  Nested Loop
-                     Join Filter: (employee.id = department.dep_id)
-                     ->  Seq Scan on employee
-                     ->  Seq Scan on department
+                     Join Filter: (e.id = d.dep_id)
+                     ->  Seq Scan on employee e
+                     ->  Seq Scan on department d
  Optimizer: Pivotal Optimizer (GPORCA)
 (10 rows)
 
@@ -3066,15 +3066,15 @@ explain(costs off) select e.id, e.name, e.salary, d.dep_name from part_employee 
                                 QUERY PLAN
 ---------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Merge Key: part_employee.id
+   Merge Key: e.id
    ->  Sort
-         Sort Key: part_employee.id DESC
+         Sort Key: e.id DESC
          ->  Nested Loop
                Join Filter: true
-               ->  Dynamic Seq Scan on part_department
+               ->  Dynamic Seq Scan on part_department d
                      Number of partitions to scan: 5 (out of 5)
-               ->  Dynamic Index Scan on part_index_id on part_employee
-                     Index Cond: (id = part_department.dep_id)
+               ->  Dynamic Index Scan on part_index_id on part_employee e
+                     Index Cond: (id = d.dep_id)
                      Number of partitions to scan: 5 (out of 5)
  Optimizer: Pivotal Optimizer (GPORCA)
 (12 rows)
@@ -3084,15 +3084,15 @@ explain(costs off) select e.id, e.name, e.salary, d.dep_name from part_employee 
 ---------------------------------------------------------------------------------
  Limit
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         Merge Key: part_employee.id
+         Merge Key: e.id
          ->  Sort
-               Sort Key: part_employee.id DESC
+               Sort Key: e.id DESC
                ->  Nested Loop
                      Join Filter: true
-                     ->  Dynamic Seq Scan on part_department
+                     ->  Dynamic Seq Scan on part_department d
                            Number of partitions to scan: 5 (out of 5)
-                     ->  Dynamic Index Scan on part_index_id on part_employee
-                           Index Cond: (id = part_department.dep_id)
+                     ->  Dynamic Index Scan on part_index_id on part_employee e
+                           Index Cond: (id = d.dep_id)
                            Number of partitions to scan: 5 (out of 5)
  Optimizer: Pivotal Optimizer (GPORCA)
 (13 rows)
@@ -3669,16 +3669,16 @@ explain (costs off) select (select b from table1 t1_alias where t1_alias.a = min
  Aggregate
    ->  Limit
          ->  Gather Motion 3:1  (slice1; segments: 3)
-               Merge Key: table1.c
+               Merge Key: t1.c
                ->  Limit
-                     ->  Index Scan using t1_c_idx on table1
+                     ->  Index Scan using t1_c_idx on table1 t1
                            Index Cond: (c IS NOT NULL)
    SubPlan 1
      ->  Result
-           Filter: (table1_1.a = min(table1.c))
+           Filter: (t1_alias.a = min(t1.c))
            ->  Materialize
                  ->  Gather Motion 3:1  (slice2; segments: 3)
-                       ->  Seq Scan on table1 table1_1
+                       ->  Seq Scan on table1 t1_alias
  Optimizer: GPORCA
 (14 rows)
 
@@ -3693,13 +3693,13 @@ explain (costs off) select min(t1.c) as min_c,
  Finalize Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
-               ->  Seq Scan on table1
+               ->  Seq Scan on table1 t1
    SubPlan 1
      ->  Result
-           Filter: (table1_1.c = max(table1.c))
+           Filter: (t1_alias.c = max(t1.c))
            ->  Materialize
                  ->  Gather Motion 3:1  (slice2; segments: 3)
-                       ->  Seq Scan on table1 table1_1
+                       ->  Seq Scan on table1 t1_alias
  Optimizer: GPORCA
 (11 rows)
 
