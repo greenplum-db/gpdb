@@ -188,8 +188,6 @@ CXform::PbsBitmapIndexXforms(CMemoryPool *mp)
 	(void) pbs->ExchangeSet(
 		GPOPT_DISABLE_XFORM_TF(CXform::ExfSelect2BitmapBoolOp));
 	(void) pbs->ExchangeSet(
-		GPOPT_DISABLE_XFORM_TF(CXform::ExfSelect2DynamicBitmapBoolOp));
-	(void) pbs->ExchangeSet(
 		GPOPT_DISABLE_XFORM_TF(CXform::ExfJoin2BitmapIndexGetApply));
 
 	return pbs;

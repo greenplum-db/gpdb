@@ -9940,7 +9940,7 @@ create index bm_dyn_test_idx on orca.bm_dyn_test using bitmap (i);
 alter table orca.bm_dyn_test drop column to_be_dropped;
 alter table orca.bm_dyn_test add partition part5 values(5);
 insert into orca.bm_dyn_test values(2, 5, '2');
-set optimizer_enable_bitmapscan=on;
+set optimizer_enable_dynamicbitmapscan=on;
 -- gather on 1 segment because of direct dispatch
 explain select * from orca.bm_dyn_test where i=2 and t='2';
                                      QUERY PLAN                                     
@@ -13366,6 +13366,7 @@ PARTITION BY RANGE(i)
 default partition def);
 create INDEX y_idx on y (j);
 set optimizer_enable_indexjoin=on;
+set optimizer_enable_dynamicindexscan=on;
 explain (costs off) select count(*) from x, y where (x.i > y.j AND x.j <= y.i);
                                    QUERY PLAN                                    
 ---------------------------------------------------------------------------------

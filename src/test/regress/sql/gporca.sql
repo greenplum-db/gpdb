@@ -1551,7 +1551,7 @@ alter table orca.bm_dyn_test drop column to_be_dropped;
 alter table orca.bm_dyn_test add partition part5 values(5);
 insert into orca.bm_dyn_test values(2, 5, '2');
 
-set optimizer_enable_bitmapscan=on;
+set optimizer_enable_dynamicbitmapscan=on;
 -- start_ignore
 analyze orca.bm_dyn_test;
 -- end_ignore
@@ -3030,6 +3030,7 @@ default partition def);
 create INDEX y_idx on y (j);
 
 set optimizer_enable_indexjoin=on;
+set optimizer_enable_dynamicindexscan=on;
 explain (costs off) select count(*) from x, y where (x.i > y.j AND x.j <= y.i);
 reset optimizer_enable_indexjoin;
 
