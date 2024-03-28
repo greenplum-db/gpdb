@@ -34,6 +34,9 @@
 #include "utils/rel.h"
 
 
+/* GUC variable */
+bool		ignore_invalid_pages = false;
+
 /*
  * During XLOG replay, we may see XLOG records for incremental updates of
  * pages that no longer exist, because their relation was later dropped or
@@ -96,7 +99,11 @@ log_invalid_page(RelFileNode node, ForkNumber forkno, BlockNumber blkno,
 	if (reachedConsistency)
 	{
 		report_invalid_page(WARNING, node, forkno, blkno, present);
-		elog(PANIC, "WAL contains references to invalid pages");
+		elog(ignore_invalid_pages ? WARNING : PANIC,
+			 "WAL contains references to invalid pages");
+
+		if (ignore_invalid_pages)
+			return;
 	}
 
 	/*
@@ -244,7 +251,8 @@ XLogCheckInvalidPages(void)
 	}
 
 	if (foundone)
-		elog(PANIC, "WAL contains references to invalid pages");
+		elog(ignore_invalid_pages ? WARNING : PANIC,
+			 "WAL contains references to invalid pages");
 
 	hash_destroy(invalid_page_tab);
 	invalid_page_tab = NULL;

@@ -1740,6 +1740,20 @@ The default setting is off, and it can only be changed by a superuser.
 |-----------|-------|-------------------|
 |Boolean|off|local, session, reload|
 
+## <a id="ignore_invalid_pages"></a>ignore\_invalid\_pages 
+
+If set to off, detection of WAL records having references to invalid pages during recovery causes Greenplum Database to raise a PANIC-level error, aborting the recovery. Setting `ignore_invalid_pages` to on causes the system to ignore invalid page references in WAL records (but still report a warning), and continue the recovery.
+
+> **Caution** This behavior may cause crashes, data loss, propagate or hide corruption, or other serious problems.
+
+However, it may allow you to get past the PANIC-level error, to finish the recovery, and to cause the server to start up. The parameter can only be set at server start. It only has effect during recovery or in standby mode.
+
+The default setting is off.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|off|local, system, restart|
+
 ## <a id="integer_datetimes"></a>integer\_datetimes 
 
 Reports whether PostgreSQL was built with support for 64-bit-integer dates and times.

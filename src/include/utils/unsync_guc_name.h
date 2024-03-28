@@ -289,6 +289,7 @@
 		"huge_pages",
 		"ident_file",
 		"ignore_checksum_failure",
+		"ignore_invalid_pages",
 		"ignore_system_indexes",
 		"integer_datetimes",
 		"is_superuser",
