@@ -206,6 +206,7 @@
 		"gp_max_system_slices",
 		"gp_motion_cost_per_row",
 		"gp_pause_on_restore_point_replay",
+		"gp_pause_in_recovery",
 		"gp_postmaster_address_family",
 		"gp_print_create_gang_time",
 		"gp_qd_hostname",

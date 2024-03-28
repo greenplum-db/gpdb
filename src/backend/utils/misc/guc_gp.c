@@ -2980,6 +2980,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		NULL, NULL, NULL
 	},
 	{
+		{"gp_pause_in_recovery", PGC_SIGHUP, DEVELOPER_OPTIONS,
+		 gettext_noop("Pause recovery right before start replaying WAL records."),
+		 NULL,
+		 GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_pause_in_recovery,
+		false,
+		NULL, NULL, NULL
+	},
+	{
 		{"gp_autostats_allow_nonowner", PGC_SUSET, DEVELOPER_OPTIONS,
 			gettext_noop("Allow automatic stats collection on tables even for users who are not the owner of the relation."),
 			gettext_noop("If disabled, table statistics will be updated only when tables are modified by the owners of the relations.")

@@ -1,0 +1,3 @@
+comment = 'Distributed point-in-time-recovery functions'
+default_version = '1.0'
+relocatable = false

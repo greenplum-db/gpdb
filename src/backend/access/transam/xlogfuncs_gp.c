@@ -292,3 +292,20 @@ gp_switch_wal(PG_FUNCTION_ARGS)
 
 	SRF_RETURN_DONE(funcctx);
 }
+
+/*
+ * GPDB:
+ * Sets recovery target to pause on
+ * in redo loop
+ */
+Datum
+gp_set_recovery_pause_target_internal(PG_FUNCTION_ARGS)
+{
+	text *recovery_target_name = PG_GETARG_TEXT_PP(0);
+	char *recovery_target_name_str;
+
+	recovery_target_name_str = text_to_cstring(recovery_target_name);
+	SetRecoveryPauseTarget(recovery_target_name_str);
+
+	PG_RETURN_VOID();
+}

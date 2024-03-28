@@ -124,6 +124,7 @@ int			max_slot_wal_keep_size_mb = -1;
 
 /* GPDB specific */
 bool gp_pause_on_restore_point_replay = false;
+bool gp_pause_in_recovery = false;
 
 #ifdef WAL_DEBUG
 bool		XLOG_DEBUG = false;
@@ -740,6 +741,7 @@ typedef struct XLogCtlData
 	TimestampTz currentChunkStartTime;
 	/* Are we requested to pause recovery? */
 	bool		recoveryPause;
+	char recoveryPauseTargetName[MAXFNAMELEN];
 
 	/*
 	 * lastFpwDisableRecPtr points to the start of the last replayed
@@ -6065,6 +6067,43 @@ recoveryStopsAfter(XLogReaderState *record)
 	return false;
 }
 
+static bool
+recoveryPausesAfter(XLogReaderState *record)
+{
+	uint8		info;
+	uint8		rmid;
+	TimestampTz recordXtime = 0;
+
+	/*
+	 * Ignore recovery target settings when not in archive recovery (meaning
+	 * we are in crash recovery).
+	 */
+	if (!ArchiveRecoveryRequested)
+		return false;
+
+	info = XLogRecGetInfo(record) & ~XLR_INFO_MASK;
+	rmid = XLogRecGetRmid(record);
+
+	if (rmid == RM_XLOG_ID && info == XLOG_RESTORE_POINT)
+	{
+		xl_restore_point *recordRestorePointData;
+		recordRestorePointData = (xl_restore_point *) XLogRecGetData(record);
+
+		if (strcmp(recordRestorePointData->rp_name, XLogCtl->recoveryPauseTargetName) == 0)
+		{
+			(void) getRecordTimestamp(record, &recoveryStopTime);
+			strlcpy(recoveryStopName, recordRestorePointData->rp_name, MAXFNAMELEN);
+
+			ereport(LOG,
+					(errmsg("recovery pausing at restore point \"%s\", time %s",
+						recoveryStopName,
+						timestamptz_to_str(recoveryStopTime))));
+			return true;
+		}
+	}
+	return false;
+}
+
 /*
  * Wait until shared recoveryPause flag is cleared.
  *
@@ -6107,6 +6146,30 @@ SetRecoveryPause(bool recoveryPause)
 {
 	SpinLockAcquire(&XLogCtl->info_lck);
 	XLogCtl->recoveryPause = recoveryPause;
+	SpinLockRelease(&XLogCtl->info_lck);
+}
+
+void
+ResetRecoveryPauseTarget()
+{
+	SpinLockAcquire(&XLogCtl->info_lck);
+	memset(XLogCtl->recoveryPauseTargetName, 0, MAXFNAMELEN);
+	SpinLockRelease(&XLogCtl->info_lck);
+}
+
+int
+RecoveryPauseTargetIsEmpty()
+{
+	char zeroStr[MAXFNAMELEN];
+	memset(zeroStr, 0, MAXFNAMELEN);
+	return strcmp(zeroStr, XLogCtl->recoveryPauseTargetName) == 0;
+}
+
+void
+SetRecoveryPauseTarget(char *name)
+{
+	SpinLockAcquire(&XLogCtl->info_lck);
+	strncpy(XLogCtl->recoveryPauseTargetName, name, MAXFNAMELEN);
 	SpinLockRelease(&XLogCtl->info_lck);
 }
 
@@ -7416,6 +7479,9 @@ StartupXLOG(void)
 					(errmsg("redo starts at %X/%X",
 							(uint32) (ReadRecPtr >> 32), (uint32) ReadRecPtr)));
 
+			if (gp_pause_in_recovery){
+					ResetRecoveryPauseTarget();
+			}
 			/*
 			 * main redo apply loop
 			 */
@@ -7625,6 +7691,18 @@ StartupXLOG(void)
 				/* Allow read-only connections if we're consistent now */
 				CheckRecoveryConsistency();
 
+				/* GPDB: Pause recovery here if GUC is set
+				 * with the intention of granular pause/resume recovery
+				 * but no concrete recovery pause target is specified.
+				 * This will be the initial pause so that we can connect
+				 * and set recoveryPauseTargetName
+				 */
+				if (gp_pause_in_recovery && RecoveryPauseTargetIsEmpty())
+				{
+					SetRecoveryPause(true);
+					recoveryPausesHere();
+				}
+
 				/* Is this a timeline switch? */
 				if (switchedTLI)
 				{
@@ -7641,6 +7719,16 @@ StartupXLOG(void)
 					 */
 					if (switchedTLI && AllowCascadeReplication())
 						WalSndWakeup();
+				}
+
+				/*
+				 * Pause here if we are in continuous recovery and
+				 * specified to pause on the intermediate target
+				 */
+				if (recoveryPausesAfter(xlogreader))
+				{
+					SetRecoveryPause(true);
+					recoveryPausesHere();
 				}
 
 				/* Exit loop if we reached inclusive recovery target */
