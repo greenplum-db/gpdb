@@ -271,6 +271,12 @@ private:
 	static IMdIdArray *RetrieveRelDistributionOpFamilies(CMemoryPool *mp,
 														 GpPolicy *policy);
 
+	// generate statistics for the system level columns
+	static CDXLColStats *GenerateStatsForSystemCols(
+		CMemoryPool *mp, const IMDRelation *md_rel, CMDIdColStats *mdid_col_stats,
+		CMDName *md_colname, OID att_type, AttrNumber attrnum,
+		CDXLBucketArray *dxl_stats_bucket_array, CDouble rows);
+
 	static IMdIdArray *RetrieveIndexPartitions(CMemoryPool *mp, OID rel_oid);
 
 	static IMDRelation::Erelstoragetype RetrieveStorageTypeForPartitionedTable(
