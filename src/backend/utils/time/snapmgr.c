@@ -253,6 +253,10 @@ typedef struct SerializedSnapshotData
 	CommandId	curcid;
 	TimestampTz whenTaken;
 	XLogRecPtr	lsn;
+	bool		haveDistribSnapshot;
+	TransactionId minCachedLocalXid;
+	TransactionId maxCachedLocalXid;
+	int32 currentLocalXidsCount;
 } SerializedSnapshotData;
 
 Size
@@ -2297,6 +2301,13 @@ EstimateSnapshotSpace(Snapshot snap)
 		size = add_size(size,
 						mul_size(snap->subxcnt, sizeof(TransactionId)));
 
+	if (snap->haveDistribSnapshot)
+	{
+		size = add_size(size,
+						mul_size(snap->distribSnapshotWithLocalMapping.currentLocalXidsCount, sizeof(TransactionId)));
+		size = add_size(size, DistributedSnapshot_SerializeSize(&snap->distribSnapshotWithLocalMapping.ds));
+	}
+
 	return size;
 }
 
@@ -2322,6 +2333,10 @@ SerializeSnapshot(Snapshot snapshot, char *start_address)
 	serialized_snapshot.curcid = snapshot->curcid;
 	serialized_snapshot.whenTaken = snapshot->whenTaken;
 	serialized_snapshot.lsn = snapshot->lsn;
+	serialized_snapshot.haveDistribSnapshot = snapshot->haveDistribSnapshot;
+	serialized_snapshot.minCachedLocalXid = snapshot->distribSnapshotWithLocalMapping.minCachedLocalXid;
+	serialized_snapshot.maxCachedLocalXid = snapshot->distribSnapshotWithLocalMapping.maxCachedLocalXid;
+	serialized_snapshot.currentLocalXidsCount = snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount;
 
 	/*
 	 * Ignore the SubXID array if it has overflowed, unless the snapshot was
@@ -2355,6 +2370,19 @@ SerializeSnapshot(Snapshot snapshot, char *start_address)
 		memcpy((TransactionId *) (start_address + subxipoff),
 			   snapshot->subxip, snapshot->subxcnt * sizeof(TransactionId));
 	}
+
+	if (serialized_snapshot.haveDistribSnapshot)
+	{
+		Size dsnapshot_off = sizeof(SerializedSnapshotData) +
+							 snapshot->xcnt * sizeof(TransactionId) +
+							 snapshot->subxcnt * sizeof(TransactionId);
+
+		memcpy((TransactionId *)(start_address + dsnapshot_off), snapshot->distribSnapshotWithLocalMapping.inProgressMappedLocalXids,
+			   serialized_snapshot.currentLocalXidsCount * sizeof(TransactionId));
+
+		DistributedSnapshot_Serialize(&snapshot->distribSnapshotWithLocalMapping.ds,
+									  start_address + dsnapshot_off + serialized_snapshot.currentLocalXidsCount * sizeof(TransactionId));
+	}
 }
 
 /*
@@ -2384,6 +2412,7 @@ RestoreSnapshot(char *start_address)
 
 	/* Copy all required fields */
 	snapshot = (Snapshot) MemoryContextAlloc(TopTransactionContext, size);
+
 	snapshot->snapshot_type = SNAPSHOT_MVCC;
 	snapshot->xmin = serialized_snapshot.xmin;
 	snapshot->xmax = serialized_snapshot.xmax;
@@ -2396,6 +2425,10 @@ RestoreSnapshot(char *start_address)
 	snapshot->curcid = serialized_snapshot.curcid;
 	snapshot->whenTaken = serialized_snapshot.whenTaken;
 	snapshot->lsn = serialized_snapshot.lsn;
+	snapshot->haveDistribSnapshot = serialized_snapshot.haveDistribSnapshot;
+	snapshot->distribSnapshotWithLocalMapping.minCachedLocalXid = serialized_snapshot.minCachedLocalXid;
+	snapshot->distribSnapshotWithLocalMapping.maxCachedLocalXid = serialized_snapshot.maxCachedLocalXid;
+	snapshot->distribSnapshotWithLocalMapping.currentLocalXidsCount = serialized_snapshot.currentLocalXidsCount;
 
 	/* Copy XIDs, if present. */
 	if (serialized_snapshot.xcnt > 0)
@@ -2412,6 +2445,19 @@ RestoreSnapshot(char *start_address)
 			serialized_snapshot.xcnt;
 		memcpy(snapshot->subxip, serialized_xids + serialized_snapshot.xcnt,
 			   serialized_snapshot.subxcnt * sizeof(TransactionId));
+	}
+
+	if (serialized_snapshot.haveDistribSnapshot)
+	{
+		if (serialized_snapshot.currentLocalXidsCount > 0)
+		{
+			size = serialized_snapshot.currentLocalXidsCount * sizeof(TransactionId);
+			snapshot->distribSnapshotWithLocalMapping.inProgressMappedLocalXids = palloc0(size);
+			memcpy(snapshot->distribSnapshotWithLocalMapping.inProgressMappedLocalXids,
+				   serialized_xids + serialized_snapshot.xcnt + serialized_snapshot.subxcnt, size);
+		}
+		DistributedSnapshot_Deserialize(serialized_xids + serialized_snapshot.xcnt + serialized_snapshot.subxcnt + serialized_snapshot.currentLocalXidsCount,
+										&snapshot->distribSnapshotWithLocalMapping.ds);
 	}
 
 	/* Set the copied flag so that the caller will set refcounts correctly. */
