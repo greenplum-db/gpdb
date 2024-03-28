@@ -140,11 +140,11 @@ GetAppendOnlyEntryAttributes(Oid relid,
 do { \
 	Form_pg_appendonly aoForm = (rel)->rd_appendonly; \
 	Assert(RelationStorageIsAO(rel)); \
-	if ((segrelid_ptr) != NULL) \
+	if ((uintptr_t) segrelid_ptr != (uintptr_t) NULL) \
 		*((Oid*)segrelid_ptr) = aoForm->segrelid; \
-	if ((blkdirrelid_ptr) != NULL) \
+	if ((uintptr_t) blkdirrelid_ptr != (uintptr_t) NULL) \
 		*((Oid*)blkdirrelid_ptr) = aoForm->blkdirrelid; \
-	if ((visimaprelid_ptr) != NULL) \
+	if ((uintptr_t) visimaprelid_ptr != (uintptr_t) NULL) \
 		*((Oid*)visimaprelid_ptr) = aoForm->visimaprelid; \
 } while (0)
 
