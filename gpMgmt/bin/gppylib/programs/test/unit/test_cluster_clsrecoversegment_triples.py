@@ -9,9 +9,9 @@ import itertools
 import gppylib
 from gppylib.gparray import GpArray, Segment
 from gppylib.programs.clsRecoverSegment_triples import RecoveryTripletsUserConfigFile, RecoveryTripletsFactory, \
-    RecoveryTriplet, get_segments_with_running_basebackup, is_pg_rewind_running
+    RecoveryTriplet, get_segments_with_running_basebackup, is_pg_rewind_running, extract_recovery_config_info
 from gppylib.operations.get_segments_in_recovery import is_seg_in_backup_mode
-from test.unit.gp_unittest import GpTestCase, SubTest, FakeCursor
+from gppylib.test.unit.gp_unittest import GpTestCase, SubTest, FakeCursor
 
 
 class RecoveryTripletsFactoryTestCase(GpTestCase):
@@ -965,6 +965,13 @@ class RecoveryTripletsUserConfigFileParserTestCase(GpTestCase):
             "name": "old_to_new_new_to_old",
             "config": """sdw1|20000|/primary/gpseg0 sdw3|20001|/primary/gpseg5
                          sdw3|20001|/primary/gpseg5 sdw1|20000|/primary/gpseg0"""
+        },
+        {
+            "name": "with_recovery_type",
+            "config": """I|sdw1|20000|/primary/gpseg0
+                            D|sdw1|20000|/primary/gpseg1
+                            F|sdw1|20000|/primary/gpseg2
+                            D|sdw1-1|sdw1|20000|/primary/gpseg3"""
         }
         ]
 
@@ -994,7 +1001,7 @@ class RecoveryTripletsUserConfigFileParserTestCase(GpTestCase):
                 """sdw1|20000|/mirror/gpseg0 sdw3|20001|/mirror/gpseg5
                    sdw1|20000 sdw3|20001|/mirror/gpseg5""",
             "expected":
-                "line 2 of file .*: expected 3 or 4 parts on failed segment group, obtained 2"
+                "line 2 of file .*: expected 3, 4 or 5 parts on failed segment group, obtained 2"
         },
         {
             "name":
@@ -1128,6 +1135,14 @@ class RecoveryTripletsUserConfigFileParserTestCase(GpTestCase):
             "expected":
                 "line 2 of file .*: expected equal parts, either 3 or 4 on both segment group, obtained 4 on group1 and 3 on group2"
         },
+        {
+            "name":
+                "failover_with_recovery_type_with",
+            "config":
+                """D|sdw1|20000|/primary/gpseg0 sdw3|20001|/primary/gpseg5""",
+            "expected":
+                "line 1 of file .*: expected equal parts, either 3 or 4 on both segment group, obtained 4 on group1 and 3 on group2"
+        },
     ]
 
     def test_parsing_should_fail(self):
@@ -1146,23 +1161,18 @@ class RecoveryTripletsUserConfigFileParserTestCase(GpTestCase):
         lineno = 0
 
         for line in config_str.splitlines():
-            hostname_check_required = False
             lineno += 1
             groups = line.split()
             parts = groups[0].split('|')
-            if len(parts) == 4:
-                hostname, address, port, datadir = parts
-                hostname_check_required = True
-            else:
-                address, port, datadir = parts
-                hostname = address
+            hostname, address, port, datadir, recovery_type, hostname_check_required = extract_recovery_config_info(parts)
             row = {
                 'failedHostname': hostname,
                 'failedAddress': address,
                 'failedPort': port,
                 'failedDataDirectory': datadir,
                 'lineno': lineno,
-                'hostname_check_required': hostname_check_required
+                'hostname_check_required': hostname_check_required,
+                'recovery_type': recovery_type
 
             }
 
@@ -1173,6 +1183,7 @@ class RecoveryTripletsUserConfigFileParserTestCase(GpTestCase):
                 else:
                     address2, port2, datadir2 = parts2
                     hostname2 = address2
+                row["recovery_type"] = "Full"
                 row.update({
                     'newHostname': hostname2,
                     'newAddress': address2,

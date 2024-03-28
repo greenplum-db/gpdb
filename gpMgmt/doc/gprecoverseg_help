@@ -166,7 +166,7 @@ Lines beginning with # are treated as comments and ignored.
 
 Segments to Recover
 Each line after the first specifies a segment to recover. This line can 
-have one of two formats. In the event of in-place recovery, enter one 
+have one of three formats. In the event of in-place recovery, enter one
 group of colon delimited fields in the line:
 
 failedAddress|failedPort|failedDataDirectory
@@ -177,6 +177,17 @@ add additional spaces.
 
 failedAddress|failedPort|failedDataDirectorySPACEnewAddress|newPort|
 newDataDirectory
+
+To do mix recovery, include a field with values I/D/F/i/d/f on each line. Default is
+incremental recovery if recovery_type field is not provided.
+
+recoveryType|failedAddress|failedPort|failedDataDirectory
+
+recoveryType field supports below values:
+    I/i for incremental recovery
+    D/d for differential recovery
+    F/f for full recovery
+
 
 Examples
 
@@ -192,6 +203,14 @@ Recovery of a single mirror to a new host with hostname specified:
 sdw1|sdw1-1|50001|/data1/mirror/gpseg16 SPACE
 sdw4|sdw4-1|50001|51001|/data1/recover1/gpseg16
 
+In-place recovery of down mirrors with recovery type:
+sdw1-1|50001|/data1/mirror/gpseg1   // Does incremental recovery (By default)
+I|sdw1-1|50001|/data1/mirror/gpseg1   // Does incremental recovery
+i|sdw1-1|50001|/data1/mirror/gpseg1   // Does incremental recovery
+D|sdw2-1|50002|/data1/mirror/gpseg2   // Does Differential recovery
+d|sdw2-1|50002|/data1/mirror/gpseg2   // Does Differential recovery
+F|sdw3-1|50003|/data1/mirror/gpseg3   // Does Full recovery
+f|sdw3-1|50003|/data1/mirror/gpseg3   // Does Full recovery
 
 Obtaining a Sample File
 

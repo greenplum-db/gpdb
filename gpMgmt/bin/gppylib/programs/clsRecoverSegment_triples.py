@@ -67,6 +67,44 @@ def is_pg_rewind_running(hostname, port):
             hostname, str(port), str(e)))
 
 
+def extract_recovery_config_info(parts):
+    """
+    Extracts relevant recovery configuration information from a list of parts.
+    """
+    address, port, datadir = parts[-3:]
+    recovery_type = "Incremental"
+    hostname_check_required = False
+    hostname = address
+
+    recovery_type_flag = False
+    # If 5 fields are there in part then first field represents recovery type and it should any of I,D,F.i,d,f
+    if len(parts) == 5:
+        if parts[0] not in {"I", "D", "F", "i", "d", "f"}:
+            raise Exception("Invalid recovery type provided, please provide any of I,D,F,i,d,f as recovery_type")
+        hostname = parts[1]
+        hostname_check_required = True
+        recovery_type_flag = True
+
+    # If 4 fields are there in recovery part then first field can be either recovery_type or hostname
+    # if first field part[0] is not in {I,D,F,i,d,f} then it is hostname
+    if len(parts) == 4:
+        if parts[0] in {"I", "D", "F", "i", "d", "f"}:
+            recovery_type_flag = True
+        else:
+            hostname = parts[0]
+            hostname_check_required = True
+
+    # If recovery_type field has been provided by user then sync_mode needs be decided based on input
+    if recovery_type_flag:
+        sync_mode = parts[0]
+        if sync_mode in {"D", "d"}:
+            recovery_type = "Differential"
+        elif sync_mode in {"F", "f"}:
+            recovery_type = "Full"
+
+    return hostname, address, port, datadir, recovery_type, hostname_check_required
+
+
 class RecoveryTriplet:
     """
     Represents the segments needed to perform a recovery on a given segment.
@@ -74,11 +112,12 @@ class RecoveryTriplet:
     live     = acting primary to use to recover that failed segment
     failover = failed segment will be recovered here
     """
-    def __init__(self, failed, live, failover):
+    def __init__(self, failed, live, failover, recovery_type=None):
         self.failed = failed
         self.live = live
         self.failover = failover
         self.validate(failed, live, failover)
+        self.recovery_type = recovery_type
 
     def __repr__(self):
         return "Failed: {0} Live: {1} Failover: {2}".format(self.failed, self.live, self.failover)
@@ -143,7 +182,7 @@ class RecoveryTriplet:
 
 
 class RecoveryTripletRequest:
-    def __init__(self, failed, failover_host_name=None, failover_host_address=None, failover_port=None, failover_datadir=None, is_new_host=False):
+    def __init__(self, failed, failover_host_name=None, failover_host_address=None, failover_port=None, failover_datadir=None, is_new_host=False, recovery_type=None):
         self.failed = failed
 
         self.failover_host_name = failover_host_name
@@ -151,6 +190,7 @@ class RecoveryTripletRequest:
         self.failover_port = failover_port
         self.failover_datadir = failover_datadir
         self.failover_to_new_host = is_new_host
+        self.recovery_type = recovery_type
 
 
 # TODO: gparray is mutated for all triplets, even if we skip recovery for them(if they are unreachable)
@@ -290,7 +330,7 @@ class RecoveryTriplets:
 
             peer = dbIdToPeerMap.get(req.failed.getSegmentDbId())
 
-            triplets.append(RecoveryTriplet(req.failed, peer, failover))
+            triplets.append(RecoveryTriplet(req.failed, peer, failover, req.recovery_type))
 
         if len(failed_segments_with_running_basebackup) > 0:
             logger.warning(
@@ -449,7 +489,10 @@ class RecoveryTripletsUserConfigFile(RecoveryTriplets):
 
         requests = []
         for row in self.rows:
-            req = RecoveryTripletRequest(_find_failed_from_row(), row.get('newHostname'), row.get('newAddress'), row.get('newPort'), row.get('newDataDirectory'))
+            req = RecoveryTripletRequest(_find_failed_from_row(), failover_host_name=row.get('newHostname'),
+                                         failover_host_address=row.get('newAddress'),
+                                         failover_port=row.get('newPort'), failover_datadir=row.get('newDataDirectory'),
+                                         recovery_type=row.get('recovery_type'))
             requests.append(req)
 
         return self._convert_requests_to_triplets(requests)
@@ -468,23 +511,17 @@ class RecoveryTripletsUserConfigFile(RecoveryTriplets):
         rows = []
         with open(config_file) as f:
             for lineno, line in line_reader(f):
-                hostname_check_required = False
                 groups = line.split()  # NOT line.split(' ') due to MPP-15675
                 if len(groups) not in [1, 2]:
                     msg = "line %d of file %s: expected 1 or 2 groups but found %d" % (lineno, config_file, len(groups))
                     raise ExceptionNoStackTraceNeeded(msg)
                 parts = groups[0].split('|')
 
-                if len(parts) not in [3, 4]:
-                    msg = "line {0} of file {1}: expected 3 or 4 parts on failed segment group, obtained {2}" .format(
+                if len(parts) not in {3, 4, 5}:
+                    msg = "line {0} of file {1}: expected 3, 4 or 5 parts on failed segment group, obtained {2}".format(
                         lineno, config_file, len(parts))
                     raise ExceptionNoStackTraceNeeded(msg)
-                if len(parts) == 4:
-                    hostname, address, port, datadir = parts
-                    hostname_check_required = True
-                else:
-                    address, port, datadir = parts
-                    hostname = address
+                hostname, address, port, datadir, recovery_type, hostname_check_required = extract_recovery_config_info(parts)
                 check_values(lineno, hostname=hostname, address=address, port=port, datadir=datadir)
                 datadir = normalizeAndValidateInputPath(datadir, f.name, lineno)
 
@@ -494,7 +531,8 @@ class RecoveryTripletsUserConfigFile(RecoveryTriplets):
                     'failedPort': port,
                     'failedDataDirectory': datadir,
                     'lineno': lineno,
-                    'hostname_check_required': hostname_check_required
+                    'hostname_check_required': hostname_check_required,
+                    'recovery_type': recovery_type
                 }
                 if len(groups) == 2:
                     parts2 = groups[1].split('|')
@@ -512,6 +550,7 @@ class RecoveryTripletsUserConfigFile(RecoveryTriplets):
                     check_values(lineno, hostname=hostname2, address=address2, port=port2, datadir=datadir2)
                     datadir2 = normalizeAndValidateInputPath(datadir2, f.name, lineno)
 
+                    row['recovery_type'] = "Full"
                     row.update({
                         'newHostname': hostname2,
                         'newAddress': address2,
