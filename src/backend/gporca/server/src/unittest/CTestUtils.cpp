@@ -310,8 +310,9 @@ CTestUtils::PexprLogicalGet(CMemoryPool *mp, CTableDescriptor *ptabdesc,
 {
 	GPOS_ASSERT(nullptr != ptabdesc);
 
-	CLogicalGet *pop = GPOS_NEW(mp) CLogicalGet(
-		mp, GPOS_NEW(mp) CName(mp, CName(pstrTableAlias)), ptabdesc);
+	CLogicalGet *pop = GPOS_NEW(mp)
+		CLogicalGet(mp, GPOS_NEW(mp) CName(mp, CName(pstrTableAlias)), ptabdesc,
+					/*hasSecurityQuals*/ false);
 
 	CExpression *result = GPOS_NEW(mp) CExpression(mp, pop);
 
