@@ -61,6 +61,8 @@ enum Edxltoken
 	EdxltokenPlanHint,
 	EdxltokenScanHint,
 	EdxltokenRowHint,
+	EdxltokenJoinHint,
+	EdxltokenLeading,
 	EdxltokenJoinArityForAssociativityCommutativity,
 	EdxltokenArrayExpansionThreshold,
 	EdxltokenJoinOrderDPThreshold,

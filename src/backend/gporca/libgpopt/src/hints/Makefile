@@ -10,7 +10,7 @@ include $(top_builddir)/src/Makefile.global
 
 include $(top_srcdir)/src/backend/gporca/gporca.mk
 
-OBJS        = CPlanHint.o CScanHint.o CRowHint.o CHintUtils.o
+OBJS        = CPlanHint.o CScanHint.o CRowHint.o CJoinHint.o CHintUtils.o
 
 include $(top_srcdir)/src/backend/common.mk
 
