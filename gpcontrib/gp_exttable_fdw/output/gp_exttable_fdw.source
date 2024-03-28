@@ -78,18 +78,16 @@ CREATE FOREIGN TABLE ext_special_uri(a int, b int)
 SERVER gp_exttable_server
 OPTIONS (format 'csv', delimiter ',',
          location_uris 'file://@hostname@@abs_srcdir@/data/spe\\cial1\||file://@hostname@@abs_srcdir@/data/\|special2\\');
+\a
 SELECT urilocation FROM pg_exttable WHERE reloid = 'public.ext_special_uri'::regclass;
-                                                                                          urilocation                                                                                          
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- {"file://@hostname@@abs_srcdir@/data/spe\\cial1|","file://@hostname@@abs_srcdir@/data/|special2\\"}
+urilocation
+{"file://@hostname@@abs_srcdir@/data/spe\\cial1|","file://@hostname@@abs_srcdir@/data/|special2\\"}
 (1 row)
-
 SELECT ftoptions FROM pg_foreign_table WHERE ftrelid='public.ext_special_uri'::regclass;
-                                                                                                                 ftoptions                                                                                                                  
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- {format=csv,"delimiter=,","location_uris=file://@hostname@@abs_srcdir@/data/spe\\\\cial1\\||file://@hostname@@abs_srcdir@/data/\\|special2\\\\"}
+ftoptions
+{format=csv,"delimiter=,","location_uris=file://@hostname@@abs_srcdir@/data/spe\\\\cial1\\||file://@hostname@@abs_srcdir@/data/\\|special2\\\\"}
 (1 row)
-
+\a
 SELECT * FROM ext_special_uri ORDER BY a;
  a | b 
 ---+---
