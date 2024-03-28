@@ -91,6 +91,8 @@ Catalog inconsistencies are inconsistencies that occur between Greenplum Databas
 
     `missing_extraneous` - Cross consistency check for missing or extraneous entries
 
+    `mix_distribution_policy` - Check `pg_opclass` and `pg_amproc` to identify tables using legacy and non-legacy hash operatoins policy. 
+
     `owner` - Check table ownership that is inconsistent with the coordinator database
 
     `orphaned_toast_tables` - Check for orphaned TOAST tables.
