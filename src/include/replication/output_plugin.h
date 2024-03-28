@@ -100,6 +100,12 @@ typedef bool (*LogicalDecodeFilterByOriginCB) (struct LogicalDecodingContext *ct
 typedef void (*LogicalDecodeShutdownCB) (struct LogicalDecodingContext *ctx);
 
 /*
+ * Callback for the commit of distributed transaction.
+*/
+typedef void (*LogicalDecodeDistributedForgetCB) (struct LogicalDecodingContext *ctx,
+				DistributedTransactionId gxid, int nsegs, XLogRecPtr start_lsn);
+
+/*
  * Output plugin callbacks
  */
 typedef struct OutputPluginCallbacks
@@ -112,6 +118,7 @@ typedef struct OutputPluginCallbacks
 	LogicalDecodeMessageCB message_cb;
 	LogicalDecodeFilterByOriginCB filter_by_origin_cb;
 	LogicalDecodeShutdownCB shutdown_cb;
+	LogicalDecodeDistributedForgetCB distributed_forget_cb;
 } OutputPluginCallbacks;
 
 /* Functions in replication/logical/logical.c */

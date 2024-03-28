@@ -38,6 +38,7 @@
 #include "miscadmin.h"
 #include "commands/sequence.h"
 #include "access/xact.h"
+#include "access/xlog.h"
 #include "utils/timestamp.h"
 #define DISPATCH_WAIT_TIMEOUT_MSEC 2000
 
@@ -1102,6 +1103,23 @@ processResults(CdbDispatchResult *dispatchResult)
 			 * always mark current top transaction has wrote xlog on executor.
 			 */
 			segdbDesc->conn->wrote_xlog = false;
+
+			/*
+			 * On the coordinator, when logical decoding is required,
+			 * we need to save the number of segments that executed the
+			 * transaction and generated logs into the distributed_forget log,
+			 * so here we use bitmap for recording.
+			 */
+			if(XLogLogicalInfoActive() && MyTmGxactLocal->state == DTX_STATE_ACTIVE_DISTRIBUTED)
+			{
+				if(!bms_is_member(segdbDesc->segindex, MyTmGxactLocal->dtxSegmentsWroteLog))
+				{
+					MemoryContext oldContext = MemoryContextSwitchTo(TopTransactionContext);
+					MyTmGxactLocal->dtxSegmentsWroteLog =
+						bms_add_member(MyTmGxactLocal->dtxSegmentsWroteLog, segdbDesc->segindex);
+					MemoryContextSwitchTo(oldContext);
+				}
+			}
 		}
 
 		/*

@@ -1,0 +1,32 @@
+This file tell how to run test_decodings by hand.
+
+1. Firstly, you need to change your system setting by the following command:
+
+```
+postgres=# show wal_level ;
+ wal_level
+-----------
+ replica
+(1 row)
+
+postgres=# alter system set wal_level = logical;
+ALTER SYSTEM
+```
+
+Then restart GPDB.
+`gpstop -ar`
+
+2. Secondly, you need to change the 'Makefile' of test_decoding:
+Comment the line `NO_INSTALLCHECK = 1` by '#'
+
+3. Thirdly, choose your testing suite file on the line behind 'REGRESS' and 'ISOLATION':
+If you want to run 'distributed_transaction' and 'one_phase', you can write the
+line like this:
+
+REGRESS = distributed_transaction one_phase
+and comment 'ISOLATION' like `#ISOLATION = ...`
+
+4. Finally, you can run the testings by the following command:
+
+`make installcheck`
+

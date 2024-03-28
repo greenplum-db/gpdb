@@ -287,7 +287,8 @@ typedef struct ReorderBufferTXN
 	 * ---
 	 */
 	dlist_node	node;
-
+	DistributedTransactionId gxid;
+	bool		is_one_phase;
 } ReorderBufferTXN;
 
 /* so we can define the callbacks used inside struct ReorderBuffer itself */
@@ -406,6 +407,8 @@ void		ReorderBufferQueueChange(ReorderBuffer *, TransactionId, XLogRecPtr lsn, R
 void		ReorderBufferQueueMessage(ReorderBuffer *, TransactionId, Snapshot snapshot, XLogRecPtr lsn,
 									  bool transactional, const char *prefix,
 									  Size message_size, const char *message);
+void		SetCommitGxidAndOnePhase(ReorderBuffer *rb, TransactionId xid, 
+								DistributedTransactionId gxid, bool is_one_phase);
 void		ReorderBufferCommit(ReorderBuffer *, TransactionId,
 								XLogRecPtr commit_lsn, XLogRecPtr end_lsn,
 								TimestampTz commit_time, RepOriginId origin_id, XLogRecPtr origin_lsn);

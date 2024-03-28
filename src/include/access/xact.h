@@ -184,6 +184,12 @@ typedef void (*SubXactCallback) (SubXactEvent event, SubTransactionId mySubid,
 #define XACT_XINFO_HAS_GID				(1U << 7)
 #define XACT_XINFO_HAS_DISTRIB			(1U << 8)
 #define XACT_XINFO_HAS_DELDBS			(1U << 9)
+#define XACT_XINFO_HAS_IS_ONE_PHASE		(1U << 10)
+
+/*
+ * This flag only appears in distributed_forget log record.
+ */
+#define XACT_XINFO_HAS_NSEGS		(1U << 11)
 
 /*
  * Also stored in xinfo, these indicating a variety of additional actions that
@@ -305,6 +311,8 @@ typedef struct xl_xact_commit
 	/* xl_xact_twophase follows if XINFO_HAS_TWOPHASE */
 	/* twophase_gid follows if XINFO_HAS_GID. As a null-terminated string. */
 	/* xl_xact_origin follows if XINFO_HAS_ORIGIN, stored unaligned! */
+	/* xl_xact_distrib follows if XACT_XINFO_HAS_DISTRIB */
+	/* there is no corresponding data structure for XACT_XINFO_HAS_IS_ONE_PHASE*/
 } xl_xact_commit;
 #define MinSizeOfXactCommit sizeof(xl_xact_commit) 
 
@@ -361,6 +369,8 @@ typedef struct xl_xact_parsed_commit
 	TimestampTz origin_timestamp;
 
 	DistributedTransactionId        distribXid;
+
+	bool is_one_phase;			/* Indicates whether this transaction is a one-phase transaction */
 } xl_xact_parsed_commit;
 
 typedef xl_xact_parsed_commit xl_xact_parsed_prepare;
@@ -390,13 +400,31 @@ typedef struct xl_xact_parsed_abort
 	TimestampTz origin_timestamp;
 } xl_xact_parsed_abort;
 
-/* 
+typedef struct xl_xact_nsegs
+{
+	int			nsegs;			/* The count of segments on which distributed transaction was executed */
+} xl_xact_nsegs;
+
+/*
  * xl_xact_distributed_forget - moved to cdb/cdbtm.h 
  */
 typedef struct xl_xact_distributed_forget
 {
 	DistributedTransactionId gxid;
+
+	/* xl_xact_xinfo follows if XLOG_XACT_HAS_INFO */
+	/* xl_xact_nsegs follows if XINFO_HAS_NSEGS */
+	/* xl_xact_dbinfo follows if XACT_XINFO_HAS_DBINFO */
 } xl_xact_distributed_forget;
+#define MinSizeOfXactDistributedForget sizeof(xl_xact_distributed_forget) 
+
+typedef struct xl_xact_parsed_distributed_forget
+{
+	DistributedTransactionId gxid;
+	int			nsegs;			/* How many segments the distributed transaction is executed on */
+	Oid			dbId;			/* MyDatabaseId */
+	Oid			tsId;			/* MyDatabaseTableSpace */
+} xl_xact_parsed_distributed_forget;
 
 /* ----------------
  *		extern definitions
@@ -509,6 +537,8 @@ extern const char *xact_identify(uint8 info);
 /* also in xactdesc.c, so they can be shared between front/backend code */
 extern void ParseCommitRecord(uint8 info, xl_xact_commit *xlrec, xl_xact_parsed_commit *parsed);
 extern void ParseAbortRecord(uint8 info, xl_xact_abort *xlrec, xl_xact_parsed_abort *parsed);
+
+extern void ParseDistributedForgetRecord(uint8 info, xl_xact_distributed_forget *xlrec, xl_xact_parsed_distributed_forget *parsed);
 
 extern void EnterParallelMode(void);
 extern void ExitParallelMode(void);

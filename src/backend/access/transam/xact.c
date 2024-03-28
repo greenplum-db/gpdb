@@ -1791,13 +1791,40 @@ void
 RecordDistributedForgetCommitted(DistributedTransactionId gxid)
 {
 	xl_xact_distributed_forget xlrec;
+	xl_xact_xinfo xl_xinfo;
+	xl_xact_nsegs xl_nsegs;
+	xl_xact_dbinfo xl_dbinfo;
+
+	xl_xinfo.xinfo = 0;
+	uint8		info = XLOG_XACT_DISTRIBUTED_FORGET;
 
 	xlrec.gxid = gxid;
 
+	if (XLogLogicalInfoActive())
+	{
+		xl_xinfo.xinfo |= XACT_XINFO_HAS_NSEGS;
+		xl_nsegs.nsegs = bms_num_members(MyTmGxactLocal->dtxSegmentsWroteLog);
+
+		xl_xinfo.xinfo |= XACT_XINFO_HAS_DBINFO;
+		xl_dbinfo.dbId = MyDatabaseId;
+		xl_dbinfo.tsId = MyDatabaseTableSpace;
+	}
+
+	if (xl_xinfo.xinfo != 0)
+		info |= XLOG_XACT_HAS_INFO;
 	XLogBeginInsert();
 	XLogRegisterData((char *) &xlrec, sizeof(xl_xact_distributed_forget));
 
-	XLogInsert(RM_XACT_ID, XLOG_XACT_DISTRIBUTED_FORGET);
+	if (xl_xinfo.xinfo != 0)
+		XLogRegisterData((char *) (&xl_xinfo.xinfo), sizeof(xl_xinfo.xinfo));
+
+	if (xl_xinfo.xinfo & XACT_XINFO_HAS_NSEGS)
+		XLogRegisterData((char *) (&xl_nsegs), sizeof(xl_nsegs));
+
+	if (xl_xinfo.xinfo & XACT_XINFO_HAS_DBINFO)
+		XLogRegisterData((char *) (&xl_dbinfo), sizeof(xl_dbinfo));
+
+	XLogInsert(RM_XACT_ID, info);
 }
 
 /*
@@ -6793,6 +6820,7 @@ XactLogCommitRecord(TimestampTz commit_time,
 	xl_xact_distrib xl_distrib;
 	xl_xact_deldbs xl_deldbs;
 	XLogRecPtr recptr;
+	bool isOnePhaseQE = (Gp_role == GP_ROLE_EXECUTE && MyTmGxactLocal->isOnePhaseCommit);
 	bool isDtxPrepared = isPreparedDtxTransaction();
 	DistributedTransactionId distrib_xid = getDistributedTransactionId();
 
@@ -6888,6 +6916,17 @@ XactLogCommitRecord(TimestampTz commit_time,
 	{
 		xl_xinfo.xinfo |= XACT_XINFO_HAS_DISTRIB;
 		xl_distrib.distrib_xid = distrib_xid;
+	}
+
+	/*
+	 * When QE commit transaction and the transaction is one-phase,
+	 * there will be no relative xlogs on coordinator.
+	 * We need to distinguish this special situation when we do logical decoding,
+	 * so we added a one-phase flag to the commit log record.
+	 */
+	if (XLogLogicalInfoActive() && info == XLOG_XACT_COMMIT && isOnePhaseQE)
+	{
+		xl_xinfo.xinfo |= XACT_XINFO_HAS_IS_ONE_PHASE;
 	}
 
 	if (xl_xinfo.xinfo != 0)

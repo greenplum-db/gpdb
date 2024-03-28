@@ -62,6 +62,8 @@ static void pg_decode_message(LogicalDecodingContext *ctx,
 							  ReorderBufferTXN *txn, XLogRecPtr message_lsn,
 							  bool transactional, const char *prefix,
 							  Size sz, const char *message);
+static void pg_decode_distributed_forget(LogicalDecodingContext *ctx,
+						DistributedTransactionId gxid, int nsegs, XLogRecPtr start_lsn);
 
 void
 _PG_init(void)
@@ -83,6 +85,7 @@ _PG_output_plugin_init(OutputPluginCallbacks *cb)
 	cb->filter_by_origin_cb = pg_decode_filter;
 	cb->shutdown_cb = pg_decode_shutdown;
 	cb->message_cb = pg_decode_message;
+	cb->distributed_forget_cb = pg_decode_distributed_forget;
 }
 
 
@@ -221,6 +224,10 @@ static void
 pg_output_begin(LogicalDecodingContext *ctx, TestDecodingData *data, ReorderBufferTXN *txn, bool last_write)
 {
 	OutputPluginPrepareWrite(ctx, last_write);
+	if(txn->is_one_phase)
+	{
+		appendStringInfoString(ctx->out, "ONE-PHASE,");
+	}
 	if (data->include_xids)
 		appendStringInfo(ctx->out, "BEGIN %u", txn->xid);
 	else
@@ -540,5 +547,19 @@ pg_decode_message(LogicalDecodingContext *ctx,
 	appendStringInfo(ctx->out, "message: transactional: %d prefix: %s, sz: %zu content:",
 					 transactional, prefix, sz);
 	appendBinaryStringInfo(ctx->out, message, sz);
+	OutputPluginWrite(ctx, true);
+}
+
+static void pg_decode_distributed_forget(LogicalDecodingContext *ctx,
+					DistributedTransactionId gxid, int nsegs, XLogRecPtr start_lsn)
+{
+	TestDecodingData *data = ctx->output_plugin_private;
+
+	data->xact_wrote_changes = false;
+	if (data->skip_empty_xacts)
+		return;
+
+	OutputPluginPrepareWrite(ctx, true);
+	appendStringInfo(ctx->out, "DISTRIBUTED_FORGET %lu,%d segments", gxid, nsegs);
 	OutputPluginWrite(ctx, true);
 }

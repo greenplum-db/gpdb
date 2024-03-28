@@ -878,6 +878,39 @@ message_cb_wrapper(ReorderBuffer *cache, ReorderBufferTXN *txn,
 	error_context_stack = errcallback.previous;
 }
 
+/* The code of this function is similar to commit_cb_wrapper. */
+void
+distributed_forget_cb_wrapper(LogicalDecodingContext *ctx, DistributedTransactionId gxid, int nsegs, XLogRecPtr start_lsn, XLogRecPtr end_lsn)
+{
+	if(ctx->callbacks.distributed_forget_cb == NULL)
+	{
+		return;
+	}
+
+	LogicalErrorCallbackState state;
+	ErrorContextCallback errcallback;
+
+	Assert(!ctx->fast_forward);
+
+	/* Push callback + info on the error context stack */
+	state.ctx = ctx;
+	state.callback_name = "distributed_forget";
+	state.report_location = start_lsn;
+	errcallback.callback = output_plugin_error_callback;
+	errcallback.arg = (void *) &state;
+	errcallback.previous = error_context_stack;
+	error_context_stack = &errcallback;
+
+	ctx->accept_writes = true;
+	ctx->write_location = end_lsn;
+
+	/* do the actual work: call callback */
+	ctx->callbacks.distributed_forget_cb(ctx, gxid, nsegs, start_lsn);
+
+	/* Pop the error context stack */
+	error_context_stack = errcallback.previous;
+}
+
 /*
  * Set the required catalog xmin horizon for historic snapshots in the current
  * replication slot.

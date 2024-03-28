@@ -145,6 +145,11 @@ ParseCommitRecord(uint8 info, xl_xact_commit *xlrec, xl_xact_parsed_commit *pars
 		parsed->distribXid = xl_distrib->distrib_xid;
 		data += sizeof(xl_xact_distrib);
 	}
+
+	if (parsed->xinfo & XACT_XINFO_HAS_IS_ONE_PHASE)
+	{
+		parsed->is_one_phase = true;
+	}
 }
 
 void
@@ -242,6 +247,43 @@ ParseAbortRecord(uint8 info, xl_xact_abort *xlrec, xl_xact_parsed_abort *parsed)
 		data += sizeof(xl_xact_origin);
 	}
 
+}
+
+void
+ParseDistributedForgetRecord(uint8 info, xl_xact_distributed_forget *xlrec, xl_xact_parsed_distributed_forget *parsed)
+{
+	char *data = ((char *) xlrec) + MinSizeOfXactDistributedForget;
+
+	memset(parsed, 0, sizeof(*parsed));
+
+	uint32 xinfo = 0;
+	parsed->gxid = xlrec->gxid;
+
+	if (info & XLOG_XACT_HAS_INFO)
+	{
+		xl_xact_xinfo *xl_xinfo = (xl_xact_xinfo *) data;
+
+		xinfo = xl_xinfo->xinfo;
+		data += sizeof(xl_xact_xinfo);
+	}
+
+	if (xinfo & XACT_XINFO_HAS_NSEGS)
+	{
+		xl_xact_nsegs *xl_nsegs = (xl_xact_nsegs *) data;
+
+		parsed->nsegs = xl_nsegs->nsegs;
+		data += sizeof(xl_xact_nsegs);
+	}
+
+	if (xinfo & XACT_XINFO_HAS_DBINFO)
+	{
+		xl_xact_dbinfo *xl_dbinfo = (xl_xact_dbinfo *) data;
+
+		parsed->dbId = xl_dbinfo->dbId;
+		parsed->tsId = xl_dbinfo->tsId;
+
+		data += sizeof(xl_xact_dbinfo);
+	}
 }
 
 static void

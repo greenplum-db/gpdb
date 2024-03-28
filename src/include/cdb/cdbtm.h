@@ -235,6 +235,12 @@ typedef struct TMGXACTLOCAL
 	Bitmapset					*dtxSegmentsMap;
 	List						*dtxSegments;
 	List						*waitGxids;
+
+	/*
+	 * Recording the segments on which the transaction generated logs
+	 * and only useful when logical decoding is required.
+	 */
+	Bitmapset					*dtxSegmentsWroteLog;
 }	TMGXACTLOCAL;
 
 typedef struct TMGXACTSTATUS
