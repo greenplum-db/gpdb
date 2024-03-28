@@ -926,12 +926,12 @@ explain analyze select a.* from mpp8031 a, mpp8031 b where a.oid = b.oid;
 -------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=16) (actual time=2.533..2.533 rows=0 loops=1)
    ->  Hash Join  (cost=0.00..862.00 rows=1 width=16) (never executed)
-         Hash Cond: (mpp8031.oid = mpp8031_1.oid)
-         ->  Dynamic Seq Scan on mpp8031  (cost=0.00..431.00 rows=1 width=16) (never executed)
+         Hash Cond: (a.oid = b.oid)
+         ->  Dynamic Seq Scan on mpp8031 a  (cost=0.00..431.00 rows=1 width=16) (never executed)
                Number of partitions to scan: 4 (out of 4)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4) (never executed)
                Buckets: 524288  Batches: 1  Memory Usage: 4096kB
-               ->  Dynamic Seq Scan on mpp8031 mpp8031_1  (cost=0.00..431.00 rows=1 width=4) (never executed)
+               ->  Dynamic Seq Scan on mpp8031 b  (cost=0.00..431.00 rows=1 width=4) (actual time=0.000..0.324 rows=0 loops=1)
                      Number of partitions to scan: 4 (out of 4)
                      Partitions scanned:  Avg 4.0 x 3 workers.  Max 4 parts (seg0).
  Planning Time: 4.433 ms
@@ -1040,11 +1040,11 @@ explain select * from r_part r1, r_part r2 where r1.a=1; -- should eliminate par
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1324032.53 rows=8 width=16)
    ->  Nested Loop  (cost=0.00..1324032.53 rows=3 width=16)
          Join Filter: true
-         ->  Dynamic Seq Scan on r_part r_part_1  (cost=0.00..431.00 rows=3 width=8)
+         ->  Dynamic Seq Scan on r_part r2  (cost=0.00..431.00 rows=3 width=8)
                Number of partitions to scan: 9 (out of 9)
          ->  Materialize  (cost=0.00..431.00 rows=1 width=8)
                ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
-                     ->  Dynamic Seq Scan on r_part  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Dynamic Seq Scan on r_part r1  (cost=0.00..431.00 rows=1 width=8)
                            Number of partitions to scan: 1 (out of 9)
                            Filter: (a = 1)
  Optimizer: Pivotal Optimizer (GPORCA)

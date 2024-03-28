@@ -113,15 +113,15 @@ explain select t1.id1, (select count(*) from choose_seqscan_t2 t2 where t2.id1 =
 -------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..437.00 rows=9 width=12)
    ->  Hash Left Join  (cost=0.00..437.00 rows=3 width=12)
-         Hash Cond: (choose_seqscan_t1.id1 = choose_seqscan_t2.id1)
-         ->  Seq Scan on choose_seqscan_t1  (cost=0.00..431.00 rows=3 width=4)
+         Hash Cond: (t1.id1 = t2.id1)
+         ->  Seq Scan on choose_seqscan_t1 t1  (cost=0.00..431.00 rows=3 width=4)
                Filter: (id1 < 10)
          ->  Hash  (cost=6.00..6.00 rows=1 width=12)
                ->  GroupAggregate  (cost=0.00..6.00 rows=1 width=12)
-                     Group Key: choose_seqscan_t2.id1
+                     Group Key: t2.id1
                      ->  Sort  (cost=0.00..6.00 rows=1 width=4)
-                           Sort Key: choose_seqscan_t2.id1
-                           ->  Index Scan using bidx2 on choose_seqscan_t2  (cost=0.00..6.00 rows=1 width=4)
+                           Sort Key: t2.id1
+                           ->  Index Scan using bidx2 on choose_seqscan_t2 t2  (cost=0.00..6.00 rows=1 width=4)
                                  Index Cond: (id2 = 1)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (13 rows)
@@ -147,26 +147,26 @@ explain select t1.id1, (select count(*) from generate_series(1,5) g, choose_seqs
 ------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.12 rows=9 width=12)
    ->  Hash Left Join  (cost=0.00..862.12 rows=3 width=12)
-         Hash Cond: (choose_seqscan_t1.id1 = choose_seqscan_t2.id1)
-         ->  Seq Scan on choose_seqscan_t1  (cost=0.00..431.00 rows=3 width=4)
+         Hash Cond: (t1.id1 = t2.id1)
+         ->  Seq Scan on choose_seqscan_t1 t1  (cost=0.00..431.00 rows=3 width=4)
                Filter: (id1 < 10)
          ->  Hash  (cost=431.12..431.12 rows=3 width=12)
                ->  Finalize GroupAggregate  (cost=0.00..431.12 rows=3 width=12)
-                     Group Key: choose_seqscan_t2.id1
+                     Group Key: t2.id1
                      ->  Sort  (cost=0.00..431.12 rows=3 width=12)
-                           Sort Key: choose_seqscan_t2.id1
+                           Sort Key: t2.id1
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.12 rows=3 width=12)
-                                 Hash Key: choose_seqscan_t2.id1
+                                 Hash Key: t2.id1
                                  ->  Streaming Partial HashAggregate  (cost=0.00..431.12 rows=3 width=12)
-                                       Group Key: choose_seqscan_t2.id1
+                                       Group Key: t2.id1
                                        ->  Hash Join  (cost=0.00..431.08 rows=334 width=4)
-                                             Hash Cond: (generate_series.generate_series = choose_seqscan_t2.id2)
+                                             Hash Cond: (generate_series.generate_series = t2.id2)
                                              ->  Result  (cost=0.00..0.01 rows=334 width=4)
                                                    ->  Function Scan on generate_series  (cost=0.00..0.00 rows=334 width=4)
                                              ->  Hash  (cost=431.00..431.00 rows=3 width=8)
                                                    ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=3 width=8)
-                                                         Hash Key: choose_seqscan_t2.id2
-                                                         ->  Seq Scan on choose_seqscan_t2  (cost=0.00..431.00 rows=3 width=8)
+                                                         Hash Key: t2.id2
+                                                         ->  Seq Scan on choose_seqscan_t2 t2  (cost=0.00..431.00 rows=3 width=8)
                                                                Filter: (id1 < 10)
  Optimizer: Pivotal Optimizer (GPORCA)
 (24 rows)
@@ -198,20 +198,20 @@ explain select t1.id1, (select count(*) from choose_seqscan_t3 t3, choose_seqsca
 -------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..868.01 rows=9 width=12)
    ->  Hash Left Join  (cost=0.00..868.01 rows=3 width=12)
-         Hash Cond: (choose_seqscan_t1.id1 = choose_seqscan_t2.id1)
-         ->  Seq Scan on choose_seqscan_t1  (cost=0.00..431.00 rows=3 width=4)
+         Hash Cond: (t1.id1 = t2.id1)
+         ->  Seq Scan on choose_seqscan_t1 t1  (cost=0.00..431.00 rows=3 width=4)
                Filter: (id1 < 10)
          ->  Hash  (cost=437.00..437.00 rows=3 width=12)
                ->  GroupAggregate  (cost=0.00..437.00 rows=3 width=12)
-                     Group Key: choose_seqscan_t2.id1
+                     Group Key: t2.id1
                      ->  Sort  (cost=0.00..437.00 rows=3 width=4)
-                           Sort Key: choose_seqscan_t2.id1
+                           Sort Key: t2.id1
                            ->  Hash Join  (cost=0.00..437.00 rows=3 width=4)
-                                 Hash Cond: (choose_seqscan_t3.id1 = choose_seqscan_t2.id1)
-                                 ->  Index Scan using bidx3 on choose_seqscan_t3  (cost=0.00..6.00 rows=3 width=4)
+                                 Hash Cond: (t3.id1 = t2.id1)
+                                 ->  Index Scan using bidx3 on choose_seqscan_t3 t3  (cost=0.00..6.00 rows=3 width=4)
                                        Index Cond: (id1 < 10)
                                  ->  Hash  (cost=431.00..431.00 rows=3 width=4)
-                                       ->  Seq Scan on choose_seqscan_t2  (cost=0.00..431.00 rows=3 width=4)
+                                       ->  Seq Scan on choose_seqscan_t2 t2  (cost=0.00..431.00 rows=3 width=4)
                                              Filter: (id1 < 10)
  Optimizer: Pivotal Optimizer (GPORCA)
 (18 rows)

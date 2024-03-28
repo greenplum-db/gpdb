@@ -35,11 +35,11 @@ explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b wh
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..499.13 rows=1 width=8)
    ->  Nested Loop  (cost=0.00..499.13 rows=1 width=8)
          Join Filter: true
-         ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
-         ->  Bitmap Heap Scan on foo  (cost=0.00..68.13 rows=1 width=8)
-               Recheck Cond: (id = bar.id)
+         ->  Seq Scan on bar b  (cost=0.00..431.00 rows=1 width=8)
+         ->  Bitmap Heap Scan on foo f  (cost=0.00..68.13 rows=1 width=8)
+               Recheck Cond: (id = b.id)
                ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..0.00 rows=0 width=0)
-                     Index Cond: (id = bar.id)
+                     Index Cond: (id = b.id)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.72.0
 (9 rows)
 
@@ -59,11 +59,11 @@ explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b wh
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..499.13 rows=1 width=8)
    ->  Nested Loop  (cost=0.00..499.13 rows=1 width=8)
          Join Filter: true
-         ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
-         ->  Bitmap Heap Scan on foo  (cost=0.00..68.13 rows=1 width=8)
-               Recheck Cond: (id = bar.id)
+         ->  Seq Scan on bar b  (cost=0.00..431.00 rows=1 width=8)
+         ->  Bitmap Heap Scan on foo f  (cost=0.00..68.13 rows=1 width=8)
+               Recheck Cond: (id = b.id)
                ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..0.00 rows=0 width=0)
-                     Index Cond: (id = bar.id)
+                     Index Cond: (id = b.id)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.72.0
 (9 rows)
 
@@ -84,11 +84,11 @@ explain select f.id from co_nestloop_idxscan.bar b, co_nestloop_idxscan.foo f wh
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..499.13 rows=1 width=8)
    ->  Nested Loop  (cost=0.00..499.13 rows=1 width=8)
          Join Filter: true
-         ->  Seq Scan on bar  (cost=0.00..431.00 rows=1 width=8)
-         ->  Bitmap Heap Scan on foo  (cost=0.00..68.13 rows=1 width=8)
-               Recheck Cond: (id = bar.id)
+         ->  Seq Scan on bar b  (cost=0.00..431.00 rows=1 width=8)
+         ->  Bitmap Heap Scan on foo f  (cost=0.00..68.13 rows=1 width=8)
+               Recheck Cond: (id = b.id)
                ->  Bitmap Index Scan on foo_id_idx  (cost=0.00..0.00 rows=0 width=0)
-                     Index Cond: (id = bar.id)
+                     Index Cond: (id = b.id)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.72.0
 (9 rows)
 

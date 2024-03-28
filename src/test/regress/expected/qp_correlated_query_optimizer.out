@@ -3713,9 +3713,9 @@ EXPLAIN SELECT a FROM qp_tab1 f1 LEFT JOIN qp_tab2 on a=c WHERE NOT EXISTS(SELEC
          Hash Cond: (qp_tab1.a = qp_tab2.c)
          ->  Hash Anti Join  (cost=0.00..862.00 rows=1 width=4)
                Hash Cond: (qp_tab1.a = qp_tab1_1.a)
-               ->  Seq Scan on qp_tab1  (cost=0.00..431.00 rows=1 width=4)
+               ->  Seq Scan on qp_tab1 f1  (cost=0.00..431.00 rows=1 width=4)
                ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                     ->  Seq Scan on qp_tab1 qp_tab1_1  (cost=0.00..431.00 rows=1 width=4)
+                     ->  Seq Scan on qp_tab1 f2  (cost=0.00..431.00 rows=1 width=4)
          ->  Hash  (cost=431.00..431.00 rows=1 width=4)
                ->  Seq Scan on qp_tab2  (cost=0.00..431.00 rows=1 width=4)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
@@ -3891,7 +3891,7 @@ explain select x1.a, (select count(*) from generate_series(1, x1.a)) from t1 x1;
                                         QUERY PLAN                                        
 ------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..882708.48 rows=3 width=12)
-   ->  Seq Scan on t1  (cost=0.00..882708.48 rows=334 width=12)
+   ->  Seq Scan on t1 x1  (cost=0.00..882708.48 rows=334 width=12)
          SubPlan 1
            ->  Aggregate  (cost=0.00..0.00 rows=1 width=8)
                  ->  Function Scan on generate_series  (cost=0.00..0.00 rows=334 width=1)

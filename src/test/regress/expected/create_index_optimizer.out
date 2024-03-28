@@ -485,7 +485,7 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 << '(0.0, 0.0)';
 -----------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Index Scan using gpointind on point_tbl
+         ->  Index Scan using gpointind on point_tbl p
                Index Cond: (f1 << '(0,0)'::point)
                Filter: (f1 << '(0,0)'::point)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -503,7 +503,7 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 >> '(0.0, 0.0)';
 -----------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Index Scan using gpointind on point_tbl
+         ->  Index Scan using gpointind on point_tbl p
                Index Cond: (f1 >> '(0,0)'::point)
                Filter: (f1 >> '(0,0)'::point)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -521,7 +521,7 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 <^ '(0.0, 0.0)';
 -----------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Index Scan using gpointind on point_tbl
+         ->  Index Scan using gpointind on point_tbl p
                Index Cond: (f1 <^ '(0,0)'::point)
                Filter: (f1 <^ '(0,0)'::point)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -539,7 +539,7 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 >^ '(0.0, 0.0)';
 -----------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Index Scan using gpointind on point_tbl
+         ->  Index Scan using gpointind on point_tbl p
                Index Cond: (f1 >^ '(0,0)'::point)
                Filter: (f1 >^ '(0,0)'::point)
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -557,7 +557,7 @@ SELECT count(*) FROM point_tbl p WHERE p.f1 ~= '(-5, -12)';
 -----------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Index Scan using gpointind on point_tbl
+         ->  Index Scan using gpointind on point_tbl p
                Index Cond: (f1 ~= '(-5,-12)'::point)
                Filter: (f1 ~= '(-5,-12)'::point)
  Optimizer: Pivotal Optimizer (GPORCA)

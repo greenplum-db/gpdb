@@ -739,10 +739,10 @@ Gather Motion N:N  (sliceN; segments: N) (actual time=N.N..N.N rows=N loops=N)
   ->  Nested Loop (actual time=N.N..N.N rows=N loops=N)
         Join Filter: true
         ->  Broadcast Motion N:N  (sliceN; segments: N) (actual time=N.N..N.N rows=N loops=N)
-              ->  Seq Scan on stat_io_timing (actual time=N.N..N.N rows=N loops=N)
+              ->  Seq Scan on stat_io_timing s1 (actual time=N.N..N.N rows=N loops=N)
                     Filter: (a = N)
-        ->  Index Scan using stat_io_timing_idx on stat_io_timing stat_io_timing_1 (never executed)
-              Index Cond: (b = stat_io_timing.b)
+        ->  Index Scan using stat_io_timing_idx on stat_io_timing s2 (never executed)
+              Index Cond: (b = s1.b)
 Optimizer: GPORCA
 Planning Time: N.N ms
   (sliceN)    Executor memory: NK bytes.

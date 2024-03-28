@@ -292,11 +292,11 @@ select * from int4_tbl o where exists
 ------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Semi Join
-         Hash Cond: (int4_tbl.f1 = int4_tbl_1.f1)
-         ->  Seq Scan on int4_tbl
+         Hash Cond: (o.f1 = i.f1)
+         ->  Seq Scan on int4_tbl o
                Filter: (NOT (f1 IS NULL))
          ->  Hash
-               ->  Seq Scan on int4_tbl int4_tbl_1
+               ->  Seq Scan on int4_tbl i
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (8 rows)
 
@@ -308,15 +308,15 @@ select * from int4_tbl o where not exists
  Result
    Filter: (SubPlan 1)
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Seq Scan on int4_tbl
+         ->  Seq Scan on int4_tbl o
    SubPlan 1
      ->  Result
            ->  Limit
                  ->  Result
-                       Filter: (int4_tbl_1.f1 = int4_tbl.f1)
+                       Filter: (i.f1 = o.f1)
                        ->  Materialize
                              ->  Gather Motion 3:1  (slice2; segments: 3)
-                                   ->  Seq Scan on int4_tbl int4_tbl_1
+                                   ->  Seq Scan on int4_tbl i
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (13 rows)
 
@@ -328,7 +328,7 @@ select * from int4_tbl o where exists
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop Semi Join
          Join Filter: true
-         ->  Seq Scan on int4_tbl
+         ->  Seq Scan on int4_tbl o
                Filter: (NOT (f1 IS NULL))
          ->  Limit
                ->  Result
@@ -941,16 +941,16 @@ where (exists(select 1 from tenk1 k where k.unique1 = t.unique2) or ten < 0);
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
                ->  Result
-                     Filter: ((COALESCE((count()), '0'::bigint) > '0'::bigint) OR (tenk1.ten < 0))
+                     Filter: ((COALESCE((count()), '0'::bigint) > '0'::bigint) OR (t.ten < 0))
                      ->  Hash Left Join
-                           Hash Cond: (tenk1.unique2 = tenk1_1.unique1)
+                           Hash Cond: (t.unique2 = k.unique1)
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                 Hash Key: tenk1.unique2
-                                 ->  Seq Scan on tenk1
+                                 Hash Key: t.unique2
+                                 ->  Seq Scan on tenk1 t
                            ->  Hash
                                  ->  HashAggregate
-                                       Group Key: tenk1_1.unique1
-                                       ->  Seq Scan on tenk1 tenk1_1
+                                       Group Key: k.unique1
+                                       ->  Seq Scan on tenk1 k
  Optimizer: Pivotal Optimizer (GPORCA)
 (15 rows)
 
@@ -970,19 +970,19 @@ where (exists(select 1 from tenk1 k where k.unique1 = t.unique2) or ten < 0)
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  GroupAggregate
-               Group Key: tenk1.unique1, tenk1.unique2, tenk1.ten, tenk1.thousand, tenk1.ctid, tenk1.gp_segment_id, (true)
+               Group Key: t.unique1, t.unique2, t.ten, t.thousand, t.ctid, t.gp_segment_id, (true)
                ->  Sort
-                     Sort Key: tenk1.unique1, tenk1.unique2, tenk1.ten, tenk1.thousand, tenk1.ctid, tenk1.gp_segment_id, (true)
+                     Sort Key: t.unique1, t.unique2, t.ten, t.thousand, t.ctid, t.gp_segment_id, (true)
                      ->  Result
-                           Filter: (CASE WHEN (NOT ((true) IS NULL)) THEN true ELSE false END OR (tenk1.ten < 0))
+                           Filter: (CASE WHEN (NOT ((true) IS NULL)) THEN true ELSE false END OR (t.ten < 0))
                            ->  Nested Loop Left Join
                                  Join Filter: true
                                  ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                       Hash Key: tenk1.unique2
-                                       ->  Index Scan using tenk1_thous_tenthous on tenk1
+                                       Hash Key: t.unique2
+                                       ->  Index Scan using tenk1_thous_tenthous on tenk1 t
                                              Index Cond: (thousand = 1)
-                                 ->  Index Only Scan using tenk1_unique1 on tenk1 tenk1_1
-                                       Index Cond: (unique1 = tenk1.unique2)
+                                 ->  Index Only Scan using tenk1_unique1 on tenk1 k
+                                       Index Cond: (unique1 = t.unique2)
  Optimizer: GPORCA
 (17 rows)
 
@@ -1009,17 +1009,17 @@ select count(*) from exists_tbl t1
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Partial Aggregate
                ->  Result
-                     Filter: ((COALESCE((count()), '0'::bigint) > '0'::bigint) OR (exists_tbl.c3 < 0))
+                     Filter: ((COALESCE((count()), '0'::bigint) > '0'::bigint) OR (t1.c3 < 0))
                      ->  Hash Left Join
-                           Hash Cond: (exists_tbl.c1 = exists_tbl_1.c2)
-                           ->  Dynamic Seq Scan on exists_tbl
+                           Hash Cond: (t1.c1 = t2.c2)
+                           ->  Dynamic Seq Scan on exists_tbl t1
                                  Number of partitions to scan: 2 (out of 2)
                            ->  Hash
                                  ->  HashAggregate
-                                       Group Key: exists_tbl_1.c2
+                                       Group Key: t2.c2
                                        ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                                             Hash Key: exists_tbl_1.c2
-                                             ->  Dynamic Seq Scan on exists_tbl exists_tbl_1
+                                             Hash Key: t2.c2
+                                             ->  Dynamic Seq Scan on exists_tbl t2
                                                    Number of partitions to scan: 2 (out of 2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (17 rows)
@@ -1339,20 +1339,20 @@ select * from int4_tbl where
                Output: int4_tbl.f1
    SubPlan 1
      ->  Result
-           Output: tenk1.unique1
+           Output: a.unique1
            ->  Materialize
-                 Output: tenk1.unique1
+                 Output: a.unique1
                  ->  Gather Motion 3:1  (slice2; segments: 3)
-                       Output: tenk1.unique1
-                       ->  Seq Scan on public.tenk1
-                             Output: tenk1.unique1
+                       Output: a.unique1
+                       ->  Seq Scan on public.tenk1 a
+                             Output: a.unique1
    SubPlan 2
      ->  Materialize
-           Output: tenk1_1.ten
+           Output: b.ten
            ->  Gather Motion 3:1  (slice3; segments: 3)
-                 Output: tenk1_1.ten
-                 ->  Seq Scan on public.tenk1 tenk1_1
-                       Output: tenk1_1.ten
+                 Output: b.ten
+                 ->  Seq Scan on public.tenk1 b
+                       Output: b.ten
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
  Settings: optimizer=on
 (25 rows)

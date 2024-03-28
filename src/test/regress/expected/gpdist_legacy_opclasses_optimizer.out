@@ -169,10 +169,10 @@ explain (costs off) select * from legacy_int a inner join legacy_int b on a.id =
 -------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (legacy_int.id = legacy_int_1.id)
-         ->  Seq Scan on legacy_int
+         Hash Cond: (a.id = b.id)
+         ->  Seq Scan on legacy_int a
          ->  Hash
-               ->  Seq Scan on legacy_int legacy_int_1
+               ->  Seq Scan on legacy_int b
  Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (7 rows)
 
@@ -213,10 +213,10 @@ explain (costs off) select * from modern_int a inner join modern_int b on a.id =
 -------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (modern_int.id = modern_int_1.id)
-         ->  Seq Scan on modern_int
+         Hash Cond: (a.id = b.id)
+         ->  Seq Scan on modern_int a
          ->  Hash
-               ->  Seq Scan on modern_int modern_int_1
+               ->  Seq Scan on modern_int b
  Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (7 rows)
 
@@ -262,10 +262,10 @@ explain (costs off) select * from legacy_domain_over_int a inner join legacy_dom
 ----------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: ((legacy_domain_over_int.id)::integer = (legacy_domain_over_int_1.id)::integer)
-         ->  Seq Scan on legacy_domain_over_int
+         Hash Cond: ((a.id)::integer = (b.id)::integer)
+         ->  Seq Scan on legacy_domain_over_int a
          ->  Hash
-               ->  Seq Scan on legacy_domain_over_int legacy_domain_over_int_1
+               ->  Seq Scan on legacy_domain_over_int b
  Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (7 rows)
 
@@ -274,10 +274,10 @@ explain (costs off) select * from legacy_int a inner join legacy_domain_over_int
 ---------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (legacy_int.id = (legacy_domain_over_int.id)::integer)
-         ->  Seq Scan on legacy_int
+         Hash Cond: (a.id = (b.id)::integer)
+         ->  Seq Scan on legacy_int a
          ->  Hash
-               ->  Seq Scan on legacy_domain_over_int
+               ->  Seq Scan on legacy_domain_over_int b
  Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (7 rows)
 
@@ -306,11 +306,11 @@ explain (costs off) select * from legacy_enum a inner join legacy_enum b on a.co
 ---------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: ((legacy_enum.color)::anyenum = (legacy_enum_1.color)::anyenum)
-         ->  Seq Scan on legacy_enum
+         Hash Cond: ((a.color)::anyenum = (b.color)::anyenum)
+         ->  Seq Scan on legacy_enum a
          ->  Hash
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                     ->  Seq Scan on legacy_enum legacy_enum_1
+                     ->  Seq Scan on legacy_enum b
  Optimizer: Pivotal Optimizer (GPORCA) version 3.41.0
 (8 rows)
 
@@ -444,12 +444,12 @@ explain (costs off) select * from try_distinct_array a, try_distinct_array b whe
                                                QUERY PLAN                                               
 --------------------------------------------------------------------------------------------------------
  Hash Join
-   Hash Cond: ((try_distinct_array.test_array)::anyarray = (try_distinct_array_1.test_array)::anyarray)
+   Hash Cond: ((a.test_array)::anyarray = (b.test_array)::anyarray)
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Seq Scan on try_distinct_array
+         ->  Seq Scan on try_distinct_array a
    ->  Hash
          ->  Gather Motion 3:1  (slice2; segments: 3)
-               ->  Seq Scan on try_distinct_array try_distinct_array_1
+               ->  Seq Scan on try_distinct_array b
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 

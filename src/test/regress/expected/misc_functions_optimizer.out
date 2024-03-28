@@ -259,10 +259,10 @@ WHERE my_int_eq(a.unique2, 42);
 ------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (tenk1.unique1 = tenk1_1.unique1)
-         ->  Seq Scan on tenk1
+         Hash Cond: (b.unique1 = a.unique1)
+         ->  Seq Scan on tenk1 b
          ->  Hash
-               ->  Seq Scan on tenk1 tenk1_1
+               ->  Seq Scan on tenk1 a
                      Filter: my_int_eq(unique2, 42)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
@@ -276,10 +276,10 @@ WHERE my_int_eq(a.unique2, 42);
 ------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (tenk1.unique1 = tenk1_1.unique1)
-         ->  Seq Scan on tenk1
+         Hash Cond: (b.unique1 = a.unique1)
+         ->  Seq Scan on tenk1 b
          ->  Hash
-               ->  Seq Scan on tenk1 tenk1_1
+               ->  Seq Scan on tenk1 a
                      Filter: my_int_eq(unique2, 42)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
@@ -295,8 +295,8 @@ SELECT * FROM tenk1 a JOIN my_gen_series(1,1000) g ON a.unique1 = g;
 ------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (tenk1.unique1 = my_gen_series.my_gen_series)
-         ->  Seq Scan on tenk1
+         Hash Cond: (a.unique1 = my_gen_series.my_gen_series)
+         ->  Seq Scan on tenk1 a
          ->  Hash
                ->  Function Scan on my_gen_series
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -308,8 +308,8 @@ SELECT * FROM tenk1 a JOIN my_gen_series(1,10) g ON a.unique1 = g;
 ------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (tenk1.unique1 = my_gen_series.my_gen_series)
-         ->  Seq Scan on tenk1
+         Hash Cond: (a.unique1 = my_gen_series.my_gen_series)
+         ->  Seq Scan on tenk1 a
          ->  Hash
                ->  Function Scan on my_gen_series
  Optimizer: Pivotal Optimizer (GPORCA)

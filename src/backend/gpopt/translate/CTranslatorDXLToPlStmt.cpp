@@ -5266,6 +5266,7 @@ CTranslatorDXLToPlStmt::ProcessDXLTblDescr(
 	}
 
 	rte->eref = alias;
+	rte->alias = alias;
 
 	// A new RTE is added to the range table entries list if it's not found in the look
 	// up table. However, it is only added to the look up table if it's a result relation

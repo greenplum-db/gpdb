@@ -1688,25 +1688,25 @@ SELECT a.x, sum(b.x) FROM pagg_tab1 a FULL OUTER JOIN pagg_tab2 b ON a.x = b.y G
                                         QUERY PLAN                                        
 ------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Merge Key: pagg_tab1.x
+   Merge Key: a.x
    ->  Finalize GroupAggregate
-         Group Key: pagg_tab1.x
+         Group Key: a.x
          ->  Sort
-               Sort Key: pagg_tab1.x
+               Sort Key: a.x
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: pagg_tab1.x
+                     Hash Key: a.x
                      ->  Streaming Partial HashAggregate
-                           Group Key: pagg_tab1.x
+                           Group Key: a.x
                            ->  Merge Full Join
-                                 Merge Cond: (pagg_tab1.x = pagg_tab2.y)
+                                 Merge Cond: (a.x = b.y)
                                  ->  Sort
-                                       Sort Key: pagg_tab1.x
-                                       ->  Seq Scan on pagg_tab1
+                                       Sort Key: a.x
+                                       ->  Seq Scan on pagg_tab1 a
                                  ->  Sort
-                                       Sort Key: pagg_tab2.y
+                                       Sort Key: b.y
                                        ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                             Hash Key: pagg_tab2.y
-                                             ->  Seq Scan on pagg_tab2
+                                             Hash Key: b.y
+                                             ->  Seq Scan on pagg_tab2 b
  Optimizer: Pivotal Optimizer (GPORCA) version 3.95.0
 (21 rows)
 
@@ -1737,19 +1737,19 @@ SELECT a.x, b.y, count(*) FROM pagg_tab1 a FULL JOIN pagg_tab2 b ON a.x = b.y GR
 ------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  HashAggregate
-         Group Key: pagg_tab1.x, pagg_tab2.y
+         Group Key: a.x, b.y
          ->  Redistribute Motion 3:3  (slice2; segments: 3)
-               Hash Key: pagg_tab1.x, pagg_tab2.y
+               Hash Key: a.x, b.y
                ->  Merge Full Join
-                     Merge Cond: (pagg_tab1.x = pagg_tab2.y)
+                     Merge Cond: (a.x = b.y)
                      ->  Sort
-                           Sort Key: pagg_tab1.x
-                           ->  Seq Scan on pagg_tab1
+                           Sort Key: a.x
+                           ->  Seq Scan on pagg_tab1 a
                      ->  Sort
-                           Sort Key: pagg_tab2.y
+                           Sort Key: b.y
                            ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                                 Hash Key: pagg_tab2.y
-                                 ->  Seq Scan on pagg_tab2
+                                 Hash Key: b.y
+                                 ->  Seq Scan on pagg_tab2 b
  Optimizer: Pivotal Optimizer (GPORCA)
 (16 rows)
 
@@ -1993,12 +1993,12 @@ explain SELECT t1.a, sum(c) from t1_replicated as t1 join t2_replicated as t2 on
 ---------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..862.00 rows=1 width=12)
    ->  HashAggregate  (cost=0.00..862.00 rows=3 width=12)
-         Group Key: t1_replicated.a
+         Group Key: t1.a
          ->  Hash Join  (cost=0.00..862.00 rows=3 width=12)
-               Hash Cond: (t1_replicated.a = t2_replicated.a)
-               ->  Seq Scan on t1_replicated  (cost=0.00..431.00 rows=3 width=12)
+               Hash Cond: (t1.a = t2.a)
+               ->  Seq Scan on t1_replicated t1  (cost=0.00..431.00 rows=3 width=12)
                ->  Hash  (cost=431.00..431.00 rows=3 width=4)
-                     ->  Seq Scan on t2_replicated  (cost=0.00..431.00 rows=3 width=4)
+                     ->  Seq Scan on t2_replicated t2  (cost=0.00..431.00 rows=3 width=4)
  Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 

@@ -445,10 +445,10 @@ explain (costs off)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: true
-         ->  Index Scan using ec0_pkey on ec0
+         ->  Index Scan using ec0_pkey on ec0 a
                Index Cond: (ff = '43'::int8alias1)
-         ->  Index Scan using ec1_pkey on ec1
-               Index Cond: (ff = ec0.ff)
+         ->  Index Scan using ec1_pkey on ec1 b
+               Index Cond: (ff = a.ff)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 
@@ -464,10 +464,10 @@ explain (costs off)
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: true
-         ->  Seq Scan on ec1
+         ->  Seq Scan on ec1 b
                Filter: (f1 < '5'::int8alias1)
-         ->  Index Scan using ec0_pkey on ec0
-               Index Cond: ((ff = ec1.ff) AND (ff = '43'::int8alias1))
+         ->  Index Scan using ec0_pkey on ec0 a
+               Index Cond: ((ff = b.ff) AND (ff = '43'::int8alias1))
  Optimizer: GPORCA
 (8 rows)
 

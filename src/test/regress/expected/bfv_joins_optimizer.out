@@ -3319,10 +3319,10 @@ EXPLAIN (costs off) SELECT * FROM coercejoin a, coercejoin b WHERE a.a=b.a;
 -------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: ((coercejoin.a)::text = (coercejoin_1.a)::text)
-         ->  Seq Scan on coercejoin
+         Hash Cond: ((a.a)::text = (b.a)::text)
+         ->  Seq Scan on coercejoin a
          ->  Hash
-               ->  Seq Scan on coercejoin coercejoin_1
+               ->  Seq Scan on coercejoin b
  Optimizer: Pivotal Optimizer (GPORCA)
 (7 rows)
 
@@ -3334,14 +3334,14 @@ EXPLAIN (costs off) SELECT * FROM coercejoin a, coercejoin b WHERE a.a::numeric=
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: ((coercejoin.a)::numeric = (coercejoin_1.a)::numeric)
+         Hash Cond: ((a.a)::numeric = (b.a)::numeric)
          ->  Redistribute Motion 3:3  (slice2; segments: 3)
-               Hash Key: (coercejoin.a)::numeric
-               ->  Seq Scan on coercejoin
+               Hash Key: (a.a)::numeric
+               ->  Seq Scan on coercejoin a
          ->  Hash
                ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                     Hash Key: (coercejoin_1.a)::numeric
-                     ->  Seq Scan on coercejoin coercejoin_1
+                     Hash Key: (b.a)::numeric
+                     ->  Seq Scan on coercejoin b
  Optimizer: Pivotal Optimizer (GPORCA)
 (11 rows)
 
@@ -3849,9 +3849,9 @@ left outer join o1 t4 on t2.a1 = t4.a1;
 ---------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..1724.00 rows=13 width=4)
    ->  Hash Left Join  (cost=0.00..1724.00 rows=5 width=4)
-         Hash Cond: (o1.a1 = o1_3.a1)
+         Hash Cond: (o1.a1 = t4.a1)
          ->  Hash Left Join  (cost=0.00..1293.00 rows=4 width=8)
-               Hash Cond: (o1.a1 = o1_2.a1)
+               Hash Cond: (o1.a1 = t3.a1)
                ->  Hash Right Join  (cost=0.00..862.00 rows=4 width=8)
                      Hash Cond: (o1.a1 = o1_1.a1)
                      ->  Seq Scan on o1  (cost=0.00..431.00 rows=4 width=8)
@@ -3862,9 +3862,9 @@ left outer join o1 t4 on t2.a1 = t4.a1;
                                        Sort Key: o1_1.a1
                                        ->  Seq Scan on o1 o1_1  (cost=0.00..431.00 rows=4 width=4)
                ->  Hash  (cost=431.00..431.00 rows=4 width=4)
-                     ->  Seq Scan on o1 o1_2  (cost=0.00..431.00 rows=4 width=4)
+                     ->  Seq Scan on o1 t3  (cost=0.00..431.00 rows=4 width=4)
          ->  Hash  (cost=431.00..431.00 rows=4 width=4)
-               ->  Seq Scan on o1 o1_3  (cost=0.00..431.00 rows=4 width=4)
+               ->  Seq Scan on o1 t4  (cost=0.00..431.00 rows=4 width=4)
  Optimizer: GPORCA
 (19 rows)
 
@@ -3898,22 +3898,22 @@ right outer join (select distinct a1 from o1) t1 on t1.a1 = t2.a1;
 ---------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Right Join
-         Hash Cond: (o1.a1 = o1_3.a1)
+         Hash Cond: (o1.a1 = o1_1.a1)
          ->  Hash Right Join
-               Hash Cond: (o1.a1 = o1_2.a1)
+               Hash Cond: (o1.a1 = t4.a1)
                ->  Hash Left Join
-                     Hash Cond: (o1.a1 = o1_1.a1)
+                     Hash Cond: (o1.a1 = t3.a1)
                      ->  Seq Scan on o1
                      ->  Hash
-                           ->  Seq Scan on o1 o1_1
+                           ->  Seq Scan on o1 t3
                ->  Hash
-                     ->  Seq Scan on o1 o1_2
+                     ->  Seq Scan on o1 t4
          ->  Hash
                ->  GroupAggregate
-                     Group Key: o1_3.a1
+                     Group Key: o1_1.a1
                      ->  Sort
-                           Sort Key: o1_3.a1
-                           ->  Seq Scan on o1 o1_3
+                           Sort Key: o1_1.a1
+                           ->  Seq Scan on o1 o1_1
  Optimizer: GPORCA
 (19 rows)
 
@@ -3944,16 +3944,16 @@ left outer join o1 t2 on t2.a1 = t1.a1;
 ------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=11 width=4)
    ->  Hash Right Join  (cost=0.00..862.00 rows=4 width=4)
-         Hash Cond: (o1.a1 = ((o1_1.a1 + 1)))
-         ->  Seq Scan on o1  (cost=0.00..431.00 rows=4 width=8)
+         Hash Cond: (t2.a1 = ((o1.a1 + 1)))
+         ->  Seq Scan on o1 t2  (cost=0.00..431.00 rows=4 width=8)
          ->  Hash  (cost=431.00..431.00 rows=4 width=4)
                ->  GroupAggregate  (cost=0.00..431.00 rows=4 width=4)
-                     Group Key: ((o1_1.a1 + 1))
+                     Group Key: ((o1.a1 + 1))
                      ->  Sort  (cost=0.00..431.00 rows=4 width=4)
-                           Sort Key: ((o1_1.a1 + 1))
+                           Sort Key: ((o1.a1 + 1))
                            ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=4 width=4)
-                                 Hash Key: ((o1_1.a1 + 1))
-                                 ->  Seq Scan on o1 o1_1  (cost=0.00..431.00 rows=4 width=4)
+                                 Hash Key: ((o1.a1 + 1))
+                                 ->  Seq Scan on o1  (cost=0.00..431.00 rows=4 width=4)
  Optimizer: GPORCA
 (13 rows)
 
@@ -3982,16 +3982,16 @@ left outer join o1 t2 on t2.a1 = t1.a1+1;
 ------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=14 width=4)
    ->  Hash Right Join  (cost=0.00..862.00 rows=5 width=4)
-         Hash Cond: (o1.a1 = (o1_1.a1 + 1))
-         ->  Seq Scan on o1  (cost=0.00..431.00 rows=4 width=8)
+         Hash Cond: (t2.a1 = (o1.a1 + 1))
+         ->  Seq Scan on o1 t2  (cost=0.00..431.00 rows=4 width=8)
          ->  Hash  (cost=431.00..431.00 rows=4 width=4)
                ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=4 width=4)
-                     Hash Key: (o1_1.a1 + 1)
+                     Hash Key: (o1.a1 + 1)
                      ->  GroupAggregate  (cost=0.00..431.00 rows=4 width=4)
-                           Group Key: o1_1.a1
+                           Group Key: o1.a1
                            ->  Sort  (cost=0.00..431.00 rows=4 width=4)
-                                 Sort Key: o1_1.a1
-                                 ->  Seq Scan on o1 o1_1  (cost=0.00..431.00 rows=4 width=4)
+                                 Sort Key: o1.a1
+                                 ->  Seq Scan on o1  (cost=0.00..431.00 rows=4 width=4)
  Optimizer: GPORCA
 (13 rows)
 

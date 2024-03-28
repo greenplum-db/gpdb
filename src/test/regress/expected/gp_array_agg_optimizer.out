@@ -112,18 +112,18 @@ order by 1,2;
                                         QUERY PLAN                                         
 -------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
-   Merge Key: mergeappend_test.a, mergeappend_test.b
+   Merge Key: r.a, r.b
    ->  Sort
-         Sort Key: mergeappend_test.a, mergeappend_test.b
+         Sort Key: r.a, r.b
          ->  Append
                ->  HashAggregate
-                     Group Key: mergeappend_test.a, mergeappend_test.b
-                     ->  Seq Scan on mergeappend_test
+                     Group Key: r.a, r.b
+                     ->  Seq Scan on mergeappend_test r
                ->  Result
                      ->  Redistribute Motion 1:3  (slice2)
                            ->  Aggregate
                                  ->  Gather Motion 3:1  (slice3; segments: 3)
-                                       ->  Seq Scan on mergeappend_test mergeappend_test_1
+                                       ->  Seq Scan on mergeappend_test r_1
  Optimizer: Pivotal Optimizer (GPORCA)
 (14 rows)
 
@@ -151,21 +151,21 @@ order by 1,2;
                                                                                  QUERY PLAN                                                                                  
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.06 rows=22 width=16) (actual time=2.204..2.206 rows=7 loops=1)
-   Merge Key: mergeappend_test.a, mergeappend_test.b
+   Merge Key: r.a, r.b
    ->  Sort  (cost=0.00..862.06 rows=8 width=16) (actual time=1.839..1.855 rows=5 loops=1)
-         Sort Key: mergeappend_test.a, mergeappend_test.b
+         Sort Key: r.a, r.b
          Sort Method:  quicksort  Memory: 150kB
          Executor Memory: 76kB  Segments: 3  Max: 26kB (segment 0)
          ->  Append  (cost=0.00..862.06 rows=8 width=16) (actual time=0.333..1.826 rows=5 loops=1)
                ->  HashAggregate  (cost=0.00..431.05 rows=7 width=16) (actual time=0.332..0.341 rows=4 loops=1)
-                     Group Key: mergeappend_test.a, mergeappend_test.b
+                     Group Key: r.a, r.b
                      Peak Memory Usage: 0 kB
-                     ->  Seq Scan on mergeappend_test  (cost=0.00..431.00 rows=167 width=12) (actual time=0.103..0.144 rows=301 loops=1)
+                     ->  Seq Scan on mergeappend_test r  (cost=0.00..431.00 rows=167 width=12) (actual time=0.103..0.144 rows=301 loops=1)
                ->  Result  (cost=0.00..431.01 rows=1 width=16) (actual time=1.481..1.483 rows=1 loops=1)
                      ->  Redistribute Motion 1:3  (slice2)  (cost=0.00..431.01 rows=1 width=8) (actual time=1.477..1.477 rows=1 loops=1)
                            ->  Aggregate  (cost=0.00..431.01 rows=1 width=8) (actual time=1.579..1.579 rows=1 loops=1)
                                  ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..431.01 rows=500 width=4) (actual time=1.284..1.451 rows=500 loops=1)
-                                       ->  Seq Scan on mergeappend_test mergeappend_test_1  (cost=0.00..431.00 rows=167 width=4) (actual time=0.087..0.152 rows=301 loops=1)
+                                       ->  Seq Scan on mergeappend_test r_1  (cost=0.00..431.00 rows=167 width=4) (actual time=0.087..0.152 rows=301 loops=1)
  Planning Time: 57.856 ms
    (slice0)    Executor memory: 56K bytes.
    (slice1)    Executor memory: 41K bytes avg x 3 workers, 42K bytes max (seg0).  Work_mem: 26K bytes max.

@@ -252,12 +252,12 @@ EXPLAIN (COSTS OFF) SELECT * FROM atest12 x, atest12 y
 ------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (atest12.a = atest12_1.b)
-         ->  Seq Scan on atest12
+         Hash Cond: (x.a = y.b)
+         ->  Seq Scan on atest12 x
          ->  Hash
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: atest12_1.b
-                     ->  Seq Scan on atest12 atest12_1
+                     Hash Key: y.b
+                     ->  Seq Scan on atest12 y
                            Filter: (abs(a) <<< 5)
  Optimizer: Pivotal Optimizer (GPORCA)
 (10 rows)
@@ -395,12 +395,12 @@ EXPLAIN (COSTS OFF) SELECT * FROM atest12 x, atest12 y
 ------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (atest12.a = atest12_1.b)
-         ->  Seq Scan on atest12
+         Hash Cond: (x.a = y.b)
+         ->  Seq Scan on atest12 x
          ->  Hash
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
-                     Hash Key: atest12_1.b
-                     ->  Seq Scan on atest12 atest12_1
+                     Hash Key: y.b
+                     ->  Seq Scan on atest12 y
                            Filter: (abs(a) <<< 5)
  Optimizer: Pivotal Optimizer (GPORCA)
 (10 rows)

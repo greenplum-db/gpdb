@@ -1867,7 +1867,7 @@ SELECT q1 FROM
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: q1
-   ->  Seq Scan on public.int8_tbl
+   ->  Seq Scan on public.int8_tbl i8
          Output: q1
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: gp_cte_sharing = 'on'
@@ -1899,7 +1899,7 @@ SELECT q1 FROM
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Output: q1
-   ->  Seq Scan on public.int8_tbl
+   ->  Seq Scan on public.int8_tbl i8
          Output: q1
  Optimizer: Pivotal Optimizer (GPORCA)
  Settings: gp_cte_sharing = 'on'

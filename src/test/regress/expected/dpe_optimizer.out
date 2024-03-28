@@ -937,14 +937,14 @@ explain (costs off, timing off, summary off, analyze) select * from t1 inner joi
          ->  Nested Loop (actual rows=1 loops=1)
                Join Filter: true
                ->  Seq Scan on t1 (actual rows=1 loops=1)
-               ->  Dynamic Index Scan on ptid_idx on pt (actual rows=1 loops=1)
+               ->  Dynamic Index Scan on ptid_idx on pt pt2 (actual rows=1 loops=1)
                      Index Cond: (ptid = t1.tid)
                      Filter: ((ptid = t1.tid) AND (t1.dist = dist))
                      Number of partitions to scan: 6 (out of 6)
                      Partitions scanned:  Avg 6.0 x 2 workers.  Max 6 parts (seg0).
-         ->  Dynamic Index Scan on ptid_idx on pt pt_1 (actual rows=1 loops=1)
-               Index Cond: ((ptid <= pt.ptid) AND (ptid = pt.ptid))
-               Filter: ((ptid <= pt.ptid) AND (ptid = pt.ptid) AND (dist = pt.dist))
+         ->  Dynamic Index Scan on ptid_idx on pt pt1 (actual rows=1 loops=1)
+               Index Cond: ((ptid <= pt2.ptid) AND (ptid = pt2.ptid))
+               Filter: ((ptid <= pt2.ptid) AND (ptid = pt2.ptid) AND (dist = pt2.dist))
                Number of partitions to scan: 6 (out of 6)
                Partitions scanned:  Avg 6.0 x 2 workers.  Max 6 parts (seg0).
  Optimizer: Pivotal Optimizer (GPORCA)
@@ -2461,12 +2461,12 @@ explain (costs off, timing off, summary off, analyze) select * from apart as a, 
 ---------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=5 loops=1)
    ->  Hash Join (actual rows=3 loops=1)
-         Hash Cond: (apart.id = c.id)
+         Hash Cond: (a.id = c.id)
          Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 8 of 262144 buckets.
          ->  Hash Join (actual rows=3 loops=1)
-               Hash Cond: (apart.t = b.t)
+               Hash Cond: (a.t = b.t)
                Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 5 of 262144 buckets.
-               ->  Dynamic Seq Scan on apart (actual rows=70 loops=1)
+               ->  Dynamic Seq Scan on apart a (actual rows=70 loops=1)
                      Number of partitions to scan: 5 (out of 5)
                      Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
                ->  Hash (actual rows=5 loops=1)
@@ -2496,12 +2496,12 @@ explain (costs off, timing off, summary off, analyze) select * from apart as a, 
 ---------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=5 loops=1)
    ->  Hash Join (actual rows=3 loops=1)
-         Hash Cond: (apart.id = c.id)
+         Hash Cond: (a.id = c.id)
          Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 8 of 262144 buckets.
          ->  Hash Join (actual rows=3 loops=1)
-               Hash Cond: (apart.t = b.t)
+               Hash Cond: (a.t = b.t)
                Extra Text: (seg0)   Hash chain length 1.0 avg, 1 max, using 5 of 262144 buckets.
-               ->  Dynamic Seq Scan on apart (actual rows=70 loops=1)
+               ->  Dynamic Seq Scan on apart a (actual rows=70 loops=1)
                      Number of partitions to scan: 5 (out of 5)
                      Partitions scanned:  Avg 1.0 x 3 workers.  Max 1 parts (seg0).
                ->  Hash (actual rows=5 loops=1)

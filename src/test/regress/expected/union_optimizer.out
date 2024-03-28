@@ -999,21 +999,21 @@ where q2 = q2;
 ---------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  GroupAggregate
-         Group Key: int8_tbl.q1
+         Group Key: i81.q1
          ->  Sort
-               Sort Key: int8_tbl.q1
+               Sort Key: i81.q1
                ->  Append
                      ->  GroupAggregate
-                           Group Key: int8_tbl.q1
+                           Group Key: i81.q1
                            ->  Sort
-                                 Sort Key: int8_tbl.q1
-                                 ->  Seq Scan on int8_tbl
+                                 Sort Key: i81.q1
+                                 ->  Seq Scan on int8_tbl i81
                                        Filter: (q2 = q2)
                      ->  GroupAggregate
-                           Group Key: int8_tbl_1.q1
+                           Group Key: i82.q1
                            ->  Sort
-                                 Sort Key: int8_tbl_1.q1
-                                 ->  Seq Scan on int8_tbl int8_tbl_1
+                                 Sort Key: i82.q1
+                                 ->  Seq Scan on int8_tbl i82
                                        Filter: (q2 = q2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (19 rows)
@@ -1039,21 +1039,21 @@ where -q1 = q2;
 ---------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  GroupAggregate
-         Group Key: int8_tbl.q1
+         Group Key: i81.q1
          ->  Sort
-               Sort Key: int8_tbl.q1
+               Sort Key: i81.q1
                ->  Append
                      ->  GroupAggregate
-                           Group Key: int8_tbl.q1
+                           Group Key: i81.q1
                            ->  Sort
-                                 Sort Key: int8_tbl.q1
-                                 ->  Seq Scan on int8_tbl
+                                 Sort Key: i81.q1
+                                 ->  Seq Scan on int8_tbl i81
                                        Filter: ((- q1) = q2)
                      ->  GroupAggregate
-                           Group Key: int8_tbl_1.q1
+                           Group Key: i82.q1
                            ->  Sort
-                                 Sort Key: int8_tbl_1.q1
-                                 ->  Seq Scan on int8_tbl int8_tbl_1
+                                 Sort Key: i82.q1
+                                 ->  Seq Scan on int8_tbl i82
                                        Filter: ((- q1) = q2)
  Optimizer: Pivotal Optimizer (GPORCA)
 (19 rows)
@@ -1084,10 +1084,10 @@ select * from
 ---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (expensivefunc(t3.x) = int4_tbl.f1)
+         Hash Cond: (expensivefunc(a.x) = int4_tbl.f1)
          ->  Append
-               ->  Seq Scan on t3
-               ->  Seq Scan on t3 t3_1
+               ->  Seq Scan on t3 a
+               ->  Seq Scan on t3 b
          ->  Hash
                ->  Broadcast Motion 3:3  (slice2; segments: 3)
                      ->  Seq Scan on int4_tbl
@@ -1117,11 +1117,11 @@ where (x = 0) or (q1 >= q2 and q1 <= q2);
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Append
          ->  Result
-               Filter: (((0) = 0) OR ((int8_tbl.q1 >= int8_tbl.q2) AND (int8_tbl.q1 <= int8_tbl.q2)))
-               ->  Seq Scan on int8_tbl
+               Filter: (((0) = 0) OR ((a.q1 >= a.q2) AND (a.q1 <= a.q2)))
+               ->  Seq Scan on int8_tbl a
          ->  Result
-               Filter: (((1) = 0) OR ((int8_tbl_1.q1 >= int8_tbl_1.q2) AND (int8_tbl_1.q1 <= int8_tbl_1.q2)))
-               ->  Seq Scan on int8_tbl int8_tbl_1
+               Filter: (((1) = 0) OR ((b.q1 >= b.q2) AND (b.q1 <= b.q2)))
+               ->  Seq Scan on int8_tbl b
  Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 

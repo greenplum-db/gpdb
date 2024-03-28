@@ -1669,8 +1669,8 @@ explain (costs off) select * from tt18v;
 --------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Append
-         ->  Seq Scan on int8_tbl
-         ->  Seq Scan on int8_tbl int8_tbl_1
+         ->  Seq Scan on int8_tbl xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+         ->  Seq Scan on int8_tbl xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_1
  Optimizer: Pivotal Optimizer (GPORCA) version 3.9.0
 (5 rows)
 

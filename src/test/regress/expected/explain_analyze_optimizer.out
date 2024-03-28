@@ -32,11 +32,11 @@ EXPLAIN (ANALYZE, TIMING OFF, COSTS OFF, SUMMARY OFF) SELECT t1.a FROM empty_tab
 ---------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3) (actual rows=0 loops=1)
    ->  Hash Join (actual rows=0 loops=1)
-         Hash Cond: (empty_table.a = empty_table_1.a)
-         ->  Seq Scan on empty_table (never executed)
+         Hash Cond: (t1.a = t2.a)
+         ->  Seq Scan on empty_table t1 (never executed)
          ->  Hash (actual rows=0 loops=1)
                Buckets: 524288  Batches: 1  Memory Usage: 4096kB
-               ->  Seq Scan on empty_table empty_table_1 (actual rows=0 loops=1)
+               ->  Seq Scan on empty_table t2 (actual rows=0 loops=1)
  Optimizer: Pivotal Optimizer (GPORCA)
 (8 rows)
 

@@ -401,18 +401,18 @@ EXPLAIN SELECT a.* FROM MPP_22019_a a INNER JOIN MPP_22019_b b ON a.i = b.i WHER
    ->  Result  (cost=0.00..1765376.88 rows=1 width=8)
          Filter: (SubPlan 1)
          ->  Hash Join  (cost=0.00..862.00 rows=1 width=12)
-               Hash Cond: (mpp_22019_a.i = mpp_22019_b.i)
-               ->  Seq Scan on mpp_22019_a  (cost=0.00..431.00 rows=1 width=8)
+               Hash Cond: (a.i = b.i)
+               ->  Seq Scan on mpp_22019_a a  (cost=0.00..431.00 rows=1 width=8)
                      Filter: (i = 1)
                ->  Hash  (cost=431.00..431.00 rows=1 width=8)
-                     ->  Seq Scan on mpp_22019_b  (cost=0.00..431.00 rows=1 width=8)
+                     ->  Seq Scan on mpp_22019_b b  (cost=0.00..431.00 rows=1 width=8)
                            Filter: (i = 1)
          SubPlan 1
            ->  Result  (cost=0.00..431.00 rows=1 width=4)
-                 Filter: (mpp_22019_a_1.j = mpp_22019_b.j)
+                 Filter: (a2.j = b.j)
                  ->  Materialize  (cost=0.00..431.00 rows=1 width=4)
                        ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                             ->  Seq Scan on mpp_22019_a mpp_22019_a_1  (cost=0.00..431.00 rows=1 width=4)
+                             ->  Seq Scan on mpp_22019_a a2  (cost=0.00..431.00 rows=1 width=4)
  Optimizer: Pivotal Optimizer (GPORCA) version 3.83.0
 (17 rows)
 
@@ -903,12 +903,12 @@ explain (costs off) select t1.gp_segment_id, t2.gp_segment_id, * from t_test_dd_
 -----------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: (t_test_dd_via_segid.gp_segment_id = t_test_dd_via_segid_1.id)
+         Hash Cond: (t1.gp_segment_id = t2.id)
          ->  Redistribute Motion 3:3  (slice2; segments: 3)
-               Hash Key: t_test_dd_via_segid.gp_segment_id
-               ->  Seq Scan on t_test_dd_via_segid
+               Hash Key: t1.gp_segment_id
+               ->  Seq Scan on t_test_dd_via_segid t1
          ->  Hash
-               ->  Seq Scan on t_test_dd_via_segid t_test_dd_via_segid_1
+               ->  Seq Scan on t_test_dd_via_segid t2
  Optimizer: Pivotal Optimizer (GPORCA)
 (9 rows)
 
