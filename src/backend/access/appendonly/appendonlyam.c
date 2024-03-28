@@ -326,7 +326,7 @@ SetSegFileForRead(AppendOnlyScanDesc aoscan, int fsInfoIdx)
 static int
 errcontext_appendonly_insert_block_user_limit(AppendOnlyInsertDesc aoInsertDesc)
 {
-	char	   *relationName = NameStr(aoInsertDesc->aoi_rel->rd_rel->relname);
+	char	   *relationName = NameStr(RelationGetRelationName(aoInsertDesc->aoi_rel));
 
 	errcontext("Append-Only table '%s'", relationName);
 
@@ -2517,7 +2517,7 @@ appendonly_fetch_init(Relation relation,
 							   &aoFetchDesc->storageRead,
 							   aoFetchDesc->initContext,
 							   aoFetchDesc->usableBlockSize,
-							   NameStr(aoFetchDesc->relation->rd_rel->relname),
+							   NameStr(RelationGetRelationName(aoFetchDesc->relation)),
 							   aoFetchDesc->title,
 							   &aoFetchDesc->storageAttributes);
 
