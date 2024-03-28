@@ -89,6 +89,10 @@ ao_insert_replay(XLogReaderState *record)
 		return;
 	}
 
+	// pre-write process the buffer by extension
+	if (ao_file_write_buffer_modify_hook)
+		buffer = ao_file_write_buffer_modify_hook(file, buffer, len, xlrec->target.offset);
+
 	written_len = FileWrite(file, buffer, len, xlrec->target.offset,
 							WAIT_EVENT_COPY_FILE_WRITE);
 	if (written_len < 0 || written_len != len)

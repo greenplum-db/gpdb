@@ -171,11 +171,20 @@ extern void AtEOXact_SMgr(void);
  * For example, disk quota extension will use these hooks to
  * detect active tables.
  */
+typedef void (*file_read_buffer_modify_hook_type)(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum, char *buffer);
+extern PGDLLIMPORT file_read_buffer_modify_hook_type file_read_buffer_modify_hook;
+
 typedef void (*file_create_hook_type)(RelFileNodeBackend rnode);
 extern PGDLLIMPORT file_create_hook_type file_create_hook;
 
+typedef char* (*file_write_buffer_modify_hook_type)(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum, char *buffer);
+extern PGDLLIMPORT file_write_buffer_modify_hook_type file_write_buffer_modify_hook;
+
 typedef void (*file_extend_hook_type)(RelFileNodeBackend rnode);
 extern PGDLLIMPORT file_extend_hook_type file_extend_hook;
+
+typedef char* (*file_extend_buffer_modify_hook_type)(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum, char *buffer);
+extern PGDLLIMPORT file_extend_buffer_modify_hook_type file_extend_buffer_modify_hook;
 
 typedef void (*file_truncate_hook_type)(RelFileNodeBackend rnode);
 extern PGDLLIMPORT file_truncate_hook_type file_truncate_hook;

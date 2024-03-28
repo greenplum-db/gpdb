@@ -16,6 +16,7 @@
  */
 #include "postgres.h"
 
+#include "access/aomd.h"
 #include "cdb/cdbbufferedread.h"
 #include "miscadmin.h"
 #include "pgstat.h"
@@ -29,7 +30,7 @@ static uint8 *BufferedReadUseBeforeBuffer(
 							BufferedRead *bufferedRead,
 							int32 maxReadAheadLen,
 							int32 *nextBufferLen);
-
+ao_file_read_buffer_modify_hook_type ao_file_read_buffer_modify_hook = NULL;
 
 /*
  * Determines the amount of memory to supply for
@@ -188,6 +189,10 @@ BufferedReadIo(
 							 largeReadLen,
 							 bufferedRead->fileOff,
 							 WAIT_EVENT_DATA_FILE_READ);
+
+		/* post-read process the buffer by extension */
+		if (ao_file_read_buffer_modify_hook)
+			ao_file_read_buffer_modify_hook(bufferedRead->file, (char*)largeReadMemory, actualLen, bufferedRead->fileOff);
 
 		SIMPLE_FAULT_INJECTOR("ao_storage_read_after_fileread");
 

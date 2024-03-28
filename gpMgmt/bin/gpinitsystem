@@ -157,6 +157,7 @@ USAGE () {
 		$ECHO "          postgresql.conf file during Greenplum database initialization."
 		$ECHO "      -P, standby_port [optional]"
 		$ECHO "      -s, standby_hostname [optional]"
+		$ECHO "      --shared-preload-libraries [optional], same as shared_preload_libraries in postgresql.conf [defaults to '']"
 		$ECHO
 		$ECHO "      Return codes:"
 		$ECHO "      0 - No problems encountered with requested operation"
@@ -395,6 +396,13 @@ CHK_PARAMS () {
 			if [ $COORDINATOR_MAX_CONNECT -lt 1 ];then
 				ERROR_EXIT "[FATAL]:-COORDINATOR_MAX_CONNECT less than 1"
 			fi
+		fi
+		# SHARED_PRELOAD_LIBRARIES
+		if [ x"" = x"$SHARED_PRELOAD_LIBRARIES" ]; then
+		    LOG_MSG "[INFO]:-SHARED_PRELOAD_LIBRARIES not set, will set to default value $DEFAULT_SHARED_PRELOAD_LIBRARIES" 1
+		    SHARED_PRELOAD_LIBRARIES=$DEFAULT_SHARED_PRELOAD_LIBRARIES
+		else
+		    LOG_MSG "[INFO]:-Server process will load libraries: $SHARED_PRELOAD_LIBRARIES" 1
 		fi
 		((QE_MAX_CONNECT=$COORDINATOR_MAX_CONNECT*$QE_CONNECT_FACTOR))
 		LOG_MSG "[INFO]:-Setting segment instance MAX_CONNECTIONS to $QD_MAX_CONNECT"
@@ -1038,22 +1046,24 @@ DISPLAY_CONFIG () {
 		LOG_MSG "[INFO]:---------------------------------------" 1
 		LOG_MSG "[INFO]:-Coordinator Configuration" 1
 		LOG_MSG "[INFO]:---------------------------------------" 1
-		LOG_MSG "[INFO]:-Coordinator hostname       = $GP_HOSTADDRESS" 1
-		LOG_MSG "[INFO]:-Coordinator port           = $COORDINATOR_PORT" 1
-		LOG_MSG "[INFO]:-Coordinator instance dir   = $GP_DIR" 1
-		LOG_MSG "[INFO]:-Coordinator LOCALE         = $LOCALE_SETTING" 1
-		LOG_MSG "[INFO]:-Greenplum segment prefix   = $SEG_PREFIX" 1
-		LOG_MSG "[INFO]:-Coordinator Database       = $DATABASE_NAME" 1
-		LOG_MSG "[INFO]:-Coordinator connections    = $COORDINATOR_MAX_CONNECT" 1
-		LOG_MSG "[INFO]:-Coordinator buffers        = $COORDINATOR_SHARED_BUFFERS" 1
-		LOG_MSG "[INFO]:-Segment connections        = $QE_MAX_CONNECT" 1
-		LOG_MSG "[INFO]:-Segment buffers            = $QE_SHARED_BUFFERS" 1
-		LOG_MSG "[INFO]:-Encoding                   = $ENCODING" 1
-		LOG_MSG "[INFO]:-Postgres param file        = $PG_ADD" 1
-		LOG_MSG "[INFO]:-Initdb to be used          = $INITDB" 1
-		LOG_MSG "[INFO]:-GP_LIBRARY_PATH is         = $GP_LIBRARY_PATH" 1
-		LOG_MSG "[INFO]:-HEAP_CHECKSUM is           = $HEAP_CHECKSUM" 1
-		LOG_MSG "[INFO]:-HBA_HOSTNAMES is           = $HBA_HOSTNAMES" 1
+		LOG_MSG "[INFO]:-Coordinator hostname                 = $GP_HOSTADDRESS" 1
+		LOG_MSG "[INFO]:-Coordinator port                     = $COORDINATOR_PORT" 1
+		LOG_MSG "[INFO]:-Coordinator instance dir             = $GP_DIR" 1
+		LOG_MSG "[INFO]:-Coordinator LOCALE                   = $LOCALE_SETTING" 1
+		LOG_MSG "[INFO]:-Greenplum segment prefix             = $SEG_PREFIX" 1
+		LOG_MSG "[INFO]:-Coordinator Database                 = $DATABASE_NAME" 1
+		LOG_MSG "[INFO]:-Coordinator connections              = $COORDINATOR_MAX_CONNECT" 1
+		LOG_MSG "[INFO]:-Coordinator buffers                  = $COORDINATOR_SHARED_BUFFERS" 1
+		LOG_MSG "[INFO]:-Coordinator shared preload libraries = $SHARED_PRELOAD_LIBRARIES" 1
+		LOG_MSG "[INFO]:-Segment connections                  = $QE_MAX_CONNECT" 1
+		LOG_MSG "[INFO]:-Segment buffers                      = $QE_SHARED_BUFFERS" 1
+		LOG_MSG "[INFO]:-Segment shared preload libraries     = $SHARED_PRELOAD_LIBRARIES" 1
+		LOG_MSG "[INFO]:-Encoding                             = $ENCODING" 1
+		LOG_MSG "[INFO]:-Postgres param file                  = $PG_ADD" 1
+		LOG_MSG "[INFO]:-Initdb to be used                    = $INITDB" 1
+		LOG_MSG "[INFO]:-GP_LIBRARY_PATH is                   = $GP_LIBRARY_PATH" 1
+		LOG_MSG "[INFO]:-HEAP_CHECKSUM is                     = $HEAP_CHECKSUM" 1
+		LOG_MSG "[INFO]:-HBA_HOSTNAMES is                     = $HBA_HOSTNAMES" 1
 		if [ $ULIMIT_WARN -eq 1 ];then
 			LOG_MSG "[WARN]:-Ulimit check               = Warnings generated, see log file $WARN_MARK" 1
 		else
@@ -1188,6 +1198,9 @@ CREATE_QD_DB () {
 		cmd="$cmd $LC_ALL_SETTINGS"
 		cmd="$cmd --max_connections=$COORDINATOR_MAX_CONNECT"
 		cmd="$cmd --shared_buffers=$COORDINATOR_SHARED_BUFFERS"
+		if [ x"$SHARED_PRELOAD_LIBRARIES" != x ]; then
+			cmd="$cmd --shared-preload-libraries=$SHARED_PRELOAD_LIBRARIES"
+		fi
 		if [ x"$HEAP_CHECKSUM" == x"on" ]; then
 			cmd="$cmd --data-checksums"
 		fi
@@ -1351,6 +1364,7 @@ CREATE_SEGMENT () {
 			export QE_MAX_CONNECT
 			export QE_SHARED_BUFFERS
 			export SEG_PREFIX
+			export SHARED_PRELOAD_LIBRARIES
 			if [ $DEBUG_LEVEL -eq 0 ] && [ x"" != x"$VERBOSE" ];then $NOLINE_ECHO ".\c";fi
 				FLAG=""
 			if [ x"" != x"$PG_CONF_ADD_FILE" ] ; then
@@ -1902,6 +1916,7 @@ while getopts ":vaqe:c:l:-:p:m:h:n:s:P:S:b:DB:I:O:" opt
 						"standby-datadir" ) STANDBY_DATADIR=$VAL ;;
 						"help"            ) USAGE "print_doc" ;;
 						"version"         ) print_version ;;
+						"shared-preload-libraries" ) SHARED_PRELOAD_LIBRARIES=$VAL ;;
 						* ) LOG_MSG "[ERROR]:-Unknown option --$NAME" 1; USAGE ;;
 					esac
 

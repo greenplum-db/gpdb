@@ -45,6 +45,10 @@ file_extend_hook_type file_extend_hook = NULL;
 file_truncate_hook_type file_truncate_hook = NULL;
 file_unlink_hook_type file_unlink_hook = NULL;
 
+file_read_buffer_modify_hook_type file_read_buffer_modify_hook = NULL;
+file_write_buffer_modify_hook_type file_write_buffer_modify_hook = NULL;
+file_extend_buffer_modify_hook_type file_extend_buffer_modify_hook = NULL;
+
 static const f_smgr smgrsw[] = {
 	/* magnetic disk */
 	{
@@ -577,6 +581,9 @@ void
 smgrextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 		   char *buffer, bool skipFsync)
 {
+	if (file_extend_buffer_modify_hook)
+		buffer = file_extend_buffer_modify_hook(reln, forknum, blocknum, buffer);
+
 	(*reln->storageManager).smgr_extend(reln, forknum, blocknum,
 										 buffer, skipFsync);
     if (file_extend_hook)
@@ -605,6 +612,9 @@ smgrread(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 		 char *buffer)
 {
 	(*reln->storageManager).smgr_read(reln, forknum, blocknum, buffer);
+
+	if (file_read_buffer_modify_hook)
+		file_read_buffer_modify_hook(reln, forknum, blocknum, buffer);
 }
 
 /*
@@ -626,6 +636,9 @@ void
 smgrwrite(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 		  char *buffer, bool skipFsync)
 {
+	if (file_write_buffer_modify_hook)
+		buffer = file_write_buffer_modify_hook(reln, forknum, blocknum, buffer);
+
 	(*reln->storageManager).smgr_write(reln, forknum, blocknum,
 										buffer, skipFsync);
 }

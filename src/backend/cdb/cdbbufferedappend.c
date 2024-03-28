@@ -21,6 +21,7 @@
 
 #include "cdb/cdbappendonlyxlog.h"
 #include "cdb/cdbbufferedappend.h"
+#include "access/aomd.h"
 #include "pgstat.h"
 #include "storage/bufmgr.h"
 #include "utils/faultinjector.h"
@@ -29,6 +30,8 @@
 static void BufferedAppendWrite(
 					BufferedAppend *bufferedAppend,
 					bool needsWAL);
+
+PGDLLIMPORT ao_file_write_buffer_modify_hook_type ao_file_write_buffer_modify_hook = NULL;
 
 /*
  * Determines the amount of memory to supply for
@@ -159,12 +162,17 @@ BufferedAppendWrite(BufferedAppend *bufferedAppend, bool needsWAL)
 		int32		byteswritten;
 		instr_time	io_start,
 					io_time;
+		char*		bytetowritten = (char*) largeWriteMemory + bytestotal;
 
 		if (track_io_timing)
 			INSTR_TIME_SET_CURRENT(io_start);
 
+		// pre-write process the buffer by extension
+		if (ao_file_write_buffer_modify_hook)
+			bytetowritten = ao_file_write_buffer_modify_hook(bufferedAppend->file, bytetowritten, bytesleft, bufferedAppend->largeWritePosition + bytestotal);
+
 		byteswritten = FileWrite(bufferedAppend->file,
-								 (char *) largeWriteMemory + bytestotal,
+								 bytetowritten,
 								 bytesleft,
 								 bufferedAppend->largeWritePosition + bytestotal,
 								 WAIT_EVENT_DATA_FILE_WRITE);

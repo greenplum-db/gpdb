@@ -735,6 +735,11 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	InitBufferPoolBackend();
 
 	/*
+	 * load preload libraries in {bootstrap, single, normal} mode
+	 */
+	process_shared_preload_libraries();
+
+	/*
 	 * Initialize local process's access to XLOG.
 	 */
 	if (IsUnderPostmaster)
