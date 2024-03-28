@@ -1045,13 +1045,6 @@ AtSubAbort_Portals(SubTransactionId mySubid,
 				portal->activeSubid = parentSubid;
 
 				/*
-				 * GPDB_96_MERGE_FIXME: We had this different comment here in GPDB.
-				 * Does this scenario happen in GPDB for some reason?
-				 *
-				 * Upper-level portals that failed while running in this
-				 * subtransaction must be forced into FAILED state, for the
-				 * same reasons discussed below.
-				 *
 				 * A MarkPortalActive() caller ran an upper-level portal in
 				 * this subtransaction and left the portal ACTIVE.  This can't
 				 * happen, but force the portal into FAILED state for the same
