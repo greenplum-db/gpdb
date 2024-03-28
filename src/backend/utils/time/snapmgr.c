@@ -2384,6 +2384,8 @@ RestoreSnapshot(char *start_address)
 
 	/* Copy all required fields */
 	snapshot = (Snapshot) MemoryContextAlloc(TopTransactionContext, size);
+	memset(snapshot, 0, sizeof(SnapshotData));
+
 	snapshot->snapshot_type = SNAPSHOT_MVCC;
 	snapshot->xmin = serialized_snapshot.xmin;
 	snapshot->xmax = serialized_snapshot.xmax;

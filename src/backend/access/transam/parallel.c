@@ -42,6 +42,10 @@
 #include "utils/relmapper.h"
 #include "utils/snapmgr.h"
 #include "utils/typcache.h"
+#include "cdb/cdbvars.h"
+#include "cdb/cdbutil.h"
+#include "cdb/cdbdtxcontextinfo.h"
+#include "cdb/cdbgang.h"
 
 
 /*
@@ -75,6 +79,9 @@
 #define PARALLEL_KEY_RELMAPPER_STATE		UINT64CONST(0xFFFFFFFFFFFF000C)
 #define PARALLEL_KEY_UNCOMMITTEDENUMS		UINT64CONST(0xFFFFFFFFFFFF000D)
 
+/* CDB: */
+#define PARALLEL_KEY_DTX_CONTEXT_INFO		UINT64CONST(0xFFFFFFFFFFFF000E)
+
 /* Fixed-size parallel state. */
 typedef struct FixedParallelState
 {
@@ -86,6 +93,10 @@ typedef struct FixedParallelState
 	Oid			temp_namespace_id;
 	Oid			temp_toast_namespace_id;
 	int			sec_context;
+	int			session_id;
+	int			num_segments;
+	int			dtxcontext_len;
+	int			ic_htab_size;
 	bool		is_superuser;
 	PGPROC	   *parallel_leader_pgproc;
 	pid_t		parallel_leader_pid;
@@ -206,6 +217,7 @@ InitializeParallelDSM(ParallelContext *pcxt)
 	Size		relmapperlen = 0;
 	Size		uncommittedenumslen = 0;
 	Size		segsize = 0;
+	Size		dtxcontextlen = 0;  
 	int			i;
 	FixedParallelState *fps;
 	dsm_handle	session_dsm_handle = DSM_HANDLE_INVALID;
@@ -263,6 +275,12 @@ InitializeParallelDSM(ParallelContext *pcxt)
 		shm_toc_estimate_chunk(&pcxt->estimator, relmapperlen);
 		uncommittedenumslen = EstimateUncommittedEnumsSpace();
 		shm_toc_estimate_chunk(&pcxt->estimator, uncommittedenumslen);
+		if (Gp_role == GP_ROLE_EXECUTE)
+		{
+			dtxcontextlen = DtxContextInfo_SerializeSize(&QEDtxContextInfo);;
+			shm_toc_estimate_chunk(&pcxt->estimator, dtxcontextlen);
+			shm_toc_estimate_keys(&pcxt->estimator, 1);
+		}
 		/* If you add more chunks here, you probably need to add keys. */
 		shm_toc_estimate_keys(&pcxt->estimator, 10);
 
@@ -320,6 +338,14 @@ InitializeParallelDSM(ParallelContext *pcxt)
 	fps->parallel_leader_pgproc = MyProc;
 	fps->parallel_leader_pid = MyProcPid;
 	fps->parallel_leader_backend_id = MyBackendId;
+	/* CDB */
+	if (Gp_role == GP_ROLE_EXECUTE)
+	{
+		fps->session_id = gp_session_id;
+		fps->num_segments = numsegmentsFromQD;
+		fps->dtxcontext_len = DtxContextInfo_SerializeSize(&QEDtxContextInfo);
+		fps->ic_htab_size = ic_htab_size;
+	}
 	fps->xact_ts = GetCurrentTransactionStartTimestamp();
 	fps->stmt_ts = GetCurrentStatementStartTimestamp();
 	fps->serializable_xact_handle = ShareSerializableXact();
@@ -342,6 +368,7 @@ InitializeParallelDSM(ParallelContext *pcxt)
 		char	   *session_dsm_handle_space;
 		char	   *entrypointstate;
 		char	   *uncommittedenumsspace;
+		char	   *dtxcontextspace;
 		Size		lnamelen;
 
 		/* Serialize shared libraries we have loaded. */
@@ -405,6 +432,14 @@ InitializeParallelDSM(ParallelContext *pcxt)
 		SerializeUncommittedEnums(uncommittedenumsspace, uncommittedenumslen);
 		shm_toc_insert(pcxt->toc, PARALLEL_KEY_UNCOMMITTEDENUMS,
 					   uncommittedenumsspace);
+
+		/* Serialize dtx context info */
+		if (Gp_role == GP_ROLE_EXECUTE)
+		{
+			dtxcontextspace = shm_toc_allocate(pcxt->toc, dtxcontextlen);
+			DtxContextInfo_Serialize(dtxcontextspace, &QEDtxContextInfo);
+			shm_toc_insert(pcxt->toc, PARALLEL_KEY_DTX_CONTEXT_INFO, dtxcontextspace);
+		}
 
 		/* Allocate space for worker information. */
 		pcxt->worker = palloc0(sizeof(ParallelWorkerInfo) * pcxt->nworkers);
@@ -1236,10 +1271,12 @@ ParallelWorkerMain(Datum main_arg)
 	char	   *reindexspace;
 	char	   *relmapperspace;
 	char	   *uncommittedenumsspace;
+	char	   *dtxcontextspace;
 	StringInfoData msgbuf;
 	char	   *session_dsm_handle_space;
 	Snapshot	tsnapshot;
 	Snapshot	asnapshot;
+	DtxContextInfo dtxcontext;
 
 	/* Set flag to indicate that we're initializing a parallel worker. */
 	InitializingParallelWorker = true;
@@ -1285,6 +1322,12 @@ ParallelWorkerMain(Datum main_arg)
 	ParallelLeaderPid = fps->parallel_leader_pid;
 	ParallelLeaderBackendId = fps->parallel_leader_backend_id;
 	on_shmem_exit(ParallelWorkerShutdown, (Datum) 0);
+
+	/* CDB: */
+	Gp_role = GP_ROLE_EXECUTE;
+	gp_session_id = fps->session_id;
+	numsegmentsFromQD = fps->num_segments;
+	ic_htab_size = fps->ic_htab_size;
 
 	/*
 	 * Now we can find and attach to the error queue provided for us.  That's
@@ -1374,6 +1417,9 @@ ParallelWorkerMain(Datum main_arg)
 	RestoreGUCState(gucspace);
 	CommitTransactionCommand();
 
+	Gp_is_writer = false;
+	Gp_role = GP_ROLE_EXECUTE;
+
 	/* Crank up a transaction state appropriate to a parallel worker. */
 	tstatespace = shm_toc_lookup(toc, PARALLEL_KEY_TRANSACTION_STATE, false);
 	StartParallelWorkerTransaction(tstatespace);
@@ -1381,6 +1427,12 @@ ParallelWorkerMain(Datum main_arg)
 	/* Restore combo CID state. */
 	combocidspace = shm_toc_lookup(toc, PARALLEL_KEY_COMBO_CID, false);
 	RestoreComboCIDState(combocidspace);
+
+
+	/* Restore dtx context info */
+	dtxcontextspace = shm_toc_lookup(toc, PARALLEL_KEY_DTX_CONTEXT_INFO, false);
+	DtxContextInfo_Deserialize(dtxcontextspace, fps->dtxcontext_len, &dtxcontext);
+	setupQEDtxContext(&dtxcontext);
 
 	/* Attach to the per-session DSM segment and contained objects. */
 	session_dsm_handle_space =
