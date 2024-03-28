@@ -60,10 +60,6 @@ private:
 		CMemoryPool *mp, CExpressionHandle &exprhdl,
 		CDistributionSpec *pdsOuter, CDistributionSpec *pdsInner) const;
 
-	BOOL FSelfJoinWithMatchingJoinKeys(CMemoryPool *mp,
-									   CExpressionHandle &exprhdl) const;
-
-
 protected:
 	// compute required hashed distribution from the n-th child
 	CDistributionSpecHashed *PdshashedRequired(CMemoryPool *mp,
@@ -79,6 +75,9 @@ protected:
 
 	// create the set of redistribute requests to send to first hash join child
 	void CreateHashRedistributeRequests(CMemoryPool *mp);
+
+	BOOL FSelfJoinWithMatchingJoinKeys(CMemoryPool *mp,
+									   CExpressionHandle &exprhdl) const;
 
 private:
 	// create (non-singleton, replicate) optimization request

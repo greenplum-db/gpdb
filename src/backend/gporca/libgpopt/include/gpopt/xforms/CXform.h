@@ -136,7 +136,7 @@ public:
 		ExfImplementDML,
 		ExfImplementRowTrigger____removed,
 		ExfImplementSplit,
-		ExfJoinCommutativity,
+		ExfInnerJoinCommutativity,
 		ExfJoinAssociativity,
 		ExfSemiJoinSemiJoinSwap,
 		ExfSemiJoinAntiSemiJoinSwap,
@@ -234,6 +234,8 @@ public:
 		ExfSelect2IndexOnlyGet,
 		ExfSelect2DynamicIndexOnlyGet,
 		ExfLimit2IndexOnlyGet,
+		ExfFullOuterJoin2HashJoin,
+		ExfFullJoinCommutativity,
 		ExfInvalid,
 		ExfSentinel = ExfInvalid
 	};

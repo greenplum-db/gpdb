@@ -231,10 +231,10 @@ explain select * from edges e1 full outer join edges e2 on (e1.grp = e2.grp and 
         </dxl:And>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="18">
+    <dxl:Plan Id="0" SpaceSize="76">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
-          <dxl:Cost StartupCost="0" TotalCost="862.001344" Rows="3.000000" Width="24"/>
+          <dxl:Cost StartupCost="0" TotalCost="862.001259" Rows="3.000000" Width="24"/>
         </dxl:Properties>
         <dxl:ProjList>
           <dxl:ProjElem ColId="0" Alias="src">
@@ -258,9 +258,9 @@ explain select * from edges e1 full outer join edges e2 on (e1.grp = e2.grp and 
         </dxl:ProjList>
         <dxl:Filter/>
         <dxl:SortingColumnList/>
-        <dxl:MergeJoin JoinType="Full" UniqueOuter="false">
+        <dxl:HashJoin JoinType="Full">
           <dxl:Properties>
-            <dxl:Cost StartupCost="0" TotalCost="862.001076" Rows="3.000000" Width="24"/>
+            <dxl:Cost StartupCost="0" TotalCost="862.000991" Rows="3.000000" Width="24"/>
           </dxl:Properties>
           <dxl:ProjList>
             <dxl:ProjElem ColId="0" Alias="src">
@@ -284,7 +284,7 @@ explain select * from edges e1 full outer join edges e2 on (e1.grp = e2.grp and 
           </dxl:ProjList>
           <dxl:Filter/>
           <dxl:JoinFilter/>
-          <dxl:MergeCondList>
+          <dxl:HashCondList>
             <dxl:Comparison ComparisonOperator="=" OperatorMdid="0.96.1.0">
               <dxl:Ident ColId="2" ColName="grp" TypeMdid="0.23.1.0"/>
               <dxl:Ident ColId="12" ColName="grp" TypeMdid="0.23.1.0"/>
@@ -293,10 +293,10 @@ explain select * from edges e1 full outer join edges e2 on (e1.grp = e2.grp and 
               <dxl:Ident ColId="0" ColName="src" TypeMdid="0.23.1.0"/>
               <dxl:Ident ColId="11" ColName="DEST" TypeMdid="0.23.1.0"/>
             </dxl:Comparison>
-          </dxl:MergeCondList>
-          <dxl:Sort SortDiscardDuplicates="false">
+          </dxl:HashCondList>
+          <dxl:TableScan>
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000182" Rows="1.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="0" Alias="src">
@@ -310,47 +310,24 @@ explain select * from edges e1 full outer join edges e2 on (e1.grp = e2.grp and 
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:SortingColumnList>
-              <dxl:SortingColumn ColId="2" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-              <dxl:SortingColumn ColId="0" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-            </dxl:SortingColumnList>
-            <dxl:LimitCount/>
-            <dxl:LimitOffset/>
-            <dxl:TableScan>
-              <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000023" Rows="1.000000" Width="12"/>
-              </dxl:Properties>
-              <dxl:ProjList>
-                <dxl:ProjElem ColId="0" Alias="src">
-                  <dxl:Ident ColId="0" ColName="src" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="1" Alias="DEST">
-                  <dxl:Ident ColId="1" ColName="DEST" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-                <dxl:ProjElem ColId="2" Alias="grp">
-                  <dxl:Ident ColId="2" ColName="grp" TypeMdid="0.23.1.0"/>
-                </dxl:ProjElem>
-              </dxl:ProjList>
-              <dxl:Filter/>
-              <dxl:TableDescriptor Mdid="6.16403.1.0" TableName="edges">
-                <dxl:Columns>
-                  <dxl:Column ColId="0" Attno="1" ColName="src" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="1" Attno="2" ColName="DEST" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="2" Attno="3" ColName="grp" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="3" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                  <dxl:Column ColId="4" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="5" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="6" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="7" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="8" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                  <dxl:Column ColId="9" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                </dxl:Columns>
-              </dxl:TableDescriptor>
-            </dxl:TableScan>
-          </dxl:Sort>
-          <dxl:Sort SortDiscardDuplicates="false">
+            <dxl:TableDescriptor Mdid="6.16403.1.0" TableName="edges">
+              <dxl:Columns>
+                <dxl:Column ColId="0" Attno="1" ColName="src" TypeMdid="0.23.1.0" ColWidth="4"/>
+                <dxl:Column ColId="1" Attno="2" ColName="DEST" TypeMdid="0.23.1.0" ColWidth="4"/>
+                <dxl:Column ColId="2" Attno="3" ColName="grp" TypeMdid="0.23.1.0" ColWidth="4"/>
+                <dxl:Column ColId="3" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                <dxl:Column ColId="4" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                <dxl:Column ColId="5" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                <dxl:Column ColId="6" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                <dxl:Column ColId="7" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                <dxl:Column ColId="8" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                <dxl:Column ColId="9" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+              </dxl:Columns>
+            </dxl:TableDescriptor>
+          </dxl:TableScan>
+          <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
             <dxl:Properties>
-              <dxl:Cost StartupCost="0" TotalCost="431.000170" Rows="1.000000" Width="12"/>
+              <dxl:Cost StartupCost="0" TotalCost="431.000034" Rows="1.000000" Width="12"/>
             </dxl:Properties>
             <dxl:ProjList>
               <dxl:ProjElem ColId="10" Alias="src">
@@ -364,15 +341,15 @@ explain select * from edges e1 full outer join edges e2 on (e1.grp = e2.grp and 
               </dxl:ProjElem>
             </dxl:ProjList>
             <dxl:Filter/>
-            <dxl:SortingColumnList>
-              <dxl:SortingColumn ColId="12" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-              <dxl:SortingColumn ColId="11" SortOperatorMdid="0.97.1.0" SortOperatorName="&lt;" SortNullsFirst="false"/>
-            </dxl:SortingColumnList>
-            <dxl:LimitCount/>
-            <dxl:LimitOffset/>
-            <dxl:RedistributeMotion InputSegments="0,1,2" OutputSegments="0,1,2">
+            <dxl:SortingColumnList/>
+            <dxl:HashExprList>
+              <dxl:HashExpr>
+                <dxl:Ident ColId="11" ColName="DEST" TypeMdid="0.23.1.0"/>
+              </dxl:HashExpr>
+            </dxl:HashExprList>
+            <dxl:TableScan>
               <dxl:Properties>
-                <dxl:Cost StartupCost="0" TotalCost="431.000034" Rows="1.000000" Width="12"/>
+                <dxl:Cost StartupCost="0" TotalCost="431.000008" Rows="1.000000" Width="12"/>
               </dxl:Properties>
               <dxl:ProjList>
                 <dxl:ProjElem ColId="10" Alias="src">
@@ -386,46 +363,23 @@ explain select * from edges e1 full outer join edges e2 on (e1.grp = e2.grp and 
                 </dxl:ProjElem>
               </dxl:ProjList>
               <dxl:Filter/>
-              <dxl:SortingColumnList/>
-              <dxl:HashExprList>
-                <dxl:HashExpr>
-                  <dxl:Ident ColId="11" ColName="DEST" TypeMdid="0.23.1.0"/>
-                </dxl:HashExpr>
-              </dxl:HashExprList>
-              <dxl:TableScan>
-                <dxl:Properties>
-                  <dxl:Cost StartupCost="0" TotalCost="431.000008" Rows="1.000000" Width="12"/>
-                </dxl:Properties>
-                <dxl:ProjList>
-                  <dxl:ProjElem ColId="10" Alias="src">
-                    <dxl:Ident ColId="10" ColName="src" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="11" Alias="DEST">
-                    <dxl:Ident ColId="11" ColName="DEST" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                  <dxl:ProjElem ColId="12" Alias="grp">
-                    <dxl:Ident ColId="12" ColName="grp" TypeMdid="0.23.1.0"/>
-                  </dxl:ProjElem>
-                </dxl:ProjList>
-                <dxl:Filter/>
-                <dxl:TableDescriptor Mdid="6.16403.1.0" TableName="edges">
-                  <dxl:Columns>
-                    <dxl:Column ColId="10" Attno="1" ColName="src" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="11" Attno="2" ColName="DEST" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="12" Attno="3" ColName="grp" TypeMdid="0.23.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="13" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
-                    <dxl:Column ColId="14" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="15" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="16" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="17" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="18" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
-                    <dxl:Column ColId="19" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
-                  </dxl:Columns>
-                </dxl:TableDescriptor>
-              </dxl:TableScan>
-            </dxl:RedistributeMotion>
-          </dxl:Sort>
-        </dxl:MergeJoin>
+              <dxl:TableDescriptor Mdid="6.16403.1.0" TableName="edges">
+                <dxl:Columns>
+                  <dxl:Column ColId="10" Attno="1" ColName="src" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="11" Attno="2" ColName="DEST" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="12" Attno="3" ColName="grp" TypeMdid="0.23.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="13" Attno="-1" ColName="ctid" TypeMdid="0.27.1.0" ColWidth="6"/>
+                  <dxl:Column ColId="14" Attno="-3" ColName="xmin" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="15" Attno="-4" ColName="cmin" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="16" Attno="-5" ColName="xmax" TypeMdid="0.28.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="17" Attno="-6" ColName="cmax" TypeMdid="0.29.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="18" Attno="-7" ColName="tableoid" TypeMdid="0.26.1.0" ColWidth="4"/>
+                  <dxl:Column ColId="19" Attno="-8" ColName="gp_segment_id" TypeMdid="0.23.1.0" ColWidth="4"/>
+                </dxl:Columns>
+              </dxl:TableDescriptor>
+            </dxl:TableScan>
+          </dxl:RedistributeMotion>
+        </dxl:HashJoin>
       </dxl:GatherMotion>
     </dxl:Plan>
   </dxl:Thread>

@@ -215,7 +215,7 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformImplementDML(m_mp));
 	SkipUnused(1);
 	Add(GPOS_NEW(m_mp) CXformImplementSplit(m_mp));
-	Add(GPOS_NEW(m_mp) CXformJoinCommutativity(m_mp));
+	Add(GPOS_NEW(m_mp) CXformInnerJoinCommutativity(m_mp));
 	Add(GPOS_NEW(m_mp) CXformJoinAssociativity(m_mp));
 	Add(GPOS_NEW(m_mp) CXformSemiJoinSemiJoinSwap(m_mp));
 	Add(GPOS_NEW(m_mp) CXformSemiJoinAntiSemiJoinSwap(m_mp));
@@ -300,6 +300,8 @@ CXformFactory::Instantiate()
 	Add(GPOS_NEW(m_mp) CXformSelect2IndexOnlyGet(m_mp));
 	Add(GPOS_NEW(m_mp) CXformSelect2DynamicIndexOnlyGet(m_mp));
 	Add(GPOS_NEW(m_mp) CXformLimit2IndexOnlyGet(m_mp));
+	Add(GPOS_NEW(m_mp) CXformFullOuterJoin2HashJoin(m_mp));
+	Add(GPOS_NEW(m_mp) CXformFullJoinCommutativity(m_mp));
 
 	GPOS_ASSERT(nullptr != m_rgpxf[CXform::ExfSentinel - 1] &&
 				"Not all xforms have been instantiated");

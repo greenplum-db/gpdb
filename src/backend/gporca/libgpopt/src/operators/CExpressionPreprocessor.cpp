@@ -955,7 +955,8 @@ CExpressionPreprocessor::PexprCollapseJoins(CMemoryPool *mp, CExpression *pexpr)
 		// The last child of an n-ary join expression is the scalar expression
 		if (pexprNAryJoin->Arity() - 1 > ulJoinArityLimit)
 		{
-			GPOPT_DISABLE_XFORM(CXform::ExfJoinCommutativity);
+			GPOPT_DISABLE_XFORM(CXform::ExfInnerJoinCommutativity);
+			GPOPT_DISABLE_XFORM(CXform::ExfFullJoinCommutativity);
 			GPOPT_DISABLE_XFORM(CXform::ExfJoinAssociativity);
 		}
 

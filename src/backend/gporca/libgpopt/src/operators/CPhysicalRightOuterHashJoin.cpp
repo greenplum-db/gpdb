@@ -90,9 +90,7 @@ CPhysicalRightOuterHashJoin::Ped(CMemoryPool *mp, CExpressionHandle &exprhdl,
 			PdsRequireSingleton(mp, exprhdl, pdsInput, child_index), dmatch);
 	}
 
-	const ULONG ulHashDistributeRequests = NumDistrReq();
-
-	if (ulOptReq < ulHashDistributeRequests)
+	if (ulOptReq < NumDistrReq())
 	{
 		// requests 1 .. N are (redistribute, redistribute)
 		CDistributionSpec *pds = PdsRequiredRedistribute(

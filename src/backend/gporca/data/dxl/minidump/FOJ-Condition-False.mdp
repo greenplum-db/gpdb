@@ -173,7 +173,7 @@ select * from foo a full join foo b on false;
         <dxl:ConstValue TypeMdid="0.16.1.0" Value="false"/>
       </dxl:LogicalJoin>
     </dxl:Query>
-    <dxl:Plan Id="0" SpaceSize="84">
+    <dxl:Plan Id="0" SpaceSize="168">
       <dxl:GatherMotion InputSegments="0,1,2" OutputSegments="-1">
         <dxl:Properties>
           <dxl:Cost StartupCost="0" TotalCost="3017.005429" Rows="80.000000" Width="8"/>

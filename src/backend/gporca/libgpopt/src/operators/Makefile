@@ -113,6 +113,7 @@ OBJS        = CExpression.o \
               CPhysicalLeftOuterNLJoin.o \
               CPhysicalLeftSemiHashJoin.o \
               CPhysicalLeftSemiNLJoin.o \
+              CPhysicalFullHashJoin.o \
               CPhysicalLimit.o \
               CPhysicalMotion.o \
               CPhysicalMotionBroadcast.o \

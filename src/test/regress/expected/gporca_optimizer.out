@@ -12053,40 +12053,20 @@ SELECT a, b FROM btab_old_hash LEFT OUTER JOIN atab_old_hash ON a |=| b;
 
 set optimizer_expand_fulljoin = on;
 EXPLAIN SELECT a, b FROM atab_old_hash FULL JOIN btab_old_hash ON a |=| b;
-                                                       QUERY PLAN                                                       
-------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2586.00 rows=10 width=8)
-   ->  Sequence  (cost=0.00..2586.00 rows=4 width=8)
-         ->  Shared Scan (share slice:id 1:0)  (cost=0.00..431.00 rows=1 width=1)
-               ->  Seq Scan on atab_old_hash  (cost=0.00..431.00 rows=1 width=34)
-         ->  Sequence  (cost=0.00..2155.00 rows=4 width=8)
-               ->  Shared Scan (share slice:id 1:1)  (cost=0.00..431.00 rows=2 width=1)
-                     ->  Seq Scan on btab_old_hash  (cost=0.00..431.00 rows=2 width=34)
-               ->  Append  (cost=0.00..1724.00 rows=4 width=8)
-                     ->  Hash Left Join  (cost=0.00..862.00 rows=2 width=8)
-                           Hash Cond: (share0_ref2.a |=| share1_ref2.b)
-                           ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                 Hash Key: share0_ref2.a
-                                 ->  Result  (cost=0.00..431.00 rows=1 width=4)
-                                       ->  Shared Scan (share slice:id 2:0)  (cost=0.00..431.00 rows=1 width=4)
-                           ->  Hash  (cost=431.00..431.00 rows=2 width=4)
-                                 ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=2 width=4)
-                                       Hash Key: share1_ref2.b
-                                       ->  Result  (cost=0.00..431.00 rows=2 width=4)
-                                             ->  Shared Scan (share slice:id 3:1)  (cost=0.00..431.00 rows=2 width=4)
-                     ->  Hash Anti Join  (cost=0.00..862.00 rows=2 width=4)
-                           Hash Cond: (share1_ref3.b |=| share0_ref3.a)
-                           ->  Redistribute Motion 3:3  (slice4; segments: 3)  (cost=0.00..431.00 rows=2 width=4)
-                                 Hash Key: share1_ref3.b
-                                 ->  Result  (cost=0.00..431.00 rows=2 width=4)
-                                       ->  Shared Scan (share slice:id 4:1)  (cost=0.00..431.00 rows=2 width=4)
-                           ->  Hash  (cost=431.00..431.00 rows=1 width=4)
-                                 ->  Redistribute Motion 3:3  (slice5; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
-                                       Hash Key: share0_ref3.a
-                                       ->  Result  (cost=0.00..431.00 rows=1 width=4)
-                                             ->  Shared Scan (share slice:id 5:0)  (cost=0.00..431.00 rows=1 width=4)
- Optimizer: Pivotal Optimizer (GPORCA)
-(31 rows)
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=10 width=8)
+   ->  Hash Full Join  (cost=0.00..862.00 rows=4 width=8)
+         Hash Cond: (btab_old_hash.b |=| atab_old_hash.a)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=2 width=4)
+               Hash Key: btab_old_hash.b
+               ->  Seq Scan on btab_old_hash  (cost=0.00..431.00 rows=2 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=4)
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.00 rows=1 width=4)
+                     Hash Key: atab_old_hash.a
+                     ->  Seq Scan on atab_old_hash  (cost=0.00..431.00 rows=1 width=4)
+ Optimizer: GPORCA
+(11 rows)
 
 SELECT a, b FROM atab_old_hash FULL JOIN btab_old_hash ON a |=| b;
  a  | b  
