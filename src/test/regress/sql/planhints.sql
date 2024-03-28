@@ -548,3 +548,13 @@ EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
     NoIndexScan(t1) SeqScan(t1)
  */
 EXPLAIN (costs off) SELECT t1.a FROM my_table AS t1 WHERE t1.a<42;
+
+-- Scan Hints with Semi/Anti Semi Joins
+/*+
+    SeqScan(t2) SeqScan(t1)
+ */
+EXPLAIN (costs off) SELECT t1.a, t1.b FROM my_table AS t1 WHERE EXISTS (SELECT 1 FROM your_table AS t2 WHERE t1.a = t2.a);
+/*+
+    SeqScan(t2) SeqScan(t1)
+ */
+EXPLAIN (costs off) SELECT t1.a, t1.b FROM my_table AS t1 WHERE NOT EXISTS (SELECT 1 FROM your_table AS t2 WHERE t1.a = t2.a);

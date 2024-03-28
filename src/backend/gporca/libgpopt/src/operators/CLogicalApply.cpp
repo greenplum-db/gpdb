@@ -123,6 +123,33 @@ CLogicalApply::Matches(COperator *pop) const
 	return false;
 }
 
+CTableDescriptorHashSet *
+CLogicalApply::DeriveTableDescriptor(CMemoryPool *mp,
+									 CExpressionHandle &exprhdl) const
+{
+	CTableDescriptorHashSet *table_descriptor_set =
+		GPOS_NEW(mp) CTableDescriptorHashSet(mp);
+
+	for (ULONG ul = 0; ul < exprhdl.Arity(); ul++)
+	{
+		if (exprhdl.Pop(ul)->FLogical())
+		{
+			CTableDescriptorHashSetIter hsiter(
+				exprhdl.DeriveTableDescriptor(ul));
+			while (hsiter.Advance())
+			{
+				CTableDescriptor *ptabdesc =
+					const_cast<CTableDescriptor *>(hsiter.Get());
+				if (table_descriptor_set->Insert(ptabdesc))
+				{
+					ptabdesc->AddRef();
+				}
+			}
+		}
+	}
+	return table_descriptor_set;
+}
+
 //---------------------------------------------------------------------------
 //	@function:
 //		CLogicalApply::OsPrint
