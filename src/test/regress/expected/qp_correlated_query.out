@@ -596,11 +596,14 @@ select * from A where A.j = any (select C.j from C,B where C.j = A.j and B.i = a
 
 -- Planner should fail due to skip-level correlation not supported. ORCA should pass
 select * from A,B where A.j = any (select C.j from C where C.j = A.j and B.i = any (select C.i from C where C.i != 10 and C.i = A.i)) order by 1,2,3,4;
-ERROR:  correlated subquery with skip-level correlations is not supported
--- start_ignore
--- GPDB_96_MERGE_FIXME: we used to propagate the (i <> 10) qual to the Seq Scans on
--- 'c'. Investigate why we lost that
--- end_ignore
+ i | j | i | j  
+---+---+---+----
+ 1 | 1 | 1 |  1
+ 1 | 1 | 1 |  1
+ 1 | 1 | 1 | 43
+ 1 | 1 | 1 | 43
+(4 rows)
+
 explain select A.i, B.i, C.j from A, B, C where A.j = (select C.j from C where C.j = A.j and C.i = any (select B.i from B where C.i = B.i and B.i !=10)) order by A.i, B.i, C.j limit 10;
                                                                     QUERY PLAN                                                                     
 ---------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1690,7 +1693,14 @@ SELECT a, (SELECT d FROM qp_csq_t3 WHERE a=c) FROM qp_csq_t1 GROUP BY a order by
 
 -- Planner should fail due to skip-level correlation not supported. ORCA should pass
 SELECT a, (SELECT (SELECT d FROM qp_csq_t3 WHERE a=c)) FROM qp_csq_t1 GROUP BY a order by a;
-ERROR:  correlated subquery with skip-level correlations is not supported
+ a |   d   
+---+-------
+ 1 | one
+ 3 | three
+ 5 | five
+ 7 | seven
+(4 rows)
+
 -- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ in select list (Heap) 
 -- ----------------------------------------------------------------------
@@ -1723,10 +1733,10 @@ select (select avg(x) from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = any (select 
 
 -- Planner should fail due to skip-level correlation not supported. Query should not cause segfault like in issue #12054.
 select A.j, (select array_agg(a_B) from (select B.j, (select array_agg(a_C) from (select C.j from C where C.i = A.i) a_C) from B where B.i = A.i order by A.j) a_B) from A;
-ERROR:  correlated subquery with skip-level correlations is not supported
+ERROR:  Passing parameters across motion is not supported in subplan. (cdbmutate.c:2035)
 -- Planner should fail due to skip-level correlation not supported. Query should not return wrong results like in issue #12054.
 select A.j, (select array_agg(a_B) from (select B.j, (select sum(a_C.j) from (select C.j from C where C.i = A.i) a_C) from B where B.i = A.i order by A.j) a_B) from A;
-ERROR:  correlated subquery with skip-level correlations is not supported
+ERROR:  Passing parameters across motion is not supported in subplan. (cdbmutate.c:2035)
 -- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ with multiple columns (Heap)
 -- ----------------------------------------------------------------------
@@ -3885,7 +3895,7 @@ WHERE EXISTS (
         FROM skip_correlated_t2
     )
 );
-ERROR:  correlated subquery with skip-level correlations is not supported
+ERROR:  Passing parameters across motion is not supported in subplan. (cdbmutate.c:2035)
 EXPLAIN (COSTS OFF)
 SELECT *
 FROM skip_correlated_t1
@@ -3900,7 +3910,7 @@ WHERE EXISTS (
         )
         )
 );
-ERROR:  correlated subquery with skip-level correlations is not supported
+ERROR:  Passing parameters across motion is not supported in subplan. (cdbmutate.c:2035)
 EXPLAIN (COSTS OFF)
 SELECT *
 FROM skip_correlated_t1
@@ -3915,7 +3925,7 @@ WHERE EXISTS (
         )
         )
 );
-ERROR:  correlated subquery with skip-level correlations is not supported
+ERROR:  Passing parameters across motion is not supported in subplan. (cdbmutate.c:2035)
 --------------------------------------------------------------------------------
 -- Query should not cause segfault on ORCA. Will fallback to planner as no plan
 -- is computed by ORCA. Github Issue #15693

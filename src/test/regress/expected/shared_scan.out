@@ -190,10 +190,10 @@ select * from cte1 where ( EXISTS ( select cte2.a from cte2 left join cte3 on (E
          SubPlan 2
            ->  Nested Loop Left Join
                  Join Filter: $1
-                 InitPlan 1 (returns $1)  (slice4)
+                 InitPlan 1 (returns $1)  (slice1; segments: 3)
                    ->  Subquery Scan on cte2
                          ->  Materialize
-                               ->  Gather Motion 3:1  (slice5; segments: 3)
+                               ->  Broadcast Motion 3:3  (slice4; segments: 3)
                                      ->  Seq Scan on sisc2
                  ->  Materialize
                        ->  Broadcast Motion 3:3  (slice2; segments: 3)

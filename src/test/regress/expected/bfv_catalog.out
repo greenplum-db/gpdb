@@ -125,10 +125,7 @@ CREATE TABLE t1 (a int, b int) DISTRIBUTED BY (a);
 CREATE TABLE t2 (a int, b int) DISTRIBUTED BY (a);
 CREATE TABLE x (a int) DISTRIBUTED BY (a);
 select * from x where a=  (select sum(t1.a)  from t1 inner join (select x.a as outer_ref, * from t2) as foo on (foo.a=t1.a+ outer_ref)  group by foo.a);
- a 
----
-(0 rows)
-
+ERROR:  Passing parameters across motion is not supported in subplan. (cdbmutate.c:2035)
 SET statement_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = off;

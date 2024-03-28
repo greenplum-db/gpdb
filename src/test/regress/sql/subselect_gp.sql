@@ -1422,6 +1422,16 @@ select (SELECT EXISTS
                   WHERE schemaname = a)) from tmp;
 drop table tmp;
 
+-- case for param cross motion after pullup sublink scenario
+create table tpm1(a int, b int, c int);
+create table tpm2(a int, b int, c int);
+create table tpm3(a int, b int, c int);
+
+explain (costs off)
+select (select count(*) from (select * from tpm2) d where d.b not in(select distinct generate_series(1, b) from tpm3 where tpm3.c = tpm1.c)) from tpm1;
+
+drop table tpm1,tpm2,tpm3;
+
 -- Test LEAST() and GREATEST() with an embedded subquery
 drop table if exists foo;
 

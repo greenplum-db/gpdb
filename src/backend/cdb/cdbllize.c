@@ -90,6 +90,7 @@ typedef struct decorate_subplan_info
 	int			sliceDepth;
 	Flow	   *parentFlow;
 	bool		is_initplan;
+	Bitmapset  *init_setparam;
 	bool		useHashTable;
 	bool		processed;
 
@@ -130,6 +131,8 @@ typedef struct
 	/* Current slice in the traversal. */
 	int			currentSliceIndex;
 
+	Bitmapset  *initSetParam;
+
 	/*
 	 * Subplan IDs that we have seen. Used to prevent scanning the
 	 * same subplan more than once, even if there are multiple SubPlan
@@ -145,6 +148,26 @@ static Node *fix_outer_query_motions_mutator(Node *node, decorate_subplans_with_
 static Plan *fix_subplan_motion(PlannerInfo *root, Plan *subplan, Flow *outer_query_flow);
 static bool build_slice_table_walker(Node *node, build_slice_table_context *context);
 static void adjust_top_path_for_parallel_retrieve_cursor(Path *path, PlanSlice *slice);
+
+/*
+ * check correlated parameters of subplan(excluding from outside initparams)
+ * The result should be true when:
+ *   1. We have external parameters of the plan.
+ *   2. External parameters are not a subset of the initparams.
+ */
+static bool outer_correlated_params(Bitmapset *extparam, Bitmapset *setparam)
+{
+	if (extparam == NULL)
+		return false;
+
+	if (setparam == NULL)
+		return true;
+
+	if (bms_is_subset(extparam, setparam))
+		return false;
+
+	return true;
+}
 
 /*
  * Create a GpPolicy that matches the natural distribution of the given plan.
@@ -717,6 +740,7 @@ cdbllize_decorate_subplans_with_motions(PlannerInfo *root, Plan *plan)
 	Plan	   *result;
 	decorate_subplans_with_motions_context context;
 	int			nsubplans;
+	Bitmapset  *initSetParam = NULL;
 
 	/* Initialize mutator context. */
 	planner_init_plan_tree_base(&context.base, root);
@@ -733,6 +757,7 @@ cdbllize_decorate_subplans_with_motions(PlannerInfo *root, Plan *plan)
 		sstate->sliceDepth = -1;
 		sstate->parentFlow = NULL;
 		sstate->is_initplan = false;
+		sstate->init_setparam = NULL;
 		sstate->processed = false;
 	}
 
@@ -766,17 +791,31 @@ cdbllize_decorate_subplans_with_motions(PlannerInfo *root, Plan *plan)
 		}
 		sstate->processed = true;
 
+		/*
+		 * Determine the behavior of InitPlans:
+		 *  1. InitPlans can be dispatched separately before the main plan, and
+		 *	   the results are then brought to the QD.
+		 *  2. InitPlans can be dispatched along with the main plan to QE.
+		 */
 		if (sstate->is_initplan)
 		{
-			/*
-			 * InitPlans are dispatched separately, before the main plan,
-			 * and the result is brought to the QD.
-			 */
-			Flow	   *topFlow = makeFlow(FLOW_SINGLETON, getgpsegmentCount());
+			if (outer_correlated_params(subplan->extParam, initSetParam))
+			{
+				Flow	   *topFlow = makeFlow(FLOW_REPLICATED, getgpsegmentCount());
 
-			topFlow->segindex = -1;
-			context.sliceDepth = 0;
-			context.currentPlanFlow = topFlow;
+				context.sliceDepth = sstate->sliceDepth;
+				context.currentPlanFlow = topFlow;
+			}
+			else
+			{
+				Flow	   *topFlow = makeFlow(FLOW_SINGLETON, getgpsegmentCount());
+
+				topFlow->segindex = -1;
+				context.sliceDepth = 0;
+				context.currentPlanFlow = topFlow;
+			}
+
+			initSetParam = bms_add_members(initSetParam, sstate->init_setparam);
 		}
 		else
 		{
@@ -852,7 +891,18 @@ fix_outer_query_motions_mutator(Node *node, decorate_subplans_with_motions_conte
 			SubPlan	   *spexpr = (SubPlan *) node;
 			decorate_subplan_info *sstate = &context->subplans[spexpr->plan_id];
 
-			sstate->is_initplan = spexpr->is_initplan;
+			if (spexpr->is_initplan)
+			{
+				ListCell	*l1;
+				Bitmapset	*initSetParam = NULL;
+				foreach(l1, spexpr->setParam)
+				{
+					initSetParam = bms_add_member(initSetParam, lfirst_int(l1));
+				}
+				sstate->init_setparam = initSetParam;
+
+				sstate->is_initplan = spexpr->is_initplan;
+			}
 			sstate->useHashTable = spexpr->useHashTable;
 
 			if (sstate->processed)
@@ -1140,6 +1190,7 @@ cdbllize_build_slice_table(PlannerInfo *root, Plan *top_plan,
 	cxt.slices = list_make1(top_slice);
 
 	cxt.currentSliceIndex = 0;
+	cxt.initSetParam = NULL;
 
 	/*
 	 * Walk through the main plan tree, and recursively all SubPlans.
@@ -1188,6 +1239,11 @@ cdbllize_build_slice_table(PlannerInfo *root, Plan *top_plan,
 	}
 
 	/*
+	 * Specific to GPDB: Check whether parameters across motion.
+	 */
+	check_motion_parameter(top_plan, root);
+
+	/*
 	 * If none of the slices require dispatching, we can run everything in one slice.
 	 */
 	all_root_slices = true;
@@ -1222,6 +1278,8 @@ cdbllize_build_slice_table(PlannerInfo *root, Plan *top_plan,
 		sliceIndex++;
 	}
 	list_free_deep(cxt.slices);
+
+
 
 	/*
 	 * Discard subtrees of Query node that aren't needed for execution. Note
@@ -1265,17 +1323,38 @@ build_slice_table_walker(Node *node, build_slice_table_context *context)
 			save_currentSliceIndex = context->currentSliceIndex;
 			if (spexpr->is_initplan)
 			{
-				PlanSlice *initTopSlice;
+				ListCell	*l2 = NULL;
+				Bitmapset	*initSetParam = NULL;
+				Plan *plan = planner_subplan_get_plan(root, spexpr);
 
-				initTopSlice = palloc0(sizeof(PlanSlice));
-				initTopSlice->gangType = GANGTYPE_UNALLOCATED;
-				initTopSlice->numsegments = 0;
-				initTopSlice->segindex = -1;
-				initTopSlice->parentIndex = -1;
-				initTopSlice->sliceIndex = list_length(context->slices);
-				context->slices = lappend(context->slices, initTopSlice);
+				/*
+				 * If there are external subplan parameters outside of the InitPlan,
+				 * then inherit the current slice. Otherwise, it is the InitPlan that
+				 * should be dispatched before the main plan and assigned a root slice
+				 * for it.
+				 */
+				if (!outer_correlated_params(plan->extParam, context->initSetParam))
+				{
+					PlanSlice *initTopSlice;
 
-				context->currentSliceIndex = initTopSlice->sliceIndex;
+					initTopSlice = palloc0(sizeof(PlanSlice));
+					initTopSlice->gangType = GANGTYPE_UNALLOCATED;
+					initTopSlice->numsegments = 0;
+					initTopSlice->segindex = -1;
+					initTopSlice->parentIndex = -1;
+					initTopSlice->sliceIndex = list_length(context->slices);
+					context->slices = lappend(context->slices, initTopSlice);
+
+					context->currentSliceIndex = initTopSlice->sliceIndex;
+				}
+
+				foreach(l2, spexpr->setParam)
+				{
+					initSetParam = bms_add_member(initSetParam, lfirst_int(l2));
+				}
+
+				/* Collect initSetparams of Initplan as recursing plan tree. */
+				context->initSetParam = bms_add_members(context->initSetParam, initSetParam);
 			}
 			root->glob->subplan_sliceIds[plan_id - 1] = context->currentSliceIndex;
 
@@ -1340,7 +1419,6 @@ build_slice_table_walker(Node *node, build_slice_table_context *context)
 							context,
 							false);
 }
-
 
 /*
  * Construct a new Flow in the current memory context.

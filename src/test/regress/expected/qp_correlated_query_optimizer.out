@@ -1834,12 +1834,12 @@ select (select avg(x) from qp_csq_t1, qp_csq_t2 where qp_csq_t1.a = any (select 
 select A.j, (select array_agg(a_B) from (select B.j, (select array_agg(a_C) from (select C.j from C where C.i = A.i) a_C) from B where B.i = A.i order by A.j) a_B) from A;
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Whole-row variable
-ERROR:  correlated subquery with skip-level correlations is not supported
+ERROR:  Passing parameters across motion is not supported in subplan. (cdbmutate.c:2035)
 -- Planner should fail due to skip-level correlation not supported. Query should not return wrong results like in issue #12054.
 select A.j, (select array_agg(a_B) from (select B.j, (select sum(a_C.j) from (select C.j from C where C.i = A.i) a_C) from B where B.i = A.i order by A.j) a_B) from A;
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Falling back to Postgres-based planner because GPORCA does not support the following feature: Whole-row variable
-ERROR:  correlated subquery with skip-level correlations is not supported
+ERROR:  Passing parameters across motion is not supported in subplan. (cdbmutate.c:2035)
 -- ----------------------------------------------------------------------
 -- Test: Correlated Subquery: CSQ with multiple columns (Heap)
 -- ----------------------------------------------------------------------
@@ -4017,7 +4017,7 @@ WHERE EXISTS (
 );
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
-ERROR:  correlated subquery with skip-level correlations is not supported
+ERROR:  Passing parameters across motion is not supported in subplan. (cdbmutate.c:2035)
 EXPLAIN (COSTS OFF)
 SELECT *
 FROM skip_correlated_t1
@@ -4034,7 +4034,7 @@ WHERE EXISTS (
 );
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
-ERROR:  correlated subquery with skip-level correlations is not supported
+ERROR:  Passing parameters across motion is not supported in subplan. (cdbmutate.c:2035)
 EXPLAIN (COSTS OFF)
 SELECT *
 FROM skip_correlated_t1
@@ -4051,7 +4051,7 @@ WHERE EXISTS (
 );
 INFO:  GPORCA failed to produce a plan, falling back to Postgres-based planner
 DETAIL:  Falling back to Postgres-based planner because no plan has been computed for required properties in GPORCA
-ERROR:  correlated subquery with skip-level correlations is not supported
+ERROR:  Passing parameters across motion is not supported in subplan. (cdbmutate.c:2035)
 --------------------------------------------------------------------------------
 -- Query should not cause segfault on ORCA. Will fallback to planner as no plan
 -- is computed by ORCA. Github Issue #15693

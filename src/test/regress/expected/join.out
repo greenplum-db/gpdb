@@ -6076,7 +6076,7 @@ lateral (select * from int8_tbl t1,
                                      where q2 = (select greatest(t1.q1,t2.q2))
                                        and (select v.id=0)) offset 0) ss2) ss
          where t1.q1 = ss.q2) ss0;
-ERROR:  correlated subquery with skip-level correlations is not supported
+ERROR:  Passing parameters across motion is not supported in nestloop. (cdbmutate.c:2038)
 select * from (values (0), (1)) v(id),
 lateral (select * from int8_tbl t1,
          lateral (select * from
@@ -6085,7 +6085,7 @@ lateral (select * from int8_tbl t1,
                                      where q2 = (select greatest(t1.q1,t2.q2))
                                        and (select v.id=0)) offset 0) ss2) ss
          where t1.q1 = ss.q2) ss0;
-ERROR:  correlated subquery with skip-level correlations is not supported
+ERROR:  Passing parameters across motion is not supported in nestloop. (cdbmutate.c:2038)
 -- test some error cases where LATERAL should have been used but wasn't
 select f1,g from int4_tbl a, (select f1 as g) ss;
 ERROR:  column "f1" does not exist
