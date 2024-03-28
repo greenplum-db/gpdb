@@ -30,7 +30,7 @@ class SshUtilsTestCase(unittest.TestCase):
         hostlist.add('localhost')
         hostlist.add('localhost')
         hostlist.filterMultiHomedHosts()
-        self.assertEqual(len(hostlist.get()), 1, 
+        self.assertEqual(len(hostlist.get()), 1,
                          "There should be only 1 host in the hostlist after calling filterMultiHomedHosts")
 
     def test01_test_SessionLogin(self):
@@ -40,10 +40,18 @@ class SshUtilsTestCase(unittest.TestCase):
 
         uname = pwd.getpwuid(os.getuid()).pw_name
 
-        s = Session()
-        s.login(['localhost', 'fakehost'], uname)
-        pxssh_hosts = [pxssh_session.x_peer for pxssh_session in s.pxssh_list]
+        s1 = Session()
+        s1.login(['localhost', 'fakehost'], uname)
+        pxssh_hosts = [pxssh_session.x_peer for pxssh_session in s1.pxssh_list]
         self.assertEqual(pxssh_hosts, ['localhost'])
+
+        s2 = Session()
+        try:
+            s2.login(['localhost', 'example.com'], uname, all_hosts=True)
+            self.assert_("Unrechable")
+        except RuntimeError:
+            pxssh_hosts = [pxssh_session.x_peer for pxssh_session in s2.pxssh_list]
+            self.assertEqual(pxssh_hosts, ['localhost'])
 
     def test02_pxssh_delaybeforesend(self):
         '''

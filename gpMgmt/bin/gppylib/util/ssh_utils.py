@@ -8,6 +8,7 @@ import cmd
 import os
 import sys
 import socket
+import time
 import threading
 from gppylib.commands.base import WorkerPool, REMOTE
 from gppylib.commands.unix import Hostname, Echo
@@ -16,6 +17,7 @@ from gpssh_modules import gppxssh_wrapper
 sys.path.insert(1, sys.path[0] + '/lib')
 from pexpect import pxssh
 
+RETRY_EXPONENT = 3
 
 class HostNameError(Exception):
     def __init__(self, msg, lineno=0):
@@ -167,7 +169,7 @@ class Session(cmd.Cmd):
         self.peerStringFormatRaw = "[%%%ds]" % cnt
         return self.peerStringFormatRaw
 
-    def login(self, hostList=None, userName=None, delaybeforesend=0.05, sync_multiplier=1.0, sync_retries=3):
+    def login(self, hostList=None, userName=None, delaybeforesend=0.05, sync_multiplier=1.0, sync_retries=3, all_hosts=None):
         """This is the normal entry point used to add host names to the object and log in to each of them"""
         if self.verbose: print('\n[Reset ...]')
         if not (self.hostList or hostList):
@@ -192,40 +194,51 @@ class Session(cmd.Cmd):
         good_list = []
         print_lock = threading.Lock()
 
-        def connect_host(hostname, p):
+        def connect_host(hostname):
             self.hostList.append(hostname)
-            try:
-                # The sync_multiplier value is passed onto pexpect.pxssh which is used to determine timeout
-                # values for prompt verification after an ssh connection is established.
-                p.login(hostname, self.userName, sync_multiplier=sync_multiplier)
-                p.x_peer = hostname
-                p.x_pid = p.pid
-                good_list.append(p)
-                if self.verbose:
+            num_retries = sync_retries
+            retry_attempt = 0
+            success = False
+            while (not success) and retry_attempt <= num_retries:
+                try:
+                    p = gppxssh_wrapper.PxsshWrapper(delaybeforesend=delaybeforesend,
+                                                     sync_retries=sync_retries,
+                                                     options={"StrictHostKeyChecking": "no",
+                                                              "BatchMode": "yes"})
+                    # The sync_multiplier value is passed onto pexpect.pxssh which is used to determine timeout
+                    # values for prompt verification after an ssh connection is established.
+                    p.login(hostname, self.userName, sync_multiplier=sync_multiplier)
+                    p.x_peer = hostname
+                    p.x_pid = p.pid
+                    good_list.append(p)
+                    success = True
+                    if self.verbose:
+                        with print_lock:
+                            print('[INFO] login %s' % hostname)
+                except Exception as e:
                     with print_lock:
-                        print('[INFO] login %s' % hostname)
-            except Exception as e:
-                with print_lock:
-                    print('[ERROR] unable to login to %s' % hostname)
-                    if type(e) is pxssh.ExceptionPxssh:
-                        print(e)
-                    elif type(e) is pxssh.EOF:
-                        print('Could not acquire connection.')
-                    else:
-                        print('hint: use gpssh-exkeys to setup public-key authentication between hosts')
+                        print('[ERROR] unable to login to %s' % hostname)
+                        if type(e) is pxssh.ExceptionPxssh:
+                            print(e)
+                        elif type(e) is pxssh.EOF:
+                            print('Could not acquire connection.')
+                        else:
+                            print(e)
+                            print('hint: use gpssh-exkeys to setup public-key authentication between hosts')
+                    time.sleep(min(120, RETRY_EXPONENT ** retry_attempt))
+                    retry_attempt += 1
 
         thread_list = []
         for host in hostList:
-            p = gppxssh_wrapper.PxsshWrapper(delaybeforesend=delaybeforesend,
-                                             sync_retries=sync_retries,
-                                             options={"StrictHostKeyChecking": "no",
-                                                      "BatchMode": "yes"})
-            t = threading.Thread(target=connect_host, args=(host, p))
+            t = threading.Thread(target=connect_host, args=(host,))
             t.start()
             thread_list.append(t)
 
         for t in thread_list:
             t.join()
+
+        if all_hosts and len(good_list) != len(hostList):
+            raise RuntimeError("Not all hosts reached.")
 
         # Restore terminal type
         if origTERM:
