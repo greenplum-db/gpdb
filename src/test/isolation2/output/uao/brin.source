@@ -639,7 +639,7 @@ SELECT brin_desummarize_range('brin_ao_specific_@amname@_i_idx', 33554435);
  (4294967295,0) 
  (4294967295,0) 
 (3 rows)
-1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_specific_@amname@_i_idx', 2), 'brin_ao_specific_@amname@_i_idx') ORDER BY blknum, attnum;
+1U: SELECT * FROM brin_page_items(get_raw_page('brin_ao_specific_@amname@_i_idx', 2), 'brin_ao_specific_@amname@_i_idx') ORDER BY blknum, attnum, itemoffset;
  itemoffset | blknum   | attnum | allnulls | hasnulls | placeholder | empty | value    
 ------------+----------+--------+----------+----------+-------------+-------+----------
  4          | 67108864 | 1      | f        | f        | f           | f     | {1 .. 1} 

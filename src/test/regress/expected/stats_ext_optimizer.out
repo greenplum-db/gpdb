@@ -437,6 +437,9 @@ CREATE TABLE functional_dependencies (
 );
 CREATE INDEX fdeps_ab_idx ON functional_dependencies (a, b);
 CREATE INDEX fdeps_abc_idx ON functional_dependencies (a, b, c);
+-- create index fdeps_abcf2_idx including column filler2, to check the
+-- behavior with null values
+CREATE INDEX fdeps_abcf2_idx ON functional_dependencies (a, b, c, filler2);
 -- random data (no functional dependencies)
 INSERT INTO functional_dependencies (a, b, c, filler1)
      SELECT mod(i, 23), mod(i, 29), mod(i, 31), i FROM generate_series(1,5000) s(i);

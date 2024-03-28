@@ -397,7 +397,7 @@ explain (costs off, timing off, summary off, analyze) select *, rank() over (ord
          Merge Key: pt.ptid, pt.pt1
          ->  Sort (actual rows=8 loops=1)
                Sort Key: pt.ptid, pt.pt1
-               Sort Method:  quicksort  Memory: 76kB
+               Sort Method:  multi-key sort  Memory: 76kB
                Executor Memory: 85kB  Segments: 3  Max: 29kB (segment 1)
                ->  Nested Loop (actual rows=8 loops=1)
                      Join Filter: true

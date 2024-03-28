@@ -484,10 +484,10 @@ BEGIN;
 ALTER TABLE aocs_addcol_abort ADD COLUMN c int;
 INSERT INTO aocs_addcol_abort SELECT i,i,i FROM generate_series(1,10)i;
 -- check state of aocsseg for entries of add column + insert
-SELECT * FROM gp_toolkit.__gp_aocsseg('aocs_addcol_abort') ORDER BY segment_id, column_num;
+SELECT * FROM gp_toolkit.__gp_aocsseg('aocs_addcol_abort') ORDER BY segment_id, column_num, physical_segno;
 SELECT * FROM aocs_addcol_abort;
 ABORT;
 -- check state of aocsseg if entries for new column are rolled back correctly
-SELECT * FROM gp_toolkit.__gp_aocsseg('aocs_addcol_abort') ORDER BY segment_id, column_num;
+SELECT * FROM gp_toolkit.__gp_aocsseg('aocs_addcol_abort') ORDER BY segment_id, column_num, physical_segno;
 SELECT * FROM aocs_addcol_abort;
 DROP TABLE aocs_addcol_abort;
